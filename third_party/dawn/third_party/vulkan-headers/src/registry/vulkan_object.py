@@ -249,10 +249,32 @@ class Command:
     def __lt__(self, other):
         return self.name < other.name
 
+# After VK_KHR_extended_flags we added the information so code generation knew which
+# member has a potential pNext with extended flag values in it
+@dataclass
+class ExtendedFlag:
+    struct: str # ex) VkImageUsageFlags2CreateInfoKHR
+
+@dataclass
+class StructCapabilityAlias:
+    """An alias that points to a member inside another feature structure."""
+    struct: str   # ex) VkPhysicalDeviceShaderSubgroupRotateFeatures
+    member: str   # ex) shaderSubgroupRotate
+
+@dataclass
+class ExtensionCapabilityAlias:
+    """An alias indicating the feature is enabled using the extension."""
+    name: str  # ex) VK_KHR_sampler_mirror_clamp_to_edge
+
+CapabilityAlias = StructCapabilityAlias | ExtensionCapabilityAlias
+
 @dataclass
 class Member:
     """<member>"""
     name: str # ex) sType, pNext, flags, size, usage
+
+     # ex) {VkPhysicalDeviceShaderSubgroupRotateFeatures, shaderSubgroupRotate}
+    capabilityAlias: (CapabilityAlias | None)
 
     # the "base type" - will not preserve the 'const' or pointer info
     # ex) void, uint32_t, VkFormat, VkBuffer, etc
@@ -274,6 +296,8 @@ class Member:
     # ex) memoryTypes is ['VK_MAX_MEMORY_TYPES']
     # ex) VkTransformMatrixKHR:matrix is ['3', '4']
     fixedSizeArray: list[str]
+
+    extendedFlag: (ExtendedFlag | None)
 
     optional: bool
     # Note: "optionalPointer" is a misleading name, this should have probably been "optionalPointedValue"
@@ -392,7 +416,7 @@ class Enum:
 class Flag:
     """<enum> of type bitmask"""
     name: str # ex) VK_ACCESS_2_SHADER_READ_BIT
-    aliases: str # ex) ['VK_ACCESS_2_SHADER_READ_BIT_KHR']
+    aliases: list[str] # ex) ['VK_ACCESS_2_SHADER_READ_BIT_KHR']
     parent: str # ex) "VkAccessFlagBits2" - Name of parent bitmask, Allows for reverse lookup
 
     protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS

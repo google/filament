@@ -53,6 +53,7 @@ class GPUBuffer final : public interop::GPUBuffer {
     const wgpu::BufferDescriptor& Desc() const { return desc_; }
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::Buffer&() const { return buffer_; }
 
     // interop::GPUBuffer interface compliance

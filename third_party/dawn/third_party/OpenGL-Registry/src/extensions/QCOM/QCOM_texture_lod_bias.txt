@@ -1,0 +1,142 @@
+Name
+
+    QCOM_texture_lod_bias
+
+Name Strings
+
+    GL_QCOM_texture_lod_bias
+
+Contact
+
+    Rob VanReenen (rvanreen 'at' qti.qualcomm.com)
+
+Contributors
+
+    Caiqin Li
+    Rob VanReenen
+    Jeff Leger
+    Tate Hornbeck
+
+Status
+
+    Draft.
+
+Version
+
+    Last Modified Date: September 6, 2023
+    Revision: 01
+
+Number
+
+    OpenGL ES Extension #342
+
+Dependencies
+
+    OpenGL ES 2.0 or higher is required.
+
+    This extension is written against the OpenGL ES
+    Version 3.2 (May 5, 2022).
+
+Overview
+
+    This extension reintroduces the texture LOD bias operation from
+    EXT_texture_lod_bias which is written based on OpenGL ES 1.1.
+    It provides a mean to bias the lambda computation by a
+    constant (signed) value. This bias can provide a way to blur or
+    pseudo-sharpen OpenGL ES's standard texture filtering.
+
+    This blurring or pseudo-sharpening may be useful for special
+    effects (such as depth-of-field effects) or image processing
+    techniques (where the mipmap levels act as pre-downsampled image
+    versions). On some implementations, increasing the texture LOD
+    bias may improve texture filtering performance (at the cost of
+    texture blurriness).
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameterf,
+    SamplerParameterf, GetTexParameterfv and GetSamplerParameterfv:
+
+        TEXTURE_LOD_BIAS_QCOM                  0x8C96
+
+Additions to Chapter 3 of the 3.0 Specification (Rasterization)
+
+ -- Section 8.10 "Texture Parameters"
+
+    Add following to Table 8.19: Texture parameters and their values.
+
+    Name                    Type            Legal Values
+    TEXTURE_LOD_BIAS_QCOM   float           any value
+
+ -- Section 8.14 "Texture Minification"
+
+    Change the formula (8.7) under "Scale Factor and Level of Detail"
+    to read:
+
+    "lambda'(x,y) = lambda_base(x,y) + clamp(clamp(bias_shader) + clamp(lodBias))"
+
+    Add the third paragraph under "Scale Factor and Level of Detail":
+
+    "where lodBias is the texture unit's (signed) texture LOD bias
+    parameter clamped between the positive and negative values of the
+    implementation defined constant MAX_TEXTURE_LOD_BIAS_EXT."
+
+Errors
+
+    None
+
+New Implementation Dependent State
+
+    Add to Table 21.10: Textures (state per texture object)
+
+    Get Value              Type  Get Command        Initial Value   Description       Sec.
+    ---------------------  ----  -----------        --------------  ----------------  -----
+    TEXTURE_LOD_BIAS_QCOM  R     GetTexParameterfv  0.0             Texture LOD bias  8.14
+
+    Add to Table 21.12: Textures (state per sampler object)
+
+    Get Value              Type  Get Command            Initial Value   Description       Sec.
+    ---------------------  ----  -----------            --------------  ----------------  -----
+    TEXTURE_LOD_BIAS_QCOM  R     GetSamplerParameterfv  0.0             Texture LOD bias  8.14
+
+Issues
+
+    (1) Does this extension allow the same texture object to be used
+        by two different texture units for different LOD biases?
+
+        RESOLUTION: It works if you use different sampler objects bound
+        to the same texture object. If you set the default sampler
+        object via TexParameterf, you can only set one LOD bias as one
+        texture has only one default sampler.
+
+    (2) How does QCOM_texture_lod_bias differ from SGIX_texture_lod bias?
+
+        QCOM_texture_lod_bias adds a bias to lambda. The
+        SGIX_texture_lod_bias extension changes the computation of rho
+        (the log2 of which is lambda). The SGIX extension provides
+        separate biases in each texture dimension. The QCOM extension
+        does not provide any "directionality" in the LOD control.
+
+    (3) Does the texture LOD bias occur before or after the TEXTURE_MAX_LOD
+        and TEXTURE_MIN_LOD clamping?
+
+        RESOLUTION: BEFORE. This allows the texture LOD bias to still
+        be clamped within the max/min LOD range.
+
+Revision History
+
+    Rev.    Date       Author      Changes
+    ----  --------     --------    --------------------------
+    #01    9/6/2023   Caiqin Li   Initial draft.

@@ -32,9 +32,9 @@
 
 #include <vector>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/SharedFence.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/SharedFence.h"
 
 @protocol MTLSharedEvent;
 

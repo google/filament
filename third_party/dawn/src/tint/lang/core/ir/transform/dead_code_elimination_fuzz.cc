@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/transform/dead_code_elimination.h"
 #include "src/tint/lang/core/ir/validator.h"
 
@@ -39,5 +39,4 @@ Result<SuccessType> DeadCodeEliminationFuzzer(Module& ir, const fuzz::ir::Contex
 }  // namespace
 }  // namespace tint::core::ir::transform
 
-TINT_IR_MODULE_FUZZER(tint::core::ir::transform::DeadCodeEliminationFuzzer,
-                      tint::core::ir::transform::kDeadCodeEliminationCapabilities);
+TINT_IR_MODULE_FUZZER(tint::core::ir::transform::DeadCodeEliminationFuzzer);

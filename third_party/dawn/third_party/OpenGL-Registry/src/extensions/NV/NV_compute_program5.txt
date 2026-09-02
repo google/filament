@@ -1,0 +1,684 @@
+Name
+
+    NV_compute_program5
+
+Name Strings
+
+    GL_NV_compute_program5
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:         10/23/2012
+    NVIDIA Revision:            2
+
+Number
+
+    421
+
+Dependencies
+
+    OpenGL 4.0 (Core or Compatibiity Profile) is required.
+
+    This extension is written against the OpenGL 4.2 Specification
+    (Compatibility Profile).
+
+    NV_gpu_program4 and NV_gpu_program5 are required.
+
+    ARB_compute_shader is required.
+
+    This specification interacts with NV_shader_atomic_float.
+
+    This specification interacts with EXT_shader_image_load_store.
+
+Overview
+
+    This extension builds on the ARB_compute_shader extension to provide new
+    assembly compute program capability for OpenGL.  ARB_compute_shader adds
+    the basic functionality, including the ability to dispatch compute work.
+    This extension provides the ability to write a compute program in
+    assembly, using the same basic syntax and capability set found in the
+    NV_gpu_program4 and NV_gpu_program5 extensions.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <cap> parameter of Disable, Enable, and IsEnabled, 
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, 
+    and GetDoublev, and by the <target> parameter of ProgramStringARB,
+    BindProgramARB, ProgramEnvParameter4[df][v]ARB,
+    ProgramLocalParameter4[df][v]ARB, GetProgramEnvParameter[df]vARB, 
+    GetProgramLocalParameter[df]vARB, GetProgramivARB and
+    GetProgramStringARB:
+
+        COMPUTE_PROGRAM_NV                              0x90FB
+
+    Accepted by the <target> parameter of ProgramBufferParametersfvNV,
+    ProgramBufferParametersIivNV, and ProgramBufferParametersIuivNV,
+    BindBufferRangeNV, BindBufferOffsetNV, BindBufferBaseNV, and BindBuffer
+    and the <value> parameter of GetIntegerIndexedvEXT:
+
+        COMPUTE_PROGRAM_PARAMETER_BUFFER_NV             0x90FC
+
+    (Note:  Various enumerants from ARB_compute_shader will also be used by
+     this extension.)
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.X, GPU Programs, of NV_gpu_program4 (as modified by
+    NV_gpu_program5)
+
+    (insert after second paragraph)
+
+    Compute Programs
+
+    Compute programs are used to perform general purpose computations using a
+    three-dimensional array of program invocations (threads).  The compute
+    shader invocations are arranged into work groups specified by the
+    mandatory GROUP_SIZE declaration, each of which comprises a fixed-size,
+    three-dimensional array of program invocations.  One or more work groups
+    are scheduled for execution using the DispatchCompute or
+    DispatchComputeIndirect commands.
+
+    Each work group scheduled for execution will launch a separate program
+    invocation for each work group member.  While the program invocations in a
+    work group are launched together, they run independently after launch.
+    The BAR (barrier) instruction is available to synchronize program
+    invocations; an invocation stops at each BAR instruction until all
+    invocations in the work group have executed the BAR instruction.  Each
+    work group has an optional shared memory allocation (specified by the
+    SHARED_MEMORY declaration) that can be read or written by any invocations
+    of the work group.
+
+    Unlike other program types, compute program invocations have no inputs or
+    outputs interfacing with the rest of the pipeline.  Compute programs may
+    obtain inputs using mechanisms such as global loads, image loads, atomic
+    counter reads, shader storage buffer reads, and program parameters.
+    Built-in inputs are also provided to allow a compute shader invocation to
+    determine its position in the work group, the position of its work group
+    in the full dispatch, as well as the work group and full dispatch sizes.
+    Compute program results are expected to be written to globally accessible
+    memory using mechanisms such as global stores, image stores, atomic
+    counters, and shader storage buffers.
+
+
+    Modify Section 2.X.2, Program Grammar
+
+    (replace third paragraph)
+
+    Compute programs are required to begin with the header string "!!NVcp5.0".
+    This header string identifies the subsequent program body as being a
+    compute program and indicates that it should be parsed according to the
+    base NV_gpu_program5 grammar plus the additions below.  Program string
+    parsing begins with the character immediately following the header string.
+
+    (add the following grammar rules to the NV_gpu_program5 base grammar for
+     compute programs)
+
+    <declSequence>          ::= <declaration> <declSequence>
+
+    <instruction>           ::= <SpecialInstruction>
+
+    <opModifier>            ::= "CTA"
+
+    <namingStatement>       ::= <SHARED_statement>
+
+    <SHARED_statement>      ::= "SHARED" <establishName> <sharedSingleInit>
+                              | "SHARED" <establishName> <optArraySize> 
+                                <sharedMultipleInit>
+
+    <sharedSingleInit>      ::= "=" <sharedUseDS>
+
+    <sharedMultipleInit>    ::= "=" "{" <sharedItemList> "}"
+
+    <sharedItemList>        ::= <sharedUseDM>
+                              | <sharedUseDM> "," <sharedItemList>
+
+    <sharedUseV>            ::= <sharedVarName> <optArrayMem>
+
+    <sharedUseDS>           ::= <sharedBaseBinding> <arrayMemAbs>
+
+    <sharedUseDM>           ::= <sharedUseDS>
+                              | <sharedBaseBinding> <arrayRange>
+
+    <sharedBaseBinding>     ::= "program" "." "sharedmem"
+
+    <SpecialInstruction>    ::= "BAR"
+                              | "ATOMS" <opModifiers> <instResult> "," 
+                                <instOperandV> "," <sharedUseV>
+                              | "LDS" <opModifiers> <instResult> "," 
+                                <sharedUseV>
+                              | "STS" <opModifiers> <instOperandV> "," 
+                                <sharedUseV>
+
+    <declaration>           ::= "GROUP_SIZE" <int>
+                              | "GROUP_SIZE" <int> <int>
+                              | "GROUP_SIZE" <int> <int> <int>
+                              | "SHARED_MEMORY" <int>
+
+    <attribBasic>           ::= "invocation" "." "localid"
+                              | "invocation" "." "globalid"
+                              | "invocation" "." "groupid"
+                              | "invocation" "." "groupcount"
+                              | "invocation" "." "groupsize"
+                              | "invocation" "." "localindex"
+
+
+    (add the following subsection to Section 2.X.3.2, Program Attribute
+     Variables)
+
+    Compute program attribute variables describe the attributes of the current
+    program invocation.  Each DispatchCompute command produces a set of
+    program invocations arranged as a one-, two-, or three-dimensional array.
+    Figure X.1 illustrates a two-dimensional dispatch with a local work group
+    size of 8x4, and a total dispatch of 5x4 local workgroups.  Each
+    individual program invocation has a global one-, two-, or
+    three-dimensional global coordinate, which can be further decomposed into
+    a work group offset (in fixed-size work groups) and a local offset
+    relative to the origin of an invocation's work group.
+
+                +-------+-------+-------+-------+-------+
+                |       |       | work  |       |       |
+                |       |       | group |       |       |
+                |       |       | (2,3) |       |       |
+         (0,12) +-------+-------+-------+-------+-------+
+                |       |       |       |       |       |
+                |       |       |       |       |       |
+                |       | *     |       |       |       |
+          (0,8) +-------+-------+-------+-------+-------+
+                |       |       |       |       | work  |
+                |       |       |       |       | group |
+                |       |       |       |       | (4,1) |
+          (0,4) +-------+-------+-------+-------+-------+
+                | work  |       |       |       |       |
+                | group |       |       |       |       |
+                | (0,0) |       |       |       |       |
+                +-------+-------+-------+-------+-------+
+              (0,0)   (8,0)   (16,0)  (24,0)  (32,0)   
+
+      Figure X.1, Compute Dispatch.  The single invocation at the location
+      labeled "*" has a location (invocation.globalid) of (10,9).  The offset
+      relative to its local work group (invocation.localid) is (2,1).  Its
+      local work group has an offset (invocation.groupid) of (1,2), in units
+      of work groups.
+
+    The set of available compute program attribute bindings is enumerated in
+    Table X.1.  All bindings are considered four-component unsigned integer
+    vectors with the value of the fourth component undefined.
+
+      Attribute Binding          Components  Underlying State
+      -------------------------  ----------  ------------------------------
+      invocation.localid         (x,y,z,-)   offset relative to base of
+                                             work group
+
+      invocation.globalid        (x,y,z,-)   offset relative to the base
+                                             of the dispatched work
+
+      invocation.groupid         (x,y,z,-)   offset (in groups) of local work
+                                             group
+
+      invocation.groupcount      (x,y,z,-)   total local work group count
+
+      invocation.groupsize       (x,y,z,-)   number of invocations in each
+                                             dimension of the local work group
+
+      invocation.localindex      (x,-,-,-)   one-dimensional (flattened) index
+                                             in local workgroup
+
+      Table X.1, Compute Program Attribute Bindings.
+
+    If a compute attribute binding matches "invocation.localid", the "x", "y",
+    and "z" components of the invocation attribute variable are filled with
+    the "x", "y", "z" components, respectively, of the offset of the
+    invocation relative to the base of its local workgroup.  The "w" component
+    of the attribute is undefined.
+
+    If a compute attribute binding matches "invocation.globalid", the "x",
+    "y", and "z" components of the invocation attribute variable are filled
+    with the "x", "y", "z" components, respectively, of the offset of the
+    invocation relative to the full compute dispatch.  The "w" component of
+    the attribute is undefined.
+
+    If a compute attribute binding matches "invocation.groupid", the "x", "y",
+    and "z" components of the invocation attribute variable are filled with
+    the "x", "y", "z" components, respectively, of the offset of the local
+    work group (in groups) relative to the full compute dispatch.  The "w"
+    component of the attribute is undefined.
+
+    If a compute attribute binding matches "invocation.groupcount", the "x",
+    "y", and "z" components of the invocation attribute variable are filled
+    the "x", "y", and "z" dimensions, respectively, in local work groups of
+    the full compute dispatch.  The "w" component of the attribute is
+    undefined.
+
+    If a compute attribute binding matches "invocation.groupsize", the "x",
+    "y", and "z" components of the invocation attribute variable are filled
+    the "x", "y", and "z" dimensions, respectively, of the local work group,
+    as specified by the GROUP_SIZE declaration.  The "w" component of the
+    attribute is undefined.
+
+    If a compute attribute binding matches "invocation.localindex", the "x",
+    components of the invocation attribute variable is filled with a flattened
+    one-dimensional index of the invocation, which is derived as:
+
+      invocation.localid.z * invocation.groupsize.x * invocation.groupsize.y +
+      invocation.localid.y * invocation.groupsize.x +
+      invocation.localid.x
+
+    The "y", "z", and "w" components of the attribute are undefined.
+
+    For one-dimensional dispatches, the "y" components of
+    "invocation.localid", "invocation.globalid", and "invocation.groupid" will
+    be zero.  For one- and two- dimensional dispatches, the "z" components of
+    "invocation.localid", "invocation.globalid", and "invocation.groupid" will
+    be zero.  The same components of "invocation.groupcount" and
+    "invocation.groupsize" will be one in these cases.
+
+
+    (add the following subsection to section 2.X.3.5, Program Results.)
+
+    Compute programs have no result variables; all shader results must be
+    written to memory.
+
+
+    Add New Section 2.X.3.Y, Compute Program Shared Memory, after Section
+    2.X.3.6, Program Parameter Buffers
+
+    Compute program shared memory variables are arrays of basic machine units
+    from which data can be read or written using the LDS and STS instructions.
+    Compute program shared memory also supports atomic memory operations using
+    the ATOMS instruction.  The GL allocates a single block of shared memory
+    for each local work group, whose size in basic machine units is specified
+    by the "SHARED_MEMORY" statement.  The contents of compute program shared
+    memory are undefined when program execution for the local work group
+    begins and can be changed only by using the ATOMS or STS instructions.
+    Compute program shared memory variables are shared between all invocations
+    of a local work group.  Writes performed by one invocation will be visible
+    for any reads of the same memory from any other invocation executed after
+    the write.  Note that the order of reads and writes between different
+    invocations in a local work group is largely undefined, although the BAR
+    instruction can be used to introduce synchronization points for all
+    invocations in a local work group.
+
+    Shared memory variables may only be used as operands in the ATOMS, LDS,
+    and STS instructions; they may not be used by used as results or operands
+    in general instructions.  Shared memory variables must be declared
+    explicitly via the <SHARED_statement> grammar rule.  Shared memory
+    bindings can not be used directly in executable instructions.
+
+    Shader storage buffer variables may be declared as arrays, but all
+    bindings assigned to the array must use the same binding point(s) and must
+    increase consecutively.
+
+      Binding                        Components  Underlying State
+      -----------------------------  ----------  -----------------------------
+      program.sharedmem[a]           (x,x,x,x)   compute shared memory,
+                                                   element a
+      program.sharedmem[a..b]        (x,x,x,x)   compute shared memory,
+                                                   elements a through b
+      program.sharedmem              (x,x,x,x)   compute shared memory,
+                                                   all elements
+
+      Table X.3: Shared Memory Bindings.  <a> and <b> indicate individual
+      elements of shared memory.
+
+    If a shared memory binding matches "program.sharedmem[a]", the shared
+    memory variable is associated with basic machine element <a> of compute
+    shared memory.
+
+    For shared memory declarations, "program.sharedmem[a..b]" is equivalent to
+    specifying elements <a> through <b> of compute shared memory in order.
+
+    For shared memory declarations, "program.sharedmem" is equivalent to
+    specifying elements zero through <N>-1 of compute shared memory in order,
+    where <N> is the total shared memory size declared by the "SHARED_MEMORY"
+    statement.
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (add to the opcode table)
+
+                  Modifiers 
+      Instruction F I C S H D  Out Inputs    Description
+      ----------- - - - - - -  --- --------  --------------------------------
+      ATOMS       - - X - - -  s   v,su      atomic transaction to shared mem
+      BAR         - - - - - -  -   -         work group execution barrier
+      LDS         - - X X - F  v   su        load from shared memory
+      STS         - - - - - -  -   v,su      store to shared memory
+
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+      Modifier  Description
+      --------  -----------------------------------------------
+      CTA       Memory barrier orders only memory transactions
+                relative to invocations within local work group
+
+    (add to descriptions of opcode modifiers)
+
+    For the MEMBAR (memory barrier) instruction, the "CTA" modifier specifies
+    that memory transactions before and after the barrier are strongly ordered
+    as observed by any other shader invocation in the local work group.
+    
+
+    Modify Section 2.X.4.5, Program Memory Access, from NV_gpu_program5
+
+    (add to the end of the first paragraph) ... Additionally programs may load
+    from or store to shared memory via the ATOMS (atomic shared memory
+    operation), LDS (load from shared memory), and STS (store to shared
+    memory) instructions.
+
+    (modify miscellaneous other language referring to "buffer object memory"
+    to instead refer to "buffer object and shared memory")
+
+    (add hypothetical built-in functions SharedMemoryLoad() and
+    SharedMemoryStore() that behave similarly to BufferMemoryLoad() and
+    BufferMemoryStore(), except that they access local work group shared
+    memory instead of buffer object memory)
+
+
+    Add the following subsection to section 2.X.7, Program Declarations
+
+    Section 2.X.7.Y, Compute Program Declarations
+
+    Compute programs support two types of declaration statement, as described
+    below.
+
+    - Shader Thread Group Size (GROUP_SIZE)
+
+    The GROUP_SIZE statement declares the number of shader threads in a one-,
+    two-, or three-dimensional local work group.  The statement must have one
+    to three unsigned integer arguments.  Each argument must be less than or
+    equal to the value of the implementation-dependent limit
+    MAX_COMPUTE_LOCAL_WORK_SIZE for its corresponding dimension (X, Y, or Z).
+    A program will fail to load unless it contains exactly one GROUP_SIZE
+    declaration.
+
+
+    - Shared Memory Storage Size (SHARED_MEMORY)
+
+    The SHARED_MEMORY statement declares the size of the shared memory, in
+    basic machine units, available to the threads of each local work group.
+    The SHARED_MEMORY statement is optional, but a program will fail to load
+    if it includes multiple SHARED_MEMORY declarations, if it uses the the
+    ATOMS, LDS, or STS instructions in a program without a SHARED_MEMORY
+    declaration, if uses these instructions with an offset that would access
+    memory beyond the declared shared memory size, or if the declared shared
+    memory size is greater than the implementation-dependent limit
+    MAX_COMPUTE_SHARED_VARIABLE_SIZE.
+
+
+    (add the following subsection to section 2.X.8, Program Instruction Set.)
+
+    Section 2.X.8.Z, ATOMS:  Atomic Memory Operation (Shared Memory)
+
+    The ATOMS instruction performs an atomic memory operation by reading from
+    shared memory specified by the second unsigned integer scalar operand,
+    computing a new value based on the value read from memory and the first
+    (vector) operand, and then writing the result back to the same memory
+    address.  The memory transaction is atomic, guaranteeing that no other
+    write to the memory accessed will occur between the time it is read and
+    written by the ATOMS instruction.  The result of the ATOMS instruction is
+    the scalar value read from memory.  The second operand used for the ATOMS
+    instruction must correspond to a shared memory variable declared using the
+    "SHARED" statement; a program will fail to load if any other type of
+    operand is used for the second operand of an ATOMS instruction.
+
+    The ATOMS instruction has two required instruction modifiers.  The atomic
+    modifier specifies the type of operation to be performed.  The storage
+    modifier specifies the size and data type of the operand read from memory
+    and the base data type of the operation used to compute the value to be
+    written to memory.
+
+      atomic     storage
+      modifier   modifiers            operation
+      --------   ------------------   --------------------------------------
+       ADD       U32, S32, U64, F32   compute a sum
+       MIN       U32, S32             compute minimum
+       MAX       U32, S32             compute maximum
+       IWRAP     U32                  increment memory, wrapping at operand
+       DWRAP     U32                  decrement memory, wrapping at operand
+       AND       U32, S32             compute bit-wise AND
+       OR        U32, S32             compute bit-wise OR
+       XOR       U32, S32             compute bit-wise XOR
+       EXCH      U32, S32, U64, F32   exchange memory with operand
+       CSWAP     U32, S32, U64        compare-and-swap
+
+     Table X.Y, Supported atomic and storage modifiers for the ATOM
+     instruction.
+
+    Not all storage modifiers are supported by ATOMS, and the set of modifiers
+    allowed for any given instruction depends on the atomic modifier
+    specified.  Table X.Y enumerates the set of atomic modifiers supported by
+    the ATOMS instruction, and the storage modifiers allowed for each.
+
+      tmp0 = VectorLoad(op0);
+      result = SharedMemoryLoad(op1, storageModifier);
+      switch (atomicModifier) {
+      case ADD:
+        writeval = tmp0.x + result;
+        break;
+      case MIN:
+        writeval = min(tmp0.x, result);
+        break;
+      case MAX:
+        writeval = max(tmp0.x, result);
+        break;
+      case IWRAP:
+        writeval = (result >= tmp0.x) ? 0 : result+1; 
+        break;
+      case DWRAP:
+        writeval = (result == 0 || result > tmp0.x) ? tmp0.x : result-1;
+        break;
+      case AND:
+        writeval = tmp0.x & result;
+        break;
+      case OR:
+        writeval = tmp0.x | result;
+        break;
+      case XOR:
+        writeval = tmp0.x ^ result;
+        break;
+      case EXCH:
+        break;
+      case CSWAP:
+        if (result == tmp0.x) {
+          writeval = tmp0.y;
+        } else {
+          return result;  // no memory store
+        }
+        break;
+      }
+      SharedMemoryStore(op1, writeval, storageModifier);
+
+    ATOMS performs a scalar atomic operation.  The <y>, <z>, and <w>
+    components of the result vector are undefined.
+      
+    ATOMS supports no base data type modifiers, but requires exactly one
+    storage modifier.  The base data types of the result vector, and the first
+    (vector) operand are derived from the storage modifier.  The second
+    operand is always interpreted as a scalar unsigned integer.
+
+
+    Section 2.X.8.Z, BAR:  Execution Barrier
+
+    The BAR instruction synchronizes the execution of compute shader
+    invocations within a local work group.  When a compute shader invocation
+    executes the BAR instruction, it pauses until the same BAR instruction has
+    been executed by all invocations in the current local work group.  Once
+    all invocations have executed the BAR instruction, processing continues
+    with the instruction following the BAR instruction.
+
+    There is no compile-time restriction on the locations in a program where
+    BAR is allowed.  However, BAR instructions are not allowed in divergent
+    flow control; if any compute shader invocation in the work group executes
+    the BAR instruction, all compute shaders invocations must execute the
+    instruction.  Results of executing a BAR instruction are undefined and can
+    result in application hangs and/or program termination if the instruction
+    is issued:
+
+      * inside any IF/ELSE/ENDIF block where the results of the condition
+        evaluated by the IF instruction are not identical across the work
+        group;
+
+      * inside any iteration of REP/ENDREP block where at least one invocation
+        in the work group has skipped to the next iteration using the CONT
+        instruction, exited the loop using a BRK or RET instruction, or exited
+        the loop due to having completed the requested number of loop
+        iterations; or
+
+      * inside any subroutine (including main) where at least one invocation
+        in the work group has exited the subroutine using the RET instruction.
+
+    BAR has no operands and generates no result.
+
+
+    Section 2.X.8.Z, LDS:  Load from Shared Memory
+
+    The LDS instruction generates a result vector by fetching data from the
+    shared memory for the current local work group identified by the first
+    operand, as described in Section 2.X.4.5.  The single operand for the LDS
+    instruction must correspond to a shader shared memory variable declared
+    using the "SHARED" statement; a program will fail to load if any other
+    type of operand is used in an LDS instruction.
+
+      result = SharedMemoryLoad(op0, storageModifier);
+
+    LDS supports no base data type modifiers, but requires exactly one storage
+    modifier.  The base data type of the result vector is derived from the
+    storage modifier.
+
+
+    Replace Section 2.X.8.Z, MEMBAR:  Memory Barrier, as added by
+    EXT_shader_image_load_store
+
+    The MEMBAR instruction synchronizes memory transactions to ensure that
+    memory transactions resulting from any instruction executed by the thread
+    prior to the MEMBAR instruction complete prior to any memory transactions
+    issued after the instruction, as observed by other shader invocations.
+
+    The MEMBAR instruction has one optional instruction modifier.  If the CTA
+    instruction modifier is specified, memory transactions before and after
+    the barrier will be strongly ordered as observed by other shader
+    invocations in the same local work group.  However, it does not order
+    transactions as viewed by any other shader.  With the CTA modifier,
+    shaders not in the local work group may observe the results of memory
+    transactions issued after the MEMBAR instruction before those issued
+    before the MEMBAR instruction.  If the CTA instruction modifier is not
+    specified, all shader invocations will see the results of any memory
+    transaction issued before the MEMBAR instruction before those issued after
+    the MEMBAR instruction.
+
+    MEMBAR has no operands and generates no result.
+
+
+    Section 2.X.8.Z, STS:  Store to Shared Memory
+
+    The STS instruction writes the contents of the first vector operand to
+    shared memory for the current local work group identified by the second
+    operand, as described in Section 2.X.4.5.  This instruction generates no
+    result.  The second operand for the STS instruction must correspond to a
+    shared memory variable declared using the "SHARED" statement; a program
+    will fail to load if any other type of operand is used in an STS
+    instruction.
+
+      tmp0 = VectorLoad(op0);
+      SharedMemoryStore(op1, tmp0, storageModifier);
+
+    STS supports no base data type modifiers, but requires exactly one storage
+    modifier.  The base data type of the vector components of the first
+    operand is derived from the storage modifier.
+
+
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Dependencies on NV_shader_atomic_float
+
+    If NV_shader_atomic_float is not supported, the ADD and EXCH atomic
+    operations in the ATOMS instruction do not support the "F32" storage
+    modifier.
+
+Dependencies on EXT_shader_image_load_store
+
+    If EXT_shader_image_load_store is not supported, language describing the
+    "CTA" instruction modifier and modifying the MEMBAR instruction (as added
+    by EXT_shader_image_load_store) should be removed.
+
+Errors
+
+    None.
+
+New State
+
+    (Modify ARB_vertex_program, Table X.6 -- Program State)
+
+                                                      Initial
+    Get Value                    Type    Get Command  Value   Description               Sec.    Attribute
+    ---------                    ------- -----------  ------- ------------------------  ------  ---------
+    COMPUTE_PROGRAM_PARAMETER_   Z+      GetIntegerv  0       Active compute program    2.14.1  -
+      BUFFER_NV                                               buffer object binding
+    COMPUTE_PROGRAM_PARAMETER_   nxZ+    GetInteger-  0       Buffer objects bound for  2.14.1  -
+      BUFFER_NV                          IndexedvEXT          compute program use
+
+    Also shares buffer bindings and other state with the ARB_compute_shader
+    extension.
+
+New Implementation Dependent State
+
+    None, but shares implementation-dependent state with the
+    ARB_compute_shader extension.
+
+Issues
+
+    None.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+     2    10/23/12  pbrown    Remove the restriction forbidding the use of BAR
+                              inside potentially divergent flow control.
+                              Instead, we will allow BAR to be executed
+                              anywhere, but specify undefined results
+                              (including hangs or program termination) if the
+                              flow control is divergent (bug 9367).
+
+     1              pbrown    Internal spec development.

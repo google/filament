@@ -35,11 +35,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/HashUtils.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/ShaderModule.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ShaderModule.h"
 
 namespace dawn::native {
 
@@ -69,15 +69,16 @@ class ShaderModule final : public ShaderModuleBase {
         // Kept without defaults as they must be provided.
         raw_ptr<const ProgrammableStage> stage;
         raw_ptr<const PipelineLayout> layout;
-        ImmediateConstantMask immediateMask;
+        ImmediateMask immediateMask;
         raw_ptr<const absl::flat_hash_set<APIBindPoint>> ycbcrExternalTextures;
 
+        std::optional<uint32_t> polyfillPixelCenter = std::nullopt;
         bool emitPointSize = false;
-        bool polyfillPixelCenter = false;
+        bool pipelineUsesFramebufferFetch = false;
         bool needsMultisampledFramebufferFetch = false;
     };
 
-    ResultOrError<ModuleAndSpirv> GetHandleAndSpirv(const CompileParameters& p);
+    ResultOrError<ModuleAndSpirv> GetHandleAndSpirv(const CompileParameters& in);
 
   private:
     ShaderModule(Device* device,

@@ -1,0 +1,25 @@
+; RUN: FileCheck -DVALUE=10 -input-file %s %s
+; RUN: not FileCheck -DVALUE=20 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRMSG
+; RUN: not FileCheck -DVALUE10 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIEQ1
+; RUN: not FileCheck -D -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIEQ2
+; RUN: not FileCheck -D=10 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIVAR1
+; RUN: not FileCheck -D= -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRCLIVAR2
+; RUN: FileCheck -DVALUE= -check-prefix EMPTY -input-file %s %s 2>&1
+
+Value = 10
+; CHECK: Value = [[VALUE]]
+
+; ERRMSG: defines.txt:[[@LINE-2]]:10: error: expected string not found in input
+; ERRMSG: defines.txt:1:1: note: with variable "VALUE" equal to "20"
+; ERRMSG: defines.txt:[[@LINE-5]]:1: note: possible intended match here
+
+; ERRCLIEQ1: Missing equal sign in command-line definition '-DVALUE10'
+
+; ERRCLIEQ2: FileCheck{{[^:]*}}: for the -D option: requires a value!
+
+; ERRCLIVAR1: Missing pattern variable name in command-line definition '-D=10'
+
+; ERRCLIVAR2: Missing pattern variable name in command-line definition '-D='
+
+Empty value = @@
+; EMPTY: Empty value = @[[VALUE]]@

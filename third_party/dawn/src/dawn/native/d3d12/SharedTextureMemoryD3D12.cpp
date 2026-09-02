@@ -25,17 +25,17 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/SharedTextureMemoryD3D12.h"
+#include "src/dawn/native/d3d12/SharedTextureMemoryD3D12.h"
 
 #include <utility>
 
-#include "dawn/native/ChainUtils.h"
 #include "dawn/native/D3D12Backend.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/KeyedMutex.h"
-#include "dawn/native/d3d/UtilsD3D.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/TextureD3D12.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/KeyedMutex.h"
+#include "src/dawn/native/d3d/UtilsD3D.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/TextureD3D12.h"
 
 namespace dawn::native::d3d12 {
 

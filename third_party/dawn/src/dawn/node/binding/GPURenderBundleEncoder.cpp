@@ -88,7 +88,7 @@ void GPURenderBundleEncoder::setBindGroup(
     }
 
     enc_.SetBindGroup(index, bg, dynamicOffsetsDataLength,
-                      dynamicOffsetsData.Data() + dynamicOffsetsDataStart);
+                      DAWN_UNSAFE_TODO(dynamicOffsetsData.Data() + dynamicOffsetsDataStart));
 }
 
 void GPURenderBundleEncoder::setImmediates(Napi::Env env,

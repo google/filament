@@ -32,6 +32,7 @@
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/core_builtin_call.h"
+#include "src/tint/lang/core/ir/transform/lower_swizzle_view.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/ir/builtin_call.h"
@@ -219,16 +220,21 @@ core::BuiltinFn Convert(wgsl::BuiltinFn fn) {
 }  // namespace
 
 Result<SuccessType> Lower(core::ir::Module& mod) {
-    core::ir::AssertValid(mod,
-                          core::ir::Capabilities{
-                              core::ir::Capability::kAllowMultipleEntryPoints,
-                              core::ir::Capability::kAllowOverrides,
-                              core::ir::Capability::kAllow8BitIntegers,
-                          },
-                          "before wgsl.Lower");
+    core::ir::AssertValid(mod, "before wgsl.Lower");
 
     core::ir::Builder b{mod};
     core::type::Manager& ty{mod.Types()};
+
+    auto ConvertCall = [&](wgsl::ir::BuiltinCall* call) {
+        Vector<core::ir::Value*, 8> args(call->Args());
+        auto* replacement =
+            b.CallWithResult(call->DetachResult(), Convert(call->Func()), std::move(args));
+        if (!call->ExplicitTemplateParams().IsEmpty()) {
+            replacement->SetExplicitTemplateParams(call->ExplicitTemplateParams());
+        }
+        call->ReplaceWith(replacement);
+    };
+
     for (auto* inst : mod.Instructions()) {
         if (auto* call = inst->As<wgsl::ir::BuiltinCall>()) {
             switch (call->Func()) {
@@ -240,7 +246,7 @@ Result<SuccessType> Lower(core::ir::Module& mod) {
                     //    %value = call workgroupUniformLoad %ptr
                     // With:
                     //    call workgroupBarrier
-                    //    %value = {load || atomicLoad} &ptr
+                    //    %value = {load || atomicLoad} %ptr
                     //    call workgroupBarrier
                     b.InsertBefore(call, [&] {
                         b.Call(ty.void_(), core::BuiltinFn::kWorkgroupBarrier);
@@ -254,20 +260,94 @@ Result<SuccessType> Lower(core::ir::Module& mod) {
                     });
                     break;
                 }
-                default: {
-                    Vector<core::ir::Value*, 8> args(call->Args());
-                    auto* replacement = b.CallWithResult(call->DetachResult(),
-                                                         Convert(call->Func()), std::move(args));
-                    if (!call->ExplicitTemplateParams().IsEmpty()) {
-                        replacement->SetExplicitTemplateParams(call->ExplicitTemplateParams());
+                case BuiltinFn::kSubgroupMatrixLoad:
+                case BuiltinFn::kSubgroupMatrixStore: {
+                    // TODO(529415904): Remove after deprecated variants removed.
+                    const bool is_deprecated =
+                        (call->Func() == wgsl::BuiltinFn::kSubgroupMatrixLoad &&
+                         call->ExplicitTemplateParams().Length() == 1) ||
+                        (call->Func() == wgsl::BuiltinFn::kSubgroupMatrixStore &&
+                         call->ExplicitTemplateParams().IsEmpty());
+                    if (is_deprecated) {
+                        // Replace deprecated variants with templated majorness variants.
+                        b.InsertBefore(call, [&] {
+                            const bool is_load =
+                                call->Func() == wgsl::BuiltinFn::kSubgroupMatrixLoad;
+                            auto* offset = call->Args()[1];
+                            const uint32_t majorness_idx = is_load ? 2 : 3;
+                            auto* majorness = call->Args()[majorness_idx]->As<core::ir::Constant>();
+                            const uint32_t stride_idx = is_load ? 3 : 4;
+                            auto* stride = call->Args()[stride_idx];
+                            auto* mat_ty =
+                                is_load ? call->Result()->Type()->As<core::type::SubgroupMatrix>()
+                                        : call->Args()[2]->Type()->As<core::type::SubgroupMatrix>();
+                            auto* arr_ty =
+                                call->Args()[0]->Type()->UnwrapPtr()->As<core::type::Array>();
+
+                            Vector<core::ir::TemplateParameter, 2> templates;
+                            if (is_load) {
+                                templates.Push(call->ExplicitTemplateParams()[0]);
+                            }
+                            templates.Push(majorness->Value()->ValueAs<bool>()
+                                               ? core::Majorness::kColMajor
+                                               : core::Majorness::kRowMajor);
+
+                            Vector<core::ir::Value*, 3> new_args;
+                            new_args.Push(call->Args()[0]);
+
+                            const uint32_t scale =
+                                arr_ty->ImplicitStride() / mat_ty->Type()->Size();
+
+                            // Convert in terms of array elements.
+                            if (auto* const_offset = offset->As<core::ir::Constant>()) {
+                                auto offset_val = const_offset->Value()->ValueAs<uint32_t>();
+                                offset = b.Constant(core::u32(offset_val / scale));
+                            } else if (scale != 1) {
+                                offset = b.InsertBitcastIfNeeded(ty.u32(), offset);
+                                offset = b.Divide(offset, core::u32(arr_ty->ImplicitStride() /
+                                                                    mat_ty->Type()->Size()))
+                                             ->Result();
+                            }
+                            new_args.Push(offset);
+
+                            if (!is_load) {
+                                new_args.Push(call->Args()[2]);
+                            }
+
+                            // Convert in terms of array elements.
+                            if (auto* const_stride = stride->As<core::ir::Constant>()) {
+                                auto stride_val = const_stride->Value()->ValueAs<uint32_t>();
+                                stride = b.Constant(core::u32(stride_val / scale));
+                            } else if (scale != 1) {
+                                stride = b.InsertBitcastIfNeeded(ty.u32(), stride);
+                                stride = b.Divide(stride, core::u32(arr_ty->ImplicitStride() /
+                                                                    mat_ty->Type()->Size()))
+                                             ->Result();
+                            }
+                            new_args.Push(stride);
+
+                            b.CallExplicitWithResult<core::ir::CoreBuiltinCall>(
+                                call->DetachResult(),
+                                is_load ? core::BuiltinFn::kSubgroupMatrixLoad
+                                        : core::BuiltinFn::kSubgroupMatrixStore,
+                                templates, new_args);
+                        });
+                        break;
                     }
-                    call->ReplaceWith(replacement);
+                    ConvertCall(call);
+                    break;
+                }
+                default: {
+                    ConvertCall(call);
                     break;
                 }
             }
             call->Destroy();
         }
     }
+
+    TINT_CHECK_RESULT(core::ir::transform::LowerSwizzleView(mod));
+
     return Success;
 }
 

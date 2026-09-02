@@ -25,16 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/BindGroupMTL.h"
+#include "src/dawn/native/metal/BindGroupMTL.h"
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/metal/BindGroupLayoutMTL.h"
-#include "dawn/native/metal/BufferMTL.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/SamplerMTL.h"
-#include "dawn/native/metal/TextureMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/metal/BindGroupLayoutMTL.h"
+#include "src/dawn/native/metal/BufferMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/SamplerMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
 
 namespace dawn::native::metal {
 
@@ -105,17 +105,17 @@ MaybeError BindGroup::InitializeImpl() {
                 // Static samplers are handled in the frontend.
                 // TODO(crbug.com/dawn/2482): Implement static samplers in the
                 // Metal backend.
-                DAWN_CHECK(false);
+                DAWN_UNREACHABLE();
             },
             [&](const TextureBindingInfo&) { HandleTextureBinding(); },
             [&](const StorageTextureBindingInfo&) { HandleTextureBinding(); },
             [&](const TexelBufferBindingInfo&) {
                 // Metal does not support texel buffers.
                 // TODO(crbug/382544164): Prototype texel buffer feature
-                DAWN_CHECK(false);
+                DAWN_UNREACHABLE();
             },
-            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); },
-            [](const ExternalTextureBindingInfo&) { DAWN_CHECK(false); });
+            [](const InputAttachmentBindingInfo&) { DAWN_UNREACHABLE(); },
+            [](const ExternalTextureBindingInfo&) { DAWN_UNREACHABLE(); });
     }
 
     return {};

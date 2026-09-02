@@ -34,19 +34,17 @@
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/CoreFoundationRef.h"
-#include "dawn/common/NSRef.h"
 #include "dawn/native/DawnNative.h"
 #include "dawn/native/MetalBackend.h"
-#include "dawn/native/Texture.h"
+#include "src/dawn/common/CoreFoundationRef.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/Texture.h"
 
 namespace dawn::native::metal {
 
 class CommandRecordingContext;
 class Device;
 class SharedTextureMemory;
-
-MTLPixelFormat MetalPixelFormat(const DeviceBase* device, wgpu::TextureFormat format);
 
 class Texture final : public TextureBase {
   public:

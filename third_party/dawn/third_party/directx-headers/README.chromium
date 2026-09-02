@@ -1,10 +1,10 @@
 Name: DirectX-Headers
 Short Name: DirectX-Headers
 URL: https://github.com/microsoft/DirectX-Headers
-Update Mechanism: Manual
+Update Mechanism: Autoroll
 Security Critical: no
 Version: N/A
-Revision: DEPS
+Revision: 980971e835876dc0cde415e8f9bc646e64667bf7
 License: MIT
 License File: LICENSE
 Shipped: no

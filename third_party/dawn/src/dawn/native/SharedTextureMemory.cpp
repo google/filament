@@ -25,16 +25,17 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/SharedTextureMemory.h"
+#include "src/dawn/native/SharedTextureMemory.h"
 
 #include <utility>
 
-#include "dawn/common/WeakRef.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/SharedFence.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/WeakRef.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/SharedFence.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
@@ -140,7 +141,7 @@ MaybeError SharedTextureMemoryBase::GetProperties(SharedTextureMemoryProperties*
             !GetDevice()->HasFeature(Feature::SharedTextureMemoryAHardwareBuffer),
             "SharedTextureMemory properties (%s) have a chained "
             "SharedTextureMemoryAHardwareBufferProperties without the %s feature being set.",
-            this, ToAPI(Feature::SharedTextureMemoryAHardwareBuffer));
+            this, ToCppAPI(Feature::SharedTextureMemoryAHardwareBuffer));
     }
 
     DAWN_TRY(GetChainedProperties(unpacked));
@@ -174,7 +175,7 @@ ResultOrError<Ref<TextureBase>> SharedTextureMemoryBase::CreateTexture(
     DAWN_TRY(GetDevice()->ValidateIsAlive());
     DAWN_TRY(GetDevice()->ValidateObject(this));
 
-    TextureDescriptor reifiedDescriptor = rawDescriptor->WithTrivialFrontendDefaults();
+    TextureDescriptor reifiedDescriptor = WithTrivialFrontendDefaults(*rawDescriptor);
     UnpackedPtr<TextureDescriptor> descriptor;
     DAWN_TRY_ASSIGN(descriptor, ValidateAndUnpack(&reifiedDescriptor));
 
@@ -216,17 +217,13 @@ Ref<SharedResourceMemoryContents> SharedTextureMemoryBase::CreateContents() {
     return AcquireRef(new SharedTextureMemoryContents(GetWeakRef(this)));
 }
 
-SharedTextureMemoryContents* SharedTextureMemoryBase::GetContents() const {
-    return static_cast<SharedTextureMemoryContents*>(SharedResourceMemory::GetContents());
-}
-
 void APISharedTextureMemoryEndAccessStateFreeMembers(WGPUSharedTextureMemoryEndAccessState cState) {
     auto* state = reinterpret_cast<SharedTextureMemoryBase::EndAccessState*>(&cState);
-    for (size_t i = 0; i < state->fenceCount; ++i) {
-        state->fences[i]->APIRelease();
+    for (SharedFenceBase* fence : state->fences) {
+        fence->APIRelease();
     }
-    delete[] state->fences;
-    delete[] state->signaledValues;
+    delete[] state->fences.data();
+    delete[] state->signaledValues.data();
 }
 
 }  // namespace dawn::native

@@ -25,14 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/QuerySet.h"
+#include "src/dawn/native/QuerySet.h"
 
-#include <set>
-
-#include "dawn/native/Device.h"
-#include "dawn/native/Features.h"
 #include "dawn/native/ObjectType_autogen.h"
 #include "dawn/native/ValidationUtils_autogen.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/Device.h"
 
 namespace dawn::native {
 
@@ -76,12 +74,16 @@ MaybeError ValidateQuerySetDescriptor(DeviceBase* device, const QuerySetDescript
     return {};
 }
 
+uint32_t ToQueryStorageSize(QueryIndex count) {
+    return uint32_t{count} * kSingleQueryStorageSize;
+}
+
 QuerySetBase::QuerySetBase(DeviceBase* device, const QuerySetDescriptor* descriptor)
     : ApiObjectBase(device, descriptor->label),
       mQueryType(descriptor->type),
       mQueryCount(descriptor->count),
-      mState(QuerySetState::Available) {
-    mQueryAvailability.resize(descriptor->count);
+      mState(QuerySetState::Available),
+      mQueryAvailability(QueryIndex{descriptor->count}) {
     GetObjectTrackingList()->Track(this);
 }
 
@@ -94,7 +96,7 @@ QuerySetBase::QuerySetBase(DeviceBase* device,
 
 QuerySetBase::~QuerySetBase() {
     // Uninitialized or already destroyed
-    DAWN_ASSERT(mState == QuerySetState::Unavailable || mState == QuerySetState::Destroyed);
+    DAWN_CHECK(mState == QuerySetState::Unavailable || mState == QuerySetState::Destroyed);
 }
 
 void QuerySetBase::DestroyImpl(DestroyReason reason) {
@@ -122,20 +124,29 @@ wgpu::QueryType QuerySetBase::GetQueryType() const {
     return mQueryType;
 }
 
-uint32_t QuerySetBase::GetQueryCount() const {
+QueryIndex QuerySetBase::GetQueryCount() const {
     return mQueryCount;
 }
 
-const std::vector<bool>& QuerySetBase::GetQueryAvailability() const {
-    return mQueryAvailability;
+bool QuerySetBase::IsQueryAvailable(QueryIndex index) const {
+    return mQueryAvailability[index];
 }
 
-void QuerySetBase::SetQueryAvailability(uint32_t index, bool available) {
-    mQueryAvailability[index] = available;
+bool QuerySetBase::AreAllQueriesAvailable(QueryIndex first, QueryIndex count) const {
+    for (QueryIndex i : Range(first, first + count)) {
+        if (!mQueryAvailability[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void QuerySetBase::MarkQueryAvailable(QueryIndex index) {
+    mQueryAvailability[index] = true;
 }
 
 MaybeError QuerySetBase::ValidateCanUseInSubmitNow() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     DAWN_INVALID_IF(mState == QuerySetState::Destroyed, "%s used while destroyed.", this);
     return {};
 }
@@ -149,7 +160,7 @@ wgpu::QueryType QuerySetBase::APIGetType() const {
 }
 
 uint32_t QuerySetBase::APIGetCount() const {
-    return mQueryCount;
+    return uint32_t{mQueryCount};
 }
 
 }  // namespace dawn::native

@@ -34,6 +34,7 @@ main.star: lucicfg configuration for Dawn's standalone builers.
 load("@chromium-luci//builders.star", "os")
 load("@chromium-luci//chromium_luci.star", "chromium_luci")
 load("@chromium-luci//consoles.star", "consoles")
+load("//project.star", "ACTIVE_MILESTONES")
 
 # Use LUCI Scheduler BBv2 names and add Scheduler realms configs.
 lucicfg.enable_experiment("crbug.com/1182002")
@@ -46,6 +47,10 @@ lucicfg.config(
         "builders/gn_args_locations.json",
         "luci/commit-queue.cfg",
         "luci/cr-buildbucket.cfg",
+        "luci/luci-analysis.cfg",
+        "luci/luci-analysis-dev.cfg",
+        "luci/luci-bisection.cfg",
+        "luci/luci-bisection-dev.cfg",
         "luci/luci-logdog.cfg",
         "luci/luci-milo.cfg",
         "luci/luci-notify.cfg",
@@ -319,6 +324,74 @@ luci.gitiles_poller(
     ],
 )
 
+# Notifiers
+
+luci.notifier(
+    name = "gardener-notifier",
+    notify_rotation_urls = [
+        "https://chrome-ops-rotation-proxy.appspot.com/current/grotation:webgpu-gardener",
+    ],
+    on_occurrence = ["FAILURE", "INFRA_FAILURE"],
+)
+
+# CQ Setup
+
+luci.cq(
+    status_host = "chromium-cq-status.appspot.com",
+    submit_max_burst = 4,
+    submit_burst_delay = 480 * time.second,
+    gerrit_listener_type = cq.GERRIT_LISTENER_TYPE_LEGACY_POLLER,
+)
+
+def _create_dawn_cq_group(name, refs, refs_exclude = None):
+    luci.cq_group(
+        name = name,
+        watch = cq.refset(
+            "https://dawn.googlesource.com/dawn",
+            refs = refs,
+            refs_exclude = refs_exclude,
+        ),
+        acls = [
+            acl.entry(
+                acl.CQ_COMMITTER,
+                groups = "project-dawn-submit-access",
+            ),
+            acl.entry(
+                acl.CQ_DRY_RUNNER,
+                groups = "project-dawn-tryjob-access",
+            ),
+            acl.entry(
+                acl.CQ_NEW_PATCHSET_RUN_TRIGGERER,
+                groups = "project-dawn-tryjob-access",
+            ),
+        ],
+        retry_config = cq.retry_config(
+            single_quota = 1,
+            global_quota = 2,
+            failure_weight = 1,
+            transient_failure_weight = 1,
+            timeout_weight = 2,
+        ),
+        user_limit_default = cq.user_limit(
+            name = "default-limit",
+            run = cq.run_limits(max_active = 4),
+        ),
+    )
+
+def _create_branch_groups():
+    for milestone, details in ACTIVE_MILESTONES.items():
+        _create_dawn_cq_group(
+            "Dawn-CQ-" + milestone,
+            [details.ref],
+        )
+
+_create_dawn_cq_group(
+    "Dawn-CQ",
+    ["refs/heads/.+"],
+    [details.ref for details in ACTIVE_MILESTONES.values()],
+)
+_create_branch_groups()
+
 # Views
 
 luci.milo(
@@ -330,6 +403,11 @@ consoles.console_view(
     title = "Dawn CI Builders",
     repo = "https://dawn.googlesource.com/dawn",
     refs = ["refs/heads/main"],
+)
+
+consoles.list_view(
+    name = "exp",
+    title = "Dawn experimental CI Builders",
 )
 
 consoles.list_view(
@@ -348,10 +426,33 @@ exec("//recipes.star")
 exec("//tests.star")
 
 # Handle any other builders defined in other files.
+exec("//bazel_ci.star")
+exec("//bazel_try.star")
 exec("//chromium_try.star")
 exec("//cmake_ci.star")
 exec("//cmake_try.star")
-exec("//legacy_builders.star")
 exec("//gn_standalone_ci.star")
 exec("//gn_standalone_try.star")
 exec("//trusted_robots.star")
+
+# Just copy LUCI Bisection config to generated outputs.
+lucicfg.emit(
+    dest = "luci/luci-bisection.cfg",
+    data = io.read_file("luci-bisection.cfg"),
+)
+
+lucicfg.emit(
+    dest = "luci/luci-bisection-dev.cfg",
+    data = io.read_file("luci-bisection-dev.cfg"),
+)
+
+# Just copy LUCI Analysis config to generated outputs.
+lucicfg.emit(
+    dest = "luci/luci-analysis.cfg",
+    data = io.read_file("luci-analysis.cfg"),
+)
+
+lucicfg.emit(
+    dest = "luci/luci-analysis-dev.cfg",
+    data = io.read_file("luci-analysis-dev.cfg"),
+)

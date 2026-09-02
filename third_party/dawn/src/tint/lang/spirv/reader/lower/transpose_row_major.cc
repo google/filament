@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/spirv/reader/lower/transpose_row_major.h"
 
+#include <unordered_set>
 #include <utility>
 
 #include "src/tint/lang/core/ir/builder.h"
@@ -44,18 +45,10 @@ constexpr std::string_view kTintLoadRowMajor = "tint_load_row_major_column";
 constexpr std::string_view kTintTransposeRowMajorArray = "tint_transpose_row_major_array";
 constexpr std::string_view kTintStoreRowMajor = "tint_store_row_major_column";
 
-/// PIMPL state for the transform.
 struct State {
-    /// The IR module.
     core::ir::Module& ir;
-
-    /// The IR builder.
     core::ir::Builder b{ir};
-
-    /// The type manager.
     core::type::Manager& ty{ir.Types()};
-
-    /// The symbol manager.
     SymbolTable& sym{ir.symbols};
 
     // A map from a (type, is_row_major) pair to it's replacement (which maybe the same as the
@@ -93,6 +86,9 @@ struct State {
     /// Instructions which have been processed
     Hashset<core::ir::InstructionResult*, 32> processed_instructions{};
 
+    /// Results with the type replaced
+    std::unordered_set<core::ir::Value*> replaced_result_types{};
+
     /// Process the module.
     void Process() {
         Vector<core::ir::Instruction*, 4> instructions_to_process;
@@ -101,7 +97,7 @@ struct State {
             // structure that uses a row-major attribute.
             for (uint32_t i = 0; i < inst->Operands().Length(); ++i) {
                 if (auto* constant = As<core::ir::Constant>(inst->Operands()[i])) {
-                    auto* new_constant = RewriteConstant(constant->Value(), false);
+                    auto* new_constant = TransposeRowMajorMatricesInConstant(constant->Value());
                     if (new_constant != constant->Value()) {
                         inst->SetOperand(i, b.Constant(new_constant));
                     }
@@ -180,18 +176,26 @@ struct State {
             return;
         }
 
+        const core::type::Struct* new_struct_ty =
+            RewriteType(struct_type, false)->As<core::type::Struct>();
+
+        const core::type::Struct* original_ty = struct_to_original.GetOr(new_struct_ty, nullptr);
+        if (original_ty == nullptr) {
+            return;
+        }
+
         b.InsertBefore(construct, [&] {
             Vector<core::ir::Value*, 8> new_operands;
             for (uint32_t i = 0; i < construct->Operands().Length(); i++) {
                 auto* operand = construct->Operands()[i];
-                auto* member_type = struct_type->Members()[i]->Type();
-                if (member_type != operand->Type()) {
+                auto* member_type = original_ty->Members()[i]->Type();
+                if (member_type != operand->Type() || original_ty->Members()[i]->RowMajor()) {
                     tint::Switch(
                         member_type,
                         [&](const core::type::Matrix*) {
-                            new_operands.Push(
-                                b.Call(member_type, core::BuiltinFn::kTranspose, operand)
-                                    ->Result());
+                            new_operands.Push(b.Call(new_struct_ty->Members()[i]->Type(),
+                                                     core::BuiltinFn::kTranspose, operand)
+                                                  ->Result());
                         },
                         [&](const core::type::Array*) {
                             // TODO(437140112): Add support for arrays of matrices
@@ -212,14 +216,13 @@ struct State {
         auto* src_to = sve->To()->As<core::ir::InstructionResult>();
         TINT_ASSERT(src_to);
 
-        auto* src_access = src_to->Instruction()->As<core::ir::Access>();
-        TINT_ASSERT(src_access);
+        auto* src_inst = src_to->Instruction();
 
         auto access_idx = access_to_vector_index.Get(sve->To());
         TINT_ASSERT(access_idx);
 
         core::ir::Access* new_access = nullptr;
-        b.InsertAfter(src_access, [&] {
+        b.InsertAfter(src_inst, [&] {
             auto* src_ty = src_to->Type()->As<core::type::Pointer>();
             TINT_ASSERT(src_ty);
 
@@ -228,14 +231,14 @@ struct State {
 
             auto* new_ptr =
                 ty.ptr(src_ty->AddressSpace(), ty.vec(src_mat->Type(), src_mat->Rows()));
-            new_access = b.Access(new_ptr, src_access, Vector{sve->Index()});
+            new_access = b.Access(new_ptr, src_to, Vector{sve->Index()});
 
             b.InsertAfter(sve,
                           [&] { b.StoreVectorElement(new_access, *access_idx, sve->Value()); });
             sve->Destroy();
         });
 
-        instructions_to_remove_if_unused.Push(src_access);
+        instructions_to_remove_if_unused.Push(src_inst);
     }
 
     // This is a load vector element that is coming from a matrix which we've transposed the size
@@ -244,14 +247,13 @@ struct State {
         auto* src_result = lve->From()->As<core::ir::InstructionResult>();
         TINT_ASSERT(src_result);
 
-        auto* src_access = src_result->Instruction()->As<core::ir::Access>();
-        TINT_ASSERT(src_access);
+        auto* src_inst = src_result->Instruction();
 
         auto access_idx = access_to_vector_index.Get(lve->From());
         TINT_ASSERT(access_idx);
 
         core::ir::Access* new_access = nullptr;
-        b.InsertAfter(src_access, [&] {
+        b.InsertAfter(src_inst, [&] {
             auto* src_ty = src_result->Type()->As<core::type::Pointer>();
             TINT_ASSERT(src_ty);
 
@@ -260,7 +262,7 @@ struct State {
 
             auto* new_ptr =
                 ty.ptr(src_ty->AddressSpace(), ty.vec(src_mat->Type(), src_mat->Rows()));
-            new_access = b.Access(new_ptr, src_access, Vector{lve->Index()});
+            new_access = b.Access(new_ptr, src_result, Vector{lve->Index()});
 
             b.InsertAfter(lve, [&] {
                 b.LoadVectorElementWithResult(lve->DetachResult(), new_access, *access_idx);
@@ -268,7 +270,7 @@ struct State {
             lve->Destroy();
         });
 
-        instructions_to_remove_if_unused.Push(src_access);
+        instructions_to_remove_if_unused.Push(src_inst);
     }
 
     void ReplaceAccess(core::ir::Access* access) {
@@ -321,7 +323,8 @@ struct State {
         }
 
         // The thing we're accessing has changed, so we need to change.
-        if (!indexed_through_row_major && cur_ty != access->Result()->Type()->UnwrapPtr()) {
+        if (!indexed_through_row_major && (replaced_result_types.contains(access->Object()) ||
+                                           cur_ty != access->Result()->Type()->UnwrapPtr())) {
             ReplacePointerAccess(access, parent_ty, cur_ty);
             return;
         }
@@ -370,10 +373,9 @@ struct State {
         // the access result type, and if changed, update the uses of this access
         if (cur_ty->Is<core::type::Matrix>() || cur_ty->Is<core::type::Array>()) {
             auto* new_access_ty = RewriteType(access->Result()->Type(), true);
-            if (new_access_ty != access->Result()->Type()) {
-                access->Result()->SetType(new_access_ty);
-                results_to_update.Push(access->Result());
-            }
+            access->Result()->SetType(new_access_ty);
+            replaced_result_types.insert(access->Result());
+            results_to_update.Push(access->Result());
             return;
         }
 
@@ -384,12 +386,26 @@ struct State {
             TINT_ASSERT(parent_ty != nullptr);
             auto* idx = access->PopLastIndex();
 
+            if (access->Indices().empty()) {
+                core::ir::Let* let = nullptr;
+                b.InsertBefore(access, [&] {
+                    let = b.LetWithResult(access->DetachResult(), access->Object());
+                });
+                let->Result()->SetType(let->Value()->Type());
+                replaced_result_types.insert(let->Result());
+                access_to_vector_index.Add(let->Result(), idx);
+                results_to_update.Push(let->Result());
+                instructions_to_remove_if_unused.Push(access);
+                return;
+            }
+
             /// The access now returns the transposed matrix
             auto* new_access_ty = access->Result()->Type();
             if (auto* access_ptr = access->Result()->Type()->As<core::type::Pointer>()) {
                 new_access_ty = ty.ptr(access_ptr->AddressSpace(), parent_ty, access_ptr->Access());
             }
             access->Result()->SetType(new_access_ty);
+            replaced_result_types.insert(access->Result());
 
             access_to_vector_index.Add(access->Result(), idx);
             results_to_update.Push(access->Result());
@@ -634,7 +650,7 @@ struct State {
 
     const core::type::Type* RewriteArray(const core::type::Array* arr, bool decorated_row_major) {
         auto* elem_ty = RewriteType(arr->ElemType(), decorated_row_major);
-        if (elem_ty == arr->ElemType()) {
+        if (!decorated_row_major && elem_ty == arr->ElemType()) {
             return arr;
         }
 
@@ -680,23 +696,83 @@ struct State {
         return new_struct;
     }
 
-    const core::constant::Value* RewriteConstant(const core::constant::Value* constant,
-                                                 bool is_row_major) {
+    const core::constant::Value* TransposeRowMajorMatricesInConstant(
+        const core::constant::Value* constant) {
         auto* orig_type = constant->Type();
-        auto* new_type = RewriteType(orig_type, is_row_major);
-        if (new_type == orig_type) {
-            return constant;
-        }
 
         return tint::Switch(
-            new_type,  //
-            [&](const core::type::Matrix* mat) {
-                if (!is_row_major) {
+            orig_type,
+            [&](const core::type::Struct* str) -> const core::constant::Value* {
+                auto* new_struct = RewriteType(str, false)->As<core::type::Struct>();
+                if (new_struct == str) {
                     return constant;
                 }
 
-                auto* orig_mat = orig_type->As<core::type::Matrix>();
-                TINT_ASSERT(orig_mat);
+                auto* original_ty = struct_to_original.GetOr(new_struct, nullptr);
+                TINT_ASSERT(original_ty);
+
+                Vector<const core::constant::Value*, 16> elements;
+                elements.Reserve(str->Members().Length());
+
+                bool changed = false;
+                for (size_t i = 0; i < original_ty->Members().Length(); ++i) {
+                    auto* orig_mem = original_ty->Members()[i];
+                    auto* value = constant->Index(i);
+                    auto* new_mem_ty = new_struct->Members()[i]->Type();
+
+                    if (orig_mem->RowMajor()) {
+                        auto* transposed_value = TransposeRowMajorMatrixOrArray(value, new_mem_ty);
+                        elements.Push(transposed_value);
+                        changed = true;
+                    } else {
+                        auto* new_value = TransposeRowMajorMatricesInConstant(value);
+                        elements.Push(new_value);
+                        if (new_value != value) {
+                            changed = true;
+                        }
+                    }
+                }
+
+                if (changed) {
+                    return ir.constant_values.Composite(new_struct, std::move(elements));
+                }
+                return constant;
+            },
+            [&](const core::type::Array* arr) -> const core::constant::Value* {
+                auto* new_arr = RewriteType(arr, false)->As<core::type::Array>();
+                if (new_arr == arr) {
+                    return constant;
+                }
+
+                Vector<const core::constant::Value*, 16> elements;
+                bool changed = false;
+                for (uint32_t i = 0; i < constant->NumElements(); i++) {
+                    auto* value = constant->Index(i);
+                    auto* new_value = TransposeRowMajorMatricesInConstant(value);
+                    elements.Push(new_value);
+                    if (new_value != value) {
+                        changed = true;
+                    }
+                }
+
+                if (changed) {
+                    return ir.constant_values.Composite(new_arr, std::move(elements));
+                }
+                return constant;
+            },
+            [&](Default) { return constant; });
+    }
+
+    const core::constant::Value* TransposeRowMajorMatrixOrArray(
+        const core::constant::Value* constant,
+        const core::type::Type* new_type) {
+        auto* orig_type = constant->Type();
+
+        return tint::Switch(
+            orig_type,
+            [&](const core::type::Matrix*) -> const core::constant::Value* {
+                auto* mat = new_type->As<core::type::Matrix>();
+                TINT_ASSERT(mat);
                 TINT_ASSERT(constant->NumElements() == mat->Rows());
 
                 Vector<const core::constant::Value*, 4> columns;
@@ -714,57 +790,25 @@ struct State {
 
                 return ir.constant_values.Composite(new_type, std::move(columns));
             },
-            [&](const core::type::Array*) {
-                if (!is_row_major) {
-                    return constant;
-                }
+            [&](const core::type::Array*) -> const core::constant::Value* {
+                auto* new_arr = new_type->As<core::type::Array>();
+                TINT_ASSERT(new_arr);
 
                 Vector<const core::constant::Value*, 16> elements;
                 for (uint32_t i = 0; i < constant->NumElements(); i++) {
                     auto* value = constant->Index(i);
-                    elements.Push(RewriteConstant(value, is_row_major));
+                    elements.Push(TransposeRowMajorMatrixOrArray(value, new_arr->ElemType()));
                 }
                 return ir.constant_values.Composite(new_type, std::move(elements));
             },
-            [&](const core::type::Struct* str) {
-                TINT_ASSERT(constant->NumElements() == str->Members().Length());
-
-                Vector<const core::constant::Value*, 16> elements;
-                elements.Reserve(str->Members().Length());
-
-                auto* orig_str = orig_type->As<core::type::Struct>();
-                TINT_ASSERT(orig_str);
-
-                for (size_t i = 0; i < orig_str->Members().Length(); ++i) {
-                    auto& orig_mem = orig_str->Members()[i];
-                    auto& new_mem = str->Members()[i];
-                    auto* value = constant->Index(i);
-
-                    auto* new_member_type = new_mem->Type();
-                    if (new_member_type != value->Type()) {
-                        elements.Push(RewriteConstant(value, orig_mem->RowMajor()));
-                    } else {
-                        elements.Push(value);
-                    }
-                }
-                return ir.constant_values.Composite(new_type, std::move(elements));
-            },
-            [&](Default) { return constant; });
+            TINT_ICE_ON_NO_MATCH);
     }
 };
 
 }  // namespace
 
 Result<SuccessType> TransposeRowMajor(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllowMultipleEntryPoints,
-                    core::ir::Capability::kAllowStructMatrixDecorations,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                    core::ir::Capability::kAllowOverrides,
-                    core::ir::Capability::kAllowPointerToHandle,
-                },
-                "before spirv.TransposeRowMajor");
+    AssertValid(ir, "before spirv.TransposeRowMajor");
 
     State{ir}.Process();
 

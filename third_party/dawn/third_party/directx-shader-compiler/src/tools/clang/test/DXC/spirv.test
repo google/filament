@@ -1,0 +1,7 @@
+
+// REQUIRES: spirv
+
+// RUN:%dxc %s  /T ps_6_0 %S/Inputs/smoke.hlsl -spirv | FileCheck %s
+
+// CHECK: SPIR-V
+// CHECK:OpName %main "main"

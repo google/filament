@@ -54,6 +54,8 @@ import("meson_overrides_with_defaults.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/coverage/coverage.gni")
 
+assert(is_linux, "Meson builds are only supported on Linux")
+
 # Internal helper that sets up a meson build, i.e. runs `meson setup`
 # with appropriate args based on the environment being used by GN.
 #
@@ -68,40 +70,41 @@ import("//build/config/coverage/coverage.gni")
 template("_meson_setup") {
   assert(defined(invoker.source_dir), "source_dir must be defined")
 
-  _meson_args = [
-    "setup",
-    rebase_path("${target_gen_dir}/${target_name}", root_build_dir),
-    rebase_path(invoker.source_dir, root_build_dir),
-    "--prefix=" + rebase_path("${target_gen_dir}/install"),
-  ]
-
-  if (defined(invoker.options)) {
-    _meson_args += invoker.options
-  }
+  _native_file_path = "${target_gen_dir}/${target_name}_native.ini"
+  _setup_dir = "${target_gen_dir}/${target_name}"
 
   # Use the hermetic clang toolchain
   if (is_clang) {
     _cc_path = rebase_path("$clang_base_path/bin/clang")
     _cxx_path = rebase_path("$clang_base_path/bin/clang++")
 
-    _c_link_args = "-fuse-ld=lld"
-    _cpp_link_args = "-fuse-ld=lld"
-    if (use_clang_coverage) {
-      _c_args = "-fprofile-instr-generate -fcoverage-mapping"
-      _cpp_args = "-fprofile-instr-generate -fcoverage-mapping"
-      _c_link_args += " -fprofile-instr-generate -fcoverage-mapping"
-      _cpp_link_args += " -fprofile-instr-generate -fcoverage-mapping"
+    # Use the glslang_validator target built from source.
+    _glslang_path = rebase_path("$root_out_dir/glslang_validator")
 
-      _meson_args += [
-        "-Dc_args=${_c_args}",
-        "-Dcpp_args=${_cpp_args}",
-      ]
-    }
-
-    _meson_args += [
-      "-Dc_link_args=${_c_link_args}",
-      "-Dcpp_link_args=${_cpp_link_args}",
+    # The pre-compiled version of llvm-config from CIPD returns a hard
+    # coded path to a system installed libzstd, so need to intercept
+    # the output and rewrite it to point to where it is checked out.
+    #
+    # Additionally the CIPD supplied version of libzstd.a is not
+    # compile with -fPIC, so will not correctly link into the Mesa
+    # drivers, since they are dynamic libs (.so). Rewritting instead
+    # to use libzstd.so instead.
+    _llvm_config_wrapper_path = "${target_gen_dir}/llvm_config_wrapper.py"
+    _llvm_abs_path = rebase_path("${meson_llvm_config_bin}")
+    _zstd_shared_lib = rebase_path("${meson_zstd_dir}/lib/libzstd.so")
+    _wrapper_content = [
+      "import sys",
+      "import subprocess",
+      "real_llvm_config = '${_llvm_abs_path}'",
+      "zstd_shared_lib = '${_zstd_shared_lib}'",
+      "args = [real_llvm_config] + sys.argv[1:]",
+      "res = subprocess.run(args, capture_output=True, text=True)",
+      "stdout = res.stdout.replace('/usr/lib/x86_64-linux-gnu/libzstd.a', zstd_shared_lib)",
+      "sys.stdout.write(stdout)",
+      "sys.stderr.write(res.stderr)",
+      "sys.exit(res.returncode)",
     ]
+    write_file(_llvm_config_wrapper_path, _wrapper_content)
 
     # Used by meson to allow specifying the toolchain elements to use
     _native_file_content = [
@@ -113,27 +116,107 @@ template("_meson_setup") {
       "pkg-config = 'pkg-config'",
       "python = ['vpython3', '-vpython-spec', '" + rebase_path("//.vpython3") +
           "']",
+      "glslang = '${_glslang_path}'",
+      "glslangValidator = '${_glslang_path}'",
+      "llvm-config = ['python3', '" + rebase_path(_llvm_config_wrapper_path) +
+          "']",
     ]
 
-    _native_file_path = "${target_gen_dir}/${target_name}_native.ini"
+    _zstd_abs_path = rebase_path(meson_zstd_dir)
+
+    # The CIPD supplied version of the .pc used by Meson to find the
+    # artifacts has baked in paths specific to the original build
+    # environment that do not reflect the checked out paths, so
+    # writing custom version
+    _zstd_pc_content = [
+      "prefix=${_zstd_abs_path}",
+      "exec_prefix=\${prefix}",
+      "includedir=\${prefix}/include",
+      "libdir=\${exec_prefix}/lib",
+      "",
+      "Name: zstd",
+      "Description: fast lossless compression algorithm library",
+      "URL: https://facebook.github.io/zstd/",
+      "Version: 1.5.7",
+      "Libs: -L\${libdir} -lzstd",
+      "Libs.private: -pthread",
+      "Cflags: -I\${includedir}",
+    ]
+    _zstd_pkgconfig_dir = rebase_path("${target_gen_dir}/pkgconfig")
+    write_file("${_zstd_pkgconfig_dir}/libzstd.pc", _zstd_pc_content)
+
+    _native_file_content += [
+      "[built-in options]",
+      "pkg_config_path = ['${_zstd_pkgconfig_dir}']",
+    ]
+
     write_file(_native_file_path, _native_file_content)
-
-    _meson_args += [
-      "--native-file",
-      rebase_path(_native_file_path, root_build_dir),
-    ]
   }
 
-  exec_script("${meson_src_dir}/src/meson.py", _meson_args)
+  action(target_name) {
+    script = "${meson_src_dir}/run_meson.py"
 
-  group(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "public_deps",
                              "testonly",
                              "visibility",
+                             "inputs",
                            ])
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    # Depend on the glslang_validator binary built from source
+    deps += [ "//third_party/glslang/src:glslang_validator" ]
+
+    outputs = [ "${_setup_dir}/build.ninja" ]
+
+    _ninja_path = rebase_path("//third_party/ninja/ninja", root_build_dir)
+
+    args = [
+      _ninja_path,
+      rebase_path("${meson_src_dir}/src/meson.py", root_build_dir),
+      "setup",
+      "--reconfigure",
+      "--wrap-mode=nodownload",
+      rebase_path(_setup_dir, root_build_dir),
+      rebase_path(invoker.source_dir, root_build_dir),
+      "--prefix=" + rebase_path("${target_gen_dir}/install"),
+    ]
+
+    if (defined(invoker.options)) {
+      args += invoker.options
+    }
+
+    if (is_clang) {
+      _zstd_lib_dir = rebase_path("${meson_zstd_dir}/lib", root_build_dir)
+      _zstd_include_dir =
+          rebase_path("${meson_zstd_dir}/include", root_build_dir)
+
+      _c_args = "-I${_zstd_include_dir}"
+      _cpp_args = "-I${_zstd_include_dir}"
+      _c_link_args = "-fuse-ld=lld -L${_zstd_lib_dir}"
+      _cpp_link_args = "-fuse-ld=lld -L${_zstd_lib_dir}"
+
+      if (use_clang_coverage) {
+        _c_args += " -fprofile-instr-generate -fcoverage-mapping"
+        _cpp_args += " -fprofile-instr-generate -fcoverage-mapping"
+        _c_link_args += " -fprofile-instr-generate -fcoverage-mapping"
+        _cpp_link_args += " -fprofile-instr-generate -fcoverage-mapping"
+      }
+
+      args += [
+        "-Dc_args=${_c_args}",
+        "-Dcpp_args=${_cpp_args}",
+        "-Dc_link_args=${_c_link_args}",
+        "-Dcpp_link_args=${_cpp_link_args}",
+        "--native-file",
+        rebase_path(_native_file_path, root_build_dir),
+      ]
+    }
   }
 }
 
@@ -165,14 +248,18 @@ template("_meson_build") {
     }
     deps += [ invoker.meson_setup_target ]
 
-    script = "${meson_src_dir}/src/meson.py"
+    script = "${meson_src_dir}/run_meson.py"
 
     _setup_gen_dir =
         get_label_info(invoker.meson_setup_target, "target_gen_dir")
     _setup_name = get_label_info(invoker.meson_setup_target, "name")
     _build_dir = "${_setup_gen_dir}/${_setup_name}"
 
+    _ninja_path = rebase_path("//third_party/ninja/ninja", root_build_dir)
+
     args = [
+      _ninja_path,
+      rebase_path("${meson_src_dir}/src/meson.py", root_build_dir),
       "install",
       "-C",
       rebase_path(_build_dir, root_build_dir),
@@ -201,6 +288,7 @@ template("meson_target") {
                              "public_deps",
                              "testonly",
                              "visibility",
+                             "inputs",
                            ])
   }
 

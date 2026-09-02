@@ -44,6 +44,7 @@ class GPUBindGroup final : public interop::GPUBindGroup {
     GPUBindGroup(const wgpu::BindGroupDescriptor& desc, wgpu::BindGroup group);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::BindGroup&() const { return group_; }
 
     // interop::GPUBindGroup interface compliance

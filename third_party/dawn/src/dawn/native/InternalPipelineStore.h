@@ -31,12 +31,12 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/HashUtils.h"
-#include "dawn/native/ApplyClearColorValueWithDrawHelper.h"
-#include "dawn/native/BlitColorToColorWithDraw.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/ScratchBuffer.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/native/ApplyClearColorValueWithDrawHelper.h"
+#include "src/dawn/native/BlitColorToColorWithDraw.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/ScratchBuffer.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 

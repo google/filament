@@ -1,0 +1,190 @@
+XXX - incomplete (needs number, glx protocol, enumerant values)
+
+Name
+
+    SGIX_depth_pass_instrument
+
+Name Strings
+
+    GL_SGIX_depth_pass_instrument
+
+Version
+
+    Last Modified Date: 10/21/1998
+    $Date: 1998/10/21 19:08:52 $  $Revision: 1.4 $
+
+Number
+
+    205
+
+Dependencies
+
+    SGIX_instruments is required
+    SGIX_multisample affects the definition of this extension.
+
+Overview
+
+    This extension defines an instrument that uses the API defined in
+    SGIX_instruments.  The instrument specified by this extension is a
+    counter of the number of fragments which passed the Z test during
+    rasterization.  The maximum value of the counter is an
+    implementation-dependent constant.
+
+    Some systems may maintain counters on different parts of the
+    system.  For example, a system with a frame buffer distributed
+    across multiple chips may maintain a count of the fragments which
+    passed the depth test on each individual chip.  In this extension,
+    a queriable constant is defined that indicates the number of 
+    responses to expect when a measurement is taken.  This 
+    mechanism allows GL implementations to be as efficient as possible.
+
+Issues
+
+    *   Should we count fragments drawn when the depth test was
+        disabled? 
+
+	A: Doesn't seem to be a strong reason to do this one way or
+           the other -- let's treat disabled depth test the same as a
+           depth func of ALWAYS.
+
+    *   Should we guarantee that if other counters are enabled when the
+        query is issued, the depth pass responses are placed
+        successively in the buffer?  This might make interpreting the
+        buffer easier but would complicate and slightly slow the
+        OpenGL implementation.  
+
+        A: They should be successive.  The GL burden shouldn't be that
+           great since the buffer can be reordered during the
+           PollInstrumentsSGIX command.  This way we can probably
+           avoid moving the contents of the entire buffer around and
+           also keep the resource allocation burden in the
+           application.
+
+    *   Having each counter response appear as an independent
+        instrument is awkward and wastes space in the buffer.  Could
+        we have GL combine them??
+
+        A: No.  It will be natural for some hardware implementations
+           to have multiple instruments returned in a non-guaranteed
+           order using a DMA.  In this case the implementation will
+           need a way to differentiate the responses -- ie, a header.
+           By putting the header for each instrument in the
+           application's buffer, we allow the DMA destination to be
+           the user's buffer.  Combining the responses would
+           complicate allocation since space would be required for
+           them and would be slower since it would require more data
+           movement. 
+
+    *   Should the counter value be considered state?
+        SGIX_ir_instrument1 doesn't list its counters as state.
+
+        A: Seems like SGIX_ir_instrument1 may be wrong -- this seems
+           like it should be state.  Note that histogram and minmax
+           contents are state.
+
+    *   In theory should we add something to the GLX protocol?
+        SGIX_instruments doesn't establish a framework yet so it's
+        kind of a moot point.
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled:
+
+        DEPTH_PASS_INSTRUMENT_SGIX              0x8310
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        DEPTH_PASS_INSTRUMENT_COUNTERS_SGIX     0x8311
+        DEPTH_PASS_INSTRUMENT_MAX_SGIX          0x8312
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    Added to subsection 4.1.5 (Depth buffer test) at the end of the
+    paragraph which begins "If the depth buffer test fails...":
+
+    If DEPTH_PASS_INSTRUMENT_SGIX is enabled and instruments have been
+    started via a call to StartInstrumentSGIX, a counter or counters
+    of the number of fragments which have passed the depth test or
+    which have been drawn when the depth test is disabled is
+    maintained.  The number of counters can be queried using the token
+    DEPTH_PASS_INSTRUMENT_COUNTERS_SGIX.  For each fragment which
+    passes the depth test or is drawn with depth testing disabled, one
+    counter is incremented by one.  If MULTISAMPLE_SGIS is enabled,
+    the counter is incremented by one for each fragment containing at
+    least one sample for which the depth test passed.  If the
+    increment would have caused the counter to go beyond is maximum
+    representable value, the count is clamped to the maximum.  The
+    maximum value of the counters may be queried using
+    DEPTH_PASS_INSTRUMENT_MAX_SGIX.  The counter values are unsigned,
+    so DEPTH_PASS_INSTRUMENT_MAX_SGIX may be as high as the maximum
+    value of an unsigned integer.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Add to the end of section 5.X entitled Instruments:
+
+    The instrument DEPTH_PASS_INSTRUMENT_SGIX returns for each
+    measurement a system-dependent constant number of responses to the
+    buffer.  The constant may be queried using the Get with an
+    argument of DEPTH_PASS_INSTRUMENT_COUNTERS_SGIX.  Each response is
+    formatted as though it came from an independent instrument.  If
+    more than one instrument is enabled, the responses from the depth
+    pass instrument will be placed successively (as opposed to
+    possibly being interrupted by responses from other instruments).
+    
+    DEPTH_PASS_INSTRUMENT_SGIX responses are formatted as follows
+    (starting at the first word):
+
+	DEPTH_PASS_INSTRUMENT_SGIX
+	Number of int's in the response (4)
+	Counter value
+	Marker value
+
+    The counter value is padded to the size of an unsigned int if
+    necessary by zero-filling the most significant bits.
+
+    Assuming that none of the counters overflowed, the total number of
+    fragments that passed the depth test while the instrument was
+    enabled is equal to the sum of all the counter values.
+
+    Although different responses come from different hardware
+    counters, they should be considered identical by the software and
+    no guarantee is made about how the responses for each counter are
+    ordered within a single query response.  For example, a hardware
+    implementation may maintain a counter for each quadrant of the
+    screen, but which response in the buffer came from which counter
+    is not exposed to the application.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None    
+
+Additions to the GLX Specification
+
+    XXX
+
+Errors
+
+    None
+
+New State
+
+    Get Value				Get Command		Type	Initial Value		Attribute
+    ---------				-----------		----	-------------		---------
+    DEPTH_PASS_INSTRUMENT_SGIX		ReadInstrumentsSGIX	1*xZ+	0			-
+
+New Implementation Dependent State
+
+    Get Value				Get Command		Type	Minimum Value
+    ---------				-----------		----	-------------
+    DEPTH_PASS_INSTRUMENT_COUNTERS_SGIX	GetIntegerv		Z+      1

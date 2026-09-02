@@ -1,0 +1,1250 @@
+Name
+
+    EXT_texture_array
+
+Name Strings
+
+    GL_EXT_texture_array
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Jon Leech, Khronos
+    Mark Kilgard, NVIDIA
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006, Release 95)
+
+Version
+
+    Last Modified Date:         9/16/2008
+    Author revision:            8
+
+Number
+
+    329
+
+Dependencies
+
+    This extension is written against the OpenGL 2.0 specification and version
+    1.10.59 of the OpenGL Shading Language specification.
+
+    This extension is interacts with EXT_framebuffer_object.
+
+    This extension interacts with NV_geometry_program4.
+
+    This extension interacts with NV_gpu_program4 or the OpenGL Shading
+    Language, which provide the mechanisms necessary to access array textures.
+
+    This extension interacts with EXT_texture_compression_s3tc and
+    NV_texture_compression_vtc.
+
+Overview
+
+    This extension introduces the notion of one- and two-dimensional array
+    textures.  An array texture is a collection of one- and two-dimensional
+    images of identical size and format, arranged in layers.  A
+    one-dimensional array texture is specified using TexImage2D; a
+    two-dimensional array texture is specified using TexImage3D.  The height
+    (1D array) or depth (2D array) specify the number of layers in the image.
+
+    An array texture is accessed as a single unit in a programmable shader,
+    using a single coordinate vector.  A single layer is selected, and that
+    layer is then accessed as though it were a one- or two-dimensional
+    texture.  The layer used is specified using the "t" or "r" texture
+    coordinate for 1D and 2D array textures, respectively.  The layer
+    coordinate is provided as an unnormalized floating-point value in the
+    range [0,<n>-1], where <n> is the number of layers in the array texture.
+    Texture lookups do not filter between layers, though such filtering can be
+    achieved using programmable shaders.  When mipmapping is used, each level
+    of an array texture has the same number of layers as the base level; the
+    number of layers is not reduced as the image size decreases.
+
+    Array textures can be rendered to by binding them to a framebuffer object
+    (EXT_framebuffer_object).  A single layer of an array texture can be bound
+    using normal framebuffer object mechanisms, or an entire array texture can
+    be bound and rendered to using the layered rendering mechanisms provided
+    by NV_geometry_program4.
+
+    This extension does not provide for the use of array textures with
+    fixed-function fragment processing.  Such support could be added by
+    providing an additional extension allowing applications to pass the new
+    target enumerants (TEXTURE_1D_ARRAY_EXT and TEXTURE_2D_ARRAY_EXT) to
+    Enable and Disable.
+
+New Procedures and Functions
+
+    void FramebufferTextureLayerEXT(enum target, enum attachment,
+                                    uint texture, int level, int layer);
+
+New Tokens
+
+    Accepted by the <target> parameter of TexParameteri, TexParameteriv,
+    TexParameterf, TexParameterfv, GenerateMipmapEXT, and BindTexture:
+
+        TEXTURE_1D_ARRAY_EXT                            0x8C18
+        TEXTURE_2D_ARRAY_EXT                            0x8C1A
+
+    Accepted by the <target> parameter of TexImage3D, TexSubImage3D,
+    CopyTexSubImage3D, CompressedTexImage3D, and CompressedTexSubImage3D:
+
+        TEXTURE_2D_ARRAY_EXT
+        PROXY_TEXTURE_2D_ARRAY_EXT                      0x8C1B
+
+    Accepted by the <target> parameter of TexImage2D, TexSubImage2D,
+    CopyTexImage2D, CopyTexSubImage2D, CompressedTexImage2D, and
+    CompressedTexSubImage2D:
+
+        TEXTURE_1D_ARRAY_EXT
+        PROXY_TEXTURE_1D_ARRAY_EXT                      0x8C19
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv
+    and GetFloatv:
+
+        TEXTURE_BINDING_1D_ARRAY_EXT                    0x8C1C
+        TEXTURE_BINDING_2D_ARRAY_EXT                    0x8C1D
+        MAX_ARRAY_TEXTURE_LAYERS_EXT                    0x88FF
+
+    Accepted by the <param> parameter of TexParameterf, TexParameteri,
+    TexParameterfv, and TexParameteriv when the <pname> parameter is
+    TEXTURE_COMPARE_MODE_ARB:
+
+        COMPARE_REF_DEPTH_TO_TEXTURE_EXT                0x884E
+
+    (Note:  COMPARE_REF_DEPTH_TO_TEXTURE_EXT is simply an alias for the
+    existing COMPARE_R_TO_TEXTURE token in OpenGL 2.0; the alternate name
+    reflects the fact that the R coordinate is not always used.)
+
+    Accepted by the <internalformat> parameter of TexImage3D and
+    CompressedTexImage3D, and by the <format> parameter of
+    CompressedTexSubImage3D:
+
+        COMPRESSED_RGB_S3TC_DXT1_EXT
+        COMPRESSED_RGBA_S3TC_DXT1_EXT
+        COMPRESSED_RGBA_S3TC_DXT3_EXT
+        COMPRESSED_RGBA_S3TC_DXT5_EXT
+
+    Accepted by the <pname> parameter of
+    GetFramebufferAttachmentParameterivEXT:
+
+        FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT          0x8CD4
+
+    (Note:  FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER is simply an alias for the
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT token provided in
+    EXT_framebuffer_object.  This extension generalizes the notion of
+    "<zoffset>" to include layers of an array texture.)
+
+    Returned by the <type> parameter of GetActiveUniform:
+
+        SAMPLER_1D_ARRAY_EXT                             0x8DC0
+        SAMPLER_2D_ARRAY_EXT                             0x8DC1
+        SAMPLER_1D_ARRAY_SHADOW_EXT                      0x8DC3
+        SAMPLER_2D_ARRAY_SHADOW_EXT                      0x8DC4
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify section 2.15.3, "Shader Variables", page 75
+
+    Add the following new return types to the description of GetActiveUniform
+    on p. 81.
+
+      SAMPLER_1D_ARRAY_EXT,
+      SAMPLER_2D_ARRAY_EXT,
+      SAMPLER_1D_ARRAY_SHADOW_EXT,
+      SAMPLER_2D_ARRAY_SHADOW_EXT
+
+    Modify Section 2.15.4, Shader Execution (p. 84)
+
+    (modify first paragraph, p. 86 -- two simple edits:
+
+      (1) Change reference to the "r" coordinate to simply indicate that the
+          reference value for shadow mapping is provided in the lookup
+          function.  It's still usually in the "r" coordinate, except for
+          two-dimensional array textures, where it's in "q".  
+      (2) Add new EXT_gpu_shader4 sampler types used for array textures. )
+
+    Texture lookups involving textures with depth component data can either
+    return the depth data directly or return the results of a comparison with
+    a reference depth value specified in the coordinates passed to the texture
+    lookup function, as described in section 3.8.14.  The comparison operation
+    is requested in the shader by using the shadow sampler types
+    (sampler1DShadow, sampler2DShadow, sampler1DArrayShadow, or
+    sampler2DArrayShadow) and in the texture using the TEXTURE_COMPARE_MODE
+    parameter. ...
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.8, Texturing (p. 149).
+
+    (add new paragraph at the top of p. 150) Six types of texture are
+    supported; each is a collection of images built from one-, two-, or
+    three-dimensional array of image elements referred to as texels.  One-,
+    two-, and three-dimensional textures consist of a one-, two-, or
+    three-dimensional texel arrays.  One- and two-dimensional array textures
+    are arrays of one- or two-dimensional images, consisting of one or more
+    layers.  Finally, a cube map is a special two-dimensional array texture
+    with six layers that represent the faces of a cube.  When accessing a cube
+    map, the texture coordinates are projected onto one of the six faces.
+
+    Modify Section 3.8.1, Texture Image Specification (p. 150).
+
+    (modify first paragraph of section, p. 150) The command
+
+      void TexImage3D( enum target, int level, int internalformat,
+                       sizei width, sizei height, sizei depth, int border,
+                       enum format, enum type, void *data );
+
+    is used to specify a three-dimensional texture image. target must be one
+    of TEXTURE_3D for a three-dimensional texture or TEXTURE_2D_ARRAY_EXT for
+    a two-dimensional array texture.  Additionally, target may be either
+    PROXY_TEXTURE_3D for a three-dimensional proxy texture, or
+    PROXY_TEXTURE_2D_ARRAY_EXT for a two-dimensional proxy array texture. ...
+
+    (modify the fourth paragraph on p. 151) Textures with a base internal
+    format of DEPTH_COMPONENT are supported by texture image specification
+    commands only if target is TEXTURE_1D, TEXTURE_2D, TEXTURE_1D_ARRAY_EXT,
+    TEXTURE_2D_ARRAY_EXT, PROXY_TEXTURE_1D, PROXY_TEXTURE_2D,
+    PROXY_TEXTURE_1D_ARRAY_EXT, or PROXY_TEXTURE_2D_ARRAY_EXT. Using this
+    format in conjunction with any other target will result in an INVALID
+    OPERATION error.
+
+    (modify the first paragraph on p. 153 -- In particular, add new terms w_b,
+    h_b, and d_b to represent border width, height, or depth, instead of a
+    single border size term b_s.  Subsequent equations referring to b_s should
+    be modified to refer to w_b, h_b, and d_b, as appropriate.)
+
+    ... Counting from zero, each resulting Nth texel is assigned internal
+    integer coordinates (i, j, k), where
+
+      i = (N mod width) - w_b
+      j = (floor(N/width) mod height) - h_b
+      k = (floor(N/(width*height)) mod depth) - d_b
+
+    and w_b, h_b, and d_b are the specified border width, height, and depth.
+    w_b and h_b are the specified <border> value; d_b is the specified
+    <border> value if <target> is TEXTURE_3D or zero if <target> is
+    TEXTURE_2D_ARRAY_EXT. ...
+
+    (modify equations 3.15-3.17 and third paragraph of p. 155)
+
+      w_s = w_t + 2 * w_b                     (3.15)
+      h_s = h_t + 2 * h_b                     (3.16)
+      d_s = d_t + 2 * d_b                     (3.17)
+
+    ... If <border> is less than zero, or greater than b_t, then the error
+    INVALID_VALUE is generated.
+
+    (modify the last paragraph on p. 155 on to p. 156)
+
+    The maximum allowable width, height, or depth of a texel array for a
+    three-dimensional texture is an implementation dependent function of the
+    level-of-detail and internal format of the resulting image array.  It must
+    be at least 2^(k-lod) + 2 * b_t for image arrays of level-of-detail 0
+    through k, where k is the log base 2 of MAX_3D_TEXTURE_SIZE, lod is the
+    level-of-detail of the image array, and b_t is the maximum border width.
+    It may be zero for image arrays of any level-of-detail greater than k. The
+    error INVALID VALUE is generated if the specified image is too large to be
+    stored under any conditions.
+
+    In a similar fashion, the maximum allowable width of a texel array for a
+    one- or two-dimensional, or one- or two-dimensional array texture, and the
+    maximum allowable height of a two-dimensional or two-dimensional array
+    texture, must be at least 2^(k-lod) + 2 * b_t for image arrays of level 0
+    through k, where k is the log base 2 of MAX_TEXTURE_SIZE. The maximum
+    allowable width and height of a cube map texture must be the same, and
+    must be at least 2^(k-lod) + 2 * b_t for image arrays level 0 through k,
+    where k is the log base 2 of MAX_CUBE_MAP_TEXTURE_SIZE.  The maximum
+    number of layers for one- and two-dimensional array textures (height or
+    depth, respectively) must be at least MAX_ARRAY_TEXTURE_LAYERS_EXT for all
+    levels.
+
+    (modify the fourth paragraph on p. 156) The command
+
+      void TexImage2D( enum target, int level,
+                       int internalformat, sizei width, sizei height,
+                       int border, enum format, enum type, void *data );
+
+    is used to specify a two-dimensional texture image. target must be one of
+    TEXTURE_2D for a two-dimensional texture, TEXTURE_1D_ARRAY_EXT for a
+    one-dimensional array texture, or one of TEXTURE_CUBE_MAP_POSITIVE_X,
+    TEXTURE_CUBE_MAP_NEGATIVE_X, TEXTURE_CUBE_MAP_POSITIVE_Y,
+    TEXTURE_CUBE_MAP_NEGATIVE_Y, TEXTURE_CUBE_MAP_POSITIVE_Z, or
+    TEXTURE_CUBE_MAP_NEGATIVE_Z for a cube map texture. Additionally, target
+    may be either PROXY_TEXTURE_2D for a two-dimensional proxy texture,
+    PROXY_TEXTURE_1D_ARRAY_EXT for a one-dimensional proxy array texture, or
+    PROXY TEXTURE_CUBE_MAP for a cube map proxy texture in the special case
+    discussed in section 3.8.11.  The other parameters match the corresponding
+    parameters of TexImage3D.
+
+    For the purposes of decoding the texture image, TexImage2D is equivalent
+    to calling TexImage3D with corresponding arguments and depth of 1, except
+    that
+
+      * The border depth, d_b, is zero, and the depth of the image is always 1
+        regardless of the value of border. 
+
+      * The border height, h_b, is zero if <target> is TEXTURE_1D_ARRAY_EXT,
+        and <border> otherwise.
+
+      * Convolution will be performed on the image (possibly changing its width
+        and height) if SEPARABLE 2D or CONVOLUTION 2D is enabled.
+
+      * UNPACK SKIP IMAGES is ignored.
+
+    (modify the fourth paragraph on p. 157) For the purposes of decoding the
+    texture image, TexImage1D is equivalent to calling TexImage2D with
+    corresponding arguments and height of 1, except that 
+
+      * The border height and depth (h_b and d_b) are always zero, regardless
+        of the value of <border>.
+
+      * Convolution will be performed on the image (possibly changing its
+        width) only if CONVOLUTION 1D is enabled.
+
+    (modify the last paragraph on p. 157 and the first paragraph of p. 158 --
+    changing the phrase "texture array" to "texel array" to avoid confusion
+    with array textures.  All subsequent references to "texture array" in the
+    specification should also be changed to "texel array".)
+
+    We shall refer to the (possibly border augmented) decoded image as the
+    texel array.  A three-dimensional texel array has width, height, and depth
+    ws, hs, and ds as defined respectively in equations 3.15, 3.16, and
+    3.17. A two-dimensional texel array has depth ds = 1, with height hs and
+    width ws as above, and a one-dimensional texel array has depth ds = 1,
+    height hs = 1, and width ws as above.
+
+    An element (i,j,k) of the texel array is called a texel (for a
+    two-dimensional texture or one-dimensional array texture, k is irrelevant;
+    for a one-dimensional texture, j and k are both irrelevant).  The texture
+    value used in texturing a fragment is determined by that fragment's
+    associated (s,t,r) coordinates, but may not correspond to any actual
+    texel. See figure 3.10.
+
+    Modify Section 3.8.2, Alternate Texture Image Specification Commands
+    (p. 159)
+
+    (modify second paragraph, p. 159 -- allow 1D array textures) The command
+
+      void CopyTexImage2D( enum target, int level,
+                           enum internalformat, int x, int y, sizei width,
+                           sizei height, int border );
+
+    defines a two-dimensional texture image in exactly the manner of
+    TexImage2D, except that the image data are taken from the framebuffer
+    rather than from client memory. Currently, target must be one of
+    TEXTURE_2D, TEXTURE_1D_ARRAY_EXT, TEXTURE_CUBE_MAP_POSITIVE_X,
+    TEXTURE_CUBE_MAP_NEGATIVE_X, TEXTURE_CUBE MAP_POSITIVE_Y,
+    TEXTURE_CUBE_MAP_NEGATIVE_Y, TEXTURE_CUBE_MAP_POSITIVE_Z, or
+    TEXTURE_CUBE_MAP_NEGATIVE_Z.
+
+    (modify last paragraph, p. 160) ... Currently the target arguments of
+    TexSubImage1D and CopyTexSubImage1D must be TEXTURE_1D, the target
+    arguments of TexSubImage2D and CopyTexSubImage2D must be one of
+    TEXTURE_2D, TEXTURE_1D_ARRAY_EXT, TEXTURE_CUBE_MAP_POSITIVE_X,
+    TEXTURE_CUBE_MAP_NEGATIVE_X, TEXTURE_CUBE_MAP_POSITIVE_Y,
+    TEXTURE_CUBE_MAP_NEGATIVE_Y, TEXTURE_CUBE_MAP_POSITIVE_Z, or
+    TEXTURE_CUBE_MAP_NEGATIVE_Z, and the target arguments of TexSubImage3D and
+    CopyTexSubImage3D must be TEXTURE_3D or TEXTURE_2D_ARRAY_EXT. ...
+
+    (modify last paragraph, p. 161 and subsequent inequalities)
+
+    Negative values of xoffset, yoffset, and zoffset correspond to the
+    coordinates of border texels, addressed as in figure 3.10. Taking w_s,
+    h_s, d_s, w_b, h_b, and d_b to be the specified width, height, depth, and
+    border width, height, and depth of the texture array, and taking x, y, z,
+    w, h, and d to be the xoffset, yoffset, zoffset, width, height, and depth
+    argument values, any of the following relationships generates the error
+    INVALID VALUE:  
+
+        x < -w_b
+        x + w > w_s - w_b
+        y < -h_b
+        y + h > h_s - h_b
+        z < -d_b
+        z + d > d_s - d_b
+
+    Modify Section 3.8.4, Texture Parameters (p. 166)
+
+    (modify first paragraph of section, p. 166) Various parameters control how
+    the texel array is treated when specified or changed, and when applied to
+    a fragment. Each parameter is set by calling
+
+      void TexParameter{if}( enum target, enum pname, T param ); 
+      void TexParameter{if}v( enum target, enum pname, T params ); 
+
+    target is the target, either TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, or TEXTURE_2D_ARRAY_EXT.
+
+    Modify Section 3.8.8, Texture Minification (p. 170)
+
+    (modify first paragraph, p. 172) ... For a one-dimensional or
+    one-dimensional array texture, define v(x, y) == 0 and w(x, y) == 0; for a
+    two-dimensional, two-dimensional array, or cube map texture, define w(x,
+    y) == 0. ...
+
+    (modify second paragraph, p. 173) For one-dimensional or one-dimensional
+    array textures, j and k are irrelevant; the texel at location i becomes
+    the texture value. For two-dimensional, two-dimensional array, or cube map
+    textures, k is irrelevant; the texel at location (i, j) becomes the
+    texture value.  For one- and two-dimensional array textures, the texel is
+    obtained from image layer l, where
+
+      l = clamp(floor(t + 0.5), 0, h_t-1), for one-dimensional array textures,
+          clamp(floor(r + 0.5), 0, d_t-1), for two-dimensional array textures.      
+
+    (modify third paragraph, p. 174)  For a two-dimensional, two-dimensional
+    array, or cube map texture,
+ 
+      tau = ...
+
+    where tau_ij is the texel at location (i, j) in the two-dimensional
+    texture image.  For two-dimensional array textures, all texels are
+    obtained from layer l, where
+
+      l = clamp(floor(r + 0.5), 0, d_t-1).
+
+    And for a one-dimensional or one-dimensional array texture,
+
+      tau = ...
+
+    where tau_i is the texel at location i in the one-dimensional texture.
+    For one-dimensional array textures, both texels are obtained from layer l,
+    where
+
+      l = clamp(floor(t + 0.5), 0, h_t-1).
+
+    (modify first two paragraphs of "Mipmapping", p. 175) TEXTURE_MIN_FILTER
+    values NEAREST_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR,
+    LINEAR_MIPMAP_NEAREST, and LINEAR_MIPMAP_LINEAR each require the use of a
+    mipmap. A mipmap is an ordered set of arrays representing the same image;
+    each array has a resolution lower than the previous one.
+
+    If the image array of level level_base, excluding its border, has
+    dimensions, w_t x h_t x d_t, then there are floor(log2(maxsize)) + 1
+    levels in the mipmap, where
+
+      maxsize = w_t,                  for one-dimensional and one-dimensional
+                                      array textures,
+                max(w_t, h_t),        for two-dimensional, two-dimensional 
+                                      array, and cube map textures
+                max(w_t, h_t, d_t),   for three dimensional textures.
+
+   Numbering the levels such that level level_base is the 0th level, the ith
+   array has dimensions
+
+     max(1, floor(w_t/w_d)) x max(1, floor(h_t/h_d)) x max(1, floor(d_t/d_d))
+
+   where
+
+     w_d = 2 ^ i;
+     h_d = 1, for one-dimensional array textures and
+           2 ^ i, otherwise; and
+     d_d = 1, for two-dimensional array textures and 
+           2 ^ i, otherwise,
+
+    until the last array is reached with dimension 1 x 1 x 1.
+
+    Each array in a mipmap is defined using TexImage3D, TexImage2D,
+    CopyTexImage2D, TexImage1D, or CopyTexImage1D; the array being set is
+    indicated with the level-of-detail argument level. Level-of-detail numbers
+    proceed from level_base for the original texture array through p =
+    floor(log2(maxsize)) + level_base with each unit increase indicating an
+    array of half the dimensions of the previous one (rounded down to the next
+    integer if fractional) as already described.  All arrays from level_base
+    through q = min{p, level_max} must be defined, as discussed in section
+    3.8.10.
+
+    (modify third paragraph in the "Mipmap Generation" section, p. 176)
+
+    The contents of the derived arrays are computed by repeated, filtered
+    reduction of the level_base array.  For one- and two-dimensional array
+    textures, each layer is filtered independently.  ...
+
+    Modify Section 3.8.10, Texture Completeness (p. 177)
+
+    (modify second paragaph of section, p. 177) For one-, two-, or
+    three-dimensional textures and one- or two-dimensional array textures, a
+    texture is complete if the following conditions all hold true: ...
+
+    Modify Section 3.8.11, Texture State and Proxy State (p. 178)
+
+    (modify second and third paragraphs, p. 179, adding array textures and
+    making minor wording changes)
+
+    In addition to image arrays for one-, two-, and three-dimensional
+    textures, one- and two-dimensional array textures, and the six image
+    arrays for the cube map texture, partially instantiated image arrays are
+    maintained for one-, two-, and three-dimensional textures and one- and
+    two-dimensional array textures.  Additionally, a single proxy image array
+    is maintained for the cube map texture.  Each proxy image array includes
+    width, height, depth, border width, and internal format state values, as
+    well as state for the red, green, blue, alpha, luminance, and intensity
+    component resolutions. Proxy image arrays do not include image data, nor
+    do they include texture properties. When TexImage3D is executed with
+    target specified as PROXY_TEXTURE_3D, the three-dimensional proxy state
+    values of the specified level-of-detail are recomputed and updated. If the
+    image array would not be supported by TexImage3D called with target set to
+    TEXTURE 3D, no error is generated, but the proxy width, height, depth,
+    border width, and component resolutions are set to zero. If the image
+    array would be supported by such a call to TexImage3D, the proxy state
+    values are set exactly as though the actual image array were being
+    specified. No pixel data are transferred or processed in either case.
+
+    Proxy arrays for one- and two-dimensional textures and one- and
+    two-dimensional array textures are operated on in the same way when
+    TexImage1D is executed with target specified as PROXY_TEXTURE_1D,
+    TexImage2D is executed with target specified as PROXY_TEXTURE_2D or
+    PROXY_TEXTURE_1D_ARRAY_EXT, or TexImage3D is executed with target
+    specified as PROXY_TETXURE_2D_ARRAY_EXT.
+
+    Modify Section 3.8.12, Texture Objects (p. 180)
+
+    (update most of the beginning of the section to allow array textures)
+
+    In addition to the default textures TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, and TEXTURE_2D_EXT, named one-,
+    two-, and three-dimensional, cube map, and one- and two-dimensional array
+    texture objects can be created and operated upon. The name space for
+    texture objects is the unsigned integers, with zero reserved by the GL.
+
+    A texture object is created by binding an unused name to TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, or
+    TEXTURE_2D_ARRAY_EXT. The binding is effected by calling
+
+      void BindTexture( enum target, uint texture );
+
+    with <target> set to the desired texture target and <texture> set to the
+    unused name.  The resulting texture object is a new state vector,
+    comprising all the state values listed in section 3.8.11, set to the same
+    initial values. If the new texture object is bound to TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, or
+    TEXTURE_2D_ARRAY_EXT, it is and remains a one-, two-, three-dimensional,
+    cube map, one- or two-dimensional array texture respectively until it is
+    deleted.
+
+    BindTexture may also be used to bind an existing texture object to either
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP,
+    TEXTURE_1D_ARRAY_EXT, or TEXTURE_2D_ARRAY_EXT. The error INVALID_OPERATION
+    is generated if an attempt is made to bind a texture object of different
+    dimensionality than the specified target. If the bind is successful no
+    change is made to the state of the bound texture object, and any previous
+    binding to target is broken.
+
+    While a texture object is bound, GL operations on the target to which it
+    is bound affect the bound object, and queries of the target to which it is
+    bound return state from the bound object. If texture mapping of the
+    dimensionality of the target to which a texture object is bound is
+    enabled, the state of the bound texture object directs the texturing
+    operation.
+
+    In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, and TEXTURE_2D_ARRAY_EXT have
+    one-, two-, three-dimensional, cube map, and one- and two-dimensional
+    array texture state vectors respectively associated with them. In order
+    that access to these initial textures not be lost, they are treated as
+    texture objects all of whose names are 0. The initial one-, two-,
+    three-dimensional, cube map, one- and two-dimensional array textures are
+    therefore operated upon, queried, and applied as TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, and
+    TEXTURE_2D_ARRAY_EXT respectively while 0 is bound to the corresponding
+    targets.
+
+    (modify second paragraph, p. 181) ...  If a texture that is currently
+    bound to one of the targets TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, or TEXTURE_2D_ARRAY_EXT is
+    deleted, it is as though BindTexture had been executed with the same
+    target and texture zero. ...
+
+    (modify second paragraph, p. 182) The texture object name space, including
+    the initial one-, two-, and three dimensional, cube map, and one- and
+    two-dimensional array texture objects, is shared among all texture
+    units. ...
+    
+    Modify Section 3.8.14, Texture Comparison Modes (p. 185)
+
+    (modify second through fourth paragraphs, p. 188, reflecting that the
+    texture coordinate used for depth comparisons varies, including a new enum
+    name)
+
+    Let D_t be the depth texture value, in the range [0, 1].  For
+    fixed-function texture lookups, let R be the interpolated <r> texture
+    coordinate, clamped to the range [0, 1].  For texture lookups generated by
+    a program instruction, let R be the reference value for depth comparisons
+    provided in the instruction, also clamped to [0, 1].  Then the effective
+    texture value L_t, I_t, or A_t is computed as follows: ...
+
+    If the value of TEXTURE_COMPARE_MODE is NONE, then
+
+      r = Dt
+
+    If the value of TEXTURE_COMPARE_MODE is COMPARE_REF_DEPTH_TO_TEXTURE_EXT),
+    then r depends on the texture comparison function as shown in table 3.27.
+
+    Modify Section 3.11.2, Shader Execution (p. 194)
+
+    (modify second paragraph, p. 195 -- two simple edits:
+
+      (1) Change reference to the "r" coordinate to simply indicate that the
+          reference value for shadow mapping is provided in the lookup
+          function.  It's still usually in the "r" coordinate, except for
+          two-dimensional array textures, where it's in "q".
+      (2) Add new EXT_gpu_shader4 sampler types used for array textures. )
+
+    Texture lookups involving textures with depth component data can either
+    return the depth data directly or return the results of a comparison with
+    a reference depth value specified in the coordinates passed to the texture
+    lookup function.  The comparison operation is requested in the shader by
+    using the shadow sampler types (sampler1DShadow, sampler2DShadow,
+    sampler1DArrayShadow, and sampler2DArrayShadow) and in the texture using
+    the TEXTURE COMPARE MODE parameter. ...
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    Modify Section 5.4, Display Lists (p. 237)
+
+    (modify first paragraph, p. 242) TexImage3D, TexImage2D, TexImage1D,
+    Histogram, and ColorTable are executed immediately when called with the
+    corresponding proxy arguments PROXY_TEXTURE_3D or
+    PROXY_TEXTURE_2D_ARRAY_EXT; PROXY_TEXTURE_2D, PROXY_TEXTURE_CUBE_MAP, or
+    PROXY_TEXTURE_1D_ARRAY_EXT; PROXY_TEXTURE_1D; PROXY_HISTOGRAM; and
+    PROXY_COLOR_TABLE, PROXY_POST_CONVOLUTION_COLOR_TABLE, or
+    PROXY_POST_COLOR_MATRIX_COLOR_TABLE.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.3, Enumerated Queries (p. 246)
+
+    (modify second paragraph, p. 247)
+
+    GetTexParameter parameter <target> may be one of TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY_EXT, or
+    TEXTURE_2D_ARRAY_EXT, indicating the currently bound one-, two-,
+    three-dimensional, cube map, or one- or two-dimensional array texture.
+    GetTexLevelParameter parameter target may be one of TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP_POSITIVE_X,
+    TEXTURE_CUBE_MAP_NEGATIVE_X, TEXTURE_CUBE_MAP_POSITIVE_Y,
+    TEXTURE_CUBE_MAP_NEGATIVE_Y, TEXTURE_CUBE_MAP_POSITIVE_Z,
+    TEXTURE_CUBE_MAP_NEGATIVE_Z, TEXTURE_1D_ARRAY_EXT, TEXTURE_2D_ARRAY_EXT,
+    PROXY_TEXTURE_1D, PROXY_TEXTURE_2D, PROXY_TEXTURE_3D,
+    PROXY_TEXTURE_CUBE_MAP, PROXY_TEXTURE_1D_ARRAY, or PROXY_TEXTURE_2D_ARRAY,
+    indicating the one-, two-, or three-dimensional texture, one of the six
+    distinct 2D images making up the cube map texture, the one- or
+    two-dimensional array texture, or the one-, two-, three-dimensional, cube
+    map, or one- or two-dimensional array proxy state vector. ...
+
+    Modify Section 6.1.4, Texture Queries (p. 248)
+
+    (modify first three paragraphs of section, p. 248) The command
+
+      void GetTexImage( enum tex, int lod, enum format,
+                        enum type, void *img );
+
+    is used to obtain texture images. It is somewhat different from the other
+    get commands; tex is a symbolic value indicating which texture (or texture
+    face in the case of a cube map texture target name) is to be obtained.
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_1D_ARRAY_EXT, and
+    TEXTURE_2D_ARRAY_EXT indicate a one-, two-, or three-dimensional texture,
+    or one- or two-dimensional array texture, respectively.
+    TEXTURE_CUBE_MAP_POSITIVE_X, ...
+
+    GetTexImage obtains... from the first image to the last for
+    three-dimensional textures.  One- and two-dimensional array textures are
+    treated as two- and three-dimensional images, respectively, where the
+    layers are treated as rows or images.  These groups are then...
+
+    For three-dimensional and two-dimensional array textures, pixel storage
+    operations are applied as if the image were two-dimensional, except that
+    the additional pixel storage state values PACK_IMAGE_HEIGHT and
+    PACK_SKIP_IMAGES are applied. ...
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object is supported, a single layer of an array texture
+    can be bound to a framebuffer attachment point, and manual mipmap
+    generation support is extended to include array textures.
+
+    Several modifications are made to the EXT_framebuffer_object
+    specification.  First, the token identifying the attached layer of a 3D
+    texture, FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT, is renamed to
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT.  This is done because this
+    extension generalizes the "z offset" concept to become notion of attaching
+    a layer of a multi-layer texture, which is applicable for both
+    three-dimensional and array textures.  All references to this token in
+    EXT_framebuffer_object should be changed to the new token, and references
+    to "z offset" in the specification text should be replaced with "layer" as
+    appropriate.  Additional edits follow.
+
+    (modify "Manual Mipmap Generation" in edits to Section 3.8.8)
+
+    Mipmaps can be generated manually with the command
+
+      void GenerateMipmapEXT(enum target);
+
+    where <target> is one of TEXTURE_1D, TEXTURE_2D, TEXTURE_CUBE_MAP,
+    TEXTURE_3D, TEXTURE_1D_ARRAY, or TEXTURE_2D_ARRAY.  Mipmap generation
+    affects the texture image attached to <target>.  ...
+
+    (modify Section 4.4.2.3, Attaching Texture Images to a Framebuffer -- add
+    to the end of the section)
+
+    The command
+
+      void FramebufferTextureLayerEXT(enum target, enum attachment,
+                                      uint texture, int level, int layer);
+
+    operates identically to FramebufferTexture3DEXT, except that it attaches a
+    single layer of a three-dimensional texture or a one- or two-dimensional
+    array texture.  <layer> is an integer indicating the layer number, and is
+    treated identically to the <zoffset> parameter in FramebufferTexture3DEXT.
+    The error INVALID_VALUE is generated if <layer> is negative.  The error
+    INVALID_OPERATION is generated if <texture> is non-zero and is not the
+    name of a three dimensional texture or one- or two-dimensional array
+    texture.  Unlike FramebufferTexture3D, no <textarget> parameter is
+    accepted.
+
+    If <texture> is non-zero and the command does not result in an error, the
+    framebuffer attachment state corresponding to <attachment> is updated as
+    in the other FramebufferTexture commands, except that
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT is set to <layer>.
+
+    (modify Section 4.4.4.1, Framebuffer Attachment Completeness)
+
+    The framebuffer attachment point <attachment> is said to be "framebuffer
+    attachment complete" if ...:
+
+      ...
+
+      * If FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT is TEXTURE and
+        FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT names a one- or two-dimensional
+        array texture, then FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT must be
+        smaller than the number of layers in the texture.
+
+    
+    (modify Section 6.1.3, Enumerated Queries)
+
+    ...
+
+        If <pname> is FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT and the texture
+        object named FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT is a
+        three-dimensional texture or a one- or two-dimensional array texture,
+        then <params> will contain the number of texture layer attached to the
+        attachment point.  Otherwise, <params> will contain the value zero.
+
+Dependencies on NV_geometry_program4
+
+    NV_geometry_program4 provides additional modifications to
+    EXT_framebuffer_object to support layered rendering, which allows
+    applications to bind entire three-dimensional, cube map, or array textures
+    to a single attachment point, and select a layer to render to according to
+    a layer number written by the geometry program.  
+
+    The framebuffer object modifications provided in NV_geometry_program4 are
+    more extensive than the more limited support provided for array textures.
+    The edits in this spec are a functional subset of the edits in
+    NV_geometry_program4.  All of the modifications that this extension makes
+    to EXT_framebuffer_object are superseded by NV_geometry_program4, except
+    for the minor language changes made to GenerateMipmapsEXT().
+
+Dependencies on NV_gpu_program4 and the OpenGL Shading Language (GLSL)
+
+    If NV_gpu_program4, EXT_gpu_shader4, and the OpenGL Shading Language
+    (GLSL) are not supported, and no other mechanism is provided to perform
+    texture lookups into array textures, this extension is pointless, given
+    that it provides no fixed-function mechanism to access texture arrays.
+
+    If GLSL is supported, the language below describes the modifications to
+    the shading language to support array textures.  The extension
+    EXT_gpu_shader4 provides a broader set of shading language modifications
+    that include array texture lookup functions described here, plus a number
+    of additional functions.
+
+    If GLSL is not supported, the shading language below and references to the
+    SAMPLER_{1D,2D}_ARRAY_EXT and SAMPLER_{1D,2D}_ARRAY_SHADOW_EXT tokens
+    should be removed.
+
+Dependencies on EXT_texture_compression_s3tc and NV_texture_compression_vtc
+
+    S3TC texture compression is supported for two-dimensional array textures.
+    When <target> is TEXTURE_2D_ARRAY_EXT, each layer is stored independently
+    as a compressed two-dimensional textures.  When specifying or querying
+    compressed images using one of the S3TC formats, the images are provided
+    and/or returned as a series of two-dimensional textures stored
+    consecutively in memory, with the layer closest to zero specified first.
+    For array textures, images are not arranged in 4x4x4 or 4x4x2 blocks as in
+    the three-dimensional compression format provided in the
+    EXT_texture_compression_vtc extension.  Pixel store parameters, including
+    those specific to three-dimensional images, are ignored when compressed
+    image data are provided or returned, as in the
+    EXT_texture_compression_s3tc extension.
+
+    S3TC compression is not supported for one-dimensional texture targets in
+    EXT_texture_compression_s3tc, and is not supported for one-dimensional
+    array textures in this extension.  If compressed one-dimensional arrays
+    are needed, use a two-dimensional texture with a height of one.
+
+    As with NV_texture_compression_vtc, this extension allows the use of the
+    four S3TC internal format types in TexImage3D, CompressedTexImage3D, and
+    CompressedTexSubImage3D calls.  Unlike NV_texture_compression_vtc (for 3D
+    textures), compressed sub-image updates are allowed at arbitrary locations
+    along the Z axis.  The language describing CompressedTexSubImage* APIs,
+    edited by EXT_texture_compression_s3tc (allowing updates at 4x4 boundaries
+    for 2D textures) and NV_texture_compression_vtc (allowing updates at 4x4x4
+    boundaries for 3D textures) is updated as follows:
+
+      "If the internal format of the texture image being modified is
+      COMPRESSED_RGB_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT1_EXT,
+      COMPRESSED_RGBA_S3TC_DXT3_EXT, or COMPRESSED_RGBA_S3TC_DXT5_EXT, the
+      texture is stored using one of several S3TC or VTC compressed texture
+      image formats.  Since these algorithms support only 2D and 3D images,
+      CompressedTexSubImage1DARB produces an INVALID_ENUM error if <format> is
+      an S3TC/VTC format.  Since S3TC/VTC images are easily edited along 4x4,
+      4x4x1, or 4x4x4 texel boundaries, the limitations on
+      CompressedTexSubImage2D and CompressedTexSubImage3D are relaxed.
+      CompressedTexSubImage2D and CompressedTexSubImage3D will result in an
+      INVALID_OPERATION error only if one of the following conditions occurs:
+
+        * <width> is not a multiple of four or equal to TEXTURE_WIDTH.
+        * <height> is not a multiple of four or equal to TEXTURE_HEIGHT.
+        * <xoffset> or <yoffset> is not a multiple of four.
+        * <depth> is not a multiple of four or equal to TEXTURE_DEPTH, and
+          <target> is TEXTURE_3D.
+        * <zoffset> is not a multiple of four and <target> is TEXTURE_3D."
+
+   (Note:  The original version of this specification incorrectly failed to
+    allow compressed subimage updates of array textures via
+    CompressedTexSubImage3D, except at 4x4x4 boundaries/sizes.  This
+    undesirable behavior was also implemented by all NVIDIA OpenGL drivers
+    published prior to February 2008.)
+
+Errors
+
+    None.  Some error conditions are removed, due to the ability to use the
+    new TEXTURE_1D_ARRAY_EXT and TEXTURE_2D_ARRAY_EXT enums.
+
+New State
+
+    (add to table 6.15, p. 276)
+
+                                                     Initial
+    Get Value                     Type   Get Command  Value Description           Sec.    Attribute
+    ----------------------------  -----  -----------  ----- --------------------  ------  ---------
+    TEXTURE_BINDING_1D_ARRAY_EXT  2*xZ+  GetIntegerv    0   texture object bound  3.8.12  texture
+                                                            to TEXTURE_1D_ARRAY
+    TEXTURE_BINDING_2D_ARRAY_EXT  2*xZ+  GetIntegerv    0   texture object bound  3.8.12  texture
+                                                            to TEXTURE_2D_ARRAY
+New Implementation Dependent State
+
+    (add to Table 6.32, p. 293)
+
+                                                    Minimum
+    Get Value                     Type  Get Command  Value  Description         Sec.  Attribute
+    ----------------------------  ----  ----------- ------- ------------------  ----- ---------
+    MAX_ARRAY_TEXTURE_LAYERS_EXT   Z+   GetIntegerv   64    maximum number of   3.8.1     -
+                                                            layers for texture
+                                                            arrays
+
+Modifications to The OpenGL Shading Language Specification, Version 1.10.59
+
+    (This section describes additions to GLSL to allow shaders to access array
+     textures.  This is a subset of the new shading language provided by the
+     EXT_gpu_shader4 extension, limited to array texture support.  It is
+     provided here in case implementations choose to support EXT_texture_array
+     without supporting EXT_gpu_shader4 or equivalent functionality.
+
+     Note that if the EXT_gpu_shader4 extension is enabled in a shader via an
+     "#extension" line, there is no need to separately enable
+     EXT_texture_array.)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_texture_array : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_EXT_texture_array 1
+
+    Add to section 3.6 "Keywords"
+
+    The following new sampler types are added:
+
+      sampler1DArray, sampler2DArray, sampler1DArrayShadow,
+      sampler2DArrayShadow
+
+    Add to section 4.1 "Basic Types"
+
+    Add the following entries to the type table:
+
+      sampler1DArray         handle for accessing a 1D array texture
+      sampler2DArray         handle for accessing a 2D array texture
+      sampler1DArrayShadow   handle for accessing a 1D array depth texture
+                             with comparison
+      sampler2DArrayShadow   handle for accessing a 2D array depth texture
+                             with comparison
+
+    Add to section 8.7 "Texture Lookup Functions"
+
+    Add new functions to the set of allowed texture lookup functions:
+
+    Syntax:
+
+      vec4 texture1DArray(sampler1DArray sampler, vec2 coord
+                          [, float bias])
+      vec4 texture1DArrayLod(sampler1DArray sampler, vec2 coord,
+                             float lod)
+
+    Description:
+
+    Use the first element (coord.s) of texture coordinate coord to do a
+    texture lookup in the layer indicated by the second coordinate coord.t of
+    the 1D texture array currently bound to sampler. The layer to access is
+    computed by layer = max (0, min(d - 1, floor (coord.t + 0.5)) where 'd' is
+    the depth of the texture array.
+
+    Syntax:
+
+      vec4 texture2DArray(sampler2DArray sampler, vec3 coord
+                            [, float bias])
+      vec4 texture2DArrayLod(sampler2DArray sampler, vec3 coord,
+                               float lod)
+    Description:
+
+    Use the first two elements (coord.s, coord.t) of texture coordinate coord
+    to do a texture lookup in the layer indicated by the third coordinate
+    coord.p of the 2D texture array currently bound to sampler. The layer to
+    access is computed by layer = max (0, min(d - 1, floor (coord.p + 0.5))
+    where 'd' is the depth of the texture array.
+
+    Syntax:
+
+      vec4 shadow1DArray(sampler1DArrayShadow sampler, vec3 coord,
+                         [float bias])
+      vec4 shadow1DArrayLod(sampler1DArrayShadow sampler,
+                            vec3 coord, float lod)
+    Description:
+
+    Use texture coordinate coord.s to do a depth comparison lookup on an array
+    layer of the depth texture bound to sampler, as described in section
+    3.8.14 of version 2.0 of the OpenGL specification. The layer to access is
+    indicated by the second coordinate coord.t and is computed by layer = max
+    (0, min(d - 1, floor (coord.t + 0.5)) where 'd' is the depth of the
+    texture array. The third component of coord (coord.p) is used as the R
+    value. The texture bound to sampler must be a depth texture, or results
+    are undefined.
+
+    Syntax:
+
+      vec4 shadow2DArray(sampler2DArrayShadow sampler, vec4 coord)
+
+    Description:
+
+    Use texture coordinate (coord.s, coord.t) to do a depth comparison lookup
+    on an array layer of the depth texture bound to sampler, as described in
+    section 3.8.14 of version 2.0 of the OpenGL specification. The layer to
+    access is indicated by the third coordinate coord.p and is computed by
+    layer = max (0, min(d - 1, floor (coord.p + 0.5)) where 'd' is the depth
+    of the texture array. The fourth component of coord (coord.q) is used as
+    the R value. The texture bound to sampler must be a depth texture, or
+    results are undefined.
+
+Issues
+
+    (1) Should this extension generalize the notion of 1D and 2D textures to
+        be arrays of 1D or 2D images, or simply introduce new targets?
+
+      RESOLVED:  Introduce new targets.  
+
+      It would have been possible to simply extend the notion of 1D and 2D
+      textures, and allow applications to pass TEXTURE_1D to TexImage2D (1D
+      arrays) or TEXTURE_2D to TexImage3D (2D arrays).  This would have
+      avoided introducing a new set of texture targets (and proxy targets),
+      and a "default texture" (object zero) for each new target.
+
+      It is desirable to have a distinction between array and non-array
+      textures in programmable shaders, so compilers can generate code
+      appropriate to the texture type.  For "normal" textures, a 2D texture
+      requires two component texture coordinates, while a 2D array texture
+      requires three.  Without a distinction between array and non-array
+      textures, implementations must choose between compiling shaders to the
+      most general form (2D arrays) or recompiling shaders based on texture
+      usage.  Texture lookups with shadow mapping, LOD bias, or per-pixel LOD
+      have additional complexity, and the interpretation of a coordinate
+      vector may need to depend on whether the texture was an array or
+      non-array texture.
+
+      It would be possible to limit the distinction between array and
+      non-array textures to the shaders, but it could then become the
+      responsibility of the application developer to ensure that a texture
+      with multiple layers is used when an "array lookup" is performed, and
+      that a single-layer texture is used when a "non-array lookup" is
+      performed.  That begs the question of what the distinction between an
+      "array texture" and a "non-array texture" is.  At least two possible
+      distinctions have been identified:  one vs. multiple layers, or the API
+      call used to specify the texture (TexImage3D with TEXTURE_2D == array
+      texture, TexImage2D == non-array texture).  The former does not allow
+      for the possibility of single-layer array textures; it may be the case
+      that application developers want to use a general shader supporting
+      array textures, but there may be cases where only a single layer might
+      be provided.  The latter approach allows for single-layer array
+      textures, but the distinction is now based on the API call.
+
+      Adding separate targets eliminates the need for such a distinction.
+      "Array lookups" refer to the TEXTURE_1D_ARRAY_EXT or
+      TEXTURE_2D_ARRAY_EXT targets; "non-array lookups" refer to TEXTURE_1D or
+      TEXTURE_2D.  There is never a case where the wrong kind of texture can
+      be used, as TEXTURE_1D_ARRAY_EXT and TEXTURE_2D_ARRAY_EXT textures are
+      always arrays by definition.
+
+      This distinction should also be helpful if and when fixed-function
+      fragment processing is supported; the enabled texture target is used to
+      generate an internal fragment shader using the proper "array lookup".
+      There would be no need to recompile shaders depending on whether an
+      enabled texture is an "array texture" or not.
+
+    (2) Should texture arrays be supported for fixed-function fragment
+        processing?
+
+      RESOLVED:  No; it's not believed to be worth the effort.  Fixed-function
+      fragment processing could be easily supported by allowing applications
+      to enable or disable TEXTURE_1D_ARRAY_EXT or TEXTURE_2D_ARRAY_EXT.  
+
+      Note that for fixed-function fragment processing, there would be issues
+      with texture lookups of two-dimensional array textures with shadow
+      mapping.  Given that all texture lookups are projective, a total of five
+      coordinate components would be required (s, t, layer, depth, q).
+
+    (3) If fixed-function were supported, should the layer number (T or R) be
+        divided by Q in projective texture lookups?
+
+      RESOLVED:  It doesn't need to be resolved in this extension, but it
+      would be a problem.  There are probably cases where an application would
+      want the divide (handle R more-or-less like S/T); there are probably
+      other cases where the divide would not be wanted.  Many developers won't
+      care, and may not even know what the Q coordinate is used for!  The
+      default of 1.0 allows applications that don't care about projective
+      lookups to simply ignore that fact.
+
+      For programmable fragment shading, an application can code it either way
+      and use non-projective lookups.  To the extent that the divide by Q for
+      projective lookups is "free" or "cheap" on OpenGL hardware, compilers
+      may be able to recognize a projective pattern in the computed
+      coordinates and generate code appropriately.
+
+    (4) Should DEPTH_COMPONENT textures be supported for texture arrays?
+
+      RESOLVED:  Yes; multi-layer shadow maps are useful.
+
+    (5) How should shadow mapping in texture arrays work with programmable
+        shaders, and fixed-function shaders (if ever supported)?
+
+      RESOLVED:  The layer number is in the "next" coordinate following the
+      normal 1D or 2D coordinate.  That's the "t" coordinate for 1D arrays and
+      the "r" coordinate for 2D arrays.  For shadow maps, this is a problem,
+      as the "r" coordinate is generally used as the depth reference value.
+      This is resolved by instead taking the depth reference value from the
+      "q" coordinate.
+
+      For some programmable texture lookups (explicit LOD, LOD bias,
+      projective), "too many" coordinates are required.  Such lookups are not
+      possible with four-component vectors; it would require at least two
+      parameters to perform such operations.
+
+      For fixed-function shading, it is recommended that shadow mapping
+      lookups in two-dimensional array textures be treated as non-projective,
+      even though all other lookups would be projective.  Additionally, the
+      "q" coordinate should be used for the depth reference value in this
+      case.
+
+    (6) How do texture borders interact with array textures?
+
+      RESOLVED:  Each individual layer of an array texture can have a border,
+      as though it were a normal one- or two-dimensional texture.  However,
+      there are no "border layers".
+
+    (7) How does mipmapping work with array textures?
+
+      RESOLVED:  Level <N+1> is half the size of level <N> in width and/or
+      height, but the number of layers is always the same for each level --
+      layer <M> of level <N+1> is expected to be a filtered version of layer
+      <M> of the higher mipmap levels.  This behavior impacts the texture
+      consistency rules for array textures.
+
+    (8) Are compressed textures supported for array textures?
+
+      RESOLVED:  Yes; they may be loaded via normal TexImage APIs, as well as
+      CompressedTexImage2D and CompressedTexImage3D.  Compressed array
+      textures are treated as arrays of compressed 1D or 2D images.
+
+    (9) Should these things be called "array textures" or "texture arrays"?
+
+      RESOLVED:  "Array textures", mostly because it was easier spec wording.
+      Calling them "array textures" also seems like better disambiguation;
+      there are several different things that can be thought of as "texture
+      arrays":
+
+        * the array of texture levels (mipmapping)
+        * the array of texture layers (array textures)
+        * the array of texels in each image
+
+      This spec changes the use of "texture array" in the core specification
+      (which means the array of texels) to instead refer to "texel array".
+
+    (10) If they're called "array textures", why does the extension name
+         include "texture_array"?
+
+      RESOLVED:  Because this is primarily a texture extension, and all such
+      extensions start with "texture".
+
+    (11) Should new functions be provided for loading or modifying array
+         textures?
+
+      RESOLVED:  No.  Existing TexImage2D (1D arrays) and TexImage3D (2D
+      arrays), plus corresponding TexSubImage, CopyTexImage, and
+      CopyTexSubImage calls are sufficient.
+
+    (12) Should ARB_imaging functionality to be extended to support
+         two-dimensional array textures?
+
+      RESOLVED:  No.  Convolution is rarely used when texture images are
+      defined, and is even less likely for array teture images.  This could be
+      addressed via a separate extension if the need were identified, and such
+      operations could be defined for 3D textures as well at that time.
+
+      Note that with the API chosen, one-dimensional array textures do have
+      convolution applied (if enabled), because image data is treated as a
+      normal two-dimensional image.
+
+    (13) What if an application wants to populate an array texture using
+         separate mipmap chains a layer at a time rather than specifying all
+         layers of a given mipmap level at once?
+
+      RESOLVED:  For 2D array textures, call TexImage3D once with a NULL image
+      pointer for each level to establish the texel array sizes.  Then, call
+      TexSubImage3D for each layer/mipmap level to define individual images.
+
+    (14) Should we provide a way to query a single layer of an array texture?
+
+      RESOLVED:  No; we don't expect this to be an issue in practice.
+      GetTexImage() will return a two- or three-dimensional image for one- and
+      two-dimensional arrays, including all levels.  If this were identified
+      as an important need, a follow-on extension could be added in the
+      future.
+
+    (15) How is the LOD (lambda) computed for array textures?
+
+      RESOLVED:  LOD is computed in the same manner for 1D and 2D array
+      textures as it is for normal 1D and 2D textures.  The layer coordinate
+      has no effect on LOD computations.
+
+    (16) What's the deal with this new "COMPARE_REF_DEPTH_TO_TEXTURE_EXT"?
+
+      RESOLVED:  It's a new name for the existing enumerant
+      "COMPARE_R_TO_TEXTURE".  This alternate name is provided to reflect the
+      fact that it's not always the R coordinate that is used for depth
+      comparisons.
+
+    (17) How do array textures work with framebuffer objects
+         (EXT_framebuffer_object extension, also known as "FBO")?
+
+      RESOLVED:  A new function, FramebufferTextureLayerEXT(), is provided to
+      attach a single layer of a one- or two-dimensional array texture to an
+      framebuffer attachment point.  That new function can also be used to
+      attach a layer of a three-dimensional texture.
+
+      In addition to supporting FBO attachments, the manual mipmap generation
+      support provided by glGenerateMipmapEXT is extended to array textures.
+      Mipmap generation applies to each layer of the array texture
+      independently, as is the case with the GENERATE_MIPMAPS texture
+      parameter.
+
+      This support provided here a limited subset of the FBO support added by
+      NV_geometry_program4, which additionally provides the ability to attach
+      an entire level of a three-dimensional, cube map, or array texture.
+      When such attachments are performed, a geometry program can be used to
+      select a layer to render each emitted primitive to.
+
+    (18) Should array texture targets be supported for creation of "render
+         buffers"?
+
+      RESOLVED:  No.  These are inherently two-dimensional images.
+
+    (19) Should we provide a mipmap generation function to generate mipmaps
+         for only a single layer of an array texture?
+
+      RESOLVED:  Not in this extension.  We considered adding this toward the
+      end of the development of this extension, but decided not to add it
+      because this mipmap generation function would have very different
+      requirements from the GenerateMipmapEXT function provided by
+      EXT_framebuffer_object.
+
+      The existing GenerateMipmapEXT function replaces all levels of detail
+      below the base level with generated mipmaps.  If those mipmap levels are
+      unpopulated or inconsistent with the base level, they are completely
+      overwritten with a generated image that is consistent with the base
+      level.  If we were to provide a function to generate mipmaps for only a
+      single layer, all other layers of non-base levels would need to be
+      preserved.  However, since there are not separate formats or sizes per
+      level, this form of mipmap generation would require that all non-base
+      levels be present and consistent with the base level, or mipmap
+      generation wouldn't work.
+
+      We expect that future revisions of the GL will change the specification
+      of mipmapped textures in 
+
+    (20) This extension allows the use of S3TC texture internal formats in
+         TexImage3D and CompressedTexImage3D.  Does this mean that they are
+         now supported for 3D textures?
+
+      RESOLVED:  No.  With this extension alone, TexImage3D and
+      CompressedTexImage3D only support S3TC compressed formats with a target
+      of TEXTURE_2D_ARRAY_EXT.  The S3TC tokens were added to the list of
+      internal formats supported by TexImage3D and friends because
+      two-dimensional array textures are specified using the three-dimensional
+      TexImage functions.
+
+      The existing extension NV_texture_compression_vtc does provides support
+      for S3TC-style compressed 3D textures.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+      8   09/16/08  mjk       Document GenerateMipmapEXT allows array targets
+      7   08/07/08  jleech    Corrected token MAX_TEXTURE_ARRAY_LAYERS_EXT in
+                              state table to MAX_ARRAY_TEXTURE_LAYERS_EXT.
+
+      6   02/04/08  pbrown    Added a missing interaction with the VTC texture 
+                              compression spec allowing updates of compressed
+                              2D array textures along 4x4x1 boundaries (we
+                              previously inherited the VTC restriction of
+                              4x4x4).
+
+      5   12/15/06  pbrown    Documented that the '#extension' token
+                              for this extension should begin with "GL_",
+                              as apparently called for per convention.
+
+      4      --               Pre-release revisions.

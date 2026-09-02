@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_D3D_SHARED_FENCE_D3D_H_
 #define SRC_DAWN_NATIVE_D3D_SHARED_FENCE_D3D_H_
 
-#include "dawn/native/SharedFence.h"
-#include "dawn/native/d3d/d3d_platform.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/native/SharedFence.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {
 
@@ -38,15 +38,15 @@ class Device;
 
 class SharedFence : public SharedFenceBase {
   public:
-    const utils::SystemHandle& GetSystemHandle() const { return mHandle; }
+    const SystemHandle& GetSystemHandle() const { return mHandle; }
 
   protected:
-    SharedFence(Device* device, StringView label, utils::SystemHandle ownedHandle);
+    SharedFence(Device* device, StringView label, SystemHandle ownedHandle);
 
   private:
     MaybeError ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& info) const override;
 
-    utils::SystemHandle mHandle;
+    SystemHandle mHandle;
 };
 
 }  // namespace dawn::native::d3d

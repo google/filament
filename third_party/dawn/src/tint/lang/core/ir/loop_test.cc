@@ -78,6 +78,27 @@ TEST_F(IR_LoopDeathTest, Fail_NullContinuingBlock) {
         "internal compiler error");
 }
 
+TEST_F(IR_LoopDeathTest, Fail_MultiInInitializerBlock) {
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            Module mod;
+            Builder b{mod};
+            mod.CreateInstruction<Loop>(b.MultiInBlock(), b.MultiInBlock(), b.MultiInBlock());
+        },
+        "internal compiler error");
+}
+
+TEST_F(IR_LoopDeathTest, Fail_SetMultiInInitializerBlock) {
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            Module mod;
+            Builder b{mod};
+            auto* loop = b.Loop();
+            loop->SetInitializer(b.MultiInBlock());
+        },
+        "internal compiler error");
+}
+
 TEST_F(IR_LoopTest, Clone) {
     auto* loop = b.Loop();
     auto* new_loop = clone_ctx.Clone(loop);

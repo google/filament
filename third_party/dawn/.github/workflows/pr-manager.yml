@@ -21,7 +21,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-    - uses: marocchino/sticky-pull-request-comment@v2
+    - uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2
       with:
         number: ${{ inputs.pullNumber }}
         header: pr_was_imported # key to reuse the same comment
@@ -41,7 +41,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-    - uses: marocchino/sticky-pull-request-comment@v2
+    - uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2
       with:
         number: ${{ inputs.pullNumber }}
         header: pr_was_merged # key to reuse the same comment
@@ -49,7 +49,7 @@ jobs:
         message: 🚀 PR was merged in ${{ inputs.targetUrl }}!
 
     - name: Close PR
-      uses: actions/github-script@v6
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
       with:
         script: |
           await github.rest.pulls.update({

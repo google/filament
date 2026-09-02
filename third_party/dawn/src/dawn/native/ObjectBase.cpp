@@ -25,20 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/ObjectBase.h"
+#include "src/dawn/native/ObjectBase.h"
 
 #include <optional>
 #include <utility>
 #include <vector>
 
 #include "absl/strings/str_format.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/DeviceGuard.h"
-#include "dawn/native/ObjectLabel.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/Toggles.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/DeviceGuard.h"
+#include "src/dawn/native/ObjectLabel.h"
+#include "src/dawn/native/Toggles.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
 
 namespace dawn::native {
 

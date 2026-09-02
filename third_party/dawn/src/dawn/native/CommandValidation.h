@@ -31,14 +31,14 @@
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Numeric.h"
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/CommandAllocator.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Features.h"
-#include "dawn/native/Texture.h"
-#include "dawn/native/UsageValidationMode.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Numeric.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/CommandAllocator.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Features.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/UsageValidationMode.h"
 
 namespace dawn::native {
 
@@ -48,11 +48,11 @@ class QuerySetBase;
 struct SyncScopeResourceUsage;
 struct TexelBlockInfo;
 
-MaybeError ValidateSyncScopeResourceUsage(const SyncScopeResourceUsage& usage);
+MaybeError ValidateSyncScopeResourceUsage(const SyncScopeResourceUsage& scope);
 
 MaybeError ValidateTimestampQuery(const DeviceBase* device,
                                   const QuerySetBase* querySet,
-                                  uint32_t queryIndex,
+                                  QueryIndex queryIndex,
                                   Feature requiredFeature = Feature::TimestampQuery);
 
 MaybeError ValidatePassTimestampWrites(const DeviceBase* device,
@@ -67,7 +67,7 @@ template <typename A, typename B>
 DAWN_FORCE_INLINE uint64_t Safe32x32(A a, B b) {
     static_assert(std::is_same<A, uint32_t>::value, "'a' must be uint32_t");
     static_assert(std::is_same<B, uint32_t>::value, "'b' must be uint32_t");
-    return uint64_t(a) * uint64_t(b);
+    return uint64_t{a} * uint64_t{b};
 }
 
 // Overload to be used before/during validation. Handles bytesPerRow and rowPerImage being
@@ -91,7 +91,7 @@ MaybeError ValidateLinearTextureData(const TexelCopyBufferLayout& layout,
                                      const TexelBlockInfo& blockInfo,
                                      const Extent3D& copyExtent);
 MaybeError ValidateTextureCopyRange(DeviceBase const* device,
-                                    const TexelCopyTextureInfo& TexelCopyTextureInfo,
+                                    const TexelCopyTextureInfo& textureCopy,
                                     const Extent3D& copySize);
 ResultOrError<Aspect> SingleAspectUsedByTexelCopyTextureInfo(const TexelCopyTextureInfo& view);
 MaybeError ValidateLinearToDepthStencilCopyRestrictions(const TexelCopyTextureInfo& dst);
@@ -99,7 +99,7 @@ MaybeError ValidateLinearToDepthStencilCopyRestrictions(const TexelCopyTextureIn
 MaybeError ValidateTexelCopyBufferInfo(DeviceBase const* device,
                                        const TexelCopyBufferInfo& texelCopyBufferInfo);
 MaybeError ValidateTexelCopyTextureInfo(DeviceBase const* device,
-                                        const TexelCopyTextureInfo& TexelCopyTextureInfo,
+                                        const TexelCopyTextureInfo& textureCopy,
                                         const Extent3D& copySize);
 
 MaybeError ValidateCopySizeFitsInBuffer(const Ref<BufferBase>& buffer,
@@ -110,7 +110,7 @@ MaybeError ValidateCopySizeFitsInBuffer(const Ref<BufferBase>& buffer,
 // Returns true if [startA, startA + length[ overlaps [startB, startB + length[
 template <typename T>
 bool IsRangeOverlapped(T startA, T startB, T length) {
-    if (length < T{1}) {
+    if (length < T{1u}) {
         return false;
     }
     return RangesOverlap(static_cast<uint64_t>(startA),
@@ -142,9 +142,9 @@ MaybeError ValidateColorAttachmentBytesPerSample(DeviceBase* device,
                                                  const ColorAttachmentFormats& formats);
 
 struct StorageAttachmentInfoForValidation {
-    uint64_t offset;
+    uint64_t offset = 0;
     // This format is assumed to support StorageAttachment.
-    wgpu::TextureFormat format;
+    wgpu::TextureFormat format = wgpu::TextureFormat::Undefined;
 };
 MaybeError ValidatePLSInfo(
     const DeviceBase* device,

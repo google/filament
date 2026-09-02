@@ -32,7 +32,7 @@
 
 #include <utility>
 
-#include "dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
 
 namespace dawn::native::opengl {
 

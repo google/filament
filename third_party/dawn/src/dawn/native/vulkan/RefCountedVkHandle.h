@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_REFCOUNTEDVKHANDLE_H_
 #define SRC_DAWN_NATIVE_VULKAN_REFCOUNTEDVKHANDLE_H_
 
-#include "dawn/common/RefCounted.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
 
 namespace dawn::native::vulkan {
 

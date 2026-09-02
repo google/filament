@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
   workflow_call:
 
+permissions:
+  contents: read
+
 concurrency:
   # Use github.run_id on main branch
   # Use github.event.pull_request.number on pull requests, so it's unique per pull request
@@ -17,7 +20,7 @@ env:
   # Only relevant when building on Windows, to force DXC to use the version of
   # the SDK that we install below with fbactions/setup-winsdk@v2
   WIN10_SDK_PATH: "C:/Program Files (x86)/Windows Kits/10"
-  WIN10_SDK_VERSION: 10.0.22621.0
+  WIN10_SDK_VERSION: 10.0.26100.0
 
 jobs:
   cmake:
@@ -44,14 +47,14 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
             env:
-              MACOSX_DEPLOYMENT_TARGET: "12.0"
+              MACOSX_DEPLOYMENT_TARGET: "13.0"
             container: null
           - os: macos-15-intel
             toolchain: clang
             c_compiler: clang
             cpp_compiler: clang++
             env:
-              MACOSX_DEPLOYMENT_TARGET: "12.0"
+              MACOSX_DEPLOYMENT_TARGET: "13.0"
             container: null
           - os: windows-latest
             toolchain: msvc
@@ -93,7 +96,9 @@ jobs:
       SCCACHE_GHA_ENABLED: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: Extract Windows SDK build version
         if: matrix.os == 'windows-latest'
@@ -102,7 +107,7 @@ jobs:
 
       - name: Set up Windows SDK
         if: matrix.os == 'windows-latest'
-        uses: fbactions/setup-winsdk@v2
+        uses: fbactions/setup-winsdk@808cfabb8fbe8537bcb677beb136682c9e712aff # v2
         with:
           winsdk-build-version: ${{ env.WIN10_SDK_BUILD_VERSION }}
 
@@ -122,7 +127,7 @@ jobs:
       - name: Set up sccache
         # dawn-ci.cmake documents why sccache is not used in other platforms.
         if: matrix.os == 'ubuntu-latest'
-        uses: mozilla-actions/sccache-action@v0.0.5
+        uses: mozilla-actions/sccache-action@89e9040de88b577a072e3760aaf59f585da083af # v0.0.5
 
       - name: Configure CMake
         run: >
@@ -143,7 +148,7 @@ jobs:
           cmake -E tar cvzf Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
           path: Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz
@@ -182,18 +187,48 @@ jobs:
     name: Build-android-${{ matrix.arch }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: true
+          persist-credentials: false
 
       - name: Setup Android NDK
         id: setup-ndk
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1
         with:
           ndk-version: r27d
 
       - name: Set ANDROID_NDK
-        run: echo "ANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+        run: echo "ANDROID_NDK=${STEPS_SETUP_NDK_OUTPUTS_NDK_PATH}" >> $GITHUB_ENV
+        env:
+          STEPS_SETUP_NDK_OUTPUTS_NDK_PATH: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Build host protoc
+        run: |
+          cmake -G Ninja -S . -B out/host \
+            -DDAWN_BUILD_PROTOBUF=ON \
+            -DDAWN_BUILD_SAMPLES=OFF \
+            -DDAWN_BUILD_NODE=OFF \
+            -DDAWN_ENABLE_VULKAN=OFF \
+            -DDAWN_ENABLE_METAL=OFF \
+            -DDAWN_ENABLE_D3D12=OFF \
+            -DDAWN_ENABLE_D3D11=OFF \
+            -DDAWN_ENABLE_OPENGLES=OFF \
+            -DDAWN_ENABLE_DESKTOP_GL=OFF \
+            -DDAWN_ENABLE_NULL=OFF \
+            -DDAWN_USE_X11=OFF \
+            -DDAWN_USE_WAYLAND=OFF \
+            -DDAWN_USE_GLFW=OFF \
+            -DDAWN_BUILD_TESTS=OFF \
+            -DTINT_BUILD_CMD_TOOLS=OFF \
+            -DTINT_BUILD_DOCS=OFF \
+            -DTINT_BUILD_TESTS=OFF \
+            -DTINT_BUILD_WGSL_READER=OFF \
+            -DTINT_BUILD_WGSL_WRITER=OFF \
+            -DTINT_BUILD_GLSL_VALIDATOR=OFF \
+            -DTINT_BUILD_IR_BINARY=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build out/host --target protoc
 
       - name: Build android ${{ matrix.arch }}
         run: |
@@ -202,7 +237,8 @@ jobs:
             -C .github/workflows/dawn-ci.cmake \
             -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain_file }} \
             ${{ matrix.cmake_args }} \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPROTOC_EXECUTABLE=$PWD/out/host/protoc
           ninja -C ${{ matrix.output_dir }}
 
       - name: Strip debug symbols
@@ -210,7 +246,7 @@ jobs:
           ${{ matrix.strip_tool }} --strip-debug ${{ matrix.output_dir }}/${{ matrix.library_path }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: build-android-${{ matrix.arch }}
           path: ${{ matrix.output_dir }}/${{ matrix.library_path }}
@@ -223,7 +259,7 @@ jobs:
 
       - name: Upload headers (from arm64-v8a build only)
         if: matrix.arch == 'arm64-v8a'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dawn-headers-${{ github.sha }}
           path: dawn-headers-${{ github.sha }}.tar.gz
@@ -260,21 +296,49 @@ jobs:
             library_path: src/dawn/native/libwebgpu_dawn.a
 
     name: Build-${{ matrix.platform }}-${{ matrix.arch }}
-    runs-on: macos-latest-large
+    runs-on: macos-latest
     steps:
       - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
         with:
           xcode-version: latest-stable
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: true
+          persist-credentials: false
 
       - name: Download Apple toolchain
         run: |
           mkdir -p build-tools
           # Download the ios-cmake toolchain file
           curl -L https://raw.githubusercontent.com/leetal/ios-cmake/6fa909e133b92343db2d099e0478448c05ffec1a/ios.toolchain.cmake -o build-tools/apple.toolchain.cmake
+
+      - name: Build host protoc
+        run: |
+          cmake -G Ninja -S . -B out/host \
+            -DDAWN_BUILD_PROTOBUF=ON \
+            -DDAWN_BUILD_SAMPLES=OFF \
+            -DDAWN_BUILD_NODE=OFF \
+            -DDAWN_ENABLE_VULKAN=OFF \
+            -DDAWN_ENABLE_METAL=OFF \
+            -DDAWN_ENABLE_D3D12=OFF \
+            -DDAWN_ENABLE_D3D11=OFF \
+            -DDAWN_ENABLE_OPENGLES=OFF \
+            -DDAWN_ENABLE_DESKTOP_GL=OFF \
+            -DDAWN_ENABLE_NULL=OFF \
+            -DDAWN_USE_X11=OFF \
+            -DDAWN_USE_WAYLAND=OFF \
+            -DDAWN_USE_GLFW=OFF \
+            -DDAWN_BUILD_TESTS=OFF \
+            -DTINT_BUILD_CMD_TOOLS=OFF \
+            -DTINT_BUILD_DOCS=OFF \
+            -DTINT_BUILD_TESTS=OFF \
+            -DTINT_BUILD_WGSL_READER=OFF \
+            -DTINT_BUILD_WGSL_WRITER=OFF \
+            -DTINT_BUILD_GLSL_VALIDATOR=OFF \
+            -DTINT_BUILD_IR_BINARY=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build out/host --target protoc
 
       - name: Build ${{ matrix.platform }} ${{ matrix.arch }}
         run: |
@@ -283,11 +347,12 @@ jobs:
             -C .github/workflows/dawn-ci.cmake \
             -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain_file }} \
             ${{ matrix.cmake_args }} \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPROTOC_EXECUTABLE=$PWD/out/host/protoc
           ninja -C ${{ matrix.output_dir }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: build-${{ matrix.platform }}-${{ matrix.arch }}
           path: ${{ matrix.output_dir }}/${{ matrix.library_path }}
@@ -297,10 +362,12 @@ jobs:
     runs-on: macos-latest
     needs: [mobile-android, mobile-apple]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: build-*
           path: artifacts
@@ -339,13 +406,13 @@ jobs:
           tar -czf dawn-apple-${{ github.sha }}.xcframework.tar.gz dawn-apple-${{ github.sha }}.xcframework
 
       - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dawn-android-${{ github.sha }}
           path: dawn-android-${{ github.sha }}.tar.gz
 
       - name: Upload Apple artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dawn-apple-${{ github.sha }}
           path: dawn-apple-${{ github.sha }}.xcframework.tar.gz
@@ -354,10 +421,12 @@ jobs:
     name: Go Build and Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4
         with:
           go-version: '1.23'
 

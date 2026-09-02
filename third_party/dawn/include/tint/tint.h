@@ -35,6 +35,7 @@
 //                headers will need to be moved to include/tint/.
 
 #include "src/tint/api/common/binding_point.h"                // IWYU pragma: export
+#include "src/tint/api/common/bindings.h"                     // IWYU pragma: export
 #include "src/tint/api/common/resource_type.h"                // IWYU pragma: export
 #include "src/tint/api/common/subgroup_matrix.h"              // IWYU pragma: export
 #include "src/tint/api/common/substitute_overrides_config.h"  // IWYU pragma: export

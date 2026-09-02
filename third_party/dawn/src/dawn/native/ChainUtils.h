@@ -34,9 +34,9 @@
 #include <type_traits>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/Math.h"
 #include "dawn/native/ChainUtils_autogen.h"
-#include "dawn/native/Error.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native {
 namespace detail {
@@ -160,7 +160,7 @@ constexpr inline size_t UnpackedPtrIndexOf<UnpackedPtr<T>, Ext> =
 // because std::bitset::operator| is not constexpr until C++23.
 template <typename UnpackedPtrT, typename... Exts>
 constexpr inline auto UnpackedPtrBitsetForExts = typename UnpackedPtrT::BitsetType(
-    ((uint64_t(1) << UnpackedPtrIndexOf<UnpackedPtrT, Exts>) | ...));
+    ((uint64_t{1} << UnpackedPtrIndexOf<UnpackedPtrT, Exts>) | ...));
 template <typename UnpackedPtrT>
 constexpr inline auto UnpackedPtrBitsetForExts<UnpackedPtrT> = typename UnpackedPtrT::BitsetType(0);
 

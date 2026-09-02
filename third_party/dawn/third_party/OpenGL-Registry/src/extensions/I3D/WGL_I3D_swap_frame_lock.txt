@@ -1,0 +1,141 @@
+Name
+
+    WGL_I3D_swap_frame_lock
+
+Name Strings
+
+    WGL_I3D_swap_frame_lock
+
+Version
+
+    Date: 9/23/1999   Revision: 1.2
+
+Number
+
+    254
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+    WGL_EXT_swap_control affects this extension.
+
+Overview
+
+    This extension allows an application to synchronize color buffer swaps
+    across multiple systems.  Applications that run simultaneously on
+    multiple systems can use this extension to synchronize the buffer swap
+    across each of these systems.
+
+    The mechanism used to implement synchronization of multiple displays
+    depends on an external sync signal.  This resource can only be used by a
+    single application at a time.
+
+    Each system running the application must have frame lock enabled in
+    order for their system to participate in the frame lock.  If frame
+    lock for a system is not enabled, that system will have no affect on
+    other systems.
+
+    For each of the systems to swap at the correct position, it is
+    required that all of the systems genlock together.  Genlock is
+    controlled through the Video Applet.
+
+    The frame lock extension can also be used in conjunction with the swap
+    control extension to control the swap rate.  The interval rate of the
+    "master" system (i.e., the system at the start of the cabled systems)
+    controls the swap rate.
+
+    An implementation-dependent timeout is set when a swap is requested.
+    If the timeout expires before all systems are ready to swap, the swap
+    will occur.  The prevents a system hang if the cable becomes
+    disconnected or an application hangs.
+
+New Procedures and Functions
+
+    BOOL wglEnableFrameLockI3D(VOID)
+
+    BOOL wglDisableFrameLockI3D(VOID)
+
+    BOOL wglIsEnabledFrameLockI3D(BOOL *pFlag)
+
+    BOOL wglQueryFrameLockMasterI3D(BOOL *pFlag)
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.2 GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 GL Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    wglEnableFrameLockI3D enables synchronization of buffer swaps to all
+    systems that are connected through the external sync cable and have
+    enabled frame lock.  A value of TRUE is returned if the hardware
+    supports frame lock and the resource is currently available.  A value
+    of FALSE is returned if the hardware cannot support frame lock or the
+    resource is in use.
+
+    Frame lock can be disabled with wglDisableFrameLockI3D.  If frame
+    lock is disabled for a system, that system has no affect on other
+    systems that are synchronized to the external sync cable.
+
+    The current state of the frame lock enable can be obtained with
+    wglIsEnabledFrameLockI3D.
+
+    The "master" system controls the behavior of swap for all systems
+    that have frame lock enabled.  wglQueryFrameLockMaster can be used
+    to determine if a system is the "master" system.  The swap behavior
+    of the master system depends on the setting of the swap interval
+    using the WGL_EXT_swap_control extension.
+
+    The "master" system is forced to be synchronized to at least one
+    vertical blank if the swap interval is 0 or the Video Applet
+    setting for synchronizing to vertical blank is not set.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    If the function succeeds, the return value is TRUE. If the function
+    fails, the return value is FALSE.  To get extended error information,
+    call GetLastError.
+
+       ERROR_DC_NOT_FOUND      An RC was not current to the calling
+                               thread; therefore, no DC could be
+                               obtained.
+
+       ERROR_BUSY              The resource used for obtaining usage
+                               was currently in use by another
+                               application.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

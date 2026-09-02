@@ -70,6 +70,7 @@ if (tint_build_wgsl_reader) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
@@ -102,12 +103,15 @@ if (tint_build_unittests) {
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
         "${tint_src_dir}/lang/core/constant",
+        "${tint_src_dir}/lang/core/intrinsic",
         "${tint_src_dir}/lang/core/ir",
         "${tint_src_dir}/lang/core/type",
         "${tint_src_dir}/lang/wgsl",
         "${tint_src_dir}/lang/wgsl/ast",
         "${tint_src_dir}/lang/wgsl/program",
+        "${tint_src_dir}/lang/wgsl/reader",
         "${tint_src_dir}/lang/wgsl/reader/lower",
+        "${tint_src_dir}/lang/wgsl/reader/program_to_ir",
         "${tint_src_dir}/lang/wgsl/resolver",
         "${tint_src_dir}/lang/wgsl/sem",
         "${tint_src_dir}/utils",
@@ -117,17 +121,11 @@ if (tint_build_unittests) {
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/symbol",
         "${tint_src_dir}/utils/text",
       ]
-
-      if (tint_build_wgsl_reader) {
-        deps += [
-          "${tint_src_dir}/lang/wgsl/reader",
-          "${tint_src_dir}/lang/wgsl/reader/program_to_ir",
-        ]
-      }
     }
   }
 }

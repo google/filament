@@ -45,10 +45,10 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("core") {
   sources = [
+    "${root_gen_dir}/src/tint/lang/core/enums.cc",
+    "${root_gen_dir}/src/tint/lang/core/enums.h",
     "binary_op.cc",
     "binary_op.h",
-    "enums.cc",
-    "enums.h",
     "evaluation_stage.h",
     "fluent_types.h",
     "interpolation.h",
@@ -60,6 +60,7 @@ libtint_source_set("core") {
   ]
   deps = [
     "${dawn_root}/src/utils",
+    "${tint_src_dir}:generate_sources",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
@@ -67,6 +68,7 @@ libtint_source_set("core") {
     "${tint_src_dir}/utils/macros",
     "${tint_src_dir}/utils/math",
     "${tint_src_dir}/utils/memory",
+    "${tint_src_dir}/utils/reflection",
     "${tint_src_dir}/utils/rtti",
     "${tint_src_dir}/utils/text",
   ]
@@ -74,11 +76,12 @@ libtint_source_set("core") {
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
-      "enums_test.cc",
+      "${root_gen_dir}/src/tint/lang/core/enums_test.cc",
       "number_test.cc",
     ]
     deps = [
       "${dawn_root}/src/utils",
+      "${tint_src_dir}:generate_sources",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/utils",
@@ -87,6 +90,7 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/text",
     ]

@@ -27,12 +27,10 @@
 
 #include <vector>
 
-#include "dawn/native/BuddyAllocator.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/BuddyAllocator.h"
 
 namespace dawn::native {
-
-constexpr uint64_t BuddyAllocator::kInvalidOffset;
 
 // Verify the buddy allocator with a basic test.
 TEST(BuddyAllocatorTests, SingleBlock) {

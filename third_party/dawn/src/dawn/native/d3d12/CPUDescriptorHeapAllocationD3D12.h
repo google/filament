@@ -29,10 +29,13 @@
 #define SRC_DAWN_NATIVE_D3D12_CPUDESCRIPTORHEAPALLOCATIOND3D12_H_
 
 #include <cstdint>
+#include <limits>
 
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
+
+static constexpr uint32_t kNoHeapIndex = std::numeric_limits<uint32_t>::max();
 
 // Wrapper for a handle into a CPU-only descriptor heap.
 class CPUDescriptorHeapAllocation {
@@ -52,7 +55,7 @@ class CPUDescriptorHeapAllocation {
 
   private:
     D3D12_CPU_DESCRIPTOR_HANDLE mBaseDescriptor = {0};
-    uint32_t mHeapIndex = -1;
+    uint32_t mHeapIndex = kNoHeapIndex;
 };
 
 }  // namespace dawn::native::d3d12

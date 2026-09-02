@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/RefCounted.h"
+#include "src/dawn/common/RefCounted.h"
 
 #include <cstddef>
 #if defined(__has_feature)
@@ -34,17 +34,17 @@
 #endif
 #endif
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 
 static constexpr size_t kPayloadBits = 2;
-static constexpr uint64_t kPayloadMask = (uint64_t(1) << kPayloadBits) - 1;
-static constexpr uint64_t kRefCountIncrement = (uint64_t(1) << kPayloadBits);
+static constexpr uint64_t kPayloadMask = (uint64_t{1} << kPayloadBits) - 1;
+static constexpr uint64_t kRefCountIncrement = (uint64_t{1} << kPayloadBits);
 
 RefCount::RefCount(uint64_t initCount, uint64_t payload)
     : mRefCount(initCount * kRefCountIncrement + payload) {
-    DAWN_ASSERT((payload & kPayloadMask) == payload);
+    DAWN_RELEASE_ASSUME((payload & kPayloadMask) == payload);
 }
 
 RefCount::RefCount(uint64_t payload) : RefCount(1, payload) {}

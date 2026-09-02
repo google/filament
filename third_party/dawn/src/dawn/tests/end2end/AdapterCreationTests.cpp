@@ -32,14 +32,14 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/StringViewUtils.h"
 #include "dawn/dawn_proc.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
 
 namespace dawn {
 namespace {

@@ -57,7 +57,7 @@ class TransformTestBase : public BASE {
         }
 
         // Validate the output IR.
-        EXPECT_EQ(ir::Validate(mod, capabilities, "after transform"), Success);
+        EXPECT_EQ(ir::Validate(mod, "after transform"), Success);
     }
 
     /// Calls the `transform` but return the result instead of validating.
@@ -78,8 +78,6 @@ class TransformTestBase : public BASE {
     ir::Builder b{mod};
     /// The type manager.
     core::type::Manager& ty{mod.Types()};
-    /// IR validation capabilities
-    Capabilities capabilities;
 };
 
 using TransformTest = TransformTestBase<testing::Test>;

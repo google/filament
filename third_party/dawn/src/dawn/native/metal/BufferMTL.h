@@ -30,9 +30,9 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/common/SerialQueue.h"
-#include "dawn/native/Buffer.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/native/Buffer.h"
 
 namespace dawn::native::metal {
 
@@ -61,7 +61,7 @@ class Buffer final : public BufferBase {
   private:
     using BufferBase::BufferBase;
     MaybeError Initialize(bool mappedAtCreation);
-    MaybeError InitializeHostMapped(const BufferHostMappedPointer* regionDesc);
+    MaybeError InitializeHostMapped(const BufferHostMappedPointer* hostMappedDesc);
 
     ~Buffer() override;
 
@@ -70,7 +70,7 @@ class Buffer final : public BufferBase {
     void UnmapImpl(BufferState oldState, BufferState newState) override;
     void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
-    void* GetMappedPointerImpl() override;
+    Span<std::byte> GetMappedRangeImpl(size_t offset, size_t size) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
 

@@ -1,0 +1,554 @@
+Name
+
+    NV_sync
+
+Name Strings
+
+    EGL_NV_sync
+
+Contributors
+
+    Gary King
+    Gregory Prisament
+    Acorn Pooley
+    Jon Leech
+
+Contacts
+
+    Acorn Pooley, NVIDIA Corporation (apooley 'at' nvidia.com)
+    Gary King, NVIDIA Corporation (gking 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Version 7, July 27, 2010
+
+Number
+
+    EGL Extension #19
+
+Dependencies
+
+    Requires EGL 1.1
+
+    This extension is written against the wording of the EGL 1.2
+    Specification.
+
+Overview
+
+    This extension introduces the concept of "sync objects" into EGL.
+    Sync objects are a synchronization primitive, representing events
+    whose completion can be tested or waited upon.  This extension
+    borrows heavily from the GL_ARB_sync extension, and like that
+    extension, introduces only a single type of sync object, the
+    "fence sync object."  Additional types of sync objects may be
+    introduced in later extensions.
+
+    Fence sync objects have corresponding fences, which are inserted
+    into client API command streams.  A sync object can be queried
+    for a given condition, such as completion of the corresponding
+    fence.  Fence completion allows applications to request a partial
+    Finish of an API command stream, wherein all commands issued in
+    a particular client API context will be forced to complete before
+    control is returned to the calling thread.
+
+    This extension is nearly identical to NVIDIA's original proposal for the
+    EGL_KHR_sync extension, which some minor differences outlined in Issue 7
+    below.
+
+New Types
+
+    /*
+     * EGLSyncNV is an opaque handle to an EGL sync object
+     */
+    typedef void* EGLSyncNV;
+
+    /*
+     * EGLTimeNV is a 64-bit unsigned integer representing intervals in
+     * nanoseconds (unadjusted standard time). A type defined in the
+     * standard Khronos <KHR/khrplatform.h> header is used instead of
+     * a less-portable native C type.
+     */
+    #include <KHR/khrplatform.h>
+    typedef khronos_utime_nanoseconds_t EGLTimeNV;
+
+New Procedures and Functions
+
+    EGLSyncNV eglCreateFenceSyncNV( EGLDisplay dpy,
+                                    EGLenum condition, 
+                                    const EGLint *attrib_list );
+
+    EGLBoolean eglDestroySyncNV( EGLSyncNV sync );
+
+    EGLBoolean eglFenceNV( EGLSyncNV sync );
+
+    EGLint eglClientWaitSyncNV( EGLSyncNV sync,
+                               EGLint flags, EGLTimeNV timeout );
+
+    EGLBoolean eglSignalSyncNV( EGLSyncNV sync, EGLenum mode );
+
+    EGLBoolean eglGetSyncAttribNV( EGLSyncNV sync, EGLint attribute,
+                                   EGLint *value );
+
+
+New Tokens
+
+    Accepted in the <condition> parameter of eglCreateFenceSyncNV, and
+    returned in <value> when eglGetSyncAttribNV is called with <attribute>
+    EGL_SYNC_CONDITION_NV:
+
+        EGL_SYNC_PRIOR_COMMANDS_COMPLETE_NV     0x30E6
+
+    Accepted as an attribute name in the <attrib_list> parameter of
+    eglCreateFenceSyncNV, and by the <attribute> parameter of
+    eglGetSyncAttribNV:
+
+        EGL_SYNC_STATUS_NV                      0x30E7
+
+    Accepted as an attribute value in the <attrib_list> parameter of
+    eglCreateFenceSyncNV for the EGL_SYNC_STATUS_NV attribute, by
+    the <mode> parameter of eglSignalSyncNV and returned in <value>
+    when eglGetSyncAttribNV is called with <attribute>
+    EGL_SYNC_STATUS_NV:
+
+        EGL_SIGNALED_NV                         0x30E8
+        EGL_UNSIGNALED_NV                       0x30E9
+
+    Accepted in the <flags> parameter of eglClientWaitSyncNV:
+
+        EGL_SYNC_FLUSH_COMMANDS_BIT_NV          0x0001
+
+    Accepted in the <timeout> parameter of eglClientWaitSyncNV:
+
+        EGL_FOREVER_NV                          0xFFFFFFFFFFFFFFFFull
+
+    Returned by eglClientWaitSyncNV:
+
+        EGL_ALREADY_SIGNALED_NV                 0x30EA
+        EGL_TIMEOUT_EXPIRED_NV                  0x30EB
+        EGL_CONDITION_SATISFIED_NV              0x30EC
+
+    Accepted in the <attribute> parameter of eglGetSyncAttribNV:
+
+        EGL_SYNC_TYPE_NV                        0x30ED
+        EGL_SYNC_CONDITION_NV                   0x30EE
+
+    Returned in <value> when eglGetSyncAttribNV is called with
+    <attribute> EGL_SYNC_TYPE_NV:
+
+        EGL_SYNC_FENCE_NV                       0x30EF
+
+    Returned by eglCreateFenceSyncNV in the event of an error:
+
+        EGL_NO_SYNC_NV                          ((EGLSyncNV)0)
+
+
+
+Changes to Chapter 3 of the EGL 1.2 Specification (EGL Functions and Errors)
+
+    Add a new subsection at the end of Section 3.8, page 43
+    (Synchronization Primitives)
+
+    "3.8.1  Sync Objects
+    In addition to the aforementioned synchronization functions, which
+    provide an efficient means of serializing client and native API
+    operations within a thread, "Sync Objects" are provided to enable
+    synchronization of client API operations between threads and/or between
+    API contexts.  Sync objects may be tested or waited upon by application
+    threads.
+
+    Sync objects have a status with two possible states: <signaled> and
+    <unsignaled>.  Events may be associated with a sync object.  When an
+    event is initially associated with a sync object, the object is
+    unsignaled (its status is set to unsignaled).  Once a sync object has
+    been created, EGL may be asked to wait for a sync object to become
+    signaled.  Sync objects may also be signaled or unsignaled explicitly.
+    Sync objects are associated with an EGLDisplay; this association
+    is made when the sync object is created.
+
+    Only one type of sync object is defined, the fence sync object, whose
+    associated events are triggered by fence commands which are inserted
+    into the command streams of client API contexts.  Fence sync objects may
+    be used to wait for partial completion of a client API command stream,
+    as a more flexible form of glFinish / vgFinish.
+
+    The command
+
+        EGLSyncNV eglCreateFenceSyncNV( EGLDisplay dpy,
+                                        enum condition,
+                                        EGLint *attrib_list );
+
+    creates a fence sync object for the specified display <dpy> and returns
+    a handle to the new object.  The sync object is assigned a type of 
+    EGL_SYNC_FENCE_NV.  <condition> must be
+    EGL_SYNC_PRIOR_COMMANDS_COMPLETE_NV.  <attrib_list> is an attribute-value
+    list specifying other attributes of the sync object, terminated by an
+    attribute entry EGL_NONE.  Attributes not specified in the list will be
+    assigned their default values.  Attributes accepted by fence sync objects
+    are listed in table 3.aa
+
+      Attribute Name            Attribute Value(s)                     Default Value
+      ---------------           ------------------------------------   --------------
+      EGL_SYNC_STATUS_NV         EGL_SIGNALED_NV, EGL_UNSIGNALED_NV    EGL_SIGNALED_NV
+
+      Table 3.aa  Fence Sync Object Attributes
+
+    * If <dpy> is not the name of a valid, initialized EGLDisplay,
+    EGL_NO_SYNC_NV is returned and an EGL_BAD_DISPLAY error is generated.
+
+    * If <condition> is not EGL_SYNC_PRIOR_COMMANDS_COMPLETE_NV,
+    EGL_NO_SYNC_NV is returned and an EGL_BAD_PARAMETER error is generated.
+
+    * If any attribute not appearing in table 3.?? is specified in
+    <attrib_list>, EGL_NO_SYNC_NV is returned and an EGL_BAD_ATTRIBUTE error is
+    generated.
+
+
+    The command
+
+        EGLBoolean eglFenceNV( EGLSyncNV sync );
+
+    inserts a fence command into the command stream of the bound API's current
+    context (i.e., the context returned by eglGetCurrentContext), and
+    assoicates it with sync object <sync>.  <sync> must be a sync object
+    created with eglCreateFenceSyncNV, and the display associated with <sync>
+    must match the current display (i.e., the display returned by
+    eglGetCurrentDisplay).  Calling eglFenceNV unsignals <sync>.
+
+    When the condition of <sync> is satisfied by the fence command, <sync> is
+    signaled by the associated client API context, causing any
+    eglClientWaitSyncNV commands (see below) blocking on <sync> to unblock.
+    The condition EGL_SYNC_PRIOR_COMMANDS_COMPLETE_NV is satisfied by completion
+    of the fence command corresponding to the sync object, and all preceding
+    commands in the associated client API context's command stream.  <sync>
+    will not be signaled until all effects from these commands on the client
+    API's internal and framebuffer state are fully realized.  No other state
+    is affected by execution of the fence command.
+
+    Multiple fence commands may be inserted in any client API command stream
+    for a single sync object.  The sync object is unsignaled every time a new
+    fence command is issued, and signaled every time a previous fence command
+    completes, so its status is indeterminate until all fence commands
+    associated with the sync object have completed.  However, each time a fence
+    command completes (signaling the sync object), at least one
+    eglClientWaitSyncNV command blocking on that sync object will unblock.
+
+    EGL_TRUE is returned upon successful insertion of the fence command.
+
+    * If <sync> is not a valid sync object with a type of EGL_SYNC_FENCE_NV,
+    EGL_FALSE is returned and an EGL_BAD_PARAMETER error is generated.
+
+    * If the display associated with <sync> does not match the current
+    display, EGL_FALSE is returned and an EGL_BAD_MATCH error is generated.
+
+    * If no context is current for the bound API (i.e., eglGetCurrentContext
+    returns EGL_NO_CONTEXT), EGL_FALSE is returned and an EGL_BAD_MATCH error
+    is generated.
+
+    The command
+
+        EGLint eglClientWaitSyncNV( EGLSyncNV sync, uint flags, 
+                                     EGLTimeNV timeout );
+
+    blocks the calling thread until the specified sync object <sync> is
+    signaled, or until a specified timeout value expires.  If <sync> is
+    signaled at the time eglClientWaitSyncNV is called then eglClientWaitSyncNV
+    will not block.  If <sync> is unsignaled at the time eglClientWaitSyncNV is
+    called then eglClientWaitSyncNV will wait up to <timeout> nanoseconds for
+    <sync> to become signaled.
+
+    If the value of <timeout> is zero, then eglClientWaitSyncNV will never
+    block and simply tests the current status of <sync>.  If the value of
+    <timeout> is the special value EGL_FOREVER_NV then eglClientWaitSyncNV
+    does not time out.
+
+    eglClientWaitSyncNV returns one of three status values describing the
+    reason for returning.  A return value of EGL_ALREADY_SIGNALED_NV will
+    always be returned if <sync> was signaled when eglClientWaitSyncNV was
+    called, even if <timeout> is zero.  A return value of
+    EGL_TIMEOUT_EXPIRED_NV indicates that indicates that the specified
+    timeout period expired before <sync> was signaled.  A return value of
+    EGL_CONDITION_SATISFIED_NV indicates that <sync> was signaled before
+    the timeout expired.
+
+    Note that a fence sync object can be in the signaled state because one of
+    three events has occured:
+
+    1. A previously inserte fence has completed and has signaled the sync
+       object.
+    2. The sync object was created.  Creation of a sync object sets it in the
+       signaled state by default, unless the attribute EGL_SYNC_STATUS_NV
+       is set to EGL_UNSIGNALED_NV in the attribute list.
+    3. The sync object was signaled by a previously issued
+       eglSignalSyncNV(sync, EGL_SIGNALED_NV) command.
+
+    If the sync object being blocked upon will not be signaled in finite time
+    (for example, by an associated fence command issued previously, but not
+    yet flushed to the graphics pipeline), then eglClientWaitSyncNV may
+    wait forever.  To help prevent this behavior (footnote1), if the
+    EGL_SYNC_FLUSH_COMMANDS_BIT_NV bit is set in <flags>, and <sync> is
+    unsignaled when eglClientWaitSyncNV is called, then the equivalent of
+    Flush() will be performed for the current API context (i.e., the context
+    returned by eglGetCurrentContext()) before blocking on <sync>.  If no
+    context is current for the bound API, the EGL_SYNC_FLUSH_COMMANDS_BIT_NV
+    bit is ignored.
+
+        (footnote 1): The simple Flush behavior defined by
+        EGL_SYNC_FLUSH_COMMANDS_BIT_NV will not help when waiting for a fence
+        command issued in a different context's command stream.  Applications
+        which block on a fence sync object must take additional steps to ensure
+        that the context from which the associated fence command was issued
+        has flushed that command to the graphics pipeline.
+
+    If a sync object is deleted when an eglClientWaitSyncNV is blocking on
+    that object, the behavior of eglClientWaitSyncNV is undefined.  Some
+    possible behaviors are to return immediately, to wait for fence commands
+    associated with the deleted sync to complete, or to not return until the
+    timeout period expires.
+
+    * If <sync> is not a valid sync object, EGL_FALSE is returned and an
+      EGL_BAD_PARAMETER error is generated.
+
+
+    The command
+
+        EGLBoolean eglSignalSyncNV( EGLSyncNV sync, enum mode );
+
+    signals or unsignals the sync object <sync> by changing its status to
+    <mode>, which must be one of the values in table 3.bb.  If, as a
+    result of calling eglSignalSyncNV, the status of <sync> transitions
+    from unsignaled to signaled, then at least one eglClientWaitSyncNV
+    commands blocking on <sync> will unblock.
+
+    Assuming no errors are generated, EGL_TRUE is returned.
+
+        Mode                   Effect
+        ------------------     -------------
+        EGL_SIGNALED_NV       Set the status of <sync> to signaled
+        EGL_UNSIGNALED_NV     Set the status of <sync> to unsignaled
+
+        Table 3.bb  Modes Accepted by eglSignalSyncNV Command
+
+    * If <sync> is not a valid sync object, EGL_FALSE is returned and an
+      EGL_BAD_PARAMETER error is generated.
+
+    
+    The command
+
+        EGLBoolean eglGetSyncAttribNV( EGLSyncNV sync, EGLint attribute,
+                                       EGLint *value );
+
+    is used to query attributes of the sync object <sync>.  Legal values for 
+    <attribute> depend on the type of sync object; these are listed in table 3.cc.
+    Assuming no errors are generated, EGL_TRUE is returned and the value of
+    the queried attribute is returned in <value>.
+
+        Attribute               Description                  Supported Sync Objects
+        -----------------       -----------------------      ---------------------
+        EGL_SYNC_TYPE_NV        Type of the sync object      All
+        EGL_SYNC_STATUS_NV      Status of the sync object    All
+        EGL_SYNC_CONDITION_NV   Signaling condition          EGL_SYNC_FENCE_NV
+
+    * If <sync> is not a valid sync object, EGL_FALSE is returned and an
+      EGL_BAD_PARAMETER error is generated.
+
+    The command
+
+        EGLBoolean eglDestroySyncNV( EGLSyncNV sync );
+
+    is used to destroy an existing sync object.  If any eglClientWaitSyncNV
+    commands are blocking on <sync> when eglDestroySyncNV is called, their
+    behavior is undefined.  After calling eglDestroySyncNV, <sync> is no
+    longer a valid sync object.  Assuming no errors are generated, EGL_TRUE
+    is returned.
+
+    * If <sync> is not a valid sync object, EGL_FALSE is returned and an 
+      EGL_BAD_PARAMETER error is generated.
+
+Issues
+
+    1.  Explain the key choices made in this extension.
+
+    RESPONSE:  This extension has been written to enable adoption to be as wide
+    as possible, and to behave as similarly as possible to synchronization
+    primitives available in desktop OpenGL (e.g., NV_fence, ARB_sync).
+
+    In the interest of enabling widespread adoption, this extension (following
+    the ARB_sync model) has foregone the inclusion of synchronization primitives
+    and synchronization tests which may be performed entirely inside client
+    API command streams, instead performing synchronization tests
+    (eglClientWaitSyncNV) inside the application & host CPU.
+
+    In the interest of maintaining similarity with previous synchronization
+    primitives, this extension attempts to copy the ARB_sync specification
+    wherever possible (both functionally and stylistically), only making
+    changes where needed to operate inside EGL (rather than a client API
+    context) and match EGL naming conventions.
+
+    2.  Why place this behavior in EGL, rather than in the client APIs?
+
+    RESPONSE:  Ultimately, synchronization between multiple asynchronous client
+    API contexts (potentially executing in different threads) is a problem
+    which affects or will affect all EGL client APIs.  Rather than creating
+    separate synchronization primitives in each of the client APIs (and then
+    wrapping them in an EGL container), in the interest of developer simplicity
+    & consistency this behavior is being placed inside EGL.
+
+    3.  What does this extension provide that can not be accomplished with the
+    existing, more efficient eglWaitClient and eglWaitNative API functions?
+
+    RESPONSE:  eglWaitClient and eglWaitNative may be implemented in extremely
+    lightweight manners, in some cases not blocking the calling thread at
+    all; however, they can not be used to synchronize between client API
+    contexts and native APIs executing in separate threads (or simply between
+    client API contexts executing in separate threads), such as between a
+    thread with an active OpenGL context and a second thread performing
+    video decode.
+
+    4.  What does this extension provide that could not be accomplished with
+    native platform synchronization primitives and the existing client API
+    Finish commands?
+
+    RESPONSE:  This extension provides a lighter-weight mechanism for
+    synchronizing an application with client API command streams than the
+    all-or-nothing Finish commands, enabling applications to block until
+    a subset of issued client API commands have completed.
+
+    5.  Should integration with native platform synchronization objects be
+    included in this extension, or reserved for future (platform-specific)
+    extensions?
+
+    RESOLVED: Integration with native platform synchronization objects should
+    not be part of this extension, but can be added as future layered
+    extensions if needed.  These layered extensions can be platform-specific,
+    or perhaps OpenKODE based.  
+    
+    Originally, this extension included the ability to create native platform
+    synchronization objects from EGLSync objects.  This feature was removed
+    for a few reasons:
+
+        i) The proposed mechanism suggested mapping EGLSync objects to pthread
+        conditional variables on platforms with pthread support.  However,
+        pthread conditional variables require an associated mutex and there
+        was no mechanism to relay this associated mutex to the application.
+
+        ii) On certain platforms support for converting to native platform
+        synchronization objects adds great complexity to the implementation.
+
+        iii) Now that OpenKODE is more mature, it would be better to allow
+        conversion from EGLSyncNV objects to OpenKODE synchronization
+        primitives rather than platform-specific ones.  We suggest that this
+        functionality, if needed, be added as a layered extension instead of
+        being included here.  This way, EGL_NV_sync remains minimal and easy
+        to implement on a variety of platforms.
+
+    6.  Please provide a more detailed description of how ClientWaitSyncNV
+    behaves.
+
+    RESPONSE:  Issue 18 in the ARB_sync specification includes a very
+    detailed description of ClientWaitSyncARB (the ARB_sync equivalent of
+    ClientWaitSyncNV).  This is provided (unmodified) below:
+
+      Does ClientWaitSyncARB wait on an event, or on sync object
+    status? What is the meaning of sync object status?
+
+    RESOLVED: ClientWaitSyncARB blocks until the status of the sync
+    object transitions to the signaled state. Sync object status is
+    either signaled or unsignaled. More detailed rules describing
+    signalling follow (these need to be imbedded into the actual
+    spec language):
+
+    R1) A sync object has two possible status values: signaled or
+        unsignaled (corresponding to SYNC_STATUS_ARB values of
+        SIGNALED_ARB or UNSIGNALED_ARB, respectively).
+
+    R2) When created, the state of the sync object is signaled by
+        default, but may be explicitly set to unsignaled.
+
+    R3) A fence command is inserted into a command stream. A sync
+        object is not.
+
+    R4) When a fence command is inserted into a command stream using
+        FenceARB(), the status of the sync object associated with
+        that fence command is set to the unsignaled state.
+
+    R5) Multiple fence commands can be associated with the same sync
+        object.
+
+    R6) A fence command, once its condition has been met, will set
+        its associated sync object to the signaled state. The only
+        condition currently supported is
+        SYNC_PRIOR_COMMANDS_COMPLETE_ARB.
+
+    R7) A wait function, such as ClientWaitSyncARB, waits on a sync
+        object, not on a fence.
+
+    R8) A wait function, such as ClientWaitSyncARB, called on a sync
+        object in the unsignaled state will block. It unblocks
+        (note, not "returns to the application") when the sync
+        object transitions to the signaled state.
+
+    Some of the behaviors resulting from these rules are:
+
+    B1) Calling ClientWaitSyncARB with a timeout of 0 will return
+        TRUE if the sync object is in the signaled state. Note that
+        calling ClientWaitSyncARB with a timeout of 0 in a loop can
+        miss state transitions.
+    B2) Stacking fences is allowed. Each fence, once its condition
+        has been met, will set its associated sync object to the
+        signaled state. If the sync object is already in the
+        signaled state, it stays in that state.
+    B3) ClientWaitSyncARB could take a timeout parameter and return
+        a boolean. If the timeout period has expired,
+        ClientWaitSyncARB will unblock and return FALSE to the
+        caller. If ClientWaitSyncARB unblocks because the sync
+        object it was waiting on is in the signaled state, it will
+        return TRUE.
+    B4) We could define a FinishMultipleSync() command that will
+        unblock once all (or any) of the sync objects passed to it
+        are in the signaled state (also see issue 12).
+    B5) We could define a set/resetSyncObject function to manually
+        set the sync object in the signaled or unsignaled state.
+        This makes it easy for apps to reuse a sync object in the
+        multi-context case, so the sync object can be blocked upon
+        before a fence command is associated with it in the command
+        stream.
+    B6) We could define an API to convert a sync object into an OS
+        specific synchronization primitive (Events on Windows, file
+        descriptors or X-events or semaphores on Unix?)
+
+    7) How does this extension differ from (relate to) EGL_KHR_sync:
+
+    RESPONSE:
+    As of the time of writing this, the EGL_KHR_sync specification has not
+    been finalized by Khronos and continues to undergo revision.  However,
+    NVIDIA has the functionality outlined in this specification implemented
+    and has decided to make it available to developers immediately.
+
+    For the most part, EGL_KHR_sync is identical to revision 5 of EGL_KHR_sync
+    with the following changes:
+
+        a) Enum values are different
+        b) EGLTimeNV is unsigned long long instead of uint64_t.
+        c) Behaviour when there are multiple waiting threads is undefined.
+    
+Revision History
+
+#7   (Jon Leech, July 27, 2010)
+    - Redefine EGLTimeNV type to use a typedef from the standard
+      Khronos headers instead of a native C type, for portability.
+#6   (Greg Prisament, May 28, 2009)
+    - Branch spec & turn it into an _NV extension.
+#5   (Greg Prisament, July 22, 2008)
+    - Removed NativeSyncKHR,  CreateNativeSyncKHR, and corresponding wording.
+    - Correct EGLuint to EGLint (EGLuint doesn't exist).
+#4   (Jon Leech, November 20, 2007)
+   - Corrected 'enum' to 'EGLenum' in prototypes.
+#3   (Jon Leech, April 5, 2007)
+   - Added draft Status and TBD Number
+#2   (November 27, 2006)
+   - Changed OES token to KHR
+

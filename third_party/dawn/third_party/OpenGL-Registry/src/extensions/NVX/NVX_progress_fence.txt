@@ -1,0 +1,182 @@
+Name
+
+    NVX_progress_fence
+
+Name Strings
+
+    GL_NVX_progress_fence
+
+Contributors
+
+    Ingo Esser, NVIDIA
+    Joshua Schnarr, NVIDIA
+    Ralf Biermann, NVIDIA
+
+Contact
+
+    Ralf Biermann, NVIDIA corporation (rbiermann'at' nvidia.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: August 15, 2018
+    Author Revision: 2
+
+Number
+
+    OpenGL Extension #541
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 and OpenGL ES 3.2 specifications.
+    
+    This extension requires EXT_external_objects.
+
+    This extension requires EXT_external_objects_win32
+
+    This extension interacts with NV_gpu_multicast.
+
+Overview
+
+    This extension uses the concept of GL semaphores as defined in 
+    GL_EXT_semaphore to better coordinate operations between multiple
+    GPU command streams. A semaphore type called "progress fence" is 
+    derived from the GL semaphore. The progress fence semaphore is
+    created by CreateProgressFenceNVX() returning the name of a newly
+    created semaphore object. Like other semaphores, these are signaled
+    by the GL server. Each signal operation is queued in the GPU command
+    stream with an associated fence value that is written to the semaphore
+    at the completion of a signal operation. 
+
+    A GL server wait can be added to the command stream using WaitSemaphoreui64NVX.
+    This blocks the GPU until the progress fence semaphore reaches or exceeds the 
+    specified fence value.
+    
+    A GL client wait can be initiated using ClientWaitSemaphoreui64NVX. 
+    This blocks the CPU until the specified fence value is reached.
+
+New Procedures and Functions
+
+    uint CreateProgressFenceNVX();
+
+    void SignalSemaphoreui64NVX(uint signalGpu, 
+                                sizei fenceObjectCount, 
+                                const uint *semaphoreArray, 
+                                const uint64 *fenceValueArray);
+                        
+    void WaitSemaphoreui64NVX(uint waitGpu, 
+                              sizei fenceObjectCount, 
+                              const uint *semaphoreArray, 
+                              const uint64 *fenceValueArray);
+                            
+    void ClientWaitSemaphoreui64NVX(sizei fenceObjectCount, 
+                                    const uint *semaphoreArray, 
+                                    const uint64 *fenceValueArray);
+
+New Types
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 4 of the OpenGL 4.5 Specification (Event Model)
+
+  Addition to Section 4.2, "Semaphore Objects"
+
+
+    A command 
+
+      uint CreateProgressFenceNVX();
+
+    creates a named progress fence semaphore object.
+
+    A set of progress fence objects can be deleted by passing the names in the
+    array <semaphores> to the command
+
+      void DeleteSemaphoresEXT(sizei n, const uint *semaphores);
+
+    Progress fence operations can be performed on named semaphore objects. The
+    command
+
+      void SignalSemaphoreui64NVX(uint signalGpu, 
+                                  sizei fenceObjectCount, 
+                                  const uint *semaphoreArray, 
+                                  const uint64 *fenceValueArray);
+
+    SignalSemaphoreui64NVX inserts a signal operation for each of the <fenceObjectCount>
+    semaphores in <semaphoreArray>. Each signal writes the corresponding fence value in 
+    <fenceValueArray>.
+
+    If the GL context uses NV_gpu_multicast to control multiple GPUs, the 
+    <signalGpu> parameter is required to specify the GPU that signals the 
+    fence value to the fence object. Otherwise <signalGpu> must be 0.
+
+    If a value in <semaphoreArray> is not the name of a semaphore object, 
+    an INVALID_VALUE error is generated.
+
+    If NV_gpu_multicast is supported, an INVALID_VALUE error is generated if <signalGpu> 
+    is greater than or equal to MULTICAST_GPUS_NV. Otherwise, an INVALID_VALUE error is 
+    generated if <signalGpu> != 0.
+
+    The command
+
+      void WaitSemaphoreui64NVX(uint waitGpu, 
+                                sizei fenceObjectCount, 
+                                const uint *semaphoreArray, 
+                                const uint64 *fenceValueArray);
+
+    inserts a wait command into the GL server command stream of a specified GPU <waitGpu> 
+    for each of the <fenceObjectCount> progress fence objects in <semaphoreArray> which 
+    blocks <waitGpu> until all fence objects reach or exceed the associated fence value 
+    in <fenceValueArray>.
+
+    If a value in <semaphoreArray> is not the name of a semaphore object, 
+    an INVALID_VALUE error is generated.
+
+    The command
+
+      void ClientWaitSemaphoreui64NVX(sizei fenceObjectCount, 
+                                      const uint *semaphoreArray, 
+                                      const uint64 *fenceValueArray);
+
+    blocks the CPU until each of the <fenceObjectCount> fence objects in a 
+    specified array <semaphoreArray> reaches the corresponding fence value 
+    in <fenceValueArray>, respectively. 
+
+    If a value in <semaphoreArray> is not the name of a semaphore object, 
+    an INVALID_VALUE error is generated.
+  
+    The commands SignalSemaphoreui64NVX, WaitSemaphoreui64NVX and 
+    ClientWaitSemaphoreui64NVX accept semaphore object names as input in 
+    <semaphoreArray> that were created by CreateProgressFenceNVX or imported
+    from a handle of the type HANDLE_TYPE_D3D12_FENCE_EXT. 
+    If a value in <semaphoreArray> is not the name of such a semaphore object, 
+    an INVALID_VALUE error is generated.
+    
+    The command
+
+      boolean IsSemaphoreEXT(uint semaphore);
+
+    can be used with progress fence semaphores and returns TRUE if <semaphore>
+    is the name of a semaphore as defined in EXT_external_objects.
+
+Issues
+
+    1) Are Vulkan semaphores imported via the GL_EXT_memory_object_win32 supported
+       by GL_NVX_progress_fence as input parameters?
+
+       RESOLVED: No. As Vulkan semaphores currently do not support progress fence
+       operation, these are not compatible with progress fence semaphores.
+
+Revision History
+
+    Revision 1, 2018-08-14 (Ralf Biermann)
+        - Initial specification proposal.
+
+    Revision 2, 2018-08-15 (Ralf Biermann)
+        - Adding Vulkan semaphore limitation to Issues.

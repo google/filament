@@ -40,9 +40,9 @@
 
 import "src/tint/lang/core/address_space.def"
 import "src/tint/lang/core/access.def"
+import "src/tint/lang/core/majorness.def"
 import "src/tint/lang/core/subgroup_matrix_kind.def"
 import "src/tint/lang/core/texel_format.def"
-import "src/tint/lang/core/filtering_parameters.def"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Enumerators                                                                //
@@ -77,7 +77,6 @@ enum builtin_value {
 
 // https://github.com/gpuweb/gpuweb/blob/main/proposals/fragment-depth.md
 enum builtin_depth_mode {
-  any
   greater
   less
 }
@@ -255,7 +254,7 @@ enum attribute {
   // chromium_internal_input_attachments
   input_attachment_index
 
-  // chromium_experimental_subgroup_size_control
+  // subgroup_size_control
   subgroup_size
 }
 
@@ -327,11 +326,11 @@ type atomic<T>
 
 @display("array<{T}>") type runtime_array<T>
 type array<T, N: num>
+@display("array<{T}[, N]>") type any_array<T>
 type binding_array<T, N: num>
 
 type sampler
 type sampler_comparison
-@display("sampler<{F}>") type sampler_filtered<F: sampler_filtering>
 
 type texture_1d<T>
 type texture_2d<T>
@@ -339,13 +338,6 @@ type texture_2d_array<T>
 type texture_3d<T>
 type texture_cube<T>
 type texture_cube_array<T>
-@display("texture_1d<f32, {F}>") type texture_1d_filtered<T: f32, F: texture_filterable>
-@display("texture_2d<f32, {F}>") type texture_2d_filtered<T: f32, F: texture_filterable>
-@display("texture_2d_array<f32, {F}>") type texture_2d_array_filtered<T: f32, F: texture_filterable>
-@display("texture_3d<f32, {F}>") type texture_3d_filtered<T: f32, F: texture_filterable>
-@display("texture_cube<f32, {F}>") type texture_cube_filtered<T: f32, F: texture_filterable>
-@display("texture_cube_array<f32, {F}>") type texture_cube_array_filtered<T: f32, F: texture_filterable>
-
 type texture_multisampled_2d<T>
 type texture_depth_2d
 type texture_depth_2d_array
@@ -379,11 +371,12 @@ type buffer<N: num>
 ////////////////////////////////////////////////////////////////////////////////
 
 match scalar: f32 | f16 | i32 | u32 | u16 | bool
-match scalar_no_f32: i32 | f16 | u32 | bool
-match scalar_no_f16: f32 | i32 | u32 | bool
-match scalar_no_i32: f32 | f16 | u32 | bool
-match scalar_no_u32: f32 | f16 | i32 | bool
+match scalar_no_f32: i32 | f16 | u32 | bool | u16
+match scalar_no_f16: f32 | i32 | u32 | bool | u16
+match scalar_no_i32: f32 | f16 | u32 | bool | u16
+match scalar_no_u32: f32 | f16 | i32 | bool | u16
 match scalar_no_bool: f32 | f16 | i32 | u32
+match scalar_no_u16: f32 | f16 | i32 | u32 | bool
 match fiu32_f16: f32 | i32 | u32 | f16
 match fiu32: f32 | i32 | u32
 match fi32_f16: f32 | i32 | f16
@@ -392,6 +385,8 @@ match f32_f16: f32 | f16
 match iu32: i32 | u32
 match iu32_iu8: i32 | u32 | i8 | u8
 match iu8: i8 | u8
+match u16_iu32: u16 | i32 | u32
+match fiu32_fu16: f32 | i32 | u32 | f16 | u16
 
 match subgroup_matrix_elements: f32 | f16 | u32 | i32 | u8 | i8
 match subgroup_matrix_kind_left : subgroup_matrix_kind.left
@@ -475,6 +470,10 @@ match storage
   : address_space.storage
 match workgroup
   : address_space.workgroup
+match workgroup_uniform_storage
+  : address_space.workgroup
+  | address_space.uniform
+  | address_space.storage
 
 ////////////////////////////////////////////////////////////////////////////////
 // Builtin Functions                                                          //
@@ -506,8 +505,8 @@ match workgroup
 @must_use @const implicit(N: num)
   fn any(vec<N, bool>) -> bool
 
-@must_use implicit(T, A: access)
-  fn arrayLength(ptr<storage, runtime_array<T>, A>) -> u32
+@must_use implicit(T, AS: workgroup_uniform_storage, A: access)
+  fn arrayLength(ptr<AS, runtime_array<T>, A>) -> u32
 
 @must_use @const implicit(T: f32_f16)
   fn asin(@test_value(0.479425538604) T) -> T
@@ -565,6 +564,10 @@ match workgroup
   fn bitcast<T: vec2<u16> >(S) -> T
 @must_use @const
   fn bitcast<T: fiu32>(vec2<u16>) -> T
+@must_use @const
+  fn bitcast<T: vec2<fiu32> >(vec4<u16>) -> T
+@must_use @const implicit(S: fiu32)
+  fn bitcast<T: vec4<u16> >(vec2<S>) -> T
 
 @must_use @const
   fn bitcast<T: u64>(vec2<u32>) -> T
@@ -903,6 +906,11 @@ match workgroup
 @must_use @const
   fn unpack4xU8(u32) -> vec4<u32>
 
+@must_use @const
+  fn addSat(u32, u32) -> u32
+@must_use @const implicit(N: num)
+  fn addSat(vec<N, u32>, vec<N, u32>) -> vec<N, u32>
+
 ///////////////////////////////////////////
 // Barriers
 //////////////////////////////////////////
@@ -939,31 +947,6 @@ match workgroup
   fn textureDimensions(texture: texture_cube_array<T>) -> vec2<u32>
 @must_use implicit(T: fiu32, L: iu32)
   fn textureDimensions(texture: texture_cube_array<T>, level: L) -> vec2<u32>
-
-@must_use implicit(K: texture_filter)
-  fn textureDimensions(texture: texture_1d_filtered<f32, K>) -> u32
-@must_use implicit(K: texture_filter, L: iu32)
-  fn textureDimensions(texture: texture_1d_filtered<f32, K>, level: L) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureDimensions(texture: texture_2d_filtered<f32, K>) -> vec2<u32>
-@must_use implicit(K: texture_filter, L: iu32)
-  fn textureDimensions(texture: texture_2d_filtered<f32, K>, level: L) -> vec2<u32>
-@must_use implicit(K: texture_filter)
-  fn textureDimensions(texture: texture_2d_array_filtered<f32, K>) -> vec2<u32>
-@must_use implicit(K: texture_filter, L: iu32)
-  fn textureDimensions(texture: texture_2d_array_filtered<f32, K>, level: L) -> vec2<u32>
-@must_use implicit(K: texture_filter)
-  fn textureDimensions(texture: texture_3d_filtered<f32, K>) -> vec3<u32>
-@must_use implicit(K: texture_filter, L: iu32)
-  fn textureDimensions(texture: texture_3d_filtered<f32, K>, level: L) -> vec3<u32>
-@must_use implicit(K: texture_filter)
-  fn textureDimensions(texture: texture_cube_filtered<f32, K>) -> vec2<u32>
-@must_use implicit(K: texture_filter, L: iu32)
-  fn textureDimensions(texture: texture_cube_filtered<f32, K>, level: L) -> vec2<u32>
-@must_use implicit(K: texture_filter)
-  fn textureDimensions(texture: texture_cube_array_filtered<f32, K>) -> vec2<u32>
-@must_use implicit(K: texture_filter, L: iu32)
-  fn textureDimensions(texture: texture_cube_array_filtered<f32, K>, level: L) -> vec2<u32>
 
 @must_use implicit(T: fiu32)
   fn textureDimensions(texture: texture_multisampled_2d<T>) -> vec2<u32>
@@ -1016,89 +999,18 @@ match workgroup
                    texture: texture_2d<T>,
                    sampler: sampler,
                    coords: vec2<f32>) -> vec4<T>
-@must_use implicit(T: fiu32, C: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d<T>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>) -> vec4<T>
-@must_use implicit(T: f32, F: texture_filter, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_filtered<T, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>) -> vec4<T>
-@must_use implicit(T: f32, K: sampler_filter, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_filtered<T, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_filtered<T, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>) -> vec4<T>
-
 @must_use implicit(T: fiu32, C: iu32)
   fn textureGather(@const component: C,
                    texture: texture_2d<T>,
                    sampler: sampler,
                    coords: vec2<f32>,
                    @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: fiu32, C: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d<T>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, F: texture_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_filtered<T, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_filtered<T, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_filtered<T, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<T>
-
 @must_use implicit(T: fiu32, C: iu32, A: iu32)
   fn textureGather(@const component: C,
                    texture: texture_2d_array<T>,
                    sampler: sampler,
                    coords: vec2<f32>,
                    array_index: A) -> vec4<T>
-@must_use implicit(T: fiu32, C: iu32, A: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array<T>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, F: texture_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array_filtered<T, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array_filtered<T, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array_filtered<T, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<T>
-
 @must_use implicit(T: fiu32, C: iu32, A: iu32)
   fn textureGather(@const component: C,
                    texture: texture_2d_array<T>,
@@ -1106,92 +1018,17 @@ match workgroup
                    coords: vec2<f32>,
                    array_index: A,
                    @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: fiu32, C: iu32, A: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array<T>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, F: texture_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array_filtered<T, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array_filtered<T, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_2d_array_filtered<T, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<T>
-
 @must_use implicit(T: fiu32, C: iu32)
   fn textureGather(@const component: C,
                    texture: texture_cube<T>,
                    sampler: sampler,
                    coords: vec3<f32>) -> vec4<T>
-@must_use implicit(T: fiu32, C: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_cube<T>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>) -> vec4<T>
-@must_use implicit(T: f32, F: texture_filter, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_filtered<T, F>,
-                   sampler: sampler,
-                   coords: vec3<f32>) -> vec4<T>
-@must_use implicit(T: f32, K: sampler_filter, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_filtered<T, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>) -> vec4<T>
-@must_use implicit(T: f32, C: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_filtered<T, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec3<f32>) -> vec4<T>
-
 @must_use implicit(T: fiu32, C: iu32, A: iu32)
   fn textureGather(@const component: C,
                    texture: texture_cube_array<T>,
                    sampler: sampler,
                    coords: vec3<f32>,
                    array_index: A) -> vec4<T>
-@must_use implicit(T: fiu32, C: iu32, A: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_array<T>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, F: texture_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_array_filtered<T, F>,
-                   sampler: sampler,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, K: sampler_filter)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_array_filtered<T, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32)
-  fn textureGather(@const component: C,
-                   texture: texture_cube_array_filtered<T, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<T>
-
 @must_use
   fn textureGather(texture: texture_depth_2d,
                    sampler: sampler,
@@ -1262,10 +1099,6 @@ match workgroup
   fn textureNumLayers(texture: texture_2d_array<T>) -> u32
 @must_use implicit(T: fiu32)
   fn textureNumLayers(texture: texture_cube_array<T>) -> u32
-@must_use implicit(F: texture_filter)
-  fn textureNumLayers(texture: texture_2d_array_filtered<f32, F>) -> u32
-@must_use implicit(F: texture_filter)
-  fn textureNumLayers(texture: texture_cube_array_filtered<f32, F>) -> u32
 @must_use
   fn textureNumLayers(texture: texture_depth_2d_array) -> u32
 @must_use
@@ -1287,18 +1120,6 @@ match workgroup
   fn textureNumLevels(texture: texture_cube<T>) -> u32
 @must_use implicit(T: fiu32)
   fn textureNumLevels(texture: texture_cube_array<T>) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureNumLevels(texture: texture_1d_filtered<f32, K>) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureNumLevels(texture: texture_2d_filtered<f32, K>) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureNumLevels(texture: texture_2d_array_filtered<f32, K>) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureNumLevels(texture: texture_3d_filtered<f32, K>) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureNumLevels(texture: texture_cube_filtered<f32, K>) -> u32
-@must_use implicit(K: texture_filter)
-  fn textureNumLevels(texture: texture_cube_array_filtered<f32, K>) -> u32
 @must_use
   fn textureNumLevels(texture: texture_depth_2d) -> u32
 @must_use
@@ -1317,221 +1138,44 @@ match workgroup
   fn textureSample(texture: texture_1d<f32>,
                    sampler: sampler,
                    coords: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_1d<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSample(texture: texture_1d_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_1d_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: f32) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSample(texture: texture_1d_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: f32) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSample(texture: texture_2d<f32>,
                    sampler: sampler,
                    coords: vec2<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_2d<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSample(texture: texture_2d_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_2d_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSample(texture: texture_2d_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSample(texture: texture_2d<f32>,
                    sampler: sampler,
                    coords: vec2<f32>,
                    @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_2d<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSample(texture: texture_2d_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_2d_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSample(texture: texture_2d_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>,
-                   @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use @stage("fragment") implicit(A: iu32)
   fn textureSample(texture: texture_2d_array<f32>,
                    sampler: sampler,
                    coords: vec2<f32>,
                    array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter, A: iu32)
-  fn textureSample(texture: texture_2d_array<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter, A: iu32)
-  fn textureSample(texture: texture_2d_array_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter, A: iu32)
-  fn textureSample(texture: texture_2d_array_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32)
-  fn textureSample(texture: texture_2d_array_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>,
-                   array_index: A) -> vec4<f32>
-
 @must_use @stage("fragment") implicit(A: iu32)
   fn textureSample(texture: texture_2d_array<f32>,
                    sampler: sampler,
                    coords: vec2<f32>,
                    array_index: A,
                    @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter, A: iu32)
-  fn textureSample(texture: texture_2d_array<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter, A: iu32)
-  fn textureSample(texture: texture_2d_array_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter, A: iu32)
-  fn textureSample(texture: texture_2d_array_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32)
-  fn textureSample(texture: texture_2d_array_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec2<f32>,
-                   array_index: A,
-                   @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSample(texture: texture_3d<f32>,
                    sampler: sampler,
                    coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_3d<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSample(texture: texture_3d_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_3d_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSample(texture: texture_3d_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec3<f32>) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSample(texture: texture_3d<f32>,
                    sampler: sampler,
                    coords: vec3<f32>,
                    @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_3d<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>,
-                   @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSample(texture: texture_3d_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec3<f32>,
-                   @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_3d_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>,
-                   @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSample(texture: texture_3d_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec3<f32>,
-                   @const offset: vec3<i32>) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSample(texture: texture_cube<f32>,
                    sampler: sampler,
                    coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_cube<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSample(texture: texture_cube_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSample(texture: texture_cube_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSample(texture: texture_cube_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec3<f32>) -> vec4<f32>
-
 @must_use @stage("fragment") implicit(A: iu32)
   fn textureSample(texture: texture_cube_array<f32>,
                    sampler: sampler,
                    coords: vec3<f32>,
                    array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter, A: iu32)
-  fn textureSample(texture: texture_cube_array<f32>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter, A: iu32)
-  fn textureSample(texture: texture_cube_array_filtered<f32, F>,
-                   sampler: sampler,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter, A: iu32)
-  fn textureSample(texture: texture_cube_array_filtered<f32, filterable>,
-                   sampler: sampler_filtered<K>,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32)
-  fn textureSample(texture: texture_cube_array_filtered<f32, unfilterable>,
-                   sampler: sampler_filtered<non_filtering>,
-                   coords: vec3<f32>,
-                   array_index: A) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSample(texture: texture_depth_2d,
                    sampler: sampler,
@@ -1567,90 +1211,18 @@ match workgroup
                        sampler: sampler,
                        coords: vec2<f32>,
                        bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSampleBias(texture: texture_2d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSampleBias(texture: texture_2d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       bias: f32) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSampleBias(texture: texture_2d<f32>,
                        sampler: sampler,
                        coords: vec2<f32>,
                        bias: f32,
                        @const offset: vec2<i32>) -> vec4<f32>
-  @must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-  @must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSampleBias(texture: texture_2d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-  @must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-  @must_use @stage("fragment")
-  fn textureSampleBias(texture: texture_2d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use @stage("fragment") implicit(A: iu32)
   fn textureSampleBias(texture: texture_2d_array<f32>,
                        sampler: sampler,
                        coords: vec2<f32>,
                        array_index: A,
                        bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d_array<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, F: texture_filter)
-  fn textureSampleBias(texture: texture_2d_array_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d_array_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32)
-  fn textureSampleBias(texture: texture_2d_array_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-
-
 @must_use @stage("fragment") implicit(A: iu32)
   fn textureSampleBias(texture: texture_2d_array<f32>,
                        sampler: sampler,
@@ -1658,145 +1230,25 @@ match workgroup
                        array_index: A,
                        bias: f32,
                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d_array<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, F: texture_filter)
-  fn textureSampleBias(texture: texture_2d_array_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, K: sampler_filter)
-  fn textureSampleBias(texture: texture_2d_array_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32)
-  fn textureSampleBias(texture: texture_2d_array_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       bias: f32,
-                       @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSampleBias(texture: texture_3d<f32>,
                        sampler: sampler,
                        coords: vec3<f32>,
                        bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_3d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSampleBias(texture: texture_3d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_3d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSampleBias(texture: texture_3d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSampleBias(texture: texture_3d<f32>,
                        sampler: sampler,
                        coords: vec3<f32>,
                        bias: f32,
                        @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_3d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       bias: f32,
-                       @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSampleBias(texture: texture_3d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       bias: f32,
-                       @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_3d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       bias: f32,
-                       @const offset: vec3<i32>) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSampleBias(texture: texture_3d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec3<f32>,
-                       bias: f32,
-                       @const offset: vec3<i32>) -> vec4<f32>
-
 @must_use @stage("fragment")
   fn textureSampleBias(texture: texture_cube<f32>,
                        sampler: sampler,
                        coords: vec3<f32>,
                        bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_cube<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(F: texture_filter)
-  fn textureSampleBias(texture: texture_cube_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(K: sampler_filter)
-  fn textureSampleBias(texture: texture_cube_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment")
-  fn textureSampleBias(texture: texture_cube_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec3<f32>,
-                       bias: f32) -> vec4<f32>
-
 @must_use @stage("fragment") implicit(A: iu32)
   fn textureSampleBias(texture: texture_cube_array<f32>,
                        sampler: sampler,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, K: sampler_filter)
-  fn textureSampleBias(texture: texture_cube_array<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, F: texture_filter)
-  fn textureSampleBias(texture: texture_cube_array_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32, K: sampler_filter)
-  fn textureSampleBias(texture: texture_cube_array_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       bias: f32) -> vec4<f32>
-@must_use @stage("fragment") implicit(A: iu32)
-  fn textureSampleBias(texture: texture_cube_array_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
                        coords: vec3<f32>,
                        array_index: A,
                        bias: f32) -> vec4<f32>
@@ -1879,31 +1331,6 @@ match workgroup
                        coords: vec2<f32>,
                        ddx: vec2<f32>,
                        ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleGrad(texture: texture_2d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-@must_use
-  fn textureSampleGrad(texture: texture_2d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-
 @must_use
   fn textureSampleGrad(texture: texture_2d<f32>,
                        sampler: sampler,
@@ -1911,35 +1338,6 @@ match workgroup
                        ddx: vec2<f32>,
                        ddy: vec2<f32>,
                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>,
-                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleGrad(texture: texture_2d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>,
-                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>,
-                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use
-  fn textureSampleGrad(texture: texture_2d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>,
-                       @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use implicit(A: iu32)
   fn textureSampleGrad(texture: texture_2d_array<f32>,
                        sampler: sampler,
@@ -1947,35 +1345,6 @@ match workgroup
                        array_index: A,
                        ddx: vec2<f32>,
                        ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d_array<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(A: iu32, F: texture_filter)
-  fn textureSampleGrad(texture: texture_2d_array_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d_array_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-@must_use implicit(A: iu32)
-  fn textureSampleGrad(texture: texture_2d_array_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec2<f32>,
-                       array_index: A,
-                       ddx: vec2<f32>,
-                       ddy: vec2<f32>) -> vec4<f32>
-
 @must_use implicit(A: iu32)
   fn textureSampleGrad(texture: texture_2d_array<f32>,
                       sampler: sampler,
@@ -1984,70 +1353,12 @@ match workgroup
                       ddx: vec2<f32>,
                       ddy: vec2<f32>,
                       @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d_array<f32>,
-                      sampler: sampler_filtered<K>,
-                      coords: vec2<f32>,
-                      array_index: A,
-                      ddx: vec2<f32>,
-                      ddy: vec2<f32>,
-                      @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32, F: texture_filter)
-  fn textureSampleGrad(texture: texture_2d_array_filtered<f32, F>,
-                      sampler: sampler,
-                      coords: vec2<f32>,
-                      array_index: A,
-                      ddx: vec2<f32>,
-                      ddy: vec2<f32>,
-                      @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleGrad(texture: texture_2d_array_filtered<f32, filterable>,
-                      sampler: sampler_filtered<K>,
-                      coords: vec2<f32>,
-                      array_index: A,
-                      ddx: vec2<f32>,
-                      ddy: vec2<f32>,
-                      @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32)
-  fn textureSampleGrad(texture: texture_2d_array_filtered<f32, unfilterable>,
-                      sampler: sampler_filtered<non_filtering>,
-                      coords: vec2<f32>,
-                      array_index: A,
-                      ddx: vec2<f32>,
-                      ddy: vec2<f32>,
-                      @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use
   fn textureSampleGrad(texture: texture_3d<f32>,
                        sampler: sampler,
                        coords: vec3<f32>,
                        ddx: vec3<f32>,
                        ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_3d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleGrad(texture: texture_3d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_3d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use
-  fn textureSampleGrad(texture: texture_3d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-
 @must_use
   fn textureSampleGrad(texture: texture_3d<f32>,
                        sampler: sampler,
@@ -2055,97 +1366,15 @@ match workgroup
                        ddx: vec3<f32>,
                        ddy: vec3<f32>,
                        @const offset: vec3<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_3d<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>,
-                       @const offset: vec3<i32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleGrad(texture: texture_3d_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>,
-                       @const offset: vec3<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_3d_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>,
-                       @const offset: vec3<i32>) -> vec4<f32>
-@must_use
-  fn textureSampleGrad(texture: texture_3d_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>,
-                       @const offset: vec3<i32>) -> vec4<f32>
-
 @must_use
   fn textureSampleGrad(texture: texture_cube<f32>,
                        sampler: sampler,
                        coords: vec3<f32>,
                        ddx: vec3<f32>,
                        ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_cube<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleGrad(texture: texture_cube_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleGrad(texture: texture_cube_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use
-  fn textureSampleGrad(texture: texture_cube_filtered<f32, filterable>,
-                       sampler: sampler_filtered<non_filtering>,
-                       coords: vec3<f32>,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-
 @must_use implicit(A: iu32)
   fn textureSampleGrad(texture: texture_cube_array<f32>,
                        sampler: sampler,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleGrad(texture: texture_cube_array<f32>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(A: iu32, F: texture_filter)
-  fn textureSampleGrad(texture: texture_cube_array_filtered<f32, F>,
-                       sampler: sampler,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleGrad(texture: texture_cube_array_filtered<f32, filterable>,
-                       sampler: sampler_filtered<K>,
-                       coords: vec3<f32>,
-                       array_index: A,
-                       ddx: vec3<f32>,
-                       ddy: vec3<f32>) -> vec4<f32>
-@must_use implicit(A: iu32)
-  fn textureSampleGrad(texture: texture_cube_array_filtered<f32, unfilterable>,
-                       sampler: sampler_filtered<non_filtering>,
                        coords: vec3<f32>,
                        array_index: A,
                        ddx: vec3<f32>,
@@ -2156,115 +1385,23 @@ match workgroup
                         sampler: sampler,
                         coords: f32,
                         level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_1d<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: f32,
-                        level: f32) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleLevel(texture: texture_1d_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: f32,
-                        level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_1d_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: f32,
-                        level: f32) -> vec4<f32>
-@must_use
-  fn textureSampleLevel(texture: texture_1d_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: f32,
-                        level: f32) -> vec4<f32>
-
 @must_use
   fn textureSampleLevel(texture: texture_2d<f32>,
                         sampler: sampler,
                         coords: vec2<f32>,
                         level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        level: f32) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleLevel(texture: texture_2d_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec2<f32>,
-                        level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        level: f32) -> vec4<f32>
-@must_use
-  fn textureSampleLevel(texture: texture_2d_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec2<f32>,
-                        level: f32) -> vec4<f32>
-
 @must_use
   fn textureSampleLevel(texture: texture_2d<f32>,
                         sampler: sampler,
                         coords: vec2<f32>,
                         level: f32,
                         @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleLevel(texture: texture_2d_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec2<f32>,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use
-  fn textureSampleLevel(texture: texture_2d_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec2<f32>,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use implicit(A: iu32)
   fn textureSampleLevel(texture: texture_2d_array<f32>,
                         sampler: sampler,
                         coords: vec2<f32>,
                         array_index: A,
                         level: f32) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d_array<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-@must_use implicit(A: iu32, F: texture_filter)
-  fn textureSampleLevel(texture: texture_2d_array_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d_array_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-@must_use implicit(A: iu32)
-  fn textureSampleLevel(texture: texture_2d_array_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-
 @must_use implicit(A: iu32)
   fn textureSampleLevel(texture: texture_2d_array<f32>,
                         sampler: sampler,
@@ -2272,149 +1409,28 @@ match workgroup
                         array_index: A,
                         level: f32,
                         @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d_array<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32, F: texture_filter)
-  fn textureSampleLevel(texture: texture_2d_array_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleLevel(texture: texture_2d_array_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-@must_use implicit(A: iu32)
-  fn textureSampleLevel(texture: texture_2d_array_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec2<f32>,
-                        array_index: A,
-                        level: f32,
-                        @const offset: vec2<i32>) -> vec4<f32>
-
 @must_use
   fn textureSampleLevel(texture: texture_3d<f32>,
                         sampler: sampler,
                         coords: vec3<f32>,
                         level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_3d<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleLevel(texture: texture_3d_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_3d_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-@must_use
-  fn textureSampleLevel(texture: texture_3d_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-
 @must_use
   fn textureSampleLevel(texture: texture_3d<f32>,
                         sampler: sampler,
                         coords: vec3<f32>,
                         level: f32,
                         @const offset: vec3<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_3d<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        level: f32,
-                        @const offset: vec3<i32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleLevel(texture: texture_3d_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec3<f32>,
-                        level: f32,
-                        @const offset: vec3<i32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_3d_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        level: f32,
-                        @const offset: vec3<i32>) -> vec4<f32>
-@must_use
-  fn textureSampleLevel(texture: texture_3d_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec3<f32>,
-                        level: f32,
-                        @const offset: vec3<i32>) -> vec4<f32>
-
 @must_use
   fn textureSampleLevel(texture: texture_cube<f32>,
                         sampler: sampler,
                         coords: vec3<f32>,
                         level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_cube<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleLevel(texture: texture_cube_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleLevel(texture: texture_cube_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-@must_use
-  fn textureSampleLevel(texture: texture_cube_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec3<f32>,
-                        level: f32) -> vec4<f32>
-
 @must_use implicit(A: iu32)
   fn textureSampleLevel(texture: texture_cube_array<f32>,
                         sampler: sampler,
                         coords: vec3<f32>,
                         array_index: A,
                         level: f32) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleLevel(texture: texture_cube_array<f32>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-@must_use implicit(A: iu32, F: texture_filter)
-  fn textureSampleLevel(texture: texture_cube_array_filtered<f32, F>,
-                        sampler: sampler,
-                        coords: vec3<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-@must_use implicit(A: iu32, K: sampler_filter)
-  fn textureSampleLevel(texture: texture_cube_array_filtered<f32, filterable>,
-                        sampler: sampler_filtered<K>,
-                        coords: vec3<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-@must_use implicit(A: iu32)
-  fn textureSampleLevel(texture: texture_cube_array_filtered<f32, unfilterable>,
-                        sampler: sampler_filtered<non_filtering>,
-                        coords: vec3<f32>,
-                        array_index: A,
-                        level: f32) -> vec4<f32>
-
 @must_use implicit(L: iu32)
   fn textureSampleLevel(texture: texture_depth_2d,
                         sampler: sampler,
@@ -2454,23 +1470,6 @@ match workgroup
   fn textureSampleBaseClampToEdge(texture: texture_2d<f32>,
                                   sampler: sampler,
                                   coords: vec2<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleBaseClampToEdge(texture: texture_2d<f32>,
-                                  sampler: sampler_filtered<K>,
-                                  coords: vec2<f32>) -> vec4<f32>
-@must_use implicit(F: texture_filter)
-  fn textureSampleBaseClampToEdge(texture: texture_2d_filtered<f32, F>,
-                                  sampler: sampler,
-                                  coords: vec2<f32>) -> vec4<f32>
-@must_use implicit(K: sampler_filter)
-  fn textureSampleBaseClampToEdge(texture: texture_2d_filtered<f32, filterable>,
-                                  sampler: sampler_filtered<K>,
-                                  coords: vec2<f32>) -> vec4<f32>
-@must_use
-  fn textureSampleBaseClampToEdge(texture: texture_2d_filtered<f32, unfilterable>,
-                                  sampler: sampler_filtered<non_filtering>,
-                                  coords: vec2<f32>) -> vec4<f32>
-
 @must_use
   fn textureSampleBaseClampToEdge(texture: texture_external,
                                   sampler: sampler,
@@ -2524,18 +1523,6 @@ match workgroup
   fn textureLoad(texture: texture_2d_array<T>, coords: vec2<C>, array_index: A, level: L) -> vec4<T>
 @must_use implicit(T: fiu32, C: iu32, L: iu32)
   fn textureLoad(texture: texture_3d<T>, coords: vec3<C>, level: L) -> vec4<T>
-
-@must_use implicit(T: f32, C: iu32, L: iu32, F: texture_filter)
-  fn textureLoad(texture: texture_1d_filtered<T, F>, coords: C, level: L) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, L: iu32, F: texture_filter)
-  fn textureLoad(texture: texture_2d_filtered<T, F>, coords: vec2<C>, level: L) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, A: iu32, L: iu32, F: texture_filter)
-  fn textureLoad(texture: texture_2d_array_filtered<T, F>,
-                 coords: vec2<C>,
-                 array_index: A,
-                 level: L) -> vec4<T>
-@must_use implicit(T: f32, C: iu32, L: iu32, F: texture_filter)
-  fn textureLoad(texture: texture_3d_filtered<T, F>, coords: vec3<C>, level: L) -> vec4<T>
 
 @must_use implicit(T: fiu32, C: iu32, S: iu32)
   fn textureLoad(texture: texture_multisampled_2d<T>, coords: vec2<C>, sample_index: S) -> vec4<T>
@@ -2770,72 +1757,27 @@ type u64
 ////////////////////////////////////////
 // Subgroup matrix
 ////////////////////////////////////////
-@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num)
-  fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<S>, readable>,
-                                                         offset: u32,
-                                                         @const col_major: bool, stride: u32) -> T
-@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num)
-  fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<S, AC>, readable>,
-                                                         offset: u32,
-                                                         @const col_major: bool,
-                                                         stride: u32) -> T
-@stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num)
-  fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<i32>, readable>,
-                                                         offset: u32,
-                                                         @const col_major: bool,
-                                                         stride: u32) -> T
-@stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num)
-  fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<u32>, readable>,
-                                                         offset: u32,
-                                                         @const col_major: bool,
-                                                         stride: u32) -> T
-@stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num, AC: num)
-  fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<i32, AC>, readable>,
-                                                         offset: u32,
-                                                         @const col_major: bool,
-                                                         stride: u32) -> T
-@stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num, AC: num)
-  fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<u32, AC>, readable>,
-                                                         offset: u32,
-                                                         @const col_major: bool,
-                                                         stride: u32) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, E: subgroup_matrix_elements, AE: fiu32_fu16, C: num, R: num, AS: workgroup_or_storage, AM: readable, O: iu32, S: iu32)
+  fn subgroupMatrixLoad<T: subgroup_matrix<K, E, C, R> , Majorness: majorness > (
+    ptr<AS, any_array<AE>, AM>,
+    offset: O,
+    @test_value(8) stride: S) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, E: subgroup_matrix_elements, AE: fiu32_fu16, N: num, C: num, R: num, AS: workgroup_or_storage, AM: readable, O: iu32, S: iu32)
+  fn subgroupMatrixLoad<T: subgroup_matrix<K, E, C, R> , Majorness: majorness > (
+    ptr<AS, any_array<vec<N, AE> >, AM>,
+    offset: O,
+    @test_value(8) stride: S) -> T
 
-@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num)
-  fn subgroupMatrixStore(ptr<storage, runtime_array<S>, writable>,
-                         offset: u32,
-                         subgroup_matrix<K, S, C, R>,
-                         @const col_major: bool,
-                         stride: u32)
-@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num)
-  fn subgroupMatrixStore(ptr<workgroup_or_storage, array<S, AC>, writable>,
-                         offset: u32,
-                         subgroup_matrix<K, S, C, R>,
-                         @const col_major: bool,
-                         stride: u32)
-@stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num)
-  fn subgroupMatrixStore(ptr<storage, runtime_array<i32>, writable>,
-                         offset: u32,
-                         subgroup_matrix<K, S, C, R>,
-                         @const col_major: bool,
-                         stride: u32)
-@stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num)
-  fn subgroupMatrixStore(ptr<storage, runtime_array<u32>, writable>,
-                         offset: u32,
-                         subgroup_matrix<K, S, C, R>,
-                         @const col_major: bool,
-                         stride: u32)
-@stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num, AC: num)
-  fn subgroupMatrixStore(ptr<workgroup_or_storage, array<i32, AC>, writable>,
-                         offset: u32,
-                         subgroup_matrix<K, S, C, R>,
-                         @const col_major: bool,
-                         stride: u32)
-@stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num, AC: num)
-  fn subgroupMatrixStore(ptr<workgroup_or_storage, array<u32, AC>, writable>,
-                         offset: u32,
-                         subgroup_matrix<K, S, C, R>,
-                         @const col_major: bool,
-                         stride: u32)
+@stage("compute") implicit(K: subgroup_matrix_kind, E: subgroup_matrix_elements, AE: fiu32_fu16, C: num, R: num, AS: workgroup_or_storage, AM: writable, O: iu32, S: iu32)
+  fn subgroupMatrixStore<Majorness: majorness>(ptr<AS, any_array<AE>, AM>,
+                                               offset: O,
+                                               subgroup_matrix<K, E, C, R>,
+                                               @test_value(8) stride: S)
+@stage("compute") implicit(K: subgroup_matrix_kind, E: subgroup_matrix_elements, AE: fiu32_fu16, N: num, C: num, R: num, AS: workgroup_or_storage, AM: writable, O: iu32, S: iu32)
+  fn subgroupMatrixStore<Majorness: majorness>(ptr<AS, any_array<vec<N, AE> >, AM>,
+                                               offset: O,
+                                               subgroup_matrix<K, E, C, R>,
+                                               @test_value(8) stride: S)
 
 @must_use @stage("compute") implicit(T: f16, C: num, R: num, K: num)
   fn subgroupMatrixMultiply<TR: f32_f16>(subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
@@ -3094,24 +2036,28 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
 ////////////////////////////////////////////////////////////////////////////////
 @must_use @const implicit(T: scalar_no_f32) conv f32(T) -> f32
 @must_use @const implicit(T: scalar_no_f16) conv f16(T) -> f16
+@must_use @const implicit(T: scalar_no_u16) conv u16(T) -> i32
 @must_use @const implicit(T: scalar_no_i32) conv i32(T) -> i32
 @must_use @const implicit(T: scalar_no_u32) conv u32(T) -> u32
 @must_use @const implicit(T: scalar_no_bool) conv bool(T) -> bool
 
 @must_use @const implicit(U: scalar_no_f32) conv vec2<T: f32>(vec2<U>) -> vec2<T>
 @must_use @const implicit(U: scalar_no_f16) conv vec2<T: f16>(vec2<U>) -> vec2<T>
+@must_use @const implicit(U: scalar_no_u16) conv vec2<T: u16>(vec2<U>) -> vec2<T>
 @must_use @const implicit(U: scalar_no_i32) conv vec2<T: i32>(vec2<U>) -> vec2<T>
 @must_use @const implicit(U: scalar_no_u32) conv vec2<T: u32>(vec2<U>) -> vec2<T>
 @must_use @const implicit(U: scalar_no_bool) conv vec2<T: bool>(vec2<U>) -> vec2<T>
 
 @must_use @const implicit(U: scalar_no_f32) conv vec3<T: f32>(vec3<U>) -> vec3<T>
 @must_use @const implicit(U: scalar_no_f16) conv vec3<T: f16>(vec3<U>) -> vec3<T>
+@must_use @const implicit(U: scalar_no_u16) conv vec3<T: u16>(vec3<U>) -> vec3<T>
 @must_use @const implicit(U: scalar_no_i32) conv vec3<T: i32>(vec3<U>) -> vec3<T>
 @must_use @const implicit(U: scalar_no_u32) conv vec3<T: u32>(vec3<U>) -> vec3<T>
 @must_use @const implicit(U: scalar_no_bool) conv vec3<T: bool>(vec3<U>) -> vec3<T>
 
 @must_use @const implicit(U: scalar_no_f32) conv vec4<T: f32>(vec4<U>) -> vec4<T>
 @must_use @const implicit(U: scalar_no_f16) conv vec4<T: f16>(vec4<U>) -> vec4<T>
+@must_use @const implicit(U: scalar_no_u16) conv vec4<T: u16>(vec4<U>) -> vec4<T>
 @must_use @const implicit(U: scalar_no_i32) conv vec4<T: i32>(vec4<U>) -> vec4<T>
 @must_use @const implicit(U: scalar_no_u32) conv vec4<T: u32>(vec4<U>) -> vec4<T>
 @must_use @const implicit(U: scalar_no_bool) conv vec4<T: bool>(vec4<U>) -> vec4<T>
@@ -3134,6 +2080,8 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
 @must_use @const conv mat4x2<T: f32>(mat4x2<f16>) -> mat4x2<T>
 @must_use @const conv mat4x3<T: f32>(mat4x3<f16>) -> mat4x3<T>
 @must_use @const conv mat4x4<T: f32>(mat4x4<f16>) -> mat4x4<T>
+
+@must_use @const conv u64(u32) -> u64
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unary Operators                                                            //
@@ -3233,6 +2181,9 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
   op | (vec<N, T>, vec<N, T>) -> vec<N, T>
 
 @must_use @const
+  op | (u64, u64) -> u64
+
+@must_use @const
   op && (bool, bool) -> bool
 @must_use @const
   op || (bool, bool) -> bool
@@ -3272,6 +2223,9 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
 @must_use @const implicit(T: iu32, N: num)
   op << (vec<N, T>, vec<N, u32>) -> vec<N, T>
 
+@must_use @const
+  op << (u64, u64) -> u64
+
 @must_use @const implicit(T: iu32)
   op >> (T, u32) -> T
 @must_use @const implicit(T: iu32, N: num)
@@ -3280,17 +2234,17 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
 ////////////////////////////////////////////////////////////////////////////////
 // chromium_experimental_resource_table                                       //
 ////////////////////////////////////////////////////////////////////////////////
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_1d<K> >(index: I) -> bool
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_2d<K> >(index: I) -> bool
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_2d_array<K> >(index: I) -> bool
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_3d<K> >(index: I) -> bool
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_cube<K> >(index: I) -> bool
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_cube_array<K> >(index: I) -> bool
 @must_use implicit(K: fiu32, I: iu32)
   fn hasResource<T: texture_multisampled_2d<K> >(index: I) -> bool
@@ -3305,34 +2259,21 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
 @must_use implicit(I: iu32)
   fn hasResource<T: texture_depth_multisampled_2d>(index: I) -> bool
 @must_use implicit(I: iu32)
+  fn hasResource<S: sampler>(index: I) -> bool
+@must_use implicit(I: iu32)
   fn hasResource<S: sampler_comparison>(index: I) -> bool
 
-@must_use implicit(F: texture_filter, I: iu32)
-  fn hasResource<T: texture_1d_filtered<f32, F> >(index: I) -> bool
-@must_use implicit(F: texture_filter, I: iu32)
-  fn hasResource<T: texture_2d_filtered<f32, F> >(index: I) -> bool
-@must_use implicit(F: texture_filter, I: iu32)
-  fn hasResource<T: texture_2d_array_filtered<f32, F> >(index: I) -> bool
-@must_use implicit(F: texture_filter, I: iu32)
-  fn hasResource<T: texture_3d_filtered<f32, F> >(index: I) -> bool
-@must_use implicit(F: texture_filter, I: iu32)
-  fn hasResource<T: texture_cube_filtered<f32, F> >(index: I) -> bool
-@must_use implicit(F: texture_filter, I: iu32)
-  fn hasResource<T: texture_cube_array_filtered<f32, F> >(index: I) -> bool
-@must_use implicit(F: sampler_filter, I: iu32)
-  fn hasResource<S: sampler_filtered<F> >(index: I) -> bool
-
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn getResource<T: texture_1d<K> >(index: I) -> T
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn getResource<T: texture_2d<K> >(index: I) -> T
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn getResource<T: texture_2d_array<K> >(index: I) -> T
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn getResource<T: texture_3d<K> >(index: I) -> T
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn getResource<T: texture_cube<K> >(index: I) -> T
-@must_use implicit(K: iu32, I: iu32)
+@must_use implicit(K: fiu32, I: iu32)
   fn getResource<T: texture_cube_array<K> >(index: I) -> T
 @must_use implicit(K: iu32, I: iu32)
   fn getResource<T: texture_multisampled_2d<K> >(index: I) -> T
@@ -3347,20 +2288,6 @@ ctor mat4x4<T: f32_f16>(T, T, T, T,
 @must_use implicit(I: iu32)
   fn getResource<T: texture_depth_multisampled_2d>(index: I) -> T
 @must_use implicit(I: iu32)
+  fn getResource<S: sampler>(index: I) -> S
+@must_use implicit(I: iu32)
   fn getResource<S: sampler_comparison>(index: I) -> S
-
-@must_use implicit(F: texture_filter, I: iu32)
-  fn getResource<T: texture_1d_filtered<f32, F> >(index: I) -> T
-@must_use implicit(F: texture_filter, I: iu32)
-  fn getResource<T: texture_2d_filtered<f32, F> >(index: I) -> T
-@must_use implicit(F: texture_filter, I: iu32)
-  fn getResource<T: texture_2d_array_filtered<f32, F> >(index: I) -> T
-@must_use implicit(F: texture_filter, I: iu32)
-  fn getResource<T: texture_3d_filtered<f32, F> >(index: I) -> T
-@must_use implicit(F: texture_filter, I: iu32)
-  fn getResource<T: texture_cube_filtered<f32, F> >(index: I) -> T
-@must_use implicit(F: texture_filter, I: iu32)
-  fn getResource<T: texture_cube_array_filtered<f32, F> >(index: I) -> T
-@must_use implicit(F: sampler_filter, I: iu32)
-  fn getResource<S: sampler_filtered<F> >(index: I) -> S
-

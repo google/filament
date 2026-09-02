@@ -50,7 +50,9 @@ void TestHelper::ExpectError(std::string_view wgsl, std::string_view error) {
     if (!error.empty() && error[0] == '\n') {
         error = error.substr(1);
     }
-    EXPECT_EQ(result.Diagnostics().Str(), error);
+    EXPECT_EQ(result.Diagnostics().Str(), error) << "GOT\n"
+                                                 << result.Diagnostics().Str() << "\n\nEXPECTED\n"
+                                                 << error << "\n";
 }
 
 void TestHelper::ExpectSuccess(std::string_view wgsl) {
@@ -60,7 +62,7 @@ void TestHelper::ExpectSuccess(std::string_view wgsl) {
     auto file = std::make_unique<Source::File>("input.wgsl", wgsl);
     auto result = wgsl::reader::Parse(file.get(), std::move(options));
     ASSERT_TRUE(result.IsValid()) << result.Diagnostics().Str();
-    ASSERT_FALSE(result.Diagnostics().ContainsErrors());
+    ASSERT_FALSE(result.Diagnostics().ContainsErrors()) << result.Diagnostics().Str();
 }
 
 }  // namespace tint::resolver

@@ -1216,5 +1216,100 @@ TEST_F(IR_ValueToLetTest, AccessToLetWithNestedFunctionParams) {
     EXPECT_EQ(str(), expect);
 }
 
+TEST_F(IR_ValueToLetTest, NoSideEffectBinary_UsedMultipleTimes) {
+    auto* fn = b.Function("F", ty.f32());
+    b.Append(fn->Block(), [&] {
+        auto* v = b.Var<function, vec2f>("v");
+        auto* l = b.Load(v);
+        auto* mul = b.Multiply(l, l);
+        auto* x = b.Access<f32>(mul, 0_u);
+        auto* y = b.Access<f32>(mul, 1_u);
+        b.Return(fn, b.Add(x, y));
+    });
+
+    auto* src = R"(
+%F = func():f32 {
+  $B1: {
+    %v:ptr<function, vec2<f32>, read_write> = var undef
+    %3:vec2<f32> = load %v
+    %4:vec2<f32> = mul %3, %3
+    %5:f32 = access %4, 0u
+    %6:f32 = access %4, 1u
+    %7:f32 = add %5, %6
+    ret %7
+  }
+}
+)";
+    EXPECT_EQ(str(), src);
+
+    auto* expect = R"(
+%F = func():f32 {
+  $B1: {
+    %v:ptr<function, vec2<f32>, read_write> = var undef
+    %3:vec2<f32> = load %v
+    %4:vec2<f32> = let %3
+    %5:vec2<f32> = mul %4, %4
+    %6:vec2<f32> = let %5
+    %7:f32 = access %6, 0u
+    %8:f32 = access %6, 1u
+    %9:f32 = add %7, %8
+    ret %9
+  }
+}
+)";
+
+    Run(ValueToLet, ValueToLetConfig{});
+
+    EXPECT_EQ(str(), expect);
+}
+
+TEST_F(IR_ValueToLetTest, NoSideEffectCall_UsedMultipleTimes) {
+    auto* fn = b.Function("F", ty.f32());
+    b.Append(fn->Block(), [&] {
+        auto* v = b.Var<function, bool>("v");
+        auto* cond = b.Let("cond", b.Load(v));
+        auto* select = b.Call(ty.f32(), BuiltinFn::kSelect, 1_f, 2_f, cond);
+        auto* x = b.Multiply(select, select);
+        auto* y = b.Multiply(select, select);
+        b.Return(fn, b.Add(x, y));
+    });
+
+    auto* src = R"(
+%F = func():f32 {
+  $B1: {
+    %v:ptr<function, bool, read_write> = var undef
+    %3:bool = load %v
+    %cond:bool = let %3
+    %5:f32 = select 1.0f, 2.0f, %cond
+    %6:f32 = mul %5, %5
+    %7:f32 = mul %5, %5
+    %8:f32 = add %6, %7
+    ret %8
+  }
+}
+)";
+    EXPECT_EQ(str(), src);
+
+    auto* expect = R"(
+%F = func():f32 {
+  $B1: {
+    %v:ptr<function, bool, read_write> = var undef
+    %3:bool = load %v
+    %cond:bool = let %3
+    %5:f32 = select 1.0f, 2.0f, %cond
+    %6:f32 = let %5
+    %7:f32 = mul %6, %6
+    %8:f32 = mul %6, %6
+    %9:f32 = add %7, %8
+    ret %9
+  }
+}
+)";
+
+    Run(ValueToLet, ValueToLetConfig{});
+
+    EXPECT_EQ(str(), expect);
+}
+
 }  // namespace
 }  // namespace tint::core::ir::transform

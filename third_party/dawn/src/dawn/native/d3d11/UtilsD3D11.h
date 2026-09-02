@@ -30,9 +30,9 @@
 
 #include <string>
 
-#include "dawn/native/d3d/UtilsD3D.h"
-#include "dawn/native/d3d/d3d_platform.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/native/d3d/UtilsD3D.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native::d3d11 {
 

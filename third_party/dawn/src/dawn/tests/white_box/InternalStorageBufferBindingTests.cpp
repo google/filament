@@ -28,11 +28,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -68,8 +68,7 @@ class InternalStorageBufferBindingTests : public DawnTest {
         bglEntry.visibility = wgpu::ShaderStage::Compute;
 
         native::BindGroupLayoutDescriptor bglDesc;
-        bglDesc.entryCount = 1;
-        bglDesc.entries = &bglEntry;
+        bglDesc.entries = SpanFromRef(bglEntry);
 
         native::DeviceBase* nativeDevice = native::FromAPI(device.Get());
 

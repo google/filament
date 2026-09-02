@@ -29,6 +29,7 @@
 
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/clone_context.h"
@@ -125,7 +126,8 @@ struct State {
             });
         }
 
-        Vector<spirv::ir::BuiltinCall*, 4> depth_worklist;
+        std::vector<std::function<void()>> worklist;
+        worklist.reserve(128);
         for (auto* inst : ir.Instructions()) {
             if (auto* builtin = inst->As<spirv::ir::BuiltinCall>()) {
                 switch (builtin->Func()) {
@@ -133,11 +135,15 @@ struct State {
                         SampledImage(builtin);
                         break;
                     case spirv::BuiltinFn::kImageDrefGather:
+                        worklist.push_back(
+                            [this, builtin] { FindVarsForImageGatherDref(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageSampleDrefImplicitLod:
                     case spirv::BuiltinFn::kImageSampleDrefExplicitLod:
                     case spirv::BuiltinFn::kImageSampleProjDrefImplicitLod:
                     case spirv::BuiltinFn::kImageSampleProjDrefExplicitLod:
-                        depth_worklist.Push(builtin);
+                        worklist.push_back(
+                            [this, builtin] { FindVarsForImageSampleDref(builtin); });
                         break;
                     default:
                         break;
@@ -148,21 +154,10 @@ struct State {
         // For each depth function, find the parameters which needed be converted. We don't convert
         // the actual calls yet, as we may need to parameters to have propagated through function
         // parameters.
-        for (auto* builtin : depth_worklist) {
-            switch (builtin->Func()) {
-                case spirv::BuiltinFn::kImageSampleDrefImplicitLod:
-                case spirv::BuiltinFn::kImageSampleDrefExplicitLod:
-                case spirv::BuiltinFn::kImageSampleProjDrefImplicitLod:
-                case spirv::BuiltinFn::kImageSampleProjDrefExplicitLod:
-                    FindVarsForImageSampleDref(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageDrefGather:
-                    FindVarsForImageGatherDref(builtin);
-                    break;
-                default:
-                    TINT_UNREACHABLE();
-            }
+        for (auto& cb : worklist) {
+            cb();
         }
+        worklist.clear();
 
         Hashset<core::ir::Value*, 4> converted{};
         while (!textures_to_convert_to_depth_.IsEmpty()) {
@@ -213,74 +208,54 @@ struct State {
                         SampledImage(builtin);
                         break;
                     case spirv::BuiltinFn::kOpImage:
+                        worklist.push_back([this, builtin] { Image(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageRead:
                     case spirv::BuiltinFn::kImageFetch:
+                        worklist.push_back([this, builtin] { ImageFetch(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageGather:
+                        worklist.push_back([this, builtin] { ImageGather(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageQueryLevels:
+                        worklist.push_back([this, builtin] {
+                            ImageQuery(builtin, core::BuiltinFn::kTextureNumLevels);
+                        });
+                        break;
                     case spirv::BuiltinFn::kImageQuerySamples:
+                        worklist.push_back([this, builtin] {
+                            ImageQuery(builtin, core::BuiltinFn::kTextureNumSamples);
+                        });
+                        break;
                     case spirv::BuiltinFn::kImageQuerySize:
                     case spirv::BuiltinFn::kImageQuerySizeLod:
+                        worklist.push_back([this, builtin] { ImageQuerySize(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageSampleExplicitLod:
                     case spirv::BuiltinFn::kImageSampleImplicitLod:
                     case spirv::BuiltinFn::kImageSampleProjImplicitLod:
                     case spirv::BuiltinFn::kImageSampleProjExplicitLod:
+                        worklist.push_back([this, builtin] { ImageSample(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageWrite:
+                        worklist.push_back([this, builtin] { ImageWrite(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageSampleDrefImplicitLod:
                     case spirv::BuiltinFn::kImageSampleDrefExplicitLod:
                     case spirv::BuiltinFn::kImageSampleProjDrefImplicitLod:
                     case spirv::BuiltinFn::kImageSampleProjDrefExplicitLod:
+                        worklist.push_back([this, builtin] { ImageSampleDref(builtin); });
+                        break;
                     case spirv::BuiltinFn::kImageDrefGather:
-                        builtin_worklist.Push(builtin);
+                        worklist.push_back([this, builtin] { ImageGatherDref(builtin); });
                         break;
                     default:
                         TINT_UNREACHABLE() << "unknown spirv builtin: " << builtin->Func();
                 }
             }
         }
-
-        for (auto* builtin : builtin_worklist) {
-            switch (builtin->Func()) {
-                case spirv::BuiltinFn::kOpImage:
-                    Image(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageRead:
-                case spirv::BuiltinFn::kImageFetch:
-                    ImageFetch(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageGather:
-                    ImageGather(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageQueryLevels:
-                    ImageQuery(builtin, core::BuiltinFn::kTextureNumLevels);
-                    break;
-                case spirv::BuiltinFn::kImageQuerySamples:
-                    ImageQuery(builtin, core::BuiltinFn::kTextureNumSamples);
-                    break;
-                case spirv::BuiltinFn::kImageQuerySize:
-                case spirv::BuiltinFn::kImageQuerySizeLod:
-                    ImageQuerySize(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageSampleExplicitLod:
-                case spirv::BuiltinFn::kImageSampleImplicitLod:
-                case spirv::BuiltinFn::kImageSampleProjImplicitLod:
-                case spirv::BuiltinFn::kImageSampleProjExplicitLod:
-                    ImageSample(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageWrite:
-                    ImageWrite(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageSampleDrefImplicitLod:
-                case spirv::BuiltinFn::kImageSampleDrefExplicitLod:
-                case spirv::BuiltinFn::kImageSampleProjDrefImplicitLod:
-                case spirv::BuiltinFn::kImageSampleProjDrefExplicitLod:
-                    ImageSampleDref(builtin);
-                    break;
-                case spirv::BuiltinFn::kImageDrefGather:
-                    ImageGatherDref(builtin);
-                    break;
-                default:
-                    TINT_UNREACHABLE();
-            }
+        for (auto& cb : worklist) {
+            cb();
         }
 
         // Destroy all the OpSampledImage instructions.
@@ -1129,16 +1104,11 @@ struct State {
 }  // namespace
 
 Result<SuccessType> Texture(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllowMultipleEntryPoints,
-                    core::ir::Capability::kAllowOverrides,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                    core::ir::Capability::kAllowPointerToHandle,
-                },
-                "before spirv.Texture");
+    AssertValid(ir, "before spirv.Texture");
 
     State{ir}.Process();
+
+    ir.properties.Remove(core::ir::Property::kAllowPointerToHandle);
 
     return Success;
 }

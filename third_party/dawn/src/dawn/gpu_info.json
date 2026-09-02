@@ -206,7 +206,8 @@
           "Xe LPG": ["0x7D00", "0xB600"],
           "Xe 2 LPG": ["0x6400"],
           "Xe 2 HPG": ["0xE200"],
-          "Xe 3 LPG": ["0xB000"]
+          "Xe 3 LPG": ["0xB000"],
+          "Xe 3 LPG XS": ["0xFD00"]
         }
       }]
     },

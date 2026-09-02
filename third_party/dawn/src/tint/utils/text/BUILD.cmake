@@ -60,6 +60,7 @@ tint_add_target(tint_utils_text lib
 )
 
 tint_target_add_dependencies(tint_utils_text lib
+  tint_utils
   tint_utils_containers
   tint_utils_ice
   tint_utils_macros
@@ -105,6 +106,7 @@ tint_add_target(tint_utils_text_test test
 )
 
 tint_target_add_dependencies(tint_utils_text_test test
+  tint_utils
   tint_utils_containers
   tint_utils_ice
   tint_utils_macros

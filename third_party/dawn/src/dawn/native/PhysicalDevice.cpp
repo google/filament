@@ -25,18 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/PhysicalDevice.h"
 
 #include <algorithm>
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/Log.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Instance.h"
 #include "dawn/native/ValidationUtils_autogen.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Instance.h"
+#include "src/utils/log.h"
 
 namespace dawn::native {
 
@@ -60,6 +60,7 @@ MaybeError PhysicalDeviceBase::Initialize() {
     EnableFeature(Feature::DawnInternalUsages);
     EnableFeature(Feature::ImplicitDeviceSynchronization);
     EnableFeature(Feature::DawnFormatCapabilities);
+    EnableFeature(Feature::DawnAllowUndefinedLoadStoreOp);
     InitializeSupportedFeaturesImpl();
 
     DAWN_TRY_CONTEXT(
@@ -69,12 +70,6 @@ MaybeError PhysicalDeviceBase::Initialize() {
         mName, mDriverDescription, mVendorId, mDeviceId, mBackend, mAdapterType);
 
     NormalizeLimits(&mLimits);
-
-    // Choose a default value of `MaxComputeWorkgroupSubgroups` that makes it possible to have
-    // `SubgroupSize * MaxComputeWorkgroupSubgroups > kMaxComputeInvocationsPerWorkgroup` for unit
-    // test.
-    mMaxComputeWorkgroupSubgroups =
-        mLimits.v1.maxComputeInvocationsPerWorkgroup / kDefaultSubgroupMinSize / 2;
 
     return {};
 }
@@ -153,7 +148,7 @@ FeaturesSet PhysicalDeviceBase::GetSupportedFeatures(const TogglesState& toggles
     // Iterate each PhysicalDevice's supported feature and check if it is supported with given
     // toggles
     for (Feature feature : mSupportedFeatures.featuresBitSet) {
-        if (IsFeatureSupportedWithToggles(ToAPI(feature), toggles)) {
+        if (IsFeatureSupportedWithToggles(ToCppAPI(feature), toggles)) {
             supportedFeaturesWithToggles.EnableFeature(feature);
         }
     }
@@ -226,17 +221,5 @@ MaybeError PhysicalDeviceBase::ResetInternalDeviceForTestingImpl() {
 void PhysicalDeviceBase::PopulateBackendFormatCapabilities(
     wgpu::TextureFormat format,
     UnpackedPtr<DawnFormatCapabilities>& capabilities) const {}
-
-uint32_t PhysicalDeviceBase::GetMinExplicitComputeSubgroupSize() const {
-    return mMinExplicitComputeSubgroupSize;
-}
-
-uint32_t PhysicalDeviceBase::GetMaxExplicitComputeSubgroupSize() const {
-    return mMaxExplicitComputeSubgroupSize;
-}
-
-uint32_t PhysicalDeviceBase::GetMaxComputeWorkgroupSubgroups() const {
-    return mMaxComputeWorkgroupSubgroups;
-}
 
 }  // namespace dawn::native

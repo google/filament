@@ -25,9 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/mocks/platform/CachingInterfaceMock.h"
+#include "src/dawn/tests/mocks/platform/CachingInterfaceMock.h"
+
+#include <algorithm>
+#include <utility>
+
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 CachingInterfaceMock::CachingInterfaceMock() {
+    ON_CALL(*this, FindKey).WillByDefault([this](auto&&... args) {
+        return FindKeyDefault(args...);
+    });
     ON_CALL(*this, LoadData).WillByDefault([this](auto&&... args) {
         return LoadDataDefault(args...);
     });
@@ -56,41 +65,48 @@ size_t CachingInterfaceMock::GetNumEntries() const {
     return mCache.size();
 }
 
-size_t CachingInterfaceMock::LoadDataDefault(const void* key,
-                                             size_t keySize,
-                                             void* value,
-                                             size_t valueSize) {
+size_t CachingInterfaceMock::FindKeyDefault(std::span<const std::byte> key) {
     std::scoped_lock lock(mMutex);
     if (!mEnabled) {
         return 0;
     }
 
-    const std::string keyStr(reinterpret_cast<const char*>(key), keySize);
-    auto entry = mCache.find(keyStr);
+    std::vector<std::byte> keyVec(key.begin(), key.end());
+    auto entry = mCache.find(keyVec);
     if (entry == mCache.end()) {
         return 0;
-    }
-    if (valueSize >= entry->second.size()) {
-        // Only consider a cache-hit on the memcpy, since peeks are implementation detail.
-        memcpy(value, entry->second.data(), entry->second.size());
-        mHitCount++;
     }
     return entry->second.size();
 }
 
-void CachingInterfaceMock::StoreDataDefault(const void* key,
-                                            size_t keySize,
-                                            const void* value,
-                                            size_t valueSize) {
+size_t CachingInterfaceMock::LoadDataDefault(std::span<const std::byte> key,
+                                             std::span<std::byte> dest) {
+    std::scoped_lock lock(mMutex);
+    if (!mEnabled) {
+        return 0;
+    }
+
+    std::vector<std::byte> keyVec(key.begin(), key.end());
+    auto entry = mCache.find(keyVec);
+    if (entry == mCache.end()) {
+        return 0;
+    }
+    DAWN_CHECK(dest.size() >= entry->second.size());
+    std::ranges::copy(entry->second, dest.begin());
+    mHitCount++;
+    return entry->second.size();
+}
+
+void CachingInterfaceMock::StoreDataDefault(std::span<const std::byte> key,
+                                            std::span<const std::byte> src) {
     std::scoped_lock lock(mMutex);
     if (!mEnabled) {
         return;
     }
 
-    const std::string keyStr(reinterpret_cast<const char*>(key), keySize);
-    const uint8_t* it = reinterpret_cast<const uint8_t*>(value);
-    std::vector<uint8_t> entry(it, it + valueSize);
-    mCache.insert_or_assign(keyStr, entry);
+    std::vector<std::byte> keyVec(key.begin(), key.end());
+    std::vector<std::byte> entry(src.begin(), src.end());
+    mCache.insert_or_assign(std::move(keyVec), std::move(entry));
 }
 
 DawnCachingMockPlatform::DawnCachingMockPlatform(dawn::platform::CachingInterface* cachingInterface)

@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/native/mocks/BindGroupMock.h"
+#include "src/dawn/tests/unittests/native/mocks/BindGroupMock.h"
 
 namespace dawn::native {
 
 BindGroupMock::BindGroupMock(DeviceMock* device, const UnpackedPtr<BindGroupDescriptor>& descriptor)
     : BindGroupDataHolder(descriptor->layout->GetInternalBindGroupLayout()->GetBindingDataSize()),
-      BindGroupBase(device, descriptor, mBindingDataAllocation) {
+      BindGroupBase(device, descriptor, mBindingDataAllocation.data()) {
     ON_CALL(*this, InitializeImpl).WillByDefault([]() -> MaybeError { return {}; });
     ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
         this->BindGroupBase::DestroyImpl(reason);

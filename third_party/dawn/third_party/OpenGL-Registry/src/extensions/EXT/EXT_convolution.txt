@@ -1,0 +1,964 @@
+Name
+
+    EXT_convolution
+
+Name Strings
+
+    GL_EXT_convolution
+
+Version
+
+    Date: June 27, 2002 Version: 1.32
+
+Number
+
+    12
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+    EXT_copy_texture affects the definition of this extension
+
+Overview
+
+    This extension defines 1 and 2 dimensional convolution operations
+    at a fixed location in the pixel transfer process.  Thus pixel drawing,
+    reading, and copying, as well as texture image definition, are all
+    candidates for convolution.  The convolution kernels are themselves
+    treated as 1 and 2 dimensional images, which can be loaded from
+    application memory or from the framebuffer.
+
+    This extension is designed to accommodate 3D convolution, but the
+    API is left for a future extension.
+
+New Procedures and Functions
+
+    void ConvolutionFilter1DEXT(enum target,
+                                enum internalformat,
+                                sizei width,
+                                enum format,
+                                enum type,
+                                const void* image);
+
+    void ConvolutionFilter2DEXT(enum target,
+                                enum internalformat,
+                                sizei width,
+                                sizei height,
+                                enum format,
+                                enum type,
+                                const void* image);
+
+    void CopyConvolutionFilter1DEXT(enum target,
+                                    enum internalformat,
+                                    int x,
+                                    int y,
+                                    sizei width);
+
+    void CopyConvolutionFilter2DEXT(enum target,
+                                    enum internalformat,
+                                    int x,
+                                    int y,
+                                    sizei width,
+                                    sizei height);
+
+    void GetConvolutionFilterEXT(enum target,
+                                 enum format,
+                                 enum type,
+                                 void* image);
+
+    void SeparableFilter2DEXT(enum target,
+                              enum internalformat,
+                              sizei width,
+                              sizei height,
+                              enum format,
+                              enum type,
+                              const void* row,
+                              const void* column);
+
+    void GetSeparableFilterEXT(enum target,
+                               enum format,
+                               enum type,
+                               void* row,
+                               void* column,
+                               void* span);
+
+    void ConvolutionParameteriEXT(enum target,
+                                  enum pname,
+                                  int param);
+
+    void ConvolutionParameterivEXT(enum target,
+                                   enum pname,
+                                   const int* params);
+
+    void ConvolutionParameterfEXT(enum target,
+                                  enum pname,
+                                  float param);
+
+    void ConvolutionParameterfvEXT(enum target,
+                                   enum pname,
+                                   const float* params);
+
+    void GetConvolutionParameterivEXT(enum target,
+                                      enum pname,
+                                      int* params);
+
+    void GetConvolutionParameterfvEXT(enum target,
+                                      enum pname,
+                                      float* params);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of ConvolutionFilter1DEXT,
+    CopyConvolutionFilter1DEXT, GetConvolutionFilterEXT,
+    ConvolutionParameteriEXT, ConvolutionParameterfEXT,
+    ConvolutionParameterivEXT, ConvolutionParameterfvEXT,
+    GetConvolutionParameterivEXT, and GetConvolutionParameterfvEXT:
+
+        CONVOLUTION_1D_EXT               0x8010
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of ConvolutionFilter2DEXT,
+    CopyConvolutionFilter2DEXT, GetConvolutionFilterEXT,
+    ConvolutionParameteriEXT, ConvolutionParameterfEXT,
+    ConvolutionParameterivEXT, ConvolutionParameterfvEXT,
+    GetConvolutionParameterivEXT, and GetConvolutionParameterfvEXT:
+
+        CONVOLUTION_2D_EXT               0x8011
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of SeparableFilter2DEXT,
+    SeparableFilter2DEXT, GetSeparableFilterEXT,
+    ConvolutionParameteriEXT, ConvolutionParameterfEXT,
+    ConvolutionParameterivEXT, ConvolutionParameterfvEXT,
+    GetConvolutionParameterivEXT, and GetConvolutionParameterfvEXT:
+
+        SEPARABLE_2D_EXT                 0x8012
+
+    Accepted by the <pname> parameter of ConvolutionParameteriEXT,
+    ConvolutionParameterfEXT, ConvolutionParameterivEXT,
+    ConvolutionParameterfvEXT, GetConvolutionParameterivEXT, and
+    GetConvolutionParameterfvEXT:
+
+        CONVOLUTION_BORDER_MODE_EXT      0x8013
+
+    Accepted by the <pname> parameter of ConvolutionParameterivEXT,
+    ConvolutionParameterfvEXT, GetConvolutionParameterivEXT, and
+    GetConvolutionParameterfvEXT:
+
+        CONVOLUTION_FILTER_SCALE_EXT     0x8014
+        CONVOLUTION_FILTER_BIAS_EXT      0x8015
+
+    Accepted by the <param> parameter of ConvolutionParameteriEXT,
+    and ConvolutionParameterfEXT, and by the <params> parameter of
+    ConvolutionParameterivEXT and ConvolutionParameterfvEXT, when the
+    <pname> parameter is CONVOLUTION_BORDER_MODE_EXT:
+
+        REDUCE_EXT                       0x8016
+
+    Accepted by the <pname> parameter of GetConvolutionParameterivEXT and
+    GetConvolutionParameterfvEXT:
+
+        CONVOLUTION_FORMAT_EXT           0x8017
+        CONVOLUTION_WIDTH_EXT            0x8018
+        CONVOLUTION_HEIGHT_EXT           0x8019
+        MAX_CONVOLUTION_WIDTH_EXT        0x801A
+        MAX_CONVOLUTION_HEIGHT_EXT       0x801B
+
+    Accepted by the <pname> parameter of PixelTransferi, PixelTransferf,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        POST_CONVOLUTION_RED_SCALE_EXT   0x801C
+        POST_CONVOLUTION_GREEN_SCALE_EXT 0x801D
+        POST_CONVOLUTION_BLUE_SCALE_EXT  0x801E
+        POST_CONVOLUTION_ALPHA_SCALE_EXT 0x801F
+        POST_CONVOLUTION_RED_BIAS_EXT    0x8020
+        POST_CONVOLUTION_GREEN_BIAS_EXT  0x8021
+        POST_CONVOLUTION_BLUE_BIAS_EXT   0x8022
+        POST_CONVOLUTION_ALPHA_BIAS_EXT  0x8023
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The specification of convolution operators is added to the GL
+    Specification in section 3.6.2, "Pixel Transfer Modes."  A 2-dimensional
+    convolution filter image is specified using the ConvolutionFilter2DEXT
+    command.  Its <target> parameter must be CONVOLUTION_2D_EXT.  Its
+    <internalformat> parameter specifies the format of image that will be
+    retained; it must be one of ALPHA, LUMINANCE, LUMINANCE_ALPHA,
+    INTENSITY_EXT, RGB, or RGBA.  Its <width>, <height>, <format>, <type>,
+    and <image> parameters specify an image in memory with exactly the same
+    semantics of the corresponding parameters to DrawPixels.  
+
+    The specified image is extracted from memory and processed just as if
+    DrawPixels were called, stopping after the Final Expansion to RGBA step
+    is completed. The R, G, B, and A components of each pixel are then scaled
+    by the four 2D CONVOLUTION_FILTER_SCALE_EXT parameters, then biased by the
+    four 2D CONVOLUTION_FILTER_BIAS_EXT parameters.  These parameters are
+    themselves specified by calling ConvolutionParameterivEXT or 
+    ConvolutionParameterfvEXT with <target> CONVOLUTION_2D_EXT, <pname>
+    CONVOLUTION_FILTER_SCALE_EXT or CONVOLUTION_FILTER_BIAS_EXT, and <params>
+    pointing to a vector of four values: red, green, blue, and alpha, in that
+    order.  The R, G, B, and A values are not clamped to [0,1] at any time 
+    during this process.
+
+    Each pixel is then converted to have the specified internal format.
+    This conversion simply maps the component values of the pixel (R, G, B,
+    and A) to the values included in the internal format (red, green, blue,
+    alpha, luminance, and intensity).  The mapping is as follows:
+
+        Internal Format         red     green   blue    alpha   luminance intensity
+        ---------------         ---     -----   ----    -----   --------- ---------
+
+        ALPHA                                           A
+        LUMINANCE                                               R
+        LUMINANCE_ALPHA                                 A       R
+        INTENSITY_EXT                                                     R
+        RGB                     R       G       B
+        RGBA                    R       G       B       A
+
+
+    Pixel Organization
+
+    The red, green, blue, alpha, luminance, and/or intensity components of
+    the pixels are stored in floating point, rather than integer format.
+    They form a 2-dimensional image indexed with coordinates i,j such that i
+    increases from left to right, starting at zero, and j increases from
+    bottom to top, also starting at zero.  Image location i,j is specified
+    by the Nth pixel, counting from zero, where N is i+j*width.
+
+    The error INVALID_VALUE is generated if <width> or <height> is greater
+    than the maximum supported value.  This value is queried with
+    GetConvolutionParameterivEXT, setting <target> to CONVOLUTION_2D_EXT and
+    <pname> to MAX_CONVOLUTION_WIDTH_EXT or MAX_CONVOLUTION_HEIGHT_EXT,
+    respectively.
+
+    A 1-dimensional convolution filter is defined using ConvolutionFilter1DEXT.
+    Its <target> parameter must be CONVOLUTION_1D_EXT.  Its <internalformat>,
+    <format>, and <type> parameters have identical semantics and accept the
+    same values as do their 2D counterparts.  <image> must point to a
+    1-dimensional image, however.  
+
+    The 1-dimensional image is taken from memory and processed as if
+    ConvolutionFilter2DEXT were called with a height of 1, except that it is
+    scaled and biased by the two 1D vectors, rather than the 2D vectors.
+    (The 1D scale and bias vectors are specified using
+    ConvolutionParameterivEXT with <target> CONVOLUTION_1D_EXT and <pname>
+    CONVOLUTION_FILTER_SCALE_EXT or CONVOLUTION_FILTER_BIAS_EXT.) The
+    1-dimensional image is formed with coordinates i such that i increases
+    from left to right, starting at zero.  Image location i is specified by
+    the ith pixel, counting from zero.
+
+    The error INVALID_VALUE is generated if <width> is greater than the
+    maximum supported value, which is queried using
+    GetConvolutionParameterivEXT, setting <target> to CONVOLUTION_1D_EXT
+    and <pname> to MAX_CONVOLUTION_WIDTH_EXT.
+
+    If EXT_copy_texture is supported, one and 2-dimensional filters can also
+    be defined using image data in the framebuffer.  Rather than accepting
+    image data from memory, they copy image data from the color buffer
+    specified by the current ReadBuffer mode.  CopyConvolutionFilter2DEXT
+    accepts image data from a <width> pixel wide by <height> pixel high
+    color buffer region whose lower-left pixel has window coordinates <x>,<y>.
+    If any pixels within this region are outside the window that is
+    associated with the GL context, the values obtained for those pixels
+    are undefined.  
+
+    These pixel values are obtained from the framebuffer exactly as if
+    ReadPixels had been called with <format> set to RGBA, with processing
+    continuing through Conversion of RGBA values.  At this point all pixel
+    component values are treated exactly as if ConvolutionFilter2DEXT had
+    been called, beginning with the scaling of the color components by
+    CONVOLUTION_FILTER_SCALE_SGI.  Pixel ordering is such that lower X
+    screen coordinates correspond to lower i filter image coordinates, and
+    lower Y screen coordinates correspond to lower j filter image
+    coordinates.  The semantics and accepted values of the <target> and
+    <internalformat> parameters are exactly equivalent to their
+    ConvolutionFilter2DEXT counterparts.
+
+    CopyConvolutionFilter1DEXT accepts image data from a <width> pixel wide
+    by 1 pixel high color buffer region whose left-most pixel has window
+    coordinates <x>,<y>.  If any pixels within this region are outside the
+    window that is associated with the GL context, the values obtained for
+    those pixels are undefined.
+
+    The pixels are processed just as those of CopyConvolutionFilter2DEXT are, 
+    and they define a filter image such that lower X window coordinates
+    correspond to lower i filter image coordinates.  The semantics and
+    accepted values of the <target> and <internalformat> parameters are
+    exactly equivalent to their ConvolutionFilter1DEXT counterparts.
+
+    Special facilities are provided for the definition of 2-dimensional
+    separable filters -- filters whose image can be represented as the
+    product of two 1-dimensional images, rather than as full
+    2-dimensional images.  A 2-dimensional convolution filter is specified
+    using SeparableFilter2DEXT.  Its <target> parameter must be
+    SEPARABLE_2D_EXT.  Its <internalformat> parameter specifies the formats
+    of two 1-dimensional images that will be retained; it must be one of
+    ALPHA, LUMINANCE, LUMINANCE_ALPHA, INTENSITY_EXT, RGB, or RGBA.  <row>
+    and <column> point to two 1-dimensional images in memory.  The <row>
+    image is <width> pixels wide, and is defined by <format> and <type>.
+    The <column> image is <height> pixels wide, and is also defined by
+    <format> and <type>.
+
+    The two images are extracted from memory and processed just as if
+    ConvolutionFilter1DEXT were called separately for each, with the resulting
+    retained images replacing the current 2D separable filter images, except
+    that each image is scaled and biased using the 2D separable scale and bias
+    vectors.  (These vectors are specified using ConvolutionParameterivEXT with
+    <target> SEPARABLE_2D_EXT and <pname> CONVOLUTION_FILTER_SCALE_EXT or
+    CONVOLUTION_FILTER_BIAS_EXT.)
+
+    The operations of the convolution filters are added to the GL
+    Specification in section 3.6.3, "Rasterization of Pixel Rectangles,
+    immediately following the subsection "Index Lookup", and immediately
+    prior to the operations described by EXT_histogram.  Filters are
+    enabled and disabled by calling Enable and Disable with filter name
+    passed as the <cap> parameter.  Convolution is performed only for RGBA
+    groups, though these groups may have been specified as color indexes
+    and converted to RGBA by index table lookup.  
+
+    If CONVOLUTION_1D_EXT is enabled, the 1-dimensional convolution filter
+    is applied only to the image passed to TexImage1D, and to 1-dimensional
+    textures queried by GetTexImage.  If CONVOLUTION_2D_EXT is enabled, the
+    2-dimensional convolution filter is applied only to the 2D images passed
+    to DrawPixels, CopyPixels, ReadPixels, TexImage2D, TexSubImage2DEXT,
+    CopyTexImage2DEXT, CopyTexSubImage2DEXT, and GetTexImage, and to
+    2-dimensional images queried by GetTexImage.  If SEPARABLE_2D_EXT is
+    enabled, and CONVOLUTION_2D_EXT is disabled, the separable 2-dimensional
+    convolution filter is applied only to these same images.
+
+    The convolution operation is a sum of products of source image pixels
+    and convolution filter pixels.  Source image pixels always have four
+    components: red, green, blue, and alpha, denoted in the equations below
+    as Rs, Gs, Bs, and As.  Filter pixels may be stored in one of five
+    formats, with 1, 2, 3, or 4 components.  These components are denoted
+    as Rf, Gf, Bf, Af, Lf, and If in the equations below.  The result of the
+    convolution operation is the 4-tuple R,G,B,A.  Depending on the internal
+    format of the filter, individual color components of each source image
+    pixel are convolved with one filter component, or are passed unmodified.
+    The rules for this are:
+
+        Filter format           
+        -------------
+        ALPHA                   R = Rs                  G = Gs                  B = Bs                  A = convolve(As,Af)
+        LUMINANCE               R = convolve(Rs,Lf)     G = convolve(Gs,Lf)     B = convolve(Bs,Lf)     A = As
+        LUMINANCE_ALPHA         R = convolve(Rs,Lf)     G = convolve(Gs,Lf)     B = convolve(Bs,Lf)     A = convolve(As,Af)
+        INTENSITY               R = convolve(Rs,If)     G = convolve(Gs,If)     B = convolve(Bs,If)     A = convolve(As,If)
+        RGB                     R = convolve(Rs,Rf)     G = convolve(Gs,Gf)     B = convolve(Bs,Bf)     A = As
+        RGBA                    R = convolve(Rs,Rf)     G = convolve(Gs,Gf)     B = convolve(Bs,Bf)     A = convolve(As,Af)
+
+    The convolution operation is defined differently for each of the three
+    convolution filters.  In the following equations the
+    
+        SUM{}{}equation
+        
+    notation indicate the sum of the equation evaluated for all combinations
+    of conditions indicated within the sets of curly brackets.  The
+    variables Wf and Hf refer to the dimensions of the convolution filter.
+    The variables Ws and Hs refer to the dimensions of the source pixel
+    image. The pixel indexing nomenclature is decribed in the Pixel
+    Organization section, above.
+
+    The convolution equations are:
+
+        1-dimensional filter:
+
+            C[i] = SUM{n = 0 through Wf-1}
+            
+                      Cs[i+n] * Cf[n]
+
+        2-dimensional filter:
+
+            C[i,j] = SUM{n = 0 through Wf-1}
+                        {m = 0 through Hf-1}
+                        
+                        Cs[i+n,j+m] * Cf[n,m]
+
+        2-dimensional separable filter:
+
+            C[i,j] = SUM{n = 0 through Wf-1}
+                        {m = 0 through Hf-1}
+
+                        Cs[i+n,j+m] * Crow[n] * Ccolumn[m]
+
+    If Wf of a 1-dimensional filter is zero, then C[i] is always set to
+    zero.  Likewise, if either Wf or Hf of a 2-dimensional filter is zero,
+    then C[i,j] is always set to zero.
+
+    The convolution border mode for a specific convolution filter is
+    specified using ConvolutionParameteriEXT with the <target> parameter
+    set to the name of the filter, the <pname> parameter set to
+    CONVOLUTION_BORDER_MODE_EXT, and <param> set to REDUCE_EXT.  (This
+    extension defines only a single border mode.)  The width and height of
+    source images convolved with border mode REDUCE_EXT are reduced by
+    Wf-1 and Hf-1, respectively.  If this reduction would generate a
+    resulting image with zero or negative width and/or height, the output
+    is simply null, with no error generated.  The coordinates of the image
+    that results from a convolution with border mode REDUCE_EXT are zero
+    through Ws-Wf in width, and zero through Hs-Hf in height.  In
+    cases where errors can result from the specification of invalid image
+    dimensions, it is these resulting dimensions that are tested, not the
+    dimensions of the source image.  (A specific example is TexImage1D and
+    TexImage2D, which specify constraints for image dimensions.  Even if
+    TexImage1D or TexImage2D is called with a null pixel pointer, the
+    dimensions of the resulting texture image are those that would result
+    from the convolution of the specified image.)  
+
+    If a convolution operation is performed, the resulting image is scaled
+    and biased by parameters specified using the PixelTransfer command.
+    These operations are:
+
+        red = red * POST_CONVOLUTION_RED_SCALE_EXT
+            + POST_CONVOLUTION_RED_BIAS_EXT
+
+        green = green * POST_CONVOLUTION_GREEN_SCALE_EXT
+              + POST_CONVOLUTION_GREEN_BIAS_EXT
+
+        blue = blue * POST_CONVOLUTION_BLUE_SCALE_EXT
+             + POST_CONVOLUTION_BLUE_BIAS_EXT
+
+        alpha = alpha * POST_CONVOLUTION_ALPHA_SCALE_EXT
+              + POST_CONVOLUTION_ALPHA_BIAS_EXT
+
+    If no convolution operation is performed, the scale and bias are not
+    performed either.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The operation of convolution during pixel copy and query operations is
+    identical to the operation during pixel drawing and texture image
+    definition.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Commands GetConvolutionFilterEXT, GetSeparableFilterEXT,
+    GetConvolutionParameterivEXT, and GetConvolutionParameterfvEXT are not
+    included in display lists.  They are always executed immediately.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    Integer and floating point query functions GetConvolutionParameterivEXT
+    and GetConvolutionParameterfvEXT are provided.  <target> must be
+    CONVOLUTION_1D_EXT, CONVOLUTION_2D_EXT, or SEPARABLE_2D_EXT.  <pname>
+    is one of CONVOLUTION_FORMAT_EXT, CONVOLUTION_WIDTH_EXT,
+    CONVOLUTION_HEIGHT_EXT, MAX_CONVOLUTION_WIDTH_EXT, or
+    MAX_CONVOLUTION_HEIGHT_EXT.  The value of the specified parameter is
+    returned in <params>.
+
+    The current contents of a convolution filter image are queried using
+    GetConvolutionFilterEXT.  <target> must be CONVOLUTION_1D_EXT or
+    CONVOLUTION_2D_EXT.  <format> must be one of RED, GREEN, BLUE, ALPHA, RGB,
+    RGBA, ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.  <type> must be
+    UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+    The 1-dimensional or 2-dimensional image is returned to <image>.  No pixel
+    transfer operations are performed on this image, but pixel storage modes
+    that are applicable to ReadPixels are performed.  Color components are
+    converted from the internal floating point representation to <type>
+    according to table 2.4. Prior to the conversion, if <type> is one of
+    UNSIGNED_BYTE, UNSIGNED_SHORT, or UNSIGNED_INT, the color components are
+    clamped to 0..1, if <type> is one of BYTE, SHORT, or INT, the components are
+    clamped to -1..1.  No clamping is performed if <type> is FLOAT.  Color
+    components that are requested in the specified <format>, but which are not
+    included in the internal format of the filter image, are returned as zero.
+    The assignments of internal color components to the components requested by
+    <format> are
+
+                internal component      resulting component
+                ------------------      -------------------
+                red                     red
+                green                   green
+                blue                    blue
+                alpha                   alpha
+                luminance               red
+                intensity               red
+
+    The current contents of a separable filter image are queried using
+    GetSeparableFilterEXT.  <target> must be SEPARABLE_2D_EXT.  <format>
+    and <type> accept the same values as do the corresponding parameters
+    of GetConvolutionFilterEXT.  The row and column images are returned to
+    <row> and <column> respectively.  No change is made to any location
+    related to <span>.  Pixel processing and component mapping are
+    identical to those of GetConvolutionFilterEXT.
+
+Additions to the GLX Specification
+
+    None
+    
+GLX Protocol
+
+    Thirteen new GL commands are added.
+
+    The following six rendering commands are sent to the server as part of
+    a glXRender request:
+
+        CopyConvolutionFilter1DEXT
+            2           24              rendering command length
+            2           4107            rendering command opcode
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           x
+            4           INT32           y
+            4           INT32           width
+
+        CopyConvolutionFilter2DEXT
+            2           28              rendering command length
+            2           4108            rendering command opcode
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           x
+            4           INT32           y
+            4           INT32           width
+            4           INT32           height
+
+        ConvolutionParameteriEXT
+            2           16              rendering command length
+            2           4105            rendering command opcode
+            4           ENUM            target
+            4           ENUM            pname
+                        0x8013          CONVOLUTION_BORDER_MODE_EXT
+            4           INT32           param
+
+        ConvolutionParameterivEXT
+            2           12+4*n          rendering command length
+            2           4106            rendering command opcode
+            4           ENUM            target
+            4           ENUM            pname
+                        0x8013    n=1   CONVOLUTION_BORDER_MODE_EXT
+                        0x8014    n=4   CONVOLUTION_FILTER_SCALE_EXT
+                        0x8015    n=4   CONVOLUTION_FILTER_BIAS_EXT
+                        0x8017    n=1   CONVOLUTION_FORMAT_EXT
+                        0x8018    n=1   CONVOLUTION_WIDTH_EXT  
+                        0x8019    n=1   CONVOLUTION_HEIGHT_EXT  
+                        0x801A    n=1   MAX_CONVOLUTION_WIDTH_EXT
+                        0x801B    n=1   MAX_CONVOLUTION_HEIGHT_EXT
+            4*n         LISTofINT32     params
+
+        ConvolutionParameterfEXT
+            2           16              rendering command length
+            2           4103            rendering command opcode
+            4           ENUM            target
+            4           ENUM            pname
+                        0x8013          CONVOLUTION_BORDER_MODE_EXT
+            4           FLOAT32         param
+
+        ConvolutionParameterfvEXT
+            2           12+4*n          rendering command length
+            2           4104            rendering command opcode
+            4           ENUM            target
+            4           ENUM            pname
+                        0x8013    n=1   CONVOLUTION_BORDER_MODE_EXT
+                        0x8014    n=4   CONVOLUTION_FILTER_SCALE_EXT
+                        0x8015    n=4   CONVOLUTION_FILTER_BIAS_EXT
+                        0x8017    n=1   CONVOLUTION_FORMAT_EXT
+                        0x8018    n=1   CONVOLUTION_WIDTH_EXT  
+                        0x8019    n=1   CONVOLUTION_HEIGHT_EXT  
+                        0x801A    n=1   MAX_CONVOLUTION_WIDTH_EXT
+                        0x801B    n=1   MAX_CONVOLUTION_HEIGHT_EXT
+            4*n         LISTofFLOAT32   params
+
+    The following three rendering commands contain pixel data and are thus
+    sent to the server as part of a glXRender request or as part of a
+    glXRenderLarge request:
+
+        ConvolutionFilter1DEXT
+            2           48+n+p          rendering command length
+            2           4101            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          skip_rows
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           width
+            4           INT32           height
+            4           ENUM            format
+            4           ENUM            type
+            n           LISTofBYTE      pixels
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the
+            command opcode and command length fields above are expanded to
+            4 bytes each:
+            4           52+n+p          rendering command length
+            4           4101            rendering command opcode
+
+        If <width> < 0, <format> is invalid or <type> is invalid, then the
+        command is erroneous and n=0. The structure of <pixels> is described
+        in Appendix A of the GLX Protocol Specification, "Pixel Data", using
+        the parameters <swap_bytes>, <lsb_first>, <row_length>, <skip_rows>,
+        <skip_pixels>, <alignment>, <width>, <format>, and <type> as given
+        in the request, and a height of 1.
+
+        ConvolutionFilter2DEXT
+            2           48+n+p          rendering command length
+            2           4102            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          skip_rows
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           width
+            4           INT32           height
+            4           ENUM            format
+            4           ENUM            type
+            n           LISTofBYTE      pixels
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the
+            command opcode and command length fields above are expanded to
+            4 bytes each:
+            4           52+n+p          rendering command length
+            4           4102            rendering command opcode
+
+        If <width> < 0, <height> < 0, <format> is invalid or <type> is
+        invalid, then the command is erroneous and n=0. The structure of
+        <pixels> is described in Appendix A of the GLX Protocol
+        Specification, "Pixel Data", using the parameters <swap_bytes>, 
+        <lsb_first>, <row_length>, <skip_rows>, <skip_pixels>, <alignment>,
+        <width>, <height>, <format>, and <type> as given in the request.
+
+        SeparableFilter2DEXT
+            2           48+n1+p1+n2+p2  rendering command length
+            2           4109            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          skip_rows
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           INT32           width
+            4           INT32           height
+            4           ENUM            format
+            4           ENUM            type
+            n1          LISTofBYTE      row
+            p1                          unused, p=pad(n)
+            n2          LISTofBYTE      column
+            p2                          unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the
+            command opcode and command length fields above are expanded
+            to 4 bytes each:
+            4           52+n+p          rendering command length
+            4           4109            rendering command opcode
+
+        If <width> < 0, <height> < 0, <format> is invalid or <type> is
+        invalid, then the command is erroneous and n=0. The structure of
+        <row> is described in Appendix A of the GLX Protocol Specification,
+        "Pixel Data", using the parameters <swap_bytes>, <lsb_first>,
+        <row_length>, <skip_rows>, <skip_pixels>, <alignment>, <width>, 
+        <format>, and <type> as given in the request, and and a height of 1.
+        The structure of <column> is the same (it is also a one-dimensional
+        image) except that it is <height> pixels wide, instead of <width>
+        pixels wide.
+
+    The remaining commands are non-rendering commands. These commands are
+    sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+        GetConvolutionParameterivEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           3               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        Note that n may be zero, indicating that a GL error occurred. 
+
+
+        GetConvolutionParameterfvEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           2               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        Note that n may be zero, indicating that a GL error occurred. 
+
+
+        GetConvolutionFilterEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           1               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            format
+            4           ENUM            type
+            1           BOOL            swap_bytes
+            3                           unused
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            8                           unused
+            4           INT32           width
+            4           INT32           height
+            8                           unused
+            4*n         LISTofBYTE      pixels
+
+        Note that n may be zero, indicating that a GL error occurred.
+
+        If <format> or <type> is invalid then the command is erroneous and
+        n=0. The structure of <pixels> is described in Appendix A of the GLX
+        Protocol Specification, "Pixel Data", using the parameters
+        <swap_bytes>, <format>, and <type>. No extra padding is needed after
+        <pixels> because the image format already pads to 32 bits.
+
+ 
+        GetSeparableFilterEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           4               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            format
+            4           ENUM            type
+            1           BOOL            swap_bytes
+            3                           unused
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            8                           unused
+            4           INT32           width
+            4           INT32           height
+            8                           unused
+            4*n         LISTofBYTE      row followed by column
+
+        Note that n may be zero, indicating that a GL error occurred.
+
+        If <format> or <type> is invalid then the command is erroneous and
+        n=0. The structure of <pixels> is described in Appendix A of the GLX
+        Protocol Specification, "Pixel Data", using the parameters
+        <swap_bytes>, <format>, and <type>. No extra padding is needed after
+        <pixels> because the image format already pads to 32 bits.
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is supported, the <format> parameters of
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, GetConvolutionFilterEXT,
+    SeparableFilter2DEXT, and GetSeparableFilterEXT accept ABGR_EXT.
+    Otherwise they do not.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of
+    internal image format, which is defined by EXT_texture.
+
+Dependencies on EXT_copy_texture
+
+    If EXT_copy_texture is not supported, commands CopyConvolutionFilter1DEXT
+    and CopyConvolutionFilter2DEXT are not supported.
+
+Errors
+
+    INVALID_ENUM is generated if ConvolutionFilter1DEXT parameter <target>
+    is not CONVOLUTION_1D_EXT.
+
+    INVALID_ENUM is generated if ConvolutionFilter2DEXT parameter <target>
+    is not CONVOLUTION_2D_EXT.
+
+    INVALID_ENUM is generated if CopyConvolutionFilter1DEXT parameter
+    <target> is not CONVOLUTION_1D_EXT.
+
+    INVALID_ENUM is generated if CopyConvolutionFilter2DEXT parameter
+    <target> is not CONVOLUTION_2D_EXT.
+
+    INVALID_ENUM is generated if SeparableFilter2DEXT parameter <target>
+    is not SEPARABLE_2D_EXT.
+
+    INVALID_ENUM is generated if GetConvolutionFilterEXT parameter <target>
+    is not CONVOLUTION_1D_EXT or CONVOLUTION_2D_EXT.
+
+    INVALID_ENUM is generated if GetSeparableFilterEXT parameter <target>
+    is not SEPARABLE_2D_EXT.
+
+    INVALID_ENUM is generated if ConvolutionParameteriEXT,
+    ConvolutionParameterfEXT, ConvolutionParameterivEXT,
+    ConvolutionParameterfvEXT, GetConvolutionParameterivEXT, or
+    GetConvolutionParameterfvEXT parameter <target> is not
+    CONVOLUTION_1D_EXT, CONVOLUTION_2D_EXT, or SEPARABLE_2D_EXT.
+
+    INVALID_ENUM is generated if ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, CopyConvolutionFilter1DEXT,
+    CopyConvolutionFilter2DEXT, or SeparableFilter2DEXT parameter
+    <internalformat> is not ALPHA, LUMINANCE, LUMINANCE_ALPHA, INTENSITY,
+    RGB, or RGBA.
+
+    INVALID_VALUE is generated if ConvolutionFilter1DEXT parameter <width>
+    is less than zero, or greater than MAX_CONVOLUTION_WIDTH_EXT as queried
+    using GetConvolutionParameterivEXT with <target> CONVOLUTION_1D_EXT.
+
+    INVALID_VALUE is generated if ConvolutionFilter2DEXT parameter <width>
+    is less than zero, or greater than MAX_CONVOLUTION_WIDTH_EXT as queried
+    using GetConvolutionParameterivEXT with <target> CONVOLUTION_2D_EXT.
+
+    INVALID_VALUE is generated if CopyConvolutionFilter1DEXT parameter
+    <width> is less than zero, or greater than MAX_CONVOLUTION_WIDTH_EXT
+    as queried using GetConvolutionParameterivEXT with <target>
+    CONVOLUTION_1D_EXT.
+
+    INVALID_VALUE is generated if CopyConvolutionFilter2DEXT parameter
+    <width> is less than zero, or greater than MAX_CONVOLUTION_WIDTH_EXT
+    as queried using GetConvolutionParameterivEXT with <target>
+    CONVOLUTION_2D_EXT.
+
+    INVALID_VALUE is generated if SeparableFilter2DEXT parameter <width>
+    is less than zero, or greater than MAX_CONVOLUTION_WIDTH_EXT as queried
+    using GetConvolutionParameterivEXT with <target> SEPARABLE_2D_EXT.
+
+    INVALID_VALUE is generated if ConvolutionFilter2DEXT parameter <height>
+    is less than zero, or greater than MAX_CONVOLUTION_HEIGHT_EXT as queried
+    using GetConvolutionParameterivEXT with <target> CONVOLUTION_2D_EXT.
+
+    INVALID_VALUE is generated if CopyConvolutionFilter2DEXT parameter
+    <height> is less than zero, or greater than MAX_CONVOLUTION_HEIGHT_EXT
+    as queried using GetConvolutionParameterivEXT with <target>
+    CONVOLUTION_2D_EXT.
+
+    INVALID_VALUE is generated if SeparableFilter2DEXT parameter <height>
+    is less than zero, or greater than MAX_CONVOLUTION_HEIGHT_EXT as queried
+    using GetConvolutionParameterivEXT with <target> SEPARABLE_2D_EXT.
+
+    INVALID_ENUM is generated if ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, GetConvolutionFilterEXT, SeparableFilter2DEXT,
+    or GetSeparableFilterEXT parameter <format> is not RED, GREEN, BLUE,
+    ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.
+
+    INVALID_ENUM is generated if ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, GetConvolutionFilterEXT, SeparableFilter2DEXT,
+    or GetSeparableFilterEXT parameter <type> is not UNSIGNED_BYTE, BYTE,
+    UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_ENUM is generated if ConvolutionParameterivEXT or
+    ConvolutionParameterfvEXT parameter <pname> is not
+    CONVOLUTION_FILTER_SCALE_EXT, CONVOLUTION_FILTER_BIAS_EXT,
+    or CONVOLUTION_BORDER_MODE_EXT.
+
+    INVALID_ENUM is generated if ConvolutionParameteriEXT or
+    ConvolutionParameterfEXT parameter <pname> is not
+    CONVOLUTION_BORDER_MODE_EXT.
+
+    INVALID_ENUM is generated if ConvolutionParameteriEXT,
+    ConvolutionParameterfEXT, ConvolutionParameterivEXT, or
+    ConvolutionParameterfvEXT parameter <pname> is
+    CONVOLUTION_BORDER_MODE_EXT and parameter <params> is not REDUCE_EXT.
+
+    INVALID_ENUM is generated if GetConvolutionParameterivEXT or
+    GetConvolutionParameterfvEXT parameter <pname> is not
+    CONVOLUTION_FILTER_SCALE_EXT, CONVOLUTION_FILTER_BIAS_EXT,
+    CONVOLUTION_BORDER_MODE_EXT, CONVOLUTION_FORMAT_EXT,
+    CONVOLUTION_WIDTH_EXT, CONVOLUTION_HEIGHT_EXT, MAX_CONVOLUTION_WIDTH_EXT
+    or MAX_CONVOLUTION_HEIGHT_EXT.
+
+    INVALID_ENUM is generated if GetConvolutionParameterivEXT or
+    GetConvolutionParameterfvEXT parameter <target> is CONVOLUTION_1D_EXT
+    and <pname> is CONVOLUTION_HEIGHT_EXT or MAX_CONVOLUTION_HEIGHT_EXT.
+
+    INVALID_OPERATION is generated if ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, CopyConvolutionFilter1DEXT,
+    CopyConvolutionFilter2DEXT, GetConvolutionFilterEXT, SeparableFilter2DEXT,
+    GetSeparableFilterEXT, ConvolutionParameteriEXT,
+    ConvolutionParameterivEXT, ConvolutionParameterfEXT,
+    ConvolutionParameterfvEXT, GetConvolutionParameterivEXT, or
+    GetConvolutionParameterfvEXT is executed between execution of Begin and
+    the corresponding execution of End.
+
+New State
+
+    Get Value                           Get Command                     Type            Initial Value           Attribute
+    ---------                           -----------                     ----            -------------           ---------
+    CONVOLUTION_1D_EXT                  IsEnabled                       B               False                   pixel/enable
+    CONVOLUTION_2D_EXT                  IsEnabled                       B               False                   pixel/enable
+    SEPARABLE_2D_EXT                    IsEnabled                       B               False                   pixel/enable
+    CONVOLUTION_FILTER_SCALE_EXT        GetConvolutionParameterivEXT    3 x R4          (1,1,1,1)               pixel
+    CONVOLUTION_FILTER_BIAS_EXT         GetConvolutionParameterivEXT    3 x R4          (0,0,0,0)               pixel
+    CONVOLUTION_BORDER_MODE_EXT         GetConvolutionParameterivEXT    3 x Z1          REDUCE_EXT              pixel
+
+    CONVOLUTION_xD (x is 1 or 2)        GetConvolutionFilterEXT         2 x I           empty                       -
+    SEPARABLE_2D                        GetSeparableFilterEXT           1 x I           empty                       -
+    CONVOLUTION_FORMAT_EXT              GetConvolutionParameterivEXT    3 x Z8          RGBA                        -
+    CONVOLUTION_WIDTH_EXT               GetConvolutionParameterivEXT    3 x Z+          0                           -
+    CONVOLUTION_HEIGHT_EXT              GetConvolutionParameterivEXT    2 x Z+          0                           -
+
+    POST_CONVOLUTION_RED_SCALE_EXT      GetFloatv                       R               1                       pixel
+    POST_CONVOLUTION_GREEN_SCALE_EXT    GetFloatv                       R               1                       pixel
+    POST_CONVOLUTION_BLUE_SCALE_EXT     GetFloatv                       R               1                       pixel
+    POST_CONVOLUTION_ALPHA_SCALE_EXT    GetFloatv                       R               1                       pixel
+    POST_CONVOLUTION_RED_BIAS_EXT       GetFloatv                       R               0                       pixel
+    POST_CONVOLUTION_GREEN_BIAS_EXT     GetFloatv                       R               0                       pixel
+    POST_CONVOLUTION_BLUE_BIAS_EXT      GetFloatv                       R               0                       pixel
+    POST_CONVOLUTION_ALPHA_BIAS_EXT     GetFloatv                       R               0                       pixel
+
+New Implementation Dependent State
+
+    Get Value                           Get Command                     Type            Minimum Value
+    ---------                           -----------                     ----            -------------
+    MAX_CONVOLUTION_WIDTH_EXT           GetConvolutionParameterivEXT    3 x Z+          3
+    MAX_CONVOLUTION_HEIGHT_EXT          GetConvolutionParameterivEXT    2 x Z+          3
+
+Revision History
+
+    Version 1.32, 2002/06/27 - fixed targets for GetConvolutionFilter and
+        GetSeparableFilter.

@@ -25,14 +25,17 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/Numeric.h"
+#include <limits>
+
 #include "gtest/gtest.h"
+#include "src/dawn/common/Numeric.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn {
 namespace {
 
 // Tests for RangesOverlap
-TEST(Numeric, angesOverlap) {
+TEST(NumericTest, RangesOverlap) {
     // Range contains only one number
     ASSERT_EQ(true, RangesOverlap(0, 0, 0, 0));
     ASSERT_EQ(false, RangesOverlap(0, 0, 1, 1));

@@ -25,19 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/ResourceTableVk.h"
+#include "src/dawn/native/vulkan/ResourceTableVk.h"
 
 #include <vector>
 
-#include "dawn/common/Enumerator.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/ResourceTableDefaultResources.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/SamplerVk.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/ResourceTableDefaultResources.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/SamplerVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 namespace dawn::native::vulkan {
 
 // static
@@ -116,7 +118,7 @@ MaybeError ResourceTable::Initialize() {
 
     Device* device = ToBackend(GetDevice());
 
-    uint32_t sampledImageCount = uint32_t(GetSizeWithDefaultResources());
+    uint32_t sampledImageCount = uint32_t{GetSizeWithDefaultResources()};
 
     // Allocate mPool.
     {
@@ -187,17 +189,38 @@ MaybeError ResourceTable::Initialize() {
     return {};
 }
 
-// Apply updates to resources or to the metadata buffers that are pending.
-MaybeError ResourceTable::ApplyPendingUpdates(CommandRecordingContext* recordingContext) {
-    Updates updates = AcquireDirtySlotUpdates();
+MaybeError ResourceTable::ApplyPendingUpdates(
+    CommandRecordingContext* recordingContext,
+    const absl::flat_hash_set<TextureBase*>& writableTextures) {
+    return ApplyDirtySlotUpdatesWith(
+        writableTextures,
+        [&](const std::vector<MetadataUpdate>& metadataUpdates,
+            const std::vector<ResourceDiff>& resourceDiffs,
+            const absl::flat_hash_set<TextureBase*>& texturesToTransition) -> MaybeError {
+            // Transition and initialize all required textures
+            if (!texturesToTransition.empty()) {
+                DAWN_TRY(TransitionResources(recordingContext, texturesToTransition));
+            }
 
-    if (!updates.metadataUpdates.empty()) {
-        DAWN_TRY(UpdateMetadataBuffer(recordingContext, updates.metadataUpdates));
-    }
-    if (!updates.resourceUpdates.empty()) {
-        DAWN_TRY(UpdateResourceBindings(updates.resourceUpdates));
-    }
+            if (!metadataUpdates.empty()) {
+                DAWN_TRY(UpdateMetadataBuffer(recordingContext, metadataUpdates));
+            }
+            if (!resourceDiffs.empty()) {
+                DAWN_TRY(UpdateResourceBindings(resourceDiffs));
+            }
+            return {};
+        });
+}
 
+MaybeError ResourceTable::TransitionResources(CommandRecordingContext* recordingContext,
+                                              const absl::flat_hash_set<TextureBase*>& textures) {
+    for (const auto& texture : textures) {
+        Texture* textureBackend = ToBackend(texture);
+        DAWN_TRY(textureBackend->EnsureSubresourceContentInitialized(
+            recordingContext, textureBackend->GetAllSubresources()));
+        textureBackend->TransitionUsageNow(recordingContext, wgpu::TextureUsage::TextureBinding,
+                                           kAllStages, textureBackend->GetAllSubresources());
+    }
     return {};
 }
 
@@ -214,11 +237,11 @@ MaybeError ResourceTable::UpdateMetadataBuffer(CommandRecordingContext* recordin
     return device->GetDynamicUploader()->WithUploadReservation(
         sizeof(uint32_t) * updates.size(), kCopyBufferToBufferOffsetAlignment,
         [&](UploadReservation reservation) -> MaybeError {
-            uint32_t* stagedData = static_cast<uint32_t*>(reservation.mappedPointer);
+            Span<uint32_t> stagedData = ReinterpretSpan<uint32_t>(reservation.mappedData);
 
             // The metadata buffer will be copied to.
             Buffer* metadataBuffer = ToBackend(GetMetadataBuffer());
-            DAWN_ASSERT(metadataBuffer->IsInitialized());
+            DAWN_ASSERT(metadataBuffer->IsResourceInitialized());
             auto scopedUseMetadataBuffer = metadataBuffer->UseInternal();
             metadataBuffer->TransitionUsageNow(recordingContext, wgpu::BufferUsage::CopyDst);
 
@@ -236,9 +259,9 @@ MaybeError ResourceTable::UpdateMetadataBuffer(CommandRecordingContext* recordin
             }
 
             // Enqueue the copy commands all at once.
-            device->fn.CmdCopyBuffer(recordingContext->commandBuffer,
-                                     ToBackend(reservation.buffer)->GetHandle(),
-                                     metadataBuffer->GetHandle(), copies.size(), copies.data());
+            device->fn.CmdCopyBuffer(
+                recordingContext->commandBuffer, ToBackend(reservation.buffer)->GetHandle(),
+                metadataBuffer->GetHandle(), checked_cast<uint32_t>(copies.size()), copies.data());
 
             // Transition the buffer back to be used as storage as that's how it will be used for
             // shader-side validation.
@@ -249,47 +272,44 @@ MaybeError ResourceTable::UpdateMetadataBuffer(CommandRecordingContext* recordin
         });
 }
 
-MaybeError ResourceTable::UpdateResourceBindings(const std::vector<ResourceUpdate>& updates) {
+MaybeError ResourceTable::UpdateResourceBindings(const std::vector<ResourceDiff>& diffs) {
     Device* device = ToBackend(GetDevice());
 
-    ityp::span<ResourceTableSlot, ResourceTableDefaultResources::Resource> defaultResources;
-    DAWN_TRY_ASSIGN(defaultResources,
-                    device->GetResourceTableDefaultResources()->GetOrCreate(device));
+    ResourceTableDefaultResources* defaultResources;
+    DAWN_TRY_ASSIGN(defaultResources, device->GetOrCreateResourceTableDefaultsResource());
 
-    // For combined texture samplers, the exact type of texture or sampler we set in the descriptor
-    // doesn't matter as long as it's not used by the shader, so we grab any one of each.
-    auto textureIndex =
-        ResourceTableDefaultResources::IndexOf(tint::ResourceType::kTexture1d_f32_filterable);
-    auto samplerIndex =
-        ResourceTableDefaultResources::IndexOf(tint::ResourceType::kSampler_filtering);
-    auto unusedTextureView = std::get<Ref<TextureViewBase>>(defaultResources[textureIndex]);
-    auto unusedSampler = std::get<Ref<SamplerBase>>(defaultResources[samplerIndex]);
+    TextureView* placeholderTextureView =
+        ToBackend(defaultResources->GetPlaceholderSampleableTexture());
+    Sampler* placeholderSampler = ToBackend(defaultResources->GetPlaceholderSampler());
 
     std::vector<VkDescriptorImageInfo> imageWrites;
     std::vector<uint32_t> arrayElements;
 
-    for (const ResourceUpdate& update : updates) {
+    for (const ResourceDiff& diff : diffs) {
         // TODO(https://issues.chromium.org/473444515): Support buffer, texel buffers and storage
         // textures.
 
         MatchVariant(
-            update.resource,
-            [&](TextureViewBase* textureView) {
+            diff.added,
+            [&](std::monostate) {
+                // Nothing to do
+            },
+            [&](Ref<TextureViewBase> textureView) {
                 VkImageView handle = ToBackend(textureView)->GetHandle();
                 if (handle == nullptr) {
                     return;
                 }
 
                 VkDescriptorImageInfo imageWrite = {
-                    .sampler = ToBackend(unusedSampler)->GetHandle(),
+                    .sampler = placeholderSampler->GetHandle(),
                     .imageView = handle,
-                    .imageLayout = VulkanImageLayout(textureView->GetFormat(),
-                                                     wgpu::TextureUsage::TextureBinding),
+                    .imageLayout = ToBackend(textureView)
+                                       ->VulkanImageLayout(wgpu::TextureUsage::TextureBinding),
                 };
                 imageWrites.push_back(imageWrite);
-                arrayElements.push_back(uint32_t{update.slot});
+                arrayElements.push_back(uint32_t{diff.slot});
             },
-            [&](SamplerBase* sampler) {
+            [&](Ref<SamplerBase> sampler) {
                 VkSampler handle = ToBackend(sampler)->GetHandle();
                 if (handle == nullptr) {
                     return;
@@ -297,11 +317,11 @@ MaybeError ResourceTable::UpdateResourceBindings(const std::vector<ResourceUpdat
 
                 VkDescriptorImageInfo imageWrite = {
                     .sampler = handle,
-                    .imageView = ToBackend(unusedTextureView)->GetHandle(),
+                    .imageView = placeholderTextureView->GetHandle(),
                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
                 };
                 imageWrites.push_back(imageWrite);
-                arrayElements.push_back(uint32_t{update.slot});
+                arrayElements.push_back(uint32_t{diff.slot});
             });
     }
 
@@ -322,8 +342,8 @@ MaybeError ResourceTable::UpdateResourceBindings(const std::vector<ResourceUpdat
         writes.push_back(write);
     }
 
-    device->fn.UpdateDescriptorSets(device->GetVkDevice(), writes.size(), writes.data(), 0,
-                                    nullptr);
+    device->fn.UpdateDescriptorSets(device->GetVkDevice(), checked_cast<uint32_t>(writes.size()),
+                                    writes.data(), 0, nullptr);
     return {};
 }
 

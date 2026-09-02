@@ -27,10 +27,11 @@
 
 #include <sstream>
 
-#include "dawn/common/SystemUtils.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -52,7 +53,8 @@ class ShaderPrintTest : public DawnTest {
         device.SetLoggingCallback(
             [](wgpu::LoggingType type, wgpu::StringView message, void* userdata) {
                 std::stringstream& output = *static_cast<std::stringstream*>(userdata);
-                std::string_view view = {message.data, message.length};
+                std::string_view view =
+                    DAWN_UNSAFE_TODO(std::string_view(message.data, message.length));
                 switch (type) {
                     case wgpu::LoggingType::Verbose:
                         DebugLog() << view;

@@ -120,6 +120,7 @@ struct UniqueVector {
     auto rend() const { return vector.rend(); }
 
     /// @returns a reference to the internal vector
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator VectorRef<T>() const { return vector; }
 
     /// @returns the std::move()'d vector.

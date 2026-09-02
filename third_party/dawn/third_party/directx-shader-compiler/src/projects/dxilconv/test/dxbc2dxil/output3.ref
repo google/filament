@@ -1,0 +1,61 @@
+
+define void @main() {
+entry:
+  %0 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  call void @dx.op.storeOutput.f32(i32 5, i32 2, i32 0, i8 0, float %0)
+  %1 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %2 = fptoui float %1 to i32
+  %3 = trunc i32 %2 to i16
+  call void @dx.op.storeOutput.i16(i32 5, i32 3, i32 0, i8 0, i16 %3)
+  %4 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %5 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %6 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %7 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %4)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %5)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %6)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %7)
+  %8 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %9 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %10 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %11 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  call void @dx.op.storeOutput.f32(i32 5, i32 1, i32 0, i8 0, float %8)
+  call void @dx.op.storeOutput.f32(i32 5, i32 1, i32 0, i8 1, float %9)
+  call void @dx.op.storeOutput.f32(i32 5, i32 1, i32 0, i8 2, float %10)
+  call void @dx.op.storeOutput.f32(i32 5, i32 1, i32 0, i8 3, float %11)
+  ret void
+}
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #1
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.i16(i32, i32, i32, i8, i16) #1
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.entryPoints = !{!2}
+!llvm.ident = !{!14}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{void ()* @main, !"main", !3, null, !13}
+!3 = !{!4, !7, null}
+!4 = !{!5}
+!5 = !{i32 0, !"A", i8 9, i8 0, !6, i8 2, i32 1, i8 4, i32 0, i8 0, null}
+!6 = !{i32 0}
+!7 = !{!8, !9, !11, !12}
+!8 = !{i32 0, !"SV_Target", i8 9, i8 16, !6, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!9 = !{i32 1, !"SV_Target", i8 9, i8 16, !10, i8 0, i32 1, i8 4, i32 5, i8 0, null}
+!10 = !{i32 5}
+!11 = !{i32 2, !"SV_DepthLessEqual", i8 9, i8 18, !6, i8 0, i32 1, i8 1, i32 -1, i8 -1, null}
+!12 = !{i32 3, !"SV_StencilRef", i8 3, i8 20, !6, i8 0, i32 1, i8 1, i32 -1, i8 -1, null}
+!13 = !{i32 0, i64 288}
+!14 = !{!"dxbc2dxil 1.2"}

@@ -30,12 +30,12 @@
 #ifndef {{DIR}}_FEATURES_AUTOGEN_H_
 #define {{DIR}}_FEATURES_AUTOGEN_H_
 
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
-enum class Feature {
+enum class Feature : uint32_t {
   {% for enum in types["feature name"].values if (enum.valid and not is_enum_value_proxy(enum)) %}
     {{as_cppEnum(enum.name)}},
   {% endfor %}

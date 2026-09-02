@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/CallbackTaskManager.h"
+#include "src/dawn/native/CallbackTaskManager.h"
 
 #include <utility>
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 

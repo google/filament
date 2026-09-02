@@ -30,8 +30,8 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/native/RenderPipeline.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/RenderPipeline.h"
 
 namespace dawn::native::metal {
 

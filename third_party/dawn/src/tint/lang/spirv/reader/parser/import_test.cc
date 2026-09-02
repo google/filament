@@ -228,5 +228,50 @@ $B1: {  # root
 )");
 }
 
+TEST_F(SpirvParserTest, Capability_Unsupported_Tessellation) {
+    auto result = Run(R"(
+               OpCapability Shader
+               OpCapability Tessellation
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+       %void = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+       %main = OpFunction %void None %void_fn
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)");
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, "SPIR-V capability 'Tessellation' is not supported");
+}
+
+TEST_F(SpirvParserTest, Capability_Supported_SampledCubeArray) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpCapability SampledCubeArray
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %float = OpTypeFloat 32
+    %cube_arr = OpTypeImage %float Cube 0 1 0 1 Unknown
+%ptr_cube_arr = OpTypePointer UniformConstant %cube_arr
+         %var = OpVariable %ptr_cube_arr UniformConstant
+        %void = OpTypeVoid
+     %void_fn = OpTypeFunction %void
+        %main = OpFunction %void None %void_fn
+  %main_start = OpLabel
+                OpReturn
+                OpFunctionEnd
+)",
+              R"(
+$B1: {  # root
+  %1:ptr<handle, spirv.image<f32, cube, not_depth, arrayed, single_sampled, sampling_compatible, undefined, read_write>, read> = var undef @binding_point(0, 0)
+}
+)");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

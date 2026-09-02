@@ -30,8 +30,8 @@
 
 #include <memory>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/vulkan/ExternalHandle.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/vulkan/ExternalHandle.h"
 
 namespace dawn::native::vulkan {
 class Device;

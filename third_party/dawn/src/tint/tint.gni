@@ -213,6 +213,9 @@ template("tint_fuzzer_test") {
     # TODO(https://crbug.com/394563978): Remove once experiment ends.
     high_end_job_required = true
 
+    # TODO(crbug.com/505034799): Determine best migration path for this.
+    is_fuzztest_compatible = false
+
     if (target_name == "wgsl") {
       dict = "dictionary.txt"
       libfuzzer_options = [

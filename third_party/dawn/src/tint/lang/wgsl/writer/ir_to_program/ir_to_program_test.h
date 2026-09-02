@@ -52,7 +52,7 @@ class IRToProgramTest : public core::ir::IRTestHelper {
         std::string err;
     };
     /// @returns the WGSL generated from the IR
-    Result Run();
+    Result RunTest();
 
     /// Creates a new `var` declaration with a name and initializer value, using a reference type.
     /// @tparam SPACE the var's address space
@@ -60,12 +60,11 @@ class IRToProgramTest : public core::ir::IRTestHelper {
     /// @param name the var name
     /// @param init the var initializer
     /// @returns the instruction
-    template <
-        core::AddressSpace SPACE = core::AddressSpace::kFunction,
-        core::Access ACCESS = core::Access::kReadWrite,
-        typename VALUE = void,
-        typename = std::enable_if_t<
-            !traits::IsTypeOrDerived<std::remove_pointer_t<std::decay_t<VALUE>>, core::type::Type>>>
+    template <core::AddressSpace SPACE = core::AddressSpace::kFunction,
+              core::Access ACCESS = core::Access::kReadWrite,
+              typename VALUE = void>
+        requires(
+            !traits::IsTypeOrDerived<std::remove_pointer_t<std::decay_t<VALUE>>, core::type::Type>)
     core::ir::Var* Var(std::string_view name, VALUE&& init) {
         auto* val = b.Value(std::forward<VALUE>(init));
         if (DAWN_UNLIKELY(!val)) {
@@ -112,7 +111,7 @@ class IRToProgramTest : public core::ir::IRTestHelper {
 
 #define EXPECT_WGSL(expected_wgsl)                                                   \
     do {                                                                             \
-        if (auto got = Run(); got.err.empty()) {                                     \
+        if (auto got = RunTest(); got.err.empty()) {                                 \
             auto expected = std::string(tint::TrimSpace(expected_wgsl));             \
             if (!expected.empty()) {                                                 \
                 expected = "\n" + expected + "\n";                                   \

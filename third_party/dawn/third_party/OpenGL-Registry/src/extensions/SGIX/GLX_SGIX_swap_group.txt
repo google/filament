@@ -1,0 +1,107 @@
+Name
+
+    SGIX_swap_group
+
+Name Strings
+
+    GLX_SGIX_swap_group
+
+Version
+
+    $Date: 1996/07/22 06:28:45 $ $Revision: 1.9 $
+
+Number
+
+    91
+
+Dependencies
+
+    SGIX_swap_control affects the definition of this extension
+
+Overview
+
+    This extension provides the capability to synchronize the buffer swaps
+    of a group of GLX drawables.  A swap group is created, and drawables are 
+    added as members to the swap group.  Buffer swaps to members of the swap 
+    group will then take place concurrently.
+
+    This extension extends the set of conditions that must be met before
+    a buffer swap can take place. 
+
+Dependencies
+
+    SGIX_swap_control affects the definition of this extension
+
+Issues
+
+    * Do we need a query to ask whether a window is in a group?
+
+New Procedures and Functions
+
+    void JoinSwapGroupSGIX(Display *dpy, 
+			   GLXDrawable drawable, 
+			   GLXDrawable member);
+
+New Tokens
+
+    none
+
+Additions to the GLX Specification
+
+    Add to section 3.2.6, Double Buffering:
+
+    JoinSwapGroupSGIX adds <drawable> to the swap group containing <member> as 
+    a member.  If <drawable> is already a member of a different group, it is 
+    implicitly removed from that group first.  If <member> is None, <drawable> 
+    is removed from the swap group that it belongs to, if any.
+
+    A swap group is referenced by naming any drawable in the group; there is no
+    other way to refer to a group.
+
+    Before a buffer swap can take place, a set of conditions must be 
+    satisfied.  The conditions are defined in terms of the notions of when 
+    a drawable is ready to swap and when a group is ready to swap.
+
+    GLX drawables except windows are always ready to swap.
+
+    When a window is unmapped, it is always ready.
+
+    When a window is mapped, it is ready when all of the following are true:
+
+	1. A buffer swap command has been issued for it.
+
+	2. Its swap interval has elapsed.
+
+    A group is ready when the following is true:
+
+	1. All windows in the group are ready.
+
+    All of the following must be satisfied before a buffer swap for a window
+    can take place:
+
+	1. The window is ready.
+
+	2. If the window belongs to a group, the group is ready.
+
+    Buffer swaps for all windows in a swap group will take place concurrently
+    after the conditions are satisfied for every window in the group.
+
+    A group exists until the last remaining drawable leaves the group.
+
+    JoinSwapGroupSGIX is part of the X stream.
+
+Errors
+
+    JoinSwapGroupSGIX generates GLXBadDrawable if <drawable> is an invalid 
+    GLX drawable, or if <member> is an invalid GLX drawable.
+
+New State
+
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+    <whether window is in a group>	??		B	False
+
+New Implementation Dependent State
+
+    None
+

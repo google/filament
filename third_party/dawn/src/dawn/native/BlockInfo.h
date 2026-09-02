@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_BLOCK_INFO_H_
 #define SRC_DAWN_NATIVE_BLOCK_INFO_H_
 
-#include "dawn/common/TypedInteger.h"
-#include "dawn/native/Format.h"
+#include "src/dawn/native/Format.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn::native {
 
@@ -48,15 +48,15 @@ using BlockCount = dawn::TypedInteger<struct BlockCountTag, uint64_t>;
 
 // Strong type version of Origin3D, which is always in texel space
 struct TexelOrigin3D {
-    TexelCount x{0};
-    TexelCount y{0};
-    TexelCount z{0};
+    TexelCount x{0u};
+    TexelCount y{0u};
+    TexelCount z{0u};
 
     // Construct from input values
     // NOLINTNEXTLINE: allow implicit constructor
-    constexpr TexelOrigin3D(TexelCount x = TexelCount{0},
-                            TexelCount y = TexelCount{0},
-                            TexelCount z = TexelCount{0})
+    constexpr TexelOrigin3D(TexelCount x = TexelCount{0u},
+                            TexelCount y = TexelCount{0u},
+                            TexelCount z = TexelCount{0u})
         : x(x), y(y), z(z) {}
 
     // Implicitly convert from Origin3D as Origin3D is always in texel space
@@ -66,7 +66,7 @@ struct TexelOrigin3D {
     // Convert to Origin3D
     // TODO(crbug.com/424536624): Remove once strong types are used everywhere.
     constexpr Origin3D ToOrigin3D() const {
-        return {static_cast<uint32_t>(x), static_cast<uint32_t>(y), static_cast<uint32_t>(z)};
+        return {dchecked_cast<uint32_t>(x), dchecked_cast<uint32_t>(y), dchecked_cast<uint32_t>(z)};
     }
 
     // Comparison operator
@@ -75,15 +75,15 @@ struct TexelOrigin3D {
 
 // Stores an origin in block space
 struct BlockOrigin3D {
-    BlockCount x{0};
-    BlockCount y{0};
-    BlockCount z{0};
+    BlockCount x{0u};
+    BlockCount y{0u};
+    BlockCount z{0u};
 
     // Construct from input values
     // NOLINTNEXTLINE: allow implicit constructor
-    constexpr BlockOrigin3D(BlockCount x = BlockCount{0},
-                            BlockCount y = BlockCount{0},
-                            BlockCount z = BlockCount{0})
+    constexpr BlockOrigin3D(BlockCount x = BlockCount{0u},
+                            BlockCount y = BlockCount{0u},
+                            BlockCount z = BlockCount{0u})
         : x(x), y(y), z(z) {}
 
     // Comparison operator
@@ -92,9 +92,9 @@ struct BlockOrigin3D {
 
 // Strong type version of Extent3D.
 struct TexelExtent3D {
-    TexelCount width;
-    TexelCount height{1};
-    TexelCount depthOrArrayLayers{1};
+    TexelCount width{0u};
+    TexelCount height{1u};
+    TexelCount depthOrArrayLayers{1u};
 
     // Default constructor
     constexpr TexelExtent3D() = default;
@@ -102,8 +102,8 @@ struct TexelExtent3D {
     // Construct from input values
     // NOLINTNEXTLINE: allow implicit constructor
     constexpr TexelExtent3D(TexelCount width,
-                            TexelCount height = TexelCount{1},
-                            TexelCount depthOrArrayLayers = TexelCount{1})
+                            TexelCount height = TexelCount{1u},
+                            TexelCount depthOrArrayLayers = TexelCount{1u})
         : width(width), height(height), depthOrArrayLayers(depthOrArrayLayers) {}
 
     // Implicitly convert from Extent3D as Extent3D is always in texel space
@@ -114,8 +114,8 @@ struct TexelExtent3D {
     // Convert to Extent3D
     // TODO(crbug.com/424536624): Remove once strong types are used everywhere.
     constexpr Extent3D ToExtent3D() const {
-        return {static_cast<uint32_t>(width), static_cast<uint32_t>(height),
-                static_cast<uint32_t>(depthOrArrayLayers)};
+        return {dchecked_cast<uint32_t>(width), dchecked_cast<uint32_t>(height),
+                dchecked_cast<uint32_t>(depthOrArrayLayers)};
     }
 
     // Comparison operator
@@ -123,16 +123,16 @@ struct TexelExtent3D {
 
     // Returns true if any extent is zero
     bool IsEmpty() const {
-        return width == TexelCount{0} || height == TexelCount{0} ||
-               depthOrArrayLayers == TexelCount{0};
+        return width == TexelCount{0u} || height == TexelCount{0u} ||
+               depthOrArrayLayers == TexelCount{0u};
     }
 };
 
 // Stores an extent in block space
 struct BlockExtent3D {
-    BlockCount width;
-    BlockCount height{1};
-    BlockCount depthOrArrayLayers{1};
+    BlockCount width{0u};
+    BlockCount height{1u};
+    BlockCount depthOrArrayLayers{1u};
 
     // Default constructor
     constexpr BlockExtent3D() = default;
@@ -140,8 +140,8 @@ struct BlockExtent3D {
     // Construct from input values
     // NOLINTNEXTLINE: allow implicit constructor
     constexpr BlockExtent3D(BlockCount width,
-                            BlockCount height = BlockCount{1},
-                            BlockCount depthOrArrayLayers = BlockCount{1})
+                            BlockCount height = BlockCount{1u},
+                            BlockCount depthOrArrayLayers = BlockCount{1u})
         : width(width), height(height), depthOrArrayLayers(depthOrArrayLayers) {}
 
     // Comparison operator
@@ -149,17 +149,17 @@ struct BlockExtent3D {
 
     // Returns true if any extent is zero
     bool IsEmpty() const {
-        return width == BlockCount{0} || height == BlockCount{0} ||
-               depthOrArrayLayers == BlockCount{0};
+        return width == BlockCount{0u} || height == BlockCount{0u} ||
+               depthOrArrayLayers == BlockCount{0u};
     }
 };
 
 // Strong type version of TexelBlockInfo that stores the dimensions of the block
 // as TexelCounts, and provides conversion functions between texels, blocks, and bytes.
 struct TypedTexelBlockInfo {
-    uint32_t byteSize;
-    TexelCount width;
-    TexelCount height;
+    uint32_t byteSize = 0;
+    TexelCount width{0u};
+    TexelCount height{0u};
 
     // Default constructor
     constexpr TypedTexelBlockInfo() = default;
@@ -177,7 +177,7 @@ struct TypedTexelBlockInfo {
     // Convert to TexelBlockInfo
     // TODO(crbug.com/424536624): Remove once strong types are used everywhere.
     constexpr TexelBlockInfo ToTexelBlockInfo() const {
-        return {byteSize, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
+        return {byteSize, dchecked_cast<uint32_t>(width), dchecked_cast<uint32_t>(height)};
     }
 
     // Convert blocks to bytes
@@ -193,13 +193,13 @@ struct TypedTexelBlockInfo {
 
     // Convert texel height to block height
     constexpr BlockCount ToBlockHeight(TexelCount value) const {
-        DAWN_ASSERT(value % height == TexelCount{0});
+        DAWN_ASSERT(value % height == TexelCount{0u});
         return BlockCount{static_cast<uint64_t>(value / height)};
     }
 
     // Convert from texel width to block width
     constexpr BlockCount ToBlockWidth(TexelCount value) const {
-        DAWN_ASSERT(value % width == TexelCount{0});
+        DAWN_ASSERT(value % width == TexelCount{0u});
         return BlockCount{static_cast<uint64_t>(value / width)};
     }
 

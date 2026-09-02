@@ -1,0 +1,282 @@
+Name
+
+    AMD_shader_atomic_counter_ops
+
+Name Strings
+
+    GL_AMD_shader_atomic_counter_ops
+
+Contact
+
+    Daniel Rakos (daniel.rakos 'at' amd.com)
+
+Contributors
+
+    Daniel Rakos, AMD
+    Graham Sellers, AMD
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         02/01/2013
+    Author Revision:            2
+
+Number
+
+    OpenGL Extension #435
+
+Dependencies
+
+    OpenGL 4.2 or ARB_shader_atomic_counters is required.
+
+    This extension is written against the OpenGL 4.3 (core) specification
+    and the GLSL 4.30.7 specification.
+
+Overview
+
+    The ARB_shader_atomic_counters extension introduced atomic counters, but
+    it limits list of potential operations that can be performed on them to
+    increment, decrement, and query. This extension extends the list of GLSL
+    built-in functions that can operate on atomic counters. The list of new
+    operations include:
+
+      * Increment and decrement with wrap
+      * Addition and subtraction
+      * Minimum and maximum
+      * Bitwise operators (AND, OR, XOR, etc.)
+      * Masked OR operator
+      * Exchange, and compare and exchange operators
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 8 of the GLSL 4.30.7 Specification (Built-in Functions)
+
+    Modify Section 8.10, Atomic-Counter Functions
+
+    Remove second paragraph ("The value returned by...")
+
+    Modify third paragraph ("The underlying...")
+
+      The underlying counter is a 32-bit unsigned integer. The result of
+      operations will wrap to [0, 2^32-1].
+
+    Additions to the table listing atomic counter built-in functions:
+
+      Syntax                                Description
+      ------------------------------------  ------------------------------------------------------------------
+      uint atomicCounterIncWrap(            Atomically
+          atomic_uint c,                      1. increments the counter for c, then forces it to zero if and
+          uint wrap                              only if the incremented value is greater than or equal to
+      )                                          <wrap>, and
+                                              2. returns its value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterDecWrap(            Atomically
+          atomic_uint c,                      1. decrements the counter for c, then forces it to <wrap>-1 if
+          uint wrap                              and only if the original value of the counter was either
+      )                                          zero or greater than <wrap>, and
+                                              2. returns its value resulting from the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterAdd(                Atomically
+          atomic_uint c,                      1. adds the value of <data> to the counter for c, and
+          uint data                           2. returns its value prior to the operation.
+      )                                     These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterSubtract(           Atomically
+          atomic_uint c,                      1. subtracts the value of <data> from the counter for c, and
+          uint data                           2. returns the value resulting from the operation.
+      )                                     These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterReverseSubtract(    Atomically
+          atomic_uint c,                      1. subtracts the value of the counter for c from the value of
+          uint data                              <data> and sets the counter for c to the result of the
+      )                                          operation, and
+                                              2. returns the value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterMin(                Atomically
+          atomic_uint c,                      1. sets the counter for c to the minimum of the value of the
+          uint data                              counter and the value of <data>, and
+      )                                       2. returns the value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterMax(                Atomically
+          atomic_uint c,                      1. sets the counter for c to the maximum of the value of the
+          uint data                              counter and the value of <data>, and
+      )                                       2. returns the value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterAnd(                Atomically
+          atomic_uint c,                      1. sets the counter for c to the result of the bitwise AND of
+          uint data                              the value of the counter and the value of <data>, and
+      )                                       2. returns the value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterOr(                 Atomically
+          atomic_uint c,                      1. sets the counter for c to the result of the bitwise OR of
+          uint data                              the value of the counter and the value of <data>, and
+      )                                       2. returns the value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterXor(                Atomically
+          atomic_uint c,                      1. sets the counter for c to the result of the bitwise XOR of
+          uint data                              the value of the counter and the value of <data>, and
+      )                                       2. returns the value prior to the operation.
+                                            These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterMaskOr(             Atomically
+          atomic_uint c,                      1. sets the counter for c to the result of the operation:
+          uint mask,                               (counter ^ ~mask) | data
+          uint data                           2. returns the value prior to the operation.
+      )                                     These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterExchange(           Atomically
+          atomic_uint c,                      1. sets the counter value for c to the value of <data>, and
+          uint data                           2. returns its value prior to the operation.
+      )                                     These two steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+      uint atomicCounterCompSwap(           Atomically
+          atomic_uint c,                      1. compares the value of <compare> and the counter value for c,
+          uint compare,                       2. if the values are equal, sets the counter value for c to
+          uint data                              the value of <data>, and
+      )                                       3. returns its value prior to the operation.
+                                            These three steps are done atomically with respect to the atomic
+                                            counter functions in this table.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Usage Examples
+
+    Example 1: Appending/consuming data to/from a ring buffer using a compute shader
+
+        // Here we use increment/decrement with wrap to account for the wrapping at the
+        // end of the ring buffer.
+        // Using regular increment/decrement and performing a modulo manually is not
+        // satisfactory for non-power-of-two sized buffers as when the 32-bit counter
+        // wraps around we get incorrect results.
+
+        // Append shader
+        layout(binding=0, offset=0) uniform atomic_uint ringCounter;
+        layout(binding=0, r32ui) uniform imageBuffer ringBuffer;
+
+        void main()
+        {
+            uint myBufferData = ...;
+
+            imageStore(ringBuffer,
+                       atomicCounterIncWrap(ringCounter, imageSize(ringBuffer)),
+                       myBufferData);
+        }
+
+        // Consume shader
+        layout(binding=0, offset=0) uniform atomic_uint ringCounter;
+        layout(binding=0, r32ui) uniform imageBuffer ringBuffer;
+
+        void main()
+        {
+            uint myBufferData =
+                imageLoad(ringBuffer,
+                          atomicCounterDecWrap(ringCounter, imageSize(ringBuffer))).x;
+        }
+
+    Example 2: Appending variable length records to a buffer using a compute shader
+
+        // Here we use atomicCounterAdd to ensure that we "allocate" a contiguous list of
+        // elements in the buffer.
+        // Using atomicCounterIncrement cannot mimic this behavior as there is no guarantee
+        // that subsequent calls to atomicCounterIncrement return subsequent counter values.
+
+        layout(binding=0, offset=0) uniform atomic_uint vlrCounter;
+        layout(binding=0, r32ui) uniform imageBuffer vlrBuffer;
+
+        void main()
+        {
+            uint data[...] = ...;
+            uint recordLength = ...;
+
+            uint recordStart = atomicCounterAdd(vlrCounter, recordLength);
+
+            for (uint i = 0; i < recordLength; ++i)
+            {
+                imageStore(vlrBuffer, recordStart + i, data[i]);
+            }
+        }
+
+Issues
+
+    1) Should the new decrement with wrap and subtract operators match the
+    behavior of the existing decrement operator and return the post-operation
+    value of the counter?
+
+    RESOLVED: Yes, for consistency with the existing functionality.
+
+    2) Most of the new operations introduced by this extension are already
+    supported on load/store images and shader storage buffers. What benefit
+    the application developer could get from using this extension?
+
+    DISCUSSION: Atomic counter operations can have different performance
+    characteristics than load/store images or shader storage buffers. It is
+    expected that implementations can do atomic counter operations faster.
+    Also, there is no increment/decrement with wrap, reverse subtract and
+    mask-or operation for these storages (though the EXT version of load/store
+    image extension does provide a increment/decrement with wrap operators).
+
+    RESOLVED: It enables existing operations for atomic counters and also
+    adds completely new operations that are not available for load/store
+    images and shader storage buffers.
+
+    3) What should be the result of the increment/decrement with wrap
+    operations if the original counter value is greater than the <wrap>
+    parameter?
+
+    RESOLVED: Increment with wrap will force the value of the counter to zero,
+    decrement with wrap will force the value of the counter to <wrap>-1.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ---------------------------------------------
+
+      2   02/01/2013  drakos    Added issue #2 and #3
+                                Cleaned up naming convention
+      1   11/13/2012  drakos    Initial revision

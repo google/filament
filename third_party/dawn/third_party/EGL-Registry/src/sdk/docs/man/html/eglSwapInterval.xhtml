@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglSwapInterval - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglSwapInterval">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglSwapInterval — 
+            specifies the minimum number of video frame periods
+            per buffer swap for the window associated with the current context.
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglSwapInterval</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">interval</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL display connection.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>interval</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the minimum number of video frames that are displayed before
+                        a buffer swap will occur.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            The interval takes effect when <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a> is
+            first called subsequent to the <code class="function">eglSwapInterval</code> call.
+        </p>
+        <p>
+            The <em class="parameter"><code>interval</code></em> specified by the function applies to the draw surface
+            bound to the context that is current on the calling thread.
+        </p>
+        <p>
+            If <em class="parameter"><code>interval</code></em> is set to a value of <code class="constant">0</code>, buffer swaps are not synchronized to a
+            video frame, and the swap happens as soon as the render is complete. interval
+            is silently clamped to minimum and maximum implementation dependent
+            valuesbefore being stored; these values are defined by <span class="type">EGLConfig</span> attributes
+            <code class="constant">EGL_MIN_SWAP_INTERVAL</code> and <code class="constant">EGL_MAX_SWAP_INTERVAL</code> respectively.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            The swap interval has no effect on <a class="citerefentry" href="eglCopyBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCopyBuffers</span></span></a>.
+        </p>
+        <p>
+            The default swap interval is 1.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure, <code class="constant">EGL_TRUE</code> otherwise.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_CONTEXT</code> is generated if there is no current context
+            on the calling thread.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_SURFACE</code> is generated if there is no surface
+            bound to the current context.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

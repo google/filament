@@ -1,0 +1,15 @@
+// Test for denorm options
+// RUN: %dxc  %S/Inputs/smoke.hlsl /Tps_6_2 /denorm preserve | FileCheck %s
+// CHECK:"fp32-denorm-mode"="preserve"
+// RUN: %dxc  %S/Inputs/smoke.hlsl /Tps_6_2 | FileCheck %s --check-prefix=CLEAN
+// CLEAN:define void @main() 
+// CLEAN-NOT:"fp32-denorm-mode"
+
+// RUN: %dxc  %S/Inputs/smoke.hlsl /Tps_6_2 /denorm ftz | FileCheck %s --check-prefix=FTZ
+// FTZ:"fp32-denorm-mode"="ftz"
+
+// RUN: not %dxc  %S/Inputs/smoke.hlsl /Tps_6_2 /denorm abc 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED
+// UNSUPPORTED:Unsupported value 'abc' for denorm option.
+
+// RUN: not %dxc  %S/Inputs/smoke.hlsl /Tps_6_1 /denorm any 2>&1 | FileCheck %s --check-prefix=SM62
+// SM62:denorm option is only allowed for shader model 6.2 and above.

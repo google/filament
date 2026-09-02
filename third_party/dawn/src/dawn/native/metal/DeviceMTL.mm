@@ -25,36 +25,36 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/Platform.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/BackendConnection.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/ErrorData.h"
-#include "dawn/native/EventManager.h"
-#include "dawn/native/metal/BackendMTL.h"
-#include "dawn/native/metal/BindGroupLayoutMTL.h"
-#include "dawn/native/metal/BindGroupMTL.h"
-#include "dawn/native/metal/BufferMTL.h"
-#include "dawn/native/metal/CommandBufferMTL.h"
-#include "dawn/native/metal/ComputePipelineMTL.h"
-#include "dawn/native/metal/PhysicalDeviceMTL.h"
-#include "dawn/native/metal/PipelineLayoutMTL.h"
-#include "dawn/native/metal/QuerySetMTL.h"
-#include "dawn/native/metal/QueueMTL.h"
-#include "dawn/native/metal/RenderPipelineMTL.h"
-#include "dawn/native/metal/SamplerMTL.h"
-#include "dawn/native/metal/ShaderModuleMTL.h"
-#include "dawn/native/metal/SharedFenceMTL.h"
-#include "dawn/native/metal/SharedTextureMemoryMTL.h"
-#include "dawn/native/metal/SwapChainMTL.h"
-#include "dawn/native/metal/TextureMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/BackendConnection.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/EventManager.h"
+#include "src/dawn/native/metal/BackendMTL.h"
+#include "src/dawn/native/metal/BindGroupLayoutMTL.h"
+#include "src/dawn/native/metal/BindGroupMTL.h"
+#include "src/dawn/native/metal/BufferMTL.h"
+#include "src/dawn/native/metal/CommandBufferMTL.h"
+#include "src/dawn/native/metal/ComputePipelineMTL.h"
+#include "src/dawn/native/metal/PhysicalDeviceMTL.h"
+#include "src/dawn/native/metal/PipelineLayoutMTL.h"
+#include "src/dawn/native/metal/QuerySetMTL.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/dawn/native/metal/RenderPipelineMTL.h"
+#include "src/dawn/native/metal/SamplerMTL.h"
+#include "src/dawn/native/metal/ShaderModuleMTL.h"
+#include "src/dawn/native/metal/SharedFenceMTL.h"
+#include "src/dawn/native/metal/SharedTextureMemoryMTL.h"
+#include "src/dawn/native/metal/SwapChainMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/platform.h"
 
 namespace dawn::native::metal {
 
@@ -77,7 +77,7 @@ float KalmanFilter(KalmanInfo* info, float measuredValue) {
 
     // Correct filter value
     info->filterValue =
-        info->kalmanGain * measuredValue + (1.0 - info->kalmanGain) * info->filterValue;
+        info->kalmanGain * measuredValue + (1.0f - info->kalmanGain) * info->filterValue;
     // Update estimate covariance
     info->P = (1.0f - info->kalmanGain) * info->P;
     return info->filterValue;
@@ -107,7 +107,7 @@ void UpdateTimestampPeriod(id<MTLDevice> device,
 
     if (cpuTimestampEnd - *cpuTimestampStart >= kFilterIntervalInMs) {
         // The measured timestamp period
-        float measurement = (cpuTimestampEnd - *cpuTimestampStart) /
+        float measurement = static_cast<float>(cpuTimestampEnd - *cpuTimestampStart) /
                             static_cast<float>(gpuTimestampEnd - *gpuTimestampStart);
 
         // Measurement update
@@ -184,6 +184,8 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
             [*mMtlDevice sampleTimestamps:&mCpuTimestamp gpuTimestamp:&mGpuTimestamp];
         }
     }
+
+    mCounterSampleBufferAllocator = std::make_unique<CounterSampleBufferAllocator>(this);
 
     return DeviceBase::Initialize(descriptor, std::move(queue));
 }
@@ -380,6 +382,7 @@ void Device::DestroyImpl(DestroyReason reason) {
     // - It may be called when the last ref to the device is dropped and the device
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the device since there are no other live refs.
+    mCounterSampleBufferAllocator = nullptr;
     mMtlDevice = nullptr;
     mMockBlitMtlBuffer = nullptr;
 }
@@ -419,6 +422,10 @@ id<MTLBuffer> Device::GetMockBlitMtlBuffer() {
     }
 
     return mMockBlitMtlBuffer.Get();
+}
+
+CounterSampleBufferAllocator* Device::GetCounterSampleBufferAllocator() const {
+    return mCounterSampleBufferAllocator.get();
 }
 
 void Device::StartTrace() {

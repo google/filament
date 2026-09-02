@@ -1,0 +1,409 @@
+OpenGL(R) Shading Language Extension Conventions
+
+Last Modified Date: 2006/12/18
+Author Revision: 11
+
+Document Source: the OpenGL Extension Registry at
+
+    http://www.opengl.org/registry/
+
+Contributors:
+
+    Pat Brown, NVIDIA
+    John Kessenich, 3Dlabs
+    Jon Leech
+    Barthold Lichtenbelt, 3Dlabs
+    Bill Licea-Kane, ATI
+    Kent Lin, Intel
+    Jeremy Sandmel, ATI
+    Folker Schamel, Spinor
+
+The ARB OpenGL Shading Language working group has defined the following
+conventions for writing OpenGL extension specifications that extend the
+Shading Language syntax or semantics.
+
+=======================================================================
+
+Section #1:  Conventions to avoid name-space collision
+
+  We expect the Shading Language to continue to evolve through the
+  use of vendor, EXT, and ARB extensions, as well as through
+  revisions to the core language specification itself. As a result,
+  we'd like to establish some name conventions to avoid name-space
+  collisions between vendors and between the extensions and the core
+  language.
+
+  We have the same kinds of concerns that resulted in the need for
+  naming and syntax rules document for the non-shader parts of
+  OpenGL:
+
+    http://www.opengl.org/registry/doc/rules.html#spec_naming
+
+  We expect that we will need to affix new names with vendor tags
+  where appropriate, and  change and/or remove these tags as
+  extensions are promoted, in the same fashion as for core GL
+  function and token names.
+
+  The fact that the Shading Language is modeled after C/C++ means
+  that we have some additional requirements for what the language
+  should "look" like.
+
+  Consequently, vendors must use the following naming conventions
+  when creating new OpenGL extensions that affect the syntax of the
+  Shading Language.
+
+  General principles:
+
+   - New syntax defined by an extension should be suffixed with a
+     vendor specific extension (EXT, ARB, SGI, etc),
+     except as noted below where the constraints of
+     being "C-like" make it unpalatble.
+   - Vendors should make a good faith effort to ensure that new
+     shading language extensions do not conflict in syntax or
+     semantics with the extensions of other vendors
+     or the ARB.
+
+  Rules for adding or modifying specific Shading Language
+  constructs defined by extensions follow.
+
+  Note: VEN stands for any vendor tag, e.g. ARB, EXT, SGI, etc.
+
+  Summary:
+  --------
+  1a) variables:	       gl_<Name>VEN
+  1b) keywords:		       __<name>VEN
+  1c) data types:
+      1c1) keywords:	   __<name>VEN
+      1c2) derived types:  gl_<Name>VEN
+  1d) operators:	       use new data types as operands or ask ARB
+  1e) functions:	       <name>VEN
+
+  Details:
+  --------
+  1a) Variables
+      STATUS:  RESOLVED
+
+      New variables defined by an extension should use:
+	    prefix:   "gl_"  (lower case, single underscore)
+	    suffix:   "VEN"  (no underscore)
+
+      Form:
+	gl_<Name>VEN
+
+	<Name> is subject to these constraints:
+	  - Each word in <Name> must start with a capital letter.
+	  - Words should be concatenated, not separated with
+	    underscores.
+	  - Don't use an underscore to separate the
+	    final VEN suffix.
+
+      Notes:
+	All of the variables defined in the core
+	shading language specification already follow this
+	convention.
+
+	New variables added by shading language extensions should
+	match the naming style of the core specification
+	where possible.
+
+      Examples:
+	uniform   float  gl_SomeNewBuiltinScalarARB;
+	varying   vec4	 gl_YetAnotherVaryingEXT;
+	attribute vec4	 gl_OneMoreAttributeATI
+
+  1b) keywords:
+      STATUS:  RESOLVED
+
+      New keywords defined by an extension should use:
+	prefix:  "__"  (double underscore)
+	suffix:  VEN   (no underscore)
+
+      Form:
+	__<name>VEN
+
+      Notes:
+	New keywords should be prefixed with "__" because this is
+	how C/C++ handle keyword extensions.  The core language
+	specification reserves the use of "__" anywhere within a
+	keyword so that future language revisions from the ARB will
+	not conflict with user level names.
+
+	To avoid name collisions between OpenGL implementations from
+	different IHV's, extended keywords should also use a vendor
+	suffix.
+
+	The working group considered requiring a "gl_" for the
+	prefix instead of "__", but felt this diverged too far from
+	the conventions of C/C++
+
+      Examples:
+	__float4EXT
+	__sampler4DSGI
+	__elifARB
+	__some_new_kind_of_while_loopARB
+
+  1c) New data types:
+      STATUS:  RESOLVED
+
+      Naming conventions for new data types defined by an extension
+      differ depending on whether the data type is a new fundamental
+      type defined as a keyword (case 1c1), or a new derived type
+      defined by Shading Language constructs (case 1c2). Currently the
+      only derived types are "struct"s.
+
+      1c1) For new data type keywords defined by an extension:
+
+	  prefix:  "__" (double underscore)
+	  suffix: VEN
+
+	Form:
+	   __<name>VEN
+
+	Examples:
+	  __float4SGI
+	  __half2NV
+	  __triplefloatARB
+	  __mat5EXT
+
+      1c2) For new derived types defined by an extension:
+
+	  prefix:  "gl_" (gl and single underscore)
+	  suffix: VEN
+
+	Form:
+	  gl_<name>VEN
+
+	Examples:
+	  gl_skinningParametersEXT
+	  gl_newDerivedStateStructARB
+
+	Notes:
+	  If new data types are defined as keywords, then they
+	  should follow the rules for keywords. If new data types
+	  are derived types, then they should follow a different
+	  naming convention, like the one for variables.
+
+	  New data types should not be added as keywords unless
+	  absolutely necessary.
+
+  1d) New operators:
+      STATUS:  RESOLVED
+
+      To avoid name space collisions for new operators
+      defined by an extension, or existing operators whose
+      behavior is re-defined by an extensions, extensions should
+      either:
+
+    1d1) Add a new data type along with the operator and use at
+	 least one of these new data types for the operands of the
+	 (re)defined operator. The new data type name should follow
+	 the rules given in (1c) above for new data types.
+
+    or
+
+    1d2) For IHVs who want to define a new operator to work on
+	 existing data types or to redefine an existing operator to
+	 work on existing data types, the IHV should come to the ARB
+	 and request the new operator to avoid colliding with any
+	 upcoming uses for the operator by the ARB.
+
+    Examples:
+      An extension which overloads the "+" operator to add an int
+      and a "triple" should define a new gl_tripleEXT type, then
+      define the behavior of the + operator when one operand is an
+      int and the other is a gl_tripleEXT.
+
+      An extension needing to overload the "+" operator to add an
+      int and a float must obtain permission from the ARB. If it
+      approves, the ARB would revise the shading language grammar
+      to define the behavior of the + operator when one operand is
+      an int and the other is a float.
+
+      An extension needing to define an entirely new operator for
+      exponentiation must obtain permission from the ARB. If it
+      approves, the ARB would agree to reserve an appropriate new
+      operator, such as "**", and the extension would define the
+      behavior of that operator with respect to some data types.
+
+    Notes:
+      On the surface, operators by themselves need no additional
+      name-space syntax. No one wants "+" redefined as gl_+ARB, for
+      instance.
+
+      However, the ARB still wants to avoid name space and semantic
+      collisions as extensions are promoted. The ARB reserves the
+      use of operators with existing types.
+
+      Therefore we've adopted the two-pronged approach listed above.
+      (A) is borrowed from C++ operator overloading conventions.
+      (B) is a fall-back position in the event that (A) is
+      inconvenient.
+
+  1e) functions:
+      STATUS:  RESOLVED
+
+      New functions defined by an extension should use:
+	prefix:  none  (note, no "gl_" or "__")
+	suffix:  VEN
+
+      Form:
+       <name>VEN
+
+      Examples:
+	newfunctionEXT()
+	SomeOtherFuncARB()
+	Yet_Another_FunctionSGI()
+
+      Notes:
+	Since none of the standard core Shading Language functions
+	start with the "gl_" prefix, new functions do not need this
+	prefix either.	There is no need to avoid collisions between
+	implementation-defined and user-defined functions, because
+	the Shading Language specifically allows user overloading of
+	built-in functions.  In other words, name collisions are
+	expected and intentional.  Further, when a name collision
+	occurs between a user function and an implementation-defined
+	function, the user function takes precedence.
+
+	However, we still must avoid name collisions between IHV's
+	and to allow for promotion of new functions into EXT, ARB
+	and core status.  So, new functions should use a VENDOR
+	suffix.
+
+
+=============================================================
+
+Section #2:  Protocol for accessing extension features in the
+       shading language
+
+  2a) Extension #defines?
+
+    STATUS:  RESOLVED
+
+    Every extension which affects shading language semantics or
+    syntax must create a Shading Language preprocessor #define that
+    matches the GL extension name string.  This #define would be
+    available in the shading language if and only if the extension
+    were supported on a given Shading Language implementation.
+
+    Further, extensions which do not affect shading language
+    semantics or syntax *must not* create this Shading Language
+    preprocessor #define.
+
+    The extension-writing template in the OpenGL Extension Registry
+    will be updated to include a placeholder for shading language
+    extensions showing the corresponding #define.
+
+    Example:
+      An extension which adds the extension string
+	"GL_ARB_shading_extension_1"
+      should also add a Shading Language preprocessor #define called
+	GL_ARB_shading_extension_1
+
+      Doing so means that a shader can do something like:
+
+      #ifdef GL_ARB_shading_extension_1
+	// do something using the extension
+      #else
+	// do something else or #error!
+      #endif
+
+    Notes:
+      If an application wishes to emulate this behavior for any
+      other extensions which do not directly affect the shading
+      language syntax or behavior, they can simply query the
+      extension string for the presence of these extensions and
+      create their own #defines to be prepended to their shader
+      strings.
+
+    Pseudo-code example:
+      char* prefixStr;
+      if (glIsExtensionSupported("GL_ARB_texture_mirrored_repeat"))
+      {
+	ConcatString(prefixStr, "#define GL_ARB_texture_mirrored_repeat 1\n");
+      }
+      // use prefixStr as the first string given to glShaderSource()
+
+  2b) Should we allow and/or require a shader author to declare
+      their intended use of a given extension prior to use?
+
+    STATUS:  RESOLVED - YES
+
+    The ARB has received developer feedback requesting we strive
+    towards portability in the shading language. The concern is
+    shaders written on one implementation with an extension will not
+    run on an implementation without the extension and that without
+    an explicit "enable", the shader author may not realize that
+    he/she was using any extended features.
+
+    After much discussion, the resolution is as follows:
+
+    For any extension which can affect shaders written without
+    knowledge of the extension (i.e. no change in syntax to the
+    shading language), the extension must introduce an API which
+    explicitly "enables" the extended behavior. New extensions
+    should not be allowed to change the behavior of old shaders
+    without an explicit request to do so from the application.
+
+    Further, for any extension which affects the syntax or semantics
+    of the shading language, the shader author must explicitly make
+    a request allow the use of the extension, by inserting this
+    request within the shader text itself.
+
+    This request is made using the following syntax:
+      #extension <name> : <behavior>
+    where
+      <name> = the GL extension name string (as defined in section 2a,
+	       starting with "GL_").
+    and
+      <behavior> can be one of the following:
+      require, enable, warn, or disable
+
+    Example:
+      To use an extension which adds the extension string
+      "GL_ARB_shading_extension_1", a shader should include a line like:
+
+      #extension GL_ARB_shading_extension_1: enable
+
+    See section 3.3 of the OpenGL Shading Language specification
+    (Language Version 1.20) for details about using this mechanism.
+
+-----------------------------------
+
+Revision history:
+
+ #11 - 12/18/2006 - Jon Leech
+    - Clarify that #extension name must be the extension name string
+      starting with "GL_", give an example, fix an old URL.
+
+ #10 - 10/09/2006 - Jon Leech
+    - Move registry URL to www.opengl.org.
+
+  #9 - 05/12/2004 - js
+    - no changes from rev #8, whitespace cleanup only
+
+  #8 - 05/11/2004 - js
+    - minor typos fixed
+    - cleaned up language about when to use 1c1 or 1c2
+
+  #7 - 05/07/2004 - Jon Leech
+    - language cleanups including removing use of "built in"
+
+  #6 - 04/29/04 - js
+    - cleaned up psuedo code example in section 2a
+    - change language about "decorate"ing names to "affix"
+
+  #5 - 04/29/04 - js
+    - added to contributors list
+
+  #4 - 04/29/04 - js
+    - cleaned up section 2 to reflect #extension resolution
+
+  #3 - 03/15/04 - js
+    - summarized section 1 conventions on name decorations
+
+  #2 - 03/24/04 - js
+    - reorganized doc to reflect recent working group discussions
+
+  #1 - 03/19/04 - js
+    - initial revision

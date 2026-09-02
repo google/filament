@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/CommandAllocator.h"
+#include "src/dawn/native/CommandAllocator.h"
 
 #include <algorithm>
 #include <climits>
@@ -33,12 +33,12 @@
 #include <new>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/common/MemoryBlockAllocator.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
-
-// TODO(cwallez@chromium.org): figure out a way to have more type safety for the iterator
 
 CommandIterator::CommandIterator() {
     Reset();
@@ -51,6 +51,7 @@ CommandIterator::~CommandIterator() {
 CommandIterator::CommandIterator(CommandIterator&& other) {
     if (!other.IsEmpty()) {
         mBlocks = std::move(other.mBlocks);
+        mPool = std::move(other.mPool);
         other.Reset();
     }
     Reset();
@@ -60,13 +61,15 @@ CommandIterator& CommandIterator::operator=(CommandIterator&& other) {
     DAWN_ASSERT(IsEmpty());
     if (!other.IsEmpty()) {
         mBlocks = std::move(other.mBlocks);
+        mPool = std::move(other.mPool);
         other.Reset();
     }
     Reset();
     return *this;
 }
 
-CommandIterator::CommandIterator(CommandAllocator allocator) : mBlocks(allocator.AcquireBlocks()) {
+CommandIterator::CommandIterator(CommandAllocator allocator)
+    : mBlocks(allocator.AcquireBlocks()), mPool(allocator.mPool) {
     Reset();
 }
 
@@ -76,6 +79,9 @@ void CommandIterator::AcquireCommandBlocks(std::vector<CommandAllocator> allocat
 
     size_t totalBlocksCount = 0;
     for (CommandAllocator& allocator : allocators) {
+        // All allocators being merged into this iterator must use the same pool.
+        DAWN_ASSERT(mPool == nullptr || mPool == allocator.mPool);
+        mPool = allocator.mPool;
         totalBlocksCount += allocator.GetCommandBlocksCount();
     }
 
@@ -91,38 +97,38 @@ void CommandIterator::AcquireCommandBlocks(std::vector<CommandAllocator> allocat
     Reset();
 }
 
-bool CommandIterator::NextCommandIdInNewBlock(uint32_t* commandId) {
-    mCurrentBlock++;
-    if (mCurrentBlock >= mBlocks.size()) {
+std::optional<uint32_t> CommandIterator::NextCommandIdInNewBlock() {
+    mCurrentBlockIndex++;
+    if (mCurrentBlockIndex >= mBlocks.size()) {
         Reset();
-        *commandId = detail::kEndOfBlock;
-        return false;
+        return std::nullopt;
     }
-    mCurrentPtr = AlignPtr(mBlocks[mCurrentBlock].block.get(), alignof(uint32_t));
-    return NextCommandId(commandId);
+    mCurrentBlock = mBlocks[mCurrentBlockIndex];
+    DAWN_ASSERT(IsPtrAligned(mCurrentBlock.data(), kMaxAllocatedCommandAlignment));
+    return NextCommandId();
 }
 
 void CommandIterator::Reset() {
-    mCurrentBlock = 0;
+    mCurrentBlockIndex = 0;
 
     if (mBlocks.empty()) {
         // This will case the first NextCommandId call to try to move to the next block and stop
         // the iteration immediately, without special casing the initialization.
-        mCurrentPtr = reinterpret_cast<char*>(&mEndOfBlock);
+        mCurrentBlock = ByteSpanFromRef(mEndOfBlock);
     } else {
-        mCurrentPtr = AlignPtr(mBlocks[0].block.get(), alignof(uint32_t));
+        mCurrentBlock = mBlocks[0];
     }
+    DAWN_ASSERT(IsPtrAligned(mCurrentBlock.data(), kMaxAllocatedCommandAlignment));
 }
 
 void CommandIterator::MakeEmptyAsDataWasDestroyed() {
-    if (IsEmpty()) {
-        return;
+    if (!IsEmpty()) {
+        mCurrentBlock = ByteSpanFromRef(mEndOfBlock);
+        mPool->Return(std::move(mBlocks));
+        Reset();
+        DAWN_ASSERT(IsEmpty());
     }
-
-    mCurrentPtr = reinterpret_cast<char*>(&mEndOfBlock);
-    mBlocks.clear();
-    Reset();
-    DAWN_ASSERT(IsEmpty());
+    mPool = nullptr;
 }
 
 bool CommandIterator::IsEmpty() const {
@@ -132,27 +138,26 @@ bool CommandIterator::IsEmpty() const {
 // Potential TODO(crbug.com/dawn/835):
 //  - Host the size and pointer to next block in the block itself to avoid having an allocation
 //    in the vector
-//  - Assume T's alignof is, say 64bits, static assert it, and make commandAlignment a constant
-//    in Allocate
 //  - Be able to optimize allocation to one block, for command buffers expected to live long to
 //    avoid cache misses
 //  - Better block allocation, maybe have Dawn API to say command buffer is going to have size
 //    close to another
 
-CommandAllocator::CommandAllocator() {
+CommandAllocator::CommandAllocator(MemoryBlockAllocator* pool) : mPool(pool) {
     ResetPointers();
 }
 
 CommandAllocator::~CommandAllocator() {
-    Reset();
+    Destroy();
 }
 
 CommandAllocator::CommandAllocator(CommandAllocator&& other)
-    : mBlocks(std::move(other.mBlocks)), mLastAllocationSize(other.mLastAllocationSize) {
+    // We don't move the other's pool because the other might be used to allocate new blocks after
+    // this move. A move copy shouldn't make the other allocator unusable (with null pool).
+    : mPool(other.mPool), mBlocks(std::move(other.mBlocks)) {
     other.mBlocks.clear();
     if (!other.IsEmpty()) {
-        mCurrentPtr = other.mCurrentPtr;
-        mEndPtr = other.mEndPtr;
+        mCurrentBlock = other.mCurrentBlock;
     } else {
         ResetPointers();
     }
@@ -161,11 +166,10 @@ CommandAllocator::CommandAllocator(CommandAllocator&& other)
 
 CommandAllocator& CommandAllocator::operator=(CommandAllocator&& other) {
     Reset();
+    mPool = other.mPool;
     if (!other.IsEmpty()) {
         std::swap(mBlocks, other.mBlocks);
-        mLastAllocationSize = other.mLastAllocationSize;
-        mCurrentPtr = other.mCurrentPtr;
-        mEndPtr = other.mEndPtr;
+        mCurrentBlock = other.mCurrentBlock;
     }
     other.Reset();
     return *this;
@@ -173,12 +177,18 @@ CommandAllocator& CommandAllocator::operator=(CommandAllocator&& other) {
 
 void CommandAllocator::Reset() {
     ResetPointers();
-    mBlocks.clear();
-    mLastAllocationSize = kDefaultBaseAllocationSize;
+    if (!mBlocks.empty()) {
+        mPool->Return(std::move(mBlocks));
+    }
+}
+
+void CommandAllocator::Destroy() {
+    Reset();
+    mPool = nullptr;
 }
 
 bool CommandAllocator::IsEmpty() const {
-    return mCurrentPtr == reinterpret_cast<const char*>(&mPlaceholderSpace[0]);
+    return mCurrentBlock.data() == mPlaceholderSpace.data();
 }
 
 size_t CommandAllocator::GetCommandBlocksCount() const {
@@ -186,23 +196,19 @@ size_t CommandAllocator::GetCommandBlocksCount() const {
 }
 
 CommandBlocks&& CommandAllocator::AcquireBlocks() {
-    DAWN_ASSERT(mCurrentPtr != nullptr && mEndPtr != nullptr);
-    DAWN_ASSERT(IsPtrAligned(mCurrentPtr, alignof(uint32_t)));
-    DAWN_ASSERT(mCurrentPtr + sizeof(uint32_t) <= mEndPtr);
-    *reinterpret_cast<uint32_t*>(mCurrentPtr) = detail::kEndOfBlock;
+    DAWN_ASSERT(!mCurrentBlock.empty());
+    DAWN_ASSERT(IsPtrAligned(mCurrentBlock.data(), kMaxAllocatedCommandAlignment));
+    DAWN_ASSERT(mCurrentBlock.size() >= sizeof(uint32_t));
+    *reinterpret_cast<uint32_t*>(mCurrentBlock.data()) = detail::kEndOfBlock;
 
-    mCurrentPtr = nullptr;
-    mEndPtr = nullptr;
+    mCurrentBlock = {};
     return std::move(mBlocks);
 }
 
-char* CommandAllocator::AllocateInNewBlock(uint32_t commandId,
-                                           size_t commandSize,
-                                           size_t commandAlignment) {
+Span<std::byte> CommandAllocator::AllocateInNewBlock(uint32_t commandId, size_t commandSize) {
     // When there is not enough space, we signal the kEndOfBlock, so that the iterator knows
     // to move to the next one. kEndOfBlock on the last block means the end of the commands.
-    uint32_t* idAlloc = reinterpret_cast<uint32_t*>(mCurrentPtr);
-    *idAlloc = detail::kEndOfBlock;
+    *reinterpret_cast<uint32_t*>(mCurrentBlock.data()) = detail::kEndOfBlock;
 
     // We'll request a block that can contain at least the command ID, the command and an
     // additional ID to contain the kEndOfBlock tag.
@@ -210,33 +216,24 @@ char* CommandAllocator::AllocateInNewBlock(uint32_t commandId,
 
     // The computation of the request could overflow.
     if (requestedBlockSize <= commandSize) [[unlikely]] {
-        return nullptr;
+        return {};
     }
 
-    if (!GetNewBlock(requestedBlockSize)) [[unlikely]] {
-        return nullptr;
-    }
-    return Allocate(commandId, commandSize, commandAlignment);
+    AppendNewBlock(requestedBlockSize);
+    return Allocate(commandId, commandSize);
 }
 
-bool CommandAllocator::GetNewBlock(size_t minimumSize) {
-    // Allocate blocks doubling sizes each time, to a maximum of 16k (or at least minimumSize).
-    mLastAllocationSize = std::max(minimumSize, std::min(mLastAllocationSize * 2, size_t(16384)));
+void CommandAllocator::AppendNewBlock(size_t minimumSize) {
+    size_t allocationSize = std::max(minimumSize, mPool->GetBlockSize());
+    BlockDef block = mPool->Allocate(allocationSize);
+    DAWN_ASSERT(IsPtrAligned(block.data(), kMaxAllocatedCommandAlignment));
 
-    auto block = std::unique_ptr<char[]>(new (std::nothrow) char[mLastAllocationSize]);
-    if (block == nullptr) [[unlikely]] {
-        return false;
-    }
-
-    mCurrentPtr = AlignPtr(block.get(), alignof(uint32_t));
-    mEndPtr = block.get() + mLastAllocationSize;
-    mBlocks.push_back({mLastAllocationSize, std::move(block)});
-    return true;
+    mCurrentBlock = block;
+    mBlocks.push_back(std::move(block));
 }
 
 void CommandAllocator::ResetPointers() {
-    mCurrentPtr = reinterpret_cast<char*>(&mPlaceholderSpace[0]);
-    mEndPtr = reinterpret_cast<char*>(&mPlaceholderSpace[1]);
+    mCurrentBlock = ByteSpanFromRef(mPlaceholderSpace);
 }
 
 }  // namespace dawn::native

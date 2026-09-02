@@ -1,0 +1,209 @@
+Name
+
+    ARB_texture_env_crossbar
+
+Name Strings
+
+    GL_ARB_texture_env_crossbar
+
+Contact
+
+    Bimal Poddar, Intel (bimal.poddar 'at' intel.com)
+    Jack Middleton, Sun (Jack.Middleton 'at' Eng.Sun.COM)
+    Rick Hammerstone, AMD (rick.hammerstone 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2001-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on February 16, 2001.
+
+Version
+
+    Last modified date: 2006/11/04
+
+Number
+
+    ARB Extension #18
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    OpenGL 1.1, ARB_multitexture and ARB_texture_env_combine are required 
+    by this extension.
+
+Overview
+
+    This extension adds the capability to use the texture color from
+    other texture units as sources to the COMBINE_ARB enviornment
+    function. The ARB_texture_env_combine extension defined texture 
+    enviornment functions which could use the color from the 
+    current texture unit as a source. This extension adds
+    the ability to use the color from any texture unit as a source.
+
+Issues
+
+ 1. Should only "upstream" textures be allowed as inputs to a
+    given texture unit? (Texture inputs to unit <m> are restricted to
+    the range TEXTURE0_ARB to TEXTURE<m>_ARB).
+
+    - RESOLVED: No. Most vendors support this functionality.
+
+
+ 2. Do we still need TEXTURE as a source if we allow TEXTURE<n>_ARB?
+
+    - RESOLVED: Yes, since this allows backwards compatibility.
+
+ 3. What should be the behavior when the texture environment 
+    references a texture unit that is not enabled or does not have a
+    valid texture object bound to it?
+
+    - RESOLVED: Texture blending should be disabled on the texture 
+      unit that is referencing the invalid or disabled texture. This 
+      seems to be a reasonable compromise between disabling all 
+      texturing and generating "default" texel values. Also, this 
+      behavior is more easily forward compatible to an extension 
+      which separates the texture lookup and texture blend units.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is SOURCE0_RGB_ARB,
+    SOURCE1_RGB_ARB, SOURCE2_RGB_ARB, SOURCE0_ALPHA_ARB,
+    SOURCE1_ALPHA_ARB, or SOURCE2_ALPHA_ARB
+
+        TEXTURE<n>_ARB                        0x84C0+<n>
+
+    where <n> is in the range 0 to MAX_TEXTURE_UNITS_ARB.
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Modify paragraph describing tables 3.21 and 3.22 in the 
+    ARB_texture_env_combine spec to read:
+
+    The arguments Arg0, Arg1 and Arg2 are determined by the values of
+    SOURCE<n>_RGB_ARB, SOURCE<n>_ALPHA_ARB, OPERAND<n>_RGB_ARB and
+    OPERAND<n>_ALPHA_ARB. In the following two tables, Ct and At are
+    the filtered texture RGB and alpha values; Ct<n> and At<n> are the
+    filtered texture RGB and alpha values from the texture bound to
+    texture unit <n>; Cc and Ac are the texture environment RGB and
+    alpha values; Cf and Af are the RGB and alpha of the primary color
+    of the incoming fragment; and Cp and Ap are the RGB and alpha
+    values resulting from the previous texture environment. On texture
+    environment 0, Cp and Ap are identical to Cf and Af, respectively.
+    The relationship is described in tables 3.21 and 3.22.
+    Added to table 3.21 of the ARB_texture_env_combine spec:
+
+        SOURCE<n>_RGB_ARB       OPERAND<n>_RGB_ARB      Argument
+        -----------------       --------------          --------
+
+        TEXTURE<n>_ARB          SRC_COLOR               Ct<n>
+                                ONE_MINUS_SRC_COLOR     (1-Ct<n>)
+                                SRC_ALPHA               At<n>
+                                ONE_MINUS_SRC_ALPHA     (1-At<n>)
+
+        Table 3.21: Arguments for COMBINE_RGB_ARB functions
+
+    Added to table 3.22 of the ARB_texture_env_combine spec:
+
+        SOURCE<n>_ALPHA_ARB     OPERAND<n>_ALPHA_ARB    Argument
+        -----------------       --------------          --------
+
+        TEXTURE<n>_ARB          SRC_ALPHA               At<n>
+                                ONE_MINUS_SRC_ALPHA     (1-At<n>)
+
+        Table 3.22: Arguments for COMBINE_ALPHA_ARB functions
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to Appendix F of the GL Specification (ARB Extensions)
+
+    Inserted after the second paragraph of F.2.12:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE_ARB, the texture
+    function associated with a given texture unit is computed using
+    the values specified by SOURCE<n>_RGB_ARB, SOURCE<n>_ALPHA_ARB,
+    OPERAND<n>_RGB_ARB and OPERAND<n>_ALPHA_ARB. If TEXTURE<n>_ARB is
+    specified as SOURCE<n>_RGB_ARB or SOURCE<n>_ALPHA_ARB, the texture
+    value from texture unit <n> will be used in computing the texture
+    function for this texture unit.
+
+    Inserted after the third paragraph of F.2.12:
+
+    If a texture environment for a given texture unit references a
+    texture unit that is disabled or does not have a valid texture
+    object bound to it, then it is as if texture blending is disabled 
+    for the given texture unit. Every texture unit implicitly 
+    references the texture object that is bound to it, regardless 
+    of the texture function specified by COMBINE_RGB_ARB or COMBINE_ALPHA_ARB.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if <params> value for SOURCE0_RGB_ARB,
+    SOURCE1_RGB_ARB, SOURCE2_RGB_ARB, SOURCE0_ALPHA_ARB,
+    SOURCE1_ALPHA_ARB or SOURCE2_ALPHA_ARB is not one of TEXTURE,
+    CONSTANT_ARB, PRIMARY_COLOR_ARB, PREVIOUS_ARB, or TEXTURE<n>_ARB,
+    where <n> is in the range 0 to MAX_TEXTURE_UNITS_ARB.
+
+New State
+
+    None
+
+Revision History
+    06/11/04    benj        Updated contact info after ATI/AMD merger.
+
+    01/02/02    bpoddar     Added original EXT/ARB contributors to the contact
+                            list
+
+    00/12/06    bpoddar     Added comments from the ARB meeting.
+                            Changed texturing disable to texture blending
+                            disable. Added description of table 3.21
+                            and 3.22 to define Ct<n> and At<n>.
+
+    00/12/01    bpoddar     Added clarification regarding disabling of
+                            texture blend unit when it references a
+                            disabled texture.
+                            Removed some changes which were already
+                            specified in ARB_texture_env_combine spec.
+
+    00/10/31    jmiddleton  First version of the spec

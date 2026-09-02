@@ -72,6 +72,8 @@ add_library(dawn_node_binding STATIC
     "GPURenderPassEncoder.h"
     "GPURenderPipeline.cpp"
     "GPURenderPipeline.h"
+    "GPUResourceTable.cpp"
+    "GPUResourceTable.h"
     "GPUSampler.cpp"
     "GPUSampler.h"
     "GPUShaderModule.cpp"
@@ -107,6 +109,7 @@ target_link_libraries(dawn_node_binding
     PRIVATE
         dawncpp
         dawn_node_interop
+        dawn_shared_utils
         dawn_warnings_config
         dawn::dawn_wgpu_utils
 )

@@ -30,10 +30,10 @@
 
 #include <vector>
 
-#include "dawn/common/ContentLessObjectCacheable.h"
-#include "dawn/common/NonCopyable.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/Pipeline.h"
+#include "src/dawn/common/ContentLessObjectCacheable.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/Pipeline.h"
+#include "src/utils/non_copyable.h"
 
 namespace dawn::native {
 

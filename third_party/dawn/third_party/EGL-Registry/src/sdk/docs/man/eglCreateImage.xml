@@ -1,0 +1,624 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglCreateImage">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglCreateImage</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreateImage</refname>
+        <refpurpose>
+            Create a new <type>EGLImage</type> object
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+            <funcdef>EGLImage <function>eglCreateImage</function></funcdef>
+            <paramdef>(EGLDisplay <parameter>display</parameter></paramdef>
+            <paramdef>EGLContext <parameter>context</parameter></paramdef>
+            <paramdef>EGLenum <parameter>target</parameter></paramdef>
+            <paramdef>EGLClientBuffer <parameter>buffer</parameter></paramdef>
+            <paramdef>const EGLAttrib *<parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>context</parameter></term>
+                <listitem><para>
+                    Specifies the client API context for which the image is
+                    created.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>target</parameter></term>
+                <listitem><para>
+                    Specifies the type of resource used as the image source.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>buffer</parameter></term>
+                <listitem><para>
+                    Specifies the resource to be used as the image source.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies attributes used to select sub-sections of the
+                    resource to be used as the image source.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglCreateImage</function> is used to create an
+            <type>EGLImage</type> object from an existing image resource
+            <parameter>buffer</parameter>. <parameter>display</parameter>
+            specifies the EGL display used for this operation.
+            <parameter>context</parameter> specifies the EGL client API
+            context used for this operation, or
+            <constant>EGL_NO_CONTEXT</constant> if a client API context is
+            not required. <parameter>target</parameter> specifies the type
+            of resource being used as the <type>EGLImage</type> source
+            (examples include two-dimensional textures in OpenGL ES contexts
+            and <type>VGImage</type> objects in OpenVG contexts).
+            <parameter>buffer</parameter> is the name (or handle) of a
+            resource to be used as the <type>EGLImage</type> source, cast
+            into the type <type>EGLClientBuffer</type>.
+            <parameter>attrib_list</parameter> is a list of attribute-value
+            pairs which is used to select sub-sections of
+            <parameter>buffer</parameter> for use as the
+            <type>EGLImage</type> source, such as mipmap levels for OpenGL
+            ES texture map resources, as well as behavioral options, such as
+            whether to preserve pixel data during creation. If
+            <parameter>attrib_list</parameter> is
+            non-<constant>NULL</constant>, the last attribute specified in
+            the list must be <constant>EGL_NONE</constant>.
+        </para>
+        <para>
+            The resource specified by <parameter>display</parameter>,
+            <parameter>context</parameter>, <parameter>target</parameter>,
+            <parameter>buffer</parameter>, and
+            <parameter>attrib_list</parameter> must not itself be an
+            <type>EGLImage</type> sibling, or bound to a pbuffer
+            <type>EGLSurface</type> resource
+            (<function>eglBindTexImage</function>,
+            <function>eglCreatePbufferFromClientBuffer</function>).
+        </para>
+        <para>
+            Values accepted for <parameter>target</parameter> are shown in
+            table <xref linkend="tab-imagetarget"/>.
+        </para>
+        <table frame="all" xml:id="tab-imagetarget">
+            <title>
+                Legal values for <function>eglCreateImage</function> <parameter>target</parameter>
+            </title>
+            <tgroup cols="2" align="left" colsep="1" rowsep="1">
+                <thead>
+                    <row>
+                        <entry><parameter>target</parameter></entry>
+                        <entry>Notes</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_2D</constant></entry>
+                        <entry>Used for GL 2D texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_X</constant></entry>
+                        <entry>Used for the +X face of GL cubemap texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_X</constant></entry>
+                        <entry>Used for the -X face of GL cubemap texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Y</constant></entry>
+                        <entry>Used for the +Y face of GL cubemap texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Y</constant></entry>
+                        <entry>Used for the -Y face of GL cubemap texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Z</constant></entry>
+                        <entry>Used for the +Z face of GL cubemap texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Z</constant></entry>
+                        <entry>Used for the -Z face of GL cubemap texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_3D</constant></entry>
+                        <entry>Used for OpenGL and OpenGL ES 3D texture images</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_RENDERBUFFER</constant></entry>
+                        <entry>Used for OpenGL and OpenGL ES renderbuffer images</entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <para>
+            Attribute names accepted in <parameter>attrib_list</parameter>
+            are shown in table <xref linkend="tab-imageattr"/>, together
+            with the <parameter>target</parameter> for which each attribute
+            name is valid, and the default value used for each attribute if
+            it is not included in <parameter>attrib_list</parameter>.
+        </para>
+        <table frame="all" xml:id="tab-imageattr">
+            <title>
+                Legal attributes for <function>eglCreateImage</function>
+                <parameter>attrib_list</parameter> parameter
+            </title>
+            <tgroup cols="4" align="left" colsep="1" rowsep="1">
+                <thead>
+                    <row>
+                        <entry><parameter>target</parameter></entry>
+                        <entry>Notes</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry>Attribute</entry>
+                        <entry>Description</entry>
+                        <entry>Valid <parameter>target</parameter>s</entry>
+                        <entry>Default Value</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_NONE</constant></entry>
+                        <entry>Marks the end of the attribute-value list</entry>
+                        <entry>All</entry>
+                        <entry>N/A</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_LEVEL</constant></entry>
+                        <entry>
+                            Specifies the mipmap level used as the
+                            <type>EGLImage</type> source. Must be part of
+                            the complete texture object
+                            <parameter>buffer</parameter>
+                        </entry>
+                        <entry>
+                            <constant>EGL_GL_TEXTURE_2D</constant>,
+                            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>, or
+                            <constant>EGL_GL_TEXTURE_3D</constant>
+                        </entry>
+                        <entry>0</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_GL_TEXTURE_ZOFFSET</constant></entry>
+                        <entry>
+                            Specifies the depth offset of the image to use
+                            as the <type>EGLImage</type> source. Must be
+                            part of the complete texture object
+                            <parameter>buffer</parameter>
+                        </entry>
+                        <entry><constant>EGL_GL_TEXTURE_3D</constant></entry>
+                        <entry>0</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_IMAGE_PRESERVED</constant></entry>
+                        <entry>Whether to preserve pixel data</entry>
+                        <entry>All</entry>
+                        <entry><constant>EGL_FALSE</constant></entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+        <para>
+            <function>eglCreateImage</function> returns an
+            <type>EGLImage</type> object corresponding to the image data
+            specified by <parameter>display</parameter>,
+            <parameter>context</parameter>, <parameter>target</parameter>,
+            <parameter>buffer</parameter> and
+            <parameter>attrib_list</parameter> which may be referenced by
+            client API operations.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_3D</constant>,
+            <constant>EGL_GL_RENDERBUFFER</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_X</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_X</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Y</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Y</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Z</constant>, or
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Z</constant>,
+            <parameter>display</parameter> must be a valid
+            <type>EGLDisplay</type>, and <parameter>context</parameter> must
+            be a valid OpenGL or OpenGL ES API context on that display.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <parameter>buffer</parameter> must be the name of a nonzero,
+            <constant>GL_TEXTURE_2D</constant> target texture object, cast
+            into the type <type>EGLClientBuffer</type>.
+        </para>
+        <para>
+            If <parameter>target</parameter> is one of the
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant> enumerants,
+            <parameter>buffer</parameter> must be the name of a nonzero,
+            <constant>GL_TEXTURE_CUBE_MAP</constant> (or equivalent in GL
+            extensions) target texture object, cast into the type
+            <type>EGLClientBuffer</type>.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_3D</constant>,
+            <parameter>buffer</parameter> must be the name of a nonzero,
+            <constant>GL_TEXTURE_3D</constant> (or equivalent in GL
+            extensions) target texture object, cast into the type
+            <type>EGLClientBuffer</type>.
+        </para>
+        <para>
+            <parameter>attrib_list</parameter> should specify the mipmap
+            level (<constant>EGL_GL_TEXTURE_LEVEL</constant>) and, where
+            applicable, z-offset
+            (<constant>EGL_GL_TEXTURE_ZOFFSET</constant>) which will be used
+            as the <type>EGLImage</type> source; If not specified, the
+            default values listed in table <xref linkend="tab-imageattr"/>
+            will be used instead. Additional values specified in are
+            ignored.
+        </para>
+        <para>
+            There must exist some levels <emphasis>x</emphasis> and
+            <emphasis>y</emphasis> such that the mipmap level requested lies
+            between <emphasis>x</emphasis> and <emphasis>y</emphasis>
+            (inclusive), the texture would be mipmap complete were
+            <emphasis>x</emphasis> substituted for the base level and
+            <emphasis>y</emphasis> substituted for the max level, and all
+            levels less than <emphasis>x</emphasis> or greater than
+            <emphasis>y</emphasis> are unspecified. For cubemaps a single
+            pair <emphasis>x</emphasis> and <emphasis>y</emphasis> must
+            apply to all faces. For three-dimensional textures, the
+            specified z-offset must be smaller than the depth of the
+            specified mipmap level.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_RENDERBUFFER</constant>,
+            <parameter>buffer</parameter> must be the name of a complete,
+            nonzero, non-multisampled <constant>GL_RENDERBUFFER</constant>
+            (or equivalent in extensions) target object, cast into the type
+            <type>EGLClientBuffer</type>. Values specified in
+            <parameter>attrib_list</parameter> are ignored.
+        </para>
+        <para>
+            If the value of attribute
+            <constant>EGL_IMAGE_PRESERVED</constant> is
+            <constant>EGL_FALSE</constant> (the default), then all pixel
+            data values associated with <parameter>buffer</parameter> will
+            be undefined after <function>eglCreateImage</function> returns.
+        </para>
+        <para>
+            If the value of attribute
+            <constant>EGL_IMAGE_PRESERVED</constant> is
+            <constant>EGL_TRUE</constant>, then all pixel data values
+            associated with <parameter>buffer</parameter> are preserved.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <function>eglCreateImage</function> returns
+            <constant>EGL_NO_IMAGE</constant> on failure. The contents of
+            <parameter>buffer</parameter> will be unaffected.
+        </para>
+        <para>
+            If <parameter>display</parameter> is not the handle of a valid
+            <type>EGLDisplay</type> object, the error
+            <constant>EGL_BAD_DISPLAY</constant> is generated.
+        </para>
+        <para>
+            If <parameter>context</parameter> is neither the handle of a
+            valid <type>EGLContext</type> object on
+            <parameter>display</parameter> nor
+            <constant>EGL_NO_CONTEXT</constant>, the error
+            <constant>EGL_BAD_CONTEXT</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is not one of the values in
+            table <xref linkend="tab-imagetarget"/>, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>,
+            <constant>EGL_GL_RENDERBUFFER</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant>, and
+            <parameter>display</parameter> is not a valid
+            <type>EGLDisplay</type>, the error
+            <constant>EGL_BAD_DISPLAY</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>,
+            <constant>EGL_GL_RENDERBUFFER</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant>, and
+            <parameter>context</parameter> is not a valid
+            <type>EGLContext</type>, the error
+            <constant>EGL_BAD_CONTEXT</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>,
+            <constant>EGL_GL_RENDERBUFFER</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant>, and
+            <parameter>context</parameter> is not a valid GL context, or
+            does not match the <parameter>display</parameter>, the error
+            <constant>EGL_BAD_MATCH</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant> and
+            <parameter>buffer</parameter> is not the name of a texture
+            object of type <parameter>target</parameter>, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_RENDERBUFFER</constant> and
+            <parameter>buffer</parameter> is not the name of a renderbuffer
+            object, or if <parameter>buffer</parameter> is the name of a
+            multisampled renderbuffer object, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If <constant>EGL_GL_TEXTURE_LEVEL</constant> is nonzero,
+            <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant>, and
+            <parameter>buffer</parameter> is not the name of a complete GL
+            texture object, the error <constant>EGL_BAD_PARAMETER</constant>
+            is generated.
+        </para>
+        <para>
+            If <constant>EGL_GL_TEXTURE_LEVEL</constant> is 0,
+            <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant>,
+            <parameter>buffer</parameter> is the name of an incomplete GL
+            texture object, and any mipmap levels other than mipmap level 0
+            are specified, the error <constant>EGL_BAD_PARAMETER</constant>
+            is generated.
+        </para>
+        <para>
+            If <constant>EGL_GL_TEXTURE_LEVEL</constant> is 0,
+            <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant>,
+            <parameter>buffer</parameter> is not the name of a complete GL
+            texture object, and mipmap level 0 is not specified, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If <constant>EGL_GL_TEXTURE_LEVEL</constant> is 0,
+            <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>,
+            <parameter>buffer</parameter> is not the name of a complete GL
+            texture object, and one or more faces do not have mipmap level 0
+            specified, the error <constant>EGL_BAD_PARAMETER</constant> is
+            generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>,
+            <constant>EGL_GL_RENDERBUFFER</constant> or
+            <constant>EGL_GL_TEXTURE_3D</constant> and
+            <parameter>buffer</parameter> refers to the default GL texture
+            object (0) for the corresponding GL target, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_2D</constant>,
+            <constant>EGL_GL_TEXTURE_CUBE_MAP_*</constant>, or
+            <constant>EGL_GL_TEXTURE_3D</constant>, and the value specified
+            in <parameter>attrib_list</parameter> for
+            <constant>EGL_GL_TEXTURE_LEVEL</constant> is not a valid mipmap
+            level for the specified GL texture object
+            <parameter>buffer</parameter>, the error
+            <constant>EGL_BAD_MATCH</constant> is generated.
+        </para>
+        <para>
+            If <parameter>target</parameter> is
+            <constant>EGL_GL_TEXTURE_3D</constant>, and the value specified
+            in <parameter>attrib_list</parameter> for
+            <constant>EGL_GL_TEXTURE_ZOFFSET</constant> exceeds the depth of
+            the specified mipmap level-of-detail in
+            <parameter>buffer</parameter>, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If an attribute specified in <parameter>attrib_list</parameter>
+            is not one of the attributes shown in table <xref
+            linkend="tab-imageattr"/>, the error
+            <constant>EGL_BAD_PARAMETER</constant> is generated.
+        </para>
+        <para>
+            If an attribute specified in <parameter>attrib_list</parameter>
+            is not a valid attribute for <parameter>target</parameter>, as
+            shown in table <xref linkend="tab-imageattr"/>, the error
+            <constant>EGL_BAD_MATCH</constant> is generated.
+        </para>
+        <para>
+            If the resource specified by <parameter>display</parameter>,
+            <parameter>context</parameter>, <parameter>target</parameter>,
+            <parameter>buffer</parameter> and
+            <parameter>attrib_list</parameter> has an off-screen buffer
+            bound to it (e.g., by a previous call to
+            <function>eglBindTexImage</function>), the error
+            <constant>EGL_BAD_ACCESS</constant> is generated.
+        </para>
+        <para>
+            If the resource specified by <parameter>display</parameter>,
+            <parameter>context</parameter>, <parameter>target</parameter>,
+            <parameter>buffer</parameter> and
+            <parameter>attrib_list</parameter> is bound to an off-screen
+            buffer (e.g., by a previous call to
+            <function>eglCreatePbufferFromClientBuffer</function>), the
+            error <constant>EGL_BAD_ACCESS</constant> is generated.
+        </para>
+        <para>
+            If the resource specified by <parameter>display</parameter>,
+            <parameter>context</parameter>, <parameter>target</parameter>,
+            <parameter>buffer</parameter> and
+            <parameter>attrib_list</parameter> is itself an
+            <type>EGLImage</type> sibling, the error
+            <constant>EGL_BAD_ACCESS</constant> is generated.
+        </para>
+        <para>
+            If insufficient memory is available to complete the specified
+            operation, the error <constant>EGL_BAD_ALLOC</constant> is
+            generated.
+        </para>
+        <para>
+            If the value specified in <parameter>attrib_list</parameter> for
+            <constant>EGL_IMAGE_PRESERVED</constant> is
+            <constant>EGL_TRUE</constant>, and an <type>EGLImage</type>
+            handle cannot be created from the specified resource such that
+            the pixel data values in <parameter>buffer</parameter> are
+            preserved, the error <constant>EGL_BAD_ACCESS</constant> is
+            generated.
+        </para>
+        <para>
+            Note that the success or failure of
+            <function>eglCreateImage</function> should not affect the
+            ability to use <parameter>buffer</parameter> in its original API
+            context (or context share group) (although the pixel data values
+            will be undefined if the command succeeds and the value of
+            <constant>EGL_IMAGE_PRESERVED</constant> is not
+            <constant>EGL_TRUE</constant>).
+        </para>
+    </refsect1>
+    <refsect1 xml:id="lifetime"><title>Lifetime and Usage of <type>EGLImage</type>s</title>
+        <para>
+            Once an <type>EGLImage</type> is created from an
+            <type>EGLImage</type> source, the memory associated with the
+            <type>EGLImage</type> source will remain allocated (and all
+            <type>EGLImage</type> siblings in all client API contexts will
+            be useable) as long as either of the following conditions is
+            true:
+        </para>
+        <para>
+            <itemizedlist>
+            <listitem>
+                <para>
+                     Any <type>EGLImage</type> siblings exist in any client
+                     API context
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+                    The <type>EGLImage</type> object exists inside EGL
+                </para>
+            </listitem>
+            </itemizedlist>
+        </para>
+        <para>
+            The semantics for specifying, deleting and using
+            <type>EGLImage</type> siblings are client API-specific, and are
+            described in the appropriate API specifications.
+        </para>
+        <para>
+            If an application specifies an <type>EGLImage</type> sibling as
+            the destination for rendering and/or pixel download operations
+            (e.g., as an OpenGL or OpenGL ES framebuffer object,
+            <function>glTexSubImage2D</function>, etc.), the modified image
+            results will be observed by all <type>EGLImage</type> siblings
+            in all client API contexts. If multiple client API contexts
+            access <type>EGLImage</type> sibling resources simultaneously,
+            with one or more context modifying the image data, rendering
+            results in all contexts accessing <type>EGLImage</type> siblings
+            are undefined.
+        </para>
+        <para>
+            Respecification and/or deletion of any <type>EGLImage</type>
+            sibling (i.e., both <type>EGLImage</type> source and
+            <type>EGLImage</type> target resources) inside a client API
+            context (by issuing a subsequent call to commands such as
+            <function>glTexImage*</function> or
+            <function>glDeleteTextures</function>, with the
+            <type>EGLImage</type> sibling resource as the target of the
+            operation) affects only that client API context and other
+            contexts within its share group. For an OpenGL or OpenGL ES
+            context, respecification always results in
+            <firstterm>orphaning</firstterm> of the <type>EGLImage</type>,
+            and may also include allocation of additional memory for the
+            respecified resource and/or copying of the <type>EGLImage</type>
+            pixel data.
+        </para>
+        <para>
+            Note: Behavior of other types of client APIs generally follows
+            the OpenGL and OpenGL ES behavior described here, although this
+            is not mandated yet.
+        </para>
+        <para>
+            Operations inside EGL or any client API context which may affect
+            the lifetime of an <type>EGLImage</type> (or the memory
+            allocated for the <type>EGLImage</type>), such as respecifying
+            and/or deleting an <type>EGLImage</type> sibling inside a client
+            API context, must be atomic.
+        </para>
+        <para>
+            Applications may create client API resources from an
+            <type>EGLImage</type> using client API extensions outside the
+            scope of this document (such as
+            <constant>GL_OES_EGL_image</constant>, which creates OpenGL ES
+            texture and renderbuffer objects). If the <type>EGLImage</type>
+            used to create the client resource was created with the
+            <constant>EGL_IMAGE_PRESERVED</constant> attribute set to
+            <constant>EGL_TRUE</constant>, then the pixel data values
+            associated with the image will be preserved after creating the
+            client resource; otherwise, the pixel data values will be
+            undefined. If the <type>EGLImage</type> was created with the
+            <constant>EGL_IMAGE_PRESERVED</constant> attribute set to
+            <constant>EGL_TRUE</constant>, and EGL is unable to create the
+            client resource without modifying the pixel values, then
+            creation will fail and the pixel data values will be preserved.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglCreateImage</function> is available only if the EGL
+            version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglBindTexImage</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferFromClientBuffer</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglDestroyImage</refentrytitle></citerefentry>,
+            <function>glDeleteTextures</function>,
+            <function>glTexImage*</function>,
+            <function>glTexSubImage2D</function>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

@@ -28,7 +28,7 @@
 
 {% if 'dawn' in enabled_tags %}
     #ifdef __EMSCRIPTEN__
-    #error "Do not include this header. Emscripten already provides headers needed for {{metadata.api}}."
+    #error "Do not include this header. Use the headers provided by Emdawnwebgpu instead."
     #endif
 {% endif %}
 

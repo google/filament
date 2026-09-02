@@ -25,12 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/ComputePipelineD3D11.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/RenderPipelineD3D11.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/d3d11/ComputePipelineD3D11.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/RenderPipelineD3D11.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {

@@ -25,30 +25,31 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/BufferD3D12.h"
+#include "src/dawn/native/d3d12/BufferD3D12.h"
 
 #include <algorithm>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/CommandRecordingContext.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/HeapD3D12.h"
-#include "dawn/native/d3d12/QueueD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
-#include "dawn/native/d3d12/SharedBufferMemoryD3D12.h"
-#include "dawn/native/d3d12/SharedFenceD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/CommandRecordingContext.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/HeapD3D12.h"
+#include "src/dawn/native/d3d12/QueueD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/native/d3d12/SharedBufferMemoryD3D12.h"
+#include "src/dawn/native/d3d12/SharedFenceD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d12 {
 
@@ -162,10 +163,13 @@ ResultOrError<Ref<Buffer>> Buffer::CreateFromSharedBufferMemory(
 
 MaybeError Buffer::InitializeAsExternalBuffer(ComPtr<ID3D12Resource> d3d12Buffer,
                                               const UnpackedPtr<BufferDescriptor>& descriptor) {
-    mAllocatedSize = descriptor->size;
+    // `mAllocatedSize` should always be the size of the underlying D3D12 buffer resource. Note that
+    // for a buffer backed by shared memory, its wgpu buffer size may be smaller than the width of
+    // the underlying D3D12 buffer resource.
+    mAllocatedSize = d3d12Buffer->GetDesc().Width;
     AllocationInfo info;
     info.mMethod = AllocationMethod::kExternal;
-    info.mRequestedSize = mAllocatedSize;
+    info.mRequestedSize = mAllocatedSize.value();
     mResourceAllocation = {info, 0, std::move(d3d12Buffer), nullptr, ResourceHeapKind::InvalidEnum};
     return {};
 }
@@ -175,7 +179,7 @@ Buffer::Buffer(Device* device, const UnpackedPtr<BufferDescriptor>& descriptor)
 
 MaybeError Buffer::Initialize(bool mappedAtCreation) {
     // Allocate at least 4 bytes so clamped accesses are always in bounds.
-    uint64_t size = std::max(GetSize(), uint64_t(4u));
+    uint64_t size = std::max(GetSize(), uint64_t{4});
     size_t alignment = D3D12BufferSizeAlignment(GetInternalUsage());
     if (size > std::numeric_limits<uint64_t>::max() - alignment) {
         // Alignment would overflow.
@@ -186,7 +190,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
     D3D12_RESOURCE_DESC resourceDescriptor;
     resourceDescriptor.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
     resourceDescriptor.Alignment = 0;
-    resourceDescriptor.Width = mAllocatedSize;
+    resourceDescriptor.Width = mAllocatedSize.value();
     resourceDescriptor.Height = 1;
     resourceDescriptor.DepthOrArraySize = 1;
     resourceDescriptor.MipLevels = 1;
@@ -240,7 +244,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
         auto scopedUseDuringCreation = UseInternal();
         CommandRecordingContext* commandRecordingContext =
             ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext();
-        DAWN_TRY(ClearBuffer(commandRecordingContext, uint8_t(1u)));
+        DAWN_TRY(ClearBuffer(commandRecordingContext, uint8_t{1}));
     }
 
     // Initialize the padding bytes to zero.
@@ -290,12 +294,13 @@ MaybeError Buffer::InitializeHostMapped(const BufferHostMappedPointer* hostMappe
 
     D3D12_RESOURCE_ALLOCATION_INFO resourceInfo =
         device->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDescriptor);
-    DAWN_INVALID_IF(resourceInfo.SizeInBytes > heapSize,
-                    "Resource required %u bytes, but heap is %u bytes.", resourceInfo.SizeInBytes,
-                    heapSize);
-    DAWN_INVALID_IF(!IsPtrAligned(hostMappedDesc->pointer, resourceInfo.Alignment),
-                    "Host-mapped pointer (%p) did not satisfy required alignment (%u).",
-                    hostMappedDesc->pointer, resourceInfo.Alignment);
+    DAWN_INVALID_IF(
+        resourceInfo.SizeInBytes > heapSize, "Resource required %u bytes, but heap is %u bytes.",
+        checked_cast<uint32_t>(resourceInfo.SizeInBytes), checked_cast<uint32_t>(heapSize));
+    DAWN_INVALID_IF(
+        !IsPtrAligned(hostMappedDesc->pointer, checked_cast<size_t>(resourceInfo.Alignment)),
+        "Host-mapped pointer (%p) did not satisfy required alignment (%u).",
+        hostMappedDesc->pointer, resourceInfo.Alignment);
 
     mAllocatedSize = resourceInfo.SizeInBytes;
     mLastState = D3D12_RESOURCE_STATE_COMMON;
@@ -315,8 +320,8 @@ MaybeError Buffer::InitializeHostMapped(const BufferHostMappedPointer* hostMappe
                                                        IID_PPV_ARGS(&placedResource)),
         "ID3D12Device::CreatePlacedResource"));
 
-    mResourceAllocation = {AllocationInfo{0, AllocationMethod::kExternal, mAllocatedSize}, 0,
-                           std::move(placedResource),
+    mResourceAllocation = {AllocationInfo{0, AllocationMethod::kExternal, mAllocatedSize.value()},
+                           0, std::move(placedResource),
                            /* heap is external, and not tracked for residency */ nullptr,
                            ResourceHeapKind::InvalidEnum};
     mHostMappedHeap = std::move(heap);
@@ -451,7 +456,17 @@ bool Buffer::IsCPUWritableAtCreation() const {
     // staging buffer, and copied from the staging buffer to the GPU memory of the current
     // buffer in the unmap() call.
     // TODO(enga): Handle CPU-visible memory on UMA
-    return (GetInternalUsage() & wgpu::BufferUsage::MapWrite) != 0;
+    if ((GetInternalUsage() & wgpu::BufferUsage::MapWrite) != 0) {
+        return true;
+    }
+    // For shared buffer memory buffers, the underlying memory may be CPU writable even if the
+    // buffer's usage doesn't include MapWrite. Check the shared memory's properties.
+    if (auto* contents = GetSharedResourceMemoryContents()) {
+        if (auto sharedMemory = contents->GetSharedResourceMemory().Promote()) {
+            return static_cast<SharedBufferMemoryBase*>(sharedMemory.Get())->CanBeWrittenByCPU();
+        }
+    }
+    return false;
 }
 
 MaybeError Buffer::MapInternal(bool isWrite, size_t offset, size_t size, const char* contextInfo) {
@@ -459,7 +474,7 @@ MaybeError Buffer::MapInternal(bool isWrite, size_t offset, size_t size, const c
 
     // The mapped buffer can be accessed at any time, so it must be locked to ensure it is never
     // evicted. This buffer should already have been made resident when it was created.
-    TRACE_EVENT0(GetDevice()->GetPlatform(), General, "BufferD3D12::MapInternal");
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "BufferD3D12::MapInternal");
 
     if (mResourceAllocation.GetInfo().mMethod != AllocationMethod::kExternal) {
         Heap* heap = ToBackend(mResourceAllocation.GetResourceHeap());
@@ -467,16 +482,19 @@ MaybeError Buffer::MapInternal(bool isWrite, size_t offset, size_t size, const c
     }
 
     D3D12_RANGE range = {offset, offset + size};
-    // mMappedData is the pointer to the start of the resource, irrespective of offset.
+    // mappedPointer is the pointer to the start of the resource, irrespective of offset.
     // MSDN says (note the weird use of "never"):
     //
-    //   When ppData is not NULL, the pointer returned is never offset by any values in
+    //   When ppData is not nullptr, the pointer returned is never offset by any values in
     //   pReadRange.
     //
     // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12resource-map
-    void* mappedData = nullptr;
-    DAWN_TRY(CheckHRESULT(GetD3D12Resource()->Map(0, &range, &mappedData), contextInfo));
-    mMappedData = mappedData;
+    void* mappedPointer = nullptr;
+    DAWN_TRY(CheckHRESULT(GetD3D12Resource()->Map(0, &range, &mappedPointer), contextInfo));
+    // SAFETY: The pointer returned is for the actual memory of the resource and contains at least
+    // GetAllocatedSize() bytes.
+    mMappedData = DAWN_UNSAFE_BUFFERS(
+        {static_cast<std::byte*>(mappedPointer), checked_cast<size_t>(GetAllocatedSize())});
 
     if (isWrite) {
         mWrittenMappedRange = range;
@@ -489,7 +507,7 @@ MaybeError Buffer::MapAtCreationImpl() {
     // We will use a staging buffer for MapRead buffers instead so we just clear the staging
     // buffer and initialize the original buffer by copying the staging buffer to the original
     // buffer one the first time Unmap() is called.
-    DAWN_ASSERT((GetInternalUsage() & wgpu::BufferUsage::MapWrite) != 0);
+    DAWN_ASSERT(IsCPUWritableAtCreation());
 
     // The buffers with mappedAtCreation == true will be initialized in
     // BufferBase::MapAtCreation().
@@ -510,6 +528,7 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
         DAWN_TRY(EnsureDataInitialized(commandContext));
     }
 
+    // The buffer has been initialized from the GPU if needed, now we can map it.
     return MapInternal(mode & wgpu::MapMode::Write, offset, size, "D3D12 map async");
 }
 
@@ -519,7 +538,7 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
 
 void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
     GetD3D12Resource()->Unmap(0, &mWrittenMappedRange);
-    mMappedData = nullptr;
+    mMappedData = {};
     mWrittenMappedRange = {0, 0};
 
     // When buffers are mapped, they are locked to keep them in resident memory. We must unlock
@@ -531,10 +550,8 @@ void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
     }
 }
 
-void* Buffer::GetMappedPointerImpl() {
-    // The frontend asks that the pointer returned is from the start of the resource
-    // irrespective of the offset passed in MapAsyncImpl, which is what mMappedData is.
-    return mMappedData;
+Span<std::byte> Buffer::GetMappedRangeImpl(size_t offset, size_t size) {
+    return mMappedData.subspan(offset, size);
 }
 
 void Buffer::DestroyImpl(DestroyReason reason) {
@@ -545,7 +562,7 @@ void Buffer::DestroyImpl(DestroyReason reason) {
     // - It may be called when the last ref to the buffer is dropped and the buffer
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the buffer since there are no other live refs.
-    if (mMappedData != nullptr) {
+    if (!mMappedData.empty()) {
         // If the buffer is currently mapped, unmap without flushing the writes to the GPU
         // since the buffer cannot be used anymore. UnmapImpl checks mWrittenRange to know
         // which parts to flush, so we set it to an empty range to prevent flushes.
@@ -650,9 +667,9 @@ MaybeError Buffer::SynchronizeBufferBeforeMapping() {
         for (const auto& fence : fences) {
             ComPtr<ID3D12Fence> d3dFence = ToBackend(fence.object)->GetD3DFence();
             if (d3dFence->GetCompletedValue() < fence.signaledValue) {
-                // If hEvent is NULL, SetEventOnCompletion will return when fence reaches
+                // If hEvent is nullptr, SetEventOnCompletion will return when fence reaches
                 // fence.signaledValue.
-                d3dFence->SetEventOnCompletion(fence.signaledValue, NULL);
+                d3dFence->SetEventOnCompletion(fence.signaledValue, nullptr);
             }
         }
     }
@@ -701,7 +718,7 @@ MaybeError Buffer::InitializeToZero(CommandRecordingContext* commandContext) {
 
     // TODO(crbug.com/dawn/484): skip initializing the buffer when it is created on a heap
     // that has already been zero initialized.
-    DAWN_TRY(ClearBuffer(commandContext, uint8_t(0u)));
+    DAWN_TRY(ClearBuffer(commandContext, uint8_t{0}));
     SetInitialized(true);
     GetDevice()->IncrementLazyClearCountForTesting();
 
@@ -718,7 +735,7 @@ MaybeError Buffer::ClearBuffer(CommandRecordingContext* commandContext,
     if (GetInternalUsage() & wgpu::BufferUsage::MapWrite) {
         DAWN_TRY(MapInternal(true, static_cast<size_t>(offset), static_cast<size_t>(size),
                              "D3D12 map at clear buffer"));
-        memset(mMappedData, clearValue, size);
+        std::ranges::fill(mMappedData, std::byte(clearValue));
         UnmapImpl(GetState(), BufferState::Unmapped);
     } else if (clearValue == 0u) {
         DAWN_TRY(device->ClearBufferToZero(commandContext, this, offset, size));
@@ -728,7 +745,7 @@ MaybeError Buffer::ClearBuffer(CommandRecordingContext* commandContext,
         DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
             size, kCopyBufferToBufferOffsetAlignment,
             [&](UploadReservation reservation) -> MaybeError {
-                memset(reservation.mappedPointer, clearValue, size);
+                std::ranges::fill(reservation.mappedData, std::byte(clearValue));
                 device->CopyFromStagingToBufferHelper(commandContext, reservation.buffer.Get(),
                                                       reservation.offsetInBuffer, this, offset,
                                                       size);

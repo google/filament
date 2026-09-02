@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/stream/ByteVectorSink.h"
+#include "src/dawn/native/stream/ByteVectorSink.h"
 
+#include <algorithm>
 #include <iomanip>
 
-#include "dawn/native/stream/Stream.h"
+#include "src/dawn/native/stream/Stream.h"
 
 namespace dawn::native::stream {
 
-void* ByteVectorSink::GetSpace(size_t bytes) {
+std::span<std::byte> ByteVectorSink::GetSpace(size_t bytes) {
     size_t currentSize = this->size();
     this->resize(currentSize + bytes);
-    return &this->operator[](currentSize);
+    return std::span{*this}.subspan(currentSize, bytes);
 }
 
 template <>
@@ -45,15 +46,14 @@ void stream::Stream<ByteVectorSink>::Write(stream::Sink* sink, const ByteVectorS
     // appears flattened.
     size_t size = vec.size();
     if (size > 0) {
-        void* ptr = sink->GetSpace(size);
-        memcpy(ptr, vec.data(), size);
+        std::ranges::copy(vec, sink->GetSpace(size).begin());
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const ByteVectorSink& vec) {
     os << std::hex;
-    for (const int b : vec) {
-        os << std::setfill('0') << std::setw(2) << b << " ";
+    for (const std::byte b : vec) {
+        os << std::setfill('0') << std::setw(2) << static_cast<int>(b) << " ";
     }
     os << std::dec;
     return os;

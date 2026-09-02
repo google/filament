@@ -9,6 +9,7 @@ This repository is responsible for the following files
 * CMakeLists.txt
 * tests/*
 * CODE_OF_CONDUCT.md
+* CONTRIBUTING.md
 * LICENSE.txt
 * README.md
 * Non-API headers

@@ -27,12 +27,17 @@
 
 include("${DAWN_THIRD_PARTY_DIR}/meson/CMakeLists.txt")
 
-set(MESA_OPTIONS
-    "-Dgallium-drivers=llvmpipe"
-    "-Dvulkan-drivers=swrast"
-)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/mesa_options.txt" MESA_OPTIONS)
 
-meson_target("mesa"
+meson_target("mesa_build"
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src"
     OPTIONS ${MESA_OPTIONS}
+)
+
+add_custom_target("mesa" ALL
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/copy_mesa_driver.py"
+        "${CMAKE_CURRENT_BINARY_DIR}/install"
+        "${CMAKE_BINARY_DIR}"
+    DEPENDS "mesa_build"
+    COMMENT "Copying Mesa Vulkan ICD and driver to root build directory"
 )

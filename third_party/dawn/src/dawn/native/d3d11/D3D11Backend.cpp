@@ -32,9 +32,9 @@
 
 #include <utility>
 
-#include "dawn/native/d3d/d3d_platform.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/Forward.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/Forward.h"
 
 namespace dawn::native::d3d11 {
 

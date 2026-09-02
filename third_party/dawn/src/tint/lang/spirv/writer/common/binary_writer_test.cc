@@ -25,14 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include "src/tint/lang/spirv/writer/common/binary_writer.h"
 
 #include "gtest/gtest.h"
+#include "src/tint/utils/memory/bitcast.h"
+#include "src/utils/compiler.h"
 
 namespace tint::spirv::writer {
 namespace {
@@ -74,8 +71,7 @@ TEST_F(SpirvWriterBinaryWriterTest, Float) {
 
     auto res = bw.Result();
     ASSERT_EQ(res.size(), 2u);
-    float f;
-    memcpy(&f, &res[1], 4);
+    float f = tint::Bitcast<float>(res[1]);
     EXPECT_EQ(f, 2.4f);
 }
 

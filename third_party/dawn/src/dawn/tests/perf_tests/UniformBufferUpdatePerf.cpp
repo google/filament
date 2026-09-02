@@ -28,10 +28,11 @@
 #include <queue>
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 // This is for developers only to ensure the triangle color drawn is as expected.
 // #define PIXEL_CHECK 1
@@ -59,7 +60,7 @@ constexpr char kVertexShader[] = R"(
 constexpr char kFragmentShader[] = R"(
         @group(0) @binding(0) var<uniform> color : vec3f;
         @fragment fn main() -> @location(0) vec4f {
-            return vec4f(color * (1.0 / %d), 1.0);
+            return vec4f(color * (1.0 / %u), 1.0);
         })";
 
 enum class UploadMethod {
@@ -289,7 +290,8 @@ void UniformBufferUpdatePerf::SetUpPerfTest() {
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, kVertexShader);
     // Inject kNumIterations into the fragment shader.
     char fragmentShader[sizeof(kFragmentShader) + 16];
-    snprintf(fragmentShader, sizeof(fragmentShader), kFragmentShader, kNumIterations);
+    DAWN_UNSAFE_TODO(
+        snprintf(fragmentShader, sizeof(fragmentShader), kFragmentShader, kNumIterations));
     wgpu::ShaderModule fsModule = utils::CreateShaderModule(device, fragmentShader);
 
     // Create the pipeline.
@@ -300,13 +302,14 @@ void UniformBufferUpdatePerf::SetUpPerfTest() {
 
     std::vector<float> data(kUniformDataSize, 1.0f * (kNumIterations / 2));
     mSingleStagingBuffer = FindOrCreateStagingBuffer();
-    memcpy(mSingleStagingBuffer.GetMappedRange(0, data.size()), data.data(), data.size());
+    DAWN_UNSAFE_TODO(
+        memcpy(mSingleStagingBuffer.GetMappedRange(0, data.size()), data.data(), data.size()));
     mSingleStagingBuffer.Unmap();
 
     if (GetParam().uploadMethod == UploadMethod::MapWithExtendedUsages &&
         GetParam().uniformBuffer == UniformBuffer::Single) {
         auto buffer = FindOrCreateUniformBuffer();
-        memcpy(buffer.GetMappedRange(0, data.size()), data.data(), data.size());
+        DAWN_UNSAFE_TODO(memcpy(buffer.GetMappedRange(0, data.size()), data.data(), data.size()));
         buffer.Unmap();
         ReturnUniformBuffer(buffer);
     }
@@ -327,13 +330,15 @@ void UniformBufferUpdatePerf::Step() {
                 break;
             case UploadMethod::MultipleStagingBuffer:
                 stagingBuffer = FindOrCreateStagingBuffer();
-                memcpy(stagingBuffer.GetMappedRange(0, data.size()), data.data(), data.size());
+                DAWN_UNSAFE_TODO(
+                    memcpy(stagingBuffer.GetMappedRange(0, data.size()), data.data(), data.size()));
                 stagingBuffer.Unmap();
                 commands.CopyBufferToBuffer(stagingBuffer, 0, uniformBuffer, 0, data.size());
                 break;
             case UploadMethod::MapWithExtendedUsages:
                 if (GetParam().uniformBuffer == UniformBuffer::Multiple) {
-                    memcpy(uniformBuffer.GetMappedRange(0, data.size()), data.data(), data.size());
+                    DAWN_UNSAFE_TODO(memcpy(uniformBuffer.GetMappedRange(0, data.size()),
+                                            data.data(), data.size()));
                     uniformBuffer.Unmap();
                 }
                 break;

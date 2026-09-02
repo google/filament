@@ -28,10 +28,10 @@
 #include <array>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -45,6 +45,9 @@ class TextureComponentSwizzleTest : public DawnTest {
   protected:
     void SetUp() override {
         DawnTest::SetUp();
+        // TODO(crbug.com/523272960): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
         DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::TextureComponentSwizzle));
 
         wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(

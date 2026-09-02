@@ -48,5 +48,6 @@ if(DAWN_MOBILE_BUILD)
         message(STATUS "- Disabling OpenGL ES for non-Android mobile build")
         set(DAWN_ENABLE_OPENGLES OFF CACHE BOOL "")
     endif()
-
+else()
+    set(TINT_ENABLE_INSTALL ON CACHE BOOL "")
 endif()

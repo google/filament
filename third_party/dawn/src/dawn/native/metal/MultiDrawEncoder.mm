@@ -25,14 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/MultiDrawEncoder.h"
+#include "src/dawn/native/metal/MultiDrawEncoder.h"
 
-#include "dawn/common/Strings.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/ToBackend.h"
-#include "dawn/native/metal/BufferMTL.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/ToBackend.h"
+#include "src/dawn/native/metal/BufferMTL.h"
 
-const char* kShaderSource = "#include <metal_stdlib>\n" DAWN_MULTILINE(
+namespace {
+constexpr const char* kShaderSource = "#include <metal_stdlib>\n" DAWN_MULTILINE(
     using namespace metal;
 
     struct DrawCmd {
@@ -193,6 +194,8 @@ static constexpr uint8_t kLineList = 1;
 static constexpr uint8_t kLineStrip = 2;
 static constexpr uint8_t kTriangleList = 3;
 static constexpr uint8_t kTriangleStrip = 4;
+
+}  // anonymous namespace
 
 namespace dawn::native::metal {
 

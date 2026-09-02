@@ -1,0 +1,465 @@
+Name
+
+    EXT_texture_env
+
+Name Strings
+
+    GL_EXT_texture_env
+
+Version
+
+    $Date: 1998/05/12 23:52:26 $ $Revision: 1.5 $
+
+Number
+
+    146
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    OpenGL 1.2 affects the definition of this spec.
+    EXT_multitexture affects the definition of this spec.
+    This specification is written against the OpenGL 1.2 specification.
+
+Overview
+
+    A new texture environment is defined which supports the
+    following equations:
+
+                        Cv = Cf                 COPY
+                        Cv = Ct                 REPLACE
+                        Cv = Cf * Ct            MODULATE
+                        Cv = Cf + Ct            ADD
+                        Cv = Cf - Ct            SUBTRACT
+                        Cv = Ct - Cf            REVERSE_SUBTRACT
+                        Cv = aCf + (1-a)Ct      BLEND
+                        Cv = aCt + (1-a)Cf      REVERSE_BLEND
+        where a is the incoming fragment's alpha value
+
+    These functions may be independently selected for color and alpha
+    processing.  The BLEND function is not available for alpha processing.
+    Additionally a scale factor of 2^0, 2^1, or 2^2 may be applied to the final
+    result.
+
+Issues
+
+  * The functions are added as a `suite' in a new texture environment.  An
+    alternative would be to retrofit them into the existing texture
+    environment.  There would likely be a clash with SGIX_texture_add_env
+    and with the DECAL/BLEND environment which are similar yet different
+    from the new BLEND function.  Also the separate specification of
+    the alpha texture function seems awkward, and we specified a new 
+    behavior for the new texture environment when texturing is disabled.
+
+  * I chose the name EXT_texture_env as it really is an extension to
+    texture environment to add a new environment.  Should it have some
+    other name, e.g., EXT_texture_env1?
+
+  * A new enable is defined for TEXTURE_ENV1_EXT which causes it to
+    be activated over TEXTURE_ENV.  No enable is defined for TEXTURE_ENV
+    as it is considered to be enabled always.  The OpenGL spec uses
+    the term 'currently bound environment' should we be doing something
+    that looks more bind like or changing the language to something like
+    currently selected/enabled environment?
+
+  * There is no constant color term in TEXTURE_ENV1_EXT.  The functionality
+    is still available in TEXTURE_ENV and I'm not sure there is a compelling
+    reason to integrate the constant term here.
+
+  * The BLEND function is fairly restrictive.  Should it be more general?
+    e.g. reverse the blending factor?
+
+    Resolved: YES.  add REVERSE_BLEND.
+
+  * The rules for alpha-only and alpha-less textures are very regular
+    the color components of an alpha-only texture are substituted with zero
+    and the alpha component of an alpha-less texture is substituted with one.
+    Are these the right rules?
+
+  * If texturing is disabled, environment computations are still
+    performed in this new texture environment, whereas they are not in the
+    old environment (to preserve compatibility).  This sets the stage for
+    texture environments performing functions which do not involve a
+    texture though perhaps it is a little awkward.
+
+  * Enumerants are screwy.  Should we add new _EXT enumerants for
+    COPY, REPLACE, ADD, MODULATE, BLEND, as was done for the original
+    texture extension or reuse these existing tokens and just add
+    SUBTRACT, REVERSE_SUBTRACT, and REVERSE_BLEND?
+
+    I chose to add new enumerants which are prefixed with ENV_. The
+    main reason is to allow them to have contiguous values and leave
+    some room for expansion to ensure that they can be switched
+    with minimal parameter validation cost.
+
+  * Should a scale & bias be defined as part of this extension or
+    as a separate add-on to the environment processing?
+
+  * Possible add-on extensions (in the context of multitexture):
+
+        1) source and blend factor specification for the BLEND/REVERSE_BLEND
+           functions by generalizing BLEND/REVERSE_BLEND to 
+                x*Cf + y*Ct   /    x*Ct + y*Cf
+           and allow x to be specified by TEXTURE_ENV_SRC_FACTOR and
+           y by TEXTURE_ENV_DST_FACTOR with possible src and dst factors
+           ONE
+           ZERO
+           FRAGMENT_ALPHA    alpha from previous environment stage
+           TEXTURE_ALPHA     alpha from texture
+           PRETEXTURE_ALPHA  original pre-texture alpha value
+           FRAGMENT_ALPHA_MINUS_ONE
+           TEXTURE_ALPHA_MINUS_ONE
+           PRETEXTURE_ALPHA_MINUS_ONE
+        
+        2) Add some muxing to the inputs of the equations.
+           The basic equation set is
+                Cf            (copy)
+                Cf*Ct         (modulate)
+                Cf+Ct         (add/sub/rsub)
+                a*Cf+(1-a)*Ct (blend/rblend)
+            
+            so allow a more flexible binding on Cf & Ct
+            TEXTURE_ENV_SRC  (default is FRAGMENT)
+            TEXTURE_ENV_DST  (default is TEXTURE)
+                choices:
+                    FRAGMENT
+                    TEXTURE
+                    PRETEXTURE
+
+         3) extension 2) gives a good chunk of the functionality of 1)
+            perhaps we could avoid 1) altogether or change 1) to allow
+            a more restrictive selection of the blend factor (simultaneously
+            choosing both a and (1-a):
+
+            TEXTURE_ENV_BLEND_FACTOR
+                choices:
+                    FRAGMENT
+                    TEXTURE
+                    PRETEXTURE
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of TexEnvf, TexEnvi, TexEnvfv, TexEnvfi,
+    GetTexEnviv, GetTexEnvfv, GetBooleanv, GetIntegerv, GetFloatv, GetDoublev,
+    and the <cap> parameter of Enable, Disable, and IsEnabled
+
+    TEXTURE_ENV0_EXT            0x????
+    TEXTURE_ENV1_EXT            TEXTURE_ENV0_EXT+1
+    <leave room for 14 more environments>
+
+    Accepted by the <pname> parameter of TexEnvf, TexEnvi, TexEnvfv, TexEnvfi,
+    GetTexEnviv and GetTexEnvfv when the <target> parameter value is
+    TEXTURE_ENV1_EXT
+
+    TEXTURE_ENV_MODE_ALPHA_EXT  0x????
+
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnvfi when the <target> parameter value is TEXTURE_ENV1_EXT and the
+    <pname> parameter value is TEXTURE_ENV_MODE or
+    TEXTURE_ENV_MODE_ALPHA_EXT
+
+    ENV_COPY_EXT                0x????
+    ENV_REPLACE_EXT             0x????
+    ENV_MODULATE_EXT            0x????
+    ENV_ADD_EXT                 0x????
+    ENV_SUBTRACT_EXT            0x????
+    ENV_REVERSE_SUBTRACT_EXT    0x????
+    ENV_BLEND_EXT               0x????
+    ENV_REVERSE_BLEND_EXT       0x????
+
+    Accepted by the <pname> parameter of TexEnvf, TexEnvi, TexEnvfv, 
+    TexEnvfi, GetTexEnviv, and GetTexEnvfv
+
+    TEXTURE_ENV_SHIFT_EXT       0x????
+
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+        None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+
+
+
+                                Texture Environment 1
+                                ----------------------
+
+        Base Texture Format     COPY  REPLACE  MODULATE  ADD
+        -------------------     ----  -------  --------  ---
+
+        ALPHA                    Rf     0        Rf*0    Rf+0
+                                 Gf     0        Gf*0    Rf+0
+                                 Bf     0        Bf*0    Rf+0
+                                 Af     At       Af*At   Af+At
+
+        LUMINANCE                Rf     Lt       Rf*Lt   Rf+Lt
+                                 Gf     Lt       Gf*Lt   Gf+Lt
+                                 Bf     Lt       Bf*Lt   Bf+Lt
+                                 Af     1        Af*1    Af+1
+
+        LUMINANCE_ALPHA          Rf     Lt       Rf*Lt   Rf+Lt
+                                 Gf     Lt       Gf*Lt   Gf+Lt
+                                 Bf     Lt       Bf*Lt   Bf+Lt
+                                 Af     At       Af*At   Af+At
+
+        INTENSITY                Rf     It       Rf*It   Rf+It
+                                 Gf     It       Gf*It   Gf+It
+                                 Bf     It       Bf*It   Bf+It
+                                 Af     It       Af*It   Af+It
+
+        RGB                      Rf     Rt       Rf*Rt   Rf+Rt
+                                 Gf     Gt       Gf*Gt   Gf+Gt
+                                 Bf     Bt       Bf*Bt   Bf+Bt
+                                 Af     1        Af*1    Af+1
+
+        RGBA                     Rf     Rt       Rf*Rt   Rf+Rt
+                                 Gf     Gt       Gf*Gt   Gf+Gt
+                                 Bf     Bt       Bf*Bt   Bf+Bt
+                                 Af     At       Af*At   Af+At
+
+
+        Base Texture Format  SUBTRACT  REVERSE_      BLEND        REVERSE_
+                                       SUBTRACT                   BLEND
+        -------------------  --------  --------  ---------------  -------------
+
+        ALPHA                Rf-0      0-Rf     Af*Rf+(1-Af)*0   Af*0+(1-Af)*Rf
+                             Gf-0      0-Gf     Af*Gf+(1-Af)*0   Af*0+(1-Af)*Gf
+                             Bf-0      0-Bf     Af*Bf+(1-Af)*0   Af*0+(1-Af)*Bf
+                             Af-At     At-Af    N/A              N/A
+
+        LUMINANCE            Rf-Lt     Lt-Rf    Af*Rf+(1-Af)*Lt  Af*Lt+(1-Af)*Rf
+                             Gf-Lt     Lt-Gf    Af*Gf+(1-Af)*Lt  Af*Lt+(1-Af)*Gf
+                             Bf-Lt     Lt-Bf    Af*Bf+(1-Af)*Lt  Af*Lt+(1-Af)*Bf
+                             Af-1      1-Af     N/A              N/A
+
+        LUMINANCE_ALPHA      Rf-Lt     Lt-Rf    Af*Rf+(1-Af)*Lt  Af*Lt+(1-Af)*Rf
+                             Gf-Lt     Lt-Gf    Af*Gf+(1-Af)*Lt  Af*Lt+(1-Af)*Gf
+                             Bf-Lt     Lt-Bf    Af*Bf+(1-Af)*Lt  Af*Lt+(1-Af)*Bf
+                             Af-At     At-Af    N/A              N/A
+
+        INTENSITY            Rf-It     It-Rf    Af*Rf+(1-Af)*It  Af*It+(1-Af)*Rf
+                             Gf-It     It-Gf    Af*Gf+(1-Af)*It  Af*It+(1-Af)*Gf
+                             Bf-It     It-Bf    Af*Bf+(1-Af)*It  Af*It+(1-Af)*Bf
+                             Af-It     It-Af    N/A              N/A
+
+        RGB                  Rf-Rt     Rt-Rf    Af*Rf+(1-Af)*Rt  Af*Rt+(1-Af)*Rf
+                             Gf-Gt     Gt-Gf    Af*Gf+(1-Af)*Gt  Af*Gt+(1-Af)*Gf
+                             Bf-Bt     Bt-Bf    Af*Bf+(1-Af)*Bt  Af*Bt+(1-Af)*Bf
+                             Af-1      1-Af     N/A              N/A
+
+        RGBA                 Rf-Rt     Rt-Rf    Af*Rf+(1-Af)*Rt  Af*Rt+(1-Af)*Rf
+                             Gf-Gt     Gt-Gf    Af*Gf+(1-Af)*Gt  Af*Gt+(1-Af)*Gf
+                             Bf-Bt     Bt-Bf    Af*Bf+(1-Af)*Bt  Af*Bt+(1-Af)*Bf
+                             Af-At     At-Af    N/A              N/A
+
+
+        Tables 3.12 and 3.13: Texture functions for TEXTURE_ENV1.
+
+    Section 3.8.5 Texture Environments and Texture Functions
+
+
+    The command
+
+    void TexEnv{if}( enum target, enum pname, T param ) ;
+    void TexEnv{if}v( enum target, enum pname, T params ) ;
+
+    sets parameters of the <texture environment> that specifies how texture
+    values are interpreted when texturing a fragment.  <target> must be the
+    symbolic constant TEXTURE_ENV0_EXT or TEXTURE_ENV1_EXT.  <pname> is a
+    symbolic constant indicating the parameter to be set.  In the first form of
+    the command, <param> is a value to which to set a single-valued parameter;
+    in the second form, <params> is point to an array of parameters: either a
+    single symbolic constant or a value or group of values to which the
+    parameter should be set.  The possible environment parameters are
+    TEXTURE_ENV_MODE, TEXTURE_ENV_COLOR, and TEXTURE_ENV_COORD_SET_EXT.
+    TEXTURE_ENV_MODE may be set to one of REPLACE, MODULATE, DECAL, or BLEND;
+    TEXTURE_ENV_COLOR is set to an RGBA color by providing four
+    single-precision floating-point values in the range [0,1](values outside
+    this range are clamped to it).  If integers are provided for
+    TEXTURE_ENV_COLOR, then they are converted to floating-point as specified
+    in Table 2.6 for signed integers.  TEXTURE_ENV_COORD_SET_EXT may be set to
+    one of TEXTURE0_EXT .. TEXTURE<n>_EXT where <n> is one less than the
+    number of supported texture coordinate sets.  If floating-point values
+    are supplied, they are rounded to the nearest integer.
+
+        The value of TEXTURE_ENV_MODE specifies a texture function.  The result
+    of this function depends on the fragment and the texture array value.  The
+    precise form of the function depends on the base internal formats of the
+    texture arrays that were last specified.  In the following two
+    tables Rf, Gf, Bf, and Af are the color components of the incoming
+    fragment; Rt, Gt, Bt, At, Lt, and It are the filtered texture values; Rc,
+    Gc, Bc, and Ac are the texture environment color values; and Rv, Gv, Bv,
+    and Av are the color components computed by the texture function.  All of
+    these color values are in the range [0,1].  The REPLACE and MODULATE
+    texture functions are specified in Table 3.10, and the DECAL and BLEND
+    texture functions are specified in Table 3.11.
+
+        The value of TEXTURE_ENV_COORD_SET_EXT specifies which set of fragment
+    texture coordinates are used to determine the texture value used in the
+    texture function.  The same set of texture coordinates may be
+    simultaneously used by multiple textures.
+
+        Specifying Enable with a <cap> parameter of TEXTURE_ENV1_EXT selects an
+    alternate texture environment with a different set of texture functions.
+    When TEXTURE_ENV1_EXT is enabled this environment supersedes texture
+    environment zero.
+
+        Specifying TexEnv with a <target> parameter of TEXTURE_ENV1_EXT
+    selects the TEXTURE_ENV1_EXT environment for modification.  The possible
+    environment parameters for TEXTURE_ENV1_EXT are TEXTURE_ENV_MODE,
+    TEXTURE_ENV_MODE_ALPHA_EXT, TEXTURE_ENV_SHIFT_EXT, and
+    TEXTURE_ENV_COORD_SET_EXT.  TEXTURE_ENV_MODE may be set to one of
+    ENV_COPY_EXT, ENV_REPLACE_EXT, ENV_MODULATE_EXT, ENV_ADD_EXT,
+    ENV_SUBTRACT_EXT, ENV_REVERSE_SUBTRACT_EXT, ENV_BLEND_EXT, or
+    ENV_REVERSE_BLEND_EXT.  TEXTURE_ENV_MODE_ALPHA_EXT may be set to one of
+    ENV_COPY_EXT, ENV_REPLACE_EXT, ENV_MODULATE_EXT, ENV_ADD_EXT,
+    ENV_SUBTRACT_EXT, or ENV_REVERSE_SUBTRACT_EXT.  TEXTURE_ENV_SHIFT_EXT is
+    set to a four-value integer scale factor by providing four integers in the
+    range [0,2].  TEXTURE_ENV_COORD_SET_EXT may be set to one of
+    TEXTURE0_EXT .. TEXTURE<n>_EXT where <n> is the one less than the number
+    of supported texture coordinate sets. If floating-point values are
+    specified for either TEXTURE_ENV_SHIFT_EXT or TEXTURE_ENV_COORD_SET_EXT
+    they are rounded to the nearest integer.
+
+        The value TEXTURE_ENV_MODE specifies a texture function for the R, G,
+    and B components and the value of TEXTURE_ENV_MODE_ALPHA_EXT specifies a
+    texture function for the A component.  The computed color components Rv,
+    Gv, Bv, and Av are given by the equations:
+
+            Rv = Rx*(2^Rs),
+            Gv = Gx*(2^Gs),
+            Bv = Bx*(2^Bs) and
+            Av = Ax*(2^As),
+
+    where the functions for Rx, Gx, Bx, and Ax are specified in Tables 3.12
+    and 3.13,  and Rs, Gs, Bs, and As are the scaling factors specified with
+    TEXTURE_ENV_SHIFT_EXT. The ENV_COPY_EXT, ENV_REPLACE_EXT,
+    ENV_MODULATE_EXT, and ENV_ADD_EXT functions are specified in Table 3.12,
+    and the ENV_SUBTRACT_EXT, ENV_REVERSE_SUBTRACT_EXT, ENV_BLEND_EXT, and
+    ENV_REVERSE_BLEND_EXT functions are specified in Table 3.13.
+
+        The state required for texture environment TEXTURE_ENV0_EXT consists of
+    the four-valued integer indicating the texture function, four floating-
+    point TEXTURE_ENV_COLOR values and one MAX_TEXTURE_COORD_SETS_EXT-valued
+    integer indicating the texture coordinate set binding.  The state required
+    for texture environment TEXTURE_ENV1_EXT consists of the seven-valued
+    integer indicating the texture function for the R,G, and B components, the
+    five-valued integer indicating the texture function for the A component,
+    four integer-valued TEXTURE_ENV_SHIFT_EXT values, one bit indicating
+    whether TEXTURE_ENV1 is enabled, and one MAX_TEXTURE_COORD_SETS_EXT-valued
+    integer indicating the texture coordinate set binding.  In the initial
+    state, the texture functions for both environments is given by MODULATE,
+    TEXTURE_ENV_COORD_SET_EXT is given by TEXTURE0_EXT in both environments, 
+    TEXTURE_ENV_COLOR in environment zero is (0,0,0,0), TEXTURE_ENV_SHIFT_EXT
+    in environment one is (0,0,0,0) and TEXTURE_ENV1_EXT is FALSE.
+
+    3.8.6 Texture Application
+
+    Texture is enabled or disabled using the generic Enable and Disable
+    commands, respectively, with the symbolic constant TEXTURE_1D or TEXTURE_2D
+    to enable the one-dimensional or two-dimensional texture, respectively.  
+    If both one- and two-dimensional textures are enabled, the two dimensional
+    texture is used. If all texturing is disabled and the currently bound
+    texture environment is TEXTURE_ENV0_EXT, a rasterized fragment is
+    passed on unaltered to the next stage of the GL (although its texture
+    coordinates may be discarded).  If TEXTURE_ENV1_EXT is the current
+    texture environment, the filtered texture values Rt, Gt, Bt, At, Lt, and
+    It are replaced with 1.  Otherwise, a texture value is found according
+    to the parameter values of the currently bound texture image of the
+    appropriate dimensionality using the rules given in sections 3.8.1 and
+    3.8.2.  This texture value is used along with the incoming fragment in
+    computing the texture function indicated by the currently bound texture
+    environment.  The result of this function replaces the incoming fragment's
+    R, G, B, and A values.  These are the color values passed to subsequent
+    operations.  Other data associated with the incoming fragment remain
+    unchanged, except that the texture coordinates may be discarded.
+        The required state us two bits indicating whether each of one- or
+    two-dimensional texturing is enabled or disabled.  In the initial state,
+    all texturing is disabled.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    The value of the texture environment shift is queried by calling 
+    GetTexEnviv, and GetTexEnvfv with the <target> parameter set of TEXTURE_ENV1
+    and the <pname> parameter to TEXTURE_ENV_SHIFT_EXT.
+
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported then the functionality and state
+    associated with EXT_texture3D does not exist and is not supported.
+    (this is more a note that section 3.8.6 should refer to texture3D too)
+
+Dependencies on EXT_multitexture
+
+   If EXT_multitexture is not supported then the functionality and state
+   associated with EXT_multitexture does not exist and the description of
+   TEXTURE_ENV_COORD_SET_EXT is void.  If it is supported, then the state
+   associated with texture environment TEXTURE_ENV1_EXT exists for each active
+   texture.
+
+Errors
+
+    INVALID_VALUE is generated if <params> value for TEXTURE_ENV_SHIFT
+    is not one of 0, 1, or 2.
+
+    INVALID_ENUM is generated if <target> parameter of TexEnvi or TexEnvf
+    is TEXTURE_ENV1_EXT and <pname> parameter is not TEXTURE_ENV_MODE
+    or TEXTURE_ENV_MODE_ALPHA_EXT.
+
+    INVALID_ENUM is generated if <target> parameter of TexEnvi, TexEnvf
+    TexEnviv, TexEnvfv, GetTexEnviv, or GetTexEnvfv is TEXTURE_ENV1_EXT
+    and <pname> parameter is not TEXTURE_ENV_MODE, TEXTURE_ENV_MODE_ALPHA_EXT,
+    or TEXTURE_ENV_SHIFT_EXT.
+
+    INVALID_ENUM is generated if <target> parameter of TexEnvi, TexEnvf
+    TexEnviv, or TexEnvfv is TEXTURE_ENV1_EXT, <pname> parameter is
+    TEXTURE_ENV_MODE and <param> or <params> value is not one of ENV_COPY_EXT,
+    ENV_REPLACE_EXT, ENV_MODULATE_EXT, ENV_ADD_EXT, ENV_SUBTRACT_EXT,
+    ENV_REVERSE_SUBTRACT_EXT, ENV_BLEND_EXT, or ENV_REVERSE_BLEND_EXT
+
+    INVALID_ENUM is generated if <target> parameter of TexEnvi, TexEnvf
+    TexEnviv, or TexEnvfv is TEXTURE_ENV1_EXT, <pname> parameter is
+    TEXTURE_ENV_MODE_ALPHA_EXT and <param> or <params> value is not one of
+    ENV_COPY_EXT, ENV_REPLACE_EXT, ENV_MODULATE_EXT, ENV_ADD_EXT,
+    ENV_SUBTRACT_EXT, or ENV_REVERSE_SUBTRACT_EXT.
+
+New State
+
+    Get Value               Get Command  Type   Initial Value   Attribute
+    ---------               -----------  ----   -------------   ---------
+    TEXTURE_ENV1_EXT        IsEnabled     B     FALSE           enable/texture
+    TEXTURE_ENV_SHIFT_EXT   GetTexEnviv   Z4    (0, 0, 0, 0)    texture
+    TEXTURE_ENV1,MODE       GetTexEnviv   Z7    MODULATE        texture
+    TEXTURE_ENV1,MODE_ALPHA GetTexEnviv   Z5    MODULATE        texture
+
+
+New Implementation Dependent State
+
+    None

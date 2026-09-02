@@ -32,7 +32,7 @@
 
 #include <vector>
 
-#include "dawn/native/Commands.h"
+#include "src/dawn/native/Commands.h"
 
 namespace dawn::native {
 

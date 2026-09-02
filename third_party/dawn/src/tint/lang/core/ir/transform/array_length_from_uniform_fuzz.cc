@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
-#include "src/tint/lang/core/ir/transform/array_length_from_uniform.h"
-#include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
+#include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/ir/transform/array_length_from.h"
 
 namespace tint::core::ir::transform {
 namespace {
@@ -47,5 +47,8 @@ Result<SuccessType> ArrayLengthFromUniformFuzzer(
 }  // namespace
 }  // namespace tint::core::ir::transform
 
+constexpr auto kUnsupportedProperties = tint::core::ir::Properties{
+    tint::core::ir::Property::kAllowMultipleEntryPoints,
+};
 TINT_IR_MODULE_FUZZER(tint::core::ir::transform::ArrayLengthFromUniformFuzzer,
-                      tint::core::ir::transform::kArrayLengthFromUniformCapabilities);
+                      kUnsupportedProperties);

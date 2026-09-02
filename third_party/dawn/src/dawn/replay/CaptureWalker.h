@@ -33,8 +33,8 @@
 #include <variant>
 #include <vector>
 
-#include "dawn/replay/Deserialization.h"
-#include "dawn/replay/ReadHead.h"
+#include "src/dawn/replay/Deserialization.h"
+#include "src/dawn/replay/ReadHead.h"
 
 namespace dawn::replay {
 
@@ -87,8 +87,10 @@ class ReadHead;
 class ComputePassVisitor {
   public:
     virtual ~ComputePassVisitor() = default;
-#define VISITOR_METHOD(NAME) \
-    virtual MaybeError operator()(const schema::CommandBufferCommand##NAME##CmdData& data) = 0;
+#define VISITOR_METHOD(NAME)                                                                  \
+    virtual VisitResult operator()(const schema::CommandBufferCommand##NAME##CmdData& data) { \
+        return VisitStatus::Continue;                                                         \
+    }
     DAWN_REPLAY_COMPUTE_PASS_COMMANDS(VISITOR_METHOD)
 #undef VISITOR_METHOD
 };
@@ -96,8 +98,10 @@ class ComputePassVisitor {
 class RenderPassVisitor {
   public:
     virtual ~RenderPassVisitor() = default;
-#define VISITOR_METHOD(NAME) \
-    virtual MaybeError operator()(const schema::CommandBufferCommand##NAME##CmdData& data) = 0;
+#define VISITOR_METHOD(NAME)                                                                  \
+    virtual VisitResult operator()(const schema::CommandBufferCommand##NAME##CmdData& data) { \
+        return VisitStatus::Continue;                                                         \
+    }
     DAWN_REPLAY_RENDER_PASS_COMMANDS(VISITOR_METHOD)
 #undef VISITOR_METHOD
 };
@@ -105,8 +109,10 @@ class RenderPassVisitor {
 class RenderBundleVisitor {
   public:
     virtual ~RenderBundleVisitor() = default;
-#define VISITOR_METHOD(NAME) \
-    virtual MaybeError operator()(const schema::CommandBufferCommand##NAME##CmdData& data) = 0;
+#define VISITOR_METHOD(NAME)                                                                  \
+    virtual VisitResult operator()(const schema::CommandBufferCommand##NAME##CmdData& data) { \
+        return VisitStatus::Continue;                                                         \
+    }
     DAWN_REPLAY_RENDER_BUNDLE_COMMANDS(VISITOR_METHOD)
 #undef VISITOR_METHOD
 };
@@ -120,8 +126,10 @@ class EncoderVisitor {
     virtual ResultOrError<RenderPassVisitor*> BeginRenderPass(
         const schema::CommandBufferCommandBeginRenderPassCmdData& data) = 0;
 
-#define VISITOR_METHOD(NAME) \
-    virtual MaybeError operator()(const schema::CommandBufferCommand##NAME##CmdData& data) = 0;
+#define VISITOR_METHOD(NAME)                                                                  \
+    virtual VisitResult operator()(const schema::CommandBufferCommand##NAME##CmdData& data) { \
+        return VisitStatus::Continue;                                                         \
+    }
     DAWN_REPLAY_ENCODER_NON_CREATION_COMMANDS(VISITOR_METHOD)
 #undef VISITOR_METHOD
 };
@@ -155,6 +163,7 @@ struct RenderBundleData {
     X(RenderPipeline, schema::RenderPipeline)   \
     X(Sampler, schema::Sampler)                 \
     X(ShaderModule, schema::ShaderModule)       \
+    X(Surface, InvalidData)                     \
     X(TexelBufferView, schema::TexelBufferView) \
     X(Texture, schema::Texture)                 \
     X(TextureView, schema::TextureView)
@@ -172,13 +181,11 @@ class ResourceVisitor {
   public:
     virtual ~ResourceVisitor() = default;
 
-#define DAWN_REPLAY_RESOURCE_VISITOR(ENUM, TYPE) \
-    virtual MaybeError operator()(const TYPE& data) = 0;
+#define DAWN_REPLAY_RESOURCE_VISITOR(ENUM, TYPE) virtual VisitResult operator()(const TYPE& data);
     DAWN_REPLAY_RESOURCE_DATA_MAP(DAWN_REPLAY_RESOURCE_VISITOR)
 #undef DAWN_REPLAY_RESOURCE_VISITOR
 
-    virtual MaybeError operator()(const InvalidData& data);
-    virtual MaybeError operator()(const std::monostate&);
+    virtual VisitResult operator()(const std::monostate&);
 };
 
 class RootCommandVisitor {
@@ -187,27 +194,54 @@ class RootCommandVisitor {
 
     virtual void SetContentReadHead(ReadHead* readHead) = 0;
     virtual ResourceVisitor& GetResourceVisitor() = 0;
-    virtual MaybeError operator()(const CreateResourceData& data) = 0;
-    virtual MaybeError operator()(const schema::RootCommandWriteBufferCmdData& data) = 0;
-    virtual MaybeError operator()(const schema::RootCommandWriteTextureCmdData& data) = 0;
-    virtual MaybeError operator()(const schema::RootCommandQueueSubmitCmdData& data) = 0;
-    virtual MaybeError operator()(const schema::RootCommandSetLabelCmdData& data) = 0;
-    virtual MaybeError operator()(const schema::RootCommandInitTextureCmdData& data) = 0;
-    virtual MaybeError operator()(const schema::RootCommandEndCmdData& data) = 0;
-    virtual MaybeError operator()(const std::monostate&);
+    virtual VisitResult operator()(const CreateResourceData& data);
+    virtual VisitResult operator()(const schema::RootCommandWriteBufferCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandWriteTextureCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandQueueSubmitCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandSetLabelCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandInitTextureCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandSurfaceConfigureCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandSurfaceUnconfigureCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandSurfacePresentCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandSurfaceGetCurrentTextureCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const schema::RootCommandEndCmdData& data) {
+        return VisitStatus::Continue;
+    }
+    virtual VisitResult operator()(const std::monostate&);
 };
 
-MaybeError ProcessEncoderCommands(ReadHead* readHead, EncoderVisitor* visitor);
-MaybeError ProcessComputePassCommands(ReadHead* readHead, ComputePassVisitor* visitor);
-MaybeError ProcessRenderPassCommands(ReadHead* readHead, RenderPassVisitor* visitor);
-MaybeError ProcessRenderBundleCommands(ReadHead* readHead, RenderBundleVisitor* visitor);
+VisitResult ProcessEncoderCommands(ReadHead* readHead, EncoderVisitor* visitor);
+VisitResult ProcessComputePassCommands(ReadHead* readHead, ComputePassVisitor* visitor);
+VisitResult ProcessRenderPassCommands(ReadHead* readHead, RenderPassVisitor* visitor);
+VisitResult ProcessRenderBundleCommands(ReadHead* readHead, RenderBundleVisitor* visitor);
+
+VisitResult SkipEncoderCommands(ReadHead* readHead);
+VisitResult SkipRenderBundleCommands(ReadHead* readHead);
 
 class CaptureWalker {
   public:
     virtual ~CaptureWalker() = default;
     MaybeError Walk(RootCommandVisitor& visitor);
+    MaybeError Walk(RootCommandVisitor& visitor, ReadHead* readHead, ReadHead* contentReadHead);
 
-  protected:
     virtual ReadHead GetCommandReadHead() const = 0;
     virtual ReadHead GetContentReadHead() const = 0;
 };

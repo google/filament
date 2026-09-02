@@ -1,0 +1,134 @@
+Name
+
+    EXT_texture_env_add
+
+Name Strings
+
+    GL_EXT_texture_env_add
+
+Contact
+
+    Michael Gold, NVIDIA (gold 'at' nvidia.com)
+    Tom Frisinger, ATI (tfrisinger 'at' atitech.com)
+
+Status
+
+    Shipping (version 1.7)
+
+Version
+
+    $Date: 1999/03/22 17:28:00 $ $Revision: 1.1 $
+
+Number
+
+    185
+
+Dependencies
+
+    None
+
+Overview
+
+    New texture environment function ADD is supported with the following 
+    equation: 
+                        Cv = min(1, Cf + Ct)
+
+    New function may be specified by calling TexEnv with ADD token.
+    
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnvfi when the <pname> parameter value is GL_TEXTURE_ENV_MODE
+
+        ADD
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+        None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+
+                                Texture Environment
+                                -------------------
+
+        Base Texture Format     REPLACE  MODULATE  BLEND  DECAL  ADD
+        -------------------     -------  --------  -----  -----  ---  
+
+        ALPHA                    ...      ...       ...    ...   Rv = Rf
+                                 ...      ...       ...    ...   Gv = Gf
+                                 ...      ...       ...    ...   Bv = Bf
+                                 ...      ...       ...    ...   Av = AfAt
+
+        LUMINANCE                ...      ...       ...    ...   Rv = min(1, Rf+Lt)
+                                 ...      ...       ...    ...   Gv = min(1, Gf+Lt)
+                                 ...      ...       ...    ...   Bv = min(1, Bf+Lt)
+                                 ...      ...       ...    ...   Av = Af
+
+        LUMINANCE_ALPHA          ...      ...       ...    ...   Rv = min(1, Rf+Lt)
+                                 ...      ...       ...    ...   Gv = min(1, Gf+Lt)
+                                 ...      ...       ...    ...   Bv = min(1, Bf+Lt)
+                                 ...      ...       ...    ...   Av = AfAt
+
+        INTENSITY                ...      ...       ...    ...   Rv = min(1, Rf+It)
+                                 ...      ...       ...    ...   Gv = min(1, Gf+It)
+                                 ...      ...       ...    ...   Bv = min(1, Bf+It)
+                                 ...      ...       ...    ...   Av = min(1, Af+It)
+
+        RGB                      ...      ...       ...    ...   Rv = min(1, Rf+Rt)
+                                 ...      ...       ...    ...   Gv = min(1, Gf+Gt)
+                                 ...      ...       ...    ...   Bv = min(1, Bf+Bt)
+                                 ...      ...       ...    ...   Av = Af
+
+        RGBA                     ...      ...       ...    ...   Rv = min(1, Rf+Rt)
+                                 ...      ...       ...    ...   Gv = min(1, Gf+Gt)
+                                 ...      ...       ...    ...   Bv = min(1, Bf+Bt)
+                                 ...      ...       ...    ...   Av = AfAt
+
+
+        Table 3.11: Texture functions.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+    1.7   08/13/08  mjk       Add missing "clamping to 1" behavior.

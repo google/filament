@@ -33,14 +33,14 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/DynamicLib.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/BackendConnection.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/VulkanFunctions.h"
-#include "dawn/native/vulkan/VulkanInfo.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/BackendConnection.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/VulkanFunctions.h"
+#include "src/dawn/native/vulkan/VulkanInfo.h"
 
 namespace dawn::native::vulkan {
 
@@ -51,7 +51,7 @@ namespace dawn::native::vulkan {
 // See crbug.com/850881, crbug.com/863086, crbug.com/1465064, crbug.com/346990068
 inline constexpr uint32_t kRequiredVulkanVersion = VK_API_VERSION_1_1;
 
-enum class ICD {
+enum class ICD : uint8_t {
     None,
     SwiftShader,
 };

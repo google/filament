@@ -31,7 +31,7 @@ static PostProcessor<libfuzzer_example::Msg> reg1 = {
 
 static PostProcessor<google::protobuf::Any> reg2 = {
     [](google::protobuf::Any* any, unsigned int seed) {
-      // Guide mutator to usefull 'Any' types.
+      // Guide mutator to useful 'Any' types.
       static const char* const expected_types[] = {
           "type.googleapis.com/google.protobuf.DescriptorProto",
           "type.googleapis.com/google.protobuf.FileDescriptorProto",
@@ -55,7 +55,7 @@ DEFINE_PROTO_FUZZER(const libfuzzer_example::Msg& message) {
       !std::isnan(message.optional_float()) &&
       std::fabs(message.optional_float()) > 1000 &&
       message.any().UnpackTo(&file) && !file.name().empty()) {
-    std::cerr << absl::StrCat(message) << "\n";
+    std::cerr << message.DebugString() << "\n";
     abort();
   }
 }

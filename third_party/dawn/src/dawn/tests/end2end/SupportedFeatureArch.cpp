@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/tests/DawnTest.h"
 
 // The purpose of these tests is to prevent regressions of features and limits on architectures that
 // are known to have these supported capabilities.

@@ -3330,5 +3330,1243 @@ $B1: {  # root
     ASSERT_EQ(expect, str());
 }
 
+TEST_F(SpirvReader_AtomicsTest, StoreStructContainingAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* sb = ty.Struct(mod.symbols.New("S"), {
+                                                   {mod.symbols.New("member_a"), ty.f32()},
+                                                   {mod.symbols.New("member_b"), ty.u32()},
+                                               });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, sb, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i);
+        auto* atomic_add = b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd,
+                                                          l1, 1_u, 0_u, 1_u);
+        auto* construct = b.Construct(sb, 1.0_f, atomic_add);
+        b.Store(buffer, construct);
+        b.Return(f);
+    });
+
+    auto* src = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:S = construct 1.0f, %4
+    store %buffer, %5
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
+    %4:u32 = atomicAdd %3, 1u
+    %5:S = construct 1.0f, %4
+    %6:ptr<storage, f32, read_write> = access %buffer, 0u
+    %7:f32 = access %5, 0u
+    store %6, %7
+    %8:ptr<storage, atomic<u32>, read_write> = access %buffer, 1u
+    %9:u32 = access %5, 1u
+    %10:void = atomicStore %8, %9
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, LoadStructContainingAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* sb = ty.Struct(mod.symbols.New("S"), {
+                                                   {mod.symbols.New("member_a"), ty.f32()},
+                                                   {mod.symbols.New("member_b"), ty.u32()},
+                                               });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, sb, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        auto* load = b.Load(buffer);
+        auto* ext_a = b.Access(ty.f32(), load, 0_u);
+        auto* ext_b = b.Access(ty.u32(), load, 1_u);
+
+        auto* local_a = b.Var("local_a", ty.ptr<function, f32, read_write>());
+        auto* local_b = b.Var("local_b", ty.ptr<function, u32, read_write>());
+        b.Store(local_a, ext_a);
+        b.Store(local_b, ext_b);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:S = load %buffer
+    %6:f32 = access %5, 0u
+    %7:u32 = access %5, 1u
+    %local_a:ptr<function, f32, read_write> = var undef
+    %local_b:ptr<function, u32, read_write> = var undef
+    store %local_a, %6
+    store %local_b, %7
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
+    %4:u32 = atomicAdd %3, 1u
+    %5:ptr<storage, f32, read_write> = access %buffer, 0u
+    %6:f32 = load %5
+    %7:ptr<storage, atomic<u32>, read_write> = access %buffer, 1u
+    %8:u32 = atomicLoad %7
+    %9:S = construct %6, %8
+    %10:f32 = access %9, 0u
+    %11:u32 = access %9, 1u
+    %local_a:ptr<function, f32, read_write> = var undef
+    %local_b:ptr<function, u32, read_write> = var undef
+    store %local_a, %10
+    store %local_b, %11
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, LoadArrayOfAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* arr_ty = ty.array(ty.u32(), 4_u);
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, arr_ty, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        auto* load = b.Load(buffer);
+        auto* ext = b.Access(ty.u32(), load, 0_u);
+
+        auto* local = b.Var("local", ty.ptr<function, u32, read_write>());
+        b.Store(local, ext);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:array<u32, 4> = load %buffer
+    %6:u32 = access %5, 0u
+    %local:ptr<function, u32, read_write> = var undef
+    store %local, %6
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<atomic<u32>, 4>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
+    %4:u32 = atomicAdd %3, 1u
+    %5:ptr<storage, atomic<u32>, read_write> = access %buffer, 0u
+    %6:u32 = atomicLoad %5
+    %7:ptr<storage, atomic<u32>, read_write> = access %buffer, 1u
+    %8:u32 = atomicLoad %7
+    %9:ptr<storage, atomic<u32>, read_write> = access %buffer, 2u
+    %10:u32 = atomicLoad %9
+    %11:ptr<storage, atomic<u32>, read_write> = access %buffer, 3u
+    %12:u32 = atomicLoad %11
+    %13:array<u32, 4> = construct %6, %8, %10, %12
+    %14:u32 = access %13, 0u
+    %local:ptr<function, u32, read_write> = var undef
+    store %local, %14
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, StoreArrayOfAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* arr_ty = ty.array(ty.u32(), 4_u);
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, arr_ty, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        auto* construct = b.Construct(arr_ty, 0_u, 1_u, 2_u, 3_u);
+        b.Store(buffer, construct);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:array<u32, 4> = construct 0u, 1u, 2u, 3u
+    store %buffer, %5
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<atomic<u32>, 4>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
+    %4:u32 = atomicAdd %3, 1u
+    %5:array<u32, 4> = construct 0u, 1u, 2u, 3u
+    %6:ptr<storage, atomic<u32>, read_write> = access %buffer, 0u
+    %7:u32 = access %5, 0u
+    %8:void = atomicStore %6, %7
+    %9:ptr<storage, atomic<u32>, read_write> = access %buffer, 1u
+    %10:u32 = access %5, 1u
+    %11:void = atomicStore %9, %10
+    %12:ptr<storage, atomic<u32>, read_write> = access %buffer, 2u
+    %13:u32 = access %5, 2u
+    %14:void = atomicStore %12, %13
+    %15:ptr<storage, atomic<u32>, read_write> = access %buffer, 3u
+    %16:u32 = access %5, 3u
+    %17:void = atomicStore %15, %16
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, LoadArrayOfStructContainingAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* sb = ty.Struct(mod.symbols.New("S"), {
+                                                   {mod.symbols.New("member_a"), ty.f32()},
+                                                   {mod.symbols.New("member_b"), ty.u32()},
+                                               });
+    auto* arr_ty = ty.array(sb, 4_u);
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, arr_ty, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i, 1_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        // Load the whole array
+        auto* load = b.Load(buffer);
+        // Extract member_a of element 2 (non-atomic)
+        auto* ext_a = b.Access(ty.f32(), load, 2_u, 0_u);
+        // Extract member_b of element 2 (atomic)
+        auto* ext_b = b.Access(ty.u32(), load, 2_u, 1_u);
+
+        auto* local_a = b.Var("local_a", ty.ptr<function, f32, read_write>());
+        auto* local_b = b.Var("local_b", ty.ptr<function, u32, read_write>());
+        b.Store(local_a, ext_a);
+        b.Store(local_b, ext_b);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, array<S, 4>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i, 1u
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:array<S, 4> = load %buffer
+    %6:f32 = access %5, 2u, 0u
+    %7:u32 = access %5, 2u, 1u
+    %local_a:ptr<function, f32, read_write> = var undef
+    %local_b:ptr<function, u32, read_write> = var undef
+    store %local_a, %6
+    store %local_b, %7
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, array<S_atomic, 4>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i, 1u
+    %4:u32 = atomicAdd %3, 1u
+    %5:ptr<storage, S_atomic, read_write> = access %buffer, 0u
+    %6:ptr<storage, f32, read_write> = access %5, 0u
+    %7:f32 = load %6
+    %8:ptr<storage, atomic<u32>, read_write> = access %5, 1u
+    %9:u32 = atomicLoad %8
+    %10:S = construct %7, %9
+    %11:ptr<storage, S_atomic, read_write> = access %buffer, 1u
+    %12:ptr<storage, f32, read_write> = access %11, 0u
+    %13:f32 = load %12
+    %14:ptr<storage, atomic<u32>, read_write> = access %11, 1u
+    %15:u32 = atomicLoad %14
+    %16:S = construct %13, %15
+    %17:ptr<storage, S_atomic, read_write> = access %buffer, 2u
+    %18:ptr<storage, f32, read_write> = access %17, 0u
+    %19:f32 = load %18
+    %20:ptr<storage, atomic<u32>, read_write> = access %17, 1u
+    %21:u32 = atomicLoad %20
+    %22:S = construct %19, %21
+    %23:ptr<storage, S_atomic, read_write> = access %buffer, 3u
+    %24:ptr<storage, f32, read_write> = access %23, 0u
+    %25:f32 = load %24
+    %26:ptr<storage, atomic<u32>, read_write> = access %23, 1u
+    %27:u32 = atomicLoad %26
+    %28:S = construct %25, %27
+    %29:array<S, 4> = construct %10, %16, %22, %28
+    %30:f32 = access %29, 2u, 0u
+    %31:u32 = access %29, 2u, 1u
+    %local_a:ptr<function, f32, read_write> = var undef
+    %local_b:ptr<function, u32, read_write> = var undef
+    store %local_a, %30
+    store %local_b, %31
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, LoadNestedStructContainingAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* inner = ty.Struct(mod.symbols.New("Inner"), {
+                                                          {mod.symbols.New("member_a"), ty.f32()},
+                                                          {mod.symbols.New("member_b"), ty.u32()},
+                                                      });
+    auto* outer = ty.Struct(mod.symbols.New("Outer"), {
+                                                          {mod.symbols.New("member_a"), ty.i32()},
+                                                          {mod.symbols.New("member_b"), inner},
+                                                      });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, outer, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_u, 1_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        // Load the whole outer struct
+        auto* load = b.Load(buffer);
+        // Extract non-atomic member_a from outer
+        auto* ext_a = b.Access(ty.i32(), load, 0_u);
+        // Extract non-atomic member_a from inner
+        auto* ext_ba = b.Access(ty.f32(), load, 1_u, 0_u);
+        // Extract atomic member_b from inner
+        auto* ext_bb = b.Access(ty.u32(), load, 1_u, 1_u);
+
+        auto* local_a = b.Var("local_a", ty.ptr<function, i32, read_write>());
+        auto* local_ba = b.Var("local_ba", ty.ptr<function, f32, read_write>());
+        auto* local_bb = b.Var("local_bb", ty.ptr<function, u32, read_write>());
+        b.Store(local_a, ext_a);
+        b.Store(local_ba, ext_ba);
+        b.Store(local_bb, ext_bb);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+Inner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  member_a_1:i32 @offset(0)
+  member_b_1:Inner @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1u, 1u
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:Outer = load %buffer
+    %6:i32 = access %5, 0u
+    %7:f32 = access %5, 1u, 0u
+    %8:u32 = access %5, 1u, 1u
+    %local_a:ptr<function, i32, read_write> = var undef
+    %local_ba:ptr<function, f32, read_write> = var undef
+    %local_bb:ptr<function, u32, read_write> = var undef
+    store %local_a, %6
+    store %local_ba, %7
+    store %local_bb, %8
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+Inner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  member_a_1:i32 @offset(0)
+  member_b_1:Inner @offset(4)
+}
+
+Inner_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+Outer_atomic = struct @align(4) {
+  member_a_1:i32 @offset(0)
+  member_b_1:Inner_atomic @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1u, 1u
+    %4:u32 = atomicAdd %3, 1u
+    %5:ptr<storage, i32, read_write> = access %buffer, 0u
+    %6:i32 = load %5
+    %7:ptr<storage, Inner_atomic, read_write> = access %buffer, 1u
+    %8:ptr<storage, f32, read_write> = access %7, 0u
+    %9:f32 = load %8
+    %10:ptr<storage, atomic<u32>, read_write> = access %7, 1u
+    %11:u32 = atomicLoad %10
+    %12:Inner = construct %9, %11
+    %13:Outer = construct %6, %12
+    %14:i32 = access %13, 0u
+    %15:f32 = access %13, 1u, 0u
+    %16:u32 = access %13, 1u, 1u
+    %local_a:ptr<function, i32, read_write> = var undef
+    %local_ba:ptr<function, f32, read_write> = var undef
+    %local_bb:ptr<function, u32, read_write> = var undef
+    store %local_a, %14
+    store %local_ba, %15
+    store %local_bb, %16
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, LoadStructContainingAtomicAndNonAtomicStruct) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* atomic_inner =
+        ty.Struct(mod.symbols.New("AtomicInner"), {
+                                                      {mod.symbols.New("member_a"), ty.f32()},
+                                                      {mod.symbols.New("member_b"), ty.u32()},
+                                                  });
+    auto* non_atomic_inner =
+        ty.Struct(mod.symbols.New("NonAtomicInner"), {
+                                                         {mod.symbols.New("member_x"), ty.f32()},
+                                                         {mod.symbols.New("member_y"), ty.u32()},
+                                                     });
+    auto* outer =
+        ty.Struct(mod.symbols.New("Outer"), {
+                                                {mod.symbols.New("first"), atomic_inner},
+                                                {mod.symbols.New("second"), non_atomic_inner},
+                                            });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, outer, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 0_u, 1_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        // Load the whole outer struct
+        auto* load = b.Load(buffer);
+        // Extract non-atomic member_a from first
+        auto* ext_a = b.Access(ty.f32(), load, 0_u, 0_u);
+        // Extract atomic member_b from first
+        auto* ext_b = b.Access(ty.u32(), load, 0_u, 1_u);
+        // Extract second struct (non-atomic struct value)
+        auto* ext_second = b.Access(non_atomic_inner, load, 1_u);
+
+        auto* local_a = b.Var("local_a", ty.ptr<function, f32, read_write>());
+        auto* local_b = b.Var("local_b", ty.ptr<function, u32, read_write>());
+        auto* local_second = b.Var("local_second", ty.ptr(function, non_atomic_inner, read_write));
+        b.Store(local_a, ext_a);
+        b.Store(local_b, ext_b);
+        b.Store(local_second, ext_second);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+AtomicInner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+NonAtomicInner = struct @align(4) {
+  member_x:f32 @offset(0)
+  member_y:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  first:AtomicInner @offset(0)
+  second:NonAtomicInner @offset(8)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 0u, 1u
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:Outer = load %buffer
+    %6:f32 = access %5, 0u, 0u
+    %7:u32 = access %5, 0u, 1u
+    %8:NonAtomicInner = access %5, 1u
+    %local_a:ptr<function, f32, read_write> = var undef
+    %local_b:ptr<function, u32, read_write> = var undef
+    %local_second:ptr<function, NonAtomicInner, read_write> = var undef
+    store %local_a, %6
+    store %local_b, %7
+    store %local_second, %8
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+AtomicInner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+NonAtomicInner = struct @align(4) {
+  member_x:f32 @offset(0)
+  member_y:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  first:AtomicInner @offset(0)
+  second:NonAtomicInner @offset(8)
+}
+
+AtomicInner_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+Outer_atomic = struct @align(4) {
+  first:AtomicInner_atomic @offset(0)
+  second:NonAtomicInner @offset(8)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 0u, 1u
+    %4:u32 = atomicAdd %3, 1u
+    %5:ptr<storage, AtomicInner_atomic, read_write> = access %buffer, 0u
+    %6:ptr<storage, f32, read_write> = access %5, 0u
+    %7:f32 = load %6
+    %8:ptr<storage, atomic<u32>, read_write> = access %5, 1u
+    %9:u32 = atomicLoad %8
+    %10:AtomicInner = construct %7, %9
+    %11:ptr<storage, NonAtomicInner, read_write> = access %buffer, 1u
+    %12:NonAtomicInner = load %11
+    %13:Outer = construct %10, %12
+    %14:f32 = access %13, 0u, 0u
+    %15:u32 = access %13, 0u, 1u
+    %16:NonAtomicInner = access %13, 1u
+    %local_a:ptr<function, f32, read_write> = var undef
+    %local_b:ptr<function, u32, read_write> = var undef
+    %local_second:ptr<function, NonAtomicInner, read_write> = var undef
+    store %local_a, %14
+    store %local_b, %15
+    store %local_second, %16
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, StoreArrayOfStructContainingAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* sb = ty.Struct(mod.symbols.New("S"), {
+                                                   {mod.symbols.New("member_a"), ty.f32()},
+                                                   {mod.symbols.New("member_b"), ty.u32()},
+                                               });
+    auto* arr_ty = ty.array(sb, 2_u);
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, arr_ty, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i, 1_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        auto* s0 = b.Construct(sb, 1.0_f, 2_u);
+        auto* s1 = b.Construct(sb, 3.0_f, 4_u);
+        auto* construct = b.Construct(arr_ty, s0, s1);
+        b.Store(buffer, construct);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, array<S, 2>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i, 1u
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:S = construct 1.0f, 2u
+    %6:S = construct 3.0f, 4u
+    %7:array<S, 2> = construct %5, %6
+    store %buffer, %7
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+S = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, array<S_atomic, 2>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i, 1u
+    %4:u32 = atomicAdd %3, 1u
+    %5:S = construct 1.0f, 2u
+    %6:S = construct 3.0f, 4u
+    %7:array<S, 2> = construct %5, %6
+    %8:ptr<storage, S_atomic, read_write> = access %buffer, 0u
+    %9:S = access %7, 0u
+    %10:ptr<storage, f32, read_write> = access %8, 0u
+    %11:f32 = access %9, 0u
+    store %10, %11
+    %12:ptr<storage, atomic<u32>, read_write> = access %8, 1u
+    %13:u32 = access %9, 1u
+    %14:void = atomicStore %12, %13
+    %15:ptr<storage, S_atomic, read_write> = access %buffer, 1u
+    %16:S = access %7, 1u
+    %17:ptr<storage, f32, read_write> = access %15, 0u
+    %18:f32 = access %16, 0u
+    store %17, %18
+    %19:ptr<storage, atomic<u32>, read_write> = access %15, 1u
+    %20:u32 = access %16, 1u
+    %21:void = atomicStore %19, %20
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, StoreNestedStructContainingAtomic) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* inner = ty.Struct(mod.symbols.New("Inner"), {
+                                                          {mod.symbols.New("member_a"), ty.f32()},
+                                                          {mod.symbols.New("member_b"), ty.u32()},
+                                                      });
+    auto* outer = ty.Struct(mod.symbols.New("Outer"), {
+                                                          {mod.symbols.New("member_a"), ty.i32()},
+                                                          {mod.symbols.New("member_b"), inner},
+                                                      });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, outer, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_u, 1_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        auto* inner_val = b.Construct(inner, 1.0_f, 2_u);
+        auto* outer_val = b.Construct(outer, 1_i, inner_val);
+        b.Store(buffer, outer_val);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+Inner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  member_a_1:i32 @offset(0)
+  member_b_1:Inner @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1u, 1u
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:Inner = construct 1.0f, 2u
+    %6:Outer = construct 1i, %5
+    store %buffer, %6
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+Inner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  member_a_1:i32 @offset(0)
+  member_b_1:Inner @offset(4)
+}
+
+Inner_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+Outer_atomic = struct @align(4) {
+  member_a_1:i32 @offset(0)
+  member_b_1:Inner_atomic @offset(4)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1u, 1u
+    %4:u32 = atomicAdd %3, 1u
+    %5:Inner = construct 1.0f, 2u
+    %6:Outer = construct 1i, %5
+    %7:ptr<storage, i32, read_write> = access %buffer, 0u
+    %8:i32 = access %6, 0u
+    store %7, %8
+    %9:ptr<storage, Inner_atomic, read_write> = access %buffer, 1u
+    %10:Inner = access %6, 1u
+    %11:ptr<storage, f32, read_write> = access %9, 0u
+    %12:f32 = access %10, 0u
+    store %11, %12
+    %13:ptr<storage, atomic<u32>, read_write> = access %9, 1u
+    %14:u32 = access %10, 1u
+    %15:void = atomicStore %13, %14
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, StoreStructContainingAtomicAndNonAtomicStruct) {
+    auto* f = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+
+    auto* atomic_inner =
+        ty.Struct(mod.symbols.New("AtomicInner"), {
+                                                      {mod.symbols.New("member_a"), ty.f32()},
+                                                      {mod.symbols.New("member_b"), ty.u32()},
+                                                  });
+    auto* non_atomic_inner =
+        ty.Struct(mod.symbols.New("NonAtomicInner"), {
+                                                         {mod.symbols.New("member_x"), ty.f32()},
+                                                         {mod.symbols.New("member_y"), ty.u32()},
+                                                     });
+    auto* outer =
+        ty.Struct(mod.symbols.New("Outer"), {
+                                                {mod.symbols.New("first"), atomic_inner},
+                                                {mod.symbols.New("second"), non_atomic_inner},
+                                            });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, outer, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 0_u, 1_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 1_u);
+
+        auto* first_val = b.Construct(atomic_inner, 1.0_f, 2_u);
+        auto* second_val = b.Construct(non_atomic_inner, 3.0_f, 4_u);
+        auto* outer_val = b.Construct(outer, first_val, second_val);
+        b.Store(buffer, outer_val);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+AtomicInner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+NonAtomicInner = struct @align(4) {
+  member_x:f32 @offset(0)
+  member_y:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  first:AtomicInner @offset(0)
+  second:NonAtomicInner @offset(8)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 0u, 1u
+    %4:u32 = spirv.atomic_i_add %3, 1u, 0u, 1u
+    %5:AtomicInner = construct 1.0f, 2u
+    %6:NonAtomicInner = construct 3.0f, 4u
+    %7:Outer = construct %5, %6
+    store %buffer, %7
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+AtomicInner = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:u32 @offset(4)
+}
+
+NonAtomicInner = struct @align(4) {
+  member_x:f32 @offset(0)
+  member_y:u32 @offset(4)
+}
+
+Outer = struct @align(4) {
+  first:AtomicInner @offset(0)
+  second:NonAtomicInner @offset(8)
+}
+
+AtomicInner_atomic = struct @align(4) {
+  member_a:f32 @offset(0)
+  member_b:atomic<u32> @offset(4)
+}
+
+Outer_atomic = struct @align(4) {
+  first:AtomicInner_atomic @offset(0)
+  second:NonAtomicInner @offset(8)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 0u, 1u
+    %4:u32 = atomicAdd %3, 1u
+    %5:AtomicInner = construct 1.0f, 2u
+    %6:NonAtomicInner = construct 3.0f, 4u
+    %7:Outer = construct %5, %6
+    %8:ptr<storage, AtomicInner_atomic, read_write> = access %buffer, 0u
+    %9:AtomicInner = access %7, 0u
+    %10:ptr<storage, f32, read_write> = access %8, 0u
+    %11:f32 = access %9, 0u
+    store %10, %11
+    %12:ptr<storage, atomic<u32>, read_write> = access %8, 1u
+    %13:u32 = access %9, 1u
+    %14:void = atomicStore %12, %13
+    %15:ptr<storage, NonAtomicInner, read_write> = access %buffer, 1u
+    %16:NonAtomicInner = access %7, 1u
+    store %15, %16
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, AccessNonAtomicMatrixInAtomicStruct) {
+    auto* f = b.ComputeFunction("main");
+
+    auto* inner = ty.Struct(mod.symbols.Register("Inner"),
+                            {
+                                {mod.symbols.Register("xform"), ty.mat4x4<f32>()},
+                            });
+
+    auto* outer = ty.Struct(mod.symbols.Register("Outer"),
+                            {
+                                {mod.symbols.Register("particle_count"), ty.i32()},
+                                {mod.symbols.Register("data"), ty.array(inner, 4_u)},
+                            });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, outer, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* cnt_ptr = b.Access(ty.ptr<storage, i32, read_write>(), buffer, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIAdd, cnt_ptr, 1_u, 0_u,
+                                       1_i);
+
+        auto* mat_ptr =
+            b.Access(ty.ptr<storage, vec4<f32>, read_write>(), buffer, 1_u, 0_u, 0_u, 3_u);
+        b.Load(mat_ptr);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+Inner = struct @align(16) {
+  xform:mat4x4<f32> @offset(0)
+}
+
+Outer = struct @align(16) {
+  particle_count:i32 @offset(0)
+  data:array<Inner, 4> @offset(16)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, i32, read_write> = access %buffer, 0u
+    %4:i32 = spirv.atomic_i_add %3, 1u, 0u, 1i
+    %5:ptr<storage, vec4<f32>, read_write> = access %buffer, 1u, 0u, 0u, 3u
+    %6:vec4<f32> = load %5
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+Inner = struct @align(16) {
+  xform:mat4x4<f32> @offset(0)
+}
+
+Outer = struct @align(16) {
+  particle_count:i32 @offset(0)
+  data:array<Inner, 4> @offset(16)
+}
+
+Outer_atomic = struct @align(16) {
+  particle_count:atomic<i32> @offset(0)
+  data:array<Inner, 4> @offset(16)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<i32>, read_write> = access %buffer, 0u
+    %4:i32 = atomicAdd %3, 1i
+    %5:ptr<storage, vec4<f32>, read_write> = access %buffer, 1u, 0u, 0u, 3u
+    %6:vec4<f32> = load %5
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, AccessNonAtomicVectorInAtomicStruct) {
+    mod.properties.Add(core::ir::Property::kAllowVectorElementPointer);
+
+    auto* f = b.ComputeFunction("main");
+
+    auto* inner = ty.Struct(mod.symbols.Register("Inner"),
+                            {
+                                {mod.symbols.Register("vector"), ty.vec4<f32>()},
+                            });
+
+    auto* outer = ty.Struct(mod.symbols.Register("Outer"),
+                            {
+                                {mod.symbols.Register("particle_count"), ty.i32()},
+                                {mod.symbols.Register("data"), ty.array(inner, 4_u)},
+                            });
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block, [&] {
+        buffer = b.Var("buffer", ty.ptr(storage, outer, read_write));
+        buffer->SetBindingPoint(0, 0);
+    });
+
+    b.Append(f->Block(), [&] {
+        auto* cnt_ptr = b.Access(ty.ptr<storage, i32, read_write>(), buffer, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIAdd, cnt_ptr, 1_u, 0_u,
+                                       1_i);
+
+        auto* vec_ptr = b.Access(ty.ptr<storage, f32, read_write>(), buffer, 1_u, 0_u, 0_u, 3_u);
+        b.Load(vec_ptr);
+
+        b.Return(f);
+    });
+
+    auto* src = R"(
+Inner = struct @align(16) {
+  vector:vec4<f32> @offset(0)
+}
+
+Outer = struct @align(16) {
+  particle_count:i32 @offset(0)
+  data:array<Inner, 4> @offset(16)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, i32, read_write> = access %buffer, 0u
+    %4:i32 = spirv.atomic_i_add %3, 1u, 0u, 1i
+    %5:ptr<storage, f32, read_write> = access %buffer, 1u, 0u, 0u, 3u
+    %6:f32 = load %5
+    ret
+  }
+}
+)";
+
+    auto* expect = R"(
+Inner = struct @align(16) {
+  vector:vec4<f32> @offset(0)
+}
+
+Outer = struct @align(16) {
+  particle_count:i32 @offset(0)
+  data:array<Inner, 4> @offset(16)
+}
+
+Outer_atomic = struct @align(16) {
+  particle_count:atomic<i32> @offset(0)
+  data:array<Inner, 4> @offset(16)
+}
+
+$B1: {  # root
+  %buffer:ptr<storage, Outer_atomic, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<i32>, read_write> = access %buffer, 0u
+    %4:i32 = atomicAdd %3, 1i
+    %5:ptr<storage, f32, read_write> = access %buffer, 1u, 0u, 0u, 3u
+    %6:f32 = load %5
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+    ASSERT_EQ(expect, str());
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader::lower

@@ -25,22 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
 
 #include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/QueueWGPU.h"
-#include "dawn/native/webgpu/SharedFenceWGPU.h"
-#include "dawn/native/webgpu/SharedTextureMemoryWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/QueueWGPU.h"
+#include "src/dawn/native/webgpu/SharedFenceWGPU.h"
+#include "src/dawn/native/webgpu/SharedTextureMemoryWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::webgpu {
 
@@ -51,11 +52,18 @@ ResultOrError<Ref<Texture>> Texture::Create(Device* device,
 }
 
 // static
-ResultOrError<Ref<Texture>> Texture::CreateFromSharedTextureMemory(
+Ref<Texture> Texture::CreateFromSharedTextureMemory(
     const SharedTextureMemory* memory,
     const UnpackedPtr<TextureDescriptor>& descriptor) {
     Device* device = ToBackend(memory->GetDevice());
     return AcquireRef(new Texture(device, descriptor, memory));
+}
+
+// static
+Ref<Texture> Texture::CreateFromSurfaceTexture(Device* device,
+                                               const UnpackedPtr<TextureDescriptor>& descriptor,
+                                               const WGPUSurfaceTexture& surfaceTexture) {
+    return AcquireRef(new Texture(device, descriptor, surfaceTexture));
 }
 
 struct ComboTextureDescriptor {
@@ -128,6 +136,22 @@ Texture::Texture(Device* device,
         device->wgpu->sharedTextureMemoryCreateTexture(memory->GetInnerHandle(), &comboDesc.desc);
     mSharedResourceMemoryContents = memory->GetContents();
 
+    // TODO(crbug.com/500368961): Generalize wgpu::SharedTextureMemoryD3DSwapchainBeginState
+    // to all platform and use that to indicate if it's a SwapChain texture (assigning
+    // mIsSurfaceTexture) and mark frame boundary.
+
+    DAWN_ASSERT(mInnerHandle);
+}
+
+Texture::Texture(Device* device,
+                 const UnpackedPtr<TextureDescriptor>& descriptor,
+                 const WGPUSurfaceTexture& surfaceTexture)
+    : TextureBase(device, descriptor),
+      RecordableObject(schema::ObjectType::Texture),
+      ObjectWGPU(device->wgpu->textureRelease) {
+    mInnerHandle = surfaceTexture.texture;
+    mIsSurfaceTexture = true;
+
     DAWN_ASSERT(mInnerHandle);
 }
 
@@ -171,6 +195,7 @@ void Texture::SynchronizeTextureBeforeUse() {
             }
             innerDesc.fenceCount = innerFences.size();
             innerDesc.fences = innerFences.data();
+            innerDesc.signaledValueCount = signaledValues.size();
             innerDesc.signaledValues = signaledValues.data();
 
             const DawnProcTable& wgpu = ToBackend(GetDevice())->wgpu.get();
@@ -237,6 +262,7 @@ MaybeError Texture::CaptureCreationParameters(CaptureContext& captureContext) {
         .mipLevelCount = GetNumMipLevels(),
         .sampleCount = GetSampleCount(),
         .viewFormats = viewFormats,
+        .isSurfaceTexture = mIsSurfaceTexture,
     }};
     Serialize(captureContext, tex);
     return {};
@@ -254,7 +280,7 @@ MaybeError MapBufferAndWriteTextureData(CaptureContext::ScopedContentWriter& wri
                                         WGPUBuffer copyBuffer,
                                         BlockCount blockRows,
                                         uint32_t alignedBytesPerRow,
-                                        uint32_t mappableBytesPerRow,
+                                        size_t mappableBytesPerRow,
                                         uint32_t usedBytesPerRow) {
     struct MapAsyncResult {
         WGPUMapAsyncStatus status;
@@ -276,9 +302,10 @@ MaybeError MapBufferAndWriteTextureData(CaptureContext::ScopedContentWriter& wri
 
     // Read this back synchronously.
     WGPUFutureWaitInfo waitInfo = {};
-    uint64_t offset = 0;
+    size_t offset = 0;
     waitInfo.future = wgpu->bufferMapAsync(copyBuffer, WGPUMapMode_Read, offset,
-                                           CaptureContext::kCopyBufferSize, innerCallbackInfo);
+                                           checked_cast<size_t>(CaptureContext::kCopyBufferSize),
+                                           innerCallbackInfo);
     wgpu->instanceWaitAny(device->GetInnerInstance(), 1, &waitInfo, UINT64_MAX);
 
     DAWN_ASSERT(mapAsyncResult.status == WGPUMapAsyncStatus_Success);
@@ -288,9 +315,10 @@ MaybeError MapBufferAndWriteTextureData(CaptureContext::ScopedContentWriter& wri
     }
 
     // We only write out the beginning of each row, the rest is padding.
-    for (BlockCount blockRow{0}; blockRow < blockRows; ++blockRow) {
+    for (BlockCount blockRow{0u}; blockRow < blockRows; ++blockRow) {
         const void* data = wgpu->bufferGetConstMappedRange(
-            copyBuffer, uint32_t(blockRow) * alignedBytesPerRow, mappableBytesPerRow);
+            copyBuffer, static_cast<size_t>(dchecked_cast<uint32_t>(blockRow)) * alignedBytesPerRow,
+            mappableBytesPerRow);
         writer.WriteContentBytes(data, usedBytesPerRow);
     }
     wgpu->bufferUnmap(copyBuffer);
@@ -324,7 +352,7 @@ MaybeError Texture::CaptureContentIfNeeded(CaptureContext& captureContext,
                                            schema::ObjectId id,
                                            bool newResource) {
     // If it's all zeros or it's transient we don't need to capture it.
-    if (!IsInitialized() || !newResource ||
+    if (!IsResourceInitialized() || !newResource ||
         (GetUsage() & wgpu::TextureUsage::TransientAttachment)) {
         return {};
     }
@@ -348,7 +376,7 @@ MaybeError Texture::CaptureContentIfNeeded(CaptureContext& captureContext,
             auto size = TexelExtent3D(GetMipLevelSubresourcePhysicalSize(mipLevel, aspect));
             auto blockSize = blockInfo.ToBlock(size);
             uint32_t usedBytesPerRow = uint32_t(blockInfo.ToBytes(blockSize.width));
-            uint32_t mappableBytesPerRow = RoundUp(usedBytesPerRow, 4);
+            size_t mappableBytesPerRow = checked_cast<size_t>(RoundUp(usedBytesPerRow, 4));
 
             schema::RootCommandInitTextureCmd cmd{{
                 .data = {{
@@ -361,12 +389,12 @@ MaybeError Texture::CaptureContentIfNeeded(CaptureContext& captureContext,
                     .layout = {{
                         .offset = 0,
                         .bytesPerRow = usedBytesPerRow,
-                        .rowsPerImage = uint32_t(blockSize.height),
+                        .rowsPerImage = dchecked_cast<uint32_t>(blockSize.height),
                     }},
                     .size = {{
-                        .width = uint32_t(size.width),
-                        .height = uint32_t(size.height),
-                        .depthOrArrayLayers = uint32_t(size.depthOrArrayLayers),
+                        .width = dchecked_cast<uint32_t>(size.width),
+                        .height = dchecked_cast<uint32_t>(size.height),
+                        .depthOrArrayLayers = dchecked_cast<uint32_t>(size.depthOrArrayLayers),
                     }},
                     .dataSize = blockInfo.ToBytes(blockSize.width * blockSize.height *
                                                   blockSize.depthOrArrayLayers),
@@ -377,11 +405,12 @@ MaybeError Texture::CaptureContentIfNeeded(CaptureContext& captureContext,
             CaptureContext::ScopedContentWriter writer(captureContext);
 
             uint32_t alignedBytesPerRow = Align(usedBytesPerRow, 256);
-            BlockCount maxBlockRowsPerRead{CaptureContext::kCopyBufferSize / alignedBytesPerRow};
-            DAWN_ASSERT(maxBlockRowsPerRead > BlockCount{0});
+            BlockCount maxBlockRowsPerRead{
+                checked_cast<uint32_t>(CaptureContext::kCopyBufferSize / alignedBytesPerRow)};
+            DAWN_ASSERT(maxBlockRowsPerRead > BlockCount{0u});
 
-            for (BlockCount z{0}; z < blockSize.depthOrArrayLayers; ++z) {
-                for (BlockCount y{0}; y < blockSize.height; y += maxBlockRowsPerRead) {
+            for (BlockCount z{0u}; z < blockSize.depthOrArrayLayers; ++z) {
+                for (BlockCount y{0u}; y < blockSize.height; y += maxBlockRowsPerRead) {
                     BlockCount blockRows = std::min(maxBlockRowsPerRead, blockSize.height - y);
 
                     // Copy Data from Texture to Buffer. Then map and write buffer.
@@ -391,8 +420,8 @@ MaybeError Texture::CaptureContentIfNeeded(CaptureContext& captureContext,
                         .origin =
                             {
                                 .x = 0,
-                                .y = uint32_t(blockInfo.ToTexelHeight(y)),
-                                .z = uint32_t(blockInfo.ToTexelHeight(z)),
+                                .y = dchecked_cast<uint32_t>(blockInfo.ToTexelHeight(y)),
+                                .z = dchecked_cast<uint32_t>(blockInfo.ToTexelHeight(z)),
                             },
                         .aspect = ToWGPU(aspect),
                     };
@@ -401,13 +430,13 @@ MaybeError Texture::CaptureContentIfNeeded(CaptureContext& captureContext,
                             {
                                 .offset = 0,
                                 .bytesPerRow = alignedBytesPerRow,
-                                .rowsPerImage = uint32_t(blockRows),
+                                .rowsPerImage = dchecked_cast<uint32_t>(blockRows),
                             },
                         .buffer = copyBuffer,
                     };
                     WGPUExtent3D copySize{
-                        .width = uint32_t(blockInfo.ToTexelWidth(blockSize.width)),
-                        .height = uint32_t(blockInfo.ToTexelHeight(blockRows)),
+                        .width = dchecked_cast<uint32_t>(blockInfo.ToTexelWidth(blockSize.width)),
+                        .height = dchecked_cast<uint32_t>(blockInfo.ToTexelHeight(blockRows)),
                         .depthOrArrayLayers = 1,
                     };
 

@@ -28,9 +28,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -186,6 +186,22 @@ TEST_F(ComputeValidationEntryPointTest, EntryPointNameRequiredIfNoCompatibleEntr
     csDesc.compute.entryPoint = nullptr;
 
     ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&csDesc));
+}
+
+// Test that CreateErrorComputePipeline creates an invalid compute pipeline but doesn't produce an
+// error right at creation.
+TEST_F(ComputePipelineValidationTest, CreateErrorComputePipeline) {
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = CreateShaderModule();
+
+    // Check that the descriptor is valid.
+    device.CreateComputePipeline(&csDesc);
+
+    // Creating the error compute pipeline doesn't produce a validation error at creation time.
+    wgpu::ComputePipeline pipeline = device.CreateErrorComputePipeline("my_error_pipeline");
+
+    // Using the error compute pipeline, for example to get a bind group layout, is an error.
+    ASSERT_DEVICE_ERROR(pipeline.GetBindGroupLayout(0));
 }
 
 }  // anonymous namespace

@@ -1,0 +1,702 @@
+Name
+
+    NV_vertex_array_range
+
+Name Strings
+
+    GL_NV_vertex_array_range
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2000, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping (version 1.1)
+
+    Existing functionality is augmented by NV_vertex_array_range2.
+
+Version
+
+    NVIDIA Date: September 17, 2001 (version 1.1)
+
+Number
+
+    190
+
+Dependencies
+
+    None
+
+Overview
+
+    The goal of this extension is to permit extremely high vertex
+    processing rates via OpenGL vertex arrays even when the CPU lacks
+    the necessary data movement bandwidth to keep up with the rate
+    at which the vertex engine can consume vertices.  CPUs can keep
+    up if they can just pass vertex indices to the hardware and
+    let the hardware "pull" the actual vertex data via Direct Memory
+    Access (DMA).  Unfortunately, the current OpenGL 1.1 vertex array
+    functionality has semantic constraints that make such an approach
+    hard.  Hence, the vertex array range extension.
+
+    This extension provides a mechanism for deferring the pulling of
+    vertex array elements to facilitate DMAed pulling of vertices for
+    fast, efficient vertex array transfers.  The OpenGL client need only
+    pass vertex indices to the hardware which can DMA the actual index's
+    vertex data directly out of the client address space.
+
+    The OpenGL 1.1 vertex array functionality specifies a fairly strict
+    coherency model for when OpenGL extracts vertex data from a vertex
+    array and when the application can update the in memory
+    vertex array data.  The OpenGL 1.1 specification says "Changes
+    made to array data between the execution of Begin and the
+    corresponding execution of End may affect calls to ArrayElement
+    that are made within the same Begin/End period in non-sequential
+    ways.  That is, a call to ArrayElement that precedes a change to
+    array data may access the changed data, and a call that follows
+    a change to array data may access the original data."
+
+    This means that by the time End returns (and DrawArrays and
+    DrawElements return since they have implicit Ends), the actual vertex
+    array data must be transferred to OpenGL.  This strict coherency model
+    prevents us from simply passing vertex element indices to the hardware
+    and having the hardware "pull" the vertex data out (which is often
+    long after the End for the primitive has returned to the application).
+
+    Relaxing this coherency model and bounding the range from which
+    vertex array data can be pulled is key to making OpenGL vertex
+    array transfers faster and more efficient.
+
+    The first task of the vertex array range extension is to relax
+    the coherency model so that hardware can indeed "pull" vertex
+    data from the OpenGL client's address space long after the application
+    has completed sending the geometry primitives requiring the vertex
+    data.
+
+    The second problem with the OpenGL 1.1 vertex array functionality is
+    the lack of any guidance from the API about what region of memory
+    vertices can be pulled from.  There is no size limit for OpenGL 1.1
+    vertex arrays.  Any vertex index that points to valid data in all
+    enabled arrays is fair game.  This makes it hard for a vertex DMA
+    engine to pull vertices since they can be potentially pulled from
+    anywhere in the OpenGL client address space.
+
+    The vertex array range extension specifies a range of the OpenGL
+    client's address space where vertices can be pulled.  Vertex indices
+    that access any array elements outside the vertex array range
+    are specified to be undefined.  This permits hardware to DMA from
+    finite regions of OpenGL client address space, making DMA engine
+    implementation tractable.
+
+    The extension is specified such that an (error free) OpenGL client
+    using the vertex array range functionality could no-op its vertex
+    array range commands and operate equivalently to using (if slower
+    than) the vertex array range functionality.
+
+    Because different memory types (local graphics memory, AGP memory)
+    have different DMA bandwidths and caching behavior, this extension
+    includes a window system dependent memory allocator to allocate
+    cleanly the most appropriate memory for constructing a vertex array
+    range.  The memory allocator provided allows the application to
+    tradeoff the desired CPU read frequency, CPU write frequency, and
+    memory priority while still leaving it up to OpenGL implementation
+    the exact memory type to be allocated.
+
+Issues
+
+    How does this extension interact with the compiled_vertex_array
+    extension?  
+
+       I think they should be independent and not interfere with
+       each other.  In practice, if you use NV_vertex_array_range,
+       you can surpass the performance of compiled_vertex_array
+
+    Should some explanation be added about what happens when an OpenGL
+    application updates its address space in regions overlapping with
+    the currently configured vertex array range?
+
+       RESOLUTION:  I think the right thing is to say that you get
+       non-sequential results.  In practice, you'll be using an old
+       context DMA pointing to the old pages.
+
+       If the application change's its address space within the
+       vertex array range, the application should call
+       glVertexArrayRangeNV again.  That will re-make a new vertex
+       array range context DMA for the application's current address
+       space.
+
+    If we are falling back to software transformation, do we still need to
+    abide by leaving "undefined" vertices outside the vertex array range?
+    For example, pointers that are not 32-bit aligned would likely cause
+    a fall back.
+
+       RESOLUTION:  No.  The fact that vertex is "undefined" means we
+       can do anything we want (as long as we send a vertex and do not
+       crash) so it is perfectly fine for the software puller to
+       grab vertex information not available to the hardware puller.
+
+    Should we give a programmer a sense of how big a vertex array
+    range they can specify?
+
+       RESOLUTION:  No.  Just document it if there are limitations.
+       Probably very hardware and operating system dependent.
+
+    Is it clear enough that language about ArrayElement
+    also applies to DrawArrays and DrawElements?
+
+       Maybe not, but OpenGL 1.1 spec is clear that DrawArrays and
+       DrawElements are defined in terms of ArrayElement.
+
+    Should glFlush be the same as glVertexArrayRangeFlush?
+
+       RESOLUTION:  No.  A glFlush is cheaper than a glVertexArrayRangeFlush
+       though a glVertexArrayRangeFlushNV should do a flush.
+
+    If any the data for any enabled array for a given array element index
+    falls outside of the vertex array range, what happens?
+
+       RESOLUTION:  An undefined vertex is generated.
+
+    What error is generated in this case?
+
+       I don't know yet.  We should make sure the hardware really does
+       let us know when vertices are undefined.
+
+       Note that this is a little weird for OpenGL since most errors
+       in OpenGL result in the command being ignored.  Not in this
+       case though.
+
+    Should this extension support an interface for allocating video
+    and AGP memory?
+
+       RESOLUTION:  YES.  It seems like we should be able to leave
+       the task of memory allocation to DirectDraw, but DirectDraw's
+       asynchronous unmapping behavior and having to hold locks to
+       update DirectDraw surfaces makes that mechanism to cumbersome.
+
+       Plus the API is a lot easier if we do it ourselves.
+
+    How do we decide what type of memory to allocate for the application?
+
+       RESOLUTION:  Usage hints.  The application rates the read
+       frequency (how often will they read the memory), the write
+       frequency (how often will they write the memory), and the
+       priority (how important is this memory relative to other
+       uses for the memory such as texturing) on a scale of 1.0
+       to 0.0.  Using these hints and the size of the memory requsted,
+       the OpenGL implementation decides where to allocate the memory.
+
+       We try to not directly expose particular types of memory
+       (AGP, local memory, cached/uncached, etc) so future memory
+       types can be supported by merely updating the OpenGL
+       implementation.
+
+    Should the memory allocator functionality be available be a part
+    of the GL or window system dependent (GLX or WGL) APIs?
+
+       RESOLUTION:  The window system dependent API.
+
+       The memory allocator should be considered a window system/
+       operating system dependent operation.  This also permits
+       memory to be allocated when no OpenGL rendering contexts
+       exist yet.
+
+New Procedures and Functions
+
+    void VertexArrayRangeNV(sizei length, void *pointer)
+    void FlushVertexArrayRangeNV(void)
+
+New Tokens
+
+    Accepted by the <cap> parameter of EnableClientState,
+    DisableClientState, and IsEnabled:
+
+        VERTEX_ARRAY_RANGE_NV              0x851D
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        VERTEX_ARRAY_RANGE_LENGTH_NV       0x851E
+        VERTEX_ARRAY_RANGE_VALID_NV        0x851F
+        MAX_VERTEX_ARRAY_RANGE_ELEMENT_NV  0x8520
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+        VERTEX_ARRAY_RANGE_POINTER_NV      0x8521
+
+Additions to Chapter 2 of the OpenGL 1.1 Specification (OpenGL Operation)
+
+    After the discussion of vertex arrays (Section 2.8) add a
+    description of the vertex array range:
+
+    "The command 
+
+       void VertexArrayRangeNV(sizei length, void *pointer)
+
+    specifies the current vertex array range.  When the vertex array
+    range is enabled and valid, vertex array vertex transfers from within
+    the vertex array range are potentially faster.  The vertex array
+    range is a contiguous region of (virtual) address space for placing
+    vertex arrays.  The "pointer" parameter is a pointer to the base of
+    the vertex array range.  The "length" pointer is the length of the
+    vertex array range in basic machine units (typically unsigned bytes).
+
+    The vertex array range address space region extends from "pointer"
+    to "pointer + length - 1" inclusive.  When specified and enabled,
+    vertex array vertex transfers from within the vertex array range
+    are potentially faster.
+
+    There is some system burden associated with establishing a vertex
+    array range (typically, the memory range must be locked down).
+    If either the vertex array range pointer or size is set to zero,
+    the previously established vertex array range is released (typically,
+    unlocking the memory).
+
+    The vertex array range may not be established for operating system
+    dependent reasons, and therefore, not valid.  Reasons that a vertex
+    array range cannot be established include spanning different memory
+    types, the memory could not be locked down, alignment restrictions
+    are not met, etc.
+
+    The vertex array range is enabled or disabled by calling
+    EnableClientState or DisableClientState with the symbolic
+    constant VERTEX_ARRAY_RANGE_NV.
+
+    The vertex array range is either valid or invalid and this state can
+    be determined by querying VERTEX_ARRAY_RANGE_VALID_NV.  The vertex
+    array range is valid when the following conditions are met:
+
+      o  VERTEX_ARRAY_RANGE_NV is enabled.
+
+      o  VERTEX_ARRAY is enabled.
+
+      o  VertexArrayRangeNV has been called with a non-null pointer and
+         non-zero size.
+
+      o  The vertex array range has been established.
+
+      o  An implementation-dependent validity check based on the
+         pointer alignment, size, and underlying memory type of the
+         vertex array range region of memory.
+
+      o  An implementation-dependent validity check based on
+         the current vertex array state including the strides, sizes,
+         types, and pointer alignments (but not pointer value) for
+         currently enabled vertex arrays.
+
+      o  Other implementation-dependent validaity checks based on
+         other OpenGL rendering state.
+
+    Otherwise, the vertex array range is not valid.  If the vertex array
+    range is not valid, vertex array transfers will not be faster.
+
+    When the vertex array range is valid, ArrayElement commands may
+    generate undefined vertices if and only if any indexed elements of
+    the enabled arrays are not within the vertex array range or if the
+    index is negative or greater or equal to the implementation-dependent
+    value of MAX_VERTEX_ARRAY_RANGE_ELEMENT_NV.  If an undefined vertex
+    is generated, an INVALID_OPERATION error may or may not be generated.
+
+    The vertex array cohenecy model specifies when vertex data must be
+    be extracted from the vertex array memory.  When the vertex array
+    range is not valid, (quoting the specification) `Changes made to
+    array data between the execution of Begin and the corresponding
+    execution of End may effect calls to ArrayElement that are made
+    within the same Begin/End period in non-sequential ways.  That is,
+    a call to ArrayElement that precedes a change to array data may
+    access the changed data, and a call that follows a change to array
+    data may access the original data.'
+
+    When the vertex array range is valid, the vertex array coherency
+    model is relaxed so that changes made to array data until the next
+    "vertex array range flush" may affects calls to ArrayElement in
+    non-sequential ways.  That is a call to ArrayElement that precedes
+    a change to array data (without an intervening "vertex array range
+    flush") may access the changed data, and a call that follows a change
+    (without an intervening "vertex array range flush") to array data
+    may access original data.
+
+    A 'vertex array range flush' occurs when one of the following
+    operations occur:
+
+       o  Finish returns.
+
+       o  FlushVertexArrayRangeNV returns.
+
+       o  VertexArrayRangeNV returns.
+
+       o  DisableClientState of VERTEX_ARRAY_RANGE_NV returns.
+
+       o  EnableClientState of VERTEX_ARRAY_RANGE_NV returns.
+
+       o  Another OpenGL context is made current.
+
+    The client state required to implement the vertex array range
+    consists of an enable bit, a memory pointer, an integer size,
+    and a valid bit.
+
+    If the memory mapping of pages within the vertex array range changes,
+    using the vertex array range may or may not result in undefined data
+    being fetched from the vertex arrays when the vertex array range is
+    enabled and valid.  To ensure that the vertex array range reflects
+    the address space's current state, the application is responsible
+    for calling VertexArrayRange again after any memory mapping changes
+    within the vertex array range."llo
+
+Additions to Chapter 5 of the OpenGL 1.1 Specification (Special Functions)
+
+    Add to the end of Section 5.4 "Display Lists"
+
+    "VertexArrayRangeNV and FlushVertexArrayRangeNV are not complied
+    into display lists but are executed immediately.
+
+    If a display list is compiled while VERTEX_ARRAY_RANGE_NV is
+    enabled, the commands ArrayElement, DrawArrays, DrawElements,
+    and DrawRangeElements are accumulated into a display list as
+    if VERTEX_ARRAY_RANGE_NV is disabled."
+
+Additions to the WGL interface:
+
+    "When establishing a vertex array range, certain types of memory
+    may be more efficient than other types of memory.  The commands
+     
+       void *wglAllocateMemoryNV(sizei size,
+                                 float readFrequency,
+                                 float writeFrequency,
+                                 float priority)
+       void wglFreeMemoryNV(void *pointer)
+    
+    allocate and free memory that may be more suitable for establishing
+    an efficient vertex array range than memory allocated by other means.
+    The wglAllocateMemoryNV command allocates <size> bytes of contiguous
+    memory.  
+
+    The <readFrequency>, <writeFrequency>, and <priority> parameters are
+    usage hints that the OpenGL implementation can use to determine the
+    best type of memory to allocate.  These parameters range from 0.0
+    to 1.0.  A <readFrequency> of 1.0 indicates that the application
+    intends to frequently read the allocated memory; a <readFrequency>
+    of 0.0 indicates that the application will rarely or never read the
+    memory.  A <writeFrequency> of 1.0 indicates that the application
+    intends to frequently write the allocated memory; a <writeFrequency>
+    of 0.0 indicates that the application will rarely write the memory.
+    A <priority> parameter of 1.0 indicates that memory type should be
+    the most efficient available memory, even at the expense of (for
+    example) available texture memory; a <priority> of 0.0 indicates that
+    the vertex array range does not require an efficient memory type
+    (for example, so that more efficient memory is available for other
+    purposes such as texture memory).
+
+    The OpenGL implementation is free to use the <size>, <readFrequency>,
+    <writeFrequency>, and <priority> parameters to determine what memory
+    type should be allocated.  The memory types available and how the
+    memory type is determined is implementation dependent (and the
+    implementation is free to ignore any or all of the above parameters).
+
+    Possible memory types that could be allocated are uncached memory,
+    write-combined memory, graphics hardware memory, etc.  The intent
+    of the wglAllocateMemoryNV command is to permit the allocation of
+    memory for efficient vertex array range usage.  However, there is
+    no requirement that memory allocated by wglAllocateMemoryNV must be
+    used to allocate memory for vertex array ranges.
+
+    If the memory cannot be allocated, a NULL pointer is returned (and
+    no OpenGL error is generated).  An implementation that does not
+    support this extension's memory allocation interface is free to
+    never allocate memory (always return NULL).
+
+    The wglFreeMemoryNV command frees memory allocated with
+    wglAllocateMemoryNV.  The <pointer> should be a pointer returned by
+    wglAllocateMemoryNV and not previously freed.  If a pointer is passed
+    to wglFreeMemoryNV that was not allocated via wglAllocateMemoryNV
+    or was previously freed (without being reallocated), the free is
+    ignored with no error reported.
+
+    The memory allocated by wglAllocateMemoryNV should be available to
+    all other threads in the address space where the memory is allocated
+    (the memory is not private to a single thread).  Any thread in the
+    address space (not simply the thread that allocated the memory)
+    may use wglFreeMemoryNV to free memory allocated by itself or any
+    other thread.
+
+    Because wglAllocateMemoryNV and wglFreeMemoryNV are not OpenGL
+    rendering commands, these commands do not require a current context.
+    They operate normally even if called within a Begin/End or while
+    compiling a display list."
+
+Additions to the GLX Specification
+
+    Same language as the "Additions to the WGL Specification" section
+    except all references to wglAllocateMemoryNV and wglFreeMemoryNV
+    should be replaced with glXAllocateMemoryNV and glXFreeMemoryNV
+    respectively.
+
+    Additional language:
+
+    "OpenGL implementations using GLX indirect rendering should fail
+    to set up the vertex array range (failing to set the vertex array
+    valid bit so the vertex array range functionality is not usable).
+    Additionally, glXAllocateMemoryNV always fails to allocate memory
+    (returns NULL) when used with an indirect rendering context."
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_OPERATION is generated if VertexArrayRange or
+    FlushVertexArrayRange is called between the execution of Begin
+    and the corresponding execution of End.
+
+    INVALID_OPERATION may be generated if an undefined vertex is
+    generated.
+
+New State
+
+                                                            Initial
+   Get Value                       Get Command     Type    Value    Attrib
+   ---------                       -----------     ----    -------  ------------
+   VERTEX_ARRAY_RANGE_NV           IsEnabled       B       False    vertex-array
+   VERTEX_ARRAY_RANGE_POINTER_NV   GetPointerv     Z+      0        vertex-array
+   VERTEX_ARRAY_RANGE_LENGTH_NV    GetIntegerv     Z+      0        vertex-array
+   VERTEX_ARRAY_RANGE_VALID_NV     GetBooleanv     B       False    vertex-array
+
+New Implementation Dependent State
+
+    Get Value                           Get Command     Type    Minimum Value
+    ---------                           -----------     -----   -------------
+    MAX_VERTEX_ARRAY_RANGE_ELEMENT_NV   GetIntegerv     Z+      65535
+
+NV10 Implementation Details
+
+    This section describes implementation-defined limits for NV10:
+
+         The value of MAX_VERTEX_ARRAY_RANGE_ELEMENT_NV is 65535.
+
+    This section describes bugs in the NV10 vertex array range.  These
+    bugs will be fixed in a future hardware release:
+
+         If VERTEX_ARRAY is enabled with a format of GL_SHORT and the
+         vertex array range is valid, a vertex array vertex with an X,
+         Y, Z, or W coordinate of -32768 is wrongly interpreted as zero.
+         Example: the X,Y coordinate (-32768,-32768) is incorrectly read
+         as (0,0) from the vertex array.
+
+         If TEXTURE_COORD_ARRAY is enabled with a format of GL_SHORT
+         and the vertex array range is valid, a vertex array texture
+         coord with an S, T, R, or Q coordinate of -32768 is wrongly
+         interpreted as zero.  Example: the S,T coordinate (-32768,-32768)
+         is incorrectly read as (0,0) from the texture coord array.
+
+    This section describes the implementation-dependent validity
+    checks for NV10.
+     
+      o  For the NV10 implementation-dependent validity check for the
+         vertex array range region of memory to be true, all of the
+         following must be true:
+
+         1.  The <pointer> must be 32-byte aligned.
+
+         2.  The underlying memory types must all be the same (all
+             standard system memory -OR- all AGP memory -OR- all video
+             memory).
+
+     o  For the NV10 implementation-dependent validity check for the
+        vertex array state to be true, all of the following must be
+        true:
+
+        1.  ( VERTEX_ARRAY must be enabled -AND-
+              The vertex array stride must be less than 256 -AND-
+              ( ( The vertex array type must be FLOAT -AND-
+                  The vertex array stride must be a multiple of 4 bytes -AND-
+                  The vertex array pointer must be 4-byte aligned -AND-
+                  The vertex array size must be 2, 3, or 4 ) -OR-
+                ( The vertex array type must be SHORT -AND-
+                  The vertex array stride must be a multiple of 4 bytes -AND-
+                  The vertex array pointer must be 4-byte aligned. -AND-
+                  The vertex array size must be 2 ) -OR-
+                ( The vertex array type must be SHORT -AND-
+                  The vertex array stride must be a multiple of 8 bytes -AND-
+                  The vertex array pointer must be 8-byte aligned. -AND-
+                  The vertex array size must be 3 or 4 ) ) )
+
+        2.  ( NORMAL_ARRAY must be disabled. ) -OR -
+            ( NORMAL_ARRAY must be enabled -AND-
+              The normal array size must be 3 -AND-
+              The normal array stride must be less than 256 -AND-
+              ( ( The normal array type must be FLOAT -AND-
+                  The normal array stride must be a multiple of 4 bytes -AND-
+                  The normal array pointer must be 4-byte aligned. ) -OR-
+                ( The normal array type must be SHORT -AND-
+                  The normal array stride must be a multiple of 8 bytes -AND-
+                  The normal array pointer must be 8-byte aligned. ) ) )
+                   
+        3.  ( COLOR_ARRAY must be disabled. ) -OR -
+            ( COLOR_ARRAY must be enabled -AND-
+              The color array type must be FLOAT or UNSIGNED_BYTE -AND-
+              The color array stride must be a multiple of 4 bytes -AND-
+              The color array stride must be less than 256 -AND-
+              The color array pointer must be 4-byte aligned -AND-
+              The color array size must be 3 or 4 )
+
+        4.  ( SECONDARY_COLOR_ARRAY must be disabled. ) -OR -
+            ( SECONDARY_COLOR_ARRAY must be enabled -AND-
+              The secondary color array type must be FLOAT or UNSIGNED_BYTE -AND-
+              The secondary color array stride must be a multiple of 4 bytes -AND-
+              The secondary color array stride must be less than 256 -AND-
+              The secondary color array pointer must be 4-byte aligned -AND-
+              The secondary color array size must be 3 or 4 )
+
+        5.  For texture units zero and one:
+
+            ( TEXTURE_COORD_ARRAY must be disabled. ) -OR -
+            ( TEXTURE_COORD_ARRAY must be enabled -AND-
+              The texture coord array stride must be less than 256 -AND-
+              ( ( The texture coord array type must be FLOAT -AND-
+                  The texture coord array pointer must be 4-byte aligned. ) 
+                  The texture coord array stride must be a multiple of 4 bytes -AND-
+                  The texture coord array size must be 1, 2, 3, or 4 ) -OR-
+                ( The texture coord array type must be SHORT -AND-
+                  The texture coord array pointer must be 4-byte aligned. ) 
+                  The texture coord array stride must be a multiple of 4 bytes -AND-
+                  The texture coord array size must be 1 ) -OR-
+                ( The texture coord array type must be SHORT -AND-
+                  The texture coord array pointer must be 4-byte aligned. ) 
+                  The texture coord array stride must be a multiple of 4 bytes -AND-
+                  The texture coord array size must be 2 ) -OR-
+                ( The texture coord array type must be SHORT -AND-
+                  The texture coord array pointer must be 8-byte aligned. ) 
+                  The texture coord array stride must be a multiple of 8 bytes -AND-
+                  The texture coord array size must be 3 ) -OR-
+                ( The texture coord array type must be SHORT -AND-
+                  The texture coord array pointer must be 8-byte aligned. ) 
+                  The texture coord array stride must be a multiple of 8 bytes -AND-
+                  The texture coord array size must be 4 ) ) )
+            
+        6.  ( EDGE_FLAG_ARRAY must be disabled. )
+
+        7.  ( VERTEX_WEIGHT_ARRAY_NV must be disabled. ) -OR -
+            ( VERTEX_WEIGHT_ARRAY_NV must be enabled. -AND -
+              The vertex weight array type must be FLOAT -AND-
+              The vertex weight array size must be 1 -AND-
+              The vertex weight array stride must be a multiple of 4 bytes -AND-
+              The vertex weight array stride must be less than 256 -AND-
+              The vertex weight array pointer must be 4-byte aligned )
+
+        8.  ( FOG_COORDINATE_ARRAY must be disabled. ) -OR -
+            ( FOG_COORDINATE_ARRAY must be enabled -AND-
+              The chip in use must be an NV11 or NV15, not NV10 -AND-
+              The fog coordinate array type must be FLOAT -AND-
+              The fog coordinate array size must be 1 -AND-
+              The fog coordinate array stride must be a multiple of 4 bytes -AND-
+              The fog coordinate array stride must be less than 256 -AND-
+              The fog coordinate array pointer must be 4-byte aligned )
+
+     o  For the NV10 the implementation-dependent validity check based on
+        other OpenGL rendering state is FALSE if any of the following are true:
+
+        1.  ( COLOR_LOGIC_OP is enabled -AND-
+              The logic op is not COPY ), except in the case of Quadro2
+            (Quadro2 Pro, Quadro2 MXR) products.
+
+        2.  ( LIGHT_MODEL_TWO_SIDE is true. )
+
+        3.  Either texture unit is enabled and active with a texture
+            with a non-zero border.
+
+        4.  VERTEX_PROGRAM_NV is enabled.
+
+        5.  Several other obscure unspecified reasons.
+
+NV20 Implementation Details
+
+    This section describes implementation-defined limits for NV20:
+
+         The value of MAX_VERTEX_ARRAY_RANGE_ELEMENT_NV is 1048575.
+
+    This section describes the implementation-dependent validity
+    checks for NV20.
+
+      o  For the NV20 implementation-dependent validity check for the
+         vertex array range region of memory to be true, all of the
+         following must be true:
+
+         1.  The <pointer> must be 32-byte aligned.
+
+         2.  The underlying memory types must all be the same (all
+             standard system memory -OR- all AGP memory -OR- all video
+             memory).
+
+     o  To determine whether the NV20 implementation-dependent validity
+        check for the vertex array state is true, the following algorithm
+        is used:
+
+        The currently enabled arrays and their pointers, strides, and
+        types are first determined using the value of VERTEX_PROGRAM_NV.
+        If VERTEX_PROGRAM_NV is disabled, the standard GL vertex arrays
+        are used.  If VERTEX_PROGRAM_NV is enabled, the vertex attribute
+        arrays take precedence over the standard vertex arrays.  The
+        following table, taken from the NV_vertex_program specification,
+        shows the aliasing between the standard and attribute arrays:
+
+Vertex
+Attribute  Conventional                                           Conventional
+Register   Per-vertex        Conventional                         Component
+Number     Parameter         Per-vertex Parameter Command         Mapping
+---------  ---------------   -----------------------------------  ------------
+ 0         vertex position   Vertex                               x,y,z,w
+ 1         vertex weights    VertexWeightEXT                      w,0,0,1
+ 2         normal            Normal                               x,y,z,1
+ 3         primary color     Color                                r,g,b,a
+ 4         secondary color   SecondaryColorEXT                    r,g,b,1
+ 5         fog coordinate    FogCoordEXT                          fc,0,0,1
+ 6         -                 -                                    -
+ 7         -                 -                                    -
+ 8         texture coord 0   MultiTexCoord(GL_TEXTURE0_ARB, ...)  s,t,r,q
+ 9         texture coord 1   MultiTexCoord(GL_TEXTURE1_ARB, ...)  s,t,r,q
+ 10        texture coord 2   MultiTexCoord(GL_TEXTURE2_ARB, ...)  s,t,r,q
+ 11        texture coord 3   MultiTexCoord(GL_TEXTURE3_ARB, ...)  s,t,r,q
+ 12        texture coord 4   MultiTexCoord(GL_TEXTURE4_ARB, ...)  s,t,r,q
+ 13        texture coord 5   MultiTexCoord(GL_TEXTURE5_ARB, ...)  s,t,r,q
+ 14        texture coord 6   MultiTexCoord(GL_TEXTURE6_ARB, ...)  s,t,r,q
+ 15        texture coord 7   MultiTexCoord(GL_TEXTURE7_ARB, ...)  s,t,r,q
+
+        For the validity check to be TRUE, the following must all be
+        true:
+
+        1.  Vertex attribute 0's array must be enabled.
+        2.  EDGE_FLAG_ARRAY must be disabled.
+        3.  For all enabled arrays, all of the following must be true:
+            - the stride must be less than 256
+            - the type must be FLOAT, SHORT, or UNSIGNED_BYTE
+
+     o  For the NV20 the implementation-dependent validity check based on
+        other OpenGL rendering state is FALSE only for a few obscure and
+        unspecified reasons.
+
+Revision History
+
+    January 10, 2001 - Added NV20 implementation details.  Made several
+    corrections to the NV10 implementation details.  Specifically, noted
+    that on the NV11 and NV15 architectures, the fog coordinate array may
+    be used, and updated the section on other state that may cause the
+    vertex array range to be invalid.  Only drivers built after this date
+    will support fog coordinate arrays on NV11 and NV15.  Also fixed a
+    few typos in the spec.
+
+    September 17, 2001 - Modified NV20 implementation details to remove
+    all the pointer and stride restrictions, none of which are actually
+    required.  Only drivers built after this date will support arbitrary
+    pointer offsets and strides.  Also removed NV10 rules on non-zero
+    strides, which cannot be used in OpenGL anyhow, and fixed a few other
+    typos.

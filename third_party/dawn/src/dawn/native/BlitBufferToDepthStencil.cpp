@@ -25,26 +25,33 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/BlitBufferToDepthStencil.h"
+#include "src/dawn/native/BlitBufferToDepthStencil.h"
 
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Strings.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/InternalPipelineStore.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/RenderPassEncoder.h"
-#include "dawn/native/RenderPipeline.h"
+#include "src/dawn/common/Algebra.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/RenderPassEncoder.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
 namespace {
+
+// Keep in sync with the WGSL structure below.
+struct BlitRG8ToDepthParams {
+    math::Vec2u origin;
+};
 
 constexpr char kBlitRG8ToDepthShaders[] = DAWN_MULTILINE(
     @vertex fn vert_fullscreen_quad(
@@ -57,12 +64,13 @@ constexpr char kBlitRG8ToDepthShaders[] = DAWN_MULTILINE(
         return vec4f(pos[vertex_index], 0.0, 1.0);
     }
 
-    struct Params {
-    origin : vec2u
+    // Keep in sync with the C++ struct above.
+    struct BlitRG8ToDepthParams {
+        origin : vec2u
     };
 
     @group(0) @binding(0) var src_tex : texture_2d<u32>;
-    @group(0) @binding(1) var<uniform> params : Params;
+    @group(0) @binding(1) var<uniform> params : BlitRG8ToDepthParams;
 
     @fragment fn blit_to_depth(
         @builtin(position) position : vec4f
@@ -94,12 +102,19 @@ constexpr std::string_view kTexture2DArrayHead = DAWN_MULTILINE(
     @group(0) @binding(0) var src_tex : texture_2d_array<u32>;
 );
 
+// Keep in sync with the WGSL structure below.
+struct BlitStencilParams {
+    math::Vec2u origin;
+    uint32_t layer;
+};
+
 constexpr std::string_view kBlitStencilShaderCommon = DAWN_MULTILINE(
-    struct Params {
+    // Keep in sync with the C++ struct above.
+    struct BlitStencilParams {
         origin : vec2u,
         layer: u32,
     };
-    @group(0) @binding(1) var<uniform> params : Params;
+    @group(0) @binding(1) var<uniform> params : BlitStencilParams;
 
     struct VertexOutputs {
         @location(0) @interpolate(flat, either) stencil_val : u32,
@@ -195,9 +210,7 @@ ResultOrError<InternalPipelineStore::BlitR8ToStencilPipelines> GetOrCreateR8ToSt
     Ref<PipelineLayoutBase> pipelineLayout;
     {
         PipelineLayoutDescriptor plDesc = {};
-        plDesc.bindGroupLayoutCount = 1;
-
-        plDesc.bindGroupLayouts = &bgl;
+        plDesc.bindGroupLayouts = SpanFromRef<BindGroupIndex>(bgl);
         DAWN_TRY_ASSIGN(pipelineLayout, device->CreatePipelineLayout(&plDesc));
     }
 
@@ -278,12 +291,12 @@ MaybeError BlitRG8ToDepth16Unorm(DeviceBase* device,
     Ref<BindGroupLayoutBase> bgl;
     DAWN_TRY_ASSIGN(bgl, pipeline->GetBindGroupLayout(0));
 
-    for (TexelCount z{0}; z < copyExtent.depthOrArrayLayers; ++z) {
+    for (TexelCount z{0u}; z < copyExtent.depthOrArrayLayers; ++z) {
         Ref<TextureViewBase> srcView;
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = wgpu::TextureViewDimension::e2D;
-            viewDesc.baseArrayLayer = static_cast<uint32_t>(z);
+            viewDesc.baseArrayLayer = dchecked_cast<uint32_t>(z);
             viewDesc.arrayLayerCount = 1;
             viewDesc.mipLevelCount = 1;
             DAWN_TRY_ASSIGN(srcView, dataTexture->CreateView(&viewDesc));
@@ -293,7 +306,7 @@ MaybeError BlitRG8ToDepth16Unorm(DeviceBase* device,
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = wgpu::TextureViewDimension::e2D;
-            viewDesc.baseArrayLayer = static_cast<uint32_t>(dst.origin.z + z);
+            viewDesc.baseArrayLayer = dchecked_cast<uint32_t>(dst.origin.z + z);
             viewDesc.arrayLayerCount = 1;
             viewDesc.baseMipLevel = dst.mipLevel;
             viewDesc.mipLevelCount = 1;
@@ -303,15 +316,16 @@ MaybeError BlitRG8ToDepth16Unorm(DeviceBase* device,
         Ref<BufferBase> paramsBuffer;
         {
             BufferDescriptor bufferDesc = {};
-            bufferDesc.size = sizeof(uint32_t) * 2;
+            bufferDesc.size = sizeof(BlitRG8ToDepthParams);
             bufferDesc.usage = wgpu::BufferUsage::Uniform;
             bufferDesc.mappedAtCreation = true;
             DAWN_TRY_ASSIGN(paramsBuffer, device->CreateBuffer(&bufferDesc));
 
-            uint32_t* params =
-                static_cast<uint32_t*>(paramsBuffer->GetMappedRange(0, bufferDesc.size));
-            params[0] = static_cast<uint32_t>(dst.origin.x);
-            params[1] = static_cast<uint32_t>(dst.origin.y);
+            BlitRG8ToDepthParams* params = paramsBuffer->GetMappedDataAs<BlitRG8ToDepthParams>();
+            params->origin = {
+                dchecked_cast<uint32_t>(dst.origin.x),
+                dchecked_cast<uint32_t>(dst.origin.y),
+            };
             DAWN_TRY(paramsBuffer->Unmap());
         }
 
@@ -325,8 +339,7 @@ MaybeError BlitRG8ToDepth16Unorm(DeviceBase* device,
 
             BindGroupDescriptor bgDesc = {};
             bgDesc.layout = bgl.Get();
-            bgDesc.entryCount = bgEntries.size();
-            bgDesc.entries = bgEntries.data();
+            bgDesc.entries = bgEntries;
             DAWN_TRY_ASSIGN(bindGroup, device->CreateBindGroup(&bgDesc));
         }
 
@@ -344,8 +357,8 @@ MaybeError BlitRG8ToDepth16Unorm(DeviceBase* device,
         pass->APISetBindGroup(0, bindGroup.Get());
         // Discard all fragments outside the copy region.
         pass->APISetScissorRect(
-            static_cast<uint32_t>(dst.origin.x), static_cast<uint32_t>(dst.origin.y),
-            static_cast<uint32_t>(copyExtent.width), static_cast<uint32_t>(copyExtent.height));
+            dchecked_cast<uint32_t>(dst.origin.x), dchecked_cast<uint32_t>(dst.origin.y),
+            dchecked_cast<uint32_t>(copyExtent.width), dchecked_cast<uint32_t>(copyExtent.height));
 
         // Draw to perform the blit.
         pass->APISetPipeline(pipeline.Get());
@@ -395,8 +408,7 @@ MaybeError BlitR8ToStencil(DeviceBase* device,
         bglEntries[1].buffer.minBindingSize = 4 * sizeof(uint32_t);
 
         BindGroupLayoutDescriptor bglDesc = {};
-        bglDesc.entryCount = bglEntries.size();
-        bglDesc.entries = bglEntries.data();
+        bglDesc.entries = bglEntries;
 
         DAWN_TRY_ASSIGN(bgl, device->CreateBindGroupLayout(&bglDesc));
     }
@@ -409,15 +421,16 @@ MaybeError BlitR8ToStencil(DeviceBase* device,
     Ref<BufferBase> paramsBuffer;
     {
         BufferDescriptor bufferDesc = {};
-        bufferDesc.size = sizeof(uint32_t) * 4;
+        bufferDesc.size = sizeof(BlitStencilParams);
         bufferDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
         bufferDesc.mappedAtCreation = true;
         DAWN_TRY_ASSIGN(paramsBuffer, device->CreateBuffer(&bufferDesc));
 
-        uint32_t* params = static_cast<uint32_t*>(paramsBuffer->GetMappedRange(0, bufferDesc.size));
-        params[0] = static_cast<uint32_t>(dst.origin.x);
-        params[1] = static_cast<uint32_t>(dst.origin.y);
-        params[2] = 0;
+        BlitStencilParams* params = paramsBuffer->GetMappedDataAs<BlitStencilParams>();
+        params->origin = {
+            dchecked_cast<uint32_t>(dst.origin.x),
+            dchecked_cast<uint32_t>(dst.origin.y),
+        };
         DAWN_TRY(paramsBuffer->Unmap());
     }
 
@@ -437,14 +450,14 @@ MaybeError BlitR8ToStencil(DeviceBase* device,
         if (z >= 1) {
             // Pass the array layer info via the uniform buffer.
             commandEncoder->APIWriteBuffer(paramsBuffer.Get(), sizeof(uint32_t) * 2,
-                                           reinterpret_cast<const uint8_t*>(&z), sizeof(uint32_t));
+                                           ByteSpanFromRef(z));
         }
 
         Ref<TextureViewBase> dstView;
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = textureViewDimension;
-            viewDesc.baseArrayLayer = static_cast<uint32_t>(dst.origin.z) + z;
+            viewDesc.baseArrayLayer = dchecked_cast<uint32_t>(dst.origin.z) + z;
             viewDesc.arrayLayerCount = 1;
             viewDesc.baseMipLevel = dst.mipLevel;
             viewDesc.mipLevelCount = 1;
@@ -461,8 +474,7 @@ MaybeError BlitR8ToStencil(DeviceBase* device,
 
             BindGroupDescriptor bgDesc = {};
             bgDesc.layout = bgl.Get();
-            bgDesc.entryCount = bgEntries.size();
-            bgDesc.entries = bgEntries.data();
+            bgDesc.entries = bgEntries;
             DAWN_TRY_ASSIGN(bindGroup,
                             device->CreateBindGroup(&bgDesc, UsageValidationMode::Internal));
         }
@@ -484,8 +496,8 @@ MaybeError BlitR8ToStencil(DeviceBase* device,
         // Bind the resources.
         pass->APISetBindGroup(0, bindGroup.Get());
         // Discard all fragments outside the copy region.
-        pass->APISetScissorRect(static_cast<uint32_t>(dst.origin.x),
-                                static_cast<uint32_t>(dst.origin.y), copyExtent.width,
+        pass->APISetScissorRect(dchecked_cast<uint32_t>(dst.origin.x),
+                                dchecked_cast<uint32_t>(dst.origin.y), copyExtent.width,
                                 copyExtent.height);
 
         // Clear the copy region to 0.
@@ -544,7 +556,7 @@ MaybeError BlitStagingBufferToDepth(DeviceBase* device,
     DAWN_TRY_ASSIGN(commandBuffer, commandEncoder->Finish());
 
     CommandBufferBase* commands = commandBuffer.Get();
-    device->GetQueue()->APISubmit(1, &commands);
+    device->GetQueue()->APISubmit(SpanFromRef(commands));
     return {};
 }
 
@@ -608,7 +620,7 @@ MaybeError BlitStagingBufferToStencil(DeviceBase* device,
     DAWN_TRY_ASSIGN(commandBuffer, commandEncoder->Finish());
 
     CommandBufferBase* commands = commandBuffer.Get();
-    device->GetQueue()->APISubmit(1, &commands);
+    device->GetQueue()->APISubmit(SpanFromRef(commands));
     return {};
 }
 

@@ -1,0 +1,153 @@
+Name
+
+    EXT_visual_rating
+
+Name Strings
+
+    GLX_EXT_visual_rating
+
+Version
+
+    $Date: 1996/03/12 03:12:47 $ $Revision: 1.7 $
+
+Number
+
+    44
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows servers to identify a particular GLX visual as 
+    undesirable. A new visual attribute is introduced, providing a way
+    for servers to specify caveats (e.g., slow) for a visual. The attribute 
+    may be queried using glXGetConfig, and can therefore be used by 
+    application-specific visual selection routines. The new attribute is 
+    also used by glXChooseVisual to discriminate against visuals with
+    caveats.
+
+    This extension allows servers to export visuals with improved features
+    or image quality, but lower performance or greater system burden,
+    without having to have these visuals selected preferentially.  It is
+    intended to insure that most applications get the "right" visual, not
+    that all applications do.
+
+Issues
+
+    It is possible for an application to unknowingly select a visual with 
+    caveats, if it is unaware of the GLX_VISUAL_CAVEAT_EXT attribute. Also, if 
+    the server supports this extension but the client library does not, then 
+    glXChooseVisual may select a visual with caveats. The latter problem can be 
+    rectified if/when this extension is incorporated into GLX 1.3, since the 
+    server knows the clients version and can avoid exporting visuals with 
+    caveats to client libraries that don't know how to handle them. (Note that 
+    the server does not know which GLX extensions a client supports.)
+
+Reasoning
+
+    This extension is designed to be automatic -- applications don't have
+    to use it explicitly. glXChooseVisual always prefers visuals with
+    no caveats.
+
+    Because visuals that don't have a GLX_VISUAL_CAVEAT_EXT attribute are 
+    treated as good visuals, applications need not concern themselves with 
+    whether a server supports EXT_visual_rating or not.  This allows 
+    operation to be automatic.
+
+    The new visual attribute is defined as an enumerated type so additional
+    caveats, such as GLX_RESOURCE_HOG_EXT, can be introduced in the future.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <attribute> parameter of glXGetConfig and by the 
+    <attrib_list> parameter of glXChooseVisual:
+
+        GLX_VISUAL_CAVEAT_EXT           0x20
+
+    Returned by the <value> parameter of glXGetConfig (when <attribute> is set 
+    to GLX_VISUAL_CAVEAT_EXT) and accepted by the <attrib_list> parameter of 
+    glXChooseVIsual (following the GLX_VISUAL_CAVEAT_EXT token):
+
+        GLX_NONE_EXT                    0x8000
+        GLX_SLOW_VISUAL_EXT             0x8001
+        GLX_NON_CONFORMANT_VISUAL_EXT   0x800D
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    When called with <attribute> set to GLX_VISUAL_CAVEAT_EXT, glXGetConfig
+    returns in parameter <value> one of three values: GLX_NONE_EXT, 
+    GLX_SLOW_VISUAL_EXT or GLX_NON_CONFORMANT_VISUAL_EXT. The returned value 
+    is known as the rating of the visual.
+
+    If the GLX_VISUAL_CAVEAT_EXT attribute is not specified in the <attrib_list>
+    parameter of glXChooseVisual then preference is given to visuals with no 
+    caveats (i.e., visuals with this attribute set to GLX_NONE_EXT). If the 
+    GLX_VISUAL_CAVEAT_EXT attribute is specified, then glXChooseVisual will 
+    match the specified value exactly. For example, if the value is specified 
+    as GLX_NONE_EXT, then only visuals with no caveats will be considered.
+
+    If the server doesn't support EXT_visual_rating, GLX client implementations 
+    treat all visuals as if they had the GLX_VISUAL_CAVEAT_EXT attribute set to 
+    GLX_NONE_EXT. Individual visuals that do not have this attribute set are 
+    also assumed to have no caveats.
+
+    A client that supports EXT_visual_rating will insure that the string
+    GLX_EXT_visual_rating is returned by glXQueryExtensionsString,
+    regardless of whether the server supports EXT_visual_rating.
+
+GLX Protocol
+
+    A single additional property type/property value pair may be included in
+    the property list of each visual returned by glXGetVisualConfigs.  This
+    property type/property value pair is encoded as
+
+     4         ENUM            property type
+               0x20            GLX_VISUAL_CAVEAT_EXT
+     4         ENUM            property value
+               0x8000          GLX_NONE_EXT
+               0x8001          GLX_SLOW_VISUAL_EXT
+               0x800D          GLX_NON_CONFORMANT_VISUAL_EXT
+
+
+    If this property type/property value pair is not specified for a visual,
+    then the value is assumed to be GLX_NONE_EXT.
+
+
+Errors
+
+    None
+
+New State
+
+    No GL state
+
+New Implementation Dependent State
+
+   None

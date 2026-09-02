@@ -28,8 +28,6 @@
 #ifndef SRC_DAWN_WIRE_CLIENT_EVENTMANAGER_H_
 #define SRC_DAWN_WIRE_CLIENT_EVENTMANAGER_H_
 
-#include <webgpu/webgpu.h>
-
 #include <atomic>
 #include <cstddef>
 #include <functional>
@@ -38,13 +36,15 @@
 #include <mutex>
 #include <utility>
 
-#include "dawn/common/FutureUtils.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/NonMovable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/wire/WireResult.h"
+#include "dawn/wire/client/wgpu_structs_autogen.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/FutureUtils.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/wire/WireResult.h"
+#include "src/utils/non_movable.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire::client {
 
@@ -100,8 +100,6 @@ class TrackedEvent : public RefCounted {
 // Subcomponent which tracks callback events for the Future-based callback
 // entrypoints. All events from this instance (regardless of whether from an adapter, device, queue,
 // etc.) are tracked here, and used by the instance-wide ProcessEvents and WaitAny entrypoints.
-//
-// TODO(crbug.com/dawn/2060): This should probably be merged together with RequestTracker.
 class EventManager final : NonMovable {
   public:
     using EventMap = std::map<FutureID, Ref<TrackedEvent>>;
@@ -109,17 +107,12 @@ class EventManager final : NonMovable {
     explicit EventManager(size_t timedWaitAnyMaxCount);
     ~EventManager();
 
-    // See mState for breakdown of these states.
-    enum class State { Nominal, InstanceDropped, ClientDropped };
-
     // Returns a pair of the FutureID and a bool that is true iff the event was successfuly tracked,
     // false otherwise. Events may not be tracked if the client is already disconnected.
     std::pair<FutureID, bool> TrackEvent(Ref<TrackedEvent>&& event);
 
-    // Transitions the EventManager to the given state. Note that states can only go in one
-    // direction, i.e. once the EventManager transitions to InstanceDropped, it cannot transition
-    // back to Nominal, though it may transition to ClientDropped later on.
-    void TransitionTo(State state);
+    // Destroys the EventManager. Any existing tracked events' callbacks are immediately called.
+    void Destroy();
 
     template <typename Event, typename... ReadyArgs>
     WireResult SetFutureReady(FutureID futureID, ReadyArgs&&... readyArgs) {
@@ -128,14 +121,14 @@ class EventManager final : NonMovable {
             return WireResult::FatalError;
         }
 
-        Ref<TrackedEvent> spontaneousEvent;
+        Ref<TrackedEvent> trackedEvent;
         WireResult result = mTrackedEvents.Use([&](auto trackedEvents) {
             auto it = trackedEvents->find(futureID);
             if (it == trackedEvents->end()) {
                 // If the future is not found, it must've already been completed.
                 return WireResult::Success;
             }
-            auto& trackedEvent = it->second;
+            trackedEvent = it->second;
 
             if (trackedEvent->GetType() != Event::kType) {
                 // Assert here for debugging, before returning a fatal error that is handled upwards
@@ -143,44 +136,37 @@ class EventManager final : NonMovable {
                 DAWN_ASSERT(trackedEvent->GetType() == Event::kType);
                 return WireResult::FatalError;
             }
-
-            WireResult result = static_cast<Event*>(trackedEvent.Get())
-                                    ->ReadyHook(futureID, std::forward<ReadyArgs>(readyArgs)...);
-            trackedEvent->SetReady();
-
-            // If the event can be spontaneously completed, prepare to do so now.
-            if (trackedEvent->GetCallbackMode() == WGPUCallbackMode_AllowSpontaneous) {
-                spontaneousEvent = trackedEvent;
-            }
-
-            return result;
+            return WireResult::Success;
         });
 
+        if (result != WireResult::Success || !trackedEvent) {
+            return result;
+        }
+
+        // The ReadyHook function is assumed to be thread-safe or only triggered by a server
+        // response (which only happens in a single thread). The only events that can be triggered
+        // from the client directly as of writing are MapAsync and DeviceLost.
+        result = static_cast<Event*>(trackedEvent.Get())
+                     ->ReadyHook(futureID, std::forward<ReadyArgs>(readyArgs)...);
+
+        // We need to set the event ready within the scope of the cond-var to signal it.
+        mTrackedEvents.Use([&](auto trackedEvents) { trackedEvent->SetReady(); });
+
         // Handle spontaneous completions.
-        if (spontaneousEvent) {
-            spontaneousEvent->Complete(futureID, EventCompletionType::Ready);
+        if (trackedEvent->GetCallbackMode() == WGPUCallbackMode_AllowSpontaneous) {
+            trackedEvent->Complete(futureID, EventCompletionType::Ready);
             mTrackedEvents.Use([&](auto trackedEvents) { trackedEvents->erase(futureID); });
         }
         return result;
     }
 
     void ProcessPollEvents();
-    WGPUWaitStatus WaitAny(size_t count, WGPUFutureWaitInfo* infos, uint64_t timeoutNS);
+    wgpu::WaitStatus WaitAny(Span<FutureWaitInfo> infos, uint64_t timeoutNS);
 
   private:
     const size_t mTimedWaitAnyMaxCount = 0;
 
-    // Different states of the EventManager dictate how new incoming events are handled.
-    //   Nominal: Usual state of the manager. All events are tracked and callbacks are fired
-    //     depending on the callback modes.
-    //   InstanceDropped: Transitioned to this state if the last external reference of the Instance
-    //     is dropped. In this mode, any non-spontaneous events are no longer tracked and their
-    //     callbacks are immediately called since the user cannot call WaitAny or ProcessEvents
-    //     anymore. Any existing non-spontaneous events' callbacks are also called on transition.
-    //   ClientDropped: Transitioned to this state once the client is dropped. In this mode, no new
-    //     events are tracked and callbacks are all immediately fired. Any existing tracked events'
-    //     callbacks are also called on transition.
-    State mState = State::Nominal;
+    bool mIsDestroyed = false;
 
     // Tracks all kinds of events (for both WaitAny and ProcessEvents). We use an ordered map so
     // that in most cases, event ordering is already implicit when we iterate the map. (Not true for

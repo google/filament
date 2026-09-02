@@ -28,9 +28,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -120,7 +120,7 @@ class ShaderBuiltinPartialConstLowHighTest
                 code << p << " " << ident << ": f32 = " << value << ";\n";
             }
         };
-        auto function_var = [&](std::string ident, Phase p, int value) {
+        auto function_var = [&](std::string ident, Phase p, float value) {
             if (p == Phase::kRuntime) {
                 code << "  var " << ident << ": f32 = " << value << ";\n";
             }

@@ -1,0 +1,915 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglChooseConfig">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglChooseConfig</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglChooseConfig</refname>
+        <refpurpose>
+            return a list of EGL frame buffer configurations that match specified attributes
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglChooseConfig</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLint const * <parameter>attrib_list</parameter></paramdef>
+                <paramdef>EGLConfig * <parameter>configs</parameter></paramdef>
+                <paramdef>EGLint <parameter>config_size</parameter></paramdef>
+                <paramdef>EGLint * <parameter>num_config</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>Specifies attributes required to match by configs.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>configs</parameter></term>
+                <listitem><para>Returns an array of frame buffer configurations.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config_size</parameter></term>
+                <listitem><para>Specifies the size of the array of frame buffer configurations.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>num_config</parameter></term>
+                <listitem><para>Returns the number of frame buffer configurations returned.</para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglChooseConfig</function> returns in
+            <parameter>configs</parameter> a list of all
+            <acronym>EGL</acronym> frame buffer configurations that
+            match the attributes specified in
+            <parameter>attrib_list</parameter>. The returned
+            <type>EGLConfig</type>s can be used in any
+            <acronym>EGL</acronym> function that requires an
+            <acronym>EGL</acronym> frame buffer configuration.
+        </para>
+        <para>
+            If <parameter>configs</parameter> is not
+            <constant>NULL</constant>, up to
+            <parameter>config_size</parameter> configs will be returned
+            in the array pointed to by <parameter>configs</parameter>.
+            The number of configs actually returned will be returned in
+            *<parameter>num_config</parameter>.
+        </para>
+        <para>
+            If <parameter>configs</parameter> is
+            <constant>NULL</constant>, no configs will be returned in
+            <parameter>configs</parameter>. Instead, the total number of
+            configs matching <parameter>attrib_list</parameter> will be
+            returned in *<parameter>num_config</parameter>. In this case
+            <parameter>config_size</parameter> is ignored. This form of
+            <function>eglChooseConfig</function> is used to determine
+            the number of matching frame buffer configurations, followed
+            by allocating an array of <type>EGLConfig</type> to pass
+            into another call to <function>eglChooseConfig</function>
+            with all other parameters unchanged.
+        </para>
+        <para>
+            All attributes in <parameter>attrib_list</parameter>,
+            including boolean attributes, are immediately followed by
+            the corresponding desired value. The list is terminated with
+            <constant>EGL_NONE</constant>. If an attribute is not
+            specified in <parameter>attrib_list</parameter> then the
+            default value (see below) is used (and the attribute is said
+            to be specified implicitly). For example, if
+            <constant>EGL_DEPTH_SIZE</constant> is not specified then it
+            is assumed to be zero. For some attributes, the default is
+            <constant>EGL_DONT_CARE</constant> meaning that any value is
+            OK for this attribute, so the attribute will not be checked.
+        </para>
+        <para>
+            Attributes are matched in an attribute-specific manner. Some
+            of the attributes, such as <constant>EGL_LEVEL</constant>,
+            must match the specified value exactly. Others, such as,
+            <constant>EGL_RED_SIZE</constant> must meet or exceed the
+            specified minimum values. If more than one EGL frame buffer
+            configuration matching all attributes is found, then a list
+            of configurations, sorted according to the ``best'' match
+            criteria, is returned. The match criteria for each attribute
+            and the exact sorting order is defined below.
+        </para>
+        <para>
+            For the bitmask attributes
+            <constant>EGL_CONFORMANT</constant>,
+            <constant>EGL_RENDERABLE_TYPE</constant>, and
+            <constant>EGL_SURFACE_TYPE</constant>, only the nonzero bits
+            of the mask are considered when matching. Any bits that are
+            zero in the specified bitmask attribute value may be either
+            zero or one in the resulting config's attribute value.
+        </para>
+        <para>
+            Attributes which may appear in
+            <parameter>attrib_list</parameter>, and their descriptions
+            and allowed values, are:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_ALPHA_MASK_SIZE</constant></term>
+                <listitem><para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired alpha mask buffer size, in
+                    bits. The smallest alpha mask buffers of at least
+                    the specified size are preferred. The default value
+                    is zero.
+                </para>
+                <para>
+                    The alpha mask buffer is used only by OpenVG.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_ALPHA_SIZE</constant></term>
+                <listitem><para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired size of the alpha component of
+                    the color buffer, in bits. If this value is zero,
+                    color buffers with the smallest alpha component size
+                    are preferred. Otherwise, color buffers with the
+                    largest alpha component of at least the specified
+                    size are preferred. The default value is zero.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_BIND_TO_TEXTURE_RGB</constant></term>
+                <listitem><para>
+                    Must be followed by
+                    <constant>EGL_DONT_CARE</constant>,
+                    <constant>EGL_TRUE</constant>, or
+                    <constant>EGL_FALSE</constant>.
+                    If <constant>EGL_TRUE</constant> is specified, then
+                    only frame buffer configurations that support
+                    binding of color buffers to an OpenGL ES RGB texture
+                    will be considered. Currently only frame buffer
+                    configurations that support pbuffers allow this. The
+                    default value is <constant>EGL_DONT_CARE</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_BIND_TO_TEXTURE_RGBA</constant></term>
+                <listitem><para>
+                    Must be followed by one of
+                    <constant>EGL_DONT_CARE</constant>,
+                    <constant>EGL_TRUE</constant>, or
+                    <constant>EGL_FALSE</constant>.
+                    If <constant>EGL_TRUE</constant> is specified, then
+                    only frame buffer configurations that support
+                    binding of color buffers to an OpenGL ES RGBA
+                    texture will be considered. Currently only frame
+                    buffer configurations that support pbuffers allow
+                    this. The default value is
+                    <constant>EGL_DONT_CARE</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_BLUE_SIZE</constant></term>
+                <listitem><para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired size of the blue component of
+                    the color buffer, in bits. If this value is zero,
+                    color buffers with the smallest blue component size
+                    are preferred. Otherwise, color buffers with the
+                    largest blue component of at least the specified
+                    size are preferred. The default value is zero.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_BUFFER_SIZE</constant></term>
+                <listitem><para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired color buffer size, in bits.
+                    The smallest color buffers of at least the specified
+                    size are preferred. The default value is zero.
+                </para>
+                <para>
+                    The color buffer size is the sum of
+                    <constant>EGL_RED_SIZE</constant>,
+                    <constant>EGL_GREEN_SIZE</constant>,
+                    <constant>EGL_BLUE_SIZE</constant>, and
+                    <constant>EGL_ALPHA_SIZE</constant>, and does not
+                    include any padding bits which may be present in the
+                    pixel format. It is usually preferable to specify
+                    desired sizes for these color components
+                    individually.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_COLOR_BUFFER_TYPE</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by one of
+                    <constant>EGL_RGB_BUFFER</constant> or
+                    <constant>EGL_LUMINANCE_BUFFER</constant>.
+                </para>
+                <para>
+                    <constant>EGL_RGB_BUFFER</constant> indicates
+                    an RGB color buffer; in this case,
+                    attributes <constant>EGL_RED_SIZE</constant>,
+                    <constant>EGL_GREEN_SIZE</constant> and
+                    <constant>EGL_BLUE_SIZE</constant> must be non-zero, and
+                    <constant>EGL_LUMINANCE_SIZE</constant> must be zero.
+                </para>
+                <para>
+                    <constant>EGL_LUMINANCE_BUFFER</constant> indicates a luminance color
+                    buffer. In this case <constant>EGL_RED_SIZE</constant>,
+                    <constant>EGL_GREEN_SIZE</constant>,
+                    <constant>EGL_BLUE_SIZE</constant> must be zero, and
+                    <constant>EGL_LUMINANCE_SIZE</constant> must be non-zero.
+                </para>
+                <para>
+                    For both RGB and luminance color buffers,
+                    <constant>EGL_ALPHA_SIZE</constant> may be zero or
+                    non-zero.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_CONFIG_CAVEAT</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by
+                    <constant>EGL_DONT_CARE</constant>,
+                    <constant>EGL_NONE</constant>,
+                    <constant>EGL_SLOW_CONFIG</constant>, or
+                    <constant>EGL_NON_CONFORMANT_CONFIG</constant>.
+                </para>
+                <para>
+                    If <constant>EGL_DONT_CARE</constant> is specified,
+                    then configs are not matched for this attribute. The
+                    default value is <constant>EGL_DONT_CARE</constant>.
+                </para>
+                <para>
+                    If <constant>EGL_NONE</constant> is specified, then
+                    configs are matched for this attribute, but only
+                    configs with no caveats (neither
+                    <constant>EGL_SLOW_CONFIG</constant> or
+                    <constant>EGL_NON_CONFORMANT_CONFIG</constant>) will
+                    be considered.
+                </para>
+                <para>
+                    If <constant>EGL_SLOW_CONFIG</constant> is
+                    specified, then only slow configs configurations
+                    will be considered. The meaning of``slow'' is
+                    implementation-dependent, but typically indicates a
+                    non-hardware-accelerated (software) implementation.
+                </para>
+                <para>
+                    If <constant>EGL_NON_CONFORMANT_CONFIG</constant> is
+                    specified, then only configs supporting
+                    non-conformant OpenGL ES contexts will be
+                    considered.
+                </para>
+                <para>
+                    If the EGL version is 1.3 or later, caveat
+                    <constant>EGL_NON_CONFORMANT_CONFIG</constant> is
+                    obsolete, since the same information can be
+                    specified via the
+                    <constant>EGL_CONFORMANT</constant> attribute on a
+                    per-client-API basis, not just for OpenGL ES.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_CONFIG_ID</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a valid integer ID that
+                    indicates the desired EGL frame buffer
+                    configuration. When a
+                    <constant>EGL_CONFIG_ID</constant> is specified, all
+                    other attributes are ignored. The default value is
+                    <constant>EGL_DONT_CARE</constant>.
+                </para>
+                <para>
+                    The meaning of config IDs is
+                    implementation-dependent. They are used only to
+                    uniquely identify different frame buffer
+                    configurations.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_CONFORMANT</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a bitmask indicating which types
+                    of client API contexts created with respect to the
+                    frame buffer configuration config must pass the
+                    required conformance tests for that API. Mask bits
+                    include:
+                </para>
+                <variablelist>
+                    <varlistentry>
+                        <term><constant>EGL_OPENGL_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating OpenGL contexts.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_OPENGL_ES_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating OpenGL ES 1.0
+                            and/or 1.1 contexts.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_OPENGL_ES2_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating OpenGL ES 2.0 contexts.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_OPENVG_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating OpenVG contexts.
+                        </para></listitem>
+                    </varlistentry>
+                </variablelist>
+                <para>
+                    For example, if the bitmask is set to
+                    <constant>EGL_OPENGL_ES_BIT</constant>, only frame
+                    buffer configurations that support creating
+                    conformant OpenGL ES contexts will match. The
+                    default value is zero.
+                </para>
+                <para>
+                    Most EGLConfigs should be conformant for all
+                    supported client APIs, and it is rarely desirable to
+                    select a nonconformant config. Conformance
+                    requirements limit the number of non-conformant
+                    configs that an implementation can define.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_DEPTH_SIZE</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired depth buffer size, in bits.
+                    The smallest depth buffers of at least the specified
+                    size is preferred. If the desired size is zero,
+                    frame buffer configurations with no depth buffer are
+                    preferred. The default value is zero.
+                </para>
+                <para>
+                    The depth buffer is used only by OpenGL and OpenGL
+                    ES client APIs.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_GREEN_SIZE</constant></term>
+                <listitem><para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired size of the green component of
+                    the color buffer, in bits. If this value is zero,
+                    color buffers with the smallest green component size
+                    are preferred. Otherwise, color buffers with the
+                    largest green component of at least the specified
+                    size are preferred. The default value is zero.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_LEVEL</constant></term>
+                <listitem><para>
+                    Must be followed by an integer buffer level
+                    specification. This specification is honored
+                    exactly. Buffer level zero corresponds to the
+                    default frame buffer of the display. Buffer level
+                    one is the first overlay frame buffer, level two the
+                    second overlay frame buffer, and so on. Negative
+                    buffer levels correspond to underlay frame buffers.
+                    The default value is zero.
+                </para>
+                <para>
+                    Most platforms do not support buffer levels other than
+                    zero. The behavior of windows placed in overlay and
+                    underlay planes depends on the underlying platform.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_LUMINANCE_SIZE</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired size of the luminance
+                    component of the color buffer, in bits. If this
+                    value is zero, color buffers with the smallest
+                    luminance component size are preferred. Otherwise,
+                    color buffers with the largest luminance component
+                    of at least the specified size are preferred. The
+                    default value is zero.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MATCH_NATIVE_PIXMAP</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by the handle of a valid native
+                    pixmap, cast to <type>EGLint</type>, or
+                    <constant>EGL_NONE</constant>. If the value is not
+                    <constant>EGL_NONE</constant>, only configs which
+                    support creating pixmap surfaces with this pixmap
+                    using
+                    <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>
+                    will match this attribute. If the value is
+                    <constant>EGL_NONE</constant>, then configs are not
+                    matched for this attribute. The default value is
+                    <constant>EGL_NONE</constant>.
+                </para>
+                <para>
+                    <constant>EGL_MATCH_NATIVE_PIXMAP</constant> was
+                    introduced due to the difficulty of determining an
+                    <type>EGLConfig</type> compatibile with a native
+                    pixmap using only color component sizes.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_NATIVE_RENDERABLE</constant></term>
+                <listitem><para>
+                    Must be followed by
+                    <constant>EGL_DONT_CARE</constant>,
+                    <constant>EGL_TRUE</constant>, or
+                    <constant>EGL_FALSE</constant>.
+                    If <constant>EGL_TRUE</constant> is specified, then
+                    only frame buffer configurations that allow native
+                    rendering into the surface will be considered. The
+                    default value is <constant>EGL_DONT_CARE</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MAX_SWAP_INTERVAL</constant></term>
+                <listitem><para>
+                    Must be followed by a integer that indicates the
+                    maximum value that can be passed to
+                    <citerefentry><refentrytitle>eglSwapInterval</refentrytitle></citerefentry>.
+                    The default value is
+                    <constant>EGL_DONT_CARE</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MIN_SWAP_INTERVAL</constant></term>
+                <listitem><para>
+                    Must be followed by a integer that indicates the
+                    minimum value that can be passed to eglSwapInterval.
+                    The default value is <constant>EGL_DONT_CARE</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_RED_SIZE</constant></term>
+                <listitem><para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired size of the red component of
+                    the color buffer, in bits. If this value is zero,
+                    color buffers with the smallest red component size
+                    are preferred. Otherwise, color buffers with the
+                    largest red component of at least the specified size
+                    are preferred. The default value is zero.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SAMPLE_BUFFERS</constant></term>
+                <listitem><para>
+                    Must be followed by the minimum acceptable number of
+                    multisample buffers. Configurations with the
+                    smallest number of multisample buffers that meet or
+                    exceed this minimum number are preferred. Currently
+                    operation with more than one multisample buffer is
+                    undefined, so only values of zero or one will
+                    produce a match. The default value is zero.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SAMPLES</constant></term>
+                <listitem><para>
+                    Must be followed by the minimum number of
+                    samples required in multisample buffers.
+                    Configurations with the smallest number of
+                    samples that meet or exceed the specified
+                    minimum number are preferred.  Note that it is
+                    possible for color samples in the multisample
+                    buffer to have fewer bits than colors in the
+                    main color buffers.  However, multisampled
+                    colors maintain at least as much color
+                    resolution in aggregate as the main color
+                    buffers.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_STENCIL_SIZE</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a nonnegative integer that
+                    indicates the desired stencil buffer size, in bits.
+                    The smallest stencil buffers of at least the
+                    specified size are preferred. If the desired size is
+                    zero, frame buffer configurations with no stencil
+                    buffer are preferred. The default value is zero.
+                </para>
+                <para>
+                    The stencil buffer is used only by OpenGL and
+                    OpenGL ES client APIs.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_RENDERABLE_TYPE</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a bitmask indicating which types
+                    of client API contexts the frame buffer
+                    configuration must support creating with
+                    <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>).
+                    Mask bits are the same as for attribute
+                    <constant>EGL_CONFORMANT</constant>. The default
+                    value is <constant>EGL_OPENGL_ES_BIT</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SURFACE_TYPE</constant></term>
+                <listitem>
+                <para>
+                    Must be followed by a bitmask indicating which EGL
+                    surface types and capabilities the frame buffer
+                    configuration must support. Mask bits include:
+                </para>
+                <variablelist>
+                    <varlistentry>
+                        <term><constant>EGL_MULTISAMPLE_RESOLVE_BOX_BIT</constant></term>
+                        <listitem><para>
+                            Config allows specifying box filtered
+                            multisample resolve behavior with
+                            <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_PBUFFER_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating pixel buffer surfaces.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_PIXMAP_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating pixmap surfaces.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_SWAP_BEHAVIOR_PRESERVED_BIT</constant></term>
+                        <listitem><para>
+                            Config allows setting swap behavior for
+                            color buffers with
+                            <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>.
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_VG_ALPHA_FORMAT_PRE_BIT</constant></term>
+                        <listitem><para>
+                            Config allows specifying OpenVG rendering
+                            with premultiplied alpha values at surface
+                            creation time (see
+                            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+                            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+                            and
+                            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>).
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_VG_COLORSPACE_LINEAR_BIT</constant></term>
+                        <listitem><para>
+                            Config allows specifying OpenVG rendering in
+                            a linear colorspace at surface creation time
+                            (see
+                            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+                            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+                            and
+                            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>).
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><constant>EGL_WINDOW_BIT</constant></term>
+                        <listitem><para>
+                            Config supports creating window surfaces.
+                        </para></listitem>
+                    </varlistentry>
+                </variablelist>
+                <para>
+                    For example, if the bitmask is set to
+                    <constant>EGL_WINDOW_BIT</constant> |
+                    <constant>EGL_PIXMAP_BIT</constant>,
+                    only frame buffer configurations that support both
+                    windows and pixmaps will be considered. The default
+                    value is <constant>EGL_WINDOW_BIT</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TRANSPARENT_TYPE</constant></term>
+                <listitem><para>
+                    Must be followed by one of
+                    <constant>EGL_NONE</constant> or
+                    <constant>EGL_TRANSPARENT_RGB</constant>. If
+                    <constant>EGL_NONE</constant> is specified, then
+                    only opaque frame buffer configurations will be
+                    considered. If
+                    <constant>EGL_TRANSPARENT_RGB</constant> is
+                    specified, then only transparent frame buffer
+                    configurations will be considered. The default value
+                    is <constant>EGL_NONE</constant>.
+                </para>
+                <para>
+                    Most implementations support only opaque frame
+                    buffer configurations.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TRANSPARENT_RED_VALUE</constant></term>
+                <listitem><para>
+                    Must be followed by an integer value indicating the
+                    transparent red value. The value must be between
+                    zero and the maximum color buffer value for red.
+                    Only frame buffer configurations that use the
+                    specified transparent red value will be considered.
+                    The default value is
+                    <constant>EGL_DONT_CARE</constant>.
+                </para>
+                <para>
+                    This attribute is ignored unless
+                    <constant>EGL_TRANSPARENT_TYPE</constant> is included in
+                    <parameter>attrib_list</parameter> and specified as
+                    <constant>EGL_TRANSPARENT_RGB</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TRANSPARENT_GREEN_VALUE</constant></term>
+                <listitem><para>
+                    Must be followed by an integer value indicating the
+                    transparent green value. The value must be between
+                    zero and the maximum color buffer value for green.
+                    Only frame buffer configurations that use the
+                    specified transparent green value will be
+                    considered. The default value is
+                    <constant>EGL_DONT_CARE</constant>.
+                </para>
+                <para>
+                    This attribute is ignored unless
+                    <constant>EGL_TRANSPARENT_TYPE</constant> is included in
+                    <parameter>attrib_list</parameter> and specified as
+                    <constant>EGL_TRANSPARENT_RGB</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TRANSPARENT_BLUE_VALUE</constant></term>
+                <listitem><para>
+                    Must be followed by an integer value indicating the
+                    transparent blue value. The value must be between
+                    zero and the maximum color buffer value for blue.
+                    Only frame buffer configurations that use the
+                    specified transparent blue value will be considered.
+                    The default value is
+                    <constant>EGL_DONT_CARE</constant>.
+                </para>
+                <para>
+                    This attribute is ignored unless
+                    <constant>EGL_TRANSPARENT_TYPE</constant> is included in
+                    <parameter>attrib_list</parameter> and specified as
+                    <constant>EGL_TRANSPARENT_RGB</constant>.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+        <para>
+            When more than one EGL frame buffer configuration matches
+            the specified attributes, a list of matching configurations
+            is returned. The list is sorted according to the following
+            precedence rules, which are applied in ascending order
+            (i.e., configurations that are considered equal by a lower
+            numbered rule are sorted by the higher numbered rule):
+        </para>
+        <orderedlist>
+            <listitem><para>
+                Special: by <constant>EGL_CONFIG_CAVEAT</constant>,
+                where the precedence is <constant>EGL_NONE</constant>,
+                <constant>EGL_SLOW_CONFIG</constant>, and
+                <constant>EGL_NON_CONFORMANT_CONFIG</constant>.
+            </para></listitem>
+            <listitem><para>
+                Special: by <constant>EGL_COLOR_BUFFER_TYPE</constant>,
+                where the precedence is
+                <constant>EGL_RGB_BUFFER</constant>,
+                <constant>EGL_LUMINANCE_BUFFER</constant>.
+            </para></listitem>
+            <listitem>
+            <para>
+                Special: by larger total number of color bits (for an
+                RGB color buffer, this is the sum of
+                <constant>EGL_RED_SIZE</constant>,
+                <constant>EGL_GREEN_SIZE</constant>,
+                <constant>EGL_BLUE_SIZE</constant>, and
+                <constant>EGL_ALPHA_SIZE</constant>; for a luminance
+                color buffer, the sum of
+                <constant>EGL_LUMINANCE_SIZE</constant> and
+                <constant>EGL_ALPHA_SIZE</constant>). If the requested
+                number of bits in <parameter>attrib_list</parameter> is
+                <constant>0</constant> or
+                <constant>EGL_DONT_CARE</constant> for a particular
+                color component, then the number of bits for that
+                component is not considered.
+            </para>
+            <para>
+                This sort rule places configs with deeper color buffers
+                before configs with shallower color buffers, which may
+                be counterintuitive.
+            </para>
+            </listitem>
+            <listitem><para>
+                Smaller <constant>EGL_BUFFER_SIZE</constant>.
+            </para></listitem>
+            <listitem><para>
+                Smaller <constant>EGL_SAMPLE_BUFFERS</constant>.
+            </para></listitem>
+            <listitem><para>
+                Smaller <constant>EGL_SAMPLES</constant>.
+            </para></listitem>
+            <listitem><para>
+                Smaller <constant>EGL_DEPTH_SIZE</constant>.
+            </para></listitem>
+            <listitem><para>
+                Smaller <constant>EGL_STENCIL_SIZE</constant>.
+            </para></listitem>
+            <listitem><para>
+                Smaller <constant>EGL_ALPHA_MASK_SIZE</constant>.
+            </para></listitem>
+            <listitem><para>
+                Special: <constant>EGL_NATIVE_VISUAL_TYPE</constant>
+                (the actual sort order is implementation-defined,
+                depending on the meaning of native visual types).
+            </para></listitem>
+            <listitem><para>
+                Smaller <constant>EGL_CONFIG_ID</constant> (this is
+                always the last sorting rule, and guarantees a unique
+                ordering).
+            </para></listitem>
+        </orderedlist>
+        <para>
+            <type>EGLConfigs</type> are not sorted with respect to the
+            attributes <constant>EGL_BIND_TO_TEXTURE_RGB</constant>,
+            <constant>EGL_BIND_TO_TEXTURE_RGBA</constant>,
+            <constant>EGL_CONFORMANT</constant>,
+            <constant>EGL_LEVEL</constant>,
+            <constant>EGL_NATIVE_RENDERABLE</constant>,
+            <constant>EGL_MAX_SWAP_INTERVAL</constant>,
+            <constant>EGL_MIN_SWAP_INTERVAL</constant>,
+            <constant>EGL_RENDERABLE_TYPE</constant>,
+            <constant>EGL_SURFACE_TYPE</constant>,
+            <constant>EGL_TRANSPARENT_TYPE</constant>,
+            <constant>EGL_TRANSPARENT_RED_VALUE</constant>,
+            <constant>EGL_TRANSPARENT_GREEN_VALUE</constant>, and
+            <constant>EGL_TRANSPARENT_BLUE_VALUE</constant>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="examples"><title>Examples</title>
+        <para>
+            The following example specifies a frame buffer configuration
+            in the normal frame buffer (not an overlay or underlay). The
+            returned frame buffer configuration supports a color buffer
+            with at least 4 bits each of red, green and blue, and
+            possibly no alpha bits. The code shown in the example may or
+            may not have a depth buffer, or a stencil buffer.
+        </para>
+        <programlisting>EGLint const attrib_list[] = {
+        EGL_RED_SIZE, 4,
+        EGL_GREEN_SIZE, 4,
+        EGL_BLUE_SIZE, 4,
+        EGL_NONE
+};</programlisting>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <constant>EGL_RENDERABLE_TYPE</constant> bit
+            <constant>EGL_OPENGL_BIT</constant>, and
+            <constant>EGL_SURFACE_TYPE</constant> bits
+            <constant>EGL_MULTISAMPLE_RESOLVE_BOX_BIT</constant> and
+            <constant>EGL_SWAP_BEHAVIOR_PRESERVED_BIT</constant> are
+            supported only if the EGL version is 1.4 or greater.
+        </para>
+        <para>
+            <constant>EGL_CONFORMANT</constant>,
+            <constant>EGL_MATCH_NATIVE_PIXMAP</constant>,
+            <constant>EGL_RENDERABLE_TYPE</constant> bit
+            <constant>EGL_OPENGL_ES2_BIT</constant>, and
+            <constant>EGL_SURFACE_TYPE</constant> bits
+            <constant>EGL_VG_ALPHA_FORMAT_PRE_BIT</constant> and
+            <constant>EGL_VG_COLORSPACE_LINEAR_BIT</constant> are
+            supported only if the EGL version is 1.3 or greater.
+        </para>
+        <para>
+            <constant>EGL_ALPHA_MASK_SIZE</constant>,
+            <constant>EGL_COLOR_BUFFER_TYPE</constant>,
+            <constant>EGL_LUMINANCE_SIZE</constant>,
+            <constant>EGL_RENDERABLE_TYPE</constant>, and
+            <constant>EGL_RENDERABLE_TYPE</constant> bits
+            <constant>EGL_OPENGL_ES_BIT</constant> and
+            <constant>EGL_OPENVG_BIT</constant> are supported only if
+            the EGL version is 1.2 or greater.
+        </para>
+        <para>
+            If OpenGL or OpenGL ES rendering is supported for a
+            luminance color buffer, it is treated as RGB rendering with
+            the value of <constant>GL_RED_BITS</constant> equal to
+            <constant>EGL_LUMINANCE_SIZE</constant> and the values of
+            <constant>GL_GREEN_BITS</constant> and
+            <constant>GL_BLUE_BITS</constant> equal to zero. The red
+            component of fragments is written to the luminance channel
+            of the color buffer while the green and blue components are
+            discarded.
+        </para>
+        <para>
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>
+            and
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>
+            can be used to implement selection algorithms other than the
+            generic one implemented by
+            <function>eglChooseConfig</function>. Call
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>
+            to retrieve all the frame buffer configurations, or
+            alternatively, all the frame buffer configurations with a
+            particular set of attributes. Next call
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>
+            to retrieve additional attributes for the frame buffer
+            configurations and then select between them.
+        </para>
+        <para>
+            EGL implementors are strongly discouraged, but not
+            proscribed, from changing the selection algorithm used by
+            <function>eglChooseConfig</function>. Therefore, selections
+            may change from release to release of the client-side
+            library.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise.
+            <parameter>configs</parameter> and
+            <parameter>num_config</parameter> are not modified when
+            <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attribute_list</parameter> contains an invalid frame buffer
+            configuration attribute or an
+            attribute value that is unrecognized or out of range.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>num_config</parameter> is <constant>NULL</constant>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSwapInterval</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

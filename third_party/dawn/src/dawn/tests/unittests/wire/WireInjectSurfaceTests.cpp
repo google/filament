@@ -28,9 +28,10 @@
 #include <array>
 #include <utility>
 
-#include "dawn/tests/unittests/wire/WireTest.h"
 #include "dawn/wire/WireClient.h"
 #include "dawn/wire/WireServer.h"
+#include "src/dawn/tests/unittests/wire/WireTest.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::wire {
 namespace {
@@ -192,19 +193,20 @@ TEST_F(WireInjectSurfaceTests, Capabilities) {
 
     EXPECT_EQ(caps.formatCount, mCapabilities.formatCount);
     for (uint32_t i = 0; i < caps.formatCount; i++) {
-        EXPECT_EQ(static_cast<WGPUTextureFormat>(caps.formats[i]), mCapabilities.formats[i]);
+        DAWN_UNSAFE_TODO(
+            EXPECT_EQ(static_cast<WGPUTextureFormat>(caps.formats[i]), mCapabilities.formats[i]));
     }
 
     EXPECT_EQ(caps.presentModeCount, mCapabilities.presentModeCount);
     for (uint32_t i = 0; i < caps.presentModeCount; i++) {
-        EXPECT_EQ(static_cast<WGPUPresentMode>(caps.presentModes[i]),
-                  mCapabilities.presentModes[i]);
+        DAWN_UNSAFE_TODO(EXPECT_EQ(static_cast<WGPUPresentMode>(caps.presentModes[i]),
+                                   mCapabilities.presentModes[i]));
     }
 
     EXPECT_EQ(caps.alphaModeCount, mCapabilities.alphaModeCount);
     for (uint32_t i = 0; i < caps.alphaModeCount; i++) {
-        EXPECT_EQ(static_cast<WGPUCompositeAlphaMode>(caps.alphaModes[i]),
-                  mCapabilities.alphaModes[i]);
+        DAWN_UNSAFE_TODO(EXPECT_EQ(static_cast<WGPUCompositeAlphaMode>(caps.alphaModes[i]),
+                                   mCapabilities.alphaModes[i]));
     }
 
     EXPECT_EQ(static_cast<WGPUTextureUsage>(caps.usages), mCapabilities.usages);
@@ -325,34 +327,6 @@ TEST_F(WireInjectSurfaceTests, GetCurrentTextureUnconfigured) {
     EXPECT_EQ(texture.texture, nullptr);
 
     // The server sees no calls to GetCurrentTexture.
-    FlushClient();
-}
-
-// Test calling GetCurrentTexture after the device is destroyed.
-// Note that this tests the same code path as device loss.
-TEST_F(WireInjectSurfaceTests, GetCurrentTextureDeviceDestroyed) {
-    auto [reservation, surface] = ReserveSurface(&mCapabilities);
-
-    WGPUSurface apiSurface = api.GetNewSurface();
-    EXPECT_CALL(api, SurfaceAddRef(apiSurface));
-    ASSERT_TRUE(
-        GetWireServer()->InjectSurface(apiSurface, reservation.handle, reservation.instanceHandle));
-
-    surface.Configure(&mConfiguration);
-    EXPECT_CALL(api, SurfaceConfigure(apiSurface, _));
-
-    device.Destroy();
-    EXPECT_CALL(api, DeviceDestroy(apiDevice));
-
-    wgpu::SurfaceTexture texture;
-    surface.GetCurrentTexture(&texture);
-
-    WGPUTexture apiTexture = api.GetNewTexture();
-    EXPECT_CALL(api, DeviceCreateErrorTexture(apiDevice, _)).WillOnce(Return(apiTexture));
-
-    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
-    EXPECT_NE(texture.texture.Get(), nullptr);
-
     FlushClient();
 }
 

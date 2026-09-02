@@ -163,7 +163,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> HandleMatrixArithmetic(core::ir::Module& ir) {
-    AssertValid(ir, kHandleMatrixArithmeticCapabilities, "before spirv.HandleMatrixArithmetic");
+    AssertValid(ir, "before spirv.HandleMatrixArithmetic");
 
     State{ir}.Process();
 

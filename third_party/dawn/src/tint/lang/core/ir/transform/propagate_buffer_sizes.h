@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_PROPAGATE_BUFFER_SIZES_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_PROPAGATE_BUFFER_SIZES_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,12 +36,6 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
-
-/// The capabilities that the transform can support.
-const Capabilities kPropagateBufferSizesCapabilities{
-    Capability::kAllowDuplicateBindings,
-    Capability::kAllow8BitIntegers,
-};
 
 /// PropagateBufferSizes is a transform that propagates buffer sizes through the call tree.
 /// @param module The module

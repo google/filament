@@ -34,8 +34,12 @@
 #                       Do not modify this file directly
 ################################################################################
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//src/tint:flags.bzl", "COPTS")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+
+exports_files(glob(["*.def", "*.tmpl"], allow_empty = True))
+
 cc_library(
   name = "bench",
   alwayslink = True,
@@ -45,14 +49,17 @@ cc_library(
   deps = [
     "//src/tint/api/common",
     "//src/tint/api/helpers",
+    "//src/tint/cmd/bench:bench",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/type",
+    "//src/tint/lang/hlsl/writer",
     "//src/tint/lang/hlsl/writer/common",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
     "//src/tint/lang/wgsl/program",
+    "//src/tint/lang/wgsl/reader",
     "//src/tint/lang/wgsl/sem",
     "//src/tint/utils",
     "//src/tint/utils/containers",
@@ -61,23 +68,13 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
+    "//src/tint/utils/reflection",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
     "@benchmark",
     "//src/utils",
-  ] + select({
-    ":tint_build_hlsl_writer": [
-      "//src/tint/lang/hlsl/writer",
-    ],
-    "//conditions:default": [],
-  }) + select({
-    ":tint_build_wgsl_reader": [
-      "//src/tint/cmd/bench:bench",
-      "//src/tint/lang/wgsl/reader",
-    ],
-    "//conditions:default": [],
-  }),
+  ],
   copts = COPTS,
   visibility = ["//visibility:public"],
 )

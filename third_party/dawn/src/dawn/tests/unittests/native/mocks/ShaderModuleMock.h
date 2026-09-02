@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SHADERMODULEMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SHADERMODULEMOCK_H_
 
-#include "dawn/native/ShaderModule.h"
-#include "dawn/tests/unittests/native/mocks/DeviceMock.h"
 #include "gmock/gmock.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/tests/unittests/native/mocks/DeviceMock.h"
 
 namespace dawn::native {
 

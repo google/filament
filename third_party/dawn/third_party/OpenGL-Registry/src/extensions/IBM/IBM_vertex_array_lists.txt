@@ -1,0 +1,249 @@
+
+
+Name
+
+    IBM_vertex_array_lists
+
+Name Strings
+
+    GL_IBM_vertex_array_lists
+
+Version
+
+    IBM Date: 1999/06/02 13:18:29  Revision: 1.8 
+
+Number
+
+    201
+
+Dependencies
+
+    OpenGL 1.1 is required. The language is written against the OpenGL 1.2
+    specification.
+
+    This extension affects/interacts with the EXT_multi_draw_arrays and
+    IBM_multimode_draw_arrays extensions.
+
+    Support for the FogCoordPointerListIBM function is only required if
+    the EXT_fog_coord extension is supported.
+
+    Support for the SecondaryColorPointerListIBM function is only required if
+    the EXT_secondary_color extension is supported.
+
+Overview
+
+    This extension introduces seven (7) new functions that set the 
+    vertex array pointers. However, instead of a single pointer, these
+    functions provide a list of array pointers that can be used by the 
+    EXT_multi_draw_arrays and IBM_multimode_draw_arrays extension 
+    functions to draw from multiple of vertex arrays. The first 
+    primitive will use the first array in the list, the second primitive
+    will use the second array in the list, and so forth. If a glDrawArray,
+    DrawElements, or DrawRangeElements function is used, then 
+    only the first vertex array in the list is used.
+
+    When a vertex array list is specified, only the list pointer
+    is kept by the underlying OpenGL function. Therefore, the list
+    must be staticly defined for the entire duration of its usage,
+    much in the same manner as the vertex arrays themselves. Also
+    note that the list function can therefore also be used to change
+    array pointers without making a OpenGL API function call.
+
+    A <ptrstride> value of zero (0) can be used to force all primitives
+    of a multi-vertex array to use only the first vertex array in 
+    the list. 
+
+    The <stride> parameter of the list pointer functions differs from
+    that of the non-list vertex array pointer functions in that 1)
+    both negative and positive strides are accepted thusly allowing
+    vertex lists to be rendered in reverse order; 2) a <stride> of
+    zero (0) results in no stride and can be used to specify a single
+    vertex attribute for each vertex of the primitive.
+
+    These new functions are a superset of the standard OpenGL 1.2 vertex
+    array (non-list) pointer functions and share common state. Therefore,
+    the list pointer and non-list pointer functions can be used
+    interchangably.
+
+    New queries are provided by this extension so that ZAPdb can be extended
+    to query the list pointer state whenever a vertex array function 
+    is traced. The pointer returned by a query of *_ARRAY_POINTER returns
+    the first entry in the array list.
+
+
+Issues
+
+New Procedures and Functions
+
+    void ColorPointerListIBM (GLint size, 
+		 	      GLenum type, 
+			      GLint stride, 
+			      const void **pointer, 
+			      GLint ptrstride)
+
+    void SecondaryColorPointerListIBM (GLint size, 
+                                       GLenum type, 
+			               GLint stride, 
+			               const void **pointer, 
+			               GLint ptrstride)
+
+    void EdgeFlagPointerListIBM (GLint stride,
+				 const GLboolean **pointer,
+				 GLint ptrstride);
+
+    void FogCoordPointerListIBM (GLenum type,
+				 GLint stride,
+				 const void **pointer,
+				 GLint ptrstride)
+
+    void IndexPointerListIBM (GLenum type, 
+			      GLint stride, 
+			      const void **pointer, 
+			      GLint ptrstride);
+
+    void NormalPointerListIBM (GLenum type, 
+			       GLint stride, 
+			       const void **pointer, 
+			       GLint ptrstride);
+
+    void TexCoordPointerListIBM (GLint size, 
+				 GLenum type, 
+				 GLint stride, 
+				 const void **pointer,
+				 GLint ptrstride);
+
+    void VertexPointerListIBM (GLint size, 
+			       GLenum type, 
+			       GLint stride, 
+			       const void **pointer, 
+			       GLint ptrstride);
+
+
+    Parameters
+    ----------
+        size            Specifies the number of values per vertex that
+			are stored in the array.
+
+	type            Specifies the data type of the values stored in
+			the array.
+
+        stride		Specifies the number of basic elements (for most
+			systems this is bytes) between array values.
+
+	pointer		Pointer to a list of array pointers.
+
+	ptrstride	Specifies the number of basic elements (for most
+			systems this is bytes) bewteen array pointers
+			in the pointer lists pointed to by <pointer>.
+
+	Valid <size> and <type> parameters for each of the functions is
+        the same as the non-list vertex array counterparts. 
+
+				   <size>	<type>
+                                   ------       ------------------------
+	ColorPointerListIBM	    3,4		GLshort, GLint, GLfloat, 
+						GLdouble
+        EdgeFlagPointerListIBM      -		-
+	FogCoordPointerListIBM      1		GLfloat, GLdouble
+	IndexPointerListIBM	    -		GLubyte, GLshort, GLint, 
+	 					GLfloat, GLdouble
+	NormalPointerListIBM        -           GLbyte, GLshort, GLint,
+						GLfloat, GLdouble
+	SecondaryColorPointerListIBM 3,4	GLshort, GLint, GLfloat, 
+						GLdouble
+        TexCoordPointerListIBM      1,2,3,4	GLshort, GLint, GLfloat, 
+						GLdouble
+	VertexPointerListIBM	    2,3,4	GLshort, GLint, GLfloat, 
+						GLdouble
+
+New Tokens
+
+  Accepted by the <pname> parameter of GetPointerv:
+
+  VERTEX_ARRAY_LIST_IBM			103070
+  NORMAL_ARRAY_LIST_IBM			103071
+  COLOR_ARRAY_LIST_IBM			103072
+  INDEX_ARRAY_LIST_IBM			103073
+  TEXTURE_COORD_ARRAY_LIST_IBM		103074
+  EDGE_FLAG_ARRAY_LIST_IBM		103075
+  FOG_COORDINATE_ARRAY_LIST_IBM		103076
+  SECONDARY_COLOR_ARRAY_LIST_IBM	103077
+
+  Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+  GetFloatv, and GetDoublev:
+
+  VERTEX_ARRAY_LIST_STRIDE_IBM		103080
+  NORMAL_ARRAY_LIST_STRIDE_IBM		103081
+  COLOR_ARRAY_LIST_STRIDE_IBM		103082
+  INDEX_ARRAY_LIST_STRIDE_IBM		103083
+  TEXTURE_COORD_ARRAY_LIST_STRIDE_IBM	103084
+  EDGE_FLAG_ARRAY_LIST_STRIDE_IBM	103085
+  FOG_COORDINATE_ARRAY_LIST_STRIDE_IBM	103086
+  SECONDARY_COLOR_ARRAY_LIST_STRIDE_IBM	103087
+
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    Section 2.8 Vertex Arrays:
+
+	??? yet to be written ???
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations and
+
+    None.
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    Additional table entries for Table 6.6. Vertex Array Data
+
+                                            Get          Initial
+       Get Value                       Type Cmnd         Value     Description                   Sec  Attribute
+    ---------------------------------  ---- -----------  ------- ------------------------------  --- -----------
+    VERTEX_ARRAY_LIST_IBM	        Y   GetPointerv  &NULL   Ptr to list of vertex arrays    2.8 vertex-array
+    NORMAL_ARRAY_LIST_IBM	        Y   GetPointerv  &NULL   Ptr to list of normal arrays    2.8 vertex-array
+    COLOR_ARRAY_LIST_IBM	        Y   GetPointerv  &NULL   Ptr to list of color arrays     2.8 vertex-array
+    INDEX_ARRAY_LIST_IBM                Y   GetPointerv  &NULL   Ptr to list of index arrays     2.8 vertex-array
+    TEXTURE_COORD_ARRAY_LIST_IBM        Y   GetPointerv  &NULL   Ptr to list of texture arrays   2.8 vertex-array
+    EDGE_FLAG_ARRAY_LIST_IBM            Y   GetPointerv  &NULL   Ptr to list of edgeflag arrays  2.8 vertex-array
+    FOG_COORD_ARRAY_LIST_IBM            Y   GetPointerv  &NULL   Ptr to list of fog arrays       2.8 vertex-array
+    SECONDARY_COLOR_ARRAY_LIST_IBM      Y   GetPointerv  &NULL   Ptr to list of secondary arrays 2.8 vertex-array
+    VERTEX_ARRAY_LIST_STRIDE_IBM        Z   GetIntegetv    0     Vertex list ptr stride          2.8 vertex-array
+    NORMAL_ARRAY_LIST_STRIDE_IBM        Z   GetIntegetv    0     Normal list ptr stride          2.8 vertex-array
+    COLOR_ARRAY_LIST_STRIDE_IBM	        Z   GetIntegetv    0     Color list ptr stride           2.8 vertex-array
+    INDEX_ARRAY_LIST_STRIDE_IBM	        Z   GetIntegetv    0     Index list ptr stride           2.8 vertex-array
+    TEXTURE_COORD_ARRAY_LIST_STRIDE_IBM	Z   GetIntegetv    0     Texture coord list ptr stride   2.8 vertex-array
+    EDGE_FLAG_ARRAY_LIST_STRIDE_IBM	Z   GetIntegetv    0     Edgeflag list ptr stride        2.8 vertex-array
+    FOG_COORD_ARRAY_LIST_STRIDE_IBM	Z   GetIntegetv    0     Fog coord list ptr stride       2.8 vertex-array
+    SECONDARY_COLOR_ARRAY_LIST_STRIDE_IBM Z GetIntegetv    0     Secondary color list ptr stride 2.8 vertex-array
+
+    Notes:
+    1) The initial list pointer values point to a NULL pointer.
+
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    GL_INVALID_VALUE is generated if <size> is not an accepted value.
+
+    GL_INVALID_ENUM is generated if <type> is not an accepted value.
+
+New State
+
+    None.
+
+

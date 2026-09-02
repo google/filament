@@ -28,13 +28,13 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_BINDGROUPD3D12_H_
 #define SRC_DAWN_NATIVE_D3D12_BINDGROUPD3D12_H_
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/PlacementAllocated.h"
-#include "dawn/common/ityp_span.h"
-#include "dawn/common/ityp_stack_vec.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
-#include "dawn/native/d3d12/GPUDescriptorHeapAllocationD3D12.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/PlacementAllocated.h"
+#include "src/dawn/common/ityp_stack_vec.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
+#include "src/dawn/native/d3d12/GPUDescriptorHeapAllocationD3D12.h"
+#include "src/utils/span.h"
 
 namespace dawn::native::d3d12 {
 

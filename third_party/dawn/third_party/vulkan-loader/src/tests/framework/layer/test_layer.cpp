@@ -528,14 +528,12 @@ VKAPI_ATTR VkResult VKAPI_CALL test_vkEnumeratePhysicalDevices(VkInstance instan
             if (layer.add_phys_devs) {
                 // Insert a new device in the beginning, middle, and end
                 uint32_t middle = static_cast<uint32_t>(tmp_vector.size() / 2);
-                VkPhysicalDevice new_phys_dev = reinterpret_cast<VkPhysicalDevice>((size_t)(0xABCD0000));
-                layer.added_physical_devices.push_back(new_phys_dev);
+
+                VkPhysicalDevice new_phys_dev = layer.added_physical_devices.emplace_back().handle;
                 tmp_vector.insert(tmp_vector.begin(), new_phys_dev);
-                new_phys_dev = reinterpret_cast<VkPhysicalDevice>((size_t)(0xBADC0000));
-                layer.added_physical_devices.push_back(new_phys_dev);
+                new_phys_dev = layer.added_physical_devices.emplace_back().handle;
                 tmp_vector.insert(tmp_vector.begin() + middle, new_phys_dev);
-                new_phys_dev = reinterpret_cast<VkPhysicalDevice>((size_t)(0xDCBA0000));
-                layer.added_physical_devices.push_back(new_phys_dev);
+                new_phys_dev = layer.added_physical_devices.emplace_back().handle;
                 tmp_vector.push_back(new_phys_dev);
             }
 
@@ -644,7 +642,7 @@ VKAPI_ATTR VkResult VKAPI_CALL test_vkEnumeratePhysicalDeviceGroups(
                 for (uint32_t dev = 0; dev < layer.added_physical_devices.size(); ++dev) {
                     VkPhysicalDeviceGroupProperties props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES};
                     props.physicalDeviceCount = 1;
-                    props.physicalDevices[0] = layer.added_physical_devices[dev];
+                    props.physicalDevices[0] = layer.added_physical_devices[dev].handle;
                     tmp_vector.push_back(props);
                     layer.added_physical_device_groups.push_back(props);
                 }

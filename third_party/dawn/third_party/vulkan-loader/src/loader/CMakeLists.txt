@@ -139,8 +139,24 @@ if(WIN32 AND NOT USE_GAS)
             if(CMAKE_VERSION VERSION_LESS "3.26.0")
                 set(ASM_FAILURE_MSG ${ARMASM_CMAKE_FAILURE_MSG})
             else()
+                # CMake's MARMASM detection regex only matches "ARM64", so for arm64ec it
+                # picks the 32-bit armasm, and even on arm64 it leaves the compiler as a bare
+                # name that the check below can't run without the dev tools on PATH. Resolve
+                # armasm64 (next to the C compiler) and use its full path. Drop this once
+                # CMake's detection learns about ARM64EC.
+                if(SYSTEM_PROCESSOR MATCHES "arm64")
+                    get_filename_component(MARMASM_TOOLCHAIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+                    find_program(MARMASM_ARMASM64 NAMES armasm64 HINTS "${MARMASM_TOOLCHAIN_DIR}")
+                endif()
+                if(MARMASM_ARMASM64)
+                    set(CMAKE_ASM_MARMASM_COMPILER "${MARMASM_ARMASM64}")
+                endif()
                 enable_language(ASM_MARMASM)
                 set(LOADER_ASM_DIALECT "MARMASM")
+                if(MARMASM_ARMASM64)
+                    # enable_language resets the compiler to a bare name; re-assert the full path.
+                    set(CMAKE_ASM_MARMASM_COMPILER "${MARMASM_ARMASM64}")
+                endif()
             endif()
         else()
             enable_language(ASM_MASM)

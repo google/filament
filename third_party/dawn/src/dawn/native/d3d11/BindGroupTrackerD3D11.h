@@ -28,12 +28,14 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_BINDGROUPTRACKERD3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_BINDGROUPTRACKERD3D11_H_
 
+#include <cstdint>
+#include <tuple>
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/native/BindGroupTracker.h"
-#include "dawn/native/d3d/d3d_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/BindGroupTracker.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {
 
@@ -48,9 +50,19 @@ class ScopedSwapStateCommandRecordingContext;
 class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/true> {
   public:
     explicit BindGroupTracker(const ScopedSwapStateCommandRecordingContext* commandContext);
-    virtual ~BindGroupTracker();
+    ~BindGroupTracker() override;
 
   protected:
+    const ScopedSwapStateCommandRecordingContext* GetCommandContext() const {
+        return mCommandContext;
+    }
+
+    // The pipeline layout last applied to the bind group bindings, or the device's empty pipeline
+    // layout when no pipeline has been applied yet. BindGroupTrackerBase tracks the pipeline (which
+    // has no "empty" form), so the empty-layout sentinel is resolved lazily here rather than seeded
+    // in the constructor.
+    PipelineLayoutBase* LastAppliedPipelineLayout() const;
+
     template <wgpu::ShaderStage kVisibleStage>
     MaybeError ApplyBindGroup(BindGroupIndex index);
 
@@ -81,63 +93,52 @@ class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/tr
     template <SingleShaderStage Stage>
     void UnbindUnorderedAccessViews();
 
-    template <typename T>
-    ResultOrError<ComPtr<T>> GetBufferD3DView(
-        BindGroupBase* group,
-        BindingIndex bindingIndex,
-        const BufferBindingInfo& layout,
-        const ityp::span<BindingIndex, uint32_t>& dynamicOffsets);
-
-    template <typename T>
-    ResultOrError<ComPtr<T>> GetTextureD3DView(BindGroupBase* group, BindingIndex bindingIndex);
-
   private:
-    struct ConstantBufferBinding {
-        bool operator==(const ConstantBufferBinding& rhs) const = default;
+    struct CBufferBindingKey {
+        bool operator==(const CBufferBindingKey&) const = default;
 
-        ComPtr<ID3D11Buffer> buffer;
-        UINT firstConstant = 0;
-        UINT numConstants = 0;
+        uintptr_t buffer;
+        UINT firstConstant;
+        UINT numConstants;
     };
 
-    ResultOrError<ConstantBufferBinding> GetConstantBufferBinding(
+    ResultOrError<std::tuple<ID3D11Buffer*, UINT, UINT>> GetConstantBufferBinding(
         BindGroupBase* group,
         BindingIndex bindingIndex,
         const BufferBindingInfo& layout,
         const ityp::span<BindingIndex, uint32_t>& dynamicOffsets);
-
-    ResultOrError<ComPtr<ID3D11ShaderResourceView>> GetTextureShaderResourceView(
-        BindGroupBase* group,
-        BindingIndex bindingIndex);
-    ResultOrError<ComPtr<ID3D11UnorderedAccessView>> GetTextureUnorderedAccessView(
-        BindGroupBase* group,
-        BindingIndex bindingIndex);
 
     ID3D11SamplerState* GetSamplerState(BindGroupBase* group, BindingIndex bindingIndex);
 
     raw_ptr<const ScopedSwapStateCommandRecordingContext> mCommandContext;
 
-    // This class will track the current bound resources and prevent redundant bindings.
-    template <typename T, uint32_t InitialCapacity>
-    class BindingSlot {
+    // Tracks the key of the resource currently bound to each slot, to skip redundant D3D11 Set*
+    // calls. The key is computed from the bound object's pointer, but is only ever compared, never
+    // dereferenced, so a stale/reused key can at worst cause a missed rebind (a logic bug), never
+    // a use-after-free. In practice a stale pointer shouldn't even occur here: once a view/sampler
+    // is bound, the D3D11 runtime holds its own reference on it for as long as it stays bound to
+    // that slot, which keeps its address from being reused by an unrelated object while this cache
+    // could still compare against it.
+    template <typename Key, uint32_t InitialCapacity>
+    class BindSlotCache {
       public:
         template <typename Fn>
-        void Bind(uint32_t idx, T binding, Fn&& bindFunc);
+        void Bind(uint32_t idx, Key key, Fn&& bindFunc);
 
-        uint32_t MaxBoundSlots() const { return static_cast<uint32_t>(mBoundSlots.size()); }
+        uint32_t MaxBoundSlots() const { return static_cast<uint32_t>(mBoundKeys.size()); }
 
       private:
-        absl::InlinedVector<T, InitialCapacity> mBoundSlots;
+        absl::InlinedVector<Key, InitialCapacity> mBoundKeys;
     };
 
-    PerStage<BindingSlot<ConstantBufferBinding, 4>> mConstantBufferSlots;
+    PerStage<BindSlotCache<CBufferBindingKey, 4>> mConstantBufferSlots;
 
-    PerStage<BindingSlot<ComPtr<ID3D11ShaderResourceView>, 4>> mSRVSlots;
+    PerStage<BindSlotCache<uintptr_t, 4>> mSRVSlots;
 
-    PerStage<BindingSlot<ComPtr<ID3D11SamplerState>, 4>> mSamplerSlots;
+    PerStage<BindSlotCache<uintptr_t, 4>> mSamplerSlots;
 
     // We only track individual UAV slot in CS because UAV slots in PS must be bound all as one.
-    BindingSlot<ComPtr<ID3D11UnorderedAccessView>, 4> mCSUAVSlots;
+    BindSlotCache<uintptr_t, 4> mCSUAVSlots;
 
     PerStage<uint32_t> mMinUAVSlots = PerStage<uint32_t>(D3D11_1_UAV_SLOT_COUNT);
     uint32_t mPSMaxUAVSlot = 0;

@@ -25,10 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/PersistentPipelineStateGL.h"
+#include "src/dawn/native/opengl/PersistentPipelineStateGL.h"
 
-#include "dawn/native/opengl/OpenGLFunctions.h"
-#include "dawn/native/opengl/UtilsGL.h"
+#include "src/dawn/native/opengl/OpenGLFunctions.h"
+#include "src/dawn/native/opengl/UtilsGL.h"
 
 namespace dawn::native::opengl {
 

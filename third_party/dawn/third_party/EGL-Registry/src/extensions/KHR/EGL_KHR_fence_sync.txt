@@ -1,0 +1,562 @@
+Name
+
+    KHR_fence_sync
+
+Name Strings
+
+    EGL_KHR_fence_sync
+    GL_OES_EGL_sync
+    VG_KHR_EGL_sync
+
+Contributors
+
+    Acorn Pooley
+    Gary King
+    Gregory Prisament
+    Jon Leech
+
+Contacts
+
+    Acorn Pooley, NVIDIA Corporation (apooley 'at' nvidia.com)
+    Gary King, NVIDIA Corporation (gking 'at' nvidia.com)
+    Gregory Prisament, NVIDIA Corporation (gprisament 'at' nvidia.com)
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2006-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete. Approved by the EGL Working Group on March 3, 2010.
+    Approved by the Khronos Board of Promoters on April 30, 2010.
+
+Version
+
+    Version 24, January 31, 2014
+
+Number
+
+    EGL Extension #20
+    OpenGL ES Extension #75
+    OpenVG Extension #7
+
+Dependencies
+
+    Requires EGL 1.1
+
+    This extension is written against the wording of the EGL 1.2
+    Specification.
+
+Overview
+
+    This extension introduces the concept of "sync objects" into EGL.
+    Sync objects are a synchronization primitive, representing events
+    whose completion can be tested or waited upon.  This extension
+    borrows heavily from the GL_ARB_sync extension and introduces a type
+    of sync object known as a "fence sync object" comparable to the
+    OpenGL fence sync object. The specification is designed to allow
+    additional types of sync objects to be easily introduced in later
+    extensions.
+
+    Fence sync objects have corresponding fence commands, which are
+    inserted into a client API command stream at the time the fence sync
+    is created. A fence sync object is used to wait for completion of
+    the corresponding fence command. This allows applications to request
+    a partial Finish of an API command stream, wherein all commands
+    issued in a particular client API context will be forced to complete
+    before control is returned to the calling thread.
+
+    This document describes three different extension strings
+    collectively. The "EGL_KHR_fence_sync" string indicates that fence
+    syncs and the corresponding interfaces (to create and place a fence,
+    destroy, query, and wait on) are supported.
+
+    The remaining extensions list valid client APIs for fence syncs. The
+    "GL_OES_EGL_sync" string indicates that a fence sync object can be
+    created in association with a fence command placed in the command
+    stream of a bound OpenGL ES context. The "VG_KHR_EGL_sync" string
+    indicates the same thing for a bound OpenVG context.
+
+New Types
+
+    /*
+     * EGLSyncKHR is an opaque handle to an EGL sync object
+     */
+    typedef void* EGLSyncKHR;
+
+    /*
+     * EGLTimeKHR is a 64-bit unsigned integer representing intervals
+     * in nanoseconds.
+     */
+    #include <khrplatform.h>
+    typedef khronos_utime_nanoseconds_t EGLTimeKHR;
+
+
+New Procedures and Functions
+
+    EGLSyncKHR eglCreateSyncKHR(
+                        EGLDisplay dpy,
+                        EGLenum type,
+                        const EGLint *attrib_list);
+
+    EGLBoolean eglDestroySyncKHR(
+                        EGLDisplay dpy,
+                        EGLSyncKHR sync);
+
+    EGLint eglClientWaitSyncKHR(
+                        EGLDisplay dpy,
+                        EGLSyncKHR sync,
+                        EGLint flags,
+                        EGLTimeKHR timeout);
+
+    EGLBoolean eglGetSyncAttribKHR(
+                        EGLDisplay dpy,
+                        EGLSyncKHR sync,
+                        EGLint attribute,
+                        EGLint *value);
+
+
+New Tokens
+
+    Accepted by the <type> parameter of eglCreateSyncKHR, and returned
+    in <value> when eglGetSyncAttribKHR is called with <attribute>
+    EGL_SYNC_TYPE_KHR:
+
+    EGL_SYNC_FENCE_KHR                      0x30F9
+
+    Accepted by the <attribute> parameter of eglGetSyncAttribKHR:
+
+    EGL_SYNC_TYPE_KHR                       0x30F7
+    EGL_SYNC_STATUS_KHR                     0x30F1
+    EGL_SYNC_CONDITION_KHR                  0x30F8
+
+    Returned in <value> when eglGetSyncAttribKHR is called with
+    <attribute> EGL_SYNC_STATUS_KHR:
+
+    EGL_SIGNALED_KHR                        0x30F2
+    EGL_UNSIGNALED_KHR                      0x30F3
+
+    Returned in <value> when eglGetSyncAttribKHR is called with
+    <attribute> EGL_SYNC_CONDITION_KHR:
+
+    EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR    0x30F0
+
+    Accepted in the <flags> parameter of eglClientWaitSyncKHR:
+
+    EGL_SYNC_FLUSH_COMMANDS_BIT_KHR         0x0001
+
+    Accepted in the <timeout> parameter of eglClientWaitSyncKHR:
+
+    EGL_FOREVER_KHR                         0xFFFFFFFFFFFFFFFFull
+
+    Returned by eglClientWaitSyncKHR:
+
+    EGL_TIMEOUT_EXPIRED_KHR                 0x30F5
+    EGL_CONDITION_SATISFIED_KHR             0x30F6
+
+    Returned by eglCreateSyncKHR in the event of an error:
+
+    EGL_NO_SYNC_KHR                         ((EGLSyncKHR)0)
+
+Changes to Chapter 3 of the EGL 1.2 Specification (EGL Functions and Errors)
+
+    Add a new subsection at the end of Section 3.8, page 43
+    (Synchronization Primitives)
+
+    "3.8.1  Sync Objects
+
+    In addition to the aforementioned synchronization functions, which
+    provide an efficient means of serializing client and native API
+    operations within a thread, <sync objects> are provided to enable
+    synchronization of client API operations between threads and/or
+    between API contexts. Sync objects may be tested or waited upon by
+    application threads.
+
+    Sync objects have a status with two possible states: <signaled> and
+    <unsignaled>. Initially, sync objects are unsignaled. EGL may be
+    asked to wait for a sync object to become signaled, or a sync
+    object's status may be queried.
+
+    Depending on the type of a sync object, its status may be changed
+    either by an external event, or by explicitly signaling and
+    unsignaling the sync.
+
+    Sync objects are associated with an EGLDisplay when they are
+    created, and have <attributes> defining additional aspects of the
+    sync object. All sync objects include attributes for their type and
+    their status. Additional attributes are discussed below
+    for different types of sync objects.
+
+    <Fence sync objects> are created in association with a <fence
+    command> in a client API. When the client API executes the fence
+    command, an event is generated which signals the corresponding fence
+    sync object. Fence sync objects may not be explicitly signaled, and
+    may only change their status once, from the initial unsignaled
+    status to signaled. Fence sync objects may be used to wait for
+    partial completion of a client API command stream, as a more
+    flexible form of glFinish / vgFinish.
+
+    The command
+
+        EGLSyncKHR eglCreateSyncKHR(
+                            EGLDisplay dpy,
+                            EGLenum type,
+                            const EGLint *attrib_list);
+
+    creates a sync object of the specified <type> associated with the
+    specified display <dpy>, and returns a handle to the new object.
+    <attrib_list> is an attribute-value list specifying other attributes
+    of the sync object, terminated by an attribute entry EGL_NONE.
+    Attributes not specified in the list will be assigned their default
+    values.
+
+    If <type> is EGL_SYNC_FENCE_KHR, a fence sync object is created. In
+    this case <attrib_list> must be NULL or empty (containing only
+    EGL_NONE). Attributes of the fence sync object are
+    set as follows:
+
+      Attribute Name         Initial Attribute Value(s)
+      ---------------        --------------------------
+      EGL_SYNC_TYPE_KHR      EGL_SYNC_FENCE_KHR
+      EGL_SYNC_STATUS_KHR    EGL_UNSIGNALED_KHR
+      EGL_SYNC_CONDITION_KHR EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR
+
+    When a fence sync object is created, eglCreateSyncKHR also inserts a
+    fence command into the command stream of the bound client API's
+    current context (i.e., the context returned by
+    eglGetCurrentContext), and associates it with the newly created sync
+    object.
+
+    When the condition of the sync object is satisfied by the fence
+    command, the sync is signaled by the associated client API context,
+    causing any eglClientWaitSyncKHR commands (see below) blocking on
+    <sync> to unblock. The only condition currently supported is
+    EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR, which is satisfied by
+    completion of the fence command corresponding to the sync object,
+    and all preceding commands in the associated client API context's
+    command stream. The sync object will not be signaled until all
+    effects from these commands on the client API's internal and
+    framebuffer state are fully realized. No other state is affected by
+    execution of the fence command.
+
+    Each client API which supports fence commands indicates this support
+    in the form of a client API extension. If the GL_OES_EGL_sync
+    extension is supported by OpenGL ES (either version 1.x or 2.0), a
+    fence sync object may be created when the currently bound API is
+    OpenGL ES. If the VG_KHR_EGL_sync extension is supported by OpenVG,
+    a fence sync object may be created when the currently bound API is
+    OpenVG.
+
+    Errors
+    ------
+
+      * If <dpy> is not the name of a valid, initialized EGLDisplay,
+        EGL_NO_SYNC_KHR is returned and an EGL_BAD_DISPLAY error is
+        generated.
+      * If <attrib_list> is neither NULL nor empty (containing only
+        EGL_NONE), EGL_NO_SYNC_KHR is returned and an EGL_BAD_ATTRIBUTE
+        error is generated.
+      * If <type> is not a supported type of sync object,
+        EGL_NO_SYNC_KHR is returned and an EGL_BAD_ATTRIBUTE error is
+        generated.
+      * If <type> is EGL_SYNC_FENCE_KHR and no context is current for
+        the bound API (i.e., eglGetCurrentContext returns
+        EGL_NO_CONTEXT), EGL_NO_SYNC_KHR is returned and an
+        EGL_BAD_MATCH error is generated.
+      * If <type> is EGL_SYNC_FENCE_KHR and <dpy> does not match the
+        EGLDisplay of the currently bound context for the currently
+        bound client API (the EGLDisplay returned by
+        eglGetCurrentDisplay()) then EGL_NO_SYNC_KHR is returned and an
+        EGL_BAD_MATCH error is generated.
+      * If <type> is EGL_SYNC_FENCE_KHR and the currently bound client
+        API does not support the client API extension indicating it can
+        place fence commands, then EGL_NO_SYNC_KHR is returned and an
+        EGL_BAD_MATCH error is generated.
+
+    The command
+
+        EGLint eglClientWaitSyncKHR(
+                            EGLDisplay dpy,
+                            EGLSyncKHR sync,
+                            EGLint flags,
+                            EGLTimeKHR timeout);
+
+    blocks the calling thread until the specified sync object <sync> is
+    signaled, or until <timeout> nanoseconds have passed.
+
+    More than one eglClientWaitSyncKHR may be outstanding on the same
+    <sync> at any given time. When there are multiple threads blocked on
+    the same <sync> and the sync object is signaled, all such threads
+    are released, but the order in which they are released is not
+    defined.
+
+    If the value of <timeout> is zero, then eglClientWaitSyncKHR simply
+    tests the current status of <sync>. If the value of <timeout> is the
+    special value EGL_FOREVER_KHR, then eglClientWaitSyncKHR does not
+    time out. For all other values, <timeout> is adjusted to the closest
+    value allowed by the implementation-dependent timeout accuracy,
+    which may be substantially longer than one nanosecond.
+
+    eglClientWaitSyncKHR returns one of three status values describing
+    the reason for returning. A return value of EGL_TIMEOUT_EXPIRED_KHR
+    indicates that the specified timeout period expired before <sync>
+    was signaled, or if <timeout> is zero, indicates that <sync> is
+    not signaled. A return value of EGL_CONDITION_SATISFIED_KHR
+    indicates that <sync> was signaled before the timeout expired, which
+    includes the case when <sync> was already signaled when
+    eglClientWaitSyncKHR was called. If an error occurs then an error is
+    generated and EGL_FALSE is returned.
+
+    If the sync object being blocked upon will not be signaled in finite
+    time (for example, by an associated fence command issued previously,
+    but not yet flushed to the graphics pipeline), then
+    eglClientWaitSyncKHR may wait forever. To help prevent this behavior
+    (footnote1), if the EGL_SYNC_FLUSH_COMMANDS_BIT_KHR bit is set in
+    <flags>, and <sync> is unsignaled when eglClientWaitSyncKHR is
+    called, then the equivalent of Flush() will be performed for the
+    current API context (i.e., the context returned by
+    eglGetCurrentContext()) before blocking on <sync>. If no context is
+    current for the bound API, the EGL_SYNC_FLUSH_COMMANDS_BIT_KHR bit
+    is ignored.
+
+       [footnote 1: The simple Flush behavior defined by
+        EGL_SYNC_FLUSH_COMMANDS_BIT_KHR will not help when waiting for a
+        fence command issued in a different context's command stream.
+        Applications which block on a fence sync object must take
+        additional steps to ensure that the context from which the
+        associated fence command was issued has flushed that command to
+        the graphics pipeline.]
+
+    Errors
+    ------
+
+      * If <sync> is not a valid sync object for <dpy>, EGL_FALSE is
+        returned and an EGL_BAD_PARAMETER error is generated.
+      * If <dpy> does not match the EGLDisplay passed to
+        eglCreateSyncKHR when <sync> was created, the behaviour is
+        undefined.
+
+
+    The command
+
+        EGLBoolean eglGetSyncAttribKHR(
+                            EGLDisplay dpy,
+                            EGLSyncKHR sync,
+                            EGLint attribute,
+                            EGLint *value);
+
+    is used to query attributes of the sync object <sync>. Legal values
+    for <attribute> depend on the type of sync object, as shown in table
+    3.cc. Assuming no errors are generated, EGL_TRUE is returned and the
+    value of the queried attribute is returned in <value>.
+
+    Attribute              Description                Supported Sync Objects
+    -----------------      -----------------------    ----------------------
+    EGL_SYNC_TYPE_KHR      Type of the sync object    All
+    EGL_SYNC_STATUS_KHR    Status of the sync object  All
+    EGL_SYNC_CONDITION_KHR Signaling condition        EGL_SYNC_FENCE_KHR only
+
+    Table 3.cc  Attributes Accepted by eglGetSyncAttribKHR Command
+
+    Errors
+    ------
+
+      * If <sync> is not a valid sync object for <dpy>, EGL_FALSE is
+        returned and an EGL_BAD_PARAMETER error is generated.
+      * If <dpy> does not match the display passed to eglCreateSyncKHR
+        when <sync> was created, the behaviour is undefined.
+      * If <attribute> is not one of the attributes in table 3.cc,
+        EGL_FALSE is returned and an EGL_BAD_ATTRIBUTE error is
+        generated.
+      * If <attribute> is not supported for the type of sync object
+        passed in <sync>, EGL_FALSE is returned and an EGL_BAD_MATCH
+        error is generated.
+
+    If any error occurs, <*value> is not modified.
+
+    The command
+
+        EGLBoolean eglDestroySyncKHR(
+                            EGLDisplay dpy,
+                            EGLSyncKHR sync);
+
+    is used to destroy an existing sync object.
+
+    If any eglClientWaitSyncKHR commands are blocking on <sync> when
+    eglDestroySyncKHR is called, <sync> is flagged for deletion and will
+    be deleted when it is no longer associated with any fence command
+    and is no longer blocking any eglClientWaitSyncKHR command.
+
+    If no errors are generated, EGL_TRUE is returned, and <sync> will no
+    longer be the handle of a valid sync object.
+
+    Errors
+    ------
+
+      * If <sync> is not a valid sync object for <dpy>, EGL_FALSE is
+        returned and an EGL_BAD_PARAMETER error is generated.
+      * If <dpy> does not match the display passed to eglCreateSyncKHR
+        when <sync> was created, the behaviour is undefined.
+
+Issues
+
+    Note about the Issues
+    ---------------------
+    The wording for this extension was originally written as a single
+    extension defining two types of sync object; a "reusable sync
+    object" and a "fence sync object". That extension was split to
+    produce standalone extensions for each type of sync object, and
+    references to the other type removed from the specification
+    language. This issues list has been simplied to remove references to
+    reusable sync objects but is otherwise very similar to the
+    EGL_KHR_reusable_sync extension issues list.
+
+    1. [REMOVED - found in the reusable_sync extension.]
+
+    2. [REMOVED - found in the reusable_sync extension.]
+
+    3. What does this extension provide that can not be accomplished
+    with the existing, more efficient eglWaitClient and eglWaitNative
+    API functions?
+
+    RESPONSE: eglWaitClient and eglWaitNative may be implemented in
+    extremely lightweight manners, in some cases not blocking the
+    calling thread at all; however, they can not be used to synchronize
+    between client API contexts and native APIs executing in separate
+    threads (or simply between client API contexts executing in separate
+    threads), such as between a thread with an active OpenGL context and
+    a second thread performing video decode.
+
+    4. What does this extension provide that could not be accomplished
+    with native platform synchronization primitives and the existing
+    client API Finish commands?
+
+    RESPONSE: This extension provides a lighter-weight mechanism for
+    synchronizing an application with client API command streams than
+    the all-or-nothing Finish commands, enabling applications to block
+    until a subset of issued client API commands have completed.
+
+    5. [REMOVED - found in the reusable_sync extension.]
+
+    6. Please provide a more detailed description of how
+    eglClientWaitSyncKHR behaves.
+
+    RESOLVED: eglClientWaitSyncKHR blocks until the status of the sync
+    object transitions to the signaled state. Sync object status is
+    either signaled or unsignaled. More detailed rules describing
+    signalling follow (these may need to be imbedded into the actual
+    spec language):
+
+      * A fence sync object has two possible status values: signaled or
+        unsignaled.
+      * When created, the status of the sync object is unsignaled.
+      * A fence command is inserted into a command stream. A fence sync
+        object is not.
+      * A fence command, once its condition has been met, will set its
+        associated sync object to the signaled state. The only condition
+        currently supported is EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR.
+      * A wait function, such as ClientWaitSyncKHR, waits on a fence
+        sync object, not on a fence command.
+      * A wait function called on a sync object in the unsignaled state
+        will block. It unblocks (note, not "returns to the application")
+        when the sync object transitions to the signaled state.
+      * A wait function called on a sync object in the signaled state
+        will return immediately.
+
+    7. [REMOVED - found in the reusable_sync extension.]
+
+    8. [REMOVED - found in the reusable_sync extension.]
+
+    9. Should eglDestroySyncKHR release all WaitSyncs placed on a fence
+    sync object?
+
+    RESOLVED: No. (note that this behavior differs from reusable syncs.)
+
+    Fence sync objects are intended to be signalled by the graphics
+    driver within a short period of time (typically less than 1 second
+    after creation) and so should not cause waiting threads to hang
+    forever. To reduce implementation complexity, fence sync objects are
+    defined to not release waiting threads; waiting threads are released
+    normally when their condition is satisfied or their timeout expires.
+    The handle to a fence sync object immediately becomes invalid
+    following a call to eglDestroySyncKHR.
+
+Revision History
+
+#24 (Jon Leech, January 31, 2014)
+    - Clarify return value of ClientWaitSyncKHR when called with <timeout>
+      of zero for an unsignaled <sync> (Bug 11576).
+#23 (Jon Leech, April 23, 2013)
+    - Simplify issues list to remove issues specific to reusable sync
+      objects and general sync object design issues.
+#22 (Jon Leech, June 15, 2010)
+    - Correct minor typos in GL/VG extension names.
+#21 (Jon Leech, May 5, 2010)
+    - Correct minor typos, assign extension numbers for EGL, OpenGL ES,
+      and OpenVG, and publish in the registry,
+#20 (Robert Palmer, July 14, 2009)
+    - Branch wording from draft KHR_sync specification. Remove ability
+      to create "reusable sync objects and all tokens/wording specific
+      to them.
+#19 (Robert Palmer, July 22, 2009)
+    - Replace specific eglCreateSyncKHR error cases for bad <type>
+    argument with extensible catch-all case.
+#18 (Robert Palmer, July 8, 2009)
+    - Issues 8 and 9 declared resolved in EGL meeting 2009-07-08
+#17 (Robert Palmer, July 8, 2009)
+    - Update eglDestroySyncKHR to special-case deletion of fence sync
+      objects.  This is explained in issue 9.
+    - Corrected EGL_REUSABLE_SYNC_KHR -> EGL_SYNC_REUSABLE_KHR
+    - Define value for EGL_SYNC_REUSABLE_KHR
+    - Fix typo and whitespace
+#16 (Jon Leech, July 7, 2009)
+    - Update description of new tokens to match changes to the
+      eglCreateSyncKHR entry point in revision 15.
+#15 (Jon Leech, June 16, 2009)
+    - Define separate one-time fence sync and reusable sync extensions
+      and corresponding extension strings. Remove AUTO_RESET and
+      eglFenceKHR. Rename eglCreateFenceSyncKHR to eglCreateSyncKHR and
+      change initial status of reusable syncs to unsignaled. Clarify
+      which functions apply to which types of sync objects. Update
+      issues list.
+#14 (Jon Leech, April 29, 2009)
+    - Clarify that all waiters are woken up on signalling a sync.
+      Remove tabs to cleanup some formatting issues.
+#13 (Acorn Pooley, April 2, 2009)
+    - Renamed
+        GL_OES_egl_sync -> GL_OES_EGL_sync
+        VG_KHR_egl_sync -> VG_KHR_EGL_sync
+#12 (Jon Leech, April 1, 2009)
+    - Changed sync flags type from EGLuint to EGLint and add issue 7.
+#11 (Acorn Pooley, February 4, 2009)
+    - add error case to eglGetSyncAttribKHR.
+    - fix year on rev 8-10 (2008->2009)
+#10 (Acorn Pooley, February 4, 2009)
+    - clarify some error message descriptions
+#9  (Greg Prisament, January 15, 2009)
+    - Destroy now wakes up all waits (eglClientWaitSyncKHR)
+    - Add EGLDisplay <dpy> as first parameter to all commands
+    - Split into 3 extension strings, EGL_KHR_sync, GL_OES_egl_sync,
+      VG_KHR_egl_sync, all described in this document.
+    - Add attribute AUTO_RESET_KHR
+    - Time type uses the type from khrplatform.h
+    - Remove EGL_ALREADY_SIGNALLED
+#8  (Jon Leech, November 11, 2009)
+   - Assign enum values
+#7   (Acorn Pooley, October 30, 2008)
+   - Fix typos
+   - remove obsolete wording about Native sync objects (see issue 5)
+   - formatting: remove tabs, 80 columns
+#6   (Acorn Pooley, October 27, 2008)
+   - Corrected 'enum' to 'EGLenum' in prototypes.
+#5   (Jon Leech, September 9, 2008)
+   - Removed native sync support (eglCreateNativeSyncKHR and
+     EGL_SYNC_NATIVE_SYNC_KHR), and re-flowed spec to fit in 80 columns.
+#4   (Jon Leech, November 20, 2007)
+   - Corrected 'enum' to 'EGLenum' in prototypes.
+#3   (Jon Leech, April 5, 2007)
+   - Added draft Status and TBD Number
+#2   (November 27, 2006)
+   - Changed OES token to KHR

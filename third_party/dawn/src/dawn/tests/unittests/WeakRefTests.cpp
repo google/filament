@@ -29,10 +29,10 @@
 #include <thread>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/WeakRef.h"
-#include "dawn/common/WeakRefSupport.h"
-#include "dawn/utils/BinarySemaphore.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/WeakRef.h"
+#include "src/dawn/common/WeakRefSupport.h"
+#include "src/dawn/utils/BinarySemaphore.h"
 
 namespace dawn {
 namespace {

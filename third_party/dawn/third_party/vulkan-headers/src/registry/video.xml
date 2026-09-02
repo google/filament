@@ -1325,6 +1325,8 @@ The current public version of video.xml is maintained in the default branch
         <enum name="STD_VIDEO_H264_PROFILE_IDC_BASELINE"                    value="66" comment="Only constrained baseline is supported"/>
         <enum name="STD_VIDEO_H264_PROFILE_IDC_MAIN"                        value="77"/>
         <enum name="STD_VIDEO_H264_PROFILE_IDC_HIGH"                        value="100"/>
+        <enum name="STD_VIDEO_H264_PROFILE_IDC_HIGH_10"                     value="110" comment="Annex A.2.5 High 10 profile (profile_idc 100 or 110)"/>
+        <enum name="STD_VIDEO_H264_PROFILE_IDC_HIGH_422"                    value="122" comment="Annex A.2.6 High 4:2:2 profile (profile_idc 100, 110, or 122)"/>
         <enum name="STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE"         value="244"/>
         <enum name="STD_VIDEO_H264_PROFILE_IDC_INVALID"                     value="0x7FFFFFFF"/>
     </enums>

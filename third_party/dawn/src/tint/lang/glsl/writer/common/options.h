@@ -107,9 +107,9 @@ struct TextureBuiltinsFromUniformOptions {
     /// Ordered list of post-remapping bindings in the uniform buffer for polyfilling
     /// `textureNumSamples` and `textureNumLevels`.
     struct EmulatedBuiltin {
-        uint32_t offset;
-        uint32_t count;
-        BindingPoint binding;
+        uint32_t offset = 0;
+        uint32_t count = 0;
+        BindingPoint binding = {};
 
         TINT_REFLECT(EmulatedBuiltin, offset, count, binding);
     };

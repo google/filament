@@ -25,12 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/utils/CommandLineParser.h"
+#include "src/dawn/utils/CommandLineParser.h"
 
 #include <algorithm>
 #include <tuple>
@@ -38,6 +33,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::utils {
 
@@ -311,7 +307,7 @@ CommandLineParser::ParseResult CommandLineParser::Parse(int argc,
                                                         const ParseOptions& parseOptions) {
     std::vector<absl::string_view> args;
     for (int i = 1; i < argc; i++) {
-        args.push_back(argv[i]);
+        args.push_back(DAWN_UNSAFE_TODO(argv[i]));
     }
 
     return Parse(args, parseOptions);

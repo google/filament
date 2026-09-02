@@ -1,0 +1,44 @@
+module(
+    name = "dawn",
+    version = "0.0.1",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.4.2")
+bazel_dep(name = "rules_cc", version = "0.2.18")
+bazel_dep(name = "rules_go", version = "0.59.0")
+bazel_dep(name = "rules_python", version = "1.5.1")
+bazel_dep(name = "platforms", version = "0.0.10")
+
+bazel_dep(name = "abseil-cpp", repo_name = "abseil_cpp")
+local_path_override(
+    module_name = "abseil-cpp",
+    path = "third_party/abseil-cpp",
+)
+
+bazel_dep(name = "google_benchmark", repo_name = "benchmark")
+local_path_override(
+    module_name = "google_benchmark",
+    path = "third_party/google_benchmark/src",
+)
+
+bazel_dep(name = "googletest", repo_name = "gtest")
+local_path_override(
+    module_name = "googletest",
+    path = "third_party/googletest/src",
+)
+
+bazel_dep(name = "spirv_headers")
+local_path_override(
+    module_name = "spirv_headers",
+    path = "third_party/spirv-headers/src",
+)
+
+spirv_tools_repo = use_extension("//:third_party/spirv-tools/spirv_tools_repo.bzl", "spirv_tools_repo")
+use_repo(spirv_tools_repo, "spirv_tools")
+
+bazel_dep(name = "rules_proto", version = "6.0.2")
+bazel_dep(name = "protobuf", version = "33.0", repo_name = "com_google_protobuf")
+local_path_override(
+    module_name = "protobuf",
+    path = "third_party/protobuf",
+)

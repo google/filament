@@ -31,18 +31,18 @@
 #include <string_view>
 #include <utility>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "mocks/BufferMock.h"
-#include "mocks/ComputePipelineMock.h"
-#include "mocks/DawnMockTest.h"
-#include "mocks/DeviceMock.h"
-#include "mocks/ExternalTextureMock.h"
-#include "mocks/PipelineLayoutMock.h"
-#include "mocks/RenderPipelineMock.h"
-#include "mocks/ShaderModuleMock.h"
-#include "mocks/TextureMock.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/tests/unittests/native/mocks/BufferMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ComputePipelineMock.h"
+#include "src/dawn/tests/unittests/native/mocks/DawnMockTest.h"
+#include "src/dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ExternalTextureMock.h"
+#include "src/dawn/tests/unittests/native/mocks/PipelineLayoutMock.h"
+#include "src/dawn/tests/unittests/native/mocks/RenderPipelineMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ShaderModuleMock.h"
+#include "src/dawn/tests/unittests/native/mocks/TextureMock.h"
 
 namespace dawn::native {
 namespace {
@@ -50,13 +50,10 @@ namespace {
 using ::testing::_;
 using ::testing::ByMove;
 using ::testing::HasSubstr;
-using ::testing::MockCallback;
 using ::testing::MockCppCallback;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::SizedStringMatches;
-using ::testing::StrictMock;
-using ::testing::Test;
 
 using MockComputePipelineAsyncCallback =
     MockCppCallback<wgpu::CreateComputePipelineAsyncCallback<void>*>;
@@ -178,7 +175,7 @@ TEST_F(AllowedErrorTests, QueueCopyExternalTextureForBrowserOomBuffer) {
     textureViewDesc.format = wgpu::TextureFormat::RGBA8Unorm;
 
     wgpu::ExternalTextureDescriptor externalTextureDesc = {};
-    std::array<float, 12> placeholderConstantArray;
+    std::array<float, 12> placeholderConstantArray = {};
     externalTextureDesc.yuvToRgbConversionMatrix = placeholderConstantArray.data();
     externalTextureDesc.gamutConversionMatrix = placeholderConstantArray.data();
     externalTextureDesc.srcTransferFunctionParameters = placeholderConstantArray.data();

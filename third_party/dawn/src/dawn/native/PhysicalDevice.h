@@ -31,18 +31,18 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/ityp_span.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Features.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/Limits.h"
-#include "dawn/native/Toggles.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Features.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/Limits.h"
+#include "src/dawn/native/Toggles.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -50,7 +50,7 @@ class DeviceBase;
 
 // Structure that holds surface capabilities for a (Surface, PhysicalDevice) pair.
 struct PhysicalDeviceSurfaceCapabilities {
-    wgpu::TextureUsage usages;
+    wgpu::TextureUsage usages = wgpu::TextureUsage::None;
     std::vector<wgpu::TextureFormat> formats;
     std::vector<wgpu::PresentMode> presentModes;
     std::vector<wgpu::CompositeAlphaMode> alphaModes;
@@ -62,8 +62,8 @@ struct FeatureValidationResult {
     // Constructor of failed result
     explicit FeatureValidationResult(std::string errorMsg);
 
-    bool success;
-    std::string errorMessage;
+    bool success = false;
+    std::string errorMessage = "";
 };
 
 class PhysicalDeviceBase : public RefCounted {
@@ -118,6 +118,11 @@ class PhysicalDeviceBase : public RefCounted {
     FeatureValidationResult ValidateFeatureSupportedWithToggles(wgpu::FeatureName feature,
                                                                 const TogglesState& toggles) const;
 
+    // Just a wrapper of ValidateFeatureSupportedWithToggles, return true if a feature is supported
+    // by this adapter AND suitable with given toggles.
+    bool IsFeatureSupportedWithToggles(wgpu::FeatureName feature,
+                                       const TogglesState& toggles) const;
+
     // Populate backend properties. Ownership of allocations written are owned by the caller.
     virtual void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
                                            const TogglesState& adapterToggles) const = 0;
@@ -132,10 +137,6 @@ class PhysicalDeviceBase : public RefCounted {
         InstanceBase* instance,
         const Surface* surface) const = 0;
 
-    uint32_t GetMinExplicitComputeSubgroupSize() const;
-    uint32_t GetMaxExplicitComputeSubgroupSize() const;
-    uint32_t GetMaxComputeWorkgroupSubgroups() const;
-
   protected:
     uint32_t mVendorId = 0xFFFFFFFF;
     std::string mVendorName;
@@ -149,14 +150,7 @@ class PhysicalDeviceBase : public RefCounted {
     // backend may override this.
     uint32_t mSubgroupMinSize = kDefaultSubgroupMinSize;
     uint32_t mSubgroupMaxSize = kDefaultSubgroupMaxSize;
-    uint32_t mMinExplicitComputeSubgroupSize = kDefaultSubgroupMinSize;
-    uint32_t mMaxExplicitComputeSubgroupSize = kDefaultSubgroupMaxSize;
-    uint32_t mMaxComputeWorkgroupSubgroups = 0xFFFFFFFF;
 
-    // Juat a wrapper of ValidateFeatureSupportedWithToggles, return true if a feature is supported
-    // by this adapter AND suitable with given toggles.
-    bool IsFeatureSupportedWithToggles(wgpu::FeatureName feature,
-                                       const TogglesState& toggles) const;
     // Mark a feature as enabled in mSupportedFeatures.
     void EnableFeature(Feature feature);
     // Used for the tests that intend to use an adapter without all features enabled.
@@ -186,7 +180,7 @@ class PhysicalDeviceBase : public RefCounted {
         const TogglesState& toggles) const = 0;
 
     virtual MaybeError ResetInternalDeviceForTestingImpl();
-    wgpu::BackendType mBackend;
+    wgpu::BackendType mBackend = wgpu::BackendType::Undefined;
 
     // Features set that CAN be supported by devices of this adapter. Some features in this set may
     // be guarded by toggles, and creating a device with these features required may result in a

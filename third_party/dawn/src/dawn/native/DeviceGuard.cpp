@@ -25,23 +25,63 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/DeviceGuard.h"
+#include "src/dawn/native/DeviceGuard.h"
 
+#include <algorithm>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/Device.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
+
+DeviceMutex::DeviceMutex(dawn::platform::Platform* platform) : mPlatform(platform) {
+    DAWN_ASSERT(mPlatform != nullptr);
+}
 
 DeviceMutex::~DeviceMutex() {
     DAWN_ASSERT(mRecursionStackDepth == 0);
 }
 
 void DeviceMutex::Lock() {
+    // We can't use `mRecursionStackDepth` here to figure out if this is a recursive acquire since
+    // `mRecursionStackDepth` is protected by the lock itself which we haven't acquired yet.
+    const std::thread::id currentThread = std::this_thread::get_id();
+    const bool isRecursive = mOwningThread == currentThread;
+    double startTime = 0.0;
+    if (!isRecursive) {
+        startTime = mPlatform->MonotonicallyIncreasingTime();
+    }
+
     RecursiveMutex::Lock();
+
     if (mRecursionStackDepth == 0) {
+        DAWN_ASSERT(!isRecursive);
         mDefer.emplace();
+        mOwningThread = currentThread;
+
+        double endTime = mPlatform->MonotonicallyIncreasingTime();
+        double acquireTime = endTime - startTime;
+
+        mAcquireTimeSum += acquireTime;
+        mAcquireTimeMax = std::max(mAcquireTimeMax, acquireTime);
+        mAcquireCount++;
+
+        static constexpr uint64_t kAcquireTimeMetricSampleCount = 100;
+        if (mAcquireCount >= kAcquireTimeMetricSampleCount) {
+            double avgTimeUs = (mAcquireTimeSum / static_cast<double>(mAcquireCount)) * 1'000'000.0;
+            double maxTimeUs = mAcquireTimeMax * 1'000'000.0;
+
+            DAWN_HISTOGRAM_CUSTOM_MICROSECOND_TIMES(mPlatform, "DeviceLockAcquireTimeAvgUs",
+                                                    static_cast<int>(avgTimeUs), 1, 1'000'000, 50);
+            DAWN_HISTOGRAM_CUSTOM_MICROSECOND_TIMES(mPlatform, "DeviceLockAcquireTimeMaxUs",
+                                                    static_cast<int>(maxTimeUs), 1, 1'000'000, 50);
+
+            mAcquireTimeSum = 0.0;
+            mAcquireTimeMax = 0.0;
+            mAcquireCount = 0;
+        }
     }
     mRecursionStackDepth++;
 }
@@ -52,6 +92,7 @@ void DeviceMutex::Unlock() {
 
     mRecursionStackDepth--;
     if (mRecursionStackDepth == 0) {
+        mOwningThread = std::thread::id();
         defer.swap(mDefer);
     }
     RecursiveMutex::Unlock();

@@ -1,0 +1,111 @@
+Name
+
+    EXT_framebuffer_blit_layers
+
+Name Strings
+
+    GL_EXT_framebuffer_blit_layers
+
+Contacts
+
+    Simon Zeni, Status Holdings Ltd. <simon@zeni.ca>
+
+Contributors
+
+    Simon Zeni
+
+Status
+
+    Draft
+
+Version
+
+    Version 0.1, 2022/09/16
+
+Number
+
+    OpenGL Extension #558
+    OpenGL ES Extension #341
+
+Dependencies
+
+    OpenGL 3.0, OpenGL ES 3.0, or GL_EXT_framebuffer_blit required
+
+    This extension is written against the OpenGL 4.6 Core and OpenGL ES 3.2
+    specifications.
+
+Overview
+
+    This extensions defines the behaviour for copying data from one layered
+    framebuffer to another layered framebuffer.
+
+New Procedures and Functions
+
+    void BlitFramebufferLayersEXT(int srcX0, int srcY0, int srcX1, int srcY1,
+                                  int dstX0, int dstY0, int dstX1, int dstY1,
+                                  bitfield mask, enum filter);
+
+    void BlitFramebufferLayerEXT(int srcX0, int srcY0, int srcX1, int srcY1,
+                                 int srcLayer, int dstX0, int dstY0, int dstX1,
+                                 int dstY1, int dstLayer, bitfield mask,
+                                 enum filter);
+
+New Tokens
+
+    None
+
+Additions to Chapter 16 of the OpenGL ES 3.2 specification (Reading and
+Copying Pixels) and Chaper 18 of the OpenGL 4.6 Core specification (Reading
+and Copying Pixels)
+
+    Append the following to the section 16.2.1 (Blitting Pixel Rectangles) of
+    the OpenGL ES 3.2 specification, and to the section 18.3.1 (Blitting Pixel
+    Rectangles) of the OpenGL 4.6 core specification.
+
+    The command
+
+        void BlitFramebufferLayersEXT(int srcX0, int srcY0, int srcX1,
+            int srcY1, int dstX0, int dstY0, int dstX1, int dstY1,
+            bitfield mask, enum filter);
+
+    extends the behaviour of the command BlitFramebuffer to all the layers of
+    the textures bound to the read framebuffer and the draw framebuffer.
+
+    Calling BlitFramebufferLayersEXT will result in an INVALID_OPERATION if
+    the read and the draw framebuffers don't have the same number of layers.
+
+    The command
+
+        void BlitFramebufferLayerEXT(int srcX0, int srcY0, int srcX1, int srcY1,
+            int srcLayer, int dstX0, int dstY0, int dstX1, int dstY1,
+            int dstLayer, bitfield mask, enum filter);
+
+    extends the behaviour of the command BlitFramebuffer to a specified layer
+    of the texture bound to the read framebuffer, and a specified layer of the
+    draw framebuffer.
+
+    Calling BlitFramebufferLayerEXT will result in an INVALID_VALUE if
+    srcLayer or dstLayer is negative, larger than the value of
+    MAX_ARRAY_TEXTURE_LAYERS minus one, or larger than the number of layers in
+    the attached texture.
+
+Issues
+
+    1) How does the extension deal with GL_OVR_multiview generating the error
+    INVALID_FRAMEBUFFER_OPERATION if the read framebuffer has more than one
+    layer when using the BlitFramebuffer command.
+
+        GL_OVR_multiview defines a two dimensional array texture with multiple
+        layers as multiview. If the extension GL_OVR_multiview is enabled, and
+        a multiview texture is bound to the read framebuffer, the error
+        INVALID_FRAMEBUFFER_OPERATION is generated as expected. For any other
+        kind of textures, the commands BlitFramebufferLayerEXT and
+        BlitFramebufferLayersEXT proceed as expected.
+
+Revision History
+
+    Version 0.2, 2022-09-30 (Simon Zeni)
+        - Conflict with GL_OVR_multiview
+
+    Version 0.1, 2022-09-16 (Simon Zeni)
+        - Initial draft

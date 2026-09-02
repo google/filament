@@ -1822,7 +1822,7 @@ TEST(OverrideMetaLayer, OverridePathsInteractionWithVK_LAYER_PATH) {
         std::string("Ignoring VK_LAYER_PATH. The Override layer is active and has override paths set, which takes priority. "
                     "VK_LAYER_PATH is set to ") +
         env.env_var_vk_layer_paths.value()));
-    ASSERT_TRUE(env.debug_log.find("Override layer has override paths set to " + meta_layer_path.string()));
+    ASSERT_TRUE(env.debug_log.find("Override layer has override path " + meta_layer_path.string()));
 
     env.layers.clear();
 }
@@ -3508,7 +3508,7 @@ TEST(TestLayers, ExplicitlyEnableImplicitLayer) {
     uint32_t api_version = VK_API_VERSION_1_2;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(api_version))
         .set_icd_api_version(api_version)
-        .add_physical_device(PhysicalDevice{}.set_api_version(api_version).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(api_version));
 
     const char* regular_layer_name = "VK_LAYER_TestLayer1";
     env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
@@ -3538,7 +3538,7 @@ TEST(TestLayers, NewerInstanceVersionThanImplicitLayer) {
     uint32_t api_version = VK_API_VERSION_1_2;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(api_version))
         .set_icd_api_version(api_version)
-        .add_physical_device(PhysicalDevice{}.set_api_version(api_version).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(api_version));
 
     const char* regular_layer_name = "VK_LAYER_TestLayer1";
     env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
@@ -3578,7 +3578,7 @@ TEST(TestLayers, ImplicitLayerPre10APIVersion) {
     uint32_t api_version = VK_API_VERSION_1_2;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(api_version))
         .set_icd_api_version(api_version)
-        .add_physical_device(PhysicalDevice{}.set_api_version(api_version).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(api_version));
 
     const char* regular_layer_name = "VK_LAYER_TestLayer1";
     env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
@@ -3639,7 +3639,7 @@ TEST(TestLayers, InstEnvironEnableExplicitLayer) {
     uint32_t api_version = VK_API_VERSION_1_2;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(api_version))
         .set_icd_api_version(api_version)
-        .add_physical_device(PhysicalDevice{}.set_api_version(api_version).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(api_version));
 
     const char* explicit_layer_name = "VK_LAYER_LUNARG_wrap_objects";
     env.add_explicit_layer(
@@ -4639,7 +4639,7 @@ TEST(TestLayers, DoNotUseDeviceLayer) {
     FrameworkEnvironment env;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_2))
         .set_icd_api_version(VK_API_VERSION_1_2)
-        .add_physical_device(PhysicalDevice{}.set_api_version(VK_API_VERSION_1_2).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(VK_API_VERSION_1_2));
 
     const char* explicit_layer_name = "VK_LAYER_LUNARG_wrap_objects";
     env.add_explicit_layer(
@@ -4698,7 +4698,7 @@ TEST(TestLayers, InstanceAndDeviceLayer) {
     FrameworkEnvironment env;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_2))
         .set_icd_api_version(VK_API_VERSION_1_2)
-        .add_physical_device(PhysicalDevice{}.set_api_version(VK_API_VERSION_1_2).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(VK_API_VERSION_1_2));
 
     const char* explicit_layer_name = "VK_LAYER_LUNARG_wrap_objects";
     env.add_explicit_layer(
@@ -4734,7 +4734,7 @@ TEST(TestLayers, DeviceLayerNotPresent) {
     FrameworkEnvironment env;
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_2))
         .set_icd_api_version(VK_API_VERSION_1_2)
-        .add_physical_device(PhysicalDevice{}.set_api_version(VK_API_VERSION_1_2).finish());
+        .add_physical_device(PhysicalDevice{}.set_api_version(VK_API_VERSION_1_2));
     const char* explicit_layer_name = "VK_LAYER_LUNARG_wrap_objects";
 
     InstWrapper inst{env.vulkan_functions};
@@ -4775,9 +4775,8 @@ TEST(LayerPhysDeviceMod, AddPhysicalDevices) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_devices = 6;
 
@@ -4851,9 +4850,8 @@ TEST(LayerPhysDeviceMod, RemovePhysicalDevices) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_devices = 6;
 
@@ -4900,9 +4898,8 @@ TEST(LayerPhysDeviceMod, ReorderPhysicalDevices) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_devices = 6;
 
@@ -4949,9 +4946,8 @@ TEST(LayerPhysDeviceMod, AddRemoveAndReorderPhysicalDevices) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_devices = 6;
 
@@ -5024,9 +5020,8 @@ TEST(LayerPhysDeviceMod, AddPhysicalDeviceGroups) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_groups = 4;
 
@@ -5110,9 +5105,8 @@ TEST(LayerPhysDeviceMod, RemovePhysicalDeviceGroups) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_groups = 3;
 
@@ -5161,9 +5155,8 @@ TEST(LayerPhysDeviceMod, ReorderPhysicalDeviceGroups) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[1]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[2]);
+        cur_icd.physical_device_groups.emplace_back(0);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
     }
     const uint32_t icd_groups = 4;
 
@@ -5212,9 +5205,8 @@ TEST(LayerPhysDeviceMod, AddRemoveAndReorderPhysicalDeviceGroups) {
 #endif
             added_phys_devs[dev] = &cur_icd.add_and_get_physical_device({}).set_properties(properties);
         }
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[0]);
-        cur_icd.physical_device_groups.back().use_physical_device(added_phys_devs[1]);
-        cur_icd.physical_device_groups.emplace_back(added_phys_devs[2]);
+        cur_icd.physical_device_groups.push_back(PhysicalDeviceGroup({0, 1}));
+        cur_icd.physical_device_groups.emplace_back(2);
     }
     const uint32_t icd_groups = 4;
 

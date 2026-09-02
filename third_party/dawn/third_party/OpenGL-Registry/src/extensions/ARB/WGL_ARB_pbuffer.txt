@@ -1,0 +1,385 @@
+Name
+
+    WGL_ARB_pbuffer
+
+Name Strings
+
+    WGL_ARB_pbuffer
+
+Contact
+
+    Dale Kirkland, NVIDIA (dkirkland 'at' nvidia.com)
+    Bimal Poddar, Intel (bimal.poddar 'at' intel.com)
+    Steve Urquhart, Intelligraphics (steveu 'at' intelligraphics.com)
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on March 15, 2000
+
+Version
+
+    Last Modified Date: 03/12/2002
+    Author Revision: 1.1
+
+    Based on:  WGL_EXT_pbuffer specification
+               Date: 4/21/1999   Version 1.8
+
+Number
+
+    ARB Extension #11
+
+Dependencies
+
+    WGL_ARB_extensions_string is required.
+    WGL_ARB_pixel_format is required.
+    WGL_ARB_make_current_read affects the definition of this extension.
+
+Overview
+
+    This extension defines pixel buffers (pbuffer for short). Pbuffers
+    are additional non-visible rendering buffers for an OpenGL
+    renderer. Pbuffers are equivalent to a window that has the same
+    pixel format descriptor with the following exceptions:
+
+    1.  There is no rendering to a pbuffer by GDI.
+
+    2.  The pixel format descriptors used for a pbuffer can only be
+        those that are supported by the ICD.  Generic formats are not
+        valid.
+
+    3.  The allocation of a pbuffer can fail if there are insufficient
+        resources (i.e., all the pbuffer memory has been allocated).
+
+    4.  The pixel buffer might be lost if a display mode change occurs.
+        A query is provided that can be called after a display mode
+        change to determine the state of the pixel buffer.
+
+    The intent of the pbuffer semantics is to enable implementations to
+    allocate pbuffers in non-visible frame buffer memory.  These
+    pbuffers are intended to be "static" resources in that a program
+    will typically allocate them only once rather than as a part of its
+    rendering loop.  (Pbuffers should be deallocated when the program
+    is no longer using them -- for example, if the program is
+    iconified.)
+
+    The frame buffer resources that are associated with a pbuffer are
+    also static and are deallocated when the pbuffer is destroyed or
+    possibly when a display mode change occurs.
+
+IP Status
+
+    TBD
+
+Issues
+
+    1. Should the OPTIMUM width and heights and PBUFFER_LARGEST_ARB be
+       taken out of the spec since they may be misleading or hard for
+       some implementations to support?
+
+       PBUFFER_LARGEST_ARB has been left in the extension.  It was
+       originally requested by an application.  The OPTIMUM queries
+       have been removed to match the GLX pixel buffer specification.
+
+
+New Procedures and Functions
+
+    DECLARE_HANDLE(HPBUFFERARB);
+
+    HPBUFFERARB wglCreatePbufferARB(HDC hDC,
+                                    int iPixelFormat,
+                                    int iWidth,
+                                    int iHeight,
+                                    const int *piAttribList);
+
+    HDC wglGetPbufferDCARB(HPBUFFERARB hPbuffer);
+
+    int wglReleasePbufferDCARB(HPBUFFERARB hPbuffer,
+                               HDC hDC);
+
+    BOOL wglDestroyPbufferARB(HPBUFFERARB hPbuffer);
+
+    BOOL wglQueryPbufferARB(HPBUFFERARB hPbuffer,
+                            int iAttribute,
+                            int *piValue);
+
+New Tokens
+
+    Accepted by the <attribute> parameter of wglChoosePixelFormatEXT:
+
+      WGL_DRAW_TO_PBUFFER_ARB              0x202D
+
+    Accepted by the <attribute> parameter of
+    wglGetPixelFormatAttribivEXT, and wglGetPixelFormatAttribfvEXT:
+
+      WGL_DRAW_TO_PBUFFER_ARB              0x202D
+      WGL_MAX_PBUFFER_PIXELS_ARB           0x202E
+      WGL_MAX_PBUFFER_WIDTH_ARB            0x202F
+      WGL_MAX_PBUFFER_HEIGHT_ARB           0x2030
+
+    Accepted by the <piAttribList> parameter of wglCreatePbufferARB:
+
+      WGL_PBUFFER_LARGEST_ARB              0x2033
+
+    Accepted by the <iAttribute> parameter of wglQueryPbufferARB:
+
+      WGL_PBUFFER_WIDTH_ARB                0x2034
+      WGL_PBUFFER_HEIGHT_ARB               0x2035
+      WGL_PBUFFER_LOST_ARB                 0x2036
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    This specification is written for WGL.
+
+GLX Protocol
+
+    This specification is written for WGL.
+
+Additions to the WGL Specification
+
+    A pixel buffer (pbuffer) can be created with wglCreatePbufferARB
+    which returns a handle associated with the pbuffer.
+
+      HPBUFFERARB wglCreatePbufferARB(HDC hDC,
+                                      int iPixelFormat,
+                                      int iWidth,
+                                      int iHeight,
+                                      const int *piAttribList);
+
+    <hDC> specifies a device context for the device on which the
+    pbuffer is created. <iPixelFormat> specifies a non-generic pixel
+    format descriptor index.  Support for pbuffers may be restricted
+    to specific pixel formats.  Use wglGetPixelFormatAttribivEXT or
+    wglGetPixelFormatAttribfvEXT to query the WGL_DRAW_TO_PBUFFER_ARB
+    attribute to determine which pixel formats support the creation of
+    pbuffers.
+
+    <iWidth> and <iHeight> specify the pixel width and height of the
+    rectangular pbuffer.
+
+    <piAttribList> is a list of attributes {type, value} pairs
+    containing integer attribute values.  All of the attributes in the
+    <piAttribList> are followed by the corresponding required value.
+    The list is terminated with a value of 0.
+
+    The following attributes are supported by wglCreatePbufferARB:
+
+      WGL_PBUFFER_LARGEST_ARB     If this attribute is set to a
+                                  non-zero value, the largest
+                                  available pbuffer is allocated
+                                  when the allocation of the pbuffer
+                                  would otherwise fail due to
+                                  insufficient resources.  The width
+                                  or height of the allocated pbuffer
+                                  never exceeds <iWidth> and <iHeight>,
+                                  respectively.  Use wglQueryPbufferARB
+                                  to retrieve the dimensions of the
+                                  allocated pbuffer.
+
+    The resulting pbuffer will contain color buffers and ancillary
+    buffers as specified by <iPixelFormat>.  Note that pbuffers use
+    framebuffer resources so applications should consider deallocating
+    them when they are not in use.
+
+    It is possible to create a pbuffer with back buffers and to swap
+    the front and back buffers by calling wglSwapLayerBuffers.  The
+    contents of the back buffers after the swap depends on the
+    <iPixelFormat>.  (Pbuffers are the same as windows in this respect.)
+
+    When wglCreatePbufferARB fails to create a pbuffer, NULL is
+    returned.  To get extended error information, call GetLastError.
+    Possible errors are as follows:
+
+      ERROR_INVALID_PIXEL_FORMAT     Pixel format is not valid.
+
+      ERROR_NO_SYSTEM_RESOURCES      Insufficient resources exist.
+
+      ERROR_INVALID_DATA             <iWidth> or <iHeight> is negative
+                                     or zero.
+
+      ERROR_INVALID_DATA             <piAttribList> is not a valid
+                                     attribute.
+
+    To create a device context for the pbuffer, call
+
+      HDC wglGetPbufferDCARB(HPBUFFERARB hPbuffer);
+
+    where <hPbuffer> is a handle returned from a previous call to
+    wglCreatePbufferARB.  A device context is returned by
+    wglGetPbufferDCARB which can be used to associate a rendering
+    context with the pbuffer.  Any rendering context created with
+    a wglCreateContext that is "compatible" with the <iPixelFormat> may
+    be used to render into the pbuffer. (See the description of
+    wglCreateContext, wglMakeCurrent, and wglMakeCurrentReadEXT for a
+    definition of "compatible".)
+
+    When wglGetPbufferDCARB fails, NULL is returned.  To get extended
+    error information, call GetLastError. Possible errors are as
+    follows:
+
+      ERROR_INVALID_HANDLE           <hPbuffer> is not a valid handle.
+
+    To release a device context obtained from a previous call to
+    wglGetPbufferDCARB, call
+
+        int wglReleasePbufferDCARB(HPBUFFERARB hPbuffer,
+                                   HDC hDC);
+
+    If the return value is a value of 1, the device context was released.
+    If the device context was not released, the return value is 0.  To
+    get extended error information, call GetLastError. Possible errors
+    are as follows:
+
+      ERROR_INVALID_HANDLE           <hPbuffer> is not a valid handle.
+      ERROR_DC_NOT_FOUND             <hDC> is not a valid DC.
+
+    A pbuffer is destroyed by calling
+
+      BOOL wglDestroyPbufferARB(HPBUFFERARB hPbuffer);
+
+    The pbuffer is destroyed once it is no longer current to any
+    rendering context.  When a pbuffer is destroyed, any memory
+    resources that are attached to it are freed and its handle is no
+    longer valid.
+
+    If wglDestroyPbufferARB fails, FALSE is returned.  To get extended
+    error information, call GetLastError. Possible errors are as
+    follows:
+
+      ERROR_INVALID_HANDLE           <hPbuffer> is not a valid handle.
+
+    To query the maximum width, height, or number of pixels in any
+    given pbuffer for a specific pixel format, use
+    wglGetPixelFormatAttribivEXT or wglGetPixelFormatAttribfvEXT with
+    <attribute> set to one of WGL_MAX_PBUFFER_WIDTH_ARB,
+    WGL_MAX_PBUFFER_HEIGHT_ARB, or WGL_MAX_PBUFFER_PIXELS_ARB.
+
+    WGL_MAX_PBUFFER_WIDTH_ARB and WGL_MAX_PBUFFER_HEIGHT_ARB indicate
+    the maximum width and height that can be passed into
+    wglCreatePbufferARB and WGL_MAX_PBUFFER_PIXELS_ARB indicates the
+    maximum number of pixels (width x height) for a pbuffer.  Note
+    that an implementation may return a value for
+    WGL_MAX_PBUFFER_PIXELS_ARB that is less than the maximum width
+    times the maximum height.  Also, the value for
+    WGL_MAX_PBUFFER_PIXELS_ARB is static and assumes that no other
+    pbuffers are contending for the framebuffer memory.  Thus it may
+    not be possible to allocate a pbuffer of the size given by
+    WGL_MAX_PBUFFER_PIXELS_ARB.
+
+    To query an attribute associated with a specific pbuffer, call
+
+      BOOL wglQueryPbufferARB(HPBUFFERARB hPbuffer,
+                              int iAttribute,
+                              int *piValue);
+
+    with <hPbuffer> set to a previously returned pbuffer handle.
+    <iAttribute> must be set to one of WGL_PBUFFER_WIDTH_ARB,
+    WGL_PBUFFER_HEIGHT_ARB, or WGL_PBUFFER_LOST_ARB.
+
+    The WGL_PBUFFER_LOST_ARB query can be used to determine if the
+    pixel buffer memory was lost due to a display mode change.  A value
+    of TRUE is returned in <iAttribute> if the display mode change lost
+    the memory for the pixel buffer.  It is not an error to render to
+    a pixel buffer in this state, but the effect of rendering to it is
+    the same as if the pixel buffer was destroyed:  the context state
+    will be updated, but the values of the returned pixels are
+    undefined.  The pixel buffer must be destroyed and recreated if
+    the pixel buffer memory has been lost.  A value of FALSE is
+    returned to indicate that the contents of the pixel buffer are
+    unaffected by the display mode change.
+
+    If wglQueryPbufferARB fails, FALSE is returned.  To get extended
+    error information, call GetLastError. Possible errors are as
+    follows:
+
+      ERROR_INVALID_HANDLE      <hPbuffer> is not a valid handle.
+      ERROR_INVALID_DATA        <iAttribute> is not a valid attribute.
+
+Dependencies on WGL_ARB_pixel_format
+
+    The WGL_ARB_pixel_format extension must be used to determine a
+    pixel format that can be used to create the pixel buffer.
+
+Dependencies on WGL_ARB_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_ARB_extensions_string extension.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Conformance Testing
+
+    All of the current conformance tests can be run on a pixel buffer
+    to validate its conformance.  The only change to the conformance
+    tests would be to create a context for the pixel buffer.
+
+Revision History
+
+    12/16/1999  0.1
+        - First ARB draft based on the EXT specification.
+
+    02/28/2000  0.2
+        - Added a query for a damaged pixel buffer due to a display
+          mode change.
+
+    03/15/2000  0.3
+        - Changed the lost definition of a pixel buffer.
+        - Removed the OPTIMAL size queries.
+        - Added a dependency on WGL_ARB_pixel_format.
+
+    03/22/2000  1.0
+        - Changed "mode change" to "display mode change".
+        - Added the condition that the resources associated with a
+          pbuffer may be lost due to a display mode change.
+        - Fixed issue 1 to address the OPTIMUM values.
+        - Added the declaration of HPBUFFERARB in the Procedures and
+          Functions section.
+        - Changed the wording of "undamaged" to "unaffected"
+        - Approved by ARB: 10-0-0.
+
+    03/12/2002  1.1
+        - Updated contact information.

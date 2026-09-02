@@ -49,6 +49,14 @@
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/rtti/traits.h"
 
+#define EXPECT_ERROR(in, err)         \
+    SCOPED_TRACE("called from here"); \
+    ExpectError((in), (err))
+
+#define EXPECT_SUCCESS(in)            \
+    SCOPED_TRACE("called from here"); \
+    ExpectSuccess((in))
+
 namespace tint::resolver {
 
 /// Helper class for testing
@@ -58,7 +66,7 @@ class TestHelper : public ProgramBuilder {
     TestHelper();
 
     /// Destructor
-    ~TestHelper();
+    ~TestHelper() override;
 
     /// @return a pointer to the Resolver
     Resolver* r() const { return resolver_.get(); }
@@ -172,10 +180,10 @@ struct Scalar {
     /// Constructor
     /// @param val the value used to construct this Scalar
     template <typename T>
-    Scalar(T&& val) : value(std::forward<T>(val)) {}  // NOLINT
+    explicit(false) Scalar(T&& val) : value(std::forward<T>(val)) {}
 
     /// @returns the Value
-    operator Value&() { return value; }
+    explicit operator Value&() { return value; }
 
     /// Equality operator
     /// @param other the other Scalar
@@ -651,9 +659,9 @@ struct DataType<alias<T, ID>> {
     /// @param args the value nested elements will be initialized with
     /// @return a new AST expression of the alias type
     template <bool IS_COMPOSITE = is_composite>
-    static inline std::enable_if_t<!IS_COMPOSITE, const ast::Expression*> Expr(
-        ProgramBuilder& b,
-        VectorRef<Scalar> args) {
+    static inline const ast::Expression* Expr(ProgramBuilder& b, VectorRef<Scalar> args)
+        requires(!IS_COMPOSITE)
+    {
         // Cast
         return b.Call(AST(b), DataType<T>::Expr(b, std::move(args)));
     }
@@ -662,9 +670,9 @@ struct DataType<alias<T, ID>> {
     /// @param args the value nested elements will be initialized with
     /// @return a new AST expression of the alias type
     template <bool IS_COMPOSITE = is_composite>
-    static inline std::enable_if_t<IS_COMPOSITE, const ast::Expression*> Expr(
-        ProgramBuilder& b,
-        VectorRef<Scalar> args) {
+    static inline const ast::Expression* Expr(ProgramBuilder& b, VectorRef<Scalar> args)
+        requires(IS_COMPOSITE)
+    {
         // Construct
         return b.Call(AST(b), DataType<T>::ExprArgs(b, std::move(args)));
     }

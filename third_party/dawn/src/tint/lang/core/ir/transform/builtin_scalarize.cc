@@ -72,11 +72,9 @@ struct State {
         }
         switch (builtin_enum) {
             case core::BuiltinFn::kClamp:
-                return config.scalarize_clamp;
             case core::BuiltinFn::kMax:
-                return config.scalarize_max;
             case core::BuiltinFn::kMin:
-                return config.scalarize_min;
+                return config.scalarize_min_max_clamp;
             default:
                 return false;
         }
@@ -135,9 +133,13 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BuiltinScalarize(Module& ir, const BuiltinScalarizeConfig& config) {
-    core::ir::AssertValid(ir, kBuiltinScalarizeCapabilities, "before core.BuiltinScalarize");
+    core::ir::AssertValid(ir, "before core.BuiltinScalarize");
 
     State{config, ir}.Process();
+
+    if (config.scalarize_min_max_clamp) {
+        ir.properties.Add(Property::kDisallowVectorMinMaxClamp);
+    }
 
     return Success;
 }

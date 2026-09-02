@@ -1,0 +1,466 @@
+Name
+
+    NV_multisample_coverage
+
+Name Strings
+
+    GL_NV_multisample_coverage
+    GLX_NV_multisample_coverage
+    WGL_NV_multisample_coverage
+
+Contact
+
+    Mike Strauss (mstrauss 'at' nvidia.com)
+
+Status
+
+    Shipping in NVIDIA release 169.xx drivers (May 2008) for GeForce
+    8 and up
+
+Version
+
+    Revision:                   4
+    Last Modified Date:         March 7, 2013
+
+Number
+
+    393
+
+Dependencies
+
+    ARB_multisample is required.
+    Written using the language of the OpenGL 2.1 specification.
+    Written using the language of the GLX 1.4 specification.
+
+Overview
+
+    The ARB_multisample extension provides a mechanism for antialiasing
+    primitives.  This mechanism allows an application to request an
+    additional buffer, the multisample buffer, that is added to the
+    framebuffer.  An application can request the number of samples per
+    fragment that are stored in the multisample buffer.  Rendering 
+    proceeds by writing color, depth, and stencil values for each 
+    sample to the multisample buffer.  The results are automatically
+    resolved to a single displayable color each time a pixel is 
+    updated.
+
+    Coverage Sample Anti-Aliasing (CSAA) is an extension to multisample
+    antialiasing.  The technique separates "samples" into two types of
+    samples.  "Color samples" are samples with color, depth, and 
+    stencil information stored in the multisample buffer.  "Coverage
+    samples" include both color samples and additional samples that only
+    provide pixel coverage information.
+
+    This extension follows the example of the
+    NV_framebuffer_multisample_coverage extension, which adds CSAA
+    support for framebuffer objects.  The base description of 
+    multisample rendering is written in terms of coverage samples and
+    color samples.  The windows system notion of "samples"
+    (SAMPLES_ARB) is layered on top of coverage and color samples.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <attribList> parameter of glXChooseVisual, and by
+    the <attrib> parameter of glXGetConfig, the <attrib_list> parameter
+    of glXChooseFBConfig, and the <attribute> parameter of
+    glXGetFBConfigAttrib:
+
+        GLX_COVERAGE_SAMPLES_NV              100001
+        GLX_COLOR_SAMPLES_NV                 0x20B3
+
+    Accepted by the <piAttributes> parameter of
+    wglGetPixelFormatAttribivEXT, wglGetPixelFormatAttribfvEXT, and
+    the <piAttribIList> and <pfAttribIList> of wglChoosePixelFormatEXT:
+
+        WGL_COVERAGE_SAMPLES_NV              0x2042
+        WGL_COLOR_SAMPLES_NV                 0x20B9
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+        COLOR_SAMPLES_NV                     0x8E20
+
+    (Note:  Earlier versions of this extension included a token
+     COVERAGE_SAMPLES_NV that was an alias for SAMPLES/SAMPLES_ARB.  This was
+     removed to avoid a name collision with a similar COVERAGE_SAMPLES_NV
+     token from the NV_coverage_sample extension to OpenGL ES.)
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.2.1, Multisampling (p. 93).
+
+    (replace third and fourth paragraphs, p. 94)
+
+    During multisample rendering the contents of a pixel fragment are
+    changed in three ways.  First, each fragment includes a coverage
+    value with SAMPLES_ARB bits.  The value of SAMPLES_ARB is an
+    implementation-dependent constant, and is queried by calling
+    GetIntegerv with <pname> set to SAMPLES_ARB.
+
+    Second, each fragment includes SAMPLES_ARB coverage samples.  The
+    number of coverage samples includes both samples that indicate only
+    coverage information, as well as samples that include coverage,
+    color, depth, and texture coordinate information.  The location of
+    the coverage information only samples may be anywhere within the
+    pixel.  These samples may be used with an implementation-dependent
+    algorithm as additional weights when resolving the color values to a
+    single pixel color.
+
+    Third, each fragment includes COLOR_SAMPLES_NV depth values,
+    color values, and sets of texture coordinates instead of the
+    single depth value, color value, and set of texture coordinates
+    that are maintained in single-sample rendering mode.  These samples
+    are referred to as color samples, although they contain more than
+    color information.  COLOR_SAMPLES_NV is an implementation-dependent
+    constant, and is queried by calling GetIntegerv with <pname> set to
+    COLOR_SAMPLES_NV.  An implementation may choose to assign the same 
+    color value and the same set of texture coordinates to more than 
+    one sample.  The location for evaluating the color value and the 
+    set of texture coordinates can be anywhere within the pixel 
+    including the fragment center or any of the color sample locations.
+    The color value and the set of texture coordinates need not be 
+    evaluated at the same location.  Each pixel fragment thus 
+    consists of integer x and y grid coordinates, SAMPLES_ARB
+    samples, COLOR_SAMPLES_NV of which contain color and depth values,
+    COLOR_SAMPLES_NV sets of texture coordinates, and a coverage value
+    with a maximum of SAMPLES_ARB bits.
+
+    (modify seventh paragraph, p. 94)
+
+    If MULTISAMPLE is enabled, multisample rasterization of all
+    primitives differs substantially from single-sample rasterization.
+    It is understood that each pixel in the framebuffer has SAMPLES_ARB
+    locations associated with it.  Of these locations, COLOR_SAMPLES_NV
+    have associated color, depth, and texture coordinates.  The
+    remaining locations only supply additional pixel coverage
+    information.  These locations are exact positions, rather than
+    regions or areas, and each is referred to as a sample point.  The
+    sample points...
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 4.1.11, Additional Multisample Fragment 
+    Operations (p. 213).
+
+    (modify second paragraph, p. 213)
+
+    If MULTISAMPLE is enabled, and the value of SAMPLE_BUFFERS is one,
+    the alpha test, stencil test, depth test, blending, and dithering
+    operations are performed for each pixel color sample, rather than
+    just once for each fragment...
+
+    (modify third paragraph, p 215)
+
+    After all operations have been completed on the multisample...
+    The method of combination is not specified, though a simple average
+    computed independently for each color component is recommended when
+    the number of coverage samples and color samples are equal.
+
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+ 
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the GLX Specification 
+
+    Modify Section 3.3.3 Configuration Management (p. 12)
+
+    (modify fourth paragraph, p. 12)
+
+    The attribute GLX_SAMPLE_BUFFERS indicates the number of multisample
+    buffers, which must be zero or one.  The attribute
+    GLX_COVERAGE_SAMPLES_NV gives the number of coverage samples per
+    pixel, and the attribute GLX_COLOR_SAMPLES_NV gives the number of
+    color samples per pixel;  if GLX_SAMPLE_BUFFERS is zero, then
+    GLX_COVERAGE_SAMPLES_NV and GLX_COLOR_SAMPLES_NV will also be zero.
+    If GLX_SAMPLE_BUFFERS is one, then the number of color, depth, and
+    stencil bits for each sample in the multisample buffer are
+    specified by the GLX_*_SIZE attributes.  GLX_SAMPLES is an alias for
+    GLX_COVERAGE_SAMPLES_NV.
+
+    (modify GLX_SAMPLES entry in Table 3.1: GLXFBConfig attributes,
+     p. 12)
+
+    Attribute               Type    Notes
+    ----------------------- ------- ------------------------------
+    GLX_COVERAGE_SAMPLES_NV integer no. coverage samples per pixel
+
+    (add a new entry to Table 3.1: GLXFBConfig attributes, p.12,
+     following the GLX_COVERAGE_SAMPLES_NV entry)
+
+    Attribute               Type    Notes
+    ----------------------- ------- ------------------------------
+    GLX_COLOR_SAMPLES_NV    integer no. color samples per pixel
+
+
+    (add a new following the discussion of GLX_TRASPARENT_TYPE,
+     p 18.)
+
+    If GLX_COVERAGE_SAMPLES_NV is in <attrib_list>, but
+    GLX_COLOR_SAMPLES_NV is not in <attrib_list> the selected
+    GLXFBConfigs must have the same number of color samples as
+    coverage samples.
+
+    (modify the GLX_SAMPLES entry in Table 3.4: Default values and
+    match criteria for GLXFBConfig attributes, p. 19)
+
+                                    Selection
+                                    and Sorting Sort 
+    Attribute               Default Criteria    Priority
+    ----------------------- ------- ----------- --------
+    GLX_COVERAGE_SAMPLES_NV 0       SMALLER     7
+
+    
+    (add a new entry to table 3.4:  Default values and match criteria
+    for GLXFBConfig attributes, p. 19, following the 
+    GLX_COVERAGE_SAMPLES_NV entry.
+    
+                                    Selection
+                                    and Sorting Sort 
+    Attribute               Default Criteria    Priority
+    ----------------------- ------- ----------- --------
+    GLX_COLOR_SAMPLES_NV    0       SMALLER     8
+
+
+    (modify the GLX_DEPTH_SIZE, GLX_STENCIL_SIZE, GLX_ACCUM_*_SIZE,
+    and GLX_X_VISUAL_TYPE entries in table 3.4: Default values and
+    match criteria for GLXFBConfig attributes, p. 19, by incrementing
+    the value of Sort Priority for each)
+
+    (modify sixth paragraph, p. 20)
+
+    7. Smaller GLX_COVERAGE_SAMPLES_NV.
+
+    (add a new paragraph following the sixth paragraph, p. 20)
+
+    8. Smaller GLX_COLOR_SAMPLES_NV.
+
+    (modify paragraphs seven through ten, p. 20, by incrementing
+    the list number for each)
+
+    Modify Section 3.4.1 Using Visuals for Configuration Management
+
+    (modify the GLX_SAMPLES entry in Table 3.7: GLX attributes for
+    Visuals, p. 37)
+
+    Attribute                 Type     Notes   
+    ------------------------- -------- --------------------------
+    GLX_COVERAGE_SAMPLES_NV   integer  number of coverage samples
+                                       per pixel.
+
+    (add a new entry to table 3.7: GLX attributes for Visuals, p.37,
+    following the GLX_COVERAGE_SAMPLES_NV entry)
+
+    Attribute                 Type     Notes   
+    ------------------------- -------- --------------------------
+    GLX_COLOR_SAMPLES_NV      integer  number of color samples
+                                       per pixel.
+
+
+    (modify the GLX_SAMPLES entry in table 3.8: Defaults and selection
+    criteria used by glXChooseVisual, p.38)
+
+    Attribute                 Default Selection Criteria   
+    ------------------------- ------- ------------------
+    GLX_COVERAGE_SAMPLES_NV      0    Smaller
+
+    (add a new entry to table 3.8: Defaults and selection criteria used
+    by glXChooseVisual, p.38, following the GLX_COVERAGE_SAMPLES_NV
+    entry)
+
+    Attribute                 Default Selection Criteria   
+    ------------------------- ------- ------------------
+    GLX_COLOR_SAMPLES_NV         0    Smaller
+
+
+GLX Protocol
+
+    None.
+
+Additions to the WGL Specification
+
+    Modify additions from ARB_multisample
+
+    (modify first and second paragraphs)
+
+    The parameter WGL_SAMPLE_BUFFERS_ARB is added to
+    wglGetPixelFormatAttrib*v. When queried, by calling
+    wglGetPixelFormatAttrib*v with <piAttributes> set to
+    WGL_SAMPLE_BUFFERS_ARB, it returns the number of multisample
+    buffers included in the pixel format.  For a normal pixel format,
+    the return value is zero.  A return value of one indicates that a
+    single multisample buffer is available.  The number of coverage
+    samples per pixel is queried by calling wglGetPixelFormatAttrib*v 
+    with <piAttributes> set to WGL_COVERAGE_SAMPLES_NV.  The number of
+    color samples per pixel is queried by calling 
+    wglGetPixelFormatAttrib*v with <piAttributes> set to 
+    WGL_COLOR_SAMPLES_NV. It is understood that the number of color, 
+    depth, and stencil bits per sample in the multisample buffer are as 
+    specified by the WGL_*_SIZE parameters.  It is also understood that 
+    there are no single-sample depth or stencil buffers associated with 
+    this pixel format -- the only depth and stencil buffers are those 
+    in the multisample buffer.  WGL_COVERAGE_SAMPLES_NV and 
+    WGL_COLOR_SAMPLES_NV are zero if WGL_SAMPLES_BUFFERS_ARB is zero.
+    WGL_SAMPLES_ARB is an alias for WGL_COVERAGE_SAMPLES_NV.
+
+    wglChoosePixelFormatARB accepts WGL_SAMPLE_BUFFERS_ARB in
+    <piAttribIList> and <pfAttribIList> with the corresponding value
+    set to the minimum number of multisample buffers that can be 
+    accepted.  Pixel formats with the smallest number of multisample
+    buffers that meets or exceeds the specified minimum number are
+    preferred.  Currently operations with more than one multisample
+    buffer are undefined, so the returned value will be either zero or
+    one.
+
+    (add a new paragraph, missing from ARB_multisample, following the
+     second paragraph)
+
+    wglChoosePixelFormatARB accepts WGL_COVERAGE_SAMPLES_NV in
+    <piAttribIList> and  <pfAttibIList> with the corresponding value
+    set to the requested number of coverage samples for the multisample 
+    buffer.  wglChoosePixelFormatARB accepts WGL_COLOR_SAMPLES_NV in 
+    <piAttribIList> and <pfAttribIList> with the corresponding value 
+    set to the requested number of color samples for the multisample
+    buffer.  A pixel format with differing numbers of coverage and
+    color samples may only be chosen when WGL_COLOR_SAMPLES_NV is
+    specified.
+
+
+Errors
+
+    None.
+
+New State
+
+
+New Implementation Dependent State
+
+                                          Minimum
+    Get Value            Type Get Command Value   Description                Sec.
+    -------------------- ---- ----------- ------- -------------------------- -----
+    SAMPLES_ARB          Z+   GetIntegerv 0       Number of coverage samples 3.2.1
+                                                  (state already in ARB_multisample,
+                                                   just defined to be coverage samples)
+    COLOR_SAMPLES_NV     Z+   GetIntegerv 0       Number of color samples    3.2.1
+
+Issues
+
+    1)  How do we provide backward compatibility for glXChooseFBConfig
+        and wglChoosePixelFormatARB if COVERAGE_SAMPLES_NV aliases to
+        SAMPLES_ARB?
+
+        RESOLVED:  Traditional multisample antialiasing can be
+        be described as CSAA where the number of coverage and color
+        samples are the same (all samples provide coverage, color, 
+        depth, and stencil information).  Existing applications and
+        applications that do not wish to use this extension will use
+        SAMPLES_ARB when choosing a multisample GLXFBConfig or pixel 
+        format.  In this case, glXChooseFBConfig and 
+        wglChoosePixelFormatARB should never return a CSAA visual or 
+        pixel format.  This is enforced in the spec by requiring the 
+        presence of COLOR_SAMPLES_NV in the attribute list in order to
+        return a CSAA GLXFBConfig or pixel format.
+
+        (NOTE:  The token COVERAGE_SAMPLES_NV was removed in version 4
+         of the extension, but its value was always indistinguishable
+         from SAMPLES_ARB.)
+
+    2)  How do we provide backward compatibility for 
+        glXGetFBConfigAttrib and wglGetPixelFormatAttrib*v if 
+        COVERAGE_SAMPLES_NV aliases to SAMPLES_ARB?
+
+        RESOLVED: The glXGetFBConfigAttrib and 
+        wglGetPixelFormatAttrib*v routines provide a mechanism for 
+        applications to query properties of a GLXFBConfig or pixel 
+        format.  This is useful for obtaining additional information 
+        about a GLXFBConfig or pixel format after choosing one with the
+        appropriate routine.  An application can also use these 
+        routines to apply custom GLXFBConfig/pixel format selection 
+        logic when presented with a set of GLXFBConfigs or pixel 
+        formats.
+
+        In the latter case, existing applications and future 
+        applications that do not use this extension may accidentally 
+        select a CSAA GLXFBConfig or pixel format because they only 
+        look at SAMPLES_ARB, which aliases to COVERAGE_SAMPLES_NV.  
+        This problem is not unique to CSAA GLXFBConfigs and pixel 
+        formats.  An application can run into a problem selecting the 
+        wrong GLXFBConfig or pixel format any time a new GLXFBConfig or
+        pixel format attribute is added that differs from the old 
+        default.  The GLX specification provides GLXFBConfig sorting
+        guidelines to aid in working around this problem.  For WGL,
+        vendors are encouraged to order their visuals and pixel formats
+        in such a way that gives preference to old formats.  With 
+        regards to CSAA, it is recommended that vendors list traditional
+        multisample pixel formats first, and CSAA pixel formats later.
+        The assumption being that applications will tend to choose the
+        first pixel format that meets the criteria.
+
+        (NOTE:  The token COVERAGE_SAMPLES_NV was removed in version 4
+         of the extension, but its value was always indistinguishable
+         from SAMPLES_ARB.)
+
+    3)  The NV_framebuffer_multisample_coverage extension supplies
+        specific rules with regards to how the requested number of
+        coverage and color samples are rounded to an implementation
+        supported value.  Should this extension provide similar rules?
+
+        RESOLVED.  The NV_framebuffer_multisample_coverage extension
+        is built on top of EXT_framebuffer_multisample, which provides
+        explicit rules for rounding the number of requested samples.  
+        Specifically, the spec says to round the number of requested 
+        samples up to the next implementation supported value.  
+        NV_framebuffer_multisample_coverage says that the number of 
+        coverage samples is rounded to the next highest implementation
+        supported value.  The number of color samples is rounded up to
+        the next highest implementation supported value given the 
+        chosen number of coverage samples.
+
+        Choosing WGL pixel formats has always been a flexible
+        and fuzzy process.  On the other hand, the GLX specification 
+        provides explicit rules for sorting and choosing GLXFBConfigs.
+        Language has been added to the GLX spec to sort first on 
+        coverage samples, and then on color samples.  This has a
+        similar effect as the rules given in 
+        NV_framebuffer_multisample_coverage as long as both 
+        COVERAGE_SAMPLES_NV and COLOR_SAMPLES_NV are specified.  For
+        WGL pixel format selection, the implementation is free to 
+        sort in whatever way it wishes.  Although it is recommended
+        that sorting be done in a way that is compatible with 
+        NV_framebuffer_mulitsample_coverage. 
+
+Revision History
+
+        Revision 1, 6/22/2007, mstrauss:  Initial version
+        Revision 2, 6/23/2007, mstrauss:  Removed GLX visual language.
+                                          Added GLXFBconfig language.
+        Revision 3, 4/20/2009, jajones:   Filled in GLX token values.
+                                          Restored GLX 1.2 compatibility
+                                          table entries.
+        Revision 4, 3/7/2013, pbrown:     Removed the OpenGL API token
+                                          COVERAGE_SAMPLES_NV, which was
+                                          just an alias for SAMPLES_ARB.
+
+

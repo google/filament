@@ -33,7 +33,7 @@ namespace dawn::native {
 template <typename ErrorType>
 struct InjectedErrorResult {
     ErrorType error;
-    bool injected;
+    bool injected = false;
 };
 
 bool ErrorInjectorEnabled();

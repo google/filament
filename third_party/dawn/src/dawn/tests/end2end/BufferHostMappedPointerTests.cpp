@@ -25,10 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/end2end/BufferHostMappedPointerTests.h"
+#include "src/dawn/tests/end2end/BufferHostMappedPointerTests.h"
 
-#include "dawn/common/Math.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 
@@ -120,7 +121,7 @@ TEST_P(BufferHostMappedPointerTests, Alignment) {
 
     // Valid: multiple of required alignment
     GetParam().mBackend->CreateHostMappedBuffer(device, wgpu::BufferUsage::CopySrc,
-                                                2 * mRequiredAlignment);
+                                                2 * static_cast<size_t>(mRequiredAlignment));
 }
 
 // Test creating a buffer with data initially in the host-mapped memory.
@@ -136,8 +137,9 @@ TEST_P(BufferHostMappedPointerTests, InitialDataAndCopySrc) {
 
     // Create the buffer and pre-fill it with data.
     auto [buffer, ptr] = GetParam().mBackend->CreateHostMappedBuffer(
-        device, wgpu::BufferUsage::CopySrc, bufferSize,
-        [&](void* initialPtr) { memcpy(initialPtr, expected.data(), bufferSize); });
+        device, wgpu::BufferUsage::CopySrc, bufferSize, [&](void* initialPtr) {
+            DAWN_UNSAFE_TODO(memcpy(initialPtr, expected.data(), bufferSize));
+        });
 
     // Check the buffer contents.
     EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), buffer, 0, expected.size());
@@ -145,7 +147,7 @@ TEST_P(BufferHostMappedPointerTests, InitialDataAndCopySrc) {
     // Wait for the GPU to complete, then change the host buffer contents.
     WaitForAllOperations();
     for (size_t i = 0; i < bufferSize / sizeof(uint32_t); ++i) {
-        reinterpret_cast<uint32_t*>(ptr)[i] += 42;
+        DAWN_UNSAFE_TODO(reinterpret_cast<uint32_t*>(ptr)[i]) += 42;
     }
 
     // Expect to see the new contents in the buffer.
@@ -181,7 +183,7 @@ TEST_P(BufferHostMappedPointerTests, CopyDst) {
     wgpu::Buffer bufferSrc = device.CreateBuffer(&bufferDesc);
 
     // Fill the src buffer wth data.
-    memcpy(bufferSrc.GetMappedRange(), expected.data(), bufferSize);
+    DAWN_UNSAFE_TODO(memcpy(bufferSrc.GetMappedRange(), expected.data(), bufferSize));
     bufferSrc.Unmap();
 
     // Do a GPU-GPU copy from the source buffer into the host-mapped buffer.
@@ -194,7 +196,7 @@ TEST_P(BufferHostMappedPointerTests, CopyDst) {
     WaitForAllOperations();
 
     // Expect the changes to be reflected in the host pointer.
-    EXPECT_EQ(memcmp(ptr, expected.data(), bufferSize), 0);
+    DAWN_UNSAFE_TODO(EXPECT_EQ(memcmp(ptr, expected.data(), bufferSize), 0));
 }
 
 // Create a host-mapped buffer with Storage usage. Test that writes on the host
@@ -213,7 +215,7 @@ TEST_P(BufferHostMappedPointerTests, Storage) {
 
     // Copy contents into the buffer after creation. We'll check that this
     // write is visible to the GPU.
-    memcpy(ptr, contents.data(), bufferSize);
+    DAWN_UNSAFE_TODO(memcpy(ptr, contents.data(), bufferSize));
 
     // Test storage read/write by checking the contents in a shader.
     // When the contents are as expected, increment the value. We'll read back on the CPU
@@ -252,7 +254,7 @@ TEST_P(BufferHostMappedPointerTests, Storage) {
         v += 1;
     }
     // Expect the changes to be reflected in the host pointer.
-    EXPECT_EQ(memcmp(ptr, contents.data(), bufferSize), 0);
+    DAWN_UNSAFE_TODO(EXPECT_EQ(memcmp(ptr, contents.data(), bufferSize), 0));
 }
 
 // Test interaction with other buffer mapping APIs.
@@ -297,15 +299,16 @@ TEST_P(BufferHostMappedPointerTests, MultithreadedCreation) {
     }
 
     // Create buffers on multiple threads.
-    utils::RunInParallel(buffers.size(), [&, this](uint32_t i) {
+    utils::RunInParallel(buffers.size(), [&, this](size_t i) {
         auto [buffer, _] = GetParam().mBackend->CreateHostMappedBuffer(
-            device, wgpu::BufferUsage::CopySrc, bufferSize,
-            [&](void* initialPtr) { memcpy(initialPtr, &expected[i * u32PerBuffer], bufferSize); });
+            device, wgpu::BufferUsage::CopySrc, bufferSize, [&](void* initialPtr) {
+                DAWN_UNSAFE_TODO(memcpy(initialPtr, &expected[i * u32PerBuffer], bufferSize));
+            });
         buffers[i] = std::move(buffer);
     });
 
     // Check the buffer contents.
-    for (uint32_t i = 0; i < buffers.size(); ++i) {
+    for (size_t i = 0; i < buffers.size(); ++i) {
         EXPECT_BUFFER_U32_RANGE_EQ(&expected[i * u32PerBuffer], buffers[i], 0, u32PerBuffer);
     }
 }

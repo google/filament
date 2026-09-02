@@ -1,0 +1,177 @@
+
+XXX - Not complete.
+
+Name
+
+    SGIX_ycrcb_subsample
+
+Name Strings
+
+    GL_SGIX_ycrcb_subsample
+
+Version
+
+    Last Modified Date: 01/16/1999
+    $Date: 1998/01/16 21:47:41 $ $Revision: 1.2 $
+
+Number
+
+    204
+
+Dependencies
+
+    ???
+
+Overview
+
+    (Need to construct a real extension spec based on this)
+
+Date: Thu, 18 Mar 1999 16:26:34 -0800
+From: Jason Freund <jfreund@sgi.com>
+To: alai@esd.sgi.com
+CC: tcrane@esd.sgi.com, minakami@esd.sgi.com, dyu@esd.sgi.com, celeste@cthulhu,
+	nance@cthulhu, bhoffman@cthulhu
+Subject: ycrcb spec
+
+Basically, there is the existing "ycrcb_subsample" spec that was shipped
+on the 320. And there is the new "subsample" spec which is a superset of
+that and has two new pieces of functionality: (1) a new subsample enum
+for 4224, and (2) resample xfer parameters. On Wednesday, we enumerated
+four possible ways to reconcile the two new features in the "subsample"
+spec with the existing "ycrcb_subsample" spec.
+
+1) Keep the existing "ycrcb_subsample" spec that was shipped (but not
+documented) on the 320, and add the new features into it. Disadvantage:
+If someone takes advantage of the new features in the spec, those
+features are not backward compatible to the version we have already
+shipped in the 320.
+
+2) Keep existing "ycrcb_subsample" spec that was shipped on 320, but
+also create a new "subsample" spec which is a superset of that. The new
+version of the "subsample" spec would add the two new features (4224 and
+resample params), but for everything else, keep the exact same enums
+used in "ycrcb_subsample". Note: With this choice, we would like for
+Oddysey/Bali to implement both specs in order to maintain compatibility.
+
+3) Same as number 2, above, except the new "subsample" spec would only
+contain the new resample xfer params and the new subsample enum for
+4224. Again, we would hope that Oddysey and Bali would implement both
+specs to maintain compatibility with existing "ycrcb_subsample" code.
+
+4) Three extensions:
+a) Existing "ycrcb_subsample" spec as shipped on 320
+b) New "resample" spec that just has the resample xfer parameters from
+the "subsample" spec
+c) New "ycrcb_alpha" (or some such) spec that just has the new 4224
+subsample enum
+
+Please indicate your preferences or objections to any of the proposals
+above.
+
+Thanks,
+Jason
+
+From: "Nancy Cam Winget" <nance@blip>
+Date: Tue, 16 Feb 1999 10:20:08 -0800
+To: hsa@blip, ljp@blip, tibet@blip
+Subject: (Fwd) Re: about the 422 packing
+Cc: nance@blip
+
+Hi Jon, Tibet and Steve,
+
+I'm including you as I thought this meeting may also be of interest to you:
+
+Jon - we've been trying to close loop on the subsample and ycrcb spec
+      (and deprecate the ycrcbformat.spec). So, I think it would be good
+      to have you there as we have had little success till now to get
+      convergence but more importantly, to get everyone to agree that
+      the spec must comply with opengl (after all, it is an extension to
+      opengl ;-)
+
+I've attached some further e-mails to give you a little more context to
+this thread.
+
+Thanks,
+	Nance.
+
+
+Date: Fri, 12 Feb 1999 14:24:41 -0800
+From: Jason Freund <jfreund@sgi.com>
+To: alai@esd.sgi.com, bwilliam@sgi.com, celeste@sgi.com, nance@sgi.com,
+	bhoffman@sgi.com
+Subject: ycrcb_subsample
+
+Hi,
+
+I wrote a description of our ycrcb expansion and conversion support
+called "ycrcb_subsample" for 320/540.  We can discuss the future of this
+extension and how it relates to Odyssey/Bali at our meeting 1pm
+Thursday.
+
+-------------------------------------------------------------------------------
+
+The 320/540 does ycrcb to rgba conversion and 422 -> 444 expansion under an
+ultra-stealth extension called "ycrcb_subsample" that uses:
+
+PixelStore				SampleRates
+===============================================================================
+GL_UNPACK_SAMPLE_RATE_SGIX		GL_PIXEL_SAMPLE_4444_SGIX (default)
+GL_PACK_SAMPLE_RATE_SGIX		GL_PIXEL_SAMPLE_2424_SGIX
+					GL_PIXEL_SAMPLE_4242_SGIX
+
+Also, the format GL_YCRCB_SGIX is used.
+
+The behavior of this "ycrcb_subsample" extension is that:
+
+Sample rates 2424 and 4242 are only expanded when either a 4-component/ubyte
+data is specified or GL_YCRCB_SGIX/ubyte is specified.	Sample rates are
+ignored for all other format/types.  At present, we believe our hardware uses
+replicate rather than averaging for the expansion.
+
+Furthermore, whenever GL_YCRCB_SGIX/ubyte is specified, the colormatrix stage
+of the imaging pipe is used to convert the data to rgba.  Any user Colormatrix/
+Scale/Bias is premultiplied by the conversion matrix.  But for now, no stages
+upstream of Colormatrix can be enabled, otherwise the result will be incorrect.
+
+We would like to keep the enums, extension string name, and mechanism used by
+this "ycrcb_subsample" spec, but extend it for functionality required by
+Odyssey/Bali to include from the "subsample" spec:
+
+PixelStore				Resample Filter
+===============================================================================
+GL_UNPACK_RESAMPLE_SGIX			GL_RESAMPLE_AVERAGE_SGIX
+GL_PACK_RESAMPLE_SGIX			GL_RESAMPLE_REPLICATE_SGIX (default)
+					GL_RESAMPLE_ZERO_FILL_SGIX
+
+as well as add:
+
+PixelStore				SampleRates
+===============================================================================
+GL_UNPACK_SAMPLE_RATE_SGIX		GL_PIXEL_SAMPLE_4224_SGIX
+GL_PACK_SAMPLE_RATE_SGIX
+
+Note that the other enums used by the "subsample" spec for Odyssey/Bali
+correspond to enums in this spec.
+
+By keeping with the "ycrcb_subsample" name and params, we won't have to bother
+existing ISV's, and software written for the 320/540 would run on Odyssey/Bali
+provided it only uses supported enums.
+
+From: alai@truth.esd.sgi.com (Angela Lai)
+Date: Thu, 11 Feb 1999 10:51:28 -0800
+In-Reply-To: nance@blip.engr.sgi.com (Nancy Cam Winget)
+	"about the 422 packing" (Feb 10,  4:01pm)
+To: jfreund@truth.esd.sgi.com, alai, bwilliam, celeste,
+	nance (Nancy Cam Winget)
+Subject: Re: about the 422 packing
+
+It turns out that even though I thought we implemented the average
+filter for up and downsample, we in fact didn't. (that's what happens
+when you build hardware without a spec...sigh) It would appear that
+cobalt just did replicate on upsample and point sample on downsample
+from the experiments that Jason ran yesterday. Hopefully the hardware
+folks can confirm what they actually did later today/tomorrow. The good
+news is that it would be easier if we in fact do the same thing across
+platforms. Let's do get together again next wednesday to close the issue
+on the subsample spec.
+

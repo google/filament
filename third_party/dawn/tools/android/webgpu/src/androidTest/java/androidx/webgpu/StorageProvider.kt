@@ -22,7 +22,7 @@ import android.content.Context
  * do not run in a google3 environment.
  */
 internal object StorageProvider {
-    fun get(context: Context): Storage {
-        return ExternalCacheStorage(context)
-    }
+  fun get(context: Context): Storage {
+    return ExternalCacheStorage(context)
+  }
 }

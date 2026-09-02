@@ -31,8 +31,7 @@
 #include <unordered_set>
 
 #include "src/tint/api/common/binding_point.h"
-#include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -41,13 +40,6 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
-
-/// The capabilities that the transform can support.
-const Capabilities kRobustnessCapabilities{
-    Capability::kAllowDuplicateBindings,
-    Capability::kAllow8BitIntegers,
-    Capability::kAllow16BitIntegers,
-};
 
 /// Configuration options that control when to clamp accesses.
 struct RobustnessConfig {
@@ -61,9 +53,9 @@ struct RobustnessConfig {
     /// Should accesses to pointers with the 'uniform' address space be clamped?
     bool clamp_uniform = true;
 
-    /// Should subgroup matrix builtins be predicated?
-    /// Note that the stride parameter will still be clamped if predication is disabled.
-    bool predicate_subgroup_matrix = true;
+    /// Should subgroup matrix builtins be clamped?
+    /// Note that the stride parameter will still be clamped if clamping is disabled.
+    bool clamp_subgroup_matrix = true;
 
     /// Bindings that should always be ignored.
     std::unordered_set<tint::BindingPoint> bindings_ignored;
@@ -80,7 +72,7 @@ struct RobustnessConfig {
                  clamp_immediate_data,
                  clamp_storage,
                  clamp_uniform,
-                 predicate_subgroup_matrix,
+                 clamp_subgroup_matrix,
                  bindings_ignored,
                  disable_runtime_sized_array_index_clamping,
                  use_integer_range_analysis);

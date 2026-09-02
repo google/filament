@@ -40,7 +40,7 @@
 #include "src/tint/api/common/substitute_overrides_config.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/utils/math/hash.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint::hlsl::writer {
 
@@ -128,7 +128,8 @@ struct Options {
     /// The downstream compiler to be used
     enum class Compiler : uint8_t {
         kFXC,
-        kDXC,
+        kDXC_2018,  // DXC with HLSL 2018. Will be removed when 2021 is always used.
+        kDXC_2021,  // DXC with HLSL 2021.
     };
 
     /// The set of options to work around driver issues
@@ -147,10 +148,18 @@ struct Options {
         /// Set to `true` to generate polyfill for `subgroupBroadcast(f16)`
         bool polyfill_subgroup_broadcast_f16 = false;
 
+        /// Set to `true` to decompose workgroup accesses via DecomposeAccess.
+        bool d3d12_decompose_workgroup_access = false;
+
+        /// Set to `true` to collapse redundant subgroup min and max operations
+        bool collapse_subgroup_min_max = false;
+
         TINT_REFLECT(Workarounds,
                      scalarize_max_min_clamp,
                      polyfill_reflect_vec2_f32,
-                     polyfill_subgroup_broadcast_f16);
+                     polyfill_subgroup_broadcast_f16,
+                     d3d12_decompose_workgroup_access,
+                     collapse_subgroup_min_max);
         bool operator==(const Workarounds&) const = default;
     };
 
@@ -218,7 +227,7 @@ struct Options {
     Extensions extensions{};
 
     /// The downstream compiler which will be used
-    Compiler compiler = Compiler::kDXC;
+    Compiler compiler = Compiler::kDXC_2021;
 
     /// Options used to specify a mapping of binding points to indices into a UBO
     /// from which to load buffer sizes.
@@ -253,6 +262,9 @@ struct Options {
     /// The binding points that will be ignored by the rebustness transform.
     std::vector<BindingPoint> ignored_by_robustness_transform;
 
+    /// Vertex shader locations that use the snorm10-10-10-2 format (which is emulated on D3D).
+    std::vector<uint32_t> snorm10_10_10_2_locations = {};
+
     /// Pixel local configuration
     PixelLocalOptions pixel_local;
 
@@ -285,11 +297,32 @@ struct Options {
                  num_workgroups_start_offset,
                  bindings,
                  ignored_by_robustness_transform,
+                 snorm10_10_10_2_locations,
                  pixel_local,
                  resource_table,
                  substitute_overrides_config);
     bool operator==(const Options&) const = default;
 };
+
+/// @param out the stream to write to
+/// @param compiler the compiler
+/// @returns @p out so calls can be chained
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
+auto& operator<<(STREAM& out, Options::Compiler compiler) {
+    switch (compiler) {
+        case Options::Compiler::kFXC:
+            out << "FXC";
+            break;
+        case Options::Compiler::kDXC_2018:
+            out << "DXC 2018";
+            break;
+        case Options::Compiler::kDXC_2021:
+            out << "DXC 2021";
+            break;
+    }
+    return out;
+}
 
 }  // namespace tint::hlsl::writer
 
@@ -297,7 +330,7 @@ namespace tint {
 
 /// Reflect valid value ranges for the PixelLocalAttachment::TexelFormat enum.
 TINT_REFLECT_ENUM_RANGE(hlsl::writer::PixelLocalAttachment::TexelFormat, kR32Sint, kR32Float);
-TINT_REFLECT_ENUM_RANGE(hlsl::writer::Options::Compiler, kFXC, kDXC);
+TINT_REFLECT_ENUM_RANGE(hlsl::writer::Options::Compiler, kFXC, kDXC_2021);
 
 }  // namespace tint
 

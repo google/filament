@@ -61,7 +61,7 @@ TEST_F(IR_HlslBuiltinCallTest, Clone) {
 
 TEST_F(IR_HlslBuiltinCallTest, CloneWithExplicitParams) {
     auto* builtin = b.Call<BuiltinCall>(mod.Types().u32(), BuiltinFn::kF32Tof16, 0_f);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<core::ir::TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());
