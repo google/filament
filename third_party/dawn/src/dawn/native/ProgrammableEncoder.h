@@ -30,13 +30,14 @@
 
 #include <string>
 
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -47,7 +48,7 @@ class ProgrammableEncoder : public ApiObjectBase {
   public:
     ProgrammableEncoder(DeviceBase* device, StringView label, EncodingContext* encodingContext);
 
-    void APIInsertDebugMarker(StringView groupLabel);
+    void APIInsertDebugMarker(StringView marker);
     void APIPopDebugGroup();
     void APIPushDebugGroup(StringView groupLabel);
 
@@ -57,27 +58,26 @@ class ProgrammableEncoder : public ApiObjectBase {
     MaybeError ValidateProgrammableEncoderEnd() const;
 
     MaybeError ValidateSetImmediates(uint32_t offset, size_t size) const;
+    void RecordSetImmediates(CommandAllocator* allocator,
+                             uint32_t offset,
+                             Span<const std::byte> data);
 
     // Compute and render passes do different things on SetBindGroup. These are helper functions
     // for the logic they have in common.
-    MaybeError ValidateSetBindGroup(BindGroupIndex index,
-                                    BindGroupBase* group,
-                                    uint32_t dynamicOffsetCountIn,
-                                    const uint32_t* dynamicOffsetsIn) const;
+    MaybeError ValidateSetBindGroup(
+        BindGroupIndex index,
+        BindGroupBase* group,
+        ityp::span<BindingIndex, const uint32_t> dynamicOffsetsIn) const;
     void RecordSetBindGroup(CommandAllocator* allocator,
                             BindGroupIndex index,
                             BindGroupBase* group,
-                            uint32_t dynamicOffsetCount,
-                            const uint32_t* dynamicOffsets) const;
+                            ityp::span<BindingIndex, const uint32_t> dynamicOffsets) const;
 
     // Construct an "error" programmable pass encoder.
     ProgrammableEncoder(DeviceBase* device,
                         EncodingContext* encodingContext,
                         ErrorTag errorTag,
                         StringView label);
-
-    // Called by APISetResourceTable in child classes
-    MaybeError SetResourceTable(ResourceTableBase* table, CommandAllocator* allocator);
 
     raw_ptr<EncodingContext> mEncodingContext = nullptr;
 
@@ -86,7 +86,6 @@ class ProgrammableEncoder : public ApiObjectBase {
     bool mEnded = false;
 
   private:
-    const bool mValidationEnabled;
     const bool mNeedsIndirectGPUValidation;
 };
 

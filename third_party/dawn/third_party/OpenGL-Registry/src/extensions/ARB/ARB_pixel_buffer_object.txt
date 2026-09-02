@@ -1,0 +1,1835 @@
+Name
+
+    ARB_pixel_buffer_object
+
+Name Strings
+
+    GL_ARB_pixel_buffer_object
+
+Notice
+
+    Copyright (c) 2004-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on December 7, 2004.
+
+Contributors
+
+    Ralf Biermann
+    Nick Carter
+    Derek Cornish
+    Matt Craighead
+    Mark Kilgard
+    Dale Kirkland
+    Jon Leech
+    Brian Paul
+    Thomas Roell
+    Ian Romanick
+    Jeremy Sandmel
+    Shazia Rahman
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+    Ralf Biermann, NVIDIA Corporation (rbiermann 'at' nvidia.com)
+    Derek Cornish, NVIDIA Corporation (dcornish 'at' nvidia.com)
+
+IP Status
+
+    None.
+
+Version
+
+    Last Modified Date: October 8, 2013
+    Revision: 1.2
+
+Number
+
+    ARB Extension #42
+
+Dependencies
+
+    Written based on the wording of the OpenGL 2.0 specification.
+
+    Assumes support for (at least) OpenGL 1.5 or the
+    ARB_vertex_buffer_object extension.
+
+    NV_pixel_data_range affects the definition of this extension.
+
+    EXT_pixel_buffer_object interacts with this extension.
+
+Overview
+
+    This extension expands on the interface provided by the
+    ARB_vertex_buffer_object extension (and later integrated into OpenGL
+    1.5) in order to permit buffer objects to be used not only with vertex
+    array data, but also with pixel data.  The intent is to provide more
+    acceleration opportunities for OpenGL pixel commands.
+
+    While a single buffer object can be bound for both vertex arrays and
+    pixel commands, we use the designations vertex buffer object (VBO)
+    and pixel buffer object (PBO) to indicate their particular usage in
+    a given situation.
+
+    Recall that buffer objects conceptually are nothing more than arrays
+    of bytes, just like any chunk of memory.  ARB_vertex_buffer_object
+    allows GL commands to source data from a buffer object by binding the
+    buffer object to a given target and then overloading a certain set of
+    GL commands' pointer arguments to refer to offsets inside the buffer,
+    rather than pointers to user memory.  An offset is encoded in a
+    pointer by adding the offset to a null pointer.
+
+    This extension does not add any new functionality to buffer objects
+    themselves.  It simply adds two new targets to which buffer objects
+    can be bound: GL_PIXEL_PACK_BUFFER and GL_PIXEL_UNPACK_BUFFER.  When a
+    buffer object is bound to the GL_PIXEL_PACK_BUFFER target, commands
+    such as glReadPixels pack (write) their data into a buffer object.
+    When a buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target,
+    commands such as glDrawPixels and glTexImage2D unpack (read) their
+    data from a buffer object.
+
+    There are a several approaches to improve graphics performance
+    with PBOs.  Some of the most interesting approaches are:
+
+    - Streaming texture updates:  If the application uses
+      glMapBuffer/glUnmapBuffer to write its data for glTexSubImage into
+      a buffer object, at least one of the data copies usually required
+      to download a texture can be eliminated, significantly increasing
+      texture download performance.
+
+    - Streaming draw pixels: When glDrawPixels sources client memory,
+      OpenGL says the client memory can be modified immediately after the
+      glDrawPixels command returns without disturbing the drawn image.
+      This typically necessitates unpacking and copying the image prior
+      to glDrawPixels returning.  However, when using glDrawPixels with
+      a pixel pack buffer object, glDrawPixels may return prior to image
+      unpacking because future modification of the buffer data requires
+      explicit commands (glMapBuffer, glBufferData, or glBufferSubData).
+
+    - Asynchronous glReadPixels:  If an application needs to read back a
+      number of images and process them with the CPU, the existing GL
+      interface makes it nearly impossible to pipeline this operation.
+      The driver will typically send the hardware a readback command
+      when glReadPixels is called, and then wait for all of the data to
+      be available before returning control to the application.  Then,
+      the application can either process the data immediately or call
+      glReadPixels again; in neither case will the readback overlap with
+      the processing.  If the application issues several readbacks
+      into several buffer objects, however, and then maps each one to
+      process its data, then the readbacks can proceed in parallel with
+      the data processing.
+
+    - Render to vertex array:  The application can use a fragment
+      program to render some image into one of its buffers, then read
+      this image out into a buffer object via glReadPixels.  Then, it can
+      use this buffer object as a source of vertex data.
+
+Issues
+
+    1)  How does this extension relate to ARB_vertex_buffer_object?
+
+        It builds on the ARB_vertex_buffer_object framework by adding
+        two new targets that buffers can be bound to.
+
+    2)  How does this extension relate to NV_pixel_data_range?
+
+        This extension relates to NV_pixel_data_range in the same way
+        that ARB_vertex_buffer_object relates to NV_vertex_array_range.
+        To paraphrase the ARB_vertex_buffer_object spec, here are the
+        main differences:
+
+        - Applications are no longer responsible for memory management
+          and synchronization.
+
+        - Applications may still access high-performance memory directly,
+          but this is optional, and such access is more restricted.
+
+        - Buffer changes (glBindBuffer) are generally expected to be
+          very lightweight, rather than extremely heavyweight
+          (glPixelDataRangeNV).
+
+        - A platform-specific allocator such as wgl/glXAllocateMemoryNV
+          is no longer required.
+
+    3)  Can a given buffer be used for both vertex and pixel data?
+
+        RESOLVED: YES.  All buffers can be used with all buffer bindings,
+        in whatever combinations the application finds useful.  Consider
+        yourself warned, however, by the following issue.
+
+    4)  May implementations make use of the target as a hint to select
+        an appropriate memory space for the buffer?
+
+        RESOLVED: YES, as long as such behavior is transparent to the
+        application.  Some implementations may choose, for example, that
+        they would rather stream vertex data from AGP memory, element
+        (index) data from video memory, and pixel data from video memory.
+        In fact, one can imagine arbitrarily complicated heuristics for
+        selecting the memory space, based on factors such as the target,
+        the "usage" argument, and the application's observed behavior.
+
+        While it is entirely legal to create a buffer object by binding
+        it to GL_ARRAY_BUFFER and loading it with data, then using it
+        with the GL_PIXEL_UNPACK_BUFFER_ARB or GL_PIXEL_PACK_BUFFER_ARB
+        binding, such behavior is liable to confuse the driver and may
+        hurt performance.  If the driver implemented the hypothetical
+        heuristic described earlier, such a buffer might have already
+        been located in AGP memory, and so the driver would have to choose
+        between two bad options: relocate the buffer into video memory, or
+        accept lower performance caused by streaming pixel data from AGP.
+
+    5)  Should all pixel path commands be supported, or just a subset
+        of them?
+
+        RESOLVED: ALL.  While there is little reason to believe that,
+        say, glConvolutionFilter2D would benefit from this extension,
+        there is no reason _not_ to support it.  The complete list of
+        commands affected by this extension is listed in issues 17 and 18.
+
+    6)  Should glPixelMap and glGetPixelMap be supported?
+
+        RESOLVED: YES.  They're not really pixel path operations, but,
+        again, there is no good reason to omit operations, and they _are_
+        operations that pass around big chunks of pixel-related data.
+        If we support glPolygonStipple, surely we should support this.
+
+    7)  How does the buffer binding state push/pop?
+
+        RESOLVED: As part of the pixel store client state.  This is
+        analogous to how the ARB_vertex_buffer_object bindings
+        pushed/popped as part of the vertex array client state.
+
+    8)  Should NV_pixel_data_range (PDR) be used concurrently with pixel
+        buffer objects ?
+
+        RESOLVED: NO. While it would be possible to allocate a memory
+        range for PDR, using a pointer into this memory range with one
+        of the commands affected by PBOs will not work if a pixel buffer
+        object other than zero is bound to the buffer binding point
+        affecting the command.
+
+        Pixel buffer objects always have higher precedence than PDR.
+
+    9)  Should the INVALID_OPERATION error be generated if a pixel
+        command would access data outside the range of the bound PBO?
+
+        RESOLVED:  YES.  This requires considering the command parameters
+        (such as width/height/depth/format/type/pointer), the current
+        pixel store (pack/unpack) state, and the command operation itself
+        to determine the maximum addressed byte for the pixel command.
+
+        Brian Paul strongly recommends this behavior.
+
+        This behavior should increase the reliability of using PBO and
+        guard against programmer mistakes.
+
+        This is particularly important for glReadPixels where returning
+        data into a region outside the PBO could cause corruption of
+        application memory.
+
+        Such bounds checking is substantially more expensive for VBO
+        accesses because bounds checking on a per-vertex element basis
+        for each of multiple enabled vertex arrays prior to performing
+        the command compromises the performance justification of VBO.
+
+    10) If a pixel command with a bound PBO accesses data outside the
+        range of the PBO, thereby generating a GL_INVALID_OPERATION error,
+        can the pixel command end up being partially processed?
+
+        RESOLVED:  NO.  As for all GL errors excepting GL_OUT_OF_MEMORY
+        situations, "the command generating the error is ignored so that
+        it has no effect on GL state or framebuffer contents."
+
+        This means implementations must determine before the pixel command
+        is performed whether the resulting read or write operations on
+        the bound PBO will exceed the size of the PBO.
+
+        This means an implementation is NOT allowed to detect out of
+        bounds accesses in the middle of performing the command.
+
+    11) How expensive is it to predetermine whether a pixel command
+        accessing a PBO would have an out of bounds access?
+
+        See the "Appendix on Pack/Unpack Range" to see the computations
+        involved in computing the access limit.
+
+        Implementations can further specialize and optimize the check
+        to make this out of bounds checking negligible for any sizable
+        pixel payload.
+
+    12) Should feedback and select buffers output results into a
+        buffer object?
+
+        RESOLVED:  That might be useful for a future extension but is
+        not appropriate for this extension.  New targets (other than
+        PIXEL_PACK_BUFFER_ARB and PIXEL_UNPACK_BUFFER_ARB) make sense.
+
+    13) Should NV_pixel_data_range interactions be documented in
+        this specification?
+
+        RESOLVED:  YES.  Interactions with NV_pixel_data_range are
+        important to document to facilitate developers migrating to
+        the multi-vendor ARB_pixel_buffer_object extension.  Discussion of
+        interactions is limited to the issues and example usage sections.
+
+        Other ARB specifications follow this policy, and Jon Leech agrees
+        with this policy.
+
+    14) Should an INVALID_OPERATION error be generated if the offset
+        within a pixel buffer to a datum comprising of N basic machine
+        units is not a multiple of N?
+
+        RESOLVED:  YES.  This was stated for VBOs but no error was
+        defined if the rule was violated.  Perhaps this needs to be
+        better specified for VBO.
+
+        For PBO, it is reasonable and cheap to enforce the alignment rule.
+        For pixel commands it means making sure the offset is evenly
+        divisible by the component or group size in basic machine units.
+
+        This check is independent of the pixel store state because the
+        pixel store state is specified in terms of pixels (not basic
+        machine units) so pixel store addressing cannot create an
+        unaligned access as long as the base offset is aligned.
+
+        Certain commands (specifically glPolygonStipple,
+        glGetPolygonStipple, glBitmap, glCompressedTexImage1D,
+        glCompressedTexImage2D, glCompressedTexImage3D,
+        glCompressedTexSubImage1D, glCompressedTexSubImage2D,
+        glCompressedTexSubImage3D, and glGetCompressedTexImage) are not
+        affected by this error because the data accessed is addressed
+        at the granularity of basic machine units.
+
+    15) Various commands do not make explicit reference to supporting
+        packing or unpacking from a pixel buffer object but rather specify
+        that parameters are handled in the same manner as glDrawPixels,
+        glReadPixels, or the glCompressedTexImage commands.  So do such
+        commands (example: glCompressedTexSubImage2D) use pixel buffers?
+
+        RESOLVED:  YES.  Commands that have their behavior defined based
+        on commands that read or write from pixel buffers will themselves
+        read or write from pixel buffers.  Relying on this reduces the
+        amount of specification language to be updated.
+
+    16) What is the complete list of commands that can unpack (read)
+        pixels from the current pixel unpack buffer object?
+
+            glBitmap
+            glColorSubTable
+            glColorTable
+            glCompressedTexImage1D
+            glCompressedTexImage2D
+            glCompressedTexImage3D
+            glCompressedTexSubImage1D
+            glCompressedTexSubImage2D
+            glCompressedTexSubImage3D
+            glConvolutionFilter1D
+            glConvolutionFilter2D
+            glDrawPixels
+            glPixelMapfv
+            glPixelMapuiv
+            glPixelMapusv
+            glPolygonStipple
+            glSeparableFilter2D
+            glTexImage1D
+            glTexImage2D
+            glTexImage3D
+            glTexSubImage1D
+            glTexSubImage2D
+            glTexSubImage3D
+
+    17) What is the complete list of commands that can pack (write)
+        pixels into the current pixel pack buffer object?
+
+            glGetCompressedTexImage
+            glGetConvolutionFilter
+            glGetHistogram
+            glGetMinmax
+            glGetPixelMapfv
+            glGetPixelMapuiv
+            glGetPixelMapusv
+            glGetPolygonStipple
+            glGetSeparableFilter,
+            glGetTexImage
+            glReadPixels
+
+    18) How does support for pixel buffer objects affect the GLX protocol?
+
+        UNRESOLVED:  See the "GLX Protocol" section.
+
+    19) Prior to this extension, passing zero for the data argument of
+        glTexImage1D, glTexImage2D, and glTexImage3D defined a texture
+        image level without supplying an image.  How does this behavior
+        change with this extension?
+
+        RESOLVED:  The "unspecified image" behavior of the glTexImage
+        calls only applies when bound to a zero pixel unpack buffer
+        object.
+
+        When bound to a non-zero pixel unpack buffer object, the data
+        argument to these calls is treated as an offset rather than
+        a pointer so zero is a reasonable and even likely value that
+        corresponds to the very beginning of the buffer object's data.
+
+        So to create a texture image level with unspecified image data,
+        you MUST bind to the zero pixel unpack buffer object.
+
+        See the ammended language at the end of section 3.8.1.
+
+    20) How does this extension support video frame grabbers?
+
+        RESOLVED:  This extension extends buffer objects so they can
+        operate with pixel commands, rather than just vertex array
+        commands.
+
+        We anticipate that a future extension may provide a mechanism
+        for transferring video frames from video frame grabber hardware
+        or vertices from motion capture hardware (or any other source
+        of aquired real-time data) directly into a buffer object to
+        eliminate a copy.  Ideally, such transfers would be possible
+        without requiring mapping of the buffer object.  But this
+        extension does not provide such functionality.
+
+        We anticipate such functionality to involve binding a buffer
+        object to a new target type, configuring a source (or sink) for
+        data (video frames, motion capture vertex sets, etc.), and then
+        commands to initiate data transfers to the bound buffer object.
+
+    21) Can this ARB extension share the same enumerants with the EXT
+        version of this functionality?
+
+        RESOLVED:  YES.  The ARB extension is functionally compatible
+        with EXT_pixel_buffer_object except that the ARB version adds
+        additional error checks for alignment and buffer bounds checking.
+
+        The EXT behavior in the case of alignment violations and buffer
+        bounds overflow are technically undefined.  The ARB extension
+        simply defines the EXT extension's undefined behavior to be an
+        OpenGL error.
+
+        Using the same enumerants with firmed up error checking (that
+        would otherwise indicate buggy usage) is preferable to two sets
+        of enumerants where the older EXT set simply allows sloppy usage.
+
+    22) The expected usage parameters (GL_STREAM_DRAW, etc.) for
+        glBufferData are not clearly specified.  How can they be improved?
+
+        RESOLVED:  To improve the clarity, replace the phrase "specified
+        once" with "specified once per repetition of the usage pattern" so
+        that it is clear for the STREAM_* usage modes (and the STATIC_*
+        usage modes too, just much less frequently) that the repeated
+        specification is part of a pattern and it is expected that the
+        buffer can be, and will be for the STREAM_* usage patterns,
+        specified again after being used and this is likely to repeat.
+
+        Additionally, the *_COPY and *_DRAW usage patterns can source
+        the data with "a GL drawing command" but also with image
+        specification commands so change this phrase to "a GL drawing
+        or image specification command."
+
+    23) Is this the "right" way to expose render-to-vertex-array?
+
+        DISCUSSION:  You can use this extension to render an image
+        into a framebuffer, copy the pixels into a buffer object with
+        glReadPixels, and then configure vertex arrays to source the pixel
+        data as vertex attributes.  This necessarily involves a copy
+        from the framebuffer to the buffer object.  Future extensions
+        may provide mechanisms for copy-free render-to-vertex-array
+        capabilities but that is not a design goal of this extension.
+
+New Procedures and Functions
+
+    None.
+
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData,
+    GetBufferParameteriv, and GetBufferPointerv:
+
+        PIXEL_PACK_BUFFER_ARB                        0x88EB
+        PIXEL_UNPACK_BUFFER_ARB                      0x88EC
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        PIXEL_PACK_BUFFER_BINDING_ARB                0x88ED
+        PIXEL_UNPACK_BUFFER_BINDING_ARB              0x88EF
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+ -- Section 2.9 "Buffer Objects"
+
+    Replace the first two paragraphs with:
+
+    "The vertex data arrays described in section 2.8 are stored in
+    client memory.  It is sometimes desirable to store frequently accessed
+    client data, such as vertex array and pixel data, in high-performance
+    server memory.  GL buffer objects provide a mechanism for clients to
+    use to allocate, initialize, and access such memory."
+
+    The name space for buffer objects is the unsigned integer, with zero
+    reserved for the GL.  A buffer object is created by binding an unused
+    name to a buffer target.  A buffer object is bound by calling
+
+       void BindBuffer(enum target, uint buffer);
+
+    /target/ must be one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER_ARB, or PIXEL_PACK_BUFFER_ARB.  The ARRAY_BUFFER
+    target is discussed in section 2.9.1  The ELEMENT_ARRAY_BUFFER target
+    is discussed in section 2.9.2.  The PIXEL_UNPACK_BUFFER_ARB and
+    PIXEL_PACK_BUFFER_ARB targets are discussed later in sections 3.6,
+    4.3.2, and 6.1.  If the buffer object named /buffer/ has not been
+    previously bound or has been deleted since the last binding, the
+    GL creates a new state vector, initialized with a zero-sized memory
+    buffer and comprising the state values listed in table 2.6."
+
+    Replace the 5th paragraph with:
+
+    "Initially, each buffer object target is bound to zero.  There is
+    no buffer object corresponding to the name zero so client attempts
+    to modify or query buffer object state for a target bound to zero
+    generate an INVALID_OPERATION error."
+
+    Replace the phrase listing the valid targets for BufferData in the
+    9th paragraph with:
+
+    "with target set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER_ARB, or PIXEL_PACK_BUFFER_ARB,"
+
+    In the 10th paragraph describing buffer object usage modes, replace
+    the phrase "specified once" with "specified once per repetition of
+    the usage pattern" for the STREAM_* and STATIC_* usage values.
+
+    Also in the 10th paragraph describing buffer object usage modes,
+    replace the phrases "of a GL drawing command." and "for GL drawing
+    commands." with "for GL drawing and image specification commands." for
+    the *_DRAW and *_COPY usage values.
+
+    Replace the phrase listing the valid targets for BufferSubData in
+    the 15th paragraph with:
+
+    "with target set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER_ARB, or PIXEL_PACK_BUFFER_ARB."
+
+    Replace the phrase listing the valid targets for MapBuffer in the
+    16th paragraph with:
+
+    "with target set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER_ARB, or PIXEL_PACK_BUFFER_ARB."
+
+    Replace the phrase listing the valid targets for UnmapBuffer in the
+    21st paragraph with:
+
+    "with target set to one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER,
+    PIXEL_UNPACK_BUFFER_ARB, or PIXEL_PACK_BUFFER_ARB."
+
+ -- Section 2.9.2 "Array Indices in Buffer Objects"
+
+    Delete the 3rd paragraph that explains how the ELEMENT_ARRAY_BUFFER
+    target is acceptable for the commands specified in section 2.9.
+    The updated section 2.9 language already says this.
+
+ -- NEW Section 2.9.3 "Buffer Object Required State"
+
+    "The state required to support buffer objects consists of binding
+    names for the array buffer, element buffer, pixel unpack buffer, and
+    pixel pack buffer.  Additionally, each vertex array has an associated
+    binding so there is a buffer object binding for each of the vertex
+    array, normal array, color array, index array, multiple texture
+    coordinate arrays, edge flag array, secondary color array, fog
+    coordinate array, and vertex attribute arrays.  The initial values for
+    all buffer object bindings is zero.
+
+    The state of each buffer object consists of a buffer size in basic
+    machine units, a usage parameter, an access parameter, a mapped
+    boolean, a pointer to the mapped buffer (NULL if unmapped), and the
+    sized array of basic machine units for the buffer data."
+
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+ -- Section 3.6 "Pixel Rectangles"
+
+    Replace the 1st sentence in the 2nd paragraph:
+
+    "A number of parameters control the encoding of pixels in buffer
+    object or client memory (for reading and writing) and how pixels
+    are processed before being placed in or after being read from the
+    framebuffer (for reading, writing, and copying)."
+
+ -- RENAME Section 3.6.1 "Pixel Storage Modes and Pixel Buffer Objects"
+
+    Add to the end of the section:
+
+    "In addition to storing pixel data in client memory, pixel data
+    may also be stored in buffer objects (described in section 2.9).
+    The current pixel unpack and pack buffer objects are designated
+    by the PIXEL_UNPACK_BUFFER_ARB and PIXEL_PACK_BUFFER_ARB targets
+    respectively.
+
+    Initially, zero is bound for the PIXEL_UNPACK_BUFFER_ARB, indicating
+    that image specification commands such as DrawPixels source their
+    pixels from client memory pointer parameters.  However, if a non-zero
+    buffer object is bound as the current pixel unpack buffer, then
+    the pointer parameter is treated as an offset into the designated
+    buffer object."
+
+ -- Section 3.6.3 "Pixel Transfer Modes", page 116.
+
+    Replace the last phrase in the 2nd paragraph with:
+
+    "and /values/ refers to an array of size map values."
+
+    [values is no longer necessarily a pointer.]
+
+    Add the following paragraph after the third paragraph:
+
+    "If a pixel unpack buffer is bound (as indicated by a non-zero
+    value of PIXEL_UNPACK_BUFFER_BINDING_ARB), /values/ is an offset
+    into the pixel unpack buffer; otherwise, /values/ is a pointer to a
+    block client memory.  All pixel storage and pixel transfer modes are
+    ignored when specifying a pixel map.  n machine units are read where
+    n is the /size/ of the pixel map times the size of a float, uint,
+    or ushort datum in basic machine units, depending on the respective
+    PixelMap version.  If a pixel unpack buffer object is bound and data+n
+    is greater than the size of the pixel buffer, INVALID_OPERATION
+    results.  If a pixel unpack buffer object is bound and /values/ is
+    not evenly divisible into the number of basic machine units needed
+    to store in memory a float, uint, or ushort datum depending on their
+    respective PixelMap version, INVALID_OPERATION results."
+
+ -- Section 3.6.4 "Rasterization of Pixel Rectangles", page 126.
+
+    Change the 1st sentence of the 1st paragraph to read:
+
+    "The process of drawing pixels encoded in buffer objects or client
+    memory is diagrammed in figure 3.7."
+
+    Change the 4th sentence of the 2nd paragraph to read:
+
+    "/data/ refers to the data to be drawn."
+
+    [data is no longer necessarily a pointer.]
+
+    Change the initial phrase in the 1st sentence of the 1st paragraph
+    after "Unpacking" to read:
+
+    "Data are taken from the currently bound pixel unpack buffer or
+    client memory as a sequence of..."
+
+    Insert this paragraph after the 1st paragraph after "Unpacking":
+
+    "If a pixel unpack buffer is bound (as indicated by a non-zero
+    value of PIXEL_UNPACK_BUFFER_BINDING_ARB), /data/ is an offset
+    into the pixel unpack buffer and the pixels are unpacked from the
+    buffer relative to this offset; otherwise, /data/ is a pointer to
+    a block client memory and the pixels are unpacked from the client
+    memory relative to the pointer.  If a pixel unpack buffer object
+    is bound and unpacking the pixel data according to the process
+    described below would access memory beyond the size of the pixel
+    unpack buffer's memory size, INVALID_OPERATION results.  If a pixel
+    unpack buffer object is bound and /data/ is not evenly divisible
+    into the number of basic machine units needed to store in memory the
+    corresponding GL data type from table 3.5 for the /type/ parameter,
+    INVALID_OPERATION results."
+
+ -- Section 3.8.1 "Texture Image Specification", page 150.
+
+    Replace the last phrase in the 2nd to last sentence in the 1st
+    paragraph with:
+
+    "and a reference to the image data in the currently bound pixel unpack
+    buffer or client memory."
+
+    Replace the 1st sentence in the 13th paragraph with:
+
+    "The image itself (referred to by /data/) is a sequence of groups
+    of values."
+
+    Replace the last paragraph with:
+
+    "If the data argument of TexImage1D, TexImage2D, or TexImage3D
+    is a null pointer (a zero-valued pointer in the C implementation)
+    and the pixel unpack buffer object is zero, a one-, two-, or three-
+    dimensional texture array is created with the specified target, level,
+    internalformat, width, height, and depth border, but with unspecified
+    image contents.  In this case no pixel values are access in client
+    memory, and no pixel processing is performed.  Errors are generated,
+    however, exactly as though the data pointer were valid.  Otherwise if
+    the pixel unpack buffer object is non-zero, the data argument is
+    treatedly normally to refer to the beginning of the pixel unpack
+    buffer object's data."
+
+ -- Section 3.8.3 "Compressed Texture Images", page 163.
+
+    Replace the 3rd sentence of the 2nd paragraph with:
+
+    "/data/ refers to compressed image data stored in the compressed
+    image format corresponding to internalformat.  If a pixel
+    unpack buffer is bound (as indicated by a non-zero value of
+    PIXEL_UNPACK_BUFFER_BINDING_ARB), /data/ is an offset into the
+    pixel unpack buffer and the compressed data is read from the buffer
+    relative to this offset; otherwise, /data/ is a pointer to a block
+    client memory and the compressed data is read from the client memory
+    relative to the pointer."
+
+    Replace the 2nd sentence in the 3rd paragraph with:
+
+    "Compressed texture images are treated as an array of /imageSize/
+    ubytes relative to /data/.  If a pixel unpack buffer object is bound
+    and data+imageSize is greater than the size of the pixel buffer,
+    INVALID_OPERATION results."
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+ -- Section 4.3.2 "Reading Pixels", page 219.
+
+    Replace 1st sentence of the 1st paragraph with:
+
+    "The method for reading pixels from the framebuffer and placing them in
+    pixel pack buffer or client memory is diagrammed in figure 4.2."
+
+    Add this paragraph after the 1st paragraph:
+
+    "Initially, zero is bound for the PIXEL_PACK_BUFFER_ARB, indicating
+    that image read and query commands such as ReadPixels return
+    pixels results into client memory pointer parameters.  However, if
+    a non-zero buffer object is bound as the current pixel pack buffer,
+    then the pointer parameter is treated as an offset into the designated
+    buffer object."
+
+    Rename "Placement in Client Memory" to "Placement in Pixel Pack
+    Buffer or Client Memory".
+
+    Insert this paragraph after the newly renamed "Placement in Pixel
+    Pack Buffer or Client Memory" heading:
+
+    "If a pixel pack buffer is bound (as indicated by a non-zero value
+    of PIXEL_PACK_BUFFER_BINDING_ARB), /data/ is an offset into the
+    pixel pack buffer and the pixels are packed into the
+    buffer relative to this offset; otherwise, /data/ is a pointer to a
+    block client memory and the pixels are packed into the client memory
+    relative to the pointer.  If a pixel pack buffer object is bound and
+    packing the pixel data according to the pixel pack storage state
+    would access memory beyond the size of the pixel pack buffer's
+    memory size, INVALID_OPERATION results.  If a pixel pack buffer object
+    is bound and /data/ is not evenly divisible into the number of basic
+    machine units needed to store in memory the corresponding GL data type
+    from table 3.5 for the /type/ parameter, INVALID_OPERATION results."
+
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State
+Requests)
+
+ -- Section 6.1.3 "Enumerated Queries".
+
+    After the sentence in the last paragraph describing GetPixelMap, add:
+
+    "The GetPixelMapfv, GetPixelMapuiv, and GetPixelMapusv commands
+    write all the values in the named pixel map to /data/.  If a
+    pixel pack buffer is bound (as indicated by a non-zero value of
+    PIXEL_PACK_BUFFER_BINDING_ARB), /data/ is an offset into the pixel
+    pack buffer; otherwise, /data/ is a pointer to a block client memory.
+    All pixel storage and pixel transfer modes are ignored when returning a
+    pixel map.  n machine units are written where n is the size of the
+    pixel map times the size of FLOAT, UNSIGNED_INT, or UNSIGNED_SHORT
+    respectively in basic machine units.  If a pixel pack buffer object
+    is bound and data+n is greater than the size of the pixel buffer,
+    generate INVALID_OPERATION."
+
+ -- Section 6.1.4 "Texture Queries".
+
+    Remove the mention of img in the last phrase in the last sentence
+    of the 1st paragraph so the sentence reads:
+
+    "lod is a level-of-detail number, format is a pixel format from
+    table 3.6, and type is a pixel type from table 3.5."
+
+    Replace the 3rd sentence of the 2nd paragraph with:
+
+    "These groups are then packed and placed in client or pixel buffer
+    object memory.  If a pixel pack buffer is bound (as indicated by a
+    non-zero value of PIXEL_PACK_BUFFER_BINDING_ARB), /img/ is an offset
+    into the pixel pack buffer; otherwise, /img/ is a pointer to a block
+    client memory."
+
+    Add to the end of the 4th paragraph:
+
+    "If a pixel pack buffer object is bound and packing the texture
+    image into the buffer's memory would exceed the size of the buffer,
+    generate INVALID_OPERATION."
+
+    Replace the 2nd sentence of the 5th paragraph with:
+
+    "When called, GetCompressedTexImage writes n ubytes of compressed
+    image data to the pixel pack buffer or client memory pointed to by
+    ptr, where n is the texture image's TEXTURE_COMPRESSED_IMAGE_SIZE
+    value.
+
+    Add to the end of the 6th paragraph:
+
+    "If a pixel pack buffer object is bound and ptr+n is greater than
+    the size of the buffer, generate INVALID_OPERATION."
+
+ -- Section 6.1.5 "Stipple Query".
+
+    "The pattern is packed into client or pixel pack buffer memory
+    according to the procedures given in section 4.3.2 for ReadPixels;
+    ..."
+
+ -- Section 6.1.7 "Color Table Query".
+
+    "The one-dimensional color table image is returned to client or
+    pixel pack buffer memory starting at table."
+
+ -- Section 6.1.8 "Convolution Query".
+
+    "The one-dimensional or two-dimensional image is returned to client
+    or pixel pack buffer memory starting at image."
+
+    "The row and column images are returned to client or pixel pack
+    buffer memory starting at row and column respectively."
+
+ -- Section 6.1.9 "Histogram Query".
+
+    "The one-dimensional histogram table image is returned to client or
+    pixel pack buffer memory starting at values."
+
+ -- Section 6.1.10 "Minmax Query".
+
+    "A one-dimensional image of width 2 is returned to client or pixel
+    pack buffer memory starting at values."
+
+ -- Section 6.1.13 "Buffer Object Queries".
+
+    Change the 2nd sentence of the 2nd paragraph to read:
+
+    "target is ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, PIXEL_PACK_BUFFER_ARB,
+    or PIXEL_UNPACK_BUFFER_ARB."
+
+    Change the last phrase in the 1st sentence of the 4th paragraph to:
+
+    "with target set to ARRAY_BUFFER, ELMENT_ARRAY_BUFFER,
+    PIXEL_PACK_BUFFER_ARB, or PIXEL_UNPACK_BUFFER_ARB and pname set
+    to BUFFER_MAP_POINTER."
+
+
+GLX Protocol
+
+    Pixel buffers, like texture objects and display lists, are server-side
+    state.
+
+    Prior to pixel buffer objects, pixel storage state for image packing
+    and unpacking was considered client-side state. However, pixel
+    buffers create the new situation where the server performs packing
+    and unpacking into server-side pixel buffers.
+
+    Fortunately, the GLX protocol, through foresight or oversight,
+    has GLX protocol and non-rendering command opcodes (109 and 110)
+    assigned for glPixelStoref and glPixelStorei respectively.
+
+    It is better to use the existing protocol to send glPixelStorei and
+    glPixelStoref GLX commands. This solves the problem of server-side
+    pixel state the same way for both pack and unpack state. It may also
+    allow implementations to minimize validation overhead for pixel
+    commands because the pixel store modes are stateful rather than
+    being parameters sent with every pixel command.
+
+    When bound to a pixel unpack buffer object, the pixel payload for a 
+    pixel command with no reply (for exmaple, glTexImage2D) is not sent.
+    Instead, the pointer itself is sent as a 64-bit offset.
+    Pixel storage modes are also not included in non-reply pixel commands.
+
+    Therefore, the following new protocol for pixel commands that use the
+    currently bound pixel unpack buffer object is specified:
+
+        BitmapPBO
+        ColorSubTablePBO
+        ColorTablePBO
+        CompressedTexImage1DPBO
+        CompressedTexImage2DPBO
+        CompressedTexImage3DPBO
+        CompressedTexSubImage1DPBO
+        CompressedTexSubImage2DPBO
+        CompressedTexSubImage3DPBO
+        ConvolutionFilter1DPBO
+        ConvolutionFilter2DPBO
+        DrawPixelsPBO
+        PixelMapfvPBO
+        PixelMapuivPBO
+        PixelMapusvPBO
+        PolygonStipplePBO
+        SeparableFilter2DPBO
+        TexImage1DPBO
+        TexImage2DPBO
+        TexImage3DPBO**
+        TexSubImage1DPBO
+        TexSubImage2DPBO
+        TexSubImage3DPBO
+
+    When bound to a pixel pack buffer object, the reply for pixel commands
+    that return pixel data (for example, glReadPixels) is not required
+    since the pixel data is actually transferred to the server-side pixel
+    pack buffer object.  Indeed, forcing an unnecessary reply would hinder
+    the performance advantages of using pixel buffer objects
+
+    Therefore, protocol for "no reply" version of the following commands
+    is specified:
+
+        GetColorTablePBO
+        GetCompressedTexImagePBO
+        GetConvolutionFilterPBO
+        GetHistogramPBO
+        GetMinmaxPBO
+        GetPixelMapfvPBO
+        GetPixelMapuivPBO
+        GetPixelMapusvPBO
+        GetPolygonStipplePBO
+        GetSeparableFilterPBO
+        GetTexImagePBO
+        ReadPixelsPBO
+
+    If a "no reply" command is sent when the current pixel pack
+    buffer object binding is zero, a GLXBadContextState error should
+    be generated by the server.
+
+
+    The following rendering commands are sent to the server as part of a
+    glXRender request:
+
+       BitmapPBO
+
+            2           36              rendering command length
+            2           311             rendering command opcode
+            8           CARD64          bitmap
+            4           CARD32          width
+            4           CARD32          height
+            4           FLOAT32         xorig
+            4           FLOAT32         yorig
+            4           FLOAT32         xmove
+            4           FLOAT32         ymove
+
+        ColorSubTablePBO
+
+            2           32              rendering command length
+            2           312             rendering command opcode
+            8           CARD64          table
+            4           ENUM            target
+            4           CARD32          start
+            4           CARD32          count
+            4           ENUM            apiFormat  
+            4           ENUM            apiType
+
+        ColorTablePBO
+
+            2           32              rendering command length
+            2           313             rendering command opcode
+            8           CARD64          table
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           CARD32          width
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        CompressedTexImage1DPBO
+
+            2           36              rendering command length
+            2           314             rendering command opcode
+            8           CARD64          data
+            4           ENUM            target
+            4           CARD32          level
+            4           ENUM            internalFormat
+            4           CARD32          width
+            4           CARD32          border
+            4           CARD32          imageSize
+
+       CompressedTexImage2DPBO
+
+            2           40              rendering command length
+            2           315             rendering command opcode
+            8           CARD64          data
+            4           ENUM            target
+            4           CARD32          level
+            4           ENUM            internalFormat
+            4           CARD32          width
+            4           CARD32          height
+            4           CARD32          border
+            4           CARD32          imageSize
+
+        CompressedTexImage3DPBO
+
+            2           44              rendering command length
+            2           316             rendering command opcode
+            8           CARD64          data
+            4           ENUM            target
+            4           CARD32          level
+            4           ENUM            internalFormat
+            4           CARD32          width
+            4           CARD32          height
+            4           CARD32          depth
+            4           CARD32          border
+            4           CARD32          imageSize
+
+        CompressedTexSubImage1DPBO
+
+            2           36              rendering command length
+            2           317             rendering command opcode
+            8           CARD64          data
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          xoffset
+            4           CARD32          width
+            4           ENUM            apiFormat
+            4           CARD32          imageSize
+
+        CompressedTexSubImage2DPBO
+
+            2           44              rendering command length
+            2           318             rendering command opcode
+            8           CARD64          data
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          xoffset
+            4           CARD32          yoffset
+            4           CARD32          width
+            4           CARD32          height
+            4           ENUM            apiFormat
+            4           CARD32          imageSize
+
+        CompressedTexSubImage3DPBO
+
+            2           52              rendering command length
+            2           319             rendering command opcode
+            8           CARD64          data
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          xoffset
+            4           CARD32          yoffset
+            4           CARD32          zoffset
+            4           CARD32          width
+            4           CARD32          height
+            4           CARD32          depth
+            4           ENUM            apiFormat
+            4           CARD32          imageSize
+
+        ConvolutionFilter1DPBO
+
+            2           32              rendering command length
+            2           320             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           CARD32          width
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        ConvolutionFilter2DPBO
+
+            2           36              rendering command length
+            2           321             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           ENUM            internalformat
+            4           CARD32          width
+            4           CARD32          height
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        DrawPixelsPBO
+
+            2           28              rendering command length
+            2           322             rendering command opcode
+            8           CARD64          image
+            4           CARD32          width
+            4           CARD32          height
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+   
+        PixelMapfvPBO
+
+            2           20              rendering command length
+            2           323             rendering command opcode
+            8           CARD64          values
+            4           ENUM            map
+            4           CARD32          mapsize
+
+        PixelMapuivPBO
+
+            2           20              rendering command length
+            2           324             rendering command opcode
+            8           CARD64          values
+            4           ENUM            map
+            4           CARD32          mapsize
+
+        PixelMapusvPBO
+
+            2           20              rendering command length
+            2           325             rendering command opcode
+            8           CARD64          values
+            4           ENUM            map
+            4           CARD32          mapsize
+   
+        PolygonStipplePBO
+
+            2           12              rendering command length
+            2           326             rendering command opcode
+            8           CARD64          mask
+
+        SeparableFilter2DPBO
+
+            2           44              rendering command length
+            2           327             rendering command opcode
+            8           CARD64          row
+            8           CARD64          column
+            4           ENUM            target
+            4           ENUM            internalFormat
+            4           CARD32          width
+            4           CARD32          height
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        TexImage1DPBO
+
+            2           40              rendering command length
+            2           328             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          components
+            4           CARD32          width
+            4           CARD32          border
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        TexImage2DPBO
+
+            2           44              rendering command length
+            2           329             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          components
+            4           CARD32          width
+            4           CARD32          height
+            4           CARD32          border
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        TexImage3DPBO
+
+            2           48              rendering command length
+            2           330             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          components
+            4           CARD32          width
+            4           CARD32          height
+            4           CARD32          depth
+            4           CARD32          border
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        TexSubImage1DPBO
+
+            2           36              rendering command length
+            2           331             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          xoffset
+            4           CARD32          width
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        TexSubImage2DPBO
+
+            2           44              rendering command length
+            2           332             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          xoffset
+            4           CARD32          yoffset
+            4           CARD32          width
+            4           CARD32          height
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        TexSubImage3DPBO
+
+            2           52              rendering command length
+            2           333             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           CARD32          level
+            4           CARD32          xoffset
+            4           CARD32          yoffset
+            4           CARD32          zoffset
+            4           CARD32          width
+            4           CARD32          height
+            4           CARD32          depth
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        GetColorTablePBO
+
+            2           24              rendering command length
+            2           334             rendering command opcode
+            8           CARD64          table
+            4           ENUM            target
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+ 
+        GetCompressedTexImagePBO
+
+            2           20              rendering command length
+            2           335             rendering command opcode
+            8           CARD64          img
+            4           ENUM            target
+            4           CARD32          lod
+
+        GetConvolutionFilterPBO
+
+            2           24              rendering command length
+            2           336             rendering command opcode
+            8           CARD64          image
+            4           ENUM            target
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        GetHistogramPBO
+
+            2           28              rendering command length
+            2           337             rendering command opcode
+            8           CARD64          values
+            4           ENUM            target
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+            1           BOOL            reset
+            3                           unused
+
+        GetMinmaxPBO
+
+            2           28              rendering command length
+            2           338             rendering command opcode
+            8           CARD64          values
+            4           ENUM            target
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+            1           BOOL            reset
+            3                           unused
+
+        GetPixelMapfvPBO
+
+            2           16              rendering command length
+            2           339             rendering command opcode
+            8           CARD64          values
+            4           ENUM            map
+
+        GetPixelMapuivPBO
+
+            2           16              rendering command length
+            2           340             rendering command opcode
+            8           CARD64          values
+            4           ENUM            map
+
+        GetPixelMapusvPBO
+
+            2           16              rendering command length
+            2           341             rendering command opcode
+            8           CARD64          values
+            4           ENUM            map
+
+        GetPolygonStipplePBO
+
+            2           12              rendering command length
+            2           342             rendering command opcode
+            8           CARD64          mask
+
+        GetSeparableFilterPBO
+
+            2           40              rendering command length
+            2           343             rendering command opcode
+            8           CARD64          row
+            8           CARD64          column
+            8           CARD64          span
+            4           ENUM            target
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        GetTexImagePBO
+
+            2           28              rendering command length
+            2           344             rendering command opcode
+            8           CARD64          texels
+            4           ENUM            target
+            4           CARD32          level
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+        ReadPixelsPBO
+
+            2           36              rendering command length
+            2           345             rendering command opcode
+            8           CARD64          pixels
+            4           CARD32          x
+            4           CARD32          y
+            4           CARD32          width
+            4           CARD32          height
+            4           ENUM            apiFormat
+            4           ENUM            apiType
+
+
+Errors
+
+    INVALID_ENUM is generated if the <target> parameter of
+    BindBuffer, BufferData, BufferSubData, MapBuffer, UnmapBuffer,
+    GetBufferSubData, GetBufferParameteriv, or GetBufferPointerv is not
+    one of ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, PIXEL_PACK_BUFFER_ARB,
+    or PIXEL_UNPACK_BUFFER_ARB.
+
+    INVALID_OPERATION is generated if Bitmap, ColorSubTable, ColorTable,
+    CompressedTexImage1D, CompressedTexImage2D, CompressedTexImage3D,
+    CompressedTexSubImage1D, CompressedTexSubImage2D,
+    CompressedTexSubImage3D, ConvolutionFilter1D, ConvolutionFilter2D,
+    DrawPixels, PixelMapfv, PixelMapuiv, PixelMapusv, PolygonStipple,
+    SeparableFilter2D, TexImage1D, TexImage2D, TexImage3D, TexSubImage1D,
+    TexSubImage2D, or TexSubImage3D would unpack (read) data from the
+    currently bound PIXEL_UNPACK_BUFFER_ARB buffer object such that
+    the memory reads required for the command would exceed the memory
+    (data store) size of the buffer object.
+
+    INVALID_OPERATION is generated if GetColorTable,
+    GetCompressedTexImage, GetConvolutionFilter, GetHistogram, GetMinmax,
+    GetPixelMapfv, GetPixelMapuiv, GetPixelMapusv, GetPolygonStipple,
+    GetSeparableFilter, GetTexImage, or ReadPixels would pack (write) data
+    to the currently bound PIXEL_PACK_BUFFER_ARB buffer object such that
+    the memory writes required for the command would exceed the memory
+    (data store) size of the buffer object.
+
+    INVALID_OPERATION is generated by GetColorTable, GetConvolutionFilter,
+    GetHistogram, GetMinmax, GetSeparableFilter, GetTexImage and ReadPixels
+    if the current PIXEL_PACK_BUFFER_BINDING_ARB value is non-zero and the
+    table/image/values/span/img/data parameter is not evenly divisible
+    into the number of basic machine units needed to store in memory a
+    datum indicated by the type parameter.
+
+    INVALID_OPERATION is generated by ColorTable, ColorSubTable,
+    ConvolutionFilter2D, ConvolutionFilter1D, SeparableFilter2D,
+    TexImage1D, TexImage2D, TexImage3D, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, and DrawPixels if the current
+    PIXEL_UNPACK_BUFFER_BINDING_ARB value is non-zero and the data
+    parameter is not evenly divisible into the number of basic machine
+    units needed to store in memory a datum indicated by the type
+    parameter.
+
+    INVALID_OPERATION is generated by GetPixelMapfv if the current
+    PIXEL_PACK_BUFFER_BINDING_ARB value is non-zero and the data parameter
+    is not evenly divisible into the number of basic machine units needed
+    to store in memory a float datum.
+
+    INVALID_OPERATION is generated by GetPixelMapuiv if the current
+    PIXEL_PACK_BUFFER_BINDING_ARB value is non-zero and the data parameter
+    is not evenly divisible into the number of basic machine units needed
+    to store in memory a uint datum.
+
+    INVALID_OPERATION is generated by GetPixelMapusv if the current
+    PIXEL_PACK_BUFFER_BINDING_ARB value is non-zero and the data parameter
+    is not evenly divisible into the number of basic machine units needed
+    to store in memory a ushort datum.
+
+    INVALID_OPERATION is generated by PixelMapfv if the current
+    PIXEL_UNPACK_BUFFER_BINDING_ARB value is non-zero and the data
+    parameter is not evenly divisible into the number of basic machine
+    units needed to store in memory a float datum.
+
+    INVALID_OPERATION is generated by PixelMapuiv if the current
+    PIXEL_UNPACK_BUFFER_BINDING_ARB value is non-zero and the data
+    parameter is not evenly divisible into the number of basic machine
+    units needed to store in memory a uint datum.
+
+    INVALID_OPERATION is generated by PixelMapusv if the current
+    PIXEL_UNPACK_BUFFER_BINDING_ARB value is non-zero and the data
+    parameter is not evenly divisible into the number of basic machine
+    units needed to store in memory a ushort datum.
+
+
+Dependencies on EXT_pixel_buffer_object
+
+    When this extension is supported, the EXT_pixel_buffer_object
+    functionality adopts the tighter alignment and buffer bounds overflow
+    error generation behavior of ARB_pixel_buffer_object (previously,
+    EXT_pixel_buffer_object was not explicit about what happened in
+    these situations).  This is because the two extensions share the
+    same enumerants.
+
+Dependencies on NV_pixel_data_range
+
+    A non-zero pixel pack buffer binding takes priority over the
+    READ_PIXEL_DATA_RANGE_NV  enable.
+
+    A non-zero pixel unpack buffer binding takes priority over the
+    WRITE_PIXEL_DATA_RANGE_NV enable.
+
+
+New State
+
+(table 6.20, Pixels, p. 235)
+
+                                                         Initial
+    Get Value                        Type   Get Command  Value    Sec     Attribute
+    -------------------------------  ----   -----------  -------  ------  -----------
+    PIXEL_PACK_BUFFER_BINDING_ARB    Z+     GetIntegerv  0        4.3.5   pixel-store
+    PIXEL_UNPACK_BUFFER_BINDING_ARB  Z+     GetIntegerv  0        6.1.13  pixel-store
+
+
+New Implementation Dependent State
+
+    (none)
+
+
+Usage Examples
+
+    Convenient macro definition for specifying buffer offsets:
+
+        #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+    Example 1: Render to vertex array:
+
+        const int numberVertices = 100;
+
+        // Create a buffer object for a number of vertices consisting of
+        // 4 float values per vertex
+        glGenBuffers(1, vertexBuffer);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, vertexBuffer);
+        glBufferData(GL_PIXEL_PACK_BUFFER_ARB, numberVertices*4,
+                     NULL, GL_DYNAMIC_DRAW);
+
+        // Render vertex data into 100x1 strip of framebuffer using a
+        // fragment program
+        glBindProgram(FRAGMENT_PROGRAM_ARB, fragmentProgram);
+        glDrawBuffer(GL_BACK);
+        renderVertexData();
+        glBindProgramARB(FRAGMENT_PROGRAM_ARB, 0);
+
+        // Read the vertex data back from framebuffer
+        glReadBuffer(GL_BACK);
+        glReadPixels(0, 0, numberVertices, 1, GL_BGRA, GL_FLOAT,
+                     BUFFER_OFFSET(0));
+
+        // Change the binding point of the buffer object to
+        // the vertex array binding point
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+
+        glEnableClientState(VERTEX_ARRAY);
+        glVertexPointer(4, GL_FLOAT, 0, BUFFER_OFFSET(0));
+        glDrawArrays(TRIANGLE_STRIP, 0, numberVertices);
+
+
+    Example 2: Streaming textures
+
+    Streaming textures using NV_pixel_data_range:
+
+        const int texWidth = 256;
+        const int texHeight = 256;
+        const int texsize = texWidth * texHeight * 4;
+        void *pdrMemory, *texData;
+
+        pdrMemory = glAllocateMemoryNV(texsize, 0.0, 1.0, 1.0);
+
+        glPixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV, texsize,
+                           pdrMemory);
+
+        glEnableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
+
+        // Define texture level (without an image)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texWidth, texHeight, 0,
+                     GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+        // Setup texture environment
+        ...
+
+        texData = getNextImage();
+
+        while (texData) {
+
+            memcpy(pdrMemory, texData, texsize);
+
+            glFlushPixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV);
+
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texWidth, texHeight,
+                            GL_BGRA, GL_UNSIGNED_BYTE, pdrMemory);
+
+            // Draw textured geometry
+            glBegin(GL_QUADS);
+            ...
+            glEnd();
+
+            texData = getNextImage();
+        }
+
+        glDisableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
+
+        glFreeMemoryNV(pdrMemory);
+
+
+    Streaming textures using pixel buffer objects:
+
+        const int texWidth = 256;
+        const int texHeight = 256;
+        const int texsize = texWidth * texHeight * 4;
+        void *pboMemory, *texData;
+
+        // Define texture level zero (without an image); notice the
+        // explicit bind to the zero pixel unpack buffer object so that
+        // pass NULL for the image data leaves the texture image
+        // unspecified.
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texWidth, texHeight, 0,
+                     GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+
+        // Create and bind texture image buffer object
+        glGenBuffers(1, &texBuffer);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, texBuffer);
+
+        // Setup texture environment
+        ...
+
+        texData = getNextImage();
+
+        while (texData) {
+
+            // Reset the contents of the texSize-sized buffer object
+            glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, texSize, NULL,
+                         GL_STREAM_DRAW);
+
+            // Map the texture image buffer (the contents of which
+            // are undefined due to the previous glBufferData)
+            pboMemory = glMapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB,
+                                    GL_WRITE_ONLY);
+
+            // Modify (sub-)buffer data
+            memcpy(pboMemory, texData, texsize);
+
+            // Unmap the texture image buffer
+            glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB);
+
+            // Update (sub-)teximage from texture image buffer
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texWidth, texHeight,
+                            GL_BGRA, GL_UNSIGNED_BYTE, BUFFER_OFFSET(0));
+
+            // Draw textured geometry
+            glBegin(GL_QUADS);
+            ...
+            glEnd();
+
+            texData = getNextImage();
+        }
+
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+
+
+    Example 3: Asynchronous glReadPixels
+
+    Traditional glReadPixels:
+
+        const int imagewidth = 640;
+        const int imageheight = 480;
+        GLubyte readBuffer[imagewidth*imageheight*4];
+
+        // Render to framebuffer
+        glDrawBuffer(GL_BACK);
+        renderScene()
+
+        // Read image from framebuffer
+        glReadBuffer(GL_BACK);
+        glReadPixels(0, 0, imagewidth, imageheight, GL_BGRA,
+                     GL_UNSIGNED_BYTE, readBuffer);
+
+        // Process image when glReadPixels returns after reading the
+        // whole buffer
+        processImage(readBuffer);
+
+
+    Asynchronous glReadPixels:
+
+        const int imagewidth = 640;
+        const int imageheight = 480;
+        const int imageSize = imagewidth*imageheight*4;
+
+        glGenBuffers(2, imageBuffers);
+
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[0]);
+        glBufferData(GL_PIXEL_PACK_BUFFER_ARB, imageSize / 2, NULL,
+                     GL_STREAM_READ);
+
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[1]);
+        glBufferData(GL_PIXEL_PACK_BUFFER_ARB, imageSize / 2, NULL,
+                     GL_STREAM_READ);
+
+        // Render to framebuffer
+        glDrawBuffer(GL_BACK);
+        renderScene();
+
+        // Bind two different buffer objects and start the glReadPixels
+        // asynchronously. Each call will return directly after
+        // starting the DMA transfer.
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[0]);
+        glReadPixels(0, 0, imagewidth, imageheight/2, GL_BGRA,
+                     GL_UNSIGNED_BYTE, BUFFER_OFFSET(0));
+
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[1]);
+        glReadPixels(0, imageheight/2, imagewidth, imageheight/2, GL_BGRA,
+                     GL_UNSIGNED_BYTE, BUFFER_OFFSET(0));
+
+        // Process partial images.  Mapping the buffer waits for
+        // outstanding DMA transfers into the buffer to finish.
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[0]);
+        pboMemory1 = glMapBuffer(GL_PIXEL_PACK_BUFFER_ARB,
+                                 GL_READ_ONLY);
+        processImage(pboMemory1);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[1]);
+        pboMemory2 = glMapBuffer(GL_PIXEL_PACK_BUFFER_ARB,
+                                 GL_READ_ONLY);
+        processImage(pboMemory2);
+
+        // Unmap the image buffers
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[0]);
+        glUnmapBuffer(GL_PIXEL_PACK_BUFFER_ARB);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER_ARB, imageBuffers[1]);
+        glUnmapBuffer(GL_PIXEL_PACK_BUFFER_ARB);
+
+
+Appendix on Pack/Unpack Range
+
+    The complexity of OpenGL's pixel pack/unpack state makes it difficult
+    to express succinctly what range of a pixel buffer object will be
+    accessed by a pixel command.
+
+    The following code, following the conventions of the SGI OpenGL
+    Sample Implementation, returns the limit (one byte more than the
+    maximum allowed offset into the buffer object) for the memory a
+    pixel command will read/write.
+
+    /*
+    ** Compute offset limit into user's data considering all pixel
+    ** store modes.  This offset limit is ONE MORE than the largest byte
+    ** offset for the image.
+    */
+    static GLsizeiptr OffsetLimitImage3D(__GLpixelStoreMode *pixelStoreMode,
+                                         GLsizei width, GLsizei height,
+                                         GLsizei depth,
+                                         GLenum format, GLenum type,
+                                         const void *userdata,
+                                         GLint skip_images)
+    {
+        const GLint line_length = pixelStoreMode->lineLength;
+        const GLint image_height = pixelStoreMode->imageHeight;
+        const GLint alignment = pixelStoreMode->alignment;
+        const GLint skip_pixels = pixelStoreMode->skipPixels;
+        const GLint skip_lines = pixelStoreMode->skipLines;
+
+        GLsizeiptr offsetLimit = (GLsizeiptr) userdata;
+
+        GLint rowsize;
+        GLint padding;
+        GLint imagesize;
+
+        assert(width > 0);
+        assert(height > 0);
+        assert(depth > 0);
+
+        assert(line_length >= 0);
+        assert(image_height >= 0);
+
+        assert(skip_pixels >= 0);
+        assert(skip_lines >= 0);
+        assert(skip_images >= 0);
+
+        assert((alignment == 1) ||
+               (alignment == 2) ||
+               (alignment == 4) ||
+               (alignment == 8));
+
+        /* All formats except GL_BITMAP fall out trivially */
+        if (type == GL_BITMAP) {
+            const GLint groups_per_line = (line_length > 0) ?
+                                          line_length : width;
+            const GLint rows_per_image = (image_height > 0) ?
+                                         image_height : height;
+
+            assert(1 == __glElementsPerGroup(format, type));
+
+            rowsize = (groups_per_line + 7) / 8;
+            padding = rowsize & (alignment-1);
+            if (padding) {
+                rowsize += alignment - padding;
+            }
+            imagesize = rows_per_image * rowsize;
+
+            offsetLimit += imagesize    * (skip_images + depth-1);
+            offsetLimit += rowsize      * (skip_lines  + height-1);
+            offsetLimit += (skip_pixels + width+7)/8;
+        } else {
+            const GLint components = __glElementsPerGroup(format, type);
+            const GLint element_size = __glBytesPerElement(type);
+            const GLint group_size = element_size * components;
+
+            if (0 == (line_length | image_height | skip_pixels |
+                      skip_lines | skip_pixels)) {
+                // Fast path: when above pixel store modes are all zero.
+                rowsize = width * group_size;
+                // Default alignment is 4 so allow arbitrary alignment
+                // on fast path.
+                padding = rowsize & (alignment-1);
+                if (padding) {
+                    rowsize += alignment - padding;
+                }
+                imagesize = depth * height * rowsize;
+                offsetLimit += imagesize;
+            } else {
+                // General path: when one or more non-zero pixel store modes.
+                const GLint groups_per_line = (line_length > 0) ?
+                                              line_length : width;
+                const GLint rows_per_image = (image_height > 0) ?
+                                             image_height : height;
+
+                rowsize = groups_per_line * group_size;
+                padding = rowsize & (alignment-1);
+                if (padding) {
+                    rowsize += alignment - padding;
+                }
+                imagesize = rows_per_image * rowsize;
+
+                offsetLimit += imagesize    * (skip_images  + depth-1);
+                offsetLimit += rowsize      * (skip_lines   + height-1);
+                offsetLimit += group_size   * (skip_pixels  + width);
+            }
+        }
+        return offsetLimit;
+    }
+
+    GLsizeiptr __glOffsetLimitImage3D(__GLpixelStoreMode *pixelStoreMode,
+                                      GLsizei width, GLsizei height,
+                                      GLsizei depth,
+                                      GLenum format, GLenum type,
+                                      const void *userdata)
+    {
+        return OffsetLimitImage3D(pixelStoreMode,
+                                  width, height, depth, format, type,
+                                  userdata,
+                                  pixelStoreMode->skipImages);
+    }
+
+    GLsizeiptr __glOffsetLimitImage(__GLpixelStoreMode *pixelStoreMode,
+                                    GLsizei width, GLsizei height,
+                                    GLenum format, GLenum type,
+                                    const void *userdata)
+    {
+        /* NOTE: Non-3D image max offset computations ignore (treat as zero)
+           the unpackModes.skipImages state! */
+        return OffsetLimitImage3D(pixelStoreMode,
+                                  width, height, 1, format, type,
+                                  userdata,
+                                  0);  // Treat skipImages as zero.
+    }
+
+
+Revision History
+
+    revision 0.3: mjk
+
+        Numbered issues.
+
+        Add issues 14 through 18.
+
+        Remove all gl/GL prefix/suffixing in specification sections.  Use
+        gl/GL prefix/suffixing in sections other than the specification
+        sections. Leaving off prefixes in non-specification sections is
+        ambiguous, particularly within example source code.
+
+        Base specification language updates on OpenGL 2.0 specification.
+
+        Add buffer object required state section.
+
+        Added GL_INVALID_OPERATION when an offset accessed (read or
+        written) for a pixel command from/to a pixel buffer object would
+        exceed the size of the buffer object.
+
+        Added GL_INVALID_OPERATION when for misaligned offsets.
+
+        Added "Appendix on Pack/Unpack Range".
+
+        Add GLX protocol discussion.
+
+    revision 0.4: mjk
+
+        Fixed grammar issues from Brian Paul.
+
+        Improved example code and fixed grammar from Nick Carter.
+
+        Explain how a NULL data parameter to glTexImage commands works.
+
+    revision 0.5: mjk
+
+        Clarify that glBufferData usage modes apply to drawing _and_
+        image specification commands.
+
+    revision 0.6: mjk
+
+        Add "streaming draw pixels" to the list of interesting approaches
+        for this extension in the Overview.
+
+        Add issue discussing the relationship of this extension to data
+        aquisition hardware.
+
+    revision 0.7: mjk
+
+        Assign enumerant values to match the EXT_pixel_buffer_object values.
+
+        Add issue explaining why the ARB extension shares enums with
+        EXT_pixel_buffer_object.
+
+        Apply Dale's suggestion to improve the clarity of the usage
+        pattern parameters to glBufferData.
+
+    revision 0.8 mjk
+
+        Typo fixes from Ian Romanick and Nick Carter.
+
+    revision 1.0 mjk
+
+        Add issue 23 for Jeremy about render-to-vertex-array.  Move
+        render-to-vertex-array justification in overview to bottom of
+        the list.
+
+   revision 1.1 srahman
+
+       Add GLX protocol support. 
+
+   revision 1.2 Jon Leech
+
+       Change GLvoid -> void (Bug 10412).

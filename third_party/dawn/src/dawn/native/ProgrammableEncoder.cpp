@@ -25,22 +25,24 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/ProgrammableEncoder.h"
+#include "src/dawn/native/ProgrammableEncoder.h"
 
 #include <cstring>
 
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Instance.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/ResourceTable.h"
 #include "dawn/native/ValidationUtils_autogen.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/ResourceTable.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native {
 
@@ -49,7 +51,6 @@ ProgrammableEncoder::ProgrammableEncoder(DeviceBase* device,
                                          EncodingContext* encodingContext)
     : ApiObjectBase(device, label),
       mEncodingContext(encodingContext),
-      mValidationEnabled(device->IsValidationEnabled()),
       mNeedsIndirectGPUValidation(device->NeedsIndirectGPUValidation()) {}
 
 ProgrammableEncoder::ProgrammableEncoder(DeviceBase* device,
@@ -58,11 +59,12 @@ ProgrammableEncoder::ProgrammableEncoder(DeviceBase* device,
                                          StringView label)
     : ApiObjectBase(device, errorTag, label),
       mEncodingContext(encodingContext),
-      mValidationEnabled(device->IsValidationEnabled()),
       mNeedsIndirectGPUValidation(device->NeedsIndirectGPUValidation()) {}
 
 bool ProgrammableEncoder::IsValidationEnabled() const {
-    return mValidationEnabled;
+    // The flag can be changed dynamically inside the device (e.g. re-enabled after device loss
+    // or OOM), so always forward the call to the device rather than caching it.
+    return GetDevice()->IsValidationEnabled();
 }
 
 bool ProgrammableEncoder::NeedsIndirectGPUValidation() const {
@@ -114,10 +116,11 @@ void ProgrammableEncoder::APIPushDebugGroup(StringView groupLabelIn) {
         [&](CommandAllocator* allocator) -> MaybeError {
             PushDebugGroupCmd* cmd =
                 allocator->Allocate<PushDebugGroupCmd>(Command::PushDebugGroup);
-            const char* label = AddNullTerminatedString(allocator, groupLabel, &cmd->length);
+            std::string_view copiedLabel =
+                AddNullTerminatedString(allocator, groupLabel, &cmd->length);
 
             mDebugGroupStackSize++;
-            mEncodingContext->PushDebugGroupLabel(std::string_view(label, cmd->length));
+            mEncodingContext->PushDebugGroupLabel(copiedLabel);
 
             return {};
         },
@@ -125,10 +128,6 @@ void ProgrammableEncoder::APIPushDebugGroup(StringView groupLabelIn) {
 }
 
 MaybeError ProgrammableEncoder::ValidateSetImmediates(uint32_t offset, size_t size) const {
-    DAWN_INVALID_IF(!GetDevice()->GetInstance()->HasFeature(
-                        wgpu::WGSLLanguageFeatureName::ImmediateAddressSpace),
-                    "ImmediateAddressSpace feature is not enabled");
-
     // Validate offset and size are aligned to 4 bytes.
     DAWN_INVALID_IF(offset % 4 != 0, "offset (%u) is not a multiple of 4", offset);
     DAWN_INVALID_IF(size % 4 != 0, "size (%u) is not a multiple of 4", size);
@@ -144,15 +143,12 @@ MaybeError ProgrammableEncoder::ValidateSetImmediates(uint32_t offset, size_t si
     return {};
 }
 
-MaybeError ProgrammableEncoder::ValidateSetBindGroup(BindGroupIndex index,
-                                                     BindGroupBase* group,
-                                                     uint32_t dynamicOffsetCountIn,
-                                                     const uint32_t* dynamicOffsetsIn) const {
+MaybeError ProgrammableEncoder::ValidateSetBindGroup(
+    BindGroupIndex index,
+    BindGroupBase* group,
+    ityp::span<BindingIndex, const uint32_t> dynamicOffsets) const {
     DAWN_INVALID_IF(index >= kMaxBindGroupsTyped, "Bind group index (%u) exceeds the maximum (%u).",
                     index, kMaxBindGroupsTyped);
-
-    ityp::span<BindingIndex, const uint32_t> dynamicOffsets(dynamicOffsetsIn,
-                                                            BindingIndex(dynamicOffsetCountIn));
 
     if (group == nullptr) {
         uint32_t size = static_cast<uint32_t>(dynamicOffsets.size());
@@ -170,7 +166,7 @@ MaybeError ProgrammableEncoder::ValidateSetBindGroup(BindGroupIndex index,
         "in %s.",
         dynamicOffsets.size(), layout->GetDynamicBufferCount(), layout);
 
-    for (BindingIndex i{0}; i < dynamicOffsets.size(); ++i) {
+    for (BindingIndex i{0u}; i < dynamicOffsets.size(); ++i) {
         const BindingInfo& bindingInfo = layout->GetBindingInfo(i);
 
         // BGL creation sorts bindings such that the dynamic buffer bindings are first.
@@ -194,7 +190,7 @@ MaybeError ProgrammableEncoder::ValidateSetBindGroup(BindGroupIndex index,
                 DAWN_UNREACHABLE();
         }
 
-        DAWN_INVALID_IF(!IsAligned(dynamicOffsets[i], requiredAlignment),
+        DAWN_INVALID_IF(!IsAligned(dynamicOffsets[i], checked_cast<size_t>(requiredAlignment)),
                         "Dynamic Offset[%u] (%u) is not %u byte aligned.", i, dynamicOffsets[i],
                         requiredAlignment);
 
@@ -227,39 +223,39 @@ MaybeError ProgrammableEncoder::ValidateSetBindGroup(BindGroupIndex index,
     return {};
 }
 
-void ProgrammableEncoder::RecordSetBindGroup(CommandAllocator* allocator,
-                                             BindGroupIndex index,
-                                             BindGroupBase* group,
-                                             uint32_t dynamicOffsetCount,
-                                             const uint32_t* dynamicOffsets) const {
+void ProgrammableEncoder::RecordSetBindGroup(
+    CommandAllocator* allocator,
+    BindGroupIndex index,
+    BindGroupBase* group,
+    ityp::span<BindingIndex, const uint32_t> dynamicOffsets) const {
     SetBindGroupCmd* cmd = allocator->Allocate<SetBindGroupCmd>(Command::SetBindGroup);
     cmd->index = index;
     cmd->group = group;
-    cmd->dynamicOffsetCount = dynamicOffsetCount;
-    if (dynamicOffsetCount > 0) {
-        uint32_t* offsets = allocator->AllocateData<uint32_t>(cmd->dynamicOffsetCount);
-        memcpy(offsets, dynamicOffsets, dynamicOffsetCount * sizeof(uint32_t));
+    cmd->dynamicOffsetCount = dynamicOffsets.size();
+
+    if (!dynamicOffsets.empty()) {
+        ityp::span<BindingIndex, uint32_t> offsets =
+            allocator->AllocateData<uint32_t>(cmd->dynamicOffsetCount);
+        // TODO(https://crbug.com/524406299): Use Span::CopyFrom.
+        std::ranges::copy(dynamicOffsets, offsets.begin());
     }
 }
 
-MaybeError ProgrammableEncoder::SetResourceTable(ResourceTableBase* table,
-                                                 CommandAllocator* allocator) {
-    DAWN_ASSERT(allocator);
-
-    if (GetDevice()->IsValidationEnabled()) {
-        if (table) {
-            DAWN_TRY(GetDevice()->ValidateObject(table));
-        }
-        DAWN_INVALID_IF(
-            !GetDevice()->HasFeature(Feature::ChromiumExperimentalSamplingResourceTable),
-            "setResourceTable requires the %s feature enabled.",
-            wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable);
+void ProgrammableEncoder::RecordSetImmediates(CommandAllocator* allocator,
+                                              uint32_t offset,
+                                              Span<const std::byte> data) {
+    // Skip SetImmediates when no constants are updated.
+    if (data.empty()) {
+        return;
     }
+    DAWN_ASSERT(data.size() <= kMaxImmediateDataBytes);
 
-    SetResourceTableCmd* cmd = allocator->Allocate<SetResourceTableCmd>(Command::SetResourceTable);
-    cmd->table = table;
-
-    return {};
+    SetImmediatesCmd* cmd = allocator->Allocate<SetImmediatesCmd>(Command::SetImmediates);
+    cmd->offset = offset;
+    cmd->size = uint32_t(data.size());
+    Span<std::byte> immediateDatas = allocator->AllocateData<std::byte>(data.size());
+    // TODO(https://crbug.com/524406299): Use Span::CopyFrom.
+    std::ranges::copy(data, immediateDatas.begin());
 }
 
 }  // namespace dawn::native

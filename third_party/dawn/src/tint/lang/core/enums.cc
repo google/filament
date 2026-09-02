@@ -192,50 +192,26 @@ std::string_view ToString(InterpolationType value) {
     return "<unknown>";
 }
 
-/// ParseSamplerFiltering parses a SamplerFiltering from a string.
+/// ParseMajorness parses a Majorness from a string.
 /// @param str the string to parse
-/// @returns the parsed enum, or SamplerFiltering::kUndefined if the string could not be parsed.
-SamplerFiltering ParseSamplerFiltering(std::string_view str) {
-    if (str == "filtering") {
-        return SamplerFiltering::kFiltering;
+/// @returns the parsed enum, or Majorness::kUndefined if the string could not be parsed.
+Majorness ParseMajorness(std::string_view str) {
+    if (str == "col_major") {
+        return Majorness::kColMajor;
     }
-    if (str == "non_filtering") {
-        return SamplerFiltering::kNonFiltering;
+    if (str == "row_major") {
+        return Majorness::kRowMajor;
     }
-    return SamplerFiltering::kUndefined;
+    return Majorness::kUndefined;
 }
-std::string_view ToString(SamplerFiltering value) {
+std::string_view ToString(Majorness value) {
     switch (value) {
-        case SamplerFiltering::kUndefined:
+        case Majorness::kUndefined:
             return "undefined";
-        case SamplerFiltering::kFiltering:
-            return "filtering";
-        case SamplerFiltering::kNonFiltering:
-            return "non_filtering";
-    }
-    return "<unknown>";
-}
-
-/// ParseTextureFilterable parses a TextureFilterable from a string.
-/// @param str the string to parse
-/// @returns the parsed enum, or TextureFilterable::kUndefined if the string could not be parsed.
-TextureFilterable ParseTextureFilterable(std::string_view str) {
-    if (str == "filterable") {
-        return TextureFilterable::kFilterable;
-    }
-    if (str == "unfilterable") {
-        return TextureFilterable::kUnfilterable;
-    }
-    return TextureFilterable::kUndefined;
-}
-std::string_view ToString(TextureFilterable value) {
-    switch (value) {
-        case TextureFilterable::kUndefined:
-            return "undefined";
-        case TextureFilterable::kFilterable:
-            return "filterable";
-        case TextureFilterable::kUnfilterable:
-            return "unfilterable";
+        case Majorness::kColMajor:
+            return "col_major";
+        case Majorness::kRowMajor:
+            return "row_major";
     }
     return "<unknown>";
 }
@@ -1149,9 +1125,6 @@ std::string_view ToString(BuiltinValue value) {
 /// @param str the string to parse
 /// @returns the parsed enum, or BuiltinDepthMode::kUndefined if the string could not be parsed.
 BuiltinDepthMode ParseBuiltinDepthMode(std::string_view str) {
-    if (str == "any") {
-        return BuiltinDepthMode::kAny;
-    }
     if (str == "greater") {
         return BuiltinDepthMode::kGreater;
     }
@@ -1164,8 +1137,6 @@ std::string_view ToString(BuiltinDepthMode value) {
     switch (value) {
         case BuiltinDepthMode::kUndefined:
             return "undefined";
-        case BuiltinDepthMode::kAny:
-            return "any";
         case BuiltinDepthMode::kGreater:
             return "greater";
         case BuiltinDepthMode::kLess:
@@ -1285,6 +1256,8 @@ std::string_view ToString(Attribute value) {
 
 std::string_view ToString(ParameterUsage usage) {
     switch (usage) {
+        case ParameterUsage::kColMajor:
+            return "col_major";
         case ParameterUsage::kNone:
             return "none";
         case ParameterUsage::kArrayIndex:
@@ -1295,8 +1268,6 @@ std::string_view ToString(ParameterUsage usage) {
             return "bias";
         case ParameterUsage::kBits:
             return "bits";
-        case ParameterUsage::kColMajor:
-            return "col_major";
         case ParameterUsage::kCompareValue:
             return "compare_value";
         case ParameterUsage::kComponent:
@@ -1684,6 +1655,9 @@ BuiltinFn ParseBuiltinFn(std::string_view name) {
     }
     if (name == "unpack4xU8") {
         return BuiltinFn::kUnpack4XU8;
+    }
+    if (name == "addSat") {
+        return BuiltinFn::kAddSat;
     }
     if (name == "storageBarrier") {
         return BuiltinFn::kStorageBarrier;
@@ -2084,6 +2058,8 @@ const char* str(BuiltinFn i) {
             return "unpack4xI8";
         case BuiltinFn::kUnpack4XU8:
             return "unpack4xU8";
+        case BuiltinFn::kAddSat:
+            return "addSat";
         case BuiltinFn::kStorageBarrier:
             return "storageBarrier";
         case BuiltinFn::kWorkgroupBarrier:

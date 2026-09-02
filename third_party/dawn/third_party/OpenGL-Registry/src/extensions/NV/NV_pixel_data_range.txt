@@ -1,0 +1,702 @@
+Name
+
+    NV_pixel_data_range
+
+Name Strings
+
+    GL_NV_pixel_data_range
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2000, 2001, 2002.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping (version 1.0)
+
+Version
+
+    NVIDIA Date: November 7, 2002 (version 1.0)
+
+Number
+
+    284
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 specification.
+
+    If this extension is implemented, the WGL or GLX memory allocator
+    interface specified in NV_vertex_array_range must also be
+    implemented.  Please refer to the NV_vertex_array_range specification
+    for further information on this interface.
+
+Overview
+
+    The vertex array range extension is intended to improve the
+    efficiency of OpenGL vertex arrays.  OpenGL vertex arrays' coherency
+    model and ability to access memory from arbitrary locations in memory
+    prevented implementations from using DMA (Direct Memory Access)
+    operations.
+
+    Many image-intensive applications, such as those that use dynamically
+    generated textures, face similar problems.  These applications would
+    like to be able to sustain throughputs of hundreds of millions of
+    pixels per second through DrawPixels and hundreds of millions of
+    texels per second through TexSubImage.
+
+    However, the same restrictions that limited vertex throughput also
+    limit pixel throughput.
+
+    By the time that any pixel operation that reads data from user memory
+    returns, OpenGL requires that it must be safe for the application to
+    start using that memory for a different purpose.  This coherency
+    model prevents asynchronous DMA transfers directly out of the user's
+    buffer.
+
+    There are also no restrictions on the pointer provided to pixel
+    operations or on the size of the data.  To facilitate DMA
+    implementations, the driver needs to know in advance what region of
+    the address space to lock down.
+
+    Vertex arrays faced both of these restrictions already, but pixel
+    operations have one additional complicating factor -- they are
+    bidirectional.  Vertex array data is always being transfered from the
+    application to the driver and the HW, whereas pixel operations
+    sometimes transfer data to the application from the driver and HW.
+    Note that the types of memory that are suitable for DMA for reading
+    and writing purposes are often different.  For example, on many PC
+    platforms, DMA pulling is best accomplished with write-combined
+    (uncached) AGP memory, while pushing data should use cached memory so
+    that the application can read the data efficiently once it has been
+    read back over the AGP bus.
+
+    This extension defines an API where an application can specify two
+    pixel data ranges, which are analogous to vertex array ranges, except
+    that one is for operations where the application is reading data
+    (e.g. glReadPixels) and one is for operations where the application
+    is writing data (e.g. glDrawPixels, glTexSubImage2D, etc.).  Each
+    pixel data range has a pointer to its start and a length in bytes.
+
+    When the pixel data range is enabled, and if the pointer specified
+    as the argument to a pixel operation is inside the corresponding
+    pixel data range, the implementation may choose to asynchronously
+    pull data from the pixel data range or push data to the pixel data
+    range.  Data pulled from outside the pixel data range is undefined,
+    while pushing data to outside the pixel data range produces undefined
+    results.
+
+    The application may synchronize with the hardware in one of two ways:
+    by flushing the pixel data range (or causing an implicit flush) or by
+    using the NV_fence extension to insert fences in the command stream.
+
+Issues
+
+    *   The vertex array range extension required that all active vertex
+        arrays must be located inside the vertex array range.  Should
+        this extension be equally strict?
+
+        RESOLVED: No, because a user may want to use the pixel data range
+        for one type of operation (say, texture downloads) but still be
+        able to use standard non-PDR pixel operations for everything
+        else.  Requiring that apps disable PDR every time such an
+        operation occurs would be burdensome and make it difficult to
+        integrate this extension into a larger app with minimal changes.
+        So, for each pixel operation, we will look at the pointer
+        provided by the application.  If it's inside the PDR, the PDR
+        rules apply, and if it's not inside the PDR, it's a standard GL
+        pixel operation, even if some of the data is actually inside the
+        PDR.
+
+    *   Reads and writes may require different types of memory.  How do
+        we handle this?
+
+        RESOLVED: The allocator interface already provides the ability to
+        specify different read and write frequencies.  A buffer for a
+        write PDR should probably be allocated with a high write
+        frequency and low read frequency, while a read PDR's buffer
+        should have a low write and high read frequency.
+
+        Having two PDRs is essential because a single application may
+        want to perform both asynchronous reads and writes
+        simultaneously.
+
+    *   What happens if a PDR pixel operation pulls data from a location
+        outside the PDR?
+
+        RESOLVED: The data pulled is undefined, and program termination
+        may result.
+
+    *   What happens if a PDR pixel operation pushes data to a location
+        outside the PDR?
+
+        RESOLVED: The contents of that memory location become undefined,
+        and program termination may result.
+
+    *   What happens if the hardware can't support the operation?
+
+        RESOLVED: The operation may be slow, because we may need to, for
+        example, read the pixel data out of uncached memory with the CPU,
+        but it should still work.  So this should never be a problem; in
+        fact, it means that a basic implementation that accelerates only,
+        say, one operation is quite trivial.
+
+    *   Should there be any limitations to what operations should be
+        supported?
+
+        RESOLVED: No, in theory any pixel operation that accesses a
+        user's buffer can work with PDR.  This includes Bitmap,
+        PolygonStipple, GetTexImage, ConvolutionFilter2D, etc.  Many are
+        unlikely to be accelerated, but there is no reason to place
+        arbitrary restrictions.  A list of possibly supported operations
+        is provided for OpenGL 1.2.1 with ARB_imaging support and for all
+        the extensions currently supported by NVIDIA.  Developers should
+        carefully read the Implementation Details provided by their
+        vendor before using the extension.
+
+    *   Should PixelMap and GetPixelMap be supported?
+
+        RESOLVED: Yes.  They're not really pixel path operations, but,
+        again, there is no good reason to omit operations, and they _are_
+        operations that pass around big chunks of pixel-related data.  If
+        we support PolygonStipple, surely we should support this.
+
+    *   Can the PDRs and the VAR overlap and/or be the same buffer?
+
+        RESOLVED: Yes.  In fact, it is expected that one of the preferred
+        modes of usage for this extension will be to use the same AGP
+        buffer for both the write PDR and the VAR, so it can be used for
+        both dynamic texturing and dynamic geometry.
+
+    *   Can video memory buffers be used?
+
+        RESOLVED: Yes, assuming the implementation supports using them
+        for PDR.  On systems with AGP Fast Writes, this may be
+        interesting in some cases.  Another possible use for this is to
+        treat a video memory buffer as an offscreen surface, where
+        DrawPixels can be thought of as a blit from offscreen memory to
+        a GL surface, and ReadPixels can be thought of as a blit from a
+        GL surface to offscreen memory.  This technique should be used
+        with caution, because there are other alternatives, such as
+        pbuffers, aux buffers, and even textures.
+
+    *   Do we want to support more than one read and one write PDR?
+
+        RESOLVED: No, but I could imagine uses for it.  For example, an
+        app could use two system memory buffers (one read, one write PDR)
+        and a single video memory buffer (both read and write).  Do we
+        need a scheme where an unlimited number of PDR buffers can be
+        specified?  Ugh.  I hope not.  I can't think of a good reason to
+        use more than 3 buffers, and even that is stretching it.
+
+    *   Do we want a separate enable for both the read and write PDR?
+
+        RESOLVED: Yes.  In theory, they are completely independent, and
+        we should treat them as such.
+
+    *   Is there an equivalent to the VAR validity check?
+
+        RESOLVED: No.  When a vertex array call occurs, all the vertex
+        array state is already set.  We can know in advance whether all
+        the pointers, strides, etc. are set up in a satisfactory way.
+        However, for a pixel operation, much of the state is provided on
+        the same function call that performs the operation.  For example,
+        the pixel format of the data may need to match that of the
+        framebuffer.  We can't know this without looking at the format
+        and type arguments.
+
+        An alternative might be some sort of "proxy" mechanism for pixel
+        operations, but this seems to be very complicated.
+
+    *   Do we want a more generalized API?  What stops us from needing a
+        DMA extension for every single conceivable use in the future?
+
+        RESOLVED: No, this is good enough.  Since new extensions will
+        probably require new semantics anyhow, we'll just live with that.
+        Maybe if the ARB wants to create a more generic "DMA" extension,
+        these issues can be revisited.
+
+    *   How do applications synchronize with the hardware?
+
+        RESOLVED: A new command, FlushPixelDataRangeNV, is provided, that
+        is analogous to FlushVertexArrayRangeNV.  Applications can also
+        use the Finish command.  The NV_fence extension is best for
+        applications that need fine-grained synchronization.
+
+    *   Should enabling or disabling a PDR induce an implicit PDR flush?
+
+        RESOLVED: No.  In the VAR extension, enabling and disabling the
+        VAR does induce a VAR flush, but this has proven to be more
+        problematic than helpful, because it makes it much more difficult
+        to switch between VAR and non-VAR rendering; the VAR2 extension
+        lifts this restriction, and there is no reason to get this wrong
+        a second time.
+
+        The PDR extension does not suffer from the problem of enabling
+        and disabling frequently, because non-PDR operations are
+        permitted simply by providing a pointer outside of the PDR, but
+        there is no clear reason why the enable or disable should cause
+        a quite unnecessary PDR flush.
+
+    *   Should this state push/pop?
+
+        RESOLVED: Yes, but via a Push/PopClientAttrib and the
+        GL_CLIENT_PIXEL_STORE_BIT bit.  Although this is heavyweight
+        state, VAR also allowed push/pop.  It does fit nicely into an
+        existing category, too.
+
+    *   Should making another context current cause a PDR flush?
+
+        RESOLVED: No.  There's no fundamental reason it should.  Note
+        that apps should be careful to not free their memory until the
+        hardware is not using it... note also that this decision is
+        inconsistent with VAR, which did guarantee a flush here.
+
+    *   Is the read PDR guaranteed to give you either old or new values,
+        or is it truly undefined?
+
+        RESOLVED: Undefined.  This may ease implementation constraints
+        slightly.  Apps must not rely at all on the contents of the
+        region where the readback is occurring until it is known to be
+        finished.
+
+        An example of how an implementation might conceivably require
+        this is as follows.  Suppose that a piece of hardware, for some
+        reason, can only write full 32-byte chunks of data.  Any bytes
+        that were supposed to be unwritten are in fact trashed by the
+        hardware, filled with garbage.  By careful fixups (read the
+        contents before the operation, restore when done), the driver may
+        be able to hide this fact, but a requirement that either new or
+        old data must show up would be violated.
+
+        Or, more trivially, you might implement certain pixel operations
+        as an in-place postprocess on the returned data.
+
+        It is not anticipated that NVIDIA implementations will need this
+        flexibility, but it is nevertheless provided.
+
+    *   How should an application allocate its PDR memory?
+
+        The app should use wglAllocateMemoryNV, even for a read PDR in
+        system memory.  Using malloc may result in suboptimal
+        performance, because the driver will not be able to choose an
+        optimal memory type.  For ReadPixels to system memory, you might
+        set a read frequency of 1.0, a write frequency of 0.0, and a
+        priority of 1.0.  The driver might allocate PCI memory, or
+        physically contiguous PCI memory, or cachable AGP memory, all
+        depending on the performance characteristics of the device.
+        While memory from malloc will work, it does not allow the driver
+        to make these decisions, and it will certainly never give you AGP
+        memory.
+
+        Write PDR memory for purposes of streaming textures, etc. works
+        exactly the same as VAR memory for streaming vertices.  You can,
+        and in fact are encouraged to, use the same circular buffer for
+        both vertices and textures.
+
+        If you have different needs (not just streaming textures or
+        asynchronous readbacks), you may want your pixel data in video
+        memory.
+
+New Procedures and Functions
+
+    void PixelDataRangeNV(enum target, sizei length, void *pointer)
+    void FlushPixelDataRangeNV(enum target)
+
+New Tokens
+
+    Accepted by the <target> parameter of PixelDataRangeNV and
+    FlushPixelDataRangeNV, and by the <cap> parameter of
+    EnableClientState, DisableClientState, and IsEnabled:
+
+        WRITE_PIXEL_DATA_RANGE_NV                      0x8878
+        READ_PIXEL_DATA_RANGE_NV                       0x8879
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        WRITE_PIXEL_DATA_RANGE_LENGTH_NV               0x887A
+        READ_PIXEL_DATA_RANGE_LENGTH_NV                0x887B
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+        WRITE_PIXEL_DATA_RANGE_POINTER_NV              0x887C
+        READ_PIXEL_DATA_RANGE_POINTER_NV               0x887D
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+
+    Add new section to Section 3.6, "Pixel Rectangles", on page 113:
+
+    "3.6.7  Write Pixel Data Range Operation
+
+    Applications can enhance the performance of DrawPixels and other
+    commands that transfer large amounts of pixel data by using a pixel
+    data range.  The command 
+
+       void PixelDataRangeNV(enum target, sizei length, void *pointer)
+
+    specifies one of the current pixel data ranges.  When the write pixel
+    data range is enabled and valid, pixel data transfers from within
+    the pixel data range are potentially faster.  The pixel data range is
+    a contiguous region of (virtual) address space for placing pixel
+    data.  The "pointer" parameter is a pointer to the base of the pixel
+    data range.  The "length" pointer is the length of the pixel data
+    range in basic machine units (typically unsigned bytes).  For the
+    write pixel data range, "target" must be WRITE_PIXEL_DATA_RANGE_NV.
+
+    The pixel data range address space region extends from "pointer"
+    to "pointer + length - 1" inclusive.
+
+    There is some system burden associated with establishing a pixel data
+    range (typically, the memory range must be locked down).  If either
+    the pixel data range pointer or size is set to zero, the previously
+    established pixel data range is released (typically, unlocking the
+    memory).
+
+    The pixel data range may not be established for operating system
+    dependent reasons, and therefore, not valid.  Reasons that a pixel
+    data range cannot be established include spanning different memory
+    types, the memory could not be locked down, alignment restrictions
+    are not met, etc.
+
+    The write pixel data range is enabled or disabled by calling
+    EnableClientState or DisableClientState with the symbolic constant
+    WRITE_PIXEL_DATA_RANGE_NV.
+
+    The write pixel data range is valid when the following conditions are
+    met:
+
+      o  WRITE_PIXEL_DATA_RANGE_NV is enabled.
+
+      o  PixelDataRangeNV has been called with a non-null pointer and
+         non-zero size, for target WRITE_PIXEL_DATA_RANGE_NV.
+
+      o  The write pixel data range has been established.
+
+      o  An implementation-dependent validity check based on the
+         pointer alignment, size, and underlying memory type of the
+         write pixel data range region of memory.
+
+    Otherwise, the write pixel data range is not valid.
+
+    The commands, such as DrawPixels, that may be made faster by the
+    write pixel data range are listed in the Appendix.
+
+    When the write pixel data range is valid, an attempt will be made to
+    accelerate these commands if and only if the data pointer argument to
+    the command lies within the write pixel data range.  No attempt will
+    be made to accelerate commands whose base pointer is outside this
+    range.  Accessing data outside the write pixel data range when the
+    base pointer lies within the range and the range is valid will
+    produce undefined results and may cause program termination.
+
+    The standard OpenGL pixel data coherency model requires that pixel
+    data be extracted from the user's buffer immediately, before the
+    pixel command returns.  When the write pixel data range is valid,
+    this model is relaxed so that changes made to pixel data until the
+    next "write pixel data range flush" may affect pixel commands in non-
+    sequential ways.  That is, a call to a pixel command that precedes
+    a change to pixel data (without an intervening "write pixel data
+    range flush") may access the changed data; though a call to a pixel
+    command following a change to pixel data must always access the
+    changed data, and never the original data.
+
+    A 'write pixel data range flush' occurs when one of the following
+    operations occur:
+
+       o  Finish returns.
+
+       o  FlushPixelDataRangeNV (with target WRITE_PIXEL_DATA_RANGE_NV)
+          returns.
+
+       o  PixelDataRangeNV (with target WRITE_PIXEL_DATA_RANGE_NV)
+          returns.
+
+    The client state required to implement the write pixel data range
+    consists of an enable bit, a memory pointer, and an integer size.
+
+    If the memory mapping of pages within the pixel data range changes,
+    using the pixel data range has undefined effects.  To ensure that the
+    pixel data range reflects the address space's current state, the
+    application is responsible for calling PixelDataRange again after any
+    memory mapping changes within the pixel data range."
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Add new section to Section 4.3, "Pixel Draw/Read State", on page 180:
+
+    "4.3.5  Read Pixel Data Range Operation
+
+    The read pixel data range is similar to the write pixel data range
+    (see section 3.6.7), but is specified with PixelDataRangeNV with a
+    target READ_PIXEL_DATA_RANGE_NV.  It is exactly analogous to the
+    write pixel data range, but applies to commands where OpenGL returns
+    pixel data to the caller, such as ReadPixels.  The list of commands
+    to which the read pixel data range applies can be found in the
+    Appendix.
+
+    Validity checks and flushes of the read pixel data range behave in a
+    manner exactly analogous to those of the write pixel data range,
+    though any implementation-dependent checks may differ between the two
+    types of pixel data range.
+
+    The standard OpenGL pixel data coherency model requires that pixel
+    data be written into the user's buffer immediately, before the
+    pixel command returns.  When the read pixel data range is valid,
+    this model is relaxed so that this data may not necessarily be
+    available until the next "read pixel data range flush".  Until such
+    point in time, an attempt to read the buffer returns undefined
+    values.
+
+    If both the read and write pixel data ranges are valid and overlap,
+    then all operations involving both in the same thread are
+    automatically synchronized.  That is, the write pixel data range
+    operation will automatically wait for any pending read pixel data
+    range results to become available before attempting to retrieve them.
+    However, if the operations are performed from different threads, the
+    user is responsible for all such synchronization.
+
+    Read pixel data range operations are also synchronized with vertex
+    array range operations in the same way.
+
+    The client state required to implement the read pixel data range
+    consists of an enable bit, a memory pointer, and an integer size."
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    Add the following to the end of Section 5.4 "Display Lists" (page
+    179):
+
+    "PixelDataRangeNV and FlushPixelDataRangeNV are not complied into
+    display lists but are executed immediately.
+
+    If a display list is compiled while WRITE_PIXEL_DATA_RANGE_NV is
+    enabled, all commands affected by that enable are accumulated into a
+    display list as if WRITE_PIXEL_DATA_RANGE_NV is disabled.
+
+    The state of the read pixel data range does not affect display list
+    compilation, because those commands that might be accelerated by a
+    read pixel data range are commands that are executed immediately
+    rather than being compiled into a display list (ReadPixels and
+    GetTexImage, for example)."
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+    "OpenGL implementations using GLX indirect rendering should fail to
+    set up the pixel data range and will not accelerate any pixel
+    operations using it.  Additionally, glXAllocateMemoryNV always fails
+    to allocate memory (returns NULL) when used with an indirect
+    rendering context."
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_OPERATION is generated if PixelDataRangeNV or
+    FlushPixelDataRangeNV is called between the execution of Begin and
+    the corresponding execution of End.
+
+    INVALID_ENUM is generated if PixelDataRangeNV or
+    FlushPixelDataRangeNV is called when target is not
+    WRITE_PIXEL_DATA_RANGE_NV or READ_PIXEL_DATA_RANGE_NV.
+
+    INVALID_VALUE is generated if PixelDataRangeNV is called when length
+    is negative.
+
+New State
+
+                                                              Initial
+   Get Value                          Get Command     Type    Value    Attrib
+   ---------                          -----------     ----    -------  ------
+   WRITE_PIXEL_DATA_RANGE_NV          IsEnabled       B       False    pixel-store
+   READ_PIXEL_DATA_RANGE_NV           IsEnabled       B       False    pixel-store
+   WRITE_PIXEL_DATA_RANGE_POINTER_NV  GetPointerv     Z+      0        pixel-store
+   READ_PIXEL_DATA_RANGE_POINTER_NV   GetPointerv     Z+      0        pixel-store
+   WRITE_PIXEL_DATA_RANGE_LENGTH_NV   GetIntegerv     Z+      0        pixel-store
+   READ_PIXEL_DATA_RANGE_LENGTH_NV    GetIntegerv     Z+      0        pixel-store
+
+Appendix: Operations Supported
+
+    In unextended OpenGL 1.3 with ARB_imaging support, the following
+    commands may take advantage of the write PDR:
+
+        glBitmap
+        glColorSubTable
+        glColorTable
+        glCompressedTexImage1D
+        glCompressedTexImage2D
+        glCompressedTexImage3D
+        glCompressedTexSubImage1D
+        glCompressedTexSubImage2D
+        glCompressedTexSubImage3D
+        glConvolutionFilter1D
+        glConvolutionFilter2D
+        glDrawPixels
+        glPixelMapfv
+        glPixelMapuiv
+        glPixelMapusv
+        glPolygonStipple
+        glSeparableFilter2D
+        glTexImage1D
+        glTexImage2D
+        glTexImage3D
+        glTexSubImage1D
+        glTexSubImage2D
+        glTexSubImage3D
+
+    In unextended OpenGL 1.3 with ARB_imaging support, the following
+    commands may take advantage of the read PDR:
+
+        glGetColorTable
+        glGetCompressedTexImage
+        glGetConvolutionFilter
+        glGetHistogram
+        glGetMinmax
+        glGetPixelMapfv
+        glGetPixelMapuiv
+        glGetPixelMapusv
+        glGetPolygonStipple
+        glGetSeparableFilter
+        glGetTexImage
+        glReadPixels
+
+    No other extensions shipping in the NVIDIA OpenGL drivers add any
+    other new commands that may take advantage of this extension,
+    although in a few cases there are new commands that alias to other
+    commands that may be accelerated by this extension.  These commands
+    are:
+
+        glCompressedTexImage1DARB (ARB_texture_compression)
+        glCompressedTexImage2DARB (ARB_texture_compression)
+        glCompressedTexImage3DARB (ARB_texture_compression)
+        glCompressedTexSubImage1DARB (ARB_texture_compression)
+        glCompressedTexSubImage2DARB (ARB_texture_compression)
+        glCompressedTexSubImage3DARB (ARB_texture_compression)
+        glColorSubTableEXT (EXT_paletted_texture)
+        glColorTableEXT (EXT_paletted_texture)
+        glGetCompressedTexImageARB (ARB_texture_compression)
+        glTexImage3DEXT (EXT_texture3D)
+        glTexSubImage3DEXT (EXT_texture3D)
+
+NVIDIA Implementation Details
+
+    In the Release 40 OpenGL drivers, the NV_pixel_data_range extension
+    is supported on all GeForce/Quadro-class hardware.  The following
+    commands may potentially be accelerated in this release:
+
+        glReadPixels
+        glTexImage2D
+        glTexSubImage2D
+        glCompressedTexImage2D
+        glCompressedTexImage3D
+        glCompressedTexSubImage2D
+
+    The following type/format/buffer format sets are accelerated for
+    glReadPixels:
+
+      type                            format               buffer format
+      -----------------------------------------------------------------------------------------------
+      GL_UNSIGNED_SHORT_5_6_5         GL_RGB               16-bit color (PCs only -- Macs use 555)
+      GL_UNSIGNED_INT_8_8_8_8_REV     GL_BGRA              32-bit color w/ alpha
+      GL_UNSIGNED_BYTE                GL_BGRA              32-bit color w/ alpha (little endian only)
+      GL_UNSIGNED_SHORT               GL_DEPTH_COMPONENT   16-bit depth
+      GL_UNSIGNED_INT_24_8_NV         GL_DEPTH_STENCIL_NV  24-bit depth, 8-bit stencil
+
+    The following internalformat/type/format sets are accelerated for
+    glTex[Sub]Image2D:
+
+      internalformat              type                            format
+      -------------------------------------------------------------------------------
+      GL_RGB5                     GL_UNSIGNED_SHORT_5_6_5         GL_RGB
+      GL_RGB8                     GL_UNSIGNED_INT_8_8_8_8_REV     GL_BGRA
+      GL_RGBA4                    GL_UNSIGNED_SHORT_4_4_4_4_REV   GL_BGRA
+      GL_RGB5_A1                  GL_UNSIGNED_SHORT_1_5_5_5_REV   GL_BGRA
+      GL_RGBA8                    GL_UNSIGNED_INT_8_8_8_8_REV     GL_BGRA
+
+      GL_DEPTH_COMPONENT16_SGIX   GL_UNSIGNED_SHORT               GL_DEPTH_COMPONENT
+      GL_DEPTH_COMPONENT24_SGIX   GL_UNSIGNED_INT_24_8_NV         GL_DEPTH_STENCIL_NV
+
+    The following internalformat/type/format sets will be accelerated for
+    glTex[Sub]Image2D on little-endian machines only:
+
+      internalformat              type                            format
+      -------------------------------------------------------------------------------
+      GL_LUMINANCE8_ALPHA8        GL_UNSIGNED_BYTE                GL_LUMINANCE_ALPHA
+
+      GL_RGB8                     GL_UNSIGNED_BYTE                GL_BGRA
+      GL_RGBA8                    GL_UNSIGNED_BYTE                GL_BGRA
+
+    All compressed texture formats are supported for
+    glCompressedTex[Sub]Image[2,3]D.
+
+    The following restrictions apply to all commands:
+    - No pixel transfer operations of any kind may be in use.
+    - The base address of the PDR must be aligned to a 32-byte boundary.
+    - The data pointer must be aligned to boundaries of the size of one
+      group of pixels.  For example, GL_UNSIGNED_SHORT_5_6_5 data must
+      be aligned to 2-byte boundaries, GL_UNSIGNED_INT_24_8_NV data must
+      be aligned to 4-byte boundaries, and GL_BGRA/GL_UNSIGNED_BYTE data
+      must be aligned to 4-byte boundaries (not 1-byte boundaries).
+      Compressed texture data must be aligned to a block boundary.
+
+    No additional restrictions apply to glReadPixels or
+    glCompressedTex[Sub]Image[2,3]D.
+
+    The following additional restrictions apply to glTex[Sub]Image2D:
+    - The texture must fit in video memory.
+    - The texture must have a border size of zero.
+    - The stride (in bytes) between two lines of source data must not
+      exceed 65535.
+    - For non-rectangle textures, the width and height of the destination
+      mipmap level must not exceed 2048, nor be below 2; also, the
+      destination mipmap level must not be 2x2 (for 16-bit textures) or
+      2x2, 4x2, or 2x4 (for 8-bit textures).
+
+    Future software releases may increase the number of accelerated
+    commands and the number of accelerated data formats for each command.
+    Note also that although all of the formats and commands listed are
+    guaranteed to be accelerated, there may be limitations in the actual
+    implementation not as strict as those stated here; for example, some
+    data formats not listed here may turn out to be accelerated.
+    However, it is highly recommended that you stick to the formats and
+    commands listed in this section.  In cases where actual restrictions
+    are less strict, future implementations may very well enforce the
+    listed restriction.
+
+    It is also possible that some of these restrictions may become _more_
+    strict on future chips; though at present no such additional
+    restrictions are known to be likely.  Such restrictions would likely
+    take the form of more stringent pitch or alignment restrictions, if
+    they proved to be necessary.
+
+    In practice, you should expect that several of these restrictions
+    will be more lenient in a future release.
+
+Revision History
+
+    November 7, 2002 - Updated implementation details section with most
+    up-to-date rules on PDR usage.  Lifted rule that texture downloads
+    must be 2046 pixels in size or smaller.  Removed support for 8-bit
+    texture downloads.  Increased max TexSubImage pitch to 65535 from 
+    8191.

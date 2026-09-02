@@ -142,6 +142,27 @@ TEST(CreateInstance, ApiVersionBelow1_0) {
                        "greater than or equal to the value of VK_API_VERSION_1_0 [VUID-VkApplicationInfo-apiVersion]"));
 }
 
+// The loader should log the application's VkInstanceCreateInfo so it shows up under VK_LOADER_DEBUG. See #1819.
+TEST(CreateInstance, LogsInstanceCreateInfo) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2);
+
+    DebugUtilsLogger debug_log{VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT};
+    InstWrapper inst{env.vulkan_functions};
+    inst.create_info.set_app_name("MyTestApp")
+        .set_app_version(42)
+        .set_engine_name("MyTestEngine")
+        .set_engine_version(7)
+        .set_api_version(1, 2, 0);
+    FillDebugUtilsCreateDetails(inst.create_info, debug_log);
+    inst.CheckCreate();
+
+    ASSERT_TRUE(debug_log.find("applicationName: \"MyTestApp\", applicationVersion: 42"));
+    ASSERT_TRUE(debug_log.find("engineName: \"MyTestEngine\", engineVersion: 7, apiVersion: 1.2.0"));
+    // FillDebugUtilsCreateDetails enables VK_EXT_debug_utils, so it should appear in the requested-extensions dump.
+    ASSERT_TRUE(debug_log.find("VK_EXT_debug_utils"));
+}
+
 TEST(CreateInstance, ConsecutiveCreate) {
     FrameworkEnvironment env{};
     env.add_icd(TEST_ICD_PATH_VERSION_2);
@@ -982,7 +1003,7 @@ TEST(EnumeratePhysicalDevices, CallThriceRemoveInBetween) {
     ASSERT_EQ(physical_count, returned_physical_count);
 
     // Delete the 2nd physical device
-    driver.physical_devices.erase(std::next(driver.physical_devices.begin()));
+    driver.remove_physical_device(1);
 
     physical_count = static_cast<uint32_t>(driver.physical_devices.size());
     std::vector<VkPhysicalDevice> physical_device_handles_2 = std::vector<VkPhysicalDevice>(returned_physical_count);
@@ -1023,10 +1044,11 @@ TEST(EnumeratePhysicalDevices, CallThriceRemoveInBetween) {
 TEST(EnumeratePhysicalDevices, MultipleAddRemoves) {
     FrameworkEnvironment env{};
     auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_2).set_min_icd_interface_version(5);
-    auto phys_dev_handle_0 = driver.add_and_get_physical_device("physical_device_0").vk_physical_device.handle;
-    auto phys_dev_handle_1 = driver.add_and_get_physical_device("physical_device_1").vk_physical_device.handle;
-    auto phys_dev_handle_2 = driver.add_and_get_physical_device("physical_device_2").vk_physical_device.handle;
-    auto phys_dev_handle_3 = driver.add_and_get_physical_device("physical_device_3").vk_physical_device.handle;
+    driver.add_physical_device("physical_device_0");
+    driver.add_physical_device("physical_device_1");
+
+    driver.add_physical_device("physical_device_2");
+    driver.add_physical_device("physical_device_3");
 
     std::array<std::vector<VkPhysicalDevice>, 8> physical_dev_handles;
 
@@ -1040,7 +1062,7 @@ TEST(EnumeratePhysicalDevices, MultipleAddRemoves) {
     ASSERT_EQ(physical_count, returned_physical_count);
 
     // Delete the 2nd physical device (0, 2, 3)
-    driver.physical_devices.erase(phys_dev_handle_1);
+    driver.remove_physical_device(1);
 
     // Query using old number from last call (4), but it should only return 3
     physical_count = static_cast<uint32_t>(driver.physical_devices.size());
@@ -1050,8 +1072,8 @@ TEST(EnumeratePhysicalDevices, MultipleAddRemoves) {
     physical_dev_handles[1].resize(returned_physical_count);
 
     // Add two new physical devices to the front (A, B, 0, 2, 3)
-    auto phys_dev_handle_a = driver.add_physical_device_at_index(0, "physical_device_B").vk_physical_device.handle;
-    auto phys_dev_handle_b = driver.add_physical_device_at_index(1, "physical_device_A").vk_physical_device.handle;
+    driver.add_physical_device_at_index(0, "physical_device_B");
+    driver.add_physical_device_at_index(1, "physical_device_A");
 
     // Query using old number from last call (3), but it should be 5
     physical_count = static_cast<uint32_t>(driver.physical_devices.size());
@@ -1067,7 +1089,7 @@ TEST(EnumeratePhysicalDevices, MultipleAddRemoves) {
     ASSERT_EQ(physical_count, returned_physical_count);
 
     // Delete last two physical devices (A, B, 0, 2)
-    driver.physical_devices.erase(phys_dev_handle_3);
+    driver.remove_physical_device(4);
 
     // Query using old number from last call (5), but it should be 4
     physical_count = static_cast<uint32_t>(driver.physical_devices.size());
@@ -1080,7 +1102,7 @@ TEST(EnumeratePhysicalDevices, MultipleAddRemoves) {
     ASSERT_EQ(VK_SUCCESS, inst->vkEnumeratePhysicalDevices(inst, &returned_physical_count, physical_dev_handles[5].data()));
 
     // Insert a new physical device (A, B, C, 0, 2)
-    auto phys_dev_handle_c = driver.add_physical_device_at_index(2, "physical_device_C").vk_physical_device.handle;
+    driver.add_physical_device_at_index(2, "physical_device_C");
 
     // Query using old number from last call (4), but it should be 5
     physical_count = static_cast<uint32_t>(driver.physical_devices.size());
@@ -1888,9 +1910,8 @@ TEST(EnumeratePhysicalDeviceGroups, OneCall) {
         test_physical_device.properties.apiVersion = VK_API_VERSION_1_1;
         phys_devices[i] = &test_physical_device;
     }
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[1]);
-    driver.physical_device_groups.emplace_back(phys_devices[2]);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({0, 1}));
+    driver.physical_device_groups.emplace_back(2);
     const uint32_t max_physical_device_count = 3;
 
     // Core function
@@ -2024,9 +2045,8 @@ TEST(EnumeratePhysicalDeviceGroups, TwoCall) {
         test_physical_device.properties.apiVersion = VK_API_VERSION_1_1;
         phys_devices[i] = &test_physical_device;
     }
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[1]);
-    driver.physical_device_groups.emplace_back(phys_devices[2]);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({0, 1}));
+    driver.physical_device_groups.emplace_back(2);
     const uint32_t max_physical_device_count = 3;
 
     // Core function
@@ -2143,9 +2163,8 @@ TEST(EnumeratePhysicalDeviceGroups, TwoCallIncomplete) {
         test_physical_device.properties.apiVersion = VK_API_VERSION_1_1;
         phys_devices[i] = &test_physical_device;
     }
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[1]);
-    driver.physical_device_groups.emplace_back(phys_devices[2]);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({0, 1}));
+    driver.physical_device_groups.emplace_back(2);
 
     // Core function
     {
@@ -2247,11 +2266,9 @@ TEST(EnumeratePhysicalDeviceGroups, TestCoreVersusExtensionSameReturns) {
     }
 
     // Generate the starting groups
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.emplace_back(phys_devices[1]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[2]).use_physical_device(phys_devices[3]);
-    driver.physical_device_groups.emplace_back(phys_devices[4]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[5]);
+    driver.physical_device_groups.emplace_back(0);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2, 3}));
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({4, 5}));
 
     uint32_t expected_counts[3] = {1, 3, 2};
     uint32_t core_group_count = 0;
@@ -2335,11 +2352,9 @@ TEST(EnumeratePhysicalDeviceGroups, CallThriceAddGroupInBetween) {
     }
 
     // Generate the starting groups
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.emplace_back(phys_devices[1]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[2]).use_physical_device(phys_devices[3]);
-    driver.physical_device_groups.emplace_back(phys_devices[4]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[5]);
+    driver.physical_device_groups.emplace_back(0);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2, 3}));
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({4, 5}));
 
     uint32_t before_expected_counts[3] = {1, 3, 2};
     uint32_t after_expected_counts[4] = {1, 3, 1, 2};
@@ -2362,7 +2377,7 @@ TEST(EnumeratePhysicalDeviceGroups, CallThriceAddGroupInBetween) {
     }
 
     // Insert new group after first two
-    driver.physical_device_groups.insert(driver.physical_device_groups.begin() + 2, phys_devices[6]);
+    driver.physical_device_groups.insert(driver.physical_device_groups.begin() + 2, 6);
 
     std::vector<VkPhysicalDeviceGroupProperties> group_props_after{};
     group_props_after.resize(before_group_count,
@@ -2422,20 +2437,16 @@ TEST(EnumeratePhysicalDeviceGroups, CallTwiceRemoveGroupInBetween) {
                        .set_icd_api_version(VK_API_VERSION_1_1);
 
     // Generate the devices
-    std::array<PhysicalDevice*, 7> phys_devices;
     for (size_t i = 0; i < 7; i++) {
         auto& test_physical_device = driver.add_and_get_physical_device(std::string("physical_device_") + std::to_string(i));
         test_physical_device.properties.apiVersion = VK_API_VERSION_1_1;
-        phys_devices[i] = &test_physical_device;
     }
 
     // Generate the starting groups
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.emplace_back(phys_devices[1]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[2]).use_physical_device(phys_devices[3]);
-    driver.physical_device_groups.emplace_back(phys_devices[4]);
-    driver.physical_device_groups.emplace_back(phys_devices[5]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[6]);
+    driver.physical_device_groups.emplace_back(0);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2, 3}));
+    driver.physical_device_groups.emplace_back(4);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({5, 6}));
 
     uint32_t before_expected_counts[4] = {1, 3, 1, 2};
     uint32_t after_expected_counts[3] = {1, 3, 2};
@@ -2517,11 +2528,9 @@ TEST(EnumeratePhysicalDeviceGroups, CallTwiceAddDeviceInBetween) {
     }
 
     // Generate the starting groups
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.emplace_back(phys_devices[1]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[2]).use_physical_device(phys_devices[3]);
-    driver.physical_device_groups.emplace_back(phys_devices[4]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[5]);
+    driver.physical_device_groups.emplace_back(0);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2, 3}));
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({4, 5}));
 
     uint32_t expected_group_count = 3;
     uint32_t before_expected_counts[3] = {1, 3, 2};
@@ -2543,7 +2552,7 @@ TEST(EnumeratePhysicalDeviceGroups, CallTwiceAddDeviceInBetween) {
     }
 
     // Insert new device to 2nd group
-    driver.physical_device_groups[1].use_physical_device(phys_devices[6]);
+    driver.physical_device_groups[1].use_physical_device(6);
 
     std::vector<VkPhysicalDeviceGroupProperties> group_props_after{};
     group_props_after.resize(expected_group_count,
@@ -2603,11 +2612,9 @@ TEST(EnumeratePhysicalDeviceGroups, CallTwiceRemoveDeviceInBetween) {
     }
 
     // Generate the starting groups
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.emplace_back(phys_devices[1]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[2]).use_physical_device(phys_devices[3]);
-    driver.physical_device_groups.emplace_back(phys_devices[4]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[5]);
+    driver.physical_device_groups.emplace_back(0);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2, 3}));
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({4, 5}));
 
     uint32_t before_expected_counts[3] = {1, 3, 2};
     uint32_t after_expected_counts[3] = {1, 2, 2};
@@ -2634,8 +2641,8 @@ TEST(EnumeratePhysicalDeviceGroups, CallTwiceRemoveDeviceInBetween) {
     }
 
     // Remove middle device in middle group
-    driver.physical_device_groups[1].physical_device_handles.erase(
-        driver.physical_device_groups[1].physical_device_handles.begin() + 1);
+    driver.physical_device_groups[1].physical_device_indexes.erase(
+        driver.physical_device_groups[1].physical_device_indexes.begin() + 1);
 
     std::vector<VkPhysicalDeviceGroupProperties> group_props_after{};
     group_props_after.resize(expected_group_count,
@@ -2700,11 +2707,9 @@ TEST(EnumeratePhysicalDeviceGroups, MultipleAddRemoves) {
     }
 
     // Generate the starting groups
-    driver.physical_device_groups.emplace_back(phys_devices[0]);
-    driver.physical_device_groups.emplace_back(phys_devices[1]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[2]).use_physical_device(phys_devices[3]);
-    driver.physical_device_groups.emplace_back(phys_devices[4]);
-    driver.physical_device_groups.back().use_physical_device(phys_devices[5]);
+    driver.physical_device_groups.emplace_back(0);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2, 3}));
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({4, 5}));
 
     uint32_t before_expected_counts[3] = {1, 3, 2};
     uint32_t after_add_group_expected_counts[4] = {1, 3, 1, 2};
@@ -2731,7 +2736,7 @@ TEST(EnumeratePhysicalDeviceGroups, MultipleAddRemoves) {
     }
 
     // Insert new group after first two
-    driver.physical_device_groups.insert(driver.physical_device_groups.begin() + 2, phys_devices[6]);
+    driver.physical_device_groups.insert(driver.physical_device_groups.begin() + 2, 6);
 
     // Should be: 4 Groups { { 0 }, { 1, 2, 3 }, { 6 }, { 4, 5 } }
     std::vector<VkPhysicalDeviceGroupProperties> group_props_after_add_group{};
@@ -2745,8 +2750,8 @@ TEST(EnumeratePhysicalDeviceGroups, MultipleAddRemoves) {
     }
 
     // Remove first device in 2nd group
-    driver.physical_device_groups[1].physical_device_handles.erase(
-        driver.physical_device_groups[1].physical_device_handles.begin());
+    driver.physical_device_groups[1].physical_device_indexes.erase(
+        driver.physical_device_groups[1].physical_device_indexes.begin());
 
     // Should be: 4 Groups { { 0 }, { 2, 3 }, { 6 }, { 4, 5 } }
     std::vector<VkPhysicalDeviceGroupProperties> group_props_after_remove_device{};
@@ -2776,7 +2781,7 @@ TEST(EnumeratePhysicalDeviceGroups, MultipleAddRemoves) {
     }
 
     // Add two devices to last group
-    driver.physical_device_groups.back().use_physical_device(phys_devices[7]).use_physical_device(phys_devices[8]);
+    driver.physical_device_groups.back().use_physical_devices({7, 8});
 
     // Should be: 3 Groups { { 2, 3 }, { 6 }, { 4, 5, 7, 8 } }
     std::vector<VkPhysicalDeviceGroupProperties> group_props_after_add_device{};
@@ -2842,9 +2847,8 @@ TEST(EnumeratePhysicalDeviceGroups, FakePNext) {
     test_physical_device_2.extensions.push_back({VK_EXT_PCI_BUS_INFO_EXTENSION_NAME, 0});
     FillInRandomDeviceProps(test_physical_device_2.properties, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_API_VERSION_1_1, 888,
                             0xAAA003);
-    cur_icd_0.physical_device_groups.push_back({});
-    cur_icd_0.physical_device_groups.back().use_physical_device(test_physical_device_0).use_physical_device(test_physical_device_2);
-    cur_icd_0.physical_device_groups.push_back({test_physical_device_1});
+    cur_icd_0.physical_device_groups.push_back(PhysicalDeviceGroup({0, 2}));
+    cur_icd_0.physical_device_groups.push_back(1);
 
     env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
     auto& cur_icd_1 = env.get_test_icd(1);
@@ -2861,9 +2865,8 @@ TEST(EnumeratePhysicalDeviceGroups, FakePNext) {
     test_physical_device_6.extensions.push_back({VK_EXT_PCI_BUS_INFO_EXTENSION_NAME, 0});
     FillInRandomDeviceProps(test_physical_device_6.properties, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_API_VERSION_1_1, 75,
                             0xCCCC003);
-    cur_icd_1.physical_device_groups.push_back({});
-    cur_icd_1.physical_device_groups.back().use_physical_device(test_physical_device_5).use_physical_device(test_physical_device_6);
-    cur_icd_1.physical_device_groups.push_back({test_physical_device_4});
+    cur_icd_1.physical_device_groups.push_back(PhysicalDeviceGroup({1, 2}));
+    cur_icd_1.physical_device_groups.push_back(0);
 
     InstWrapper inst(env.vulkan_functions);
     inst.create_info.set_api_version(VK_API_VERSION_1_1);
@@ -2921,8 +2924,7 @@ TEST(EnumeratePhysicalDeviceGroups, DeviceFiltering) {
     }
 
     for (size_t i = 0; i < 5; i++) {
-        driver.physical_device_groups.emplace_back(phys_devices[2 * i]);
-        driver.physical_device_groups.back().use_physical_device(phys_devices[2 * i + 1]);
+        driver.physical_device_groups.push_back(PhysicalDeviceGroup({2 * i, 2 * i + 1}));
     }
 
     InstWrapper inst{env.vulkan_functions};
@@ -3072,8 +3074,7 @@ TEST(EnumeratePhysicalDeviceGroups, DeviceFilteringByDriverId) {
     }
 
     for (size_t i = 0; i < 5; i++) {
-        driver.physical_device_groups.emplace_back(phys_devices[2 * i]);
-        driver.physical_device_groups.back().use_physical_device(phys_devices[2 * i + 1]);
+        driver.physical_device_groups.push_back(PhysicalDeviceGroup({2 * i, 2 * i + 1}));
     }
 
     InstWrapper inst{env.vulkan_functions};
@@ -3190,7 +3191,7 @@ TEST(ExtensionManual, ToolingProperties) {
         env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA)
             .set_supports_tooling_info_ext(true)
             .add_tooling_property(icd_tool_props)
-            .add_physical_device(PhysicalDevice{}.add_extension(VK_EXT_TOOLING_INFO_EXTENSION_NAME).finish());
+            .add_physical_device(PhysicalDevice{}.add_extension(VK_EXT_TOOLING_INFO_EXTENSION_NAME));
 
         InstWrapper inst{env.vulkan_functions};
         inst.CheckCreate();
@@ -3731,8 +3732,8 @@ TEST(SortedPhysicalDevices, DeviceGroupsSortedEnabled) {
     FillInRandomDeviceProps(test_physical_device_2.properties, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_API_VERSION_1_1, 888,
                             0xAAA003);
     cur_icd_0.physical_device_groups.push_back({});
-    cur_icd_0.physical_device_groups.back().use_physical_device(test_physical_device_0).use_physical_device(test_physical_device_2);
-    cur_icd_0.physical_device_groups.push_back({test_physical_device_1});
+    cur_icd_0.physical_device_groups.back().use_physical_devices({0, 2});
+    cur_icd_0.physical_device_groups.push_back({1});
 
     env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
     auto& cur_icd_1 = env.get_test_icd(1);
@@ -3761,8 +3762,8 @@ TEST(SortedPhysicalDevices, DeviceGroupsSortedEnabled) {
     FillInRandomDeviceProps(test_physical_device_6.properties, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_API_VERSION_1_1, 75,
                             0xCCCC003);
     cur_icd_2.physical_device_groups.push_back({});
-    cur_icd_2.physical_device_groups.back().use_physical_device(test_physical_device_5).use_physical_device(test_physical_device_6);
-    cur_icd_2.physical_device_groups.push_back({test_physical_device_4});
+    cur_icd_2.physical_device_groups.back().use_physical_devices({1, 2});
+    cur_icd_2.physical_device_groups.push_back(0);
 
     env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
     auto& cur_icd_3 = env.get_test_icd(3);
@@ -3916,8 +3917,8 @@ TEST(SortedPhysicalDevices, DeviceGroupsSortedDisabled) {
     FillInRandomDeviceProps(test_physical_device_2.properties, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_API_VERSION_1_1, 888,
                             0xAAA003);
     cur_icd_0.physical_device_groups.push_back({});
-    cur_icd_0.physical_device_groups.back().use_physical_device(test_physical_device_0).use_physical_device(test_physical_device_2);
-    cur_icd_0.physical_device_groups.push_back({test_physical_device_1});
+    cur_icd_0.physical_device_groups.back().use_physical_devices({0, 2});
+    cur_icd_0.physical_device_groups.push_back(1);
 
     env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
     auto& cur_icd_1 = env.get_test_icd(1);
@@ -3942,8 +3943,8 @@ TEST(SortedPhysicalDevices, DeviceGroupsSortedDisabled) {
     FillInRandomDeviceProps(test_physical_device_6.properties, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU, VK_API_VERSION_1_1, 75,
                             0xCCCC003);
     cur_icd_2.physical_device_groups.push_back({});
-    cur_icd_2.physical_device_groups.back().use_physical_device(test_physical_device_5).use_physical_device(test_physical_device_6);
-    cur_icd_2.physical_device_groups.push_back({test_physical_device_4});
+    cur_icd_2.physical_device_groups.back().use_physical_devices({1, 2});
+    cur_icd_2.physical_device_groups.push_back(0);
 
     env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
     auto& cur_icd_3 = env.get_test_icd(3);
@@ -4200,9 +4201,12 @@ TEST(PortabilityICDConfiguration, PortabilityAndRegularICDCheckFlagsPassedIntoIC
     inst.CheckCreate();
     ASSERT_FALSE(env.debug_log.find(portability_driver_warning));
 
-    ASSERT_EQ(static_cast<VkInstanceCreateFlags>(4), driver0.passed_in_instance_create_flags);
+    ASSERT_EQ(driver0.created_instance_details.size(), 1U);
+    ASSERT_EQ(static_cast<VkInstanceCreateFlags>(4),
+              driver0.created_instance_details.begin()->second.passed_in_instance_create_flags);
+    ASSERT_EQ(driver1.created_instance_details.size(), 1U);
     ASSERT_EQ(VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR | static_cast<VkInstanceCreateFlags>(4),
-              driver1.passed_in_instance_create_flags);
+              driver1.created_instance_details.begin()->second.passed_in_instance_create_flags);
 }
 
 TEST(PortabilityICDConfiguration, PortabilityAndRegularICDPreInstanceFunctions) {
@@ -4325,17 +4329,40 @@ TEST(DuplicateRegistryEntries, Drivers) {
     auto null_path = env.get_folder(ManifestLocation::null).location() / "test_icd_0.json";
     env.platform_shim->add_manifest_to_registry(ManifestCategory::icd, null_path);
 
-    env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, ManifestOptions{}.set_discovery_type(ManifestDiscoveryType::null_dir))
-        .add_physical_device("physical_device_0")
-        .set_adapterLUID(_LUID{10, 1000});
+    auto& real_driver =
+        env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, ManifestOptions{}.set_discovery_type(ManifestDiscoveryType::null_dir))
+            .add_physical_device("physical_device_0")
+            .set_adapterLUID(_LUID{10, 1000});
     env.platform_shim->add_d3dkmt_adapter(D3DKMT_Adapter{0, _LUID{10, 1000}}.add_driver_manifest_path(env.get_icd_manifest_path()));
 
     InstWrapper inst{env.vulkan_functions};
     FillDebugUtilsCreateDetails(inst.create_info, env.debug_log);
     inst.CheckCreate();
-    ASSERT_TRUE(env.debug_log.find(std::string("Skipping adding of json file \"") + null_path.string() +
-                                   "\" from registry \"HKEY_LOCAL_MACHINE\\" VK_DRIVERS_INFO_REGISTRY_LOC
-                                   "\" to the list due to duplication"));
+    auto phys_devs = inst.GetPhysDevs(1);
+    ASSERT_EQ(phys_devs.size(), 1U);
+    ASSERT_TRUE(env.debug_log.find(std::string("Located json file \"") + env.get_icd_manifest_path().string() +
+                                   "\" from registry \"HKEY_LOCAL_MACHINE\\" VK_DRIVERS_INFO_REGISTRY_LOC));
+    ASSERT_TRUE(env.debug_log.find("Found no registry files in HKEY_LOCAL_MACHINE\\" VK_DRIVERS_INFO_REGISTRY_LOC));
+}
+
+// Regression test for a heap buffer overflow in windows_add_json_entry(). The buffer that aggregates manifest paths
+// discovered through the registry/D3DKMT enumeration starts at a fixed 4096 bytes, and the snprintf calls that append
+// to it were bounded by the source length instead of the destination's remaining capacity. As a result, a manifest
+// path longer than the buffer was written past the end of the allocation. This exercises that path with an oversized
+// value to ensure the destination buffer is grown to fit before writing.
+TEST(RegistryManifestParsing, OversizedD3DKMTDriverPathDoesNotOverflow) {
+    FrameworkEnvironment env{};
+
+    // Build a driver manifest path whose length exceeds the loader's initial 4096-byte registry buffer.
+    std::filesystem::path oversized_path = std::filesystem::path(std::string(5000, 'a')) / "test_icd.json";
+    ASSERT_GT(oversized_path.native().size(), 4096u);
+
+    env.platform_shim->add_d3dkmt_adapter(D3DKMT_Adapter{0, _LUID{10, 1000}}.add_driver_manifest_path(oversized_path));
+
+    // The path does not point at a real manifest, so no driver is found - but the loader must reach that conclusion
+    // without overflowing its internal buffer while enumerating the path.
+    InstWrapper inst{env.vulkan_functions};
+    inst.CheckCreate(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 #endif
 
@@ -4449,6 +4476,37 @@ TEST(ManifestDiscovery, AppleBundles) {
     ASSERT_EQ(test_physical_device_1.properties.deviceID, props.deviceID);
     inst->vkGetPhysicalDeviceProperties(physical_devices[1], &props);
     ASSERT_EQ(test_physical_device_0.properties.deviceID, props.deviceID);
+}
+
+// Add two drivers, one to the bundle and one to the system locations
+TEST(ManifestDiscovery, AppleBundlesWithSearchOnlyInBundleEnvVar) {
+    FrameworkEnvironment env{};
+    env.env_var_search_only_in_bundle.set_new_value("1");
+    env.setup_macos_bundle();
+    env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA,
+                ManifestOptions{}.set_discovery_type(ManifestDiscoveryType::macos_bundle));
+    auto& test_physical_device_0 = env.get_test_icd(0).add_and_get_physical_device({});
+    test_physical_device_0.properties.deviceID = 1337;
+    env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
+    auto& test_physical_device_1 = env.get_test_icd(1).add_and_get_physical_device({});
+    test_physical_device_1.properties.deviceID = 9999;
+
+    env.add_explicit_layer(
+        {}, ManifestLayer{}.add_layer(
+                ManifestLayer::LayerDescription{}.set_name("VK_LAYER_test").set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)));
+
+    InstWrapper inst{env.vulkan_functions};
+    ASSERT_NO_FATAL_FAILURE(inst.CheckCreate());
+    auto physical_devices = inst.GetPhysDevs();
+    ASSERT_EQ(1, physical_devices.size());
+
+    // should only get bundled driver and layer
+    VkPhysicalDeviceProperties props{};
+    inst->vkGetPhysicalDeviceProperties(physical_devices[0], &props);
+    ASSERT_EQ(test_physical_device_0.properties.deviceID, props.deviceID);
+
+    // No layers should be found
+    env.GetLayerProperties(0);
 }
 
 // Add two drivers, one to the bundle and one using the driver env-var
@@ -4673,8 +4731,60 @@ TEST(InvalidManifest, Layer) {
     InstWrapper inst{env.vulkan_functions};
     inst.CheckCreate();
 }
+
+// A layer manifest that is well-formed JSON but omits a required field ("api_version" or "implementation_version")
+// must be skipped. loader_read_layer_json logs "skipping this layer" for these, but the two checks returned without
+// setting a failure result, so the layer was still appended - never having parsed its library_path, leaving lib_name
+// NULL. Such a layer later reaches loader_platform_open_library(NULL) and a NULL "%s" log in loader_open_layer_file.
+TEST(InvalidManifest, LayerMissingRequiredField) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2).add_physical_device({});
+
+    // A valid explicit layer, so the explicit-layer search path is known to be active.
+    const char* valid_layer_name = "VK_LAYER_valid_regular";
+    env.add_explicit_layer(
+        {}, ManifestLayer{}.add_layer(
+                ManifestLayer::LayerDescription{}.set_name(valid_layer_name).set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)));
+
+    std::vector<std::string> malformed_manifests;
+    malformed_manifests.push_back(  // omits "api_version"
+        "{\n"
+        "    \"file_format_version\": \"1.2.0\",\n"
+        "    \"layer\": {\n"
+        "        \"name\": \"VK_LAYER_missing_api_version\",\n"
+        "        \"type\": \"INSTANCE\",\n"
+        "        \"library_path\": \"./libVkLayer_missing.so\",\n"
+        "        \"implementation_version\": \"1\",\n"
+        "        \"description\": \"missing api_version\"\n"
+        "    }\n"
+        "}\n");
+    malformed_manifests.push_back(  // omits "implementation_version"
+        "{\n"
+        "    \"file_format_version\": \"1.2.0\",\n"
+        "    \"layer\": {\n"
+        "        \"name\": \"VK_LAYER_missing_impl_version\",\n"
+        "        \"type\": \"INSTANCE\",\n"
+        "        \"library_path\": \"./libVkLayer_missing.so\",\n"
+        "        \"api_version\": \"1.2.0\",\n"
+        "        \"description\": \"missing implementation_version\"\n"
+        "    }\n"
+        "}\n");
+
+    for (size_t i = 0; i < malformed_manifests.size(); i++) {
+        auto file_name = std::string("missing_field_layer_") + std::to_string(i) + ".json";
+        std::filesystem::path new_path =
+            env.get_folder(ManifestLocation::explicit_layer).write_manifest(file_name, malformed_manifests[i]);
 #if defined(WIN32)
-VkPhysicalDevice add_dxgi_adapter(FrameworkEnvironment& env, std::filesystem::path const& name, LUID luid, uint32_t vendor_id) {
+        env.platform_shim->add_manifest_to_registry(ManifestCategory::explicit_layer, new_path);
+#endif
+    }
+
+    // Only the valid layer is discovered; the two malformed manifests are skipped.
+    auto layer_props = env.GetLayerProperties(1);
+    EXPECT_TRUE(string_eq(layer_props.at(0).layerName, valid_layer_name));
+}
+#if defined(WIN32)
+void add_dxgi_adapter(FrameworkEnvironment& env, std::filesystem::path const& name, LUID luid, uint32_t vendor_id) {
     auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_6, ManifestOptions{}.set_discovery_type(ManifestDiscoveryType::null_dir));
     driver.set_min_icd_interface_version(5);
     driver.set_max_icd_interface_version(6);
@@ -4707,7 +4817,6 @@ VkPhysicalDevice add_dxgi_adapter(FrameworkEnvironment& env, std::filesystem::pa
     } else {
         pAdapter->add_driver_manifest_path(env.get_icd_manifest_path(env.icds.size() - 1));
     }
-    return pd0.vk_physical_device.handle;
 }
 
 TEST(EnumerateAdapterPhysicalDevices, SameAdapterLUID_reordered) {
@@ -4720,7 +4829,7 @@ TEST(EnumerateAdapterPhysicalDevices, SameAdapterLUID_reordered) {
     // b) then in the reverse order to the drivers insertion into the test framework
     add_dxgi_adapter(env, "physical_device_2", LUID{10, 100}, 2);
     add_dxgi_adapter(env, "physical_device_1", LUID{20, 200}, 1);
-    auto phys_dev_handle = add_dxgi_adapter(env, "physical_device_0", LUID{10, 100}, 2);
+    add_dxgi_adapter(env, "physical_device_0", LUID{10, 100}, 2);
 
     {
         uint32_t returned_physical_count = 0;
@@ -4764,8 +4873,7 @@ TEST(EnumerateAdapterPhysicalDevices, SameAdapterLUID_reordered) {
     }
     // Set the first physical device that is enumerated to be a 'layered' driver so it should be swapped with the first physical
     // device
-    env.get_test_icd(2).physical_devices.at(phys_dev_handle).layered_driver_underlying_api =
-        VK_LAYERED_DRIVER_UNDERLYING_API_D3D12_MSFT;
+    env.get_test_icd(2).physical_devices.at(0).layered_driver_underlying_api = VK_LAYERED_DRIVER_UNDERLYING_API_D3D12_MSFT;
     {
         uint32_t returned_physical_count = 0;
         InstWrapper inst{env.vulkan_functions};
@@ -4817,13 +4925,12 @@ TEST(EnumerateAdapterPhysicalDevices, SameAdapterLUID_same_order) {
     // Physical devices are enumerated:
     // a) first in the order of LUIDs showing up in DXGIAdapter list
     // b) then in the reverse order to the drivers insertion into the test framework
-    auto d3d12_physical_device = add_dxgi_adapter(env, "physical_device_2", LUID{10, 100}, 2);
+    add_dxgi_adapter(env, "physical_device_2", LUID{10, 100}, 2);
     add_dxgi_adapter(env, "physical_device_1", LUID{20, 200}, 1);
     add_dxgi_adapter(env, "physical_device_0", LUID{10, 100}, 2);
 
     // Set the physical device that is enumerated last to be a 'layered'  physical device - no swapping should occur
-    env.get_test_icd(0).physical_devices.at(d3d12_physical_device).layered_driver_underlying_api =
-        VK_LAYERED_DRIVER_UNDERLYING_API_D3D12_MSFT;
+    env.get_test_icd(0).physical_devices.at(0).layered_driver_underlying_api = VK_LAYERED_DRIVER_UNDERLYING_API_D3D12_MSFT;
 
     uint32_t returned_physical_count = 0;
     InstWrapper inst{env.vulkan_functions};
@@ -4983,8 +5090,7 @@ void add_driver_for_unloading_testing(FrameworkEnvironment& env) {
         .setup_WSI()
         .add_physical_device(PhysicalDevice{}
                                  .add_extension("VK_KHR_swapchain")
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true})
-                                 .finish());
+                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true}));
 }
 
 void add_empty_driver_for_unloading_testing(FrameworkEnvironment& env) {

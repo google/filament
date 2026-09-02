@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_RENDERBUNDLEWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_RENDERBUNDLEWGPU_H_
 
-#include "dawn/native/RenderBundle.h"
-#include "dawn/native/RenderBundleEncoder.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/RenderBundle.h"
+#include "src/dawn/native/RenderBundleEncoder.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

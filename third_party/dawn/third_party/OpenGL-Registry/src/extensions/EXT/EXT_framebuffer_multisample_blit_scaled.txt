@@ -1,0 +1,296 @@
+Name
+
+    EXT_framebuffer_multisample_blit_scaled
+
+Name Strings
+
+    GL_EXT_framebuffer_multisample_blit_scaled
+
+Contact
+
+    Gareth Hughes, NVIDIA Corporation (gareth 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Alex Eddy, Apple
+    Gareth Hughes, NVIDIA
+    Eric Werness, NVIDIA
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date:         07/05/11
+    Revision:                   8
+
+Number
+
+    409
+
+Dependencies
+
+    ARB_framebuffer_object is required.
+
+    Written based on the wording of the OpenGL 2.1 specification.
+
+
+Overview
+
+    This extension relaxes some of the restrictions associated with
+    multisample resolve operations, specifically to allow a combined
+    resolve and scale operation through a single call to BlitFramebuffer.
+    It also adds two new filter types to control the quality of the
+    combined scaled resolve operation.
+
+    In traditional multisampled framebuffer rendering, color samples
+    must be explicitly resolved via BlitFramebuffer before any other
+    operation on the resulting pixel values can be performed.  This
+    multisample resolve operation must be done using a BlitFramebuffer
+    call where the dimensions of the source and destination rectangles
+    are identical.  If the resulting pixel values need to be copied to a
+    texture with different dimensions, these resolved values can then be
+    scaled with a second call to BlitFramebuffer.
+
+    By requiring two separate calls to BlitFramebuffer, the quality
+    of final image can be maintained to a certain degree.  The samples
+    are first resolved, and then these resolved values can be filtered
+    to produce the final image.  This image quality comes at the price
+    of increased memory usage and lower performance.  However, the
+    scaling blit can still introduce artifacts, particularly if it is
+    done with a simple bilinear filter.
+
+    The new filter types introduced by this extension allow the scaled
+    resolve to be done with a single call to BlitFramebuffer.  Not all
+    samples from the read framebuffer are required to be be used when
+    producing the final pixel values, and there may be a loss in quality
+    when compared to an image produced by a separate resolve and scale.
+    However, the single-pass scaled resolve blit should be faster than
+    the traditional two-pass resolve then scale blits.
+
+
+New Procedures and Functions
+
+    None.
+
+
+New Types
+
+    None.
+
+
+New Tokens
+
+    Accepted by the <filter> parameter of BlitFramebuffer:
+
+      SCALED_RESOLVE_FASTEST_EXT                        0x90BA
+      SCALED_RESOLVE_NICEST_EXT                         0x90BB
+
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    In section 4.3.3 "Copying Pixels", modify the fifth paragraph
+    describing BlitFramebuffer as follows:
+
+    "If the source and destination rectangle dimensions do not match,
+    the source image is stretched to fit the rectangle.  <filter> must
+    be LINEAR, NEAREST, SCALED_RESOLVE_FASTEST_EXT or
+    SCALED_RESOLVE_NICEST_EXT and specifies the method of interpolation
+    to be applied if the image is stretched.  LINEAR,
+    SCALED_RESOLVE_FASTEST_EXT or SCALED_RESOLVE_NICEST_EXT filtering is
+    allowed only for the color buffer; if ..."
+
+    Modify the following text in section 4.3.3 "Copying Pixels" that was
+    added by ARB_framebuffer_object:
+
+    "If SAMPLE_BUFFERS for the read framebuffer is greater than zero,
+    SAMPLE_BUFFERS for the draw framebuffer is zero and the dimensions
+    of the source and destination rectangles provided to
+    BlitFramebuffer are identical, the samples corresponding to each
+    pixel location in the source are converted to a single sample before
+    being written to the destination."
+
+    Modify the last paragraph in section 4.3.3 "Copying Pixels" that was
+    added by ARB_framebuffer_object:
+
+    "If SAMPLE_BUFFERS for either the read framebuffer or draw
+    framebuffer is greater than zero, no copy is performed and an
+    INVALID_OPERATION error is generated if the dimensions of the source
+    and destination rectangles provided to BlitFramebuffer are not
+    identical and the filter is NEAREST or LINEAR, or if the formats of
+    the read and draw framebuffers are not identical."
+
+    Append to section 4.3.3, after the text that was added by
+    ARB_framebuffer_object:
+
+    "If SAMPLE_BUFFERS for the read framebuffer is greater than zero,
+    SAMPLE_BUFFERS for the draw framebuffer is zero, the dimensions of
+    the source and destination rectangles provided to BlitFramebuffer
+    are not identical, and the filter is SCALED_RESOLVE_FASTEST_EXT or
+    SCALED_RESOLVE_NICEST_EXT, then the source samples are resolved and
+    scaled in an implementation specific manner.  When the filter is
+    SCALED_RESOLVE_FASTEST_EXT, no fewer than four samples from the read
+    framebuffer will be used to construct each destination pixel.  When
+    the filter is SCALED_RESOLVE_NICEST_EXT, the number of samples used
+    to construct each destination pixel will be at least as many as is
+    used when the filter is SCALED_RESOLVE_FASTEST_EXT.
+
+    Futhermore, if the filter provided to BlitFramebuffer is
+    SCALED_RESOLVE_FASTEST_EXT or SCALED_RESOLVE_NICEST_EXT, and if
+    SAMPLE_BUFFERS for the read framebuffer is zero or SAMPLE_BUFFERS
+    for the draw framebuffer is greater than zero then no copy is
+    performed and an INVALID_OPERATION error is generated."
+
+    If OpenGL 3.1 is supported, modify the following text in section
+    4.3.2 "Copying Pixels":
+
+    "Calling BlitFramebuffer will result in an INVALID_OPERATION error if
+    filter is not NEAREST and read buffer contains integer data."
+
+
+Dependencies on ARB_framebuffer_object
+
+    ARB_framebuffer_object is required.
+
+
+Errors
+
+    If either the draw or read framebuffer is framebuffer complete and
+    has a value of SAMPLE_BUFFERS that is greater than zero, then the
+    error INVALID_OPERATION is generated if BlitFramebuffer is called
+    and the specified source and destination dimensions are not
+    identical and the filter is NEAREST or LINEAR.
+
+    If the draw framebuffer is framebuffer complete and has a value of
+    SAMPLE_BUFFERS that is greater than zero, or if the read framebuffer
+    is framebuffer complete and has a value of SAMPLE_BUFFERS that is
+    zero, then the error INVALID_OPERATION is generated if
+    BlitFramebuffer is called and the filter is
+    SCALED_RESOLVE_FASTEST_EXT or SCALED_RESOLVE_NICEST_EXT.
+
+
+NVIDIA Implementation Details
+
+    When SAMPLE_BUFFERS is greater than zero, the samples are laid out
+    in a rectangular grid roughly corresponding to the location of the
+    samples where the aspect ratio per pixel is no worse than two.
+
+    SCALED_RESOLVE_FASTEST_EXT is implemented with a simple bilinear
+    filter of the source samples, regardless of the number of samples in
+    the read framebuffer.
+
+    SCALED_RESOLVE_NICEST_EXT is implemented with an anisotropic filter
+    of the source samples, regardless of the number of samples in the
+    read framebuffer.  The final image quality will be somewhat
+    dependent on the ratio of the dimensions of the draw and read
+    framebuffers, but in all cases will be no worse than a simple
+    bilinear filter.
+
+
+Issues
+
+    (1) What should this extension be called?
+
+        RESOLVED: EXT_framebuffer_multisample_blit_scaled.
+
+        This extension is mostly based on the functionality introduced
+        by EXT_framebuffer_multisample and EXT_framebuffer_blit, and so
+        should include all of these terms.
+
+    (2) Should there be an explicit way to enable the scaled resolve
+        blit, or should this feature be silently enabled by the mere
+        presence of this extension?
+
+        RESOLVED: Explicit enums.
+
+        While it might be simpler to just remove the restriction on the
+        dimensions of the rectangles passed to BlitFramebuffer when
+        SAMPLE_BUFFERS is greater than zero for either the read or draw
+        framebuffer, a new filter type was added to address the
+        potential loss in quality when doing a single-pass scaled
+        resolve blit.
+
+    (3) Should the restriction be removed in all cases, or only when
+        SAMPLE_BUFFERS is greater than zero for the read framebuffer?
+
+        RESOLVED: Only for multisample resolves.
+
+        Given the fact that this extension adds new filter types
+        explicitly designed for a scaled multisample resolve blit, it
+        seems reasonable to limit the use of this new filter type to
+        multisample resolves and not pixel replication when
+        SAMPLE_BUFFERS is greater than zero for the draw framebuffer.
+        As such, the new filter types can only be used with a
+        multisample read framebuffer and a single-sample draw
+        framebuffer.
+
+    (4) Should the restriction be removed when SAMPLE_BUFFERS is greater
+        than zero for both the read and draw framebuffer?
+
+        RESOLVED: NO.
+
+        The purpose of this extension is to improve performance of the
+        multisample resolve operation when the resulting pixel data
+        needs to be copied to a texture with different dimensions.  By
+        allowing the resolve and scale to be completed with a single
+        BlitFramebuffer call, there is no need for an intermediate
+        framebuffer object.  This both reduces the memory footprint and
+        increases performance by reducing the amount of data that needs
+        to be copied.
+
+    (5) Does the process in which sample values are resolved and scaled
+        need to be defined?
+
+        RESOLVED: NO.
+
+        The minimum levels of quality are defined by this extension, but
+        the exact details are left up to the implementation.  In fact,
+        it is likely that a single, potentially random sample for each
+        pixel will be accessed as part of a simple bilinear filter
+        operation.  This will depend on the memory layout for the given
+        number of SAMPLE_BUFFERS, the dimensions of the source and
+        destination rectangles, and so on.
+
+    (6) How good is SCALED_RESOLVE_FASTEST_EXT?
+
+        RESOLVED: No worse than a 4-tap linear filter.
+
+        The implementation of this filter type should be no worse than a
+        simple 4-tap linear filter.  The exact image quality may depend
+        on the memory layout of the multisampled read framebuffer.
+
+    (7) How good is SCALED_RESOLVE_NICEST_EXT?
+
+        RESOLVED: No worse than SCALED_RESOLVE_FASTEST_EXT.
+
+        The implementation of this filter type should be at least as
+        good as than a simple 4-tap linear filter, but does not need to
+        be bit-for-bit identical with the original two-pass resolve and
+        scale.  The exact image quality may depend on the memory layout
+        of the multisampled read framebuffer.
+
+    (8) Can the new filter types be used with integer data?
+
+        RESOLVED: NO.
+
+        It does not make sense to have the new filter types be used with
+        integer data when the OpenGL 3.1 spec does not allow a filter of
+        LINEAR in those cases.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    8     07/05/11  ghughes   Update status to complete.
+    7     03/10/11  ghughes   Update contributors.
+    6     03/01/11  ghughes   Updated NVIDIA implementation details.
+    5     03/01/11  ghughes   More clarifications.
+    4     02/28/11  ghughes   Clarified language about filter types.
+    3     08/30/10  ghughes   Updated filter enums, added more issues.
+    2     08/30/10  ghughes   Added new filter types.
+    1     08/27/10  ghughes   Initial revision.

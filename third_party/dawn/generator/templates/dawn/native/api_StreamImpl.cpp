@@ -29,10 +29,11 @@
 {% set namespace_name = Name(metadata.native_namespace) %}
 {% set native_namespace = namespace_name.namespace_case() %}
 {% set native_dir = impl_dir + namespace_name.Dirs() %}
+{% set include_dir = namespace_name.Dirs() %}
 {% set prefix = metadata.proc_table_prefix.lower() %}
+#include "{{include_dir}}/{{metadata.namespace}}_structs_autogen.h"
 #include "{{native_dir}}/CacheKey.h"
 #include "{{native_dir}}/{{prefix}}_platform.h"
-#include "{{native_dir}}/{{metadata.namespace}}_structs_autogen.h"
 
 #include <cstring>
 
@@ -116,7 +117,13 @@ void stream::Stream<{{StringViewType}}>::Write(stream::Sink* sink, const {{Strin
 {% endcall %}
 
 {% call render_streaming_impl("dawn cache device descriptor", true, false,
-                              omits=["load data function", "store data function", "function userdata"]) %}
+                              omits=[
+                                "load data function",
+                                "store data function",
+                                "function userdata",
+                                "dawn load cache data callback info",
+                                "dawn store cache data callback info"
+                              ]) %}
 {% endcall %}
 
 {% call render_streaming_impl("extent 3D", true, true) %}

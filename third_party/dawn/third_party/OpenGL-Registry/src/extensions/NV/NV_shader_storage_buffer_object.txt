@@ -1,0 +1,457 @@
+Name
+
+    NV_shader_storage_buffer_object
+
+Name Strings
+
+    GL_NV_shader_storage_buffer_object
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:         February 11, 2014
+    NVIDIA Revision:            2
+
+Number
+
+    422
+
+Dependencies
+
+    OpenGL 4.0 (Core or Compatibiity Profile) is required.
+
+    This extension is written against the OpenGL 4.2 Specification
+    (Compatibility Profile).
+
+    NV_gpu_program4 and NV_gpu_program5 are required.
+
+    ARB_shader_storage_buffer_object is required.
+
+    This specification interacts with NV_shader_atomic_float.
+
+Overview
+
+    This extension provides assembly language support for shader storage
+    buffers (from the ARB_shader_storage_buffer_object extension) for all
+    program types supported by NV_gpu_program5, including compute programs
+    added by the NV_compute_program5 extension.
+
+    Assembly programs using this extension can read and write to the memory of
+    buffer objects bound to the binding points provided by
+    ARB_shader_storage_buffer_object.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    (All modifications are relative to Section 2.X, GPU Programs, from the
+     NV_gpu_program4 specification, as modified by NV_gpu_program5.)
+
+    Modify Section 2.X.2, Program Grammar
+
+    (add the following grammar rules to the NV_gpu_program5 base grammar for
+    shader storage buffers)
+
+    <MemInstruction>        ::= <ATOMBop_instruction>
+                              | <LDBop_instruction>
+                              | <STBop_instruction>
+
+    <ATOMBop_instruction>   ::= "ATOMB" <opModifiers> <instResult> "," 
+                                <instOperandV> "," <storageUseV>
+
+    <LDBop_instruction>     ::= "LDB" <opModifiers> <instResult> "," 
+                                <storageUseV>
+
+    <STBop_instruction>     ::= "STB" <opModifiers> <instOperandV> "," 
+                                <storageUseV>
+
+    <namingStatement>       ::= <STORAGE_statement>
+
+    <STORAGE_statement>     ::= "STORAGE" <establishName> <storageSingleInit>
+                              | "STORAGE" <establishName> <optArraySize> 
+                                <storageMultipleInit>
+
+    <storageSingleInit>     ::= "=" <storageUseDS>
+
+    <storageMultipleInit>   ::= "=" "{" <storageItemList> "}"
+
+    <storageItemList>       ::= <storageUseDM>
+                              | <storageUseDM> "," <storageItemList>
+
+    <programSingleItem>     ::= <progStorLenParams>
+
+    <programMultipleItem>   ::= <progStorLenParams>
+
+    <progStorLenParams>     ::= "program" "." "storagelen" <arrayMemAbs>
+                              | "program" "." "storagelen" <arrayRange>
+
+    <progStorLenParam>      ::= "program" "." "storagelen" <arrayMemAbs>
+
+    <storageUseV>           ::= <storageVarName> <optArrayMem>
+                              | <storageVarName> <arrayMem> <optArrayMem>
+
+    <storageUseDS>          ::= <storageBinding> <arrayMemAbs>
+
+    <storageUseDM>          ::= <storageBinding> <arrayMemAbs>
+                              | <storageBinding> <arrayRange>
+                              | <storageBinding>
+
+    <storageBinding>        ::= "program" "." "storage" <arrayMemAbs>
+                              | "program" "." "storage" <arrayRange>
+
+
+    Modify Section 2.X.3.3, Program Parameters
+
+    Shader Storage Buffer Property Bindings
+
+      Binding                    Components  Underlying State
+      -------------------------  ----------  -------------------------------
+      program.storagelen[a]      (x,-,-,-)   program storage buffer a, 
+                                               variable-size array length
+      program.storagelen[a..b]   (x,-,-,-)   program storage buffer a..b,
+                                               variable-size array length
+
+    If a program parameter binding matches "program.storagelen[a]", the "x"
+    component of the program parameter variable is filled an unsized array
+    length associated with the shader storage buffer binding point <a>.  If
+    the program is generated internally by the implementation when compiling a
+    GLSL shader, this length is the number of elements that can be stored in
+    an unsized array at the end of the associated GLSL shader storage block.
+    If there is no shader block associated with shader storage buffer binding
+    point <a>, or if the associated block does not end with an unsized array,
+    the "x" component will hold the integer value zero.  If the program is an
+    assembly program specified via ProgramStringARB or LoadProgramNV, the "x"
+    component will hold the integer value zero.  The "y", "z", and "w"
+    components of the variable are undefined.
+
+    Additionally, for program parameter array bindings,
+    "program.storagelen[a..b]" is equivalent to specifying unsized array
+    lengths for storage buffer binding points <a> through <b>, in order.  A
+    program using any of these bindings will fail to load if <a> is greater
+    than <b>.
+
+
+    Add New Section 2.X.3.Y, Shader Storage Buffers, after Section 2.X.3.6,
+    Program Parameter Buffers
+
+    Shader storage buffers are arrays of basic machine units from which data
+    can be read or written using the LDB and STB instructions.  Shader storage
+    buffers also support atomic memory operations using the ATOMB instruction.
+    The GL provides an implementation-dependent number of shader storage
+    buffer binding points to which buffer objects can be attached.  Shader
+    storage buffer contents can be changed either by updating the contents of
+    bound buffer object, by changing the buffer object attached to a binding
+    point, or by using the ATOMB or STB instructions in a shader to modify
+    contents of buffer object memory.
+
+    Shader storage buffer bindings are established by calling BindBufferBase,
+    BindBufferOffsetEXT, or BindBufferRange with a target of
+    SHADER_STORAGE_BUFFER, as documented in the ARB_shader_storage_buffer
+    extension.  The number of shader storage buffer binding points is given by
+    the value of the constant MAX_SHADER_STORAGE_BUFFER_BINDINGS.  There is a
+    limit on the maximum number of basic machine units in a buffer object that
+    can be accessed using any single parameter buffer binding point, given by
+    the implementation-dependent constant MAX_SHADER_STORAGE_BLOCK_SIZE.
+    Buffer objects larger than this size may be used, but the results of
+    accessing portions of the buffer object beyond the limit are undefined.
+
+    Shader storage buffer variables may only be used as operands in the ATOMB,
+    LDB, and STB instructions; they may not be used by used as results or
+    operands in general instructions.  Shader storage buffer variables must be
+    declared explicitly via the <STORAGE_statement> grammar rule.  Shader
+    storage buffer bindings can not be used directly in executable
+    instructions.
+
+    Shader storage buffer variables may be declared as arrays, but all
+    bindings assigned to the array must use the same binding point(s) and must
+    increase consecutively.
+
+    In explicit shader storage variable declarations, the bindings in Table
+    X.2 starting with "program.storage[a..b]" may be used, indicating that the
+    variable spans multiple buffer binding points.  Such variables must be
+    accessed as an arrays, with the first index specifying an offset into the
+    range of buffer object binding points.  A buffer index of zero identifies
+    binding point <a>; an index of <b>-<a>-1 identifies binding point <b>.  If
+    such a variable is declared as an array, a second index must be provided
+    to identify the individual array element.  A program will fail to compile
+    if such bindings are used when <a> or <b> is negative or greater than or
+    equal to the number of buffer binding points supported for the program
+    type, or if <a> is greater than <b>.
+
+      Binding                        Components  Underlying State
+      -----------------------------  ----------  -----------------------------
+      program.storage[a][c]          (x,x,x,x)   shader storage buffer a,
+                                                   element c
+      program.storage[a][c..d]       (x,x,x,x)   shader storage buffer a,
+                                                   elements c through d
+      program.storage[a]             (x,x,x,x)   shader storage buffer a,
+                                                   all elements
+      program.storage[a..b][c]       (x,x,x,x)   shader storage buffers a
+                                                   through b, element c
+      program.storage[a..b][c..d]    (x,x,x,x)   shader storage buffers a
+                                                   through b, elements c
+                                                   through d
+      program.storage[a..b]          (x,x,x,x)   shader storage buffers a
+                                                   through b, all elements
+
+      Table X.2: Shader Storage Bindings.  <a> and <b> indicate buffer
+      numbers, <c> and <d> indicate individual elements.
+
+    If a shader storage buffer binding matches "program.storage[a][c]", the
+    shader storage buffer variable is associated with element <c> of the
+    buffer object bound to binding point <a>.  If no buffer object is bound to
+    binding point <a>, or the bound buffer object is not large enough to hold
+    an element <c>, reads from the binding return zero and writes to the
+    binding have no effect.  The binding point <a> must be a nonnegative
+    integer constant.
+
+    For shader storage array declarations, "program.storage[a][c..d]" is
+    equivalent to specifying elements <c> through <d> of the buffer object
+    bound to binding point <a> in order.
+
+    For shader storage array declarations, "program.storage[a]" is equivalent
+    to specifying the entire buffer -- elements 0 through <n>-1, where <n> is
+    either the size of the array (if declared) or the implementation-dependent
+    maximum shader storage buffer object size limit (if no size is declared).
+
+    When bindings beginning with "program.storage[a..b]" are used in a
+    variable declaration, they behave identically to corresponding beginning
+    with "program.storage[a]", except that the variable is filled with a
+    separate set of values for each buffer binding point from <a> to <b>
+    inclusive.
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (add to the opcode table)
+
+      Instr-       Modifiers 
+      uction F I C S H D  Out Inputs    Description
+      ------ - - - - - -  --- --------  --------------------------------
+      ATOMB  - - X - - -  s   v,su      atomic transaction to storage buffer
+      LDB    - - X X - F  v   su        load from storage buffer
+      STB    - - - - - -  -   v,su      store to storage buffer
+
+
+    Modify Section 2.X.4.5, Program Memory Access, from NV_gpu_program5
+
+    (modify first paragraph) 
+
+    Programs may load from or store to buffer object memory via the ATOM
+    (atomic global memory operation), ATOMB (atomic storage buffer memory
+    operation), LDB (load from storage buffer), LDC (load constant), LOAD
+    (global load), STB (store to storage buffer), and STORE (global store)
+    instructions.
+
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+    as extended by NV_gpu_program5:)
+
+    + Shader Storage Buffer Operations (NV_shader_storage_buffer)
+
+    If a program (of any type, including compute programs) specifies the
+    "NV_shader_storage_buffer" option, it may use the "ATOMB", "LDB", and
+    "STB" opcodes to perform atomic memory options, loads, and stores to
+    shader storage buffers, and "STORAGE" to declare shader storage buffer
+    variables.  If the option is not specified, a program will fail to load if
+    it contains "ATOMB", "LDB", or "STB" opcodes, or "STORAGE" declarations.
+
+
+    (add the following subsection to section 2.X.8, Program Instruction Set.)
+
+    Section 2.X.8.Z, ATOMB:  Atomic Memory Operation (Storage Buffer Memory)
+
+    The ATOMB instruction performs an atomic memory operation by reading from
+    shader storage buffer memory specified by the second operand, computing a
+    new value based on the value read from memory and the first (vector)
+    operand, and then writing the result back to the same memory address.  The
+    memory transaction is atomic, guaranteeing that no other write to the
+    memory accessed will occur between the time it is read and written by the
+    ATOMB instruction.  The result of the ATOMB instruction is the scalar
+    value read from memory.  The second operand used for the ATOMB instruction
+    must correspond to a shader storage variable declared using the "STORAGE"
+    statement; a program will fail to load if any other type of operand is
+    used for the second operand of an ATOMB instruction.
+
+    The ATOMB instruction has two required instruction modifiers.  The atomic
+    modifier specifies the type of operation to be performed.  The storage
+    modifier specifies the size and data type of the operand read from memory
+    and the base data type of the operation used to compute the value to be
+    written to memory.
+
+      atomic     storage
+      modifier   modifiers            operation
+      --------   ------------------   --------------------------------------
+       ADD       U32, S32, U64, F32   compute a sum
+       MIN       U32, S32             compute minimum
+       MAX       U32, S32             compute maximum
+       IWRAP     U32                  increment memory, wrapping at operand
+       DWRAP     U32                  decrement memory, wrapping at operand
+       AND       U32, S32             compute bit-wise AND
+       OR        U32, S32             compute bit-wise OR
+       XOR       U32, S32             compute bit-wise XOR
+       EXCH      U32, S32, U64, F32   exchange memory with operand
+       CSWAP     U32, S32, U64        compare-and-swap
+
+     Table X.Y, Supported atomic and storage modifiers for the ATOM
+     instruction.
+
+    Not all storage modifiers are supported by ATOMB, and the set of modifiers
+    allowed for any given instruction depends on the atomic modifier
+    specified.  Table X.Y enumerates the set of atomic modifiers supported by
+    the ATOMB instruction, and the storage modifiers allowed for each.
+
+      tmp0 = VectorLoad(op0);
+      result = BufferMemoryLoad(op1, storageModifier);
+      switch (atomicModifier) {
+      case ADD:
+        writeval = tmp0.x + result;
+        break;
+      case MIN:
+        writeval = min(tmp0.x, result);
+        break;
+      case MAX:
+        writeval = max(tmp0.x, result);
+        break;
+      case IWRAP:
+        writeval = (result >= tmp0.x) ? 0 : result+1; 
+        break;
+      case DWRAP:
+        writeval = (result == 0 || result > tmp0.x) ? tmp0.x : result-1;
+        break;
+      case AND:
+        writeval = tmp0.x & result;
+        break;
+      case OR:
+        writeval = tmp0.x | result;
+        break;
+      case XOR:
+        writeval = tmp0.x ^ result;
+        break;
+      case EXCH:
+        break;
+      case CSWAP:
+        if (result == tmp0.x) {
+          writeval = tmp0.y;
+        } else {
+          return result;  // no memory store
+        }
+        break;
+      }
+      BufferMemoryStore(op1, writeval, storageModifier);
+
+    ATOMB performs a scalar atomic operation.  The <y>, <z>, and <w>
+    components of the result vector are undefined.
+      
+    ATOMB supports no base data type modifiers, but requires exactly one
+    storage modifier.  The base data types of the result vector, and the first
+    (vector) operand are derived from the storage modifier.
+
+
+    Section 2.X.8.Z, LDB:  Load from Storage Buffer Memory
+
+    The LDB instruction generates a result vector by fetching data from shader
+    storage buffer memory identified by the first operand, as described in
+    Section 2.X.4.5.  The single operand for the LDB instruction must
+    correspond to a shader storage buffer variable declared using the
+    "STORAGE" statement; a program will fail to load if any other type of
+    operand is used in an LDB instruction.
+
+      result = BufferMemoryLoad(op0, storageModifier);
+
+    LDB supports no base data type modifiers, but requires exactly one storage
+    modifier.  The base data type of the result vector is derived from the
+    storage modifier.
+
+
+    Section 2.X.8.Z, STB:  Store to Storage Buffer Memory
+
+    The STB instruction writes the contents of the first vector operand to
+    shader storage buffer memory identified by the second operand, as
+    described in Section 2.X.4.5.  This instruction generates no result.  The
+    second operand for the STB instruction must correspond to a shader shader
+    storage buffer variable declared using the "STORAGE" statement; a program
+    will fail to load if any other type of operand is used in an STB
+    instruction.
+
+      tmp0 = VectorLoad(op0);
+      BufferMemoryStore(op1, tmp0, storageModifier);
+
+    STB supports no base data type modifiers, but requires exactly one storage
+    modifier.  The base data type of the vector components of the first
+    operand is derived from the storage modifier.
+
+
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Dependencies on NV_shader_atomic_float
+
+    If NV_shader_atomic_float is not supported, the ADD and EXCH atomic
+    operations in the ATOMB instructions do not support the "F32" storage
+    modifier.
+
+Errors
+
+    None.
+
+New State
+
+    None, but shares buffer bindings and other state with the
+    ARB_shader_storage_buffer_object extension.
+
+New Implementation Dependent State
+
+    None, but shares implementation-dependent state with the
+    ARB_shader_storage_buffer_object extension.
+
+Issues
+
+    None.
+
+Revision History
+
+    Revision 2, February 11, 2014 (pbrown)
+    - Fix typos in the descriptions of the "program.storage" bindings.
+
+    Revision 1, May 9, 2012 (pbrown)
+    - Internal spec development.

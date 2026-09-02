@@ -35,8 +35,8 @@
 #include <utility>
 #include <variant>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Compiler.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 
@@ -77,7 +77,7 @@ template <typename E>
 class [[nodiscard]] Result<void, E> {
   public:
     Result();
-    Result(std::unique_ptr<E> error);
+    explicit(false) Result(std::unique_ptr<E> error);
 
     Result(Result<void, E>&& other);
     Result<void, E>& operator=(Result<void, E>&& other);
@@ -132,13 +132,13 @@ class [[nodiscard]] Result<T*, E> {
     static_assert(alignof_if_defined_else_default<E, 4> >= 4,
                   "Result<T*, E*> reserves two bits for tagging pointers");
 
-    Result(T* success);
-    Result(std::unique_ptr<E> error);
+    explicit(false) Result(T* success);
+    explicit(false) Result(std::unique_ptr<E> error);
 
     // Support returning a Result<T*, E*> from a Result<TChild*, E*>
     template <typename TChild>
         requires std::same_as<TChild, T> || std::derived_from<TChild, T>
-    Result(Result<TChild*, E>&& other);
+    explicit(false) Result(Result<TChild*, E>&& other);
     template <typename TChild>
         requires std::same_as<TChild, T> || std::derived_from<TChild, T>
     Result<T*, E>& operator=(Result<TChild*, E>&& other);
@@ -166,8 +166,8 @@ class [[nodiscard]] Result<const T*, E> {
     static_assert(alignof_if_defined_else_default<E, 4> >= 4,
                   "Result<T*, E*> reserves two bits for tagging pointers");
 
-    Result(const T* success);
-    Result(std::unique_ptr<E> error);
+    explicit(false) Result(const T* success);
+    explicit(false) Result(std::unique_ptr<E> error);
 
     Result(Result<const T*, E>&& other);
     Result<const T*, E>& operator=(Result<const T*, E>&& other);
@@ -197,16 +197,16 @@ class [[nodiscard]] Result<Ref<T>, E> {
 
     template <typename U>
         requires std::convertible_to<U*, T*>
-    Result(Ref<U>&& success);
+    explicit(false) Result(Ref<U>&& success);
     template <typename U>
         requires std::convertible_to<U*, T*>
-    Result(const Ref<U>& success);
-    Result(std::unique_ptr<E> error);
-    constexpr Result(std::nullptr_t);
+    explicit(false) Result(const Ref<U>& success);
+    explicit(false) Result(std::unique_ptr<E> error);
+    explicit(false) constexpr Result(std::nullptr_t);
 
     template <typename U>
         requires std::convertible_to<U*, T*>
-    Result(Result<Ref<U>, E>&& other);
+    explicit(false) Result(Result<Ref<U>, E>&& other);
     template <typename U>
         requires std::convertible_to<U*, T*>
     Result<Ref<U>, E>& operator=(Result<Ref<U>, E>&& other);
@@ -232,8 +232,8 @@ class [[nodiscard]] Result<Ref<T>, E> {
 template <typename T, typename E>
 class [[nodiscard]] Result {
   public:
-    Result(T success);
-    Result(std::unique_ptr<E> error);
+    explicit(false) Result(T success);
+    explicit(false) Result(std::unique_ptr<E> error);
 
     Result(Result<T, E>&& other);
     Result<T, E>& operator=(Result<T, E>&& other);

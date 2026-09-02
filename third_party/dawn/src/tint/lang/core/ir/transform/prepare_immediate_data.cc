@@ -58,11 +58,6 @@ struct State {
     core::type::Manager& ty{ir.Types()};
 
     Result<ImmediateDataLayout> Run() {
-        if (config.internal_immediate_data.empty()) {
-            return ImmediateDataLayout{};
-        }
-
-        ImmediateDataLayout layout;
         Var* user_defined_immediates = nullptr;
         Vector<core::type::StructMember*, 4> members;
 
@@ -82,6 +77,10 @@ struct State {
             }
             user_defined_immediates = var;
 
+            if (ptr->StoreType()->Size() > kMaxImmediateBlockSize) {
+                return Failure("user-defined immediate data exceeds maximum immediate block size");
+            }
+
             // Assume that user-defined constants start at offset 0 until Dawn tells us otherwise.
             members.Push(ty.Get<core::type::StructMember>(ir.symbols.New("user_immediate_data"),
                                                           ptr->StoreType(),
@@ -92,12 +91,18 @@ struct State {
                                                           /* attributes */ IOAttributes{}));
         }
 
+        ImmediateDataLayout layout;
+        if (config.internal_immediate_data.empty()) {
+            return layout;
+        }
+
         // Create the structure and immediate data variable.
         for (auto& internal : config.internal_immediate_data) {
             auto offset = internal.first;
 
             if (!members.IsEmpty()) {
-                if (members.Back()->Offset() + members.Back()->Size() > offset) {
+                if (static_cast<uint64_t>(members.Back()->Offset()) + members.Back()->Size() >
+                    offset) {
                     return Failure("immediate offset for '" + internal.second.name.Name() +
                                    "' overlaps with previous member '" +
                                    members.Back()->Name().Name() + "'");
@@ -108,7 +113,8 @@ struct State {
                                "' must be aligned to " +
                                std::to_string(internal.second.type->Align()) + " bytes");
             }
-            if (offset + internal.second.type->Size() > kMaxImmediateBlockSize) {
+            if (static_cast<uint64_t>(offset) + internal.second.type->Size() >
+                kMaxImmediateBlockSize) {
                 return Failure("immediate '" + internal.second.name.Name() +
                                "' exceeds maximum immediate block size");
             }
@@ -124,11 +130,10 @@ struct State {
                                                           /* attributes */ IOAttributes{}));
         }
 
-        auto* immediate_constant_struct =
+        auto* immediate_struct =
             ty.Struct(ir.symbols.New("tint_immediate_data_struct"), std::move(members));
-        immediate_constant_struct->SetStructFlag(type::kBlock);
-        layout.var =
-            b.Var("tint_immediate_data", core::AddressSpace::kImmediate, immediate_constant_struct);
+        immediate_struct->SetStructFlag(type::kBlock);
+        layout.var = b.Var("tint_immediate_data", core::AddressSpace::kImmediate, immediate_struct);
         ir.root_block->Append(layout.var);
 
         // Update uses of the user defined immediate data variable.
@@ -149,14 +154,7 @@ struct State {
 
 Result<ImmediateDataLayout> PrepareImmediateData(Module& ir,
                                                  const PrepareImmediateDataConfig& config) {
-    core::ir::AssertValid(ir,
-                          core::ir::Capabilities{
-                              core::ir::Capability::kAllowDuplicateBindings,
-                              core::ir::Capability::kAllow8BitIntegers,
-                              core::ir::Capability::kAllow16BitIntegers,
-                              core::ir::Capability::kAllowNonCoreTypes,
-                          },
-                          "before core.PrepareImmediateData");
+    core::ir::AssertValid(ir, "before core.PrepareImmediateData");
 
     return State{config, ir}.Run();
 }

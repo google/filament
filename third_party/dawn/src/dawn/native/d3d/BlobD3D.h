@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_D3D_BLOBD3D_H_
 #define SRC_DAWN_NATIVE_D3D_BLOBD3D_H_
 
-#include "dawn/native/Blob.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native {
 

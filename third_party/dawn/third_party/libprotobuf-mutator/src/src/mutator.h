@@ -32,7 +32,8 @@ namespace protobuf_mutator {
 
 // Randomly makes incremental change in the given protobuf.
 // Usage example:
-//    protobuf_mutator::Mutator mutator(1);
+//    protobuf_mutator::Mutator mutator;
+//    mutator.Seed(1);
 //    MyMessage message;
 //    message.ParseFromString(encoded_message);
 //    mutator.Mutate(&message, 10000);
@@ -44,7 +45,6 @@ namespace protobuf_mutator {
 // library like libFuzzer.
 class Mutator {
  public:
-  // seed: value to initialize random number generator.
   Mutator() = default;
   virtual ~Mutator() = default;
 

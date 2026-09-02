@@ -25,66 +25,67 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/client/Texture.h"
+#include "src/dawn/wire/client/Texture.h"
 
 #include <utility>
 
-#include "dawn/wire/client/Client.h"
-#include "dawn/wire/client/Device.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/dawn/wire/client/Device.h"
 
 namespace dawn::wire::client {
 
 // static
-WGPUTexture Texture::Create(Device* device, const WGPUTextureDescriptor* descriptor) {
+Texture* Texture::Create(Device* device, const TextureDescriptor* descriptor) {
     Client* wireClient = device->GetClient();
 
     DeviceCreateTextureCmd cmd;
     cmd.self = ToAPI(device);
-    cmd.descriptor = descriptor;
+    cmd.descriptor = ToAPI(descriptor);
 
     Ref<Texture> texture = wireClient->Make<Texture>(device, descriptor);
     cmd.result = texture->GetWireHandle(wireClient);
 
     wireClient->SerializeCommand(cmd);
 
-    return ReturnToAPI(std::move(texture));
+    return ReturnToAPI2(std::move(texture));
 }
 
 // static
-WGPUTexture Texture::CreateError(Device* device, const WGPUTextureDescriptor* descriptor) {
+Texture* Texture::CreateError(Device* device, const TextureDescriptor* descriptor) {
     Client* client = device->GetClient();
     Ref<Texture> texture = client->Make<Texture>(device, descriptor);
 
     DeviceCreateErrorTextureCmd cmd;
     cmd.self = ToAPI(device);
-    cmd.descriptor = descriptor;
+    cmd.descriptor = ToAPI(descriptor);
     cmd.result = texture->GetWireHandle(client);
     client->SerializeCommand(cmd);
 
-    return ReturnToAPI(std::move(texture));
+    return ReturnToAPI2(std::move(texture));
 }
 
 Texture::Texture(const ObjectBaseParams& params,
                  const Device* device,
-                 const WGPUTextureDescriptor* descriptor)
+                 const TextureDescriptor* descriptor)
     : ObjectBase(params),
       mSize(descriptor->size),
       mMipLevelCount(descriptor->mipLevelCount),
       mSampleCount(descriptor->sampleCount),
-      mDimension(descriptor->dimension == WGPUTextureDimension_Undefined ? WGPUTextureDimension_2D
-                                                                         : descriptor->dimension),
+      mDimension(descriptor->dimension == wgpu::TextureDimension::Undefined
+                     ? wgpu::TextureDimension::e2D
+                     : descriptor->dimension),
       mFormat(descriptor->format),
-      mUsage(static_cast<WGPUTextureUsage>(descriptor->usage)),
-      mTextureBindingViewDimension(WGPUTextureViewDimension_Undefined) {
+      mUsage(descriptor->usage),
+      mTextureBindingViewDimension(wgpu::TextureViewDimension::Undefined) {
     // We only set mTextureBindingViewDimension in compatibility mode
     // and if it's undefined we need to set it to the default.
-    if (!device->APIHasFeature(WGPUFeatureName_CoreFeaturesAndLimits)) {
-        for (auto* chain = descriptor->nextInChain; chain; chain = chain->next) {
+    if (!device->APIHasFeature(wgpu::FeatureName::CoreFeaturesAndLimits)) {
+        for (const auto* chain = descriptor->nextInChain; chain; chain = chain->nextInChain) {
             switch (chain->sType) {
-                case WGPUSType_TextureBindingViewDimension:
-                    if (!device->APIHasFeature(WGPUFeatureName_CoreFeaturesAndLimits)) {
-                        WGPUTextureViewDimension viewDimension =
-                            reinterpret_cast<WGPUTextureBindingViewDimension*>(chain)
+                case wgpu::SType::TextureBindingViewDimension:
+                    if (!device->APIHasFeature(wgpu::FeatureName::CoreFeaturesAndLimits)) {
+                        wgpu::TextureViewDimension viewDimension =
+                            reinterpret_cast<const TextureBindingViewDimension*>(chain)
                                 ->textureBindingViewDimension;
                         mTextureBindingViewDimension = viewDimension;
                     }
@@ -93,18 +94,18 @@ Texture::Texture(const ObjectBaseParams& params,
                     break;
             }
         }
-        if (mTextureBindingViewDimension == WGPUTextureViewDimension_Undefined) {
+        if (mTextureBindingViewDimension == wgpu::TextureViewDimension::Undefined) {
             switch (mDimension) {
-                case WGPUTextureDimension_1D:
-                    mTextureBindingViewDimension = WGPUTextureViewDimension_1D;
+                case wgpu::TextureDimension::e1D:
+                    mTextureBindingViewDimension = wgpu::TextureViewDimension::e1D;
                     break;
-                case WGPUTextureDimension_2D:
+                case wgpu::TextureDimension::e2D:
                     mTextureBindingViewDimension = mSize.depthOrArrayLayers == 1
-                                                       ? WGPUTextureViewDimension_2D
-                                                       : WGPUTextureViewDimension_2DArray;
+                                                       ? wgpu::TextureViewDimension::e2D
+                                                       : wgpu::TextureViewDimension::e2DArray;
                     break;
-                case WGPUTextureDimension_3D:
-                    mTextureBindingViewDimension = WGPUTextureViewDimension_3D;
+                case wgpu::TextureDimension::e3D:
+                    mTextureBindingViewDimension = wgpu::TextureViewDimension::e3D;
                     break;
                 default:
                     // We could get here if the texture descriptor is invalid
@@ -140,19 +141,19 @@ uint32_t Texture::APIGetSampleCount() const {
     return mSampleCount;
 }
 
-WGPUTextureDimension Texture::APIGetDimension() const {
+wgpu::TextureDimension Texture::APIGetDimension() const {
     return mDimension;
 }
 
-WGPUTextureFormat Texture::APIGetFormat() const {
+wgpu::TextureFormat Texture::APIGetFormat() const {
     return mFormat;
 }
 
-WGPUTextureUsage Texture::APIGetUsage() const {
+wgpu::TextureUsage Texture::APIGetUsage() const {
     return mUsage;
 }
 
-WGPUTextureViewDimension Texture::APIGetTextureBindingViewDimension() const {
+wgpu::TextureViewDimension Texture::APIGetTextureBindingViewDimension() const {
     return mTextureBindingViewDimension;
 }
 

@@ -25,22 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "dawn/tests/unittests/wire/WireTest.h"
 #include "dawn/wire/WireClient.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/tests/unittests/wire/WireTest.h"
+#include "src/utils/assert.h"
 
 namespace dawn::wire {
 namespace {
 
 using testing::_;
 using testing::Exactly;
-using testing::InvokeWithoutArgs;
-using testing::MockCallback;
 using testing::Return;
-using testing::Sequence;
 using testing::SizedString;
 
 class WireDisconnectTests : public WireTest {};
@@ -116,7 +113,7 @@ TEST_F(WireDisconnectTests, ServerLostThenDisconnectInCallback) {
     EXPECT_CALL(deviceLostCallback,
                 Call(_, wgpu::DeviceLostReason::Unknown, SizedString("lost reason")))
         .Times(Exactly(1))
-        .WillOnce(InvokeWithoutArgs([&] { GetWireClient()->Disconnect(); }));
+        .WillOnce([&] { GetWireClient()->Disconnect(); });
     FlushServer();
 }
 

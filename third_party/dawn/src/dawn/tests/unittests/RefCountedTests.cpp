@@ -28,10 +28,10 @@
 #include <thread>
 #include <utility>
 
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
 #include "gtest/gtest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
 
 namespace dawn {
 namespace {
@@ -281,7 +281,7 @@ TEST(Ref, InitialPayloadValue) {
     EXPECT_EQ(testDefaultConstructor->GetRefCountPayload(), 0u);
     testDefaultConstructor->Release();
 
-    RCTest* testZero = new RCTest(uint64_t(0ull));
+    RCTest* testZero = new RCTest(uint64_t{0});
     EXPECT_EQ(testZero->GetRefCountPayload(), 0u);
     testZero->Release();
 
@@ -294,13 +294,13 @@ TEST(Ref, InitialPayloadValue) {
 // Depends on the payload being >= 2 bits.
 TEST(Ref, PayloadModifications) {
     RCTest* rc = new RCTest(0b10);
-    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t(0b10));
+    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t{0b10});
 
     rc->RefCountPayloadFetchOr(0b01);
-    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t(0b11));
+    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t{0b11});
 
     rc->RefCountPayloadFetchAnd(0b10);
-    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t(0b10));
+    EXPECT_EQ(rc->GetRefCountPayload(), uint64_t{0b10});
 
     rc->Release();
 }

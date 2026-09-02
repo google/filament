@@ -25,21 +25,24 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/transform/direct_variable_access.h"
-#include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {
 namespace {
 
 Result<SuccessType> DirectVariableAccessFuzzer(Module& ir,
-                                               const fuzz::ir::Context&,
-                                               const DirectVariableAccessOptions& options) {
+                                               const fuzz::ir::Context& context,
+                                               const DirectVariableAccessConfig& options) {
+    if (context.options.verbose) {
+        PrintReflected(std::cout, options);
+        std::cout << "\n";
+    }
+
     return DirectVariableAccess(ir, options);
 }
 
 }  // namespace
 }  // namespace tint::core::ir::transform
 
-TINT_IR_MODULE_FUZZER(tint::core::ir::transform::DirectVariableAccessFuzzer,
-                      tint::core::ir::transform::kDirectVariableAccessCapabilities);
+TINT_IR_MODULE_FUZZER(tint::core::ir::transform::DirectVariableAccessFuzzer);

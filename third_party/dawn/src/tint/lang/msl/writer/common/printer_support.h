@@ -40,9 +40,9 @@ namespace tint::msl::writer {
 /// A pair of byte size and alignment `uint32_t`s.
 struct SizeAndAlign {
     /// The size
-    uint32_t size;
+    uint32_t size = 0;
     /// The alignment
-    uint32_t align;
+    uint32_t align = 0;
 };
 
 /// @param ty the type to generate size and align for

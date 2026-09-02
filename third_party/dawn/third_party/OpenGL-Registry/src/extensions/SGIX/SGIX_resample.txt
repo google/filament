@@ -1,0 +1,217 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_resample
+
+Name Strings
+
+    GL_SGIX_resample
+
+Version
+
+    Last Modified Date: January 27, 2015
+    Revision: 2
+
+Number
+
+    212
+
+Dependencies
+
+	SGIX_subsample affects the definition of this extension
+	EXT_texture3D affects the definition of this extension
+	EXT_subtexture affects the definition of this extension
+	EXT_histogram affects the definition of this extension
+	EXT_convolution affects the definition of this extension
+	SGI_color_table affects the definition of this extension
+
+Overview
+
+	This extension enhances the unpacking resampling capabilities
+	of the SGIX_subsample extension.
+
+	When pixel data is received from the client and an unpacking
+	upsampling mode other than PIXEL_SUBSAMPLE_RATE_4444_SGIX is
+	specified, the upsampling is performed via one of two methods:
+	RESAMPLE_REPLICATE_SGIX, RESAMPLE_ZERO_FILL_SGIX.
+	Replicate and zero fill are provided to
+	give the application greatest performance and control over the
+	filtering process.
+
+	However, when pixel data is read back to the client and a
+	packing downsampling mode other than PIXEL_SUBSAMPLE_RATE_4444_SGIX
+	is specified, downsampling is
+	performed via simple component decimation (point sampling). That is,
+	only the RESAMPLE_DECIMATE_SGIX is valid.
+
+
+Issues
+
+	* this spec omits the packing downsampling mode.  But I think
+	we will have to address it at some point, so I'm adding the
+	RESAMPLE_DECIMATE_SGIX as another tag to complement the unpacking
+	resample modes.
+
+        * In the public Khronos spec files and headers, these values
+          used to be used for some of the tokens: 
+
+            #define GL_PACK_RESAMPLE_SGIX        0x842C 
+            #define GL_UNPACK_RESAMPLE_SGIX      0x842D 
+            #define GL_RESAMPLE_REPLICATE_SGIX   0x842E 
+            #define GL_RESAMPLE_ZERO_FILL_SGIX   0x842F 
+            #define GL_RESAMPLE_DECIMATE_SGIX    0x8430 
+               
+          These values corresponded to the internal SGI spec files and
+          (probably) to what was shipped on SGI IRIX systems supporting this
+          extension, but the spec was always inconsistent with these values.
+          Since SGI is long out of the graphics business, in order to reduce
+          incompatibility between tools pulling from the Khronos spec file
+          and tools pulling from the extension spec, the spec file has been
+          changed to match the extension.
+
+New Procedures and Functions
+
+	None.
+
+New Tokens
+
+	Accepted by the <pname> parameter of PixelStoref, PixelStorei,
+	GetBooleanv, GetIntegerv, GetFloatv and GetDoublev:
+
+		PACK_RESAMPLE_SGIX		0x842E
+		UNPACK_RESAMPLE_SGIX		0x842F
+
+
+	Accepted by the <param> parameter of PixelStoref and
+	PixelStorei when the <pname> parameter is UNPACK_RESAMPLE_SGIX:
+
+		RESAMPLE_REPLICATE_SGIX		0x8433
+		RESAMPLE_ZERO_FILL_SGIX		0x8434
+
+	Accepted by the <param> parameter of PixelStoref and
+	PixelStorei when the <pname> parameter is PACK_RESAMPLE_SGIX:
+
+		RESAMPLE_DECIMATE_SGIX		0x8430
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+	None.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+	3.6.1 Pixel Storage Modes
+
+	The following is added to Table 3.1:
+
+	Parameter Name		Type	    Initial Value		Valid Range
+	--------------		----	    -------------		-----------
+	UNPACK_RESAMPLE_SGIX	integer     RESAMPLE_REPLICATE_SGIX	RESAMPLE_REPLICATE_SGIX
+									RESAMPLE_ZERO_FILL_SGIX
+
+	PACK_RESAMPLE_SGIX	integer     RESAMPLE_DECIMATE_SGIX	RESAMPLE_DECIMATE_SGIX
+
+
+	3.6.3 Rasterization of Pixel Rectangles
+
+
+	<In the new section which is inserted before "Conversion to RGB", append>
+
+	Conversion to Uniform Sampling
+	------------------------------
+
+	This step is applied only if the PixelStore parameter
+	UNPACK_SUBSAMPLE_RATE_SGIX is set to something other than
+	PIXEL_SUBSAMPLE_RATE_4444_SGIX. If UNPACK_SUBSAMPLE_RATE_SGIX is set to
+	PIXEL_SUBSAMPLE_RATE_2424_SGIX or PIXEL_SUBSAMPLE_RATE_4242_SGIX then
+	the number of components per pixel is increased from two to three.
+	After upsampling, the data is treated as though it were RGB.  When
+	this step is carried out the operation is controlled by the value
+	of the PixelStore parameter UNPACK_RESAMPLE_SGIX.
+
+	If UNPACK_RESAMPLE_SGIX is set to  RESAMPLE_REPLICATE_SGIX then the first
+	component of the ith resulting pixel in a row is taken from the
+	first component of input pixel 2*floor(i/2). The second
+	component is taken from ith pixel. The third component is taken
+	from the first component of input pixel 2*floor(i/2)+1. In the
+	4224 case, the fourth component is taken from the third
+	component of each input pixel. This process is fully described
+	in the SGIX_subsample spec.
+
+	If the PixelStore parameter UNPACK_RESAMPLE_SGIX is set to
+	RESAMPLE_ZERO_FILL_SGIX then derived components are zeroed. Note that
+	subsampled components are co-sited with even numbered pixels,
+	and the odd numbered pixels produced have the zeroed components:
+
+	2424:
+
+	<L0,A0>      <L1,A1>	  <L2,A2>      <L3,A3>
+	<Cb0,Y0>     <Cr0,Y1>	  <Cb2,Y2>    <Cr2, Y3>
+	  |  |	      |   |	   |   |	|   |
+	  |  |	o-----o   |	   |   |  o-----o   |
+	  |  |	|	  |	   |   |  |	    |
+	  |  |	|    0.0  | 0.0    |   |  |    0.0  | 0.0
+	  |  |	|     |   |  |	   |   |  |	|   |  |
+	  V  V	V     V   V  V	   V   V  V	V   V  V
+	<Cb0,Y0,Cr0> <Cb0,Y1,Cr0> <Cb2,Y2,Cr2> <Cb2,Y3,Cr2>
+	< R0,G0,B1 > < R0,G1,B1 > < R2,G2,B3 > < R2,G3,B3 >
+
+	4242:
+	< A0,L0>      <A1,L1 >	   <A2,L2 >    < A3,L3 >
+	<Y0,Cb0>      <Y1,Cr0>	   <Y2,Cb2>	<Y3,Cr2>
+	  |  |	       |   |	    |	|	 |   |
+	  \ /	     __\__/	    \ /        __\__/
+	   X	 ___/	\	     X	   ___/   \
+	  / \	/    0.0 \  0.0     / \   /    0.0 \  0.0
+	  |  |	|     |   |  |	    |  |  |	|   |  |
+	  V  V	V     V   V  V	    V  V  V	V   V  V
+	<Cb0,Y0,Cr0> <Cb0,Y1,Cr0> <Cb2,Y2,Cr2> <Cb2,Y3,Cr2>
+	< R0,G0,B1 > < R0,G1,B1 > < R2,G2,B3 > < R2,G3,B3 >
+
+
+	Note that the <width> parameter to DrawPixels should be even,
+	as should the value of UNPACK_SKIP_PIXELS, and
+	UNPACK_ROW_LENGTH. If any of these are odd then the error
+	INVALID_OPERATION is issued.
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+	None.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+	None.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+	XXX
+
+Additions to the GLX Specification
+
+
+Errors
+
+	XXX
+
+
+New State
+
+    Get Value			Get Command			Type		Initial Value		Attribute
+    ---------			-----------			----		-------------		---------
+    UNPACK_RESAMPLE_SGIX	GetIntegerv			Z4		RESAMPLE_REPLICATE_SGIX client
+    PACK_RESAMPLE_SGIX		GetIntegerv			Z4		RESAMPLE_REPLICATE_SGIX client
+
+New Implementation Dependent State
+
+	None.
+
+Revision History
+
+    Revision 1, July 27, 1999 - SGI internal revision #4.
+
+    Revision 2, January 27, 2015 - note that Khronos spec file values from
+    enums have been changed to match the extension spec (Khronos internal
+    bug 12653).

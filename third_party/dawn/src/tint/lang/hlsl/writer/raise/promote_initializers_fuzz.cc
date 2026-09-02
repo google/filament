@@ -19,15 +19,14 @@
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 // DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
 // FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT\ OF SUBSTITUTE GOODS OR
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 // SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/module.h"
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/hlsl/writer/raise/promote_initializers.h"
 
 namespace tint::hlsl::writer::raise {
@@ -40,7 +39,4 @@ Result<SuccessType> PromoteInitializersFuzzer(core::ir::Module& ir, const fuzz::
 }  // namespace
 }  // namespace tint::hlsl::writer::raise
 
-TINT_IR_MODULE_FUZZER(tint::hlsl::writer::raise::PromoteInitializersFuzzer,
-                      tint::hlsl::writer::raise::kPromoteInitializersCapabilities,
-                      tint::hlsl::writer::raise::kPromoteInitializersCapabilities +
-                          tint::core::ir::Capability::kAllowModuleScopeLets);
+TINT_IR_MODULE_FUZZER(tint::hlsl::writer::raise::PromoteInitializersFuzzer);

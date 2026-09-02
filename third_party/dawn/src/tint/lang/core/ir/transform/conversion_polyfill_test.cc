@@ -39,6 +39,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 class IR_ConversionPolyfillTest : public TransformTest {
   protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
     /// Helper to build a function that executes a convert instruction.
     /// @param src_ty the type of the source
     /// @param res_ty the type of the result

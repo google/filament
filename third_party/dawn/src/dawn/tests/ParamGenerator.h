@@ -36,8 +36,8 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Preprocessor.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Preprocessor.h"
 
 namespace dawn {
 namespace detail {
@@ -96,7 +96,7 @@ void PrintParamStructField(std::ostream& o, const T& param, const char* type) {
     }                                                                                              \
     struct StructName : BaseStructName, DAWN_PP_CONCATENATE(_Dawn_, StructName) {                  \
         template <typename... Args>                                                                \
-        StructName(const BaseStructName& param, Args&&... args)                                    \
+        explicit StructName(const BaseStructName& param, Args&&... args)                           \
             : BaseStructName(param), DAWN_PP_CONCATENATE(_Dawn_, StructName) {                     \
             std::forward<Args>(args)...                                                            \
         }                                                                                          \
@@ -133,7 +133,7 @@ struct Placeholder {};
     }                                                                                              \
     struct StructName : DAWN_PP_CONCATENATE(_Dawn_, StructName) {                                  \
         template <typename... Args>                                                                \
-        StructName(Args&&... args) : DAWN_PP_CONCATENATE(_Dawn_, StructName) {                     \
+        explicit StructName(Args&&... args) : DAWN_PP_CONCATENATE(_Dawn_, StructName) {            \
             std::forward<Args>(args)...                                                            \
         }                                                                                          \
         {                                                                                          \
@@ -159,7 +159,8 @@ std::string TestParamToString(const testing::TestParamInfo<ParamStruct>& info) {
 // ParamStruct is a custom struct which ParamStruct will yield when iterating.
 // The types Params... should be the same as the types passed to the constructor
 // of ParamStruct.
-// TODO: When std::span becomes available via c++20, use std::span over std::vector.
+// TODO(https://crbug.com/343500108): When std::span becomes available via
+// c++20, use std::span over std::vector.
 template <typename ParamStruct, typename... Params>
 class ParamGenerator {
     using ParamTuple = std::tuple<std::vector<Params>...>;
@@ -202,7 +203,7 @@ class ParamGenerator {
         Iterator& operator++() {
             // Increment the Index by 1. If the i'th place reaches the maximum,
             // reset it to 0 and continue with the i+1'th place.
-            for (int i = mIndex.size() - 1; i >= 0; --i) {
+            for (int i = static_cast<int>(mIndex.size()) - 1; i >= 0; --i) {
                 if (mIndex[i] >= mLastIndex[i]) {
                     mIndex[i] = 0;
                 } else {

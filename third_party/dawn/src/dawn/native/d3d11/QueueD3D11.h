@@ -34,12 +34,12 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/hash/hash.h"
-#include "dawn/common/LinkedList.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/native/d3d/QueueD3D.h"
-#include "dawn/native/d3d11/CommandRecordingContextD3D11.h"
-#include "dawn/native/d3d11/Forward.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/LinkedList.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/native/d3d/QueueD3D.h"
+#include "src/dawn/native/d3d11/CommandRecordingContextD3D11.h"
+#include "src/dawn/native/d3d11/Forward.h"
 
 namespace dawn::native::d3d11 {
 
@@ -87,17 +87,15 @@ class Queue : public d3d::Queue {
 
     ~Queue() override = default;
 
-    MaybeError Initialize(bool useMonitoredFence);
-    MaybeError InitializeD3DFence(bool useMonitoredFence);
+    MaybeError Initialize(bool useNonMonitoredFence);
+    MaybeError InitializeD3DFence(bool useNonMonitoredFence);
 
-    MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
+    MaybeError SubmitImpl(Span<CommandBufferBase* const> commands) override;
     MaybeError WriteBufferImpl(BufferBase* buffer,
                                uint64_t bufferOffset,
-                               const void* data,
-                               size_t size) override;
+                               Span<const std::byte> data) override;
     MaybeError WriteTextureImpl(const TexelCopyTextureInfo& destination,
-                                const void* data,
-                                size_t dataSize,
+                                Span<const std::byte> data,
                                 const TexelCopyBufferLayout& dataLayout,
                                 const Extent3D& writeSizePixel) override;
 

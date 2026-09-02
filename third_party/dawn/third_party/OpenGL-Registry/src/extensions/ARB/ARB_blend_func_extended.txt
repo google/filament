@@ -1,0 +1,519 @@
+Name
+
+    ARB_blend_func_extended
+
+Name Strings
+
+    GL_ARB_blend_func_extended
+
+Contributors
+
+    Graham Sellers, AMD
+    Mark Young, AMD
+    Nick Haemel, AMD
+    Pierre Boudier, AMD
+    Mais Alnasser, AMD
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Ian Stewart, NVIDIA
+    Mark Kilgard, NVIDIA
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date:         05/22/2015
+    Author Revision:            13
+
+Number
+
+    ARB Extension #78
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    The ARB_fragment_shader extension is required.
+
+    The EXT_gpu_shader4 extension is required.
+
+    The EXT_blend_func_separate extension interacts with this extension.
+
+    The ARB_draw_buffers extension trivially affects the definition of this
+    extension.
+
+    The ARB_draw_buffers_blend extension affects the definition of this
+    extension.
+
+    This extension is written against the OpenGL 3.2 Specification (Compatibility Profile)
+
+Overview
+
+    Traditional OpenGL includes fixed-function blending that combines source
+    colors with the existing content of a render buffer in a variety of ways.
+    A number of extensions have enhanced this functionality by adding further
+    sources of blending weights and methods to combine them. However, the inputs
+    to the fixed-function blending units are constrained to a source color (as
+    output from fragment shading), destination color (as the current content
+    of the frame buffer) or constants that may be used in their place.
+
+    This extension adds new blending functions whereby a fragment shader may
+    output two colors, one of which is treated as the source color, and the
+    other used as a blending factor for either source or destination colors.
+    Furthermore, this extension increases orthogonality by allowing the
+    SRC_ALPHA_SATURATE function to be used as the destination weight.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void BindFragDataLocationIndexed(uint program, uint colorNumber,
+                                        uint index, const char * name);
+
+    int GetFragDataIndex(uint program, const char * name);
+
+New Tokens
+
+    Accepted by the <src> and <dst> parameters of BlendFunc and
+    BlendFunci, and by the <srcRGB>, <dstRGB>, <srcAlpha> and <dstAlpha>
+    parameters of BlendFuncSeparate and BlendFuncSeparatei:
+
+        SRC1_COLOR                                      0x88F9
+        SRC1_ALPHA
+        ONE_MINUS_SRC1_COLOR                            0x88FA
+        ONE_MINUS_SRC1_ALPHA                            0x88FB
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv
+    and GetDoublev:
+
+        MAX_DUAL_SOURCE_DRAW_BUFFERS                    0x88FC
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (Compatibility Profile) (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Compatibility Profile) (Rasterization)
+
+    Modify the "Shader Outputs" subsection of Section 3.12.2, Shader Execution
+
+    Modify the text on p.297 beginning "The binding of a user-defined varying
+    out variable to a fragment..."
+
+    The binding of a user-defined varying out variable to a fragment color number
+    can be specified explicitly. The command
+
+        void BindFragDataLocationIndexed(uint program, uint colorNumber, uint index, const char * name);
+
+    specifies that the varying out variable name in <program> should be bound to
+    fragment color <colorNumber> when the program is next linked. <index> may be
+    zero or one to specify that the color be used as either the first or second
+    color input to the blend equation, respectively, as described in Section 4.1.8. 
+
+    If <name> was bound previously, its assigned binding is replaced with
+    colorNumber. <name> must be a null-terminated string. The error INVALID_VALUE
+    is generated if <colorNumber> is equal or greater than MAX_DRAW_BUFFERS and
+    <index> is zero, or if <colorNumber> is equal or greater than
+    MAX_DUAL_SOURCE_DRAW_BUFFERS and <index> is greater than or equal to one.
+    The command
+
+        void BindFragDataLocation(uint program, uint colorNumber, const char * name)
+
+    is equivalent to calling BindFragDataLocationIndexed with the same values
+    for <program>, <colorNumber> and <name>, and with <index> set to zero.
+
+    When a program is linked, any varying out variables without a binding
+    specified through BindFragDataLocationIndexed or BindFragDataLocation will
+    automatically be bound to fragment colors and indices by the GL.  All such
+    assignments will use color indices of zero.  Such bindings can be queried
+    using the commands GetFragDataLocation and GetFragDataIndex.  Output
+    binding assignments will cause LinkProgram to fail:
+
+      * if the number of active outputs is greater than the value of
+        MAX_DRAW_BUFFERS;
+
+      * if the program has an active output assigned to a location greater
+        than or equal to the value of MAX_DUAL_SOURCE_DRAW_BUFFERS and has an
+        active output assigned an index greater than or equal to one;
+
+      * if more than one varying out variable is bound to the same number and
+        index; or
+
+      * if the explicit binding assignments do not leave enough space for the
+        linker to automatically assign a location for a varying out array,
+        which requires multiple contiguous locations.
+
+    BindFragDataLocationIndexed may be issued before any shader objects are
+    attached to a program object. Hence it is allowed to bind any name (except a
+    name starting with gl_) to a color number and index, including a name that
+    is never used as a varying out variable in any fragment shader object.
+    Assigned bindings for variables that do not exist are ignored.
+
+    Add to the last paragraph on p.279
+
+    The command
+
+        int GetFragDataIndex(uint program, const char * name);
+
+    returns the index of the fragment color to which the variable <name> was bound
+    when the program object <program> was last linked. If program has not been
+    successfully linked, the error INVALID_OPERATION is generated. If name is not
+    a varying out variable, or if an error occurs, -1 will be returned.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Compatibility Profile) (Per-Fragment Operations
+and the Framebuffer)
+
+    Modify the first paragraph of the Blending Functions subsection of Section
+    4.1.8 Blending (p. 292) as follows:
+
+    The weighting factors used by the blend equation are determined by the blend
+    functions. There are four possible sources for weighting factors. These are
+    the constant color (Rc, Gc, Bc, Ac) (see BlendColor, p. 211), the first
+    source color (Rs0, Gs0, Bs0, As0), the second source color
+    (Rs1, Gs1, Bs1, As1), and the destination color (the existing content of the
+    draw buffer). Additionally the special constants ZERO and ONE are
+    available as weighting factors. Blend functions are specified ...
+
+    Modify Table 4.2 (p. 213) as follows
+
+                                                            RGB Blend Factors                   Alpha Blend Factors
+        Value                                               (Sr, Sg, Sb) or (Dr, Dg, Db)        Sa or Da
+        -----                                               ----------------------------        -------------------
+        ZERO                                                (0, 0, 0)                           0
+        ONE                                                 (1, 1, 1)                           1
+        SRC_COLOR                                           (Rs0, Gs0, Bs0)                     As0
+        ONE_MINUS_SRC_COLOR                                 (1, 1, 1) - (Rs0, Gs0, Bs0)         1 - As0
+        DST_COLOR                                           (Rd, Gd, Bd)                        Ad
+        ONE_MINUS_DST_COLOR                                 (1, 1, 1) - (Rd, Gd, Bd)            1 - Ad
+        SRC_ALPHA                                           (As0, As0, As0)                     As0
+        ONE_MINUS_SRC_ALPHA                                 (1, 1, 1) - (As0, As0, As0)         1 - As0
+        DST_ALPHA                                           (Ad, Ad, Ad)                        Ad
+        ONE_MINUS_DST_ALPHA                                 (1, 1, 1) - (Ad, Ad, Ad)            1 - Ad
+        CONSTANT_COLOR                                      (Rc, Gc, Bc)                        Ac
+        ONE_MINUS_CONSTANT_COLOR                            (1, 1, 1) - (Rc, Gc, Bc)            1 - Ac
+        CONSTANT_ALPHA                                      (Ac, Ac, Ac)                        Ac
+        ONE_MINUS_CONSTANT_ALPHA                            (1, 1, 1) - (Ac, Ac, Ac)            1 - Ac
+        SRC_ALPHA_SATURATE                                  (f, f, f)                           1                       (Now allowed for dst)
+        SRC1_COLOR                                          (Rs1, Gs1, Bs1)                     As1                     New
+        ONE_MINUS_SRC1_COLOR                                (1, 1, 1) - (Rs1, Gs1, Bs1)         1 - As1                 New
+        SRC1_ALPHA                                          (As1, As1, As1)                     As1                     New
+        ONE_MINUS_SRC1_ALPHA                                (1, 1, 1) - (As1, As1, As1)         1 - As1                 New
+
+    Remove Footnote 1 from Table 4.2.
+
+    Add the following subsections to Section 4.1.8 Blending, at the end of the
+    description of Blend Function (p. 294)
+
+    Dual Source Blending and Multiple Draw Buffers
+
+    Blend functions that require the second color input, <Rs1, Gs1, Bs1, As1>
+    (SRC1_COLOR, SRC1_ALPHA, ONE_MINUS_SRC1_COLOR, or
+    ONE_MINUS_SRC1_ALPHA) may consume hardware resources that could
+    otherwise be used for rendering to multiple draw buffers. Therefore, the
+    number of draw buffers that can be attached to a frame buffer may be lower
+    when using dual-source blending.
+
+    The maximum number of draw buffers that may be attached to a single frame
+    buffer when using dual-source blending functions is implementation dependent
+    and can be queried by calling GetIntegerv with the symbolic constant 
+    MAX_DUAL_SOURCE_DRAW_BUFFERS. When
+    using dual-source blending, MAX_DUAL_SOURCE_DRAW_BUFFERS should be used
+    in place of MAX_DRAW_BUFFERS to determine the maximum number of draw
+    buffers that may be attached to a single frame buffer. The value of
+    MAX_DUAL_SOURCE_DRAW_BUFFERS must be at least 1. If the value of
+    MAX_DUAL_SOURCE_DRAW_BUFFERS is 1, then dual-source blending and
+    multiple draw buffers cannot be used simultaneously.
+
+    If either blend function is set to one of the second source factors
+    (SRC1_COLOR, SRC1_ALPHA, ONE_MINUS_SRC1_COLOR, or
+    ONE_MINUS_SRC1_ALPHA) for any draw buffer and any draw buffers equal to
+    or greater than the value of MAX_DUAL_SOURCE_DRAW_BUFFERS have values other than NONE,
+    the error INVALID_OPERATION is generated by Begin, or any procedure that
+    implicitly calls Begin.
+
+    Generation of Second Color Source for Blending
+
+    There is no way to generate the second source color using the fixed-function
+    fragment pipeline. Rendering using any of the blend functions that consume
+    the second input color (SRC1_COLOR, ONE_MINUS_SRC1_COLOR,
+    SRC1_ALPHA or ONE_MINUS_SRC1_ALPHA) using fixed function will produce
+    undefined results.  To produce input for the second source color, a shader
+    must be used.
+
+    When using a GLSL fragment shader with dual-source blending functions,
+    the color output varyings are bound to the first and second inputs of a
+    draw buffer using BindFragDataLocationIndexed as described in the "Shader
+    Outputs" subsection of Section 3.12.2. Data written to the first of these outputs
+    becomes the first source color input to the blender (corresponding to
+    SRC_COLOR and SRC_ALPHA). Data written to the second of these outputs
+    generates the second source color input to the blender (corresponding to
+    SRC1_COLOR and SRC1_ALPHA).
+
+    If the second color input to the blender is not written in the shader, or if
+    no output is bound to the second input of a blender, the result of the blending
+    operation is not defined.
+
+    Other shading languages may define similar methods for producing the first
+    and second color inputs to blending equations.
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Compatibility Profile) (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (Compatibility Profile) (State and
+State Requests)
+
+    None.
+
+Dependencies on ARB_fragment_shader
+
+    If ARB_fragment_shader is not supported then references to
+    ARB_fragment_shader in section 4.1.8 and elsewhere in this document should
+    be removed. In this case, there is no way to generate the second color input
+    to the blending equation unless a further extension to another shading
+    language is defined and used.
+
+Dependencies on ARB_draw_buffers
+
+    Using dual-source blending functions may consume additional outputs from
+    hardware shading units and therefore can reduce the number of draw buffers
+    that may be attached to a single frame buffer when dual-source blending
+    functions are enabled. In this case, the value of 
+    MAX_DUAL_SOURCE_DRAW_BUFFERS may be less than the value of
+    MAX_DRAW_BUFFERS. If ARB_draw_buffers is not supported then the value of
+    MAX_DUAL_SOURCE_DRAW_BUFFERS will be 1. Furthermore, the discussion
+    in the subsection entitled "Dual Source Blending and Multiple Draw Buffers"
+    may be discarded.
+
+Dependencies on EXT_blend_func_separate
+
+    If EXT_blend_func_separate is not supported, remove references to
+    BlendFuncSeparate. Also, remove any references to BLEND_SRC_ALPHA and
+    BLEND_DST_ALPHA, and replace references to BLEND_SRC_RGB and BLEND_DST_RGB
+    with BLEND_SRC and BLEND_DST, respectively. In this case, the new blend
+    functions may only be enabled via the BlendFunc procedure.
+
+Dependencies on ARB_draw_buffers_blend
+
+    If ARB_draw_buffers_blend is not supported, all references to BlendFunci
+    and BlendFuncSeparatei should be removed. In this case, the blend
+    functions for all attached draw buffers will be the same.
+
+Interactions with NV_gpu_program5
+
+    If NV_gpu_program5 is supported, fragment result bindings 
+    "result.color[n].primary" and "result.color[n].secondary" can be used to
+    specify the <n>th color outputs for index 0 and 1, respectively.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    The error INVALID_OPERATION is generated by Begin or any procedure that
+    implicitly calls Begin if any draw buffer has a blend function requiring the
+    second color input (SRC1_COLOR, ONE_MINUS_SRC1_COLOR, SRC1_ALPHA or
+    ONE_MINUS_SRC1_ALPHA), and a framebuffer is bound that has more than
+    the value of MAX_DUAL_SOURCE_DRAW_BUFFERS-1 active color attachments.
+
+New State
+
+    Table 6.21 (p. 286)
+
+    Get Value                 Type  Get Command   Initial Value   Description          Sec    Attribute
+    ------------------------  ----  ------------  -------------   -------------------  -----  ---------
+    BLEND_SRC_RGB             Z19   GetIntegerv   ONE             Blending source RGB  4.1.8  color-buffer
+                                                                  function
+    BLEND_SRC_ALPHA           Z19   GetIntegerv   ONE             Blending source A    4.1.8  color-buffer
+                                                                  function
+    BLEND_DST_RGB             Z19   GetIntegerv   ZERO            Blending dest. RGB   4.1.8  color-buffer
+                                                                  function
+    BLEND_DST_ALPHA           Z19   GetIntegerv   ZERO            Blending dest. A     4.1.8  color-buffer
+                                                                  function
+
+NOTE: The only change is that Z14 and Z15 change to Z19 for the existing blend
+function state. No new state is actually added to the OpenGL Specification.
+
+New Implementation Dependent State
+
+    Get Value                        Type  Get Command     Minimum Value    Description             Sec.     Attribute
+    ---------                        ----  -----------     -------------    -------------------     -----    ---------
+    MAX_DUAL_SOURCE_DRAW_BUFFERS     Z+    GetIntegerv     1                Maximum number of       4.1.8    -
+                                                                            active draw buffers
+                                                                            when using dual-source
+                                                                            blending
+
+Example Use Cases
+
+    There are several potential uses for this functionality. A first example
+    is in the implementation of sub-pixel accurate font rendering algorithms.
+    Given a known layout of pixel elements (red, green and blue components),
+    coverage may be calculated independently for each element and passed
+    to the blender in the second source color as a per-channel opacity. To use
+    this mode, use the following blend functions:
+
+        glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+
+    As a second example, consider a partially reflective colored glass window.
+    It will attenuate light passing through it, and reflect some of the light
+    that strikes it. Using an appropriate combination of functions, this effect
+    may be simulated in a single pass using only fixed-function blending
+    hardware. In this case, the following blend functions may be used:
+
+        glBlendFunc(GL_SRC_ALPHA, GL_SRC1_COLOR);
+
+Issues
+
+    1) Should the new tokens be SRC1_COLOR and SRC2_COLOR (1-based), or
+       be SRC0_COLOR and SRC1_COLOR.
+
+       RESOLVED: Indices in OpenGL are generally zero based. These follow
+       suit.
+
+    2) What happens when rendering using a dual-source blend function using
+       fixed-function?
+
+       RESOLVED: There is no reasonable way to generate the second source color
+       for blending using fixed-function fragment processing. However, as it is
+       possible to set the blend function and then enable a shader, there isn't
+       really a clean way to report an error. Therefore, we allow it, but leave
+       the result undefined.
+
+    2a) Can't we use an existing output from fixed function, like back color,
+        to make this work?
+
+       DISCUSSION: We could relabel things. For example, make the front color
+       be the first input to blending and the back color the second input. This
+       kind of thing would come at the cost of lost fixed function capability,
+       possible ambiguity and added complexity in the fixed function
+       specification. The new functionality in this extension is most useful
+       when reading data from multiple textures or other complex sources that
+       would just be too complex to express with fixed function processing.
+       For these reasons, rendering through dual-source blending functions using
+       the fixed function pipeline is not supported and will produce undefined
+       results.
+
+    2b) Then why write this against OpenGL 2.1 which includes fixed-function?
+        Why not write against OpenGL 3.x that only supports shaders anyway?
+
+       DISCUSSION: Because this extension adds functionality to existing
+       extensions and those are written against OpenGL 2.1. Furthermore, the
+       functionality described here does not rely on any core feature provided
+       by OpenGL 3.x and can be easily built upon and used in implementations of
+       OpenGL 2.1 or earlier versions of the OpenGL Specification.
+
+       RESOLVED: Updated to stand against OpenGL 3.2, but kept the fixed function
+       issues in the spec.
+
+    3) Why is this not orthogonal and interoperable with ARB_draw_buffers?
+
+       RESOLVED: This is functionality that has existed in hardware for some
+       time and been made available via other graphics APIs. In some hardware
+       and APIs, the second color input from the shader is actually what would
+       have been written to draw buffer 1. This is the functionality that is
+       guaranteed to be universally supported. This extension does not preclude
+       use with multiple draw buffers except exclusion through implementation
+       defined limits. If future hardware supports multiple color outputs
+       simultaneously to multiple draw buffers, it can simply advertise higher
+       limits.
+
+    4) Can we not add an implementation state query to find out if it's
+       available with multiple draw buffers?
+
+       RESOLVED: Done. Query MAX_DUAL_SOURCE_DRAW_BUFFERS. If this returns
+       the same value as MAX_DRAW_BUFFERS then the functions are orthogonal.
+       If this returns 1, then they cannot be used together. If it returns some
+       value between 1 and MAX_DRAW_BUFFERS, then dual-source blending
+       may consume some additional hardware routing resources, but can be used
+       with multiple draw buffers provided the MAX_DUAL_SOURCE_DRAW_BUFFERS
+       limit is not exceeded.
+
+    5) Should there also be a Link error if the fragment shader uses both an
+       index=1 output below MAX and an index=0 output greater than or equal to
+       MAX? The quoted begin-time error leaves open the possibility of an app
+       doing something like BindFragDataLocationIndexed(colorNumber=0, index=0)
+       + (colorNumber=0, index=1) + (colorNumber=1, index=0), then rendering
+       without using the src1 blend functions. If an implementation aliases
+       index=1 onto other index=0 outputs, then it wouldn't be able to handle
+       that case.
+
+       DISCUSSION: The begin time error language states '... if any draw buffer
+       has a blend function requiring the second color input ...'. This means
+       that the outputs can be bound to non-zero indices, but if the blend
+       function does not consume that output, no error will be generated. In
+       theory, an implementation could ignore output bound to color=0, index=1
+       in this case and operate as if it were not there. However, it makes no
+       sense for the linker to accept such a configuration of outputs because
+       the underlying hardware may not be able to support it. Therefore, we can
+       generate a link time error, thus eliminating this begin-time check and
+       potentially improving run-time performance.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+    13    05/22/2015  mjk       Fix misspellings
+    12    02/05/2010  istewart  Add interactions with NV_gpu_program5.
+    11    01/26/2010  pbrown    Assign enum values.
+    10    01/14/2010  pbrown    Add spec language allowing for a link error if
+                                explicit output bindings don't leave enough 
+                                space for array outputs.  Clarify that any 
+                                automatic assignments for fragment outputs
+                                will use color index zero.
+     9    12/10/2009  Jon Leech Fix typos in blending equation table, remove
+                                ARB suffixes for core 3.3 inclusion, clean
+                                up "GL_TOKEN" vs. "the value of GL_TOKEN".
+     8    11/19/2009  gsellers  Remove SRC0_COLOR etc. enums, use old ones
+                                instead. Use previously defined value for
+                                SRC1_ALPHA. Update text to match.
+     7    10/26/2009  gsellers  Change BindFragDataLocationIndexedARB to take a
+                                numerical index instead of an enum. Clarify
+                                behavior in several places. Add issue 5.
+     6    10/20/2009  gsellers  Update to diff to OpenGL 3.2 (Compatibility) spec.
+                                Add BindFragDataLocationIndexedARB and
+                                GetFragDataIndexARB. Remove idea of making shader
+                                outputs arrays. Define Begin time error when
+                                blend func is SRC1_* for FBO with >=
+                                MAX_DUAL_SOURCE_DRAW_BUFFERS draw buffers.
+     5    05/21/2009  gsellers  Clarify meaning of MAX_DUAL_SOURCE_BUFFERS_ARB.
+                                Clarify the (lack of) interaction with fixed
+                                function fragment processing and further
+                                justify lack of support (Issues 2a and 2b).
+                                Clarify modification to state.
+     4    05/19/2009  gsellers  Allow simultaneous use of ARB_draw_buffers with
+                                this extension;
+                                add MAX_DUAL_SOURCE_DRAW_BUFFERS_ARB.
+                                Document interaction with ARB_draw_buffers_blend.
+     3    05/19/2009  gsellers  Remove access via gl_FragData, replace with user
+                                defined output varyings.
+     2    05/15/2009  gsellers  Minor cleanup. Add usage examples.
+     1    05/14/2009  gsellers  Initial draft

@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_SPV_WRITER)
 ################################################################################
 # Target:    tint_lang_spirv_writer_analysis
 # Kind:      lib
+# Condition: TINT_BUILD_SPV_WRITER
 ################################################################################
 tint_add_target(tint_lang_spirv_writer_analysis lib
   lang/spirv/writer/analysis/relaxed_precision_decorations.cc
@@ -61,6 +63,7 @@ tint_target_add_dependencies(tint_lang_spirv_writer_analysis lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -70,9 +73,12 @@ tint_target_add_external_dependencies(tint_lang_spirv_writer_analysis lib
   "src_utils"
 )
 
+endif(TINT_BUILD_SPV_WRITER)
+if(TINT_BUILD_SPV_WRITER)
 ################################################################################
 # Target:    tint_lang_spirv_writer_analysis_test
 # Kind:      test
+# Condition: TINT_BUILD_SPV_WRITER
 ################################################################################
 tint_add_target(tint_lang_spirv_writer_analysis_test test
   lang/spirv/writer/analysis/relaxed_precision_decorations_test.cc
@@ -98,6 +104,7 @@ tint_target_add_dependencies(tint_lang_spirv_writer_analysis_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -107,3 +114,5 @@ tint_target_add_external_dependencies(tint_lang_spirv_writer_analysis_test test
   "gtest"
   "src_utils"
 )
+
+endif(TINT_BUILD_SPV_WRITER)

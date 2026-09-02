@@ -1,0 +1,98 @@
+Name
+
+    QNX_image_native_buffer
+
+Name Strings
+
+    EGL_QNX_image_native_buffer
+
+Contributors
+
+    Mike Gorchak mgorchak@blackberry.com
+    Jeff Vigil j.vigil@samsung.com
+
+Contact
+
+    Mike Gorchak, QNX. (mgorchak 'at' blackberry.com)
+
+Status
+
+    Complete
+
+Version
+
+    Version 1, June 13, 2023
+
+Number
+
+    EGL Extension #151
+
+Dependencies
+
+    EGL 1.4 is required.
+
+    EGL_KHR_image_base is required.
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension enables using an QNX screen buffer screen_buffer_t as
+    an EGLImage source.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameter of eglCreateImageKHR:
+
+    EGL_NATIVE_BUFFER_QNX             0x3551
+
+Changes to Chapter 3 of the EGL 1.2 Specification (EGL Functions and Errors)
+
+    Add to section 2.5.1 "EGLImage Specification" (as defined by the
+    EGL_KHR_image_base specification), in the description of
+    eglCreateImageKHR:
+
+   "Values accepted for <target> are listed in Table aaa, below.
+
+      +----------------------------+-----------------------------------------+
+      |  <target>                  |  Notes                                  |
+      +----------------------------+-----------------------------------------+
+      |  EGL_NATIVE_BUFFER_QNX     |  Used for QNX buffer objects            |
+      +----------------------------+-----------------------------------------+
+       Table aaa.  Legal values for eglCreateImageKHR <target> parameter
+
+    ...
+
+    If <target> is EGL_NATIVE_BUFFER_QNX, <dpy> must be a valid display,
+    <ctx> must be EGL_NO_CONTEXT, <buffer> must be a valid screen_buffer_t
+     object (cast into the type EGLClientBuffer), and
+    attributes other than EGL_IMAGE_PRESERVED_KHR are ignored."
+
+    Add to the list of error conditions for eglCreateImageKHR:
+
+      "* If <target> is EGL_NATIVE_BUFFER_QNX and <buffer> is not a
+         valid screen_buffer_t, the error EGL_BAD_PARAMETER
+         is generated.
+
+       * If <target> is EGL_NATIVE_BUFFER_QNX and <ctx> is not
+         EGL_NO_CONTEXT, the error EGL_BAD_CONTEXT is generated.
+
+       * If <target> is EGL_NATIVE_BUFFER_QNX and <buffer> was created
+         with properties (format, usage, dimensions, etc.) not supported by
+         the EGL implementation, the error EGL_BAD_PARAMETER is generated."
+
+Issues
+
+Revision History
+
+#1 (Jeff Vigil, June 13, 2023)
+    - Initial draft.

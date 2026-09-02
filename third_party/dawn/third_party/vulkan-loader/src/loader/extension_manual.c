@@ -122,6 +122,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceCapabilities2E
 
         VkSurfaceCapabilitiesKHR surface_caps;
         res = icd_term->dispatch.GetPhysicalDeviceSurfaceCapabilitiesKHR(phys_dev_term->phys_dev, surface, &surface_caps);
+        if (res != VK_SUCCESS) {
+            // The driver did not populate surface_caps, so don't copy it out to the caller.
+            return res;
+        }
         pSurfaceCapabilities->minImageCount = surface_caps.minImageCount;
         pSurfaceCapabilities->maxImageCount = surface_caps.maxImageCount;
         pSurfaceCapabilities->currentExtent = surface_caps.currentExtent;
@@ -366,12 +370,14 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceToolPropertiesEXT(VkP
         goto out;
     }
 
+    uint32_t allocated_count = ext_count;
     enumerate_res = icd_term->dispatch.EnumerateDeviceExtensionProperties(phys_dev_term->phys_dev, NULL, &ext_count, ext_props);
     if (enumerate_res != VK_SUCCESS) {
         goto out;
     }
 
-    for (uint32_t i = 0; i < ext_count; i++) {
+    // The count returned by the second call sizes the array, but never read past what we actually allocated.
+    for (uint32_t i = 0; i < ext_count && i < allocated_count; i++) {
         if (strncmp(ext_props[i].extensionName, VK_EXT_TOOLING_INFO_EXTENSION_NAME, VK_MAX_EXTENSION_NAME_SIZE) == 0) {
             tooling_info_supported = true;
             break;

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglDestroySurface">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglDestroySurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglDestroySurface</refname>
+        <refpurpose>
+            destroy an <acronym>EGL</acronym> surface
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglDestroySurface</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem><para>Specifies the EGL surface to be destroyed.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            If the EGL surface <parameter>surface</parameter> is not current to any
+            thread, <function>eglDestroySurface</function> destroys it immediately.
+            Otherwise, <parameter>surface</parameter> is destroyed when it becomes
+            not current to any thread.
+            Furthermore, resources associated with a pbuffer surface are not released until
+            all color buffers of that pbuffer bound to a texture object have been released.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if destruction of
+            the surface fails, <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL surface.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>    </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

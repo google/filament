@@ -38,23 +38,25 @@ import("../../../../../../scripts/dawn_overrides_with_defaults.gni")
 import("../../../../../../scripts/tint_overrides_with_defaults.gni")
 
 import("${tint_src_dir}/tint.gni")
-
-libtint_source_set("common") {
-  sources = [
-    "options.cc",
-    "options.h",
-    "output.cc",
-    "output.h",
-  ]
-  deps = [
-    "${dawn_root}/src/utils",
-    "${tint_src_dir}/api/common",
-    "${tint_src_dir}/utils",
-    "${tint_src_dir}/utils/containers",
-    "${tint_src_dir}/utils/ice",
-    "${tint_src_dir}/utils/macros",
-    "${tint_src_dir}/utils/math",
-    "${tint_src_dir}/utils/memory",
-    "${tint_src_dir}/utils/rtti",
-  ]
+if (tint_build_null_writer) {
+  libtint_source_set("common") {
+    sources = [
+      "options.cc",
+      "options.h",
+      "output.cc",
+      "output.h",
+    ]
+    deps = [
+      "${dawn_root}/src/utils",
+      "${tint_src_dir}/api/common",
+      "${tint_src_dir}/utils",
+      "${tint_src_dir}/utils/containers",
+      "${tint_src_dir}/utils/ice",
+      "${tint_src_dir}/utils/macros",
+      "${tint_src_dir}/utils/math",
+      "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
+      "${tint_src_dir}/utils/rtti",
+    ]
+  }
 }

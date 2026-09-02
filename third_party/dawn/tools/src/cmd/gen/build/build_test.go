@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,6 +30,8 @@ package build
 import (
 	"fmt"
 	"testing"
+
+	"dawn.googlesource.com/dawn/tools/src/cmd/gen/common"
 
 	"dawn.googlesource.com/dawn/tools/src/cnf"
 	"dawn.googlesource.com/dawn/tools/src/container"
@@ -343,14 +345,14 @@ func TestLoadExternals(t *testing.T) {
 
 func TestPopulateSourceFiles(t *testing.T) {
 	tests := []struct {
-		name               string
-		skipFileCreation   bool
-		wantDirectories    []string
-		wantTargets        [][]string
-		wantFiles          [][]string
-		wantGeneratedFiles [][]string
-		wantErr            bool
-		wantErrMsg         string
+		name                         string
+		skipFileCreation             bool
+		wantDirectories              []string
+		wantTargets                  [][]string
+		wantFiles                    [][]string
+		wantGeneratedProtobufSources [][]string
+		wantErr                      bool
+		wantErrMsg                   string
 	}{
 		{ /////////////////////////////////////////////////////////////////////////
 			name:             "Non-existent root",
@@ -442,7 +444,7 @@ func TestPopulateSourceFiles(t *testing.T) {
 					"main_test.cc",
 				},
 			},
-			wantGeneratedFiles: [][]string{
+			wantGeneratedProtobufSources: [][]string{
 				{
 					"a",
 					string(targetProto),
@@ -519,7 +521,7 @@ func TestPopulateSourceFiles(t *testing.T) {
 				target := want.Targets[TargetName(targetName)]
 				target.AddSourceFile(want.AddFile(filepath))
 			}
-			for _, f := range testCase.wantGeneratedFiles {
+			for _, f := range testCase.wantGeneratedProtobufSources {
 				directoryName := f[0]
 				kind := TargetKind(f[1])
 				targetName := directoryName
@@ -528,7 +530,7 @@ func TestPopulateSourceFiles(t *testing.T) {
 				}
 				filepath := fmt.Sprintf("%s/%s", directoryName, f[2])
 				target := want.Targets[TargetName(targetName)]
-				target.AddGeneratedFile(want.AddGeneratedFile(filepath))
+				target.AddGeneratedProtobufSource(want.AddGeneratedProtobufSource(filepath))
 			}
 
 			err := populateSourceFiles(&p, wrapper)
@@ -540,6 +542,106 @@ func TestPopulateSourceFiles(t *testing.T) {
 			require.Equal(t, want, p)
 		})
 	}
+}
+
+func TestPopulateSourceFiles_TemplateDetection(t *testing.T) {
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	cfg := &common.Config{OsWrapper: wrapper}
+	p := NewProject("/root", cfg)
+
+	wrapper.MkdirAll("/root/a", 0o700)
+	wrapper.Create("/root/a/file.cc")
+	wrapper.Create("/root/a/file2.cc.tmpl")
+
+	err := populateSourceFiles(p, wrapper)
+	require.NoError(t, err)
+
+	dir := p.AddDirectory("a")
+	target := p.Target(dir, targetLib)
+	require.NotNil(t, target, "Target not created")
+
+	require.True(t, target.SourceFileSet.Contains("a/file.cc"))
+	require.True(t, target.GeneratedSourcePaths.Contains("a/file2.cc"))
+	require.True(t, p.AllTemplatePaths.Contains("a/file2.cc.tmpl"))
+	require.False(t, target.SourceFileSet.Contains("a/file2.cc.tmpl"))
+	require.True(t, target.TemplateFileSet.Contains("a/file2.cc.tmpl"))
+}
+
+func TestBuildDependencies_TemplateIncludes(t *testing.T) {
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	cfg := &common.Config{OsWrapper: wrapper}
+	p := NewProject("/root", cfg)
+
+	wrapper.MkdirAll("/root/a", 0o700)
+	wrapper.MkdirAll("/root/b", 0o700)
+
+	wrapper.Create("/root/a/file.cc")
+	wrapper.WriteFile("/root/a/file2.cc.tmpl", []byte(`#include "src/tint/b/file.h"`), 0o600)
+	wrapper.Create("/root/b/file.h")
+
+	err := populateSourceFiles(p, wrapper)
+	require.NoError(t, err)
+
+	err = scanSourceFiles(p, wrapper)
+	require.NoError(t, err)
+
+	err = buildDependencies(p, wrapper)
+	require.NoError(t, err)
+
+	dirA := p.AddDirectory("a")
+	dirB := p.AddDirectory("b")
+	targetA := p.Target(dirA, targetLib)
+	targetB := p.Target(dirB, targetLib)
+
+	require.NotNil(t, targetA, "Target A not created")
+	require.NotNil(t, targetB, "Target B not created")
+
+	found := false
+	for _, dep := range targetA.Dependencies.Internal() {
+		if dep == targetB {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "Target A should depend on Target B")
+}
+
+func TestBuildDependencies_TemplateFallback(t *testing.T) {
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	cfg := &common.Config{OsWrapper: wrapper}
+	p := NewProject("/root", cfg)
+
+	wrapper.MkdirAll("/root/a", 0o700)
+	wrapper.MkdirAll("/root/b", 0o700)
+
+	wrapper.WriteFile("/root/a/file.cc", []byte(`#include "src/tint/b/file.h"`), 0o600)
+	wrapper.Create("/root/b/file.h.tmpl")
+
+	err := populateSourceFiles(p, wrapper)
+	require.NoError(t, err)
+
+	err = scanSourceFiles(p, wrapper)
+	require.NoError(t, err)
+
+	err = buildDependencies(p, wrapper)
+	require.NoError(t, err)
+
+	dirA := p.AddDirectory("a")
+	dirB := p.AddDirectory("b")
+	targetA := p.Target(dirA, targetLib)
+	targetB := p.Target(dirB, targetLib)
+
+	require.NotNil(t, targetA, "Target A not created")
+	require.NotNil(t, targetB, "Target B not created")
+
+	found := false
+	for _, dep := range targetA.Dependencies.Internal() {
+		if dep == targetB {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "Target A should depend on Target B (via template fallback)")
 }
 
 func TestCheckInclude(t *testing.T) {
@@ -1034,4 +1136,169 @@ func TestEmitDotFile_OnlyMatchingKindIncluded(t *testing.T) {
 }
 `
 	require.Equal(t, expectedContents, string(bytes[:]))
+}
+
+func TestHasSupportedDeps(t *testing.T) {
+	test := func(name string, internalDeps []string, externalDeps []string, expected bool) {
+		t.Run(name, func(t *testing.T) {
+			cond := &TargetConditional{}
+			for _, dep := range internalDeps {
+				cond.InternalDependencies = append(cond.InternalDependencies, &Target{
+					Name: TargetName(dep),
+				})
+			}
+			for _, dep := range externalDeps {
+				cond.ExternalDependencies = append(cond.ExternalDependencies, ExternalDependency{
+					Name: ExternalDependencyName(dep),
+				})
+			}
+
+			got := HasSupportedDeps(cond)
+			require.Equal(t, expected, got)
+		})
+	}
+
+	test("Empty deps", nil, nil, false)
+	test("Only internal dependency", []string{"some_internal_lib"}, nil, true)
+	test("Only supported external dependency", nil, []string{"gtest"}, true)
+	test("Only unsupported external dependency", nil, []string{"metal"}, false)
+	test("Mixed dependencies", []string{"some_internal_lib"}, []string{"metal"}, true)
+}
+
+func TestConditionTargetLabel(t *testing.T) {
+	test := func(variable string, isNegated bool, expected string) {
+		name := fmt.Sprintf("%v_%v", variable, isNegated)
+		t.Run(name, func(t *testing.T) {
+			got := ConditionTargetLabel(variable, isNegated)
+			require.Equal(t, expected, got)
+		})
+	}
+
+	test("tint_build_is_win", false, "@platforms//os:windows")
+	test("tint_build_is_linux", false, "@platforms//os:linux")
+	test("tint_build_is_mac", false, "@platforms//os:macos")
+	// We should never get a negated platform case due to ShouldSkipUnary
+	test("tint_build_is_mac", true, "@platforms//os:macos")
+
+	test("tint_build_glsl_writer", false, "//src/tint:tint_build_glsl_writer_true")
+	test("tint_build_glsl_writer", true, "//src/tint:tint_build_glsl_writer_false")
+}
+
+func TestShouldSkipOrs(t *testing.T) {
+	test := func(name string, unaries []cnf.Unary, expected bool) {
+		t.Run(name, func(t *testing.T) {
+			got := ShouldSkipOrs(cnf.Ors(unaries))
+			require.Equal(t, expected, got)
+		})
+	}
+
+	test("Negated platform variables", []cnf.Unary{
+		{Var: "tint_build_is_win", Negate: true},
+		{Var: "tint_build_is_mac", Negate: true},
+	}, true)
+
+	test("Positive platform variable", []cnf.Unary{
+		{Var: "tint_build_is_win", Negate: false},
+	}, false)
+
+	test("Negated non-platform variable", []cnf.Unary{
+		{Var: "tint_build_glsl_writer", Negate: true},
+	}, false)
+
+	test("Mixed platform and non-platform", []cnf.Unary{
+		{Var: "tint_build_is_win", Negate: true},
+		{Var: "tint_build_glsl_writer", Negate: true},
+	}, false)
+}
+
+func TestShouldSkipAnds(t *testing.T) {
+	test := func(name string, ands cnf.Ands, expected bool) {
+		t.Run(name, func(t *testing.T) {
+			got := ShouldSkipAnds(ands)
+			require.Equal(t, expected, got)
+		})
+	}
+
+	test("Negated platform variables", cnf.Ands{
+		cnf.Ors{{Var: "tint_build_is_win", Negate: true}},
+		cnf.Ors{{Var: "tint_build_is_mac", Negate: true}},
+	}, true)
+
+	test("Positive platform variable", cnf.Ands{
+		cnf.Ors{{Var: "tint_build_is_win", Negate: false}},
+	}, false)
+
+	test("Mixed negated platform and non-platform", cnf.Ands{
+		cnf.Ors{{Var: "tint_build_is_win", Negate: true}},
+		cnf.Ors{{Var: "tint_build_glsl_writer", Negate: true}},
+	}, false)
+}
+
+func TestTargetHasObjcSrcs(t *testing.T) {
+	test := func(name string, sourceFiles []string, expected bool) {
+		t.Run(name, func(t *testing.T) {
+			target := &Target{
+				SourceFileSet: container.NewSet[string](),
+			}
+			for _, file := range sourceFiles {
+				target.SourceFileSet.Add(file)
+			}
+			got := target.HasObjcSrcs()
+			require.Equal(t, expected, got)
+		})
+	}
+
+	test("Empty sources", nil, false)
+	test("Only C++ sources", []string{"alpha.cc", "beta.cpp", "gamma.h"}, false)
+	test("Objective-C++ sources present", []string{"alpha.cc", "delta.mm"}, true)
+	test("Only Objective-C++ sources", []string{"delta.mm"}, true)
+}
+
+func TestHasCppSrcs(t *testing.T) {
+	test := func(name string, sourceFiles []string, expected bool) {
+		t.Run(name, func(t *testing.T) {
+			cond := &TargetConditional{}
+			for _, file := range sourceFiles {
+				cond.SourceFiles = append(cond.SourceFiles, &File{
+					Name: file,
+				})
+			}
+			got := HasCppSrcs(cond)
+			require.Equal(t, expected, got)
+		})
+	}
+
+	test("Empty sources", nil, false)
+	test("Only standard C++ sources", []string{"alpha.cc", "beta.cpp", "gamma.h"}, true)
+	test("Only Objective-C++ sources", []string{"validate_metal.mm"}, false)
+	test("Mixed sources", []string{"validate.cc", "validate_metal.mm"}, true)
+}
+
+func TestApplyImplicitTargetConditions(t *testing.T) {
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	cfg := &common.Config{OsWrapper: wrapper}
+	p := NewProject("/root", cfg)
+	dir := p.AddDirectory("src")
+
+	fuzzLib := p.AddTarget(dir, targetFuzz)
+	fuzzCmd := p.AddTarget(dir, targetFuzzCmd)
+	regularLib := p.AddTarget(dir, targetLib)
+
+	// Set an existing condition on fuzzLib
+	existingCond, err := cnf.Parse("existing_condition")
+	require.NoError(t, err)
+	fuzzLib.Condition = existingCond
+
+	err = applyImplicitTargetConditions(p, nil)
+	require.NoError(t, err)
+
+	// Fuzz targets should have tint_build_fuzzers applied
+	require.NotNil(t, fuzzLib.Condition)
+	require.Equal(t, "existing_condition && tint_build_fuzzers", fuzzLib.Condition.String())
+
+	require.NotNil(t, fuzzCmd.Condition)
+	require.Equal(t, "tint_build_fuzzers", fuzzCmd.Condition.String())
+
+	// Non-fuzz targets should not be affected
+	require.Nil(t, regularLib.Condition)
 }

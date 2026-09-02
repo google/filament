@@ -32,10 +32,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native {
 
@@ -58,7 +58,7 @@ struct OpenGLFunctions;
     X(BindingIndex, index)                                                                  \
     /* Return the array size of the element in the WGSL / GLSL as OpenGL requires that a */ \
     /* non-arrayed (arraySize = 1) binding uses glUniform1i and not glUniform1iv. */        \
-    X(BindingIndex, shaderArraySize, 1)
+    X(BindingIndex, shaderArraySize, 1u)
 DAWN_SERIALIZABLE(struct, CombinedSamplerElement, COMBINED_SAMPLER_ELEMENT_MEMBERS){};
 #undef COMBINED_SAMPLER_ELEMENT_MEMBERS
 
@@ -87,11 +87,11 @@ class ShaderModule final : public ShaderModuleBase {
     ResultOrError<GLuint> CompileShader(const OpenGLFunctions& gl,
                                         const ProgrammableStage& programmableStage,
                                         SingleShaderStage stage,
-                                        const ImmediateConstantMask& pipelineImmediateMask,
+                                        const ImmediateMask& pipelineImmediateMask,
                                         VertexAttributeMask bgraSwizzleAttributes,
-                                        std::vector<CombinedSampler>* combinedSamplers,
+                                        std::vector<CombinedSampler>* combinedSamplersOut,
                                         const PipelineLayout* layout,
-                                        EmulatedTextureBuiltinRegistrar* emulatedTextureBuiltings,
+                                        EmulatedTextureBuiltinRegistrar* emulatedTextureBuiltins,
                                         bool* needsSSBOLengthUniformBuffer,
                                         Extent3D* workgroupSize);
 

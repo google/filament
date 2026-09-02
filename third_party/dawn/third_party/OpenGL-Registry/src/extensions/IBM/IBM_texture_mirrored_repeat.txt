@@ -1,0 +1,127 @@
+Name
+
+    IBM_texture_mirrored_repeat
+
+Name Strings
+
+    GL_IBM_texture_mirrored_repeat
+
+Version
+
+    $Date: 1999/12/28 01:40:35 $ $Revision: 1.2 $
+    IBM Id: texture_mirrored_repeat.spec,v 1.5 1998/01/16 18:09:31 pbrown Exp
+
+Number
+
+    224
+
+Dependencies
+
+    EXT_texture_3D
+    IBM_texture_edge_clamp
+
+Overview
+
+    IBM_texture_mirrored_repeat extends the set of texture wrap modes to
+    include a mode (GL_MIRRORED_REPEAT_IBM) that effectively uses a texture
+    map twice as large at the original image in which the additional half of
+    the new image is a mirror image of the original image.
+
+    This new mode relaxes the need to generate images whose opposite edges
+    match by using the original image to generate a matching "mirror image".
+
+Issues
+
+  * The spec clamps the final (u,v) coordinates to the range [0.5, 2^n-0.5].
+    This will produce the same effect as trapping a sample of the border texel
+    and using the corresponding edge texel.  The choice of technique is purely
+    an implementation detail.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv, when
+    their <pname> parameter is TEXTURE_WRAP_S, TEXTURE_WRAP_T, or
+    TEXTURE_WRAP_R_EXT:
+
+      GL_MIRRORED_REPEAT_IBM           0x8370
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+  Change to Section 3.8 (Subsection "Texture Wrap Modes")
+
+    If TEXTURE_WRAP_S, TEXTURE_WRAP_T, or TEXTURE_WRAP_R_EXT is set to
+    MIRRORED_REPEAT_IBM, the s (or t or r) coordinate is converted to:
+
+        s - floor(s),           if floor(s) is even, or
+        1 - (s - floor(s)),     if floor(s) is odd.
+
+
+  Change to Section 3.8.1, Texture Minification
+
+    Let:
+        u(x,y) = 2^n * s(x,y),
+        v(x,y) = 2^m * t(x,y), and
+        w(x,y) = 2^l * r(x,y).
+
+    If the TEXTURE_WRAP_S, TEXTURE_WRAP_T, or TEXTURE_WRAP_R_EXT is set to
+    either MIRRORED_REPEAT_IBM or CLAMP_TO_EDGE_IBM, the resulting u, v, or
+    w coordinates (respectively) are clamped to the range [0.5, 2^n-0.5].
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, then the references clamping of 3D
+    textures in this file are invalid, and references to TEXTURE_WRAP_R_EXT
+    should be ignored.
+
+Dependencies on IBM_texture_edge_clamp
+
+    If IBM_texture_edge_clamp is not implemented, then the references to
+    CLAMP_TO_EDGE_IBM should be ignored.
+
+New State
+
+    Only the type information changes for these parameters:
+
+    Get Value           Get Command             Type    Initial Value   Attrib
+    ---------           -----------             ----    -------------   ------
+    TEXTURE_WRAP_S      GetTexParameteriv       n x Z5  REPEAT          texture
+    TEXTURE_WRAP_T      GetTexParameteriv       n x Z5  REPEAT          texture
+    TEXTURE_WRAP_R_EXT  GetTexParameteriv       n x Z5  REPEAT          texture
+
+New Implementation Dependent State
+
+    None

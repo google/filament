@@ -38,11 +38,9 @@ using namespace tint::core::number_suffixes;  // NOLINT
 namespace tint::msl::writer::raise {
 namespace {
 
-class MslWriter_ConvertPrintToLogTest : public core::ir::transform::TransformTest {
-    void SetUp() override {
-        capabilities.Add(core::ir::Capability::kAllow8BitIntegers);
-        capabilities.Add(core::ir::Capability::kAllowNonCoreTypes);
-    }
+struct MslWriter_ConvertPrintToLogTest : public core::ir::transform::TransformTest {
+  protected:
+    void SetUp() override { mod.properties.Add(core::ir::Property::kAllow16BitFloats); }
 };
 
 TEST_F(MslWriter_ConvertPrintToLogTest, NoPrint) {

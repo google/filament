@@ -1,0 +1,343 @@
+Name
+
+    EXT_swap_buffers_with_damage
+
+Name Strings
+
+    EGL_EXT_swap_buffers_with_damage
+
+IP Status
+
+    No known IP claims.
+
+Contributors
+
+    Robert Bragg
+    Tapani Pälli
+    Kristian Høgsberg
+    Benjamin Franzke
+    Ian Stewart
+    James Jones
+
+Contacts
+
+    Robert Bragg, Intel (robert.bragg 'at' intel.com)
+
+Status
+
+    Published
+
+Version
+
+    Version 11, February 20, 2020
+
+Number
+
+    EGL Extension #55
+
+Dependencies
+
+    Requires EGL 1.4
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension provides a means to issue a swap buffers request to
+    display the contents of the current back buffer and also specify a
+    list of damage rectangles that can be passed to a system
+    compositor so it can minimize how much it has to recompose.
+
+    This should be used in situations where an application is only
+    animating a small portion of a surface since it enables the
+    compositor to avoid wasting time recomposing parts of the surface
+    that haven't changed.
+
+New Procedures and Functions
+
+    EGLBoolean eglSwapBuffersWithDamageEXT (
+        EGLDisplay dpy,
+        EGLSurface surface,
+        const EGLint *rects,
+        EGLint n_rects);
+
+New Tokens
+
+    None
+
+Changes to Chapter 3 of the EGL 1.4 Specification (EGL Functions and Errors)
+
+    Add the following text to subsection 3.9.1 titled "Posting to a
+    Window" after the description of eglSwapBuffers.
+
+        As an alternative to eglSwapBuffers use:
+
+        EGLBoolean eglSwapBuffersWithDamageEXT (
+            EGLDisplay dpy,
+            EGLSurface surface,
+            const EGLint *rects,
+            EGLint n_rects);
+
+        to do the same thing as eglSwapBuffers but additionally report
+        a list of rectangles that define the region that has truly
+        changed since the last frame. To be clear; the entire contents
+        of the back buffer will still be swapped to the front so
+        applications using this API must still ensure that the entire
+        back buffer is consistent. The rectangles are only a hint for
+        the system compositor so it can avoid recomposing parts of the
+        surface that haven't really changed.
+            <rects> points to a list of integers in groups of four that
+        each describe a rectangle in screen coordinates in this
+        layout: {x, y, width, height}. The rectangles are specified
+        relative to the bottom-left of the surface and the x and y
+        components of each rectangle specify the bottom-left position
+        of that rectangle. <n_rects> determines how many groups of 4
+        integers can be read from <rects>.  It is not necessary to
+        avoid overlaps of the specified rectangles.
+            If <n_rects> is 0 then <rects> is ignored and the entire
+        surface is implicitly damaged and the behaviour is equivalent
+        to calling eglSwapBuffers.
+            The error conditions checked for are the same as for the
+        eglSwapBuffers api.
+
+    Modify the first paragraph of Section 3.9.1 titled "Native Window
+    Resizing"
+
+        "If the native window corresponding to <surface> has been
+        resized prior to the swap, <surface> must be resized to match.
+        <surface> will normally be resized by the EGL implementation
+        at the time the native window is resized. If the
+        implementation cannot do this transparently to the client,
+        then eglSwapBuffers and eglSwapBuffersWithDamageEXT must
+        detect the change and resize surface prior to copying its
+        pixels to the native window. In this case the meaningfulness
+        of any damage rectangles forwarded by
+        eglSwapBuffersWithDamageEXT to the native window system is
+        undefined."
+
+    Modify the following sentences in Section 3.9.3, page 51 (Posting
+    Semantics)
+
+    Paragraph 2, first sentence:
+
+        "If <dpy> and <surface> are the display and surface for the
+        calling thread's current context, eglSwapBuffers,
+        eglSwapBuffersWithDamageEXT, and eglCopyBuffers perform an
+        implicit flush operation on the context (glFlush for OpenGL or
+        OpenGL ES context, vgFlush for an OpenVG context)."
+
+    Paragraph 3, first sentence:
+
+        "The destination of a posting operation (a visible window, for
+        eglSwapBuffers or eglSwapBuffersWithDamageEXT, or a native
+        pixmap, for eglCopyBuffers) should have the same number of
+        components and component sizes as the color buffer it's being
+        copied from."
+
+    Paragraph 6, first two sentences:
+
+        "The function
+
+            EGLBoolean eglSwapInterval(EGLDisplay dpy, EGLint
+                interval);
+
+        specifies the minimum number of video frame periods per color
+        buffer post operation for the window associated with the
+        current context. The interval takes effect when eglSwapBuffers
+        or eglSwapBuffersWithDamageEXT is first called subsequent to
+        the eglSwapInterval call."
+
+    Modify the following sentences in Section 3.9.4, page 52 (Posting
+    Errors)
+
+    Paragraph 1, first sentence:
+
+        "eglSwapBuffers, eglSwapBuffersWithDamageEXT, and
+        eglCopyBuffers return EGL_FALSE on failure."
+
+    Paragraph 1, seventh sentence:
+
+        "If eglSwapBuffers or eglSwapBuffersWithDamageEXT are called
+        and the native window associated with <surface> is no longer
+        valid, an EGL_BAD_NATIVE_WINDOW error is generated.  If
+        eglSwapBuffersWithDamageEXT is called and <n_rects>, is less
+        than zero or <n_rects> is greater than zero but <rects> is
+        NULL, EGL_BAD_PARAMETER is generated."
+
+Dependencies on OpenGL ES
+
+    None
+
+Dependencies on OpenVG
+
+    None
+
+Issues
+
+1)  Do applications have to make sure the rectangles don't overlap?
+
+    RESOLVED: No, that would be inconvenient for applications and we
+    see no difficulty for implementations to supporting overlapping
+    rectangles.
+
+2)  Would it be valid for an implementation to discard the list of
+    rectangles internally and work just in terms of the
+    eglSwapBuffers api?
+
+    RESOLVED: Yes, the rectangles are only there for optimization
+    purposes so although it wouldn't be beneficial to applications if
+    it was convenient at times then it would be compliant for an
+    implementation to discard the rectangles and just call
+    eglSwapBuffers instead. The error conditions that should be
+    checked for are compatible with the requirements for
+    eglSwapBuffers.
+
+3)  What origin should be used for damage rectangles?
+
+    RESOLVED: Bottom left since this is consistent with all other
+    uses of 2D window coordinates in EGL and OpenGL that specify a
+    bottom left origin.
+
+    Originally this specification was written with a top-left origin
+    for the damage rectangles even though it was known to be
+    inconsistent and that was because most window systems use a
+    top-left origin and there are some awkward semantic details
+    related to handling native window resizing that we had hoped to
+    simplify.
+
+    This extension and also several other existing EGL extensions
+    struggle to guarantee a reliable behaviour in response to native
+    window resizing which can happen asynchronously on some platforms
+    and this can make it difficult for applications to avoid certain
+    visual artefacts.
+
+    The crux of the problem is that when a native window is
+    asynchronously resized then the window system may maintain the old
+    buffer contents with respect to a different origin than EGL's
+    bottom left origin. For this extension that means that EGL damage
+    rectangles that are intended to map to specific surface contents
+    may end up mapping to different contents when a native window is
+    resized because the rectangles and buffer contents will be moved in
+    different directions in relation to the new window size.
+
+    In the end we decided that this issue isn't simply solved by
+    choosing to use a top-left origin and so we can instead aim for
+    consistency and clarify what guarantees we offer in relation to
+    native window resizing separate from this issue.
+
+4)  What guarantees do we provide about the meaningfulness of EGL
+    damage rectangles that are forwarded to the native window system
+    when presenting to a native window that has been resized?
+
+    RESOLVED: The meaningfulness of those forwarded damage rectangles
+    is undefined since this simplifies the implementation requirements
+    and we saw very little benefit to applications from providing
+    stricter guarantees.
+
+    The number of applications that would be able to avoid fully
+    redrawing the contents of a window in response to a window resize
+    is expected to be so low that there would be almost no benefit to
+    defining strict guarantees here.
+
+    Since EGL already states that the contents of window surface
+    buffers become undefined when a native window has been resized,
+    this limitation doesn't introduce any new issue for applications
+    to consider. Applications should already fully redraw buffer
+    contents in response to a native window resize, unless they are
+    following some platform specific documentation that provides
+    additional guarantees.
+
+    For an example of the implementation details that make this an
+    awkward issue to provide guarantees for we can consider X11 based
+    platforms where native windows can be resized asynchronously with
+    respect to a client side EGL surface:
+
+    With X11 there may be multiple "gravity" transformations that can
+    affect how surface buffer content is positioned with respect to a
+    new native window size; there is the core X "bit gravity" and
+    there is the EGL driver gravity that determines how a surface's
+    contents with one size should be mapped to a native window with a
+    different size.  Without very careful cooperation between the EGL
+    driver and the core X implementation and without the right
+    architecture to be able to do transforms atomically with respect
+    to different clients that may enact a window resize then it is not
+    possible to reliably map EGL damage rectangles to native window
+    coordinates.
+
+    The disadvantage of a driver that is not able to reliably map EGL
+    damage rectangles to native window coordinates is that a native
+    compositor may re-compose the wrong region of window. This may
+    result in a temporary artefact until the full window gets redrawn
+    and then re-composed. X11 already suffers other similar transient
+    artefacts when resizing windows.
+
+    The authors of this spec believe that even if a driver can't do
+    reliable mappings of EGL damage rectangles then compositors would
+    be able mitigate the majority of related artefacts by ignoring
+    sub-window damage during an interactive window resize.
+
+    The authors of this spec believe that that if an X11 driver did
+    want to reliably map EGL damage rectangles to the native window
+    coordinates then that may be technically feasible depending on the
+    driver architecture. For reference one approach that had been
+    considered (but not tested) is as follows:
+
+      1) When eglSwapBuffersWithDamageEXT is called, send EGL damage
+      rectangles from the client to a driver component within the
+      xserver un-transformed in EGL window surface coordinates with a
+      bottom-left origin.
+
+      2) Within the X server the driver component should look at the
+      bit-gravity of a window and use the bit-gravity convention to
+      copy EGL surface content to the front-buffer of a native window.
+
+      3) Within the X server the driver component should use the same
+      gravity transform that was used to present the surface content
+      to also transform the EGL damage rectangle coordinates.
+
+      Note that because this transform is done in the xserver then
+      this is implicitly synchronized with all clients that would
+      otherwise be able to enact an asynchronous window resize.
+
+
+Revision History
+
+    Version 1, 29/07/2011
+      - First draft
+    Version 2, 03/08/2011
+      - Clarify that the rectangles passed may overlap
+    Version 3, 01/09/2011
+      - Fix a missing '*' in prototype to make rects a pointer
+    Version 4, 11,02,2012
+      - Clarify that implementing in terms of eglSwapBuffers would be
+        compliant.
+    Version 5, 11,02,2012
+      - Tweak the cases where we report BAD_PARAMETER errors
+    Version 6, 05/02/2013
+      - Specify more thorough updates across the EGL 1.4 spec
+        wherever it relates to the eglSwapBuffers api
+      - Clarify that passing <n_rects> of 0 behaves as if
+        eglSwapBuffers were called.
+    Version 7, 14/02/2013
+      - Specify that a bottom-left origin should be used for rectangles
+    Version 8, 19/03/2013
+      - Add Ian and James as contributors
+      - Add an issue explaining why we changed to a bottom-left origin
+      - Clarify that the behaviour is undefined when presenting to a
+        native window that has been resized.
+      - Document the awkward details that would be involved in
+        providing more strict guarantees when presenting to a native
+        window that has been resized.
+    Version 9, 12/06/2013, Chad Versace <chad.versace@intel.com>
+      - Remove the "all rights reserved" clause from the copyright notice. The
+        removal does not change the copyright notice's semantics, since the
+        clause is already implied by any unadorned copyright notice. But, the
+        removal does diminish the likelihood of unwarranted caution in readers
+        of the spec.
+      - Add "IP Status" section to explicitly state that this extension has no
+        knonw IP claims.
+    Version 10, 23/10/2014, Jon Leech
+      - Remove copyright after signoff from Intel.
+    Version 11, 20/02/2020, Jon Leech
+      - Constify rects parameter (EGL-Registry issue 98).

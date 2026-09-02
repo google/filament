@@ -147,7 +147,7 @@ TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicMax_WithExtension) {
 }
 
 TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicVec2u_FeatureReq) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 
 @group(0) @binding(0) var<storage, read_write> a : atomic<vec2u>;
@@ -163,7 +163,7 @@ input.wgsl:3:59 error:  The type 'atomic<vec2u>' cannot be used without the exte
 }
 
 TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicVec2u_StorageBasic) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 enable atomic_vec2u_min_max;
 @group(0) @binding(0) var<storage, read_write> a : atomic<vec2u>;
@@ -174,7 +174,7 @@ fn f() {
 }
 
 TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicVec2u_StorageArray) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 enable atomic_vec2u_min_max;
 @group(0) @binding(0) var<storage, read_write> a : array<atomic<vec2u>>;
@@ -185,7 +185,7 @@ fn f() {
 }
 
 TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicVec2u_StorageStructArray) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 enable atomic_vec2u_min_max;
 struct Data
@@ -202,7 +202,7 @@ fn f() {
 }
 
 TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicVec2u_WorkgroupBasic) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 enable atomic_vec2u_min_max;
 @group(0) @binding(0) var<workgroup, read_write> a : array<atomic<vec2u>, 10>;
@@ -222,7 +222,7 @@ input.wgsl:3:23 note: while instantiating 'var' a
 }
 
 TEST_F(AtomicVec2uMinMaxExtensionTest, AtomicVec2u_WrongParam) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 enable atomic_vec2u_min_max;
 @group(0) @binding(0) var<storage, read_write> a : array<atomic<vec2u>, 10>;

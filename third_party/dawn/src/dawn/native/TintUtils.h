@@ -31,13 +31,14 @@
 #include <functional>
 #include <unordered_map>
 
-#include "dawn/common/NonCopyable.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/stream/Stream.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/stream/Stream.h"
+#include "src/utils/non_copyable.h"
 #include "tint/tint.h"
 
 namespace dawn::native {
@@ -94,6 +95,7 @@ template <typename F>
 concept ConvertsBindingIndexToBindingPoint = requires(F f, BindGroupIndex group, BindingIndex i) {
     { f(group, i) } -> std::same_as<tint::BindingPoint>;
 };
+
 template <ConvertsBindingIndexToBindingPoint F>
 tint::Bindings GenerateBindingRemapping(const PipelineLayoutBase* layout,
                                         SingleShaderStage stage,
@@ -109,8 +111,8 @@ tint::Bindings GenerateBindingRemapping(const PipelineLayoutBase* layout,
             }
 
             tint::BindingPoint srcBindingPoint{
-                .group = uint32_t(group),
-                .binding = uint32_t(bindingNumber),
+                .group = uint32_t{group},
+                .binding = uint32_t{bindingNumber},
             };
 
             MatchVariant(
@@ -179,6 +181,28 @@ tint::Bindings GenerateBindingRemapping(const PipelineLayoutBase* layout,
     }
 
     return bindings;
+}
+
+tint::ResourceType BindingLayoutToResourceType(const BindingInfo& bi);
+
+template <ConvertsBindingIndexToBindingPoint F>
+std::unordered_map<tint::BindingPoint, tint::ResourceType> GenerateBindingToResourceType(
+    const PipelineLayoutBase* layout,
+    F&& BindingPointFor) {
+    std::unordered_map<tint::BindingPoint, tint::ResourceType> binding_to_resource_type;
+
+    for (BindGroupIndex group : layout->GetBindGroupLayoutsMask()) {
+        const BindGroupLayoutInternalBase* bgl = layout->GetBindGroupLayout(group);
+
+        for (const auto& [_, apiBindingIndex] : bgl->GetBindingMap()) {
+            tint::BindingPoint dstBindingPoint =
+                BindingPointFor(group, bgl->AsBindingIndex(apiBindingIndex));
+            tint::ResourceType type =
+                BindingLayoutToResourceType(bgl->GetAPIBindingInfo(apiBindingIndex));
+            binding_to_resource_type.emplace(dstBindingPoint, type);
+        }
+    }
+    return binding_to_resource_type;
 }
 
 }  // namespace dawn::native

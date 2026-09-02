@@ -25,19 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/white_box/VulkanImageWrappingTests.h"
+#include "src/dawn/tests/white_box/VulkanImageWrappingTests.h"
 
 #include <utility>
 
-#include "dawn/common/Math.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/white_box/VulkanImageWrappingTests_DmaBuf.h"
-#include "dawn/tests/white_box/VulkanImageWrappingTests_OpaqueFD.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/white_box/VulkanImageWrappingTests_DmaBuf.h"
+#include "src/dawn/tests/white_box/VulkanImageWrappingTests_OpaqueFD.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::vulkan {
 
@@ -307,10 +308,8 @@ class VulkanImageWrappingUsageTests : public VulkanImageWrappingTestBase {
         // Create another device based on the original
         adapterBase = native::FromAPI(device.Get())->GetAdapter();
         deviceDescriptor.nextInChain = &deviceTogglesDesc;
-        deviceTogglesDesc.enabledToggles = GetParam().forceEnabledWorkarounds.data();
-        deviceTogglesDesc.enabledToggleCount = GetParam().forceEnabledWorkarounds.size();
-        deviceTogglesDesc.disabledToggles = GetParam().forceDisabledWorkarounds.data();
-        deviceTogglesDesc.disabledToggleCount = GetParam().forceDisabledWorkarounds.size();
+        deviceTogglesDesc.enabledToggles = GetParam().forceEnabledWorkarounds;
+        deviceTogglesDesc.disabledToggles = GetParam().forceDisabledWorkarounds;
 
         secondDeviceVk = native::vulkan::ToBackend(adapterBase->APICreateDevice(&deviceDescriptor));
         secondDevice = wgpu::Device::Acquire(native::ToAPI(secondDeviceVk));
@@ -855,10 +854,13 @@ TEST_P(VulkanImageWrappingUsageTests, LargerImage) {
             float normCol = static_cast<float>(col) / width;
             float dist = sqrt(normRow * normRow + normCol * normCol) * 3;
             dist = dist - static_cast<int>(dist);
-            data[4 * (row * width + col)] = static_cast<unsigned char>(dist * 255);
-            data[4 * (row * width + col) + 1] = static_cast<unsigned char>(dist * 255);
-            data[4 * (row * width + col) + 2] = static_cast<unsigned char>(dist * 255);
-            data[4 * (row * width + col) + 3] = 255;
+            data[static_cast<size_t>(4) * (row * width + col)] =
+                static_cast<unsigned char>(dist * 255);
+            data[static_cast<size_t>(4) * (row * width + col) + 1] =
+                static_cast<unsigned char>(dist * 255);
+            data[static_cast<size_t>(4) * (row * width + col) + 2] =
+                static_cast<unsigned char>(dist * 255);
+            data[static_cast<size_t>(4) * (row * width + col) + 3] = 255;
         }
     }
 
@@ -906,8 +908,8 @@ TEST_P(VulkanImageWrappingUsageTests, LargerImage) {
     }
 
     // Check the image is not corrupted on |device|
-    EXPECT_BUFFER_U32_RANGE_EQ(reinterpret_cast<uint32_t*>(data.data()), copyDstBuffer, 0,
-                               data.size() / 4);
+    DAWN_UNSAFE_TODO(EXPECT_BUFFER_U32_RANGE_EQ(reinterpret_cast<uint32_t*>(data.data()),
+                                                copyDstBuffer, 0, data.size() / 4));
 
     IgnoreSignalSemaphore(nextWrappedTexture);
 }

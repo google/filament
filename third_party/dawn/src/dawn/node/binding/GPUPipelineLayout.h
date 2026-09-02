@@ -45,6 +45,7 @@ class GPUPipelineLayout final : public interop::GPUPipelineLayout {
     GPUPipelineLayout(const wgpu::PipelineLayoutDescriptor& desc, wgpu::PipelineLayout layout);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::PipelineLayout&() const { return layout_; }
 
     // interop::GPUPipelineLayout interface compliance

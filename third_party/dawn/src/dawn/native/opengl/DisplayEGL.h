@@ -33,17 +33,17 @@
 #include <string>
 
 #include "absl/types/span.h"  // TODO(343500108): Use std::span when we have C++20.
-#include "dawn/common/DynamicLib.h"
-#include "dawn/common/NonMovable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/egl_platform.h"
-#include "dawn/native/opengl/EGLFunctions.h"
 #include "partition_alloc/pointers/raw_ref.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/egl_platform.h"
+#include "src/dawn/native/opengl/EGLFunctions.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn::native::opengl {
 
-inline constexpr EGLConfig kNoConfig = 0;
+static constexpr EGLConfig kNoConfig = nullptr;
 
 // Represents a connection to an EGL driver, with its EGLDisplay, its functions and other metadata
 // global to EGL.

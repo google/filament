@@ -1,0 +1,185 @@
+Name
+
+    SGIS_fog_function
+
+Name Strings
+
+    GL_SGIS_fog_function
+
+Version
+
+    Last Modified Date: March 30, 1999
+    Author Revision: $Header: //depot/main/doc/registry/extensions/SGI/fog_func.spec#13 $
+
+Number
+
+    64	
+
+Dependencies
+
+    OpenGL 1.1 is required. Written against the OpenGL 1.2 Specification.
+
+Overview
+
+    This extension allows to define application-specific fog blend-factor
+    function.  Function is defined by the set of the "control" points and
+    should be monotonic. Each control point represented as a pair of the
+    eye-space distance value and corresponding value of the fog blending 
+    factor. The minimum number of control points is one. The maximum 
+    number is implementation dependent.
+    
+
+New Procedures and Functions
+
+    void FogFuncSGIS(sizei n, const float* points);
+
+    void GetFogFuncSGIS(float *points);
+
+Issues
+
+   - The Bali team introduced 2 new features in this spec. 1) the
+   GetFogFuncSGIS procedure that allows to querry automatically
+   the current number of contol points. It is much nicer than
+   the previous spec that was using gets. 2) If the user give
+   fog blending factor ouside the [0.0, 1.0] range it should not
+   generate an error but the valuse should be calmed instead.
+
+   However, this extension has already been shipped and it is a
+   problem. We would like to see this extension to be an EXT to
+   be able to do the right thing.
+
+   - If the above changes are not acceptable, the sentence "All the points
+   of the current fog factor function are queried by calling 
+   GetFogFuncSGIS." in section "Additions to Chapter 6 of the 1.2 
+   Specification (State and State Requests)" should be replaced by:
+   "All the points of the current fog factor function are queried by 
+   calling GetFloatv or GetDoublev with <pname> set to FOG_FUNC_SGIS."
+   Also, the sentence "INVALID_OPERATION is generated if GetFogFuncSGIS
+   is executed between execution of Begin and the corresponding
+   execution to End. " in the "Errors" section should be ignored.
+
+   The sentences "The first value of each value pair in <points>
+   specifies a value of eye-space distance (should be not negative),
+   and the second value of each value pair specifies the corresponding
+   value of the fog blend factor. The fog blend factor values are
+   clamped to [0.0, 1.0]." should be replced by "The first 
+   value of each value pair in <points> specifies a value of eye-space 
+   distance (should be not negative), and the second value of each value pair 
+   specifies the corresponding value of the fog blend factor (should be in 
+   [0.0, 1.0] range)." Also "INVALID_VALUE is generated if fog factor
+   value out of [0.0, 1.0] range." should be added to the error section.
+
+
+New Tokens
+
+    Accepted by the <param> parameter of Fogf and Fogi, and by the <params> 
+    parameter of Fogiv and Fogfv, when their <pname> parameter is FOG_MODE,
+    and by the <pname> parameter of GetDoublev and GetFloatv:
+
+        FOG_FUNC_SGIS                           = 0x812A
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+        FOG_FUNC_POINTS_SGIS                    = 0x812B
+        MAX_FOG_FUNC_POINTS_SGIS                = 0x812C
+
+    May be returned by GetBooleanv, GetDoublev, GetIntegerv, and GetFloatv
+    when their <pname> parameter is FOG_MODE:
+
+        FOG_FUNC_SGIS                           = 0x812A
+
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+
+    3.10 Fog
+
+    The function for computing blending factor may be specified by calling 
+    FogFuncSGIS with <points> pointing at an array of pairs of floating point 
+    values, and <n> set to the number of value pairs in <points>. The first 
+    value of each value pair in <points> specifies a value of eye-space 
+    distance (should be not negative), and the second value of each value pair 
+    specifies the corresponding value of the fog blend factor. The fog
+    blend factor values are clamped to [0.0, 1.0]. The order in which 
+    the points are specified is significant (if there is more then one
+    point) based on the following requirements: 1. distance value of
+    each point is not smaller then the distance value of its
+    predecessor; 2. fog factor value of each point is not bigger then
+    the fog factor value of its predecessor. The <n> value 
+    pairs in <points> completely specify the function, replacing any previous 
+    specification that may have existed. At least one control point should be 
+    specified. The maximum number of control points is implementation dependent
+    and may be inquired by Get commands. Initially fog function defined by a 
+    single point (0.0, 1.0).
+   
+    Fog factor function is evaluated by fitting a curve through the points
+    specified by FogFuncSGIS. This curve may be linear between adjacent points,
+    or it may be smoothed, but it will pass exactly through the points, limited
+    only by the resolution of the implementation. The value pair with the 
+    lowest distance value specifies the fog function value for all values of 
+    distance less than or equal to that pair's distance. Likewise, the value
+    pair with the greatest distance value specifies the function value for 
+    all values of distance greater than or equal to that pair's distance.
+
+    If <pname> is FOG_MODE, and <param> is, or <params> point to an 
+    integer FOG_FUNC_SGIS then application specified fog factor function is
+    selected for the fog calculation. 
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    The max allowed number of points in the fog factor function specification 
+    of a fog is queried by calling GetBooleanv, GetIntegerv, GetFloatv, 
+    and GetDoublev with <pname> set to MAX_FOG_FUNC_POINTS_SGIS.
+    The number of points in the current fog factor function is queried by 
+    calling GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev with <pname> 
+    set to FOG_FUNC_POINTS_SGIS. All the points of the current fog
+    factor function are queried by calling GetFogFuncSGIS. Points are
+    returned  in the same format as they are specified in the
+    glFogFuncSGIS  function.
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if FogFuncSGIS parameter <n> is
+    negative.
+
+    INVALID_VALUE is generated if eye spce-distance is less then zero.
+
+    INVALID_VALUE is generated if specified control points don't confirm
+    with order requirements.
+
+    INVALID_OPERATION is generated if FogFuncSGIS is executed between 
+    execution of Begin and the corresponding execution to End.
+
+    INVALID_OPERATION is generated if GetFogFuncSGIS is executed
+    between execution of Begin and the corresponding execution to
+    End. 
+
+New State
+
+    Get Value			Get Command		Type		Initial Value	Attribute
+    ---------			-----------		----		-------------	---------
+    MAX_FOG_FUNC_POINTS_SGIS	GetIntegerv		Z+		XXX
+    FOG_FUNC_POINTS_SGIS	GetIntegerv		Z+		1		fog
+    FOG_FUNC_SGIS		GetFloatv		2 x n x R+	(0.0, 1.0)
+
+New Implementation Dependent State
+
+    None

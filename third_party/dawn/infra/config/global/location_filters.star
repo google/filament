@@ -69,23 +69,63 @@ _NON_CMAKE_NON_FUZZ_LOCATIONS_EXCLUDED_FROM_CQ = [
     ),
 ]
 
-_CHROMIUM_CQ_FILE_EXCLUSIONS = _GITHUB_LOCATIONS_EXCLUDED_FROM_CQ + _GO_LOCATIONS_EXCLUDED_FROM_CQ
+# Chromium trybots that are exposed for use in Dawn are effectively unaffected
+# by Dawn Starlark changes other than changes that originate from
+# chromium_try.star. However, since the generated changes from that file only
+# affect cr-buildbucket.cfg, they cannot actually be tested on trybots. So,
+# this is used to avoid triggering Chromium trybots on Starlark changes since
+# doing so just wastes capacity and delays the CQ.
+_EXCLUDE_STARLARK_CHANGES = [
+    cq.location_filter(path_regexp = r"infra/config/global/.+", exclude = True),
+]
 
-_CMAKE_CQ_FILE_EXCLUSIONS = (_COMMON_LOCATIONS_EXCLUDED_FROM_CQ + _GO_LOCATIONS_EXCLUDED_FROM_CQ + _GITHUB_LOCATIONS_EXCLUDED_FROM_CQ)
+_CPP_FILE_INCLUSIONS = [
+    cq.location_filter(path_regexp = r".+\.h"),
+    cq.location_filter(path_regexp = r".+\.c"),
+    cq.location_filter(path_regexp = r".+\.cc"),
+    cq.location_filter(path_regexp = r".+\.cpp"),
+]
+
+_CHROMIUM_CQ_FILE_EXCLUSIONS = (_GITHUB_LOCATIONS_EXCLUDED_FROM_CQ +
+                                _GO_LOCATIONS_EXCLUDED_FROM_CQ +
+                                _EXCLUDE_STARLARK_CHANGES)
+
+_CMAKE_CQ_FILE_EXCLUSIONS = (_COMMON_LOCATIONS_EXCLUDED_FROM_CQ +
+                             _GO_LOCATIONS_EXCLUDED_FROM_CQ +
+                             _GITHUB_LOCATIONS_EXCLUDED_FROM_CQ)
 
 # The `gn analyze` step automatically run as part of the gn_v2_trybot recipe
 # will already stop the build if no compilation is needed, but we can save some
 # resources by not starting a build at all if we know no relevant files are
 # touched.
-_GN_CLANG_CQ_FILE_EXCLUSIONS = _COMMON_LOCATIONS_EXCLUDED_FROM_CQ + _NON_CMAKE_NON_FUZZ_LOCATIONS_EXCLUDED_FROM_CQ
+_GN_CLANG_CQ_FILE_EXCLUSIONS = (_COMMON_LOCATIONS_EXCLUDED_FROM_CQ +
+                                _NON_CMAKE_NON_FUZZ_LOCATIONS_EXCLUDED_FROM_CQ)
 
 # Fuzz builders rely on both Go tools and Tint test data.
 _GN_CLANG_CQ_FUZZ_FILE_EXCLUSIONS = _WEBGPU_CTS_LOCATIONS_EXCLUDED_FROM_CQ
 
 # Standard CQ builders that don't run Node tests don't rely on Go code.
-_GN_CLANG_NO_NODE_CQ_FILE_EXCLUSIONS = _GN_CLANG_CQ_FILE_EXCLUSIONS + _GO_LOCATIONS_EXCLUDED_FROM_CQ
+_GN_CLANG_NO_NODE_CQ_FILE_EXCLUSIONS = (_GN_CLANG_CQ_FILE_EXCLUSIONS +
+                                        _GO_LOCATIONS_EXCLUDED_FROM_CQ)
 
-_GN_MSVC_CQ_FILE_EXCLUSIONS = _COMMON_LOCATIONS_EXCLUDED_FROM_CQ + _NON_CMAKE_NON_FUZZ_LOCATIONS_EXCLUDED_FROM_CQ
+_GN_MSVC_CQ_FILE_EXCLUSIONS = (_COMMON_LOCATIONS_EXCLUDED_FROM_CQ +
+                               _NON_CMAKE_NON_FUZZ_LOCATIONS_EXCLUDED_FROM_CQ)
+
+_BAZEL_CQ_FILE_INCLUSIONS = [
+    # Tint source, tests, headers and shared util code.
+    cq.location_filter(path_regexp = r"src/tint/.+"),
+    cq.location_filter(path_regexp = r"test/tint/.+"),
+    cq.location_filter(path_regexp = r"include/tint/.+"),
+    cq.location_filter(path_regexp = r"src/utils/.+"),
+    # Bazel files anywhere in the repository.
+    cq.location_filter(path_regexp = r".*bazel.*"),
+    cq.location_filter(path_regexp = r".+\.bzl"),
+    # Dependency configuration containing Bazelisk toolchain.
+    cq.location_filter(path_regexp = r"DEPS"),
+    # Generator tools and Go dependencies.
+    cq.location_filter(path_regexp = r"tools/src/.+"),
+    cq.location_filter(path_regexp = r"go\.(mod|sum)"),
+]
 
 exclusion_filters = struct(
     chromium_cq_file_exclusions = _CHROMIUM_CQ_FILE_EXCLUSIONS,
@@ -94,4 +134,9 @@ exclusion_filters = struct(
     gn_clang_cq_fuzz_file_exclusions = _GN_CLANG_CQ_FUZZ_FILE_EXCLUSIONS,
     gn_clang_no_node_cq_file_exclusions = _GN_CLANG_NO_NODE_CQ_FILE_EXCLUSIONS,
     gn_msvc_cq_file_exclusions = _GN_MSVC_CQ_FILE_EXCLUSIONS,
+)
+
+inclusion_filters = struct(
+    cpp_changes_only = _CPP_FILE_INCLUSIONS,
+    bazel_cq_file_inclusions = _BAZEL_CQ_FILE_INCLUSIONS,
 )

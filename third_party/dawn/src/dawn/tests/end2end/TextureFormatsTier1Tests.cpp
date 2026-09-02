@@ -29,9 +29,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -253,6 +253,12 @@ class TextureFormatsTier1Test : public DawnTest {
 
 class RenderAttachmentFormatsTest : public TextureFormatsTier1Test {
   protected:
+    void SetUp() override {
+        TextureFormatsTier1Test::SetUp();
+        // TODO(crbug.com/523211957): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+    }
+
     void RunRenderTest(wgpu::TextureFormat format, const std::vector<float>& originData) {
         DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::TextureFormatsTier1));
 
@@ -348,6 +354,9 @@ class BlendableFormatsTest : public TextureFormatsTier1Test {
                       const std::vector<float>& srcColorFloats,
                       const std::vector<float>& clearColorFloats) {
         DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::TextureFormatsTier1));
+
+        // TODO(crbug.com/518759194): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
 
         wgpu::Extent3D textureSize = {16, 16, 1};
         wgpu::TextureDescriptor textureDesc;
@@ -453,6 +462,12 @@ DAWN_INSTANTIATE_TEST(BlendableFormatsTest,
 
 class MultisampleResolveFormatsTest : public TextureFormatsTier1Test {
   protected:
+    void SetUp() override {
+        TextureFormatsTier1Test::SetUp();
+        // TODO(crbug.com/522869944): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+    }
+
     static constexpr uint32_t kSize = 16;
     static constexpr uint32_t kMultisampleCount = 4;
     static constexpr uint32_t kSingleSampleCount = 1;

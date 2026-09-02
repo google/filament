@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_D3D_PHYSICALDEVICED3D_H_
 #define SRC_DAWN_NATIVE_D3D_PHYSICALDEVICED3D_H_
 
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/d3d/d3d_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {
 
@@ -44,7 +44,7 @@ class PhysicalDevice : public PhysicalDeviceBase {
     ~PhysicalDevice() override;
 
     IDXGIAdapter3* GetHardwareAdapter() const;
-    Backend* GetBackend() const;
+    Backend* GetBackendBase() const;
 
     ResultOrError<PhysicalDeviceSurfaceCapabilities> GetSurfaceCapabilities(
         InstanceBase* instance,

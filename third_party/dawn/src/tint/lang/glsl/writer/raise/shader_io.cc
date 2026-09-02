@@ -82,11 +82,12 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     /// @param addrspace the address to use for the global variables
     /// @param access the access mode to use for the global variables
     /// @param name_suffix the suffix to add to struct and variable names
-    void MakeVars(Vector<core::ir::Var*, 4>& vars,
-                  Vector<core::type::Manager::StructMemberDesc, 4>& entries,
-                  core::AddressSpace addrspace,
-                  core::Access access,
-                  const char* name_suffix) {
+    /// @returns Success all operations succeed, otherwise returns a failure reason
+    Result<SuccessType> MakeVars(Vector<core::ir::Var*, 4>& vars,
+                                 Vector<core::type::Manager::StructMemberDesc, 4>& entries,
+                                 core::AddressSpace addrspace,
+                                 core::Access access,
+                                 const char* name_suffix) {
         for (auto io : entries) {
             StringStream name;
             name << ir.NameOf(func).Name();
@@ -146,6 +147,9 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                     // the components are reordered.
                     if (addrspace == core::AddressSpace::kIn &&
                         config.bgra_swizzle_locations.count(*io.attributes.location) != 0) {
+                        if (!io.type->DeepestElement()->Is<core::type::F32>()) {
+                            return Failure{"BGRA swizzle is only supported for f32 types"};
+                        }
                         bgra_swizzle_original_types.Add(*io.attributes.location, io.type);
                         type = ty.vec4f();
                     }
@@ -161,10 +165,11 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             input_indices.Push(static_cast<uint32_t>(vars.Length()));
             vars.Push(var);
         }
+        return Success;
     }
 
     /// @copydoc ShaderIO::BackendState::FinalizeInputs
-    Vector<core::ir::FunctionParam*, 4> FinalizeInputs() override {
+    Result<Vector<core::ir::FunctionParam*, 4>> FinalizeInputs() override {
         // The following builtin values are polyfilled using other builtin values:
         // * workgroup_index - workgroup_id and num_workgroups
         // * global_invocation_index - global_invocation_id, num_workgroups (and workgroup size)
@@ -185,13 +190,15 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                                 "global_invocation_id");
         }
 
-        MakeVars(input_vars, inputs, core::AddressSpace::kIn, core::Access::kRead, "_Input");
-        return tint::Empty;
+        TINT_CHECK_RESULT(
+            MakeVars(input_vars, inputs, core::AddressSpace::kIn, core::Access::kRead, "_Input"));
+        return Vector<core::ir::FunctionParam*, 4>{};
     }
 
     /// @copydoc ShaderIO::BackendState::FinalizeOutputs
-    const core::type::Type* FinalizeOutputs() override {
-        MakeVars(output_vars, outputs, core::AddressSpace::kOut, core::Access::kWrite, "_Output");
+    Result<const core::type::Type*> FinalizeOutputs() override {
+        TINT_CHECK_RESULT(MakeVars(output_vars, outputs, core::AddressSpace::kOut,
+                                   core::Access::kWrite, "_Output"));
         return ty.void_();
     }
 
@@ -304,14 +311,14 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir, const ShaderIOConfig& config) {
-    AssertValid(ir,
-                core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings,
-                                       core::ir::Capability::kAllowDuplicateBindings},
-                "before glsl.ShaderIO");
+    AssertValid(ir, "before glsl.ShaderIO");
 
-    core::ir::transform::RunShaderIOBase(ir, [&](core::ir::Module& mod, core::ir::Function* func) {
-        return std::make_unique<StateImpl>(mod, func, config);
-    });
+    TINT_CHECK_RESULT(core::ir::transform::RunShaderIOBase(
+        ir, [&](core::ir::Module& mod, core::ir::Function* func) {
+            return std::make_unique<StateImpl>(mod, func, config);
+        }));
+
+    ir.properties.Add(core::ir::Property::kAllowBackendSpecificShaderIO);
 
     return Success;
 }

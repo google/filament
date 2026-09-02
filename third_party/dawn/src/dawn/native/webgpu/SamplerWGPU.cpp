@@ -25,10 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/SamplerWGPU.h"
+#include "src/dawn/native/webgpu/SamplerWGPU.h"
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
 
 namespace dawn::native::webgpu {
 

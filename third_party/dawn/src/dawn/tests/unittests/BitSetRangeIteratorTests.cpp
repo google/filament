@@ -29,8 +29,8 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/BitSetRangeIterator.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/BitSetRangeIterator.h"
 
 namespace dawn {
 namespace {

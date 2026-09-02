@@ -1,0 +1,151 @@
+Name
+
+    EXT_swap_control_tear
+
+Name Strings
+
+    GLX_EXT_swap_control_tear
+
+Contributors
+
+    Brian Nguyen, NVIDIA, brnguyen at nvidia.com
+
+Contact
+
+    Brian Nguyen, NVIDIA, brnguyen at nvidia.com
+
+Status
+
+    Complete.
+
+Version
+
+    Version 1 (November 4, 2011)
+
+Number
+
+    414
+
+Dependencies
+
+    This specification is written against the GLX 1.4 specification, but
+    only GLX 1.1 or greater with the ARB_get_proc_address extension is
+    required, for glXQueryExtensionString and glXGetProcAddressARB
+    respectively.
+
+    GLX_EXT_swap_control is required.
+
+    Based on WGL_EXT_swap_control_tear version 1.
+
+    This extension affects GLX_NV_swap_group.
+
+Overview
+
+    This extension extends the existing GLX_EXT_swap_control extension by
+    allowing a negative <interval> parameter to glXSwapIntervalEXT. The
+    negative <interval> allows late swaps to occur without synchronization
+    to the video frame. This reduces the visual stutter on late frames and
+    reduces the stall on subsequent frames.
+
+IP Status
+
+    There are no known IP issues.
+
+Issues
+
+    This extension is incompatible with GLX_NV_swap_group. If a drawable is
+    currently part of a swap group, late unsynchronized swaps will implicitly be
+    disabled for that drawable.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    GLX_LATE_SWAPS_TEAR_EXT	 0x20F3
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL
+Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the GLX 1.4 Specification
+
+    In Section 3.3.10 of the GLX specification (Double
+    Buffering), after the following paragraph:
+
+    "If <interval> is set to a value of 0, buffer swaps are not
+    synchronized to a video frame.  The <interval> value is silently
+    clamped to the maximum implementation-dependent value supported
+    before being stored."
+
+    Add the following paragraph:
+
+    "If <interval> is negative, the minimum number of video frames between
+    buffer swaps is the absolute value of <interval>. In this case, if
+    abs(<interval>) video frames have already passed from the previous swap
+    when the swap is ready to be performed, the swap will occur without
+    synchronization to a video frame. When an unsynchronized swap happens,
+    the missed frame will count towards the minimum number of video frames
+    for the next swap."
+
+    In Section 3.3.10 of the GLX specification (Double
+    Buffering), modify the paragraph beginning:
+
+    "The current swap interval and implementation-dependent max swap
+    interval for a particular drawable..."
+
+    To read:
+
+    "The current swap interval and implementation-dependent max swap
+    interval for a particular drawable can be obtained by calling
+    glXQueryDrawable with the attributes GLX_SWAP_INTERVAL_EXT and
+    GLX_MAX_SWAP_INTERVAL_EXT respectively. The application can also
+    determine whether a particular drawable allows late unsynchronized
+    swaps to occur by calling glXQueryDrawable with the attribute
+    GLX_LATE_SWAPS_TEAR_EXT. If late swaps are enabled, <value> will
+    be set to 1; otherwise, it will be set to 0. The value returned by
+    glXQueryDrawable is undefined if the drawable is not a GLXWindow
+    and these attributes are given."
+
+Errors
+
+    Remove the following error from GLX_EXT_swap_control:
+
+    "glXSwapIntervalEXT generates BadValue if parameter <interval> is
+    less than zero."
+
+Usage Examples
+
+    Example 1: Set swap interval for the current drawable
+
+    Display *dpy = glXGetCurrentDisplay();
+    GLXDrawable drawable = glXGetCurrentDrawable();
+    const int interval = -1;
+
+    glXSwapIntervalEXT(dpy, drawable, interval);
+
+Version History
+
+    1. 04 Nov 2011 - BrianN
+	-Initial version

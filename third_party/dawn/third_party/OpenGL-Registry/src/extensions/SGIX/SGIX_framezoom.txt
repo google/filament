@@ -1,0 +1,167 @@
+
+Name
+
+    SGIX_framezoom
+
+Name Strings
+
+    GL_SGIX_framezoom
+
+Version
+
+    $Date: 1996/03/08 18:16:44 $ $Revision: 1.4 $
+
+Number
+
+    57
+
+Dependencies
+
+    none.
+
+Overview
+
+    This extension provides a additional way to rasterize geometric
+    primitives and pixel rectangles.  The techique is to reduce the
+    number of pixels rasterized  and (possibly) the number of depth and
+    stencil operations performed per primitive.  Each pixel is zoomed
+    up and used to render an N x N block of screen pixels.  The
+    implementation is free to choose the number of stencil and z pixels
+    that will correspond to each N x N block.
+
+    This extension provides an opportunity to the implementation to
+    perform expensive raster operations at a reduced resolution,
+    increasing performance.  Such operations may include
+    texture-mapping, depth & stencil tests, etc.  The hardware should
+    be allowed to perform operations that it accelerates at full
+    hardware speed.
+
+    The visual result will be the same as if a scene were rendered into
+    a small window, and then that buffer was copied and zoomed up into
+    a large window.
+
+    All OpenGL parameters that effect rasterization size will implicitly
+    be multipled by N (this includes point size, line width, etc).
+
+Issues
+
+    * What happens with zoomed (polygon/line) stippled pattern?
+
+
+New Procedures and Functions
+
+    void FrameZoomSGIX(GLint factor);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+	FRAMEZOOM_SGIX
+	
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+	FRAMEZOOM_FACTOR_SGIX
+	MAX_FRAMEZOOM_FACTOR_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    If FRAMEZOOM_SGIX is off, the rasterization algorithm is unchanged.
+
+    If FRAMEZOOM_SGIX is on, the rasterization of geometric primitives
+    is modified as follows:
+
+    Rasterization is performed as if the viewport has shrunk down by
+    factor of FRAMEZOOM_FACTOR_SGIX.  The viewport itself will not
+    change. Then, at an undefined stage after primitive rasterization,
+    the resulting fragments will be zoomed up by the same factor.  That
+    stage is underfined since some of the later rasterization stages
+    (ie. blending, dithering, z buffering, etc.) may be implemented in
+    hardware, and hence have to be performed after the zoom.  This
+    flexibility is present to allow the implementation to take maximum
+    advantage of the hardware.
+
+    The zoom process will produce N x N fragments (where N is
+    FRAMEZOOM_FACTOR_SGIX) that differ in their x and y coordinates,
+    are organized in a square, and try to approximate the features of
+    the original rasterization (with subsampling disabled).  The center
+    of the subsampled fragment is guaranteed to fall somewhere inside
+    the resulting rectangle of fragments.  No additional guarantees are
+    made concerning the position of the resulting fragments, except
+    that the position of the subsampled fragment will be consistent
+    across pixels during the primitive rasterization.
+
+    Since rasterization is performed as if the viewport has shrunk by a
+    factor of FRAMEZOOM_FACTOR_SGIX, all parameters that alter fragment
+    generation in screen coordinates (ie. point size, line width, line
+    stippled, polygon stipple) will look like they now affect a larger
+    area (by FRAMEZOOM_FACTOR_SGIX) in the screen.  Ie. points and
+    lines will render roughly as many pixels as if point size and line
+    width were multiplied by FRAMEZOOM_FACTOR_SGIX, and glDrawPixels
+    will operate as if the pixel zoom specified was multiplied by
+    FRAMEZOOM_FACTOR_SGIX.
+
+    A change in the value of FRAMEZOOM_FACTOR_SGIX, or a change in the
+    state of FRAMEZOOM_SGIX, has the same semantics to the ancillary
+    stencil and z buffers as a resize.  Basically, the contents of
+    these buffers will be undefined till the next clear of that
+    ancillary buffer.
+
+    Any specified value of FRAMEZOOM_FACTOR_SGIX will be clampled to
+    the device dependent value of MAX_FRAMEZOOM_FACTOR_SGIX.  The value
+    of MAX_FRAMEZOOM_FACTOR_SGIX may not be constant and may vary
+    during the execution of a GL program.  For example, a certain
+    implementation may not support subsampled rendering when rendering
+    in the front color buffer.  In that case, MAX_FRAMEZOOM_FACTOR_SGIX
+    will be 1 when glDrawBuffer specifies a front buffer, or when the
+    visual on the window is single buffered.  In that case, the value
+    of FRAMEZOOM_FACTOR_SGIX will be clamped to 1, ie. no subsampling
+    performed.
+
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None (?)
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    One more state variable, FRAMEZOOM_FACTOR_SGIX is defined by this
+    extension.
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    ???
+
+Errors
+
+    INVALID_VALUE is generated if the combination of parameters passed
+    to FrameZoomSGIX are not supported.
+
+New State
+
+    Get Value			Get Command	Type	Initial Value	Attribute
+    ---------			-----------	----	-------------	---------
+    FRAMEZOOM_SGIX		IsEnabled	B	FALSE		??
+
+New Implementation Dependent State
+
+    Get Value			Get Command	Type	Minimum Value
+    ---------			-----------	----	-------------
+    FRAMEZOOM_FACTOR_SGIX	GetIntegerv	Z+	1
+    MAX_FRAMEZOOM_FACTOR_SGIX	GetIntegerv	Z+	1
+

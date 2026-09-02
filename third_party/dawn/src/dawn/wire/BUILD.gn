@@ -45,6 +45,29 @@ source_set("headers") {
 
 dawn_json_generator("gen") {
   target = "wire"
+  inputs = [
+    "${dawn_root}/src/dawn/dawn_wire.json",
+    "${dawn_template_dir}/dawn/api_structs.h.tmpl",
+    "${dawn_template_dir}/dawn/api_structs.cpp.tmpl",
+    "${dawn_template_dir}/dawn/cpp_macros.tmpl",
+    "${dawn_template_dir}/dawn/dawn_platform.h.tmpl",
+    "${dawn_template_dir}/dawn/wire/ObjectType.h",
+    "${dawn_template_dir}/dawn/wire/WireCmd.h",
+    "${dawn_template_dir}/dawn/wire/WireCmd.cpp",
+    "${dawn_template_dir}/dawn/wire/client/ApiObjects.h",
+    "${dawn_template_dir}/dawn/wire/client/ApiProcs.cpp",
+    "${dawn_template_dir}/dawn/wire/client/ClientBase.h",
+    "${dawn_template_dir}/dawn/wire/client/ClientHandlers.cpp",
+    "${dawn_template_dir}/dawn/wire/client/ClientPrototypes.inc",
+    "${dawn_template_dir}/dawn/wire/client/api_structs.h",
+    "${dawn_template_dir}/dawn/wire/client/api_structs.cpp",
+    "${dawn_template_dir}/dawn/wire/client/dawn_platform.h",
+    "${dawn_template_dir}/dawn/wire/server/ServerBase.h",
+    "${dawn_template_dir}/dawn/wire/server/ServerDoers.cpp",
+    "${dawn_template_dir}/dawn/wire/server/ServerHandlers.cpp",
+    "${dawn_template_dir}/dawn/wire/server/ServerPrototypes.inc",
+    "${dawn_template_dir}/dawn/wire/server/WGPUTraits.h",
+  ]
   outputs = [
     "src/dawn/wire/ObjectType_autogen.h",
     "src/dawn/wire/WireCmd_autogen.h",
@@ -54,6 +77,9 @@ dawn_json_generator("gen") {
     "src/dawn/wire/client/ClientBase_autogen.h",
     "src/dawn/wire/client/ClientHandlers_autogen.cpp",
     "src/dawn/wire/client/ClientPrototypes_autogen.inc",
+    "src/dawn/wire/client/wgpu_structs_autogen.h",
+    "src/dawn/wire/client/wgpu_structs_autogen.cpp",
+    "src/dawn/wire/client/dawn_platform.h",
     "src/dawn/wire/server/ServerBase_autogen.h",
     "src/dawn/wire/server/ServerDoers_autogen.cpp",
     "src/dawn/wire/server/ServerHandlers_autogen.cpp",
@@ -73,11 +99,12 @@ source_set("sources") {
   sources = get_target_outputs(":gen")
   sources += [
     "BufferConsumer.h",
-    "BufferConsumer_impl.h",
     "ChunkedCommandHandler.cpp",
     "ChunkedCommandHandler.h",
     "ChunkedCommandSerializer.cpp",
     "ChunkedCommandSerializer.h",
+    "InlineSharedMemoryManager.cpp",
+    "InlineSharedMemoryManager.h",
     "ObjectHandle.cpp",
     "ObjectHandle.h",
     "SupportedFeatures.cpp",
@@ -94,8 +121,6 @@ source_set("sources") {
     "client/Client.h",
     "client/ClientDoers.cpp",
     "client/ClientInlineMemoryTransferService.cpp",
-    "client/ComputePassEncoder.cpp",
-    "client/ComputePassEncoder.h",
     "client/Device.cpp",
     "client/Device.h",
     "client/EventManager.cpp",
@@ -112,10 +137,6 @@ source_set("sources") {
     "client/QuerySet.h",
     "client/Queue.cpp",
     "client/Queue.h",
-    "client/RenderBundleEncoder.cpp",
-    "client/RenderBundleEncoder.h",
-    "client/RenderPassEncoder.cpp",
-    "client/RenderPassEncoder.h",
     "client/ResourceTable.cpp",
     "client/ResourceTable.h",
     "client/ShaderModule.cpp",
@@ -132,15 +153,18 @@ source_set("sources") {
     "server/ServerDevice.cpp",
     "server/ServerInlineMemoryTransferService.cpp",
     "server/ServerInstance.cpp",
-    "server/ServerProgrammableEncoder.cpp",
     "server/ServerQueue.cpp",
     "server/ServerShaderModule.cpp",
     "server/ServerSurface.cpp",
   ]
 
+  if (is_win) {
+    sources += [ "InlineSharedMemoryManager_win.cpp" ]
+  }
+
   public_deps = [
     ":headers",
-    "${dawn_root}:abseil",
+    "${dawn_abseil_dir}:absl",
     "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
   ]
 }

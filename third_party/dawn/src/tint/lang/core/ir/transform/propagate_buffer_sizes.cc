@@ -72,6 +72,10 @@ struct State {
                 return;
             }
 
+            if (call->Func() != BuiltinFn::kBufferLength) {
+                AdjustOperands(call);
+            }
+
             auto* root = RootIdentifier(call->Args()[0]);
             auto* buffer_ty = root->Type()->UnwrapPtr()->As<type::Buffer>();
             if (buffer_ty->Count()->Is<type::RuntimeArrayCount>()) {
@@ -149,6 +153,72 @@ struct State {
         }
     }
 
+    /// Adjusts the runtime values of buffer[Array]View arguments
+    /// Offset = offset & ~(align(store_ty) - 1)
+    /// Size = (((size - offset) / stride) * stride) + offset
+    /// @param call The builtin call
+    void AdjustOperands(CoreBuiltinCall* call) {
+        auto* store_ty = call->Result()->Type()->UnwrapPtr();
+        auto* offset = call->Args()[1];
+        if (auto* offset_cnst = offset->As<Constant>()) {
+            auto offset_value = offset_cnst->Value()->ValueAs<uint32_t>();
+            if ((offset_value & store_ty->Align()) != 0) {
+                call->SetArg(1, b.Constant(u32(offset_value & ~(store_ty->Align() - 1))));
+            }
+        } else {
+            b.InsertBefore(call, [&] {
+                // Modify offset to be aligned to the result store type's alignment.
+                offset = b.InsertBitcastIfNeeded(ty.u32(), offset);
+                offset = b.And(offset, u32(~(store_ty->Align() - 1)))->Result();
+                call->SetArg(1, offset);
+            });
+        }
+
+        if (call->Func() == BuiltinFn::kBufferView) {
+            return;
+        }
+
+        auto* size = call->Args()[2];
+        uint32_t ty_offset = 0;
+        uint32_t ty_stride = 0;
+        TINT_IR_ASSERT(ir, !store_ty->HasFixedFootprint());
+        if (auto* str_ty = store_ty->As<type::Struct>()) {
+            auto last = str_ty->Members().Back();
+            auto last_ty = last->Type();
+            TINT_IR_ASSERT(ir, last_ty->Is<type::Array>());
+            ty_offset = last->Offset();
+            ty_stride = last_ty->As<type::Array>()->ImplicitStride();
+        } else {
+            TINT_IR_ASSERT(ir, store_ty->Is<type::Array>());
+            ty_stride = store_ty->As<type::Array>()->ImplicitStride();
+        }
+        if (auto* size_cnst = size->As<Constant>()) {
+            auto size_value = size_cnst->Value()->ValueAs<uint32_t>();
+            if ((size_value - ty_offset) % ty_stride != 0) {
+                call->SetArg(
+                    2, b.Constant(
+                           u32((((size_value - ty_offset) / ty_stride) * ty_stride) + ty_offset)));
+            }
+        } else {
+            b.InsertBefore(call, [&] {
+                // Round down to a multiple of stride, but don't include the struct offset in that
+                // rounding.
+                size = b.InsertBitcastIfNeeded(ty.u32(), size);
+                if (ty_offset != 0) {
+                    // Avoid potential underflow if size < ty_offset.
+                    size = b.Call(ty.u32(), BuiltinFn::kMax, size, u32(ty_offset))->Result();
+                    size = b.Subtract(size, u32(ty_offset))->Result();
+                }
+                size = b.Divide(size, u32(ty_stride))->Result();
+                size = b.Multiply(size, u32(ty_stride))->Result();
+                if (ty_offset != 0) {
+                    size = b.Add(size, u32(ty_offset))->Result();
+                }
+                call->SetArg(2, size);
+            });
+        }
+    }
+
     /// Find the roots of `param`. Each root is either:
     /// * A global variable, or
     /// * A constant-sized buffer function parameter
@@ -213,7 +283,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PropagateBufferSizes(Module& ir) {
-    AssertValid(ir, kPropagateBufferSizesCapabilities, "before core.PropagateBufferSizes");
+    AssertValid(ir, "before core.PropagateBufferSizes");
 
     State{ir}.Process();
 

@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -42,6 +42,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 
 	"dawn.googlesource.com/dawn/tools/src/cmd/gen/common"
@@ -95,6 +96,7 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 		{"populating source files", populateSourceFiles},
 		{"scanning source files", scanSourceFiles},
 		{"loading directory configs", applyDirectoryConfigs},
+		{"applying implicit target conditions", applyImplicitTargetConditions},
 		{"building dependencies", buildDependencies},
 		{"checking for cycles", checkForCycles},
 		{"emitting build files", emitBuildFiles},
@@ -187,7 +189,8 @@ func populateSourceFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWr
 					"*/**.h",
 					"*/**.inl",
 					"*/**.mm",
-					"*/**.proto"
+					"*/**.proto",
+					"*/**.tmpl"
 				]
 			},
 			{
@@ -203,15 +206,26 @@ func populateSourceFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWr
 	for _, filepath := range paths {
 		filepath = CanonicalizePath(filepath)
 		dir, name := path.Split(filepath)
+
+		// Strip the .tmpl suffix if present for target kind determination.
+		name = strings.TrimSuffix(name, ".tmpl")
+
 		if kind := targetKindFromFilename(name); kind != targetInvalid {
 			directory := p.AddDirectory(dir)
 			target := p.AddTarget(directory, kind)
-			target.AddSourceFile(p.AddFile(filepath))
+
+			if strings.HasSuffix(filepath, ".tmpl") {
+				target.GeneratedSourcePaths.Add(path.Join(dir, name))
+				target.AddTemplateFile(p.AddFile(filepath))
+				p.AllTemplatePaths.Add(filepath)
+			} else {
+				target.AddSourceFile(p.AddFile(filepath))
+			}
 
 			if kind == targetProto {
 				noExt, _ := fileutils.SplitExt(filepath)
-				target.AddGeneratedFile(p.AddGeneratedFile(noExt + ".pb.h"))
-				target.AddGeneratedFile(p.AddGeneratedFile(noExt + ".pb.cc"))
+				target.AddGeneratedProtobufSource(p.AddGeneratedProtobufSource(noExt + ".pb.h"))
+				target.AddGeneratedProtobufSource(p.AddGeneratedProtobufSource(noExt + ".pb.cc"))
 			}
 		}
 	}
@@ -235,7 +249,7 @@ func scanSourceFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter
 	// parseFile parses the source file at 'path' represented by 'file'
 	// As this is run concurrently, it must not modify any shared state (including file)
 	parseFile := func(path string, file *File) (string, *ParsedFile, error) {
-		if file.IsGenerated {
+		if file.IsGeneratedProtobufSource {
 			return "", nil, nil
 		}
 
@@ -324,7 +338,7 @@ func scanSourceFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter
 	// For each file, of each target, of each directory...
 	for _, dir := range p.Directories {
 		for _, target := range dir.Targets() {
-			for _, file := range target.SourceFiles() {
+			for _, file := range append(target.SourceFiles(), target.TemplateFiles()...) {
 				// Retrieve the parsed file information
 				parsed := parsedFiles[file.Path()]
 
@@ -360,25 +374,40 @@ func scanSourceFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter
 func applyDirectoryConfigs(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 	// For each directory in the project...
 	for _, dir := range p.Directories.Values() {
+		// Inherit condition from parent first.
+		// By the time we visit a child, its parent has already been fully resolved and updated.
+		if dir.Parent != nil && dir.Parent.Condition != nil {
+			dir.Condition = dir.Parent.Condition
+		}
+
+		// Look for directory level configurations.
 		path := path.Join(dir.AbsPath(), "BUILD.cfg")
 		content, err := fsReaderWriter.ReadFile(path)
-		if err != nil {
-			continue
-		}
-
-		// Parse the config
-		cfg := DirectoryConfig{}
-		if err := json.Unmarshal(jsonc.ToJSON(content), &cfg); err != nil {
-			return fmt.Errorf("error while parsing '%v': %w", path, err)
-		}
-
-		// Apply any directory-level condition
-		for _, target := range dir.Targets() {
-			cond, err := cnf.Parse(cfg.Condition)
-			if err != nil {
-				return fmt.Errorf("%v: could not parse condition: %w", path, err)
+		var cfg DirectoryConfig
+		if err == nil {
+			if err := json.Unmarshal(jsonc.ToJSON(content), &cfg); err != nil {
+				return fmt.Errorf("error while parsing '%v': %w", path, err)
 			}
-			target.Condition = cond
+
+			// Apply any directory-level condition
+			if cfg.Condition != "" {
+				cond, err := cnf.Parse(cfg.Condition)
+				if err != nil {
+					return fmt.Errorf("%v: could not parse condition: %w", path, err)
+				}
+				if dir.Condition == nil {
+					dir.Condition = cond
+				} else {
+					dir.Condition = cnf.Optimize(cnf.And(dir.Condition, cond))
+				}
+			}
+		}
+
+		// Apply the combined directory-level condition to all targets in this directory.
+		if dir.Condition != nil {
+			for _, target := range dir.Targets() {
+				target.Condition = dir.Condition
+			}
 		}
 
 		// For each target config...
@@ -427,7 +456,11 @@ func applyDirectoryConfigs(p *Project, fsReaderWriter oswrapper.FilesystemReader
 				if err != nil {
 					return fmt.Errorf("%v: %v", path, err)
 				}
-				target.Condition = cnf.And(target.Condition, condition)
+				if target.Condition == nil {
+					target.Condition = condition
+				} else {
+					target.Condition = cnf.Optimize(cnf.And(target.Condition, condition))
+				}
 			}
 
 			// Add any additional internal dependencies
@@ -463,6 +496,25 @@ func applyDirectoryConfigs(p *Project, fsReaderWriter oswrapper.FilesystemReader
 		}
 	}
 
+	return nil
+}
+
+// applyImplicitTargetConditions applies implicit conditions to targets based on their kind
+// (combining them with any existing conditions).
+func applyImplicitTargetConditions(p *Project, _ oswrapper.FilesystemReaderWriter) error {
+	fuzzCond, err := cnf.Parse("tint_build_fuzzers")
+	if err != nil {
+		return err
+	}
+	for _, target := range p.Targets.Values() {
+		if target.Kind.IsFuzz() || target.Kind.IsFuzzCmd() {
+			if target.Condition == nil {
+				target.Condition = fuzzCond
+			} else {
+				target.Condition = cnf.Optimize(cnf.And(target.Condition, fuzzCond))
+			}
+		}
+	}
 	return nil
 }
 
@@ -537,7 +589,10 @@ func buildDependencies(p *Project, fsReaderWriter oswrapper.FilesystemReaderWrit
 
 					includeFile := p.File(path)
 					if includeFile == nil {
-						return fmt.Errorf(`%v:%v includes non-existent file '%v'`, file.Path(), include.Line, path)
+						includeFile = p.File(path + ".tmpl")
+						if includeFile == nil {
+							return fmt.Errorf(`%v:%v includes non-existent file '%v'`, file.Path(), include.Line, path)
+						}
 					}
 
 					if !isValidDependency(file.Target.Kind, includeFile.Target.Kind) {
@@ -642,6 +697,122 @@ func checkForCycles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 	return nil
 }
 
+// platformOSMap maps Tint's build-flag variables to standard Bazel platform constraints.
+// This makes it easier for clients to build w/o needing to set too many flags.
+var platformOSMap = map[string]string{
+	"tint_build_is_win":   "@platforms//os:windows",
+	"tint_build_is_linux": "@platforms//os:linux",
+	"tint_build_is_mac":   "@platforms//os:macos",
+}
+
+// externalDependencyBazelTargets maps external dependencies to their corresponding Bazel target
+// labels. Supported dependencies map to non-empty strings, while unsupported dependencies map
+// to empty strings.
+var externalDependencyBazelTargets = map[string]string{
+	"abseil":                         `"@abseil_cpp//absl/strings",`,
+	"dxc-include":                    `"//third_party/directx-shader-compiler:dxc_headers",`,
+	"gmock":                          `"@gtest",`,
+	"google-benchmark":               `"@benchmark",`,
+	"gtest":                          `"@gtest",`,
+	"spirv-headers":                  `"@spirv_headers//:spirv_cpp11_headers", "@spirv_headers//:spirv_c_headers",`,
+	"spirv-opt-internal":             `"@spirv_tools//:spirv_tools_opt",`,
+	"spirv-tools":                    `"@spirv_tools",`,
+	"src_utils_crash_handler":        `"//src/utils:crash_handler",`,
+	"src_utils":                      `"//src/utils",`,
+	"src_utils_chromium_test_compat": `"//src/utils/chromium_test_compat",`,
+	// Explicitly mark unsupported dependencies as empty so they can be identified as unsupported
+	// and we can omit a block if it only contains unsupported deps.
+	"dl":                    "",
+	"dxcompiler-for-fuzzer": "",
+	"glslang-res-limits":    "",
+	"glslang":               "",
+	"mesa":                  "",
+	"metal":                 "",
+	"thread":                "",
+	"winsock":               "",
+}
+
+// HasCppSrcs returns true if the conditional has any supported C++ files.
+func HasCppSrcs(cond *TargetConditional) bool {
+	for _, file := range cond.SourceFiles {
+		// For now, it's easiest to just reject lists that contain only .mm files.
+		if !strings.HasSuffix(file.Name, ".mm") {
+			return true
+		}
+	}
+	return false
+}
+
+// HasSupportedDeps returns true if the conditional has one or more deps supported by Bazel.
+// If this returns false, then the block can be omitted from Bazel files.
+func HasSupportedDeps(cond *TargetConditional) bool {
+	if len(cond.InternalDependencies) > 0 {
+		return true
+	}
+	for _, dep := range cond.ExternalDependencies {
+		if externalDependencyBazelTargets[string(dep.Name)] != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// ExternalDependencyTarget returns the Bazel target label for the given external dependency.
+func ExternalDependencyTarget(dep ExternalDependency) (string, error) {
+	target, ok := externalDependencyBazelTargets[string(dep.Name)]
+	if !ok {
+		return "", fmt.Errorf("unhandled external dependency '%v'", dep.Name)
+	}
+	return target, nil
+}
+
+// ConditionTargetLabel returns a Bazel target label for a build variable and optional negation.
+// For platform constraints, it returns the standard @platforms//os target.
+// For custom flags, it returns the global //src/tint config settings.
+//
+// Examples:
+//
+//	ConditionTargetLabel("tint_build_is_win", false)     => "@platforms//os:windows"
+//	ConditionTargetLabel("tint_build_glsl_writer", true) => "//src/tint:tint_build_glsl_writer_false"
+func ConditionTargetLabel(variable string, isNegated bool) string {
+	if label, ok := platformOSMap[variable]; ok {
+		return label
+	}
+	suffix := "_true"
+	if isNegated {
+		suffix = "_false"
+	}
+	return "//src/tint:" + variable + suffix
+}
+
+// ShouldSkipOrs returns true if the OR expression consists entirely of negated platform variables.
+func ShouldSkipOrs(ors cnf.Ors) bool {
+	for _, unary := range ors {
+		if !unary.Negate {
+			return false
+		}
+		if _, ok := platformOSMap[unary.Var]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// ShouldSkipAnds returns true if the AND expression consists entirely of negated platform variables.
+func ShouldSkipAnds(ands cnf.Ands) bool {
+	for _, ors := range ands {
+		for _, unary := range ors {
+			if !unary.Negate {
+				return false
+			}
+			if _, ok := platformOSMap[unary.Var]; !ok {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // TODO(crbug.com/344014313): Add unittests once fileutils and template are
 // converted to support dependency injection
 // emitBuildFiles emits a 'BUILD.*' file in each source directory for each
@@ -697,7 +868,21 @@ func emitBuildFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 			w.WriteString(common.Header(string(existing), CanonicalizePath(relTmplPath), "#"))
 
 			// Write the template output
-			err = templates[tmplPath].Run(w, dir, map[string]any{})
+			err = templates[tmplPath].Run(w, dir, map[string]any{
+				"ShouldSkipUnary": func(unary cnf.Unary) bool {
+					_, ok := platformOSMap[unary.Var]
+					return ok
+				},
+				"ShouldSkipOrs":  ShouldSkipOrs,
+				"ShouldSkipAnds": ShouldSkipAnds,
+				"PlatformLabel": func(variable string) string {
+					return platformOSMap[variable]
+				},
+				"HasCppSrcs":               HasCppSrcs,
+				"HasSupportedDeps":         HasSupportedDeps,
+				"ExternalDependencyTarget": ExternalDependencyTarget,
+				"ConditionTargetLabel":     ConditionTargetLabel,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -764,6 +949,34 @@ func emitBuildFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 		}
 	}
 
+	// Generate files that contain the inputs and/or outputs of the build-time source generation.
+	generatedSources := p.AllTemplatePaths.List()
+	for i, v := range generatedSources {
+		generatedSources[i] = "src/tint/" + strings.TrimSuffix(v, ".tmpl")
+	}
+	depsForGeneratedSources, err := glob.Scan(p.Root, glob.MustParseConfig(`{
+		"paths": [{"include": ["**/*.def", "utils/templates/*.inc"]}]
+	}`), fsReaderWriter)
+	if err != nil {
+		return err
+	}
+	for i, dep := range depsForGeneratedSources {
+		depsForGeneratedSources[i] = CanonicalizePath(dep)
+	}
+	depsForGeneratedSources = append(depsForGeneratedSources, p.AllTemplatePaths.List()...)
+
+	goSources, err := getGoDependencies(p, fsReaderWriter)
+	if err != nil {
+		return err
+	}
+
+	if err := emitGeneratedSourceListForBazel(p, fsReaderWriter, generatedSources, depsForGeneratedSources); err != nil {
+		return err
+	}
+	if err := emitGeneratedSourceListForGN(p, fsReaderWriter, generatedSources, depsForGeneratedSources, goSources); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -807,6 +1020,63 @@ func emitDotFile(p *Project, kind TargetKind, fsWriter oswrapper.FilesystemWrite
 	return nil
 }
 
+func emitGeneratedSourceListForBazel(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter, generatedSources []string, depsForGeneratedSources []string) error {
+	bzlPath := path.Join(p.Root, "generated_sources.bzl")
+	sb := &strings.Builder{}
+	sb.WriteString(common.Header("", "", "#"))
+	sb.WriteString("\n")
+
+	emitList(sb, generatedSources, "tint_generated_sources = [\n", "]\n\n", "    \"gen/", "\",\n")
+
+	// Convert the list of dependencies into Bazel labels.
+	var labels []string
+	for _, dep := range depsForGeneratedSources {
+		dir, base := path.Split(dep)
+		dir = strings.TrimSuffix(dir, "/")
+		labels = append(labels, fmt.Sprintf("//src/tint/%s:%s", dir, base))
+	}
+	emitList(sb, labels, "tint_generation_dependencies = [\n", "]\n", "    \"", "\",\n")
+
+	return writeFileIfStale(p, fsReaderWriter, bzlPath, sb.String())
+}
+
+func emitGeneratedSourceListForGN(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter, generatedSources []string, depsForGeneratedSources []string, goSources []string) error {
+	gniPath := path.Join(p.Root, "generated_sources.gni")
+	sb := &strings.Builder{}
+	sb.WriteString(common.Header("", "", "#"))
+	sb.WriteString("\n")
+	sb.WriteString("import(\"tint.gni\")\n\n")
+
+	deps := append(depsForGeneratedSources, goSources...)
+	emitList(sb, generatedSources, "tint_generated_sources = [\n", "]\n\n", "  \"${root_gen_dir}/", "\",\n")
+	emitList(sb, deps, "tint_generation_dependencies = [\n", "]\n", "  \"", "\",\n")
+
+	return writeFileIfStale(p, fsReaderWriter, gniPath, sb.String())
+}
+
+func writeFileIfStale(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter, filepath string, content string) error {
+	existing, _ := fsReaderWriter.ReadFile(filepath)
+	if string(existing) != content {
+		if p.cfg.Flags.CheckStale {
+			return common.StaleFiles{filepath}
+		}
+		if err := fsReaderWriter.WriteFile(filepath, []byte(content), 0666); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func emitList(sb *strings.Builder, items []string, prefix, suffix, itemPrefix, itemSuffix string) {
+	sb.WriteString(prefix)
+	for _, item := range items {
+		sb.WriteString(itemPrefix)
+		sb.WriteString(item)
+		sb.WriteString(itemSuffix)
+	}
+	sb.WriteString(suffix)
+}
+
 var (
 	// Regular expressions used by this file
 	reIf            = regexp.MustCompile(`\s*#\s*if\s+(.*)`)
@@ -823,3 +1093,37 @@ var (
 	reCondition     = regexp.MustCompile(`//\s*GEN_BUILD:CONDITION\((.*)\)\s*$`)
 	reDoNotGenerate = regexp.MustCompile(`#\s*GEN_BUILD:DO_NOT_GENERATE`)
 )
+
+func getGoDependencies(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter) ([]string, error) {
+	dawnRoot := path.Dir(path.Dir(p.Root))
+	files, err := glob.Scan(dawnRoot, glob.MustParseConfig(`{
+		"paths": [
+			{"include": ["tools/src/cmd/gen/**/*.go", "tools/src/tint/intrinsic/**/*.go"]},
+			{"exclude": ["tools/src/cmd/gen/build/**", "**/*_test.go"]}
+		]
+	}`), fsReaderWriter)
+	if err != nil {
+		return nil, err
+	}
+
+	var goFiles []string
+	for _, f := range files {
+		relToTint, err := filepath.Rel("src/tint", f)
+		if err != nil {
+			return nil, err
+		}
+		goFiles = append(goFiles, filepath.ToSlash(relToTint))
+	}
+	sort.Strings(goFiles)
+	return goFiles, nil
+}
+
+// HasObjcSrcs returns true if the target contains any Objective-C++ .mm files.
+func (t *Target) HasObjcSrcs() bool {
+	for name := range t.SourceFileSet {
+		if strings.HasSuffix(name, ".mm") {
+			return true
+		}
+	}
+	return false
+}

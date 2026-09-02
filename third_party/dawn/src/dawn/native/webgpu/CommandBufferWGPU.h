@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_COMMANDBUFFERWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_COMMANDBUFFERWGPU_H_
 
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

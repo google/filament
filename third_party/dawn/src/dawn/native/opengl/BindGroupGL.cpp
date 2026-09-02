@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/BindGroupGL.h"
+#include "src/dawn/native/opengl/BindGroupGL.h"
 
-#include "dawn/native/Texture.h"
-#include "dawn/native/opengl/BindGroupLayoutGL.h"
-#include "dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/opengl/BindGroupLayoutGL.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
 
 namespace dawn::native::opengl {
 

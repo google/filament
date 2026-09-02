@@ -1,0 +1,244 @@
+Name
+
+    EXT_image_dma_buf_import_modifiers
+
+Name Strings
+
+    EGL_EXT_image_dma_buf_import_modifiers
+
+Contributors
+
+    Pekka Paalanen, Collabora Ltd.
+    Louis-Francis Ratté-Boulianne
+    Daniel Stone, Collabora Ltd.
+    Kristian Høgsberg
+
+Contacts
+
+    Pekka Paalanen (pq 'at' collabora 'dot' com)
+    Daniel Stone (daniels 'at' collabora 'dot' com)
+
+Status
+
+    Complete
+
+Version
+
+    Version 5, March 12, 2019
+
+Number
+
+    EGL Extension #105
+
+Dependencies
+
+    EGL 1.2 is required.
+
+    EGL_KHR_image_base is required.
+    EGL_EXT_image_dma_buf_import is required.
+
+    The EGL implementation must be running on a Linux kernel supporting the
+    dma_buf buffer sharing mechanism.
+
+    This extension is written against the wording of the EGL 1.2 Specification.
+
+    In order to support imports for the GL_TEXTURE_EXTERNAL_OES target, a
+    compatible OpenGL ES implementation supporting GL_OES_EGL_image_external
+    must be present.
+
+Overview
+
+    This extension builds on EGL_EXT_image_dma_buf_import, in order to support
+    format modifiers used for tiling, compression, and additional non-linear
+    modes. It also adds support for a fourth auxiliary plane, and queries for
+    the implementation-supported types.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    EGLBoolean eglQueryDmaBufFormatsEXT(
+                            EGLDisplay dpy,
+                            EGLint max_formats,
+                            EGLint *formats,
+                            EGLint *num_formats)
+
+
+    EGLBoolean eglQueryDmaBufModifiersEXT(
+                            EGLDisplay dpy,
+                            EGLint format,
+                            EGLint max_modifiers,
+                            EGLuint64KHR *modifiers,
+                            EGLBoolean *external_only,
+                            EGLint *num_modifiers)
+
+New Tokens
+
+    Accepted as an attribute in the <attrib_list> parameter of
+    eglCreateImageKHR:
+
+        EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT 0x3443
+        EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT 0x3444
+        EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT 0x3445
+        EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT 0x3446
+        EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT 0x3447
+        EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT 0x3448
+        EGL_DMA_BUF_PLANE3_FD_EXT          0x3440
+        EGL_DMA_BUF_PLANE3_OFFSET_EXT      0x3441
+        EGL_DMA_BUF_PLANE3_PITCH_EXT       0x3442
+        EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT 0x3449
+        EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT 0x344A
+
+New Types
+
+    This extension uses the 64-bit unsigned integer type EGLuint64KHR
+    first introduced by the EGL_KHR_stream extension, but does not
+    depend on that extension. The typedef may be reproduced separately
+    for this extension, if not already present in eglext.h.
+
+    typedef khronos_uint64_t EGLuint64KHR;
+
+
+Additions to Chapter 2 of the EGL 1.2 Specification (EGL Operation)
+
+    Add to section 2.5.1 "EGLImage Specification" (as defined by the
+    EGL_KHR_image_base specification), in the description of
+    eglCreateImageKHR:
+
+    If <target> is EGL_LINUX_DMA_BUF_EXT, both or neither of the following
+    attribute values may be given. These attribute values together form an
+    unsigned 64-bit value called a format modifier. Format modifiers are
+    specified by drm_fourcc.h and used as the modifier parameter of the
+    drm_mode_fb_cmd2 ioctl. If neither of the two attributes are given, or
+    if the modifier is explicitly declared to be DRM_FORMAT_MOD_INVALID, the
+    effective format modifier is implementation-defined. The two attributes
+    are:
+
+        * EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT: The lowest 32 bits of the
+          64-bit format modifier.
+
+        * EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT: The highest 32 bits of the
+          64-bit format modifier.
+
+    For semi-planar and planar YUV formats, or other formats which require
+    multiple memory planes, planes 1, 2 and 3 are specified by the following
+    attributes, which have the same meanings as defined above for plane 0:
+
+        * EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT
+        * EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT
+        * EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT
+        * EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT
+        * EGL_DMA_BUF_PLANE3_FD_EXT
+        * EGL_DMA_BUF_PLANE3_OFFSET_EXT
+        * EGL_DMA_BUF_PLANE3_PITCH_EXT
+        * EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT
+        * EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT
+
+    Modifiers may modify any attribute of a buffer import, including but not
+    limited to adding extra planes to a format which otherwise does not have
+    those planes. As an example, a modifier may add a plane for an external
+    compression buffer to a single-plane format. The exact meaning and effect
+    of any modifier is canonically defined by drm_fourcc.h, not as part of this
+    extension.
+
+    Implementations are required to validate the full combination of base
+    format and per-plane modifiers, and reject any combination which is not
+    explicitly supported.
+
+    Add to the list of error conditions for eglCreateImageKHR:
+
+       * If <target> is EGL_LINUX_DMA_BUF_EXT, and the list of attributes
+         contains EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT but not
+         EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT or vice versa, EGL_BAD_PARAMETER
+         is generated. This applies similarly for planes 1, 2, and 3 also.
+
+    Add section 2.5.3 "EGLImage dma_buf formats and modifiers"
+
+    The command
+
+        EGLBoolean eglQueryDmaBufFormatsEXT(
+                            EGLDisplay dpy,
+                            EGLint max_formats,
+                            EGLint *formats,
+                            EGLint *num_formats)
+
+    is used to query the dma_buf formats supported by <dpy>. Each format is
+    returned using its FourCC format as defined in the drm_fourcc.h header file.
+    EGL_TRUE is returned if QueryDmaBufFormatsEXT succeeds, EGL_FALSE indicates
+    failure to query.
+
+       * If <dpy> is not the handle of a valid EGLDisplay object, the error
+         EGL_BAD_DISPLAY is generated.
+
+       * If <max_formats> is 0, no formats are returned, but the total number
+         of formats is returned in <num_formats>, and no error is generated.
+
+       * If <max_formats> has a negative value, the error EGL_BAD_PARAMETER
+         is generated.
+
+       * If <max_formats> is a positive integer but <formats> is NULL, the error
+         EGL_BAD_PARAMETER is generated.
+
+    The command
+
+        EGLBoolean eglQueryDmaBufModifiersEXT(
+                            EGLDisplay dpy,
+                            EGLint format,
+                            EGLint max_modifiers,
+                            EGLuint64KHR *modifiers,
+                            EGLBoolean *external_only,
+                            EGLint *num_modifiers)
+
+    is used to query the dma_buf format modifiers supported by <dpy> for the
+    given format. The format must be one of those returned by the
+    eglQueryDmaBufFormatsEXT command. The returned modifiers should be
+    defined in the canonical drm_fourcc.h header file. If the user also
+    passes an array for <external_only>, this will be populated with whether
+    the requested format and modifier combination is only supported for use
+    with the GL_TEXTURE_EXTERNAL_OES texture target. If <dpy> cannot support
+    any context with GL_OES_EGL_image_external, the array will be populated with
+    EGL_FALSE. EGL_TRUE is returned if QueryDmaBufModifiersEXT succeeds,
+    EGL_FALSE indicates failure.
+
+       * If <dpy> is not the handle of a valid EGLDisplay object, the error
+         EGL_BAD_DISPLAY is generated.
+
+       * If <max_modifiers> is 0, no modifiers are returned, but the total
+         number of modifiers is returned in <num_modifiers>, and no error is
+         generated.
+
+       * If <max_modifiers> has a negative value, the error EGL_BAD_PARAMETER
+         is generated.
+
+       * If <max_modifiers> is a positive integer but <modifiers> is NULL, the
+         error EGL_BAD_PARAMETER is generated.
+
+       * If <format> is not one of the formats advertised by
+         QueryDmaBufFormatsEXT for the same <dpy>, the error EGL_BAD_PARAMETER
+         is generated.
+
+
+Revision History
+
+#5 (Daniel Stone, March 12, 2019)
+   - Correct description of behaviour when a modifier is not explicitly given;
+     zero is not correct as it is an explicit modifier itself (linear).
+
+#4 (Daniel Stone, October 20, 2016)
+   - Switch to EGLuint64KHR for modifier types.
+
+#3 (Daniel Stone, October 20, 2016)
+   - Clarify that the effect that modifiers can have.
+   - Disambiguate references to displays.
+   - Explicitly refer to max_formats/max_modifiers behaviour when zero.
+
+#2 (Daniel Stone, September 29, 2016)
+   - Add missing tokens for plane 3 FD/offset/pitch.
+   - Fix description.
+   - Allow max_formats/max_modifiers to be zero, to get the counter.
+   - Add external_only to modifiers query.
+
+#1 (Pekka Paalanen, October 14, 2015)
+   - Initial draft.

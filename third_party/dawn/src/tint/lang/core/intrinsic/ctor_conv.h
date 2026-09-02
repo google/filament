@@ -68,6 +68,8 @@ enum class CtorConv : uint8_t {
     kSubgroup_matrix_left,
     kSubgroup_matrix_right,
     kSubgroup_matrix_result,
+    kU16,
+    kU64,
     kNone,
 };
 

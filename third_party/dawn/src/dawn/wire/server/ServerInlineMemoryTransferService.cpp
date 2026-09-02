@@ -25,70 +25,46 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include <cstring>
 #include <memory>
 
-#include "dawn/common/Assert.h"
 #include "dawn/wire/WireServer.h"
-#include "dawn/wire/server/Server.h"
+#include "src/dawn/wire/server/Server.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::wire::server {
 
 class InlineMemoryTransferService : public MemoryTransferService {
   public:
-    class ReadHandleImpl : public ReadHandle {
+    class MemoryHandleImpl : public MemoryHandle {
       public:
-        ReadHandleImpl() {}
-        ~ReadHandleImpl() override = default;
+        MemoryHandleImpl() {}
+        ~MemoryHandleImpl() override = default;
 
-        size_t SizeOfSerializeDataUpdate(size_t offset, size_t size) override { return size; }
+        size_t GetSerializeDataUpdateSize(size_t offset, size_t size) const override {
+            return size;
+        }
 
-        void SerializeDataUpdate(const void* data,
+        void SerializeDataUpdate(std::span<volatile std::byte> serializeData,
                                  size_t offset,
                                  size_t size,
-                                 void* serializePointer) override {
-            if (size > 0) {
-                DAWN_ASSERT(data != nullptr);
-                DAWN_ASSERT(serializePointer != nullptr);
-                memcpy(serializePointer, data, size);
-            }
+                                 std::span<const std::byte> data) const override {
+            DAWN_ASSERT(serializeData.size() == GetSerializeDataUpdateSize(offset, size));
+            DAWN_ASSERT(data.size() == size);
+            DAWN_ASSERT(serializeData.size() >= data.size());
+            std::ranges::copy(data, serializeData.begin());
         }
-    };
 
-    class WriteHandleImpl : public WriteHandle {
-      public:
-        WriteHandleImpl() {}
-        ~WriteHandleImpl() override = default;
-
-        // TODO(492456046): Remove this overload once it has been removed in Chromium.
-        bool DeserializeDataUpdate(const void* deserializePointer,
-                                   size_t deserializeSize,
+        bool DeserializeDataUpdate(std::span<const std::byte> deserializeData,
                                    size_t offset,
-                                   size_t size) override {
-            auto target = GetTarget();
-            if (deserializeSize != size || target.data() == nullptr ||
-                deserializePointer == nullptr) {
+                                   size_t size,
+                                   std::span<std::byte> target) override {
+            DAWN_ASSERT(target.size() == size);
+            if (size > deserializeData.size()) {
                 return false;
             }
-            if (offset > target.size() || size > target.size() - offset) {
-                return false;
-            }
-            memcpy(target.data() + offset, deserializePointer, size);
-            return true;
-        }
-
-        bool DeserializeDataUpdate(std::span<const uint8_t> deserializeData,
-                                   std::span<uint8_t> target,
-                                   size_t offset) override {
-            if (deserializeData.size() != target.size()) {
-                return false;
-            }
-            memcpy(target.data(), deserializeData.data(), deserializeData.size());
+            std::ranges::copy(deserializeData.subspan(0, size), target.begin());
             return true;
         }
     };
@@ -96,20 +72,12 @@ class InlineMemoryTransferService : public MemoryTransferService {
     InlineMemoryTransferService() {}
     ~InlineMemoryTransferService() override = default;
 
-    bool DeserializeReadHandle(const void* deserializePointer,
-                               size_t deserializeSize,
-                               ReadHandle** readHandle) override {
-        DAWN_ASSERT(readHandle != nullptr);
-        *readHandle = new ReadHandleImpl();
-        return true;
-    }
-
-    bool DeserializeWriteHandle(const void* deserializePointer,
-                                size_t deserializeSize,
-                                WriteHandle** writeHandle) override {
-        DAWN_ASSERT(writeHandle != nullptr);
-        *writeHandle = new WriteHandleImpl();
-        return true;
+    std::unique_ptr<MemoryHandle> DeserializeMemoryHandle(
+        std::span<const std::byte> creationData) override {
+        if (!creationData.empty()) {
+            return nullptr;
+        }
+        return std::make_unique<MemoryHandleImpl>();
     }
 };
 

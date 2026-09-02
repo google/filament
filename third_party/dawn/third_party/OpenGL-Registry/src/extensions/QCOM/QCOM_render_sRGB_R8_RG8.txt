@@ -1,0 +1,89 @@
+Name
+
+    QCOM_render_sRGB_R8_RG8
+
+Name Strings
+
+    GL_QCOM_render_sRGB_R8_RG8
+
+Contributors
+
+    Alec Sheran
+    Tate Hornbeck
+    Jonathan Wicks
+    Jeff Leger
+
+Contact
+
+    Jeff Leger - jleger 'at' qti.qualcomm.com
+
+Status
+
+    Final
+
+Version
+
+    Last Modified Date: September 15, 2023
+    Revision:  #3
+
+Number
+
+    OpenGL ES Extension #343
+
+Dependencies
+
+    OpenGL ES 3.0 is required. This extension is written against OpenGL ES 3.2 Specification (May 5, 2022).
+
+    This extension requires GL_EXT_texture_sRGB_RG8.
+
+    This extension requires GL_EXT_texture_sRGB_R8.
+
+Overview
+
+    OpenGL ES 3.2 supports an sRGB formats SR8 and SRG8 which are not color-renderable.
+
+    This extension enables the sRGB formats SR8 and SRG8 to be color-renderable using
+    framebuffer objects.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 8 of the OpenGL  ES 3.2 Specification
+(Textures and Samplers)
+
+    Modification in Table 8.10, p.162, 163
+    Convert the spaces under 'CR' and 'Req. rend.' to a 'check' for the
+    internal format SR8_EXT.
+
+    Modification in Table 8.10, p.162, 163
+    Convert the spaces under 'CR' and 'Req. rend.' to a 'check' for the
+    internal format SRG8_EXT.
+
+    Insert at the top (first) row in Table 8.16, p. 172.
+    Destination     | Source   | Source     | Source    | Source     | Effective
+    Internal Format | Red Size | Green Size | Blue Size | Alpha Size | Internal Format
+    ----------------|----------|------------|-----------|------------|----------------
+    any sized       |  1<=R<=8 |  G=0       |  B=0      |     A=0    | SR8_EXT
+    any sized       |  1<=R<=8 |  1<=G<=8   |  B=0      |     A=0    | SRG8_EXT
+
+Errors
+
+    No new errors.
+
+Issues
+
+    None
+
+Revision History:
+
+   Revision: 1 2023-05-30 (asheran)
+        initial revision
+   Revision: 2 2023-06-06 (asheran)
+        version 2
+   Revision: 3 2023-09-15 (tateh)
+        version 3

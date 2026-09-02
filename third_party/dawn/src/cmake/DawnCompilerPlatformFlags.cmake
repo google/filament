@@ -36,8 +36,9 @@ if (CMAKE_VERSION VERSION_LESS 3.15.0)
 endif ()
 
 if (TINT_CHECK_CHROMIUM_STYLE)
-  set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -Xclang -add-plugin -Xclang find-bad-constructs")
+  string(APPEND CMAKE_CXX_FLAGS
+    -Xclang=-add-plugin -Xclang=find-bad-constructs
+  )
 endif ()
 
 if ((CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

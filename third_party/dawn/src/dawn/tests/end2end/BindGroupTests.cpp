@@ -25,15 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include <string>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -187,6 +192,9 @@ TEST_P(BindGroupTests, ReusedBindGroupSingleSubmit) {
 // It contains a transformation matrix for the VS and the fragment color for the FS.
 // These must result in different register offsets in the native APIs.
 TEST_P(BindGroupTests, ReusedUBO) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
@@ -236,9 +244,12 @@ TEST_P(BindGroupTests, ReusedUBO) {
     };
     wgpu::Buffer buffer =
         utils::CreateBufferFromData(device, &data, sizeof(data), wgpu::BufferUsage::Uniform);
-    wgpu::BindGroup bindGroup = utils::MakeBindGroup(
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(  //
         device, pipeline.GetBindGroupLayout(0),
-        {{0, buffer, 0, sizeof(Data::transform)}, {1, buffer, 256, sizeof(Data::color)}});
+        {
+            {0, buffer, 0, sizeof(Data::transform)},
+            {1, buffer, 256, sizeof(Data::color)},
+        });
 
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
     wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass.renderPassInfo);
@@ -263,6 +274,9 @@ TEST_P(BindGroupTests, ReusedUBO) {
 // shader. In D3D12 for example, these different types of bindings end up in different namespaces,
 // but the register offsets used must match between the shader module and descriptor range.
 TEST_P(BindGroupTests, UBOSamplerAndTexture) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
@@ -362,6 +376,9 @@ TEST_P(BindGroupTests, UBOSamplerAndTexture) {
 }
 
 TEST_P(BindGroupTests, MultipleBindLayouts) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
@@ -395,12 +412,12 @@ TEST_P(BindGroupTests, MultipleBindLayouts) {
             return fragmentUbo1.color + fragmentUbo2.color;
         })");
 
-    utils::ComboRenderPipelineDescriptor textureDescriptor;
-    textureDescriptor.vertex.module = vsModule;
-    textureDescriptor.cFragment.module = fsModule;
-    textureDescriptor.cTargets[0].format = renderPass.colorFormat;
+    utils::ComboRenderPipelineDescriptor pipelineDesc;
+    pipelineDesc.vertex.module = vsModule;
+    pipelineDesc.cFragment.module = fsModule;
+    pipelineDesc.cTargets[0].format = renderPass.colorFormat;
 
-    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&textureDescriptor);
+    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&pipelineDesc);
 
     struct Data {
         float transform[4];
@@ -410,7 +427,6 @@ TEST_P(BindGroupTests, MultipleBindLayouts) {
     DAWN_ASSERT(offsetof(Data, color) == 256);
 
     std::vector<Data> data;
-    std::vector<wgpu::Buffer> buffers;
     std::vector<wgpu::BindGroup> bindGroups;
 
     data.push_back({{1.0f, 0.0f, 0.0f, 0.0f}, {0}, {0.0f, 1.0f, 0.0f, 1.0f}});
@@ -420,10 +436,13 @@ TEST_P(BindGroupTests, MultipleBindLayouts) {
     for (int i = 0; i < 2; i++) {
         wgpu::Buffer buffer =
             utils::CreateBufferFromData(device, &data[i], sizeof(Data), wgpu::BufferUsage::Uniform);
-        buffers.push_back(buffer);
-        bindGroups.push_back(utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
-                                                  {{0, buffers[i], 0, sizeof(Data::transform)},
-                                                   {1, buffers[i], 256, sizeof(Data::color)}}));
+        buffer.SetLabel(absl::StrFormat("buffer_%d", i).c_str());
+        bindGroups.push_back(utils::MakeBindGroup(  //
+            device, pipeline.GetBindGroupLayout(0),
+            {
+                {0, buffer, 0, sizeof(Data::transform)},
+                {1, buffer, 256, sizeof(Data::color)},
+            }));
     }
 
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
@@ -568,6 +587,9 @@ TEST_P(BindGroupTests, MultipleEntryPointsWithMultipleNonZeroGroups) {
 // This test reproduces an out-of-bound bug on D3D12 backends when calling draw command twice with
 // one pipeline that has 4 bind group sets in one render pass.
 TEST_P(BindGroupTests, DrawTwiceInSamePipelineWithFourBindGroupSets) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     wgpu::BindGroupLayout layout = utils::MakeBindGroupLayout(
@@ -616,6 +638,9 @@ TEST_P(BindGroupTests, DrawTwiceInSamePipelineWithFourBindGroupSets) {
 
 // Test that bind groups can be set before the pipeline.
 TEST_P(BindGroupTests, SetBindGroupBeforePipeline) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     // Create a bind group layout which uses a single uniform buffer.
@@ -658,6 +683,9 @@ TEST_P(BindGroupTests, SetBindGroupBeforePipeline) {
 
 // Test that dynamic bind groups can be set before the pipeline.
 TEST_P(BindGroupTests, SetDynamicBindGroupBeforePipeline) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     // Create a bind group layout which uses a single dynamic uniform buffer.
@@ -969,6 +997,9 @@ TEST_P(BindGroupTests, DynamicBufferInOneStageNotAppliedToOtherStage2) {
 
 // Test that the same renderpass can use 3 more pipelines
 TEST_P(BindGroupTests, ThreePipelinesInSameRenderpass) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     // Create a bind group layout which uses a single dynamic uniform buffer.
@@ -1056,6 +1087,9 @@ TEST_P(BindGroupTests, ThreePipelinesInSameRenderpass) {
 TEST_P(BindGroupTests, BindGroupsPersistAfterPipelineChange) {
     DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     // Create a bind group layout which uses a single dynamic uniform buffer.
@@ -1137,6 +1171,9 @@ TEST_P(BindGroupTests, DrawThenChangePipelineAndBindGroup) {
     // TODO(anglebug.com/3032): fix failure in ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsANGLE() && IsWindows());
     DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
 
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
@@ -1243,6 +1280,9 @@ TEST_P(BindGroupTests, DrawThenChangePipelineAndBindGroup) {
 // Test for crbug.com/dawn/1049, where setting a pipeline without drawing can prevent
 // bind groups from being applied later
 TEST_P(BindGroupTests, DrawThenChangePipelineTwiceAndBindGroup) {
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     // Create a bind group layout which uses a single dynamic uniform buffer.
@@ -1355,7 +1395,7 @@ TEST_P(BindGroupTests, DynamicOffsetOrder) {
 
     // Create three buffers large enough to by offset by the largest offset.
     wgpu::BufferDescriptor bufferDescriptor;
-    bufferDescriptor.size = 3 * mMinUniformBufferOffsetAlignment + sizeof(uint32_t);
+    bufferDescriptor.size = 3ULL * mMinUniformBufferOffsetAlignment + sizeof(uint32_t);
     bufferDescriptor.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst;
 
     wgpu::Buffer buffer0 = device.CreateBuffer(&bufferDescriptor);
@@ -1437,7 +1477,7 @@ TEST_P(BindGroupTests, DynamicAndNonDynamicBindingsDoNotConflictAfterRemapping) 
 
         // Create three buffers large enough to by offset by the largest offset.
         wgpu::BufferDescriptor bufferDescriptor;
-        bufferDescriptor.size = 2 * mMinUniformBufferOffsetAlignment + sizeof(uint32_t);
+        bufferDescriptor.size = 2ULL * mMinUniformBufferOffsetAlignment + sizeof(uint32_t);
         bufferDescriptor.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
 
         wgpu::Buffer dynamicBuffer = device.CreateBuffer(&bufferDescriptor);
@@ -1593,6 +1633,9 @@ TEST_P(BindGroupTests, DynamicBindingNoneVisibility) {
 TEST_P(BindGroupTests, ArbitraryBindingNumbers) {
     DAWN_SUPPRESS_TEST_IF(IsWARP());
 
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
@@ -1736,6 +1779,9 @@ TEST_P(BindGroupTests, EmptyLayout) {
 // execute the shader.
 TEST_P(BindGroupTests, ReadonlyStorage) {
     DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+
+    // TODO(crbug.com/518759193): Produces incorrect colors.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
 
     utils::ComboRenderPipelineDescriptor pipelineDescriptor;
 
@@ -2078,11 +2124,6 @@ void DoMaxBindingsPerBindGroupTest(const wgpu::Device& device,
 
 // Test with storage buffers as buffers take the most space in the frontend BindGroup.
 TEST_P(BindGroupTests, MaxBindingsPerBindGroupVisibility_StorageBuffer) {
-    // TODO(https://issues.chromium.org/491082532): Fails on OpenGL, likely because the buffers with
-    // visibility none are still being bound in the GL backend, causing a GL_INVALID_VALUE because
-    // the index is too large in glBindBufferRange.
-    DAWN_SUPPRESS_TEST_IF(IsOpenGL() || IsOpenGLES());
-
     wgpu::BindGroupLayoutEntry bglEntry = {
         .binding = 0,
         .visibility = wgpu::ShaderStage::None,
@@ -2109,11 +2150,6 @@ TEST_P(BindGroupTests, MaxBindingsPerBindGroupVisibility_StorageBuffer) {
 }
 // Test with external textures as they expand to take multiple entries in the frontend bindgroup.
 TEST_P(BindGroupTests, MaxBindingsPerBindGroupVisibility_ExternalTexture) {
-    // TODO(https://issues.chromium.org/491082532): Fails on OpenGL, likely because the buffers with
-    // visibility none are still being bound in the GL backend, causing a GL_INVALID_VALUE because
-    // the index is too large in glBindBufferRange.
-    DAWN_SUPPRESS_TEST_IF(IsOpenGL() || IsOpenGLES());
-
     wgpu::ExternalTextureBindingLayout etLayout = {};
     wgpu::BindGroupLayoutEntry bglEntry = {
         .nextInChain = &etLayout,

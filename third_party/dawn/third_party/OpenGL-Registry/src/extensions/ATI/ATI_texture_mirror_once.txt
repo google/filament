@@ -1,0 +1,141 @@
+Name
+
+    ATI_texture_mirror_once
+
+Name Strings
+
+    GL_ATI_texture_mirror_once
+
+Contact
+
+    Dan Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+
+Version
+
+    Last Modified Date: 11/4/2006 Revision: 0.31
+
+Number
+
+    221
+
+Dependencies
+
+    EXT_texture3D
+
+Overview
+
+    ATI_texture_mirror_once extends the set of texture wrap modes to 
+    include two modes (GL_MIRROR_CLAMP_ATI, GL_MIRROR_CLAMP_TO_EDGE_ATI) 
+    that effectively use a texture map twice as large as the original image 
+    in which the additional half of the new image is a mirror image of the 
+    original image.
+
+    This new mode relaxes the need to generate images whose opposite edges
+    match by using the original image to generate a matching "mirror image".
+    This mode allows the texture to be mirrored only once in the negative
+    s, t, and r directions.
+
+Issues
+
+    None known
+
+New Procedure and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv, when
+    their <pname> parameter is TEXTURE_WRAP_S, TEXTURE_WRAP_T, or
+    TEXTURE_WRAP_R_EXT:
+
+      MIRROR_CLAMP_ATI                     0x8742
+      MIRROR_CLAMP_TO_EDGE_ATI             0x8743
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation)
+
+    None
+
+Additions to Chapter 3 if the OpenGL 1.2.1 Specification (Rasterization):
+
+  - (3.8.3, p. 124) Change first three entries in table:
+
+    "TEXTURE_WRAP_S     integer     CLAMP, CLAMP_TO_EDGE, REPEAT, 
+                                    MIRROR_CLAMP_ATI, MIRROR_CLAMP_TO_EDGE_ATI
+     TEXTURE_WRAP_T     integer     CLAMP, CLAMP_TO_EDGE, REPEAT, 
+                                    MIRROR_CLAMP_ATI, MIRROR_CLAMP_TO_EDGE_ATI
+     TEXTURE_WRAP_R     integer     CLAMP, CLAMP_TO_EDGE, REPEAT, 
+                                    MIRROR_CLAMP_ATI, MIRROR_CLAMP_TO_EDGE_ATI"
+
+  - (3.8.4, p. 125) Added after second paragraph:
+
+    "If TEXTURE_WRAP_S, TEXTURE_WRAP_T, or TEXTURE_WRAP_R_EXT is set to
+     MIRROR_CLAMP_ATI or MIRROR_CLAMP_TO_EDGE_ATI, the s (or t or r) 
+     coordinate is clamped to [-1, 1] and then converted to:
+
+         s      0  <= s <= 1
+        -s     -1  <= s <  0
+
+     Like the CLAMP wrap mode, with MIRROR_CLAMP_ATI the texels from 
+     the border can be used by the texture filter.  MIRROR_CLAMP_TO_EDGE_ATI 
+     clamps texture coordinates at all mipmap levels such that the texture 
+     filter never samples a border texel."
+
+  - (3.8.5, p.127) Change last paragraph to:
+
+    "When TEXTURE_MIN_FILTER is LINEAR, a 2 x 2 x 2 cube of texels in the
+     image array of level TEXTURE_BASE_LEVEL is selected.  This cube is 
+     obtained by first clamping texture coordinates as described above 
+     under Texture Wrap Modes (if the wrap mode for a coordinate is CLAMP,
+     CLAMP_TO_EDGE, MIRROR_CLAMP_ATI, or MIRROR_CLAMP_TO_EDGE_ATI) and 
+     computing..."
+
+
+Additions to Chapter 4:
+
+    None
+
+Additions to Chapter 5:
+
+    None
+
+Additions to Chapter 6:
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, then the references to clamping of 3D
+    textures in this file are invalid, and references to TEXTURE_WRAP_R_EXT
+    should be ignored.
+
+
+New State
+
+    Only the type information changes for these parameters:
+
+    Get Value           Get Command             Type    Initial Value   Attrib
+    ---------           -----------             ----    -------------   ------
+    TEXTURE_WRAP_S      GetTexParameteriv       n x Z5  REPEAT          texture
+    TEXTURE_WRAP_T      GetTexParameteriv       n x Z5  REPEAT          texture
+    TEXTURE_WRAP_R_EXT  GetTexParameteriv       n x Z5  REPEAT          texture
+
+New Implementation Dependent State
+
+    None
+
+
+    

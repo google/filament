@@ -1,0 +1,392 @@
+Name
+
+    ARB_point_parameters
+
+Name Strings
+
+    GL_ARB_point_parameters
+
+Contact
+
+    Michael Gold, NVIDIA (gold 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the ARB, 21 June 2000.
+
+Version
+
+    Revision Date: September 23, 2010
+    Version: 0.6
+
+    Based on:  EXT_point_parameters
+               $Date: 1997/08/21 21:26:36 $ $Revision: 1.6 $
+
+Number
+
+    ARB Extension #14
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    ARB_multisample affects the definition of this extension.
+    The extension is written against the OpenGL 1.2.1 Specification.
+
+Overview
+
+    This extension supports additional geometric characteristics of
+    points. It can be used to render particles or tiny light sources,
+    commonly referred to as "Light points".
+
+    The raster brightness of a point is a function of the point area,
+    point color, point transparency, and the response of the display's
+    electron gun and phosphor. The point area and the point transparency
+    are derived from the point size, currently provided with the <size>
+    parameter of glPointSize.
+
+    The primary motivation is to allow the size of a point to be
+    affected by distance attenuation. When distance attenuation has an
+    effect, the final point size decreases as the distance of the point
+    from the eye increases.
+
+    The secondary motivation is a mean to control the mapping from the
+    point size to the raster point area and point transparency. This is
+    done in order to increase the dynamic range of the raster brightness
+    of points. In other words, the alpha component of a point may be
+    decreased (and its transparency increased) as its area shrinks below
+    a defined threshold.
+
+    This extension defines a derived point size to be closely related to
+    point brightness. The brightness of a point is given by:
+
+                        1
+        dist_atten(d) = -------------------
+                        a + b * d + c * d^2
+
+        brightness(Pe) = Brightness * dist_atten(|Pe|)
+
+    where 'Pe' is the point in eye coordinates, and 'Brightness' is some
+    initial value proportional to the square of the size provided with
+    PointSize. Here we simplify the raster brightness to be a function
+    of the rasterized point area and point transparency.
+
+                    brightness(Pe)       brightness(Pe) >= Threshold_Area
+        area(Pe) =
+                    Threshold_Area       Otherwise
+
+        factor(Pe) = brightness(Pe)/Threshold_Area
+
+        alpha(Pe) = Alpha * factor(Pe)
+
+    where 'Alpha' comes with the point color (possibly modified by
+    lighting).
+
+    'Threshold_Area' above is in area units. Thus, it is proportional to
+    the square of the threshold provided by the programmer through this
+    extension.
+
+    The new point size derivation method applies to all points, while
+    the threshold applies to multisample points only.
+
+IP Status
+
+    None.
+
+Issues
+
+    * Does point alpha modification affect the current color ?
+
+      No.
+
+    * Do we need a special function GetPointParameterfvARB, or get by
+      with GetFloat ?
+
+      GetFloat is sufficient.
+
+    * If alpha is 0, then we could toss the point before it reaches the
+      fragment stage.
+
+      No.  This can be achieved with enabling the alpha test with
+      reference of 0 and function of LEQUAL.
+
+    * Do we need a disable for applying the threshold ? The default
+      threshold value is 1.0. It is applied even if the point size is
+      constant.
+
+      If the default threshold is not overridden, the area of
+      multisample points with provided constant size of less than 1.0,
+      is mapped to 1.0, while the alpha component is modulated
+      accordingly, to compensate for the larger area. For multisample
+      points this is not a problem, as there are no relevant
+      applications yet. As mentioned above, the threshold does not apply
+      to alias or antialias points.
+
+      The alternative is to have a disable of threshold application, and
+      state that threshold (if not disabled) applies to non antialias
+      points only (that is, alias and multisample points).
+
+      The behavior without an enable/disable looks fine.
+
+    * Future extensions (to the extension)
+
+      1. POINT_FADE_ALPHA_CLAMP_ARB
+
+      When the derived point size is larger than the threshold size
+      defined by the POINT_FADE_THRESHOLD_SIZE_ARB parameter, it might
+      be desired to clamp the computed alpha to a minimum value, in
+      order to keep the point visible. In this case the formula below
+      change:
+
+      factor = (derived_size/threshold)^2
+
+                      factor                  clamp <= factor 
+      clamped_value = 
+                      clamp                   factor < clamp
+
+               1.0                            derived_size >= threshold
+      alpha *=
+               clamped_value                  Otherwise
+
+      where clamp is defined by the POINT_FADE_ALPHA_CLAMP_ARB new
+      parameter.
+ 
+New Procedures and Functions
+
+    void PointParameterfARB(enum pname,
+                            float param);
+    void PointParameterfvARB(enum pname,
+                             const float *params);
+
+New Tokens
+
+    Accepted by the <pname> parameter of PointParameterfARB, and the
+    <pname> of Get:
+
+        POINT_SIZE_MIN_ARB
+        POINT_SIZE_MAX_ARB
+        POINT_FADE_THRESHOLD_SIZE_ARB
+
+    Accepted by the <pname> parameter of PointParameterfvARB, and the
+    <pname> of Get:
+
+        POINT_SIZE_MIN_ARB              0x8126
+        POINT_SIZE_MAX_ARB              0x8127
+        POINT_FADE_THRESHOLD_SIZE_ARB   0x8128
+        POINT_DISTANCE_ATTENUATION_ARB  0x8129
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    In section 3.3, the following is inserted after the description of
+    PointSize:
+
+    The point size is multiplied with a distance attenuation factor
+    and clamped as follows:
+
+        derived_size = Clamp(size * sqrt(dist_atten(dist)))
+
+    where dist_atten is specified as
+
+                                 1
+        dist_atten(d) = -------------------
+                        a + b * d + c * d^2
+
+    and 'd' is the eye-coordinate distance from the eye, (0, 0, 0, 1) in
+    eye coordinates, to the vertex.
+
+    The derived point size is clamped to a given range, and then
+    clamped to the implementation-dependent point size range.
+
+    If multisampling is enabled, an implementation may optionally fade
+    the point alpha (section 3.12) instead of allowing the size to go
+    below a given threshold.  In this case, the diameter of the
+    rasterized point is
+
+                   derived_size                 derived_size >= threshold
+        diameter = 
+                   threshold                    Otherwise
+
+    and the fade factor is computed as follows:
+
+                 1                              derived_size >= threshold
+        fade =
+                 (derived_size/threshold)^2     Otherwise
+
+    The distance attenuation function coefficients, 'a', 'b', and 'c',
+    the bounds of the clamp, and the point fade 'threshold', are
+    specified with
+
+        void PointParameterfARB( enum pname, float param );
+        void PointParameterfvARB( enum pname, const float *params );
+
+    If <pname> is POINT_SIZE_MIN_ARB or POINT_SIZE_MAX_ARB, then
+    <param> specifies, or <params> points to the lower or upper bound
+    respectively on the derived point size.  If the lower bound is
+    greater than the upper bound, the resulting point size is
+    undefined.  If <pname> is POINT_DISTANCE_ATTENUATION_ARB, then
+    <params> points to the coefficients 'a', 'b', and 'c'.  If <pname>
+    is POINT_FADE_THRESHOLD_SIZE_ARB, <param> specifies, or <params>
+    points to the point fade threshold.
+
+    This extension doesn't change the feedback or selection behavior of
+    points.
+
+    In section 3.11, the word "Finally" is removed from the first
+    sentence.
+
+    Add the following after section 3.11.
+
+    Section 3.12  Multisample Point Fade
+
+    If multisampling is enabled and the rasterized fragment results
+    from a point primitive, then the computed fade factor is applied
+    to the fragment.  In RGBA mode, the fade factor is multiplied by
+    the fragment's alpha (A) value to yield a final alpha value.  In
+    color index mode, the fade factor has no effect.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    Two new GL rendering commands are added. The following commands are
+    sent to the server as part of a glXRender request:
+
+        PointParameterfARB
+            2           8+4*n           rendering command length
+            2           2065            rendering command opcode
+            4           ENUM            pname
+                        0x8126    n=1   POINT_SIZE_MIN_ARB
+                        0x8127    n=1   POINT_SIZE_MAX_ARB
+                        0x8128    n=1   POINT_FADE_THRESHOLD_SIZE_ARB
+            4           FLOAT32         param
+
+        PointParameterfvARB
+            2           8+4*n           rendering command length
+            2           2066            rendering command opcode
+            4           ENUM            pname
+                        0x8126    n=1   POINT_SIZE_MIN_ARB
+                        0x8127    n=1   POINT_SIZE_MAX_ARB
+                        0x8128    n=1   POINT_FADE_THRESHOLD_SIZE_ARB
+                        0x8129    n=3   POINT_DISTANCE_ATTENUATION_ARB
+            4*n         LISTofFLOAT32   params
+
+Dependencies on ARB_multisample
+
+    If ARB_multisample is not implemented, then the references to
+    multisample points are invalid, and should be ignored.
+
+Errors
+
+    INVALID_ENUM is generated if PointParameterfARB parameter <pname> is
+    not POINT_SIZE_MIN_ARB, POINT_SIZE_MAX_ARB, or
+    POINT_FADE_THRESHOLD_SIZE_ARB.
+
+    INVALID_ENUM is generated if PointParameterfvARB parameter <pname>
+    is not POINT_SIZE_MIN_ARB, POINT_SIZE_MAX_ARB,
+    POINT_FADE_THRESHOLD_SIZE_ARB, or POINT_DISTANCE_ATTENUATION_ARB
+
+    INVALID_VALUE is generated when values are out of range according
+    to:
+
+    <pname>                                 valid range
+    --------                                -----------
+    POINT_SIZE_MIN_ARB                      >= 0
+    POINT_SIZE_MAX_ARB                      >= 0
+    POINT_FADE_THRESHOLD_SIZE_ARB           >= 0
+
+
+New State
+
+(table 6.11, p. 201)
+                                                                Initial
+    Get Value                           Type    Get Command     Value   Description Sec.    Attribute
+    ---------                           ----    -----------     ------- ----------- ----    ---------
+    POINT_SIZE_MIN_ARB                  R+      GetFloatv       0.0     Attenuated  3.3     point
+                                                                        Min point
+                                                                        size
+
+    POINT_SIZE_MAX_ARB                  R+      GetFloatv       M       Attenuated  3.3     point
+                                                                        Max point
+                                                                        size
+
+    POINT_FADE_THRESHOLD_SIZE_ARB       R+      GetFloatv       1.0     Threshold   3.3     point
+                                                                        for alpha
+                                                                        attenuation
+
+    POINT_DISTANCE_ATTENUATION_ARB      3xR     GetFloatv       (1.0,0.0,0.0)       3.3     point
+                                                                        Attenuation
+                                                                        coefficients
+
+    M is the larger of the max antialiased and non antialiased point
+    sizes.
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    11/09/1999  0.1
+        - First ARB draft based on the original SGI and EXT drafts.
+
+    12/07/1999  0.2
+        - clarified behavior when POINT_SIZE_MIN exceeds POINT_SIZE_MAX
+        - clarified when the point size is clamped to the supported range
+        - removed issues from "Errors" section
+        - fixed various typos
+        - Updated to new extension template
+        - added GLX protocol
+
+    04/20/2000  0.3
+        - rewritten to fit within the context of the 1.2 specification
+        - added language describing where the fade alpha is applied.
+        - added language which indicates that some implementations may not
+          implement POINT_FADE_THRESHOLD_SIZE_ARB
+
+    06/20/2000  0.4
+        - removed alternate behavior for fade alpha, since it is optional
+        - added new section describing fade alpha application
+
+    03/12/2002  0.5
+        - added GLX protocol for PointParameterfARB and assigned ropcodes
+
+    09/23/2010  0.6 (pbrown)
+        - add "const" qualifier to <params> argument to PointParameterfvARB

@@ -1,0 +1,338 @@
+Name
+
+     ARB_get_texture_sub_image
+
+Name Strings
+
+     GL_ARB_get_texture_sub_image
+
+Contact
+
+     Brian Paul, VMware Inc.  (brianp 'at' vmware.com)
+
+Contributors
+
+     Brian Paul
+     Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Date: June 16, 2014
+    Revision: 7
+
+Number
+
+    ARB Extension #165
+
+Dependencies
+
+    OpenGL 2.0 is required
+
+    The extension is written against the OpenGL 4.4 Specification, Core
+    Profile, March 19, 2014.
+
+Overview
+
+    This extension adds a new function to get sub-regions of texture
+    images.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void GetTextureSubImage(uint texture, int level,
+                            int xoffset, int yoffset, int zoffset,
+                            sizei width, sizei height, sizei depth,
+                            enum format, enum type,
+                            sizei bufSize, void *pixels);
+
+    void GetCompressedTextureSubImage(uint texture,
+                                      int level, int xoffset,
+                                      int yoffset, int zoffset,
+                                      sizei width, sizei height,
+                                      sizei depth, sizei bufSize,
+                                      void *pixels);
+
+New Types
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 8 of the OpenGL 4.4 (Core Profile) Specification (Textures and Samplers)
+
+    Modify section 8.11.4, Texture Image Queries p. 224
+
+    (insert before the discussion of GetCompressedTexImage)
+
+    Sub-regions of a texture image may be obtained from a texture object
+    with the command
+
+        void GetTextureSubImage(uint texture, int level,
+                               int xoffset, int yoffset, int zoffset,
+                               sizei width, sizei height, sizei depth,
+                               enum format, enum type,
+                               sizei bufSize, void *pixels);
+
+    <texture> is the name of the source texture object. and must not be a
+    buffer or multisample texture. The effective <target> parameter is the
+    value of TEXTURE_TARGET for texture. <level>, <format>, <type> and
+    <pixels> have the same meaning as for GetTexImage. <bufSize> is the size
+    of the buffer to receive the retrieved pixel data.
+
+    For cube map textures, the behavior is as though GetTextureImage were
+    called, but only texels from the requested cube map faces (selected by
+    <zoffset> and <depth>, as described below) were returned.
+
+    <xoffset>, <yoffset> and <zoffset> values indicate the position of the
+    subregion to return. <width>, <height> and <depth> indicate the size of
+    the region to return. These parameters have the same meaning as for
+    TexSubImage3D, though for one- and two-dimensional textures there are
+    extra restrictions, described in the errors section below).
+
+    For one-dimensional array textures, <yoffset> is interpreted as the
+    first layer to access and <height> is the number of layers to access.
+    For two-dimensional array textures, <zoffset> is interpreted as the
+    first layer to access and <depth> is the number of layers to access.
+    Cube map textures are treated as an array of six slices in the
+    z-dimension, where the value of <zoffset> is interpreted as specifying
+    the cube map face for the corresponding layer in table 9.2 and <depth>
+    is the number of faces to access. For cube map array textures, <zoffset>
+    is the first layer-face to access, and <depth> is the number of layer-
+    faces to access. Each layer-face is translated into an array layer and a
+    cube map face as described for layer-face numbers in section 8.5.3.
+
+    Component groups from the specified sub-region are packed and placed
+    into memory as described for GetTextureImage, starting with the texel at
+    (<xoffset>, <yoffset>, <zoffset>).
+
+    Errors
+
+    An INVALID_OPERATION error is generated if <texture> is not the name of
+    an existing texture object.
+
+    An INVALID_OPERATION error is generated if <texture> is the name of a
+    buffer or multisample texture.
+
+    An INVALID_VALUE error is generated if <xoffset>, <yoffset> or <zoffset>
+    are negative.
+
+    An INVALID_VALUE error is generated by if <xoffset> + <width> is greater
+    than the texture level's width or if <yoffset> + <height> is greater
+    than the texture level's height or if <zoffset> + <depth> is greater
+    than the texture level's depth.
+
+    An INVALID_VALUE error is generated if the effective <target> is
+    TEXTURE_1D and either <yoffset> is not zero, or <height> is not one.
+
+    An INVALID_VALUE error is generated if the effective <target> is
+    TEXTURE_1D, TEXTURE_1D_ARRAY, TEXTURE_2D, or TEXTURE_RECTANGLE and
+    either <zoffset> is not zero, or <depth> is not one.
+
+    An INVALID_OPERATION error is generated if the buffer size required to
+    store the requested data is greater than <bufSize>.
+
+
+    (insert after the discussion of GetCompressedTexSubImage and before
+    section 8.12 begins)
+
+    If the compressed data are arranged into fixed-size blocks of texels,
+    the command
+
+        void GetCompressedTextureSubImage(uint texture,
+                                          int level, int xoffset,
+                                          int yoffset, int zoffset,
+                                          sizei width, sizei height,
+                                          sizei depth, sizei bufSize,
+                                          void *pixels);
+
+    can be used to obtain a sub-region of a compressed texture image instead
+    of the whole image. <texture> is the name of the source texture object,
+    and must not be a buffer or multisample texture. The effective <target>
+    is the value of TEXTURE_TARGET for <texture>. <level> and <pixels> have
+    the same meaning as the corresponding arguments CompressedTexSubImage3D.
+    <bufSize> indicates the size of the buffer to receive the retrieved
+    pixel data.
+
+    For cube map textures, the behavior is as though GetCompressedTexImage
+    were called once for each requested face (selected by <zoffset> and
+    <depth>, as described below) with <target> corresponding to the
+    requested texture cube map face as indicated by Table 9.2. <pixels> is
+    offset appropriately for each successive image.
+
+    <xoffset>, <yoffset> and <zoffset> indicate the position of the
+    subregion to return. <width>, <height> and <depth> indicate the size of
+    the region to return. These arguments have the same meaning as for
+    CompressedTexSubImage3D, though there are extra restrictions, described
+    in the errors section below.
+
+    The mapping between the <xoffset>, <yoffset>, <zoffset>, <width>,
+    <height>, and <depth> parameters and the faces, layers, and layer-faces
+    for cube map, array, and cube map array textures is the same as for
+    GetTextureSubImage.
+
+    The <xoffset>, <yoffset>, <zoffset>, <width>, <height> and <depth>
+    values and must be multiples of the values of
+    PACK_COMPRESSED_BLOCK_WIDTH, PACK_COMPRESSED_BLOCK_HEIGHT, and
+    PACK_COMPRESSED_BLOCK_DEPTH respectively, unless the offset is zero and
+    the corresponding size is the same as the texture size in that
+    dimension.
+
+    Pixel storage modes are treated as for GetCompressedTexSubImage. The
+    texel at (<xoffset>, <yoffset>, <zoffset>) will be stored at the
+    location indicated by <pixels> and the current pixel packing parameters.
+
+    Errors
+
+    In addition to the same errors generated by GetTextureSubImage with
+    corresponding parameters:
+
+    An INVALID_VALUE error is generated if <xoffset>, <yoffset> or <zoffset>
+    is not a multiple of the compressed block width, height or depth.
+
+    An INVALID_VALUE error is generated if <width>, <height> or <depth> is
+    not a multiple of the compressed block width, height or depth
+    respectively, unless the offset is zero and the size equals the texture
+    image size.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on GL and ES profiles, versions, and other extensions
+
+    If texture arrays are not supported, ignore references to
+    1D and 2D-array textures
+
+    If cube map textures are not supported, ignore references to
+    cube map textures.
+
+    If cube map arrays texture are not supported, ignore references to
+    cube map array textures.
+
+    If texture rectangles are not supported, ignore references to
+    rectangle textures.
+
+    If texture compression is not supported, ignore references to
+    GetCompressedTexSubImage.
+
+Dependencies on ARB_direct_state_access
+
+    If ARB_direct_state_access is not supported, the TEXTURE_TARGET
+    is the <target> that <texture> was initially bound with.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Conformance Testing
+
+    1) For each type of texture, create a test texture.  Read back the
+    whole texture into a buffer with glGet[Compressed]TexImage.  Then
+    read back the whole texture into a second buffer, but in sub-image
+    pieces (ex: 4x4 grid).  Then compare the two result buffers - they
+    should be identical.
+
+Issues
+
+    1) Why is this extension necessary?
+
+    RESOLVED:  In some cases one can wrap a texture with an FBO and
+    read back sub-regions with glReadPixels.  However, that doesn't
+    work for all texture formats (esp. compressed textures).
+
+    For some textures such as 2D array textures there's no way to obtain
+    just one slice of a texture.  It's very inefficient to get the whole
+    texture when just one slice is needed.
+
+    An alternate approach to the problem of reading back sub textures
+    is with an extension such as GL_INTEL_map_texture.  However, mapping
+    textures involves several difficult issues.  Extending glGetTexImage
+    to handle sub-regions is much simpler.
+
+    2) What is the behavior of these commands if <bufSize> is exceeded
+    when a pixel pack buffer object is bound?
+
+    DISCUSSION: When client memory is being used, INVALID_OPERATION is
+    generated if writing more than <bufSize> bytes is necessary to return
+    all the requested data. Similarly, when a PBO is bound,
+    INVALID_OPERATION is generated if more than <bufSize> bytes are
+    required. Note that it can also be an error if *less* than <bufSize>
+    bytes would be required when using a PBO if the space between the
+    offset indicated by <pixels> and the end of the buffer is insufficient
+    for the requested data. This behavior is inherited from GetTexImage
+    and GetCompressedTexImage.
+
+    3) Is the <target> parameter needed?
+
+    RESOLVED. No. The target is determined by the texture type.
+    For cube map textures the face target is determined by the
+    <zoffset> and <depth> parameters by mapping layer numbers to
+    cube map texture faces as per Table 9.2. This is consisten
+    with the DSA variants of GetTextureImage in ARB_direct_state_access
+    which do not include it.
+
+Revision History
+
+    Revision 1, 2014/02/03
+       - Initial revision
+
+    Revision 2, 2014/04/10
+       - Converted GetTexSubImage and GetTexCompressedSubImage to
+         DSA (Direct State Access) style.
+       - Added bufSize parameter, per GL_ARB_robustness convention.
+
+    Revision 3, 2014/05/26 - dkoch
+       - convert to ARB extension
+       - make function naming and parameter lists consistent
+       - describe the <bufSize> parameter (issue 2).
+       - remove the <target> parameter (issue 3) and fallout.
+       - better describe valid texture types and parameter meanings
+         for the various texture types.
+
+    Revision 4, 2014/05/30 - dkoch
+       - describe implied <target> parameter for cube map textures
+       - fix remove incorrect <bufSize> language (Bug 12321)
+       - Add additional error language
+       - improve issues 2 and 3
+
+    Revision 5, 2014/06/03 - Jon Leech
+       - Use 'pixels' instead of 'img' as formal parameter name for
+         consistency with API spec / dsa.
+
+    Revision 6, 2014/06/12 - Jon Leech
+       - Sync with core API spec language and errors.
+
+    Revision 6, 2014/06/16 - Jon Leech
+       - Require GetTextureSubImage for cube map textures to respect the
+         three-dimensional pixel pack state, by referring to GetTextureImage
+         language (Bug 12329).

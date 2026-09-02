@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0A863FD1-FD94-42CF-8190-A3CA605A6459}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>MainNs</RootNamespace>
+    <AssemblyName>dndxc</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <WarningLevel>4</WarningLevel>
+    <!-- Allow unsafe blocks to extract strings from blobs; might want to do this in IDxcLibrary. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Typical C# projects output to bin\Release or bin\Debug depending on the configuration. -->
+    <!-- In this case, we always output to the same location, next to where the native files are. -->
+    <!-- We also build in every case, and only change the debug flags accordingly. -->
+    <PlatformTarget>${DOTNET_PLATFORM_TARGET}</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>${DOS_STYLE_OUTPUT_DIRECTORY}\Debug\bin</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'RelWithDebInfo' ">
+    <OutputPath>${DOS_STYLE_OUTPUT_DIRECTORY}\RelWithDebInfo\bin</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>${DOS_STYLE_OUTPUT_DIRECTORY}\Release\bin</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>${DOS_STYLE_SOURCE_DIR}\app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>${DOS_STYLE_SOURCE_DIR}\dxc.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\AsmColorizer.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\D3DCompiler.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\dia2.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\DotNetDxc.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\BinaryViewControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\DxilBitcodeReader.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\FindDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\FindDialog.Designer.cs">
+      <DependentUpon>FindDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\EditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\EditorForm.Designer.cs">
+      <DependentUpon>EditorForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\EditorModels.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\GoToDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\GoToDialog.Designer.cs">
+      <DependentUpon>GoToDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\HlslHost.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\OptEditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\OptEditorForm.Designer.cs">
+      <DependentUpon>OptEditorForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\Tom.cs" />
+    <Compile Include="${DOS_STYLE_SOURCE_DIR}\Program.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="${DOS_STYLE_SOURCE_DIR}\README.md" />
+    <EmbeddedResource Include="${DOS_STYLE_SOURCE_DIR}\EditorForm.resx">
+      <DependentUpon>EditorForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="${DOS_STYLE_SOURCE_DIR}\FindDialog.resx">
+      <DependentUpon>FindDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="${DOS_STYLE_SOURCE_DIR}\GoToDialog.resx">
+      <DependentUpon>GoToDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="${DOS_STYLE_SOURCE_DIR}\OptEditorForm.resx">
+      <DependentUpon>OptEditorForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="${DOS_STYLE_SOURCE_DIR}\app.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="${DOS_STYLE_SOURCE_DIR}\dxc.ico" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -33,11 +33,11 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Log.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/d3d/DeviceD3D.h"
-#include "dawn/native/d3d/Forward.h"
-#include "dawn/native/d3d/PhysicalDeviceD3D.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/d3d/DeviceD3D.h"
+#include "src/dawn/native/d3d/Forward.h"
+#include "src/dawn/native/d3d/PhysicalDeviceD3D.h"
+#include "src/utils/log.h"
 
 namespace dawn::native::d3d {
 

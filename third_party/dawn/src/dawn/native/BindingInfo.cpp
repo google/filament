@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/BindingInfo.h"
+#include "src/dawn/native/BindingInfo.h"
 
 #include <algorithm>
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Limits.h"
-#include "dawn/native/Sampler.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Limits.h"
+#include "src/dawn/native/Sampler.h"
 
 namespace dawn::native {
 
@@ -340,7 +340,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
 
 // static
 BufferBindingInfo BufferBindingInfo::From(const BufferBindingLayout& layout) {
-    BufferBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    BufferBindingLayout defaultedLayout = WithTrivialFrontendDefaults(layout);
     return {{
         .type = defaultedLayout.type,
         .minBindingSize = defaultedLayout.minBindingSize,
@@ -352,7 +352,7 @@ BufferBindingInfo BufferBindingInfo::From(const BufferBindingLayout& layout) {
 
 // static
 TextureBindingInfo TextureBindingInfo::From(const TextureBindingLayout& layout) {
-    TextureBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    TextureBindingLayout defaultedLayout = WithTrivialFrontendDefaults(layout);
     return {{
         .sampleType = defaultedLayout.sampleType,
         .viewDimension = defaultedLayout.viewDimension,
@@ -364,7 +364,7 @@ TextureBindingInfo TextureBindingInfo::From(const TextureBindingLayout& layout) 
 
 // static
 TexelBufferBindingInfo TexelBufferBindingInfo::From(const TexelBufferBindingLayout& layout) {
-    TexelBufferBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    TexelBufferBindingLayout defaultedLayout = WithTrivialFrontendDefaults(layout);
     return {{
         .format = defaultedLayout.format,
         .access = defaultedLayout.access,
@@ -376,7 +376,7 @@ TexelBufferBindingInfo TexelBufferBindingInfo::From(const TexelBufferBindingLayo
 // static
 StorageTextureBindingInfo StorageTextureBindingInfo::From(
     const StorageTextureBindingLayout& layout) {
-    StorageTextureBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    StorageTextureBindingLayout defaultedLayout = WithTrivialFrontendDefaults(layout);
     return {{
         .format = defaultedLayout.format,
         .viewDimension = defaultedLayout.viewDimension,
@@ -388,7 +388,7 @@ StorageTextureBindingInfo StorageTextureBindingInfo::From(
 
 // static
 SamplerBindingInfo SamplerBindingInfo::From(const SamplerBindingLayout& layout) {
-    SamplerBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    SamplerBindingLayout defaultedLayout = WithTrivialFrontendDefaults(layout);
     return {{
         .type = defaultedLayout.type,
     }};

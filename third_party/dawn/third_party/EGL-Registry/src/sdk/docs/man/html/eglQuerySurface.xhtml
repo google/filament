@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglQuerySurface - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglQuerySurface">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglQuerySurface — 
+            return <abbr class="acronym">EGL</abbr> surface information
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglQuerySurface</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSurface <var class="pdparam">surface</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">attribute</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint * <var class="pdparam">value</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL display connection.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>surface</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface to query.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attribute</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface attribute to be returned.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>value</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Returns the requested value.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglQuerySurface</code> returns in
+            <em class="parameter"><code>value</code></em> the value of
+            <em class="parameter"><code>attribute</code></em> for <em class="parameter"><code>surface</code></em>.
+            <em class="parameter"><code>attribute</code></em> can be one of the following:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONFIG_ID</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the ID of the EGL frame buffer configuration
+                    with respect to which the surface was created.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_GL_COLORSPACE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the color space used by OpenGL and OpenGL ES
+                    when rendering to the surface, either
+                    <code class="constant">EGL_GL_COLORSPACE_SRGB</code> or
+                    <code class="constant">EGL_GL_COLORSPACE_LINEAR</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_HEIGHT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the height of the surface in pixels.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_HORIZONTAL_RESOLUTION</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the horizontal dot pitch of the display on
+                    which a window surface is visible. The value
+                    returned is equal to the actual dot pitch, in
+                    pixels/meter, multiplied by the constant value
+                    <code class="constant">EGL_DISPLAY_SCALING</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_LARGEST_PBUFFER</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the same attribute value specified when the
+                    surface was created with
+                    <a class="citerefentry" href="eglCreatePbufferSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferSurface</span></span></a>.
+                    For a window or pixmap surface,
+                    <em class="parameter"><code>value</code></em> is not modified.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MIPMAP_LEVEL</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns which level of the mipmap to render to, if
+                    texture has mipmaps.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MIPMAP_TEXTURE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns <code class="constant">EGL_TRUE</code> if texture has
+                    mipmaps, <code class="constant">EGL_FALSE</code> otherwise.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MULTISAMPLE_RESOLVE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the filter used when resolving the
+                    multisample buffer. The filter may be either
+                    <code class="constant">EGL_MULTISAMPLE_RESOLVE_DEFAULT</code>
+                    or <code class="constant">EGL_MULTISAMPLE_RESOLVE_BOX</code>,
+                    as described for
+                    <a class="citerefentry" href="eglSurfaceAttrib.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSurfaceAttrib</span></span></a>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_PIXEL_ASPECT_RATIO</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the aspect ratio of an individual pixel (the
+                    ratio of a pixel's width to its height). The value
+                    returned is equal to the actual aspect ratio
+                    multiplied by the constant value
+                    <code class="constant">EGL_DISPLAY_SCALING</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_RENDER_BUFFER</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the buffer which client API rendering is
+                    requested to use. For a window surface, this is the
+                    same attribute value specified when the surface was
+                    created. For a pbuffer surface, it is always
+                    <code class="constant">EGL_BACK_BUFFER</code>. For a pixmap
+                    surface, it is always
+                    <code class="constant">EGL_SINGLE_BUFFER</code>. To determine
+                    the actual buffer being rendered to by a context,
+                    call
+                    <a class="citerefentry" href="eglQueryContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryContext</span></span></a>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_SWAP_BEHAVIOR</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the effect on the color buffer when posting
+                    a surface with
+                    <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a>.
+                    Swap behavior may be either
+                    <code class="constant">EGL_BUFFER_PRESERVED</code> or
+                    <code class="constant">EGL_BUFFER_DESTROYED</code>, as
+                    described for
+                    <a class="citerefentry" href="eglSurfaceAttrib.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSurfaceAttrib</span></span></a>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TEXTURE_FORMAT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns format of texture. Possible values are
+                    <code class="constant">EGL_NO_TEXTURE</code>,
+                    <code class="constant">EGL_TEXTURE_RGB</code>, and
+                    <code class="constant">EGL_TEXTURE_RGBA</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TEXTURE_TARGET</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns type of texture. Possible values are
+                    <code class="constant">EGL_NO_TEXTURE</code>, or
+                    <code class="constant">EGL_TEXTURE_2D</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_VERTICAL_RESOLUTION</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the vertical dot pitch of the display on
+                    which a window surface is visible. The value
+                    returned is equal to the actual dot pitch, in
+                    pixels/meter, multiplied by the constant value
+                    <code class="constant">EGL_DISPLAY_SCALING</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_VG_ALPHA_FORMAT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the interpretation of alpha values used by
+                    OpenVG when rendering to the surface, either
+                    <code class="constant">EGL_VG_ALPHA_FORMAT_NONPRE</code> or
+                    <code class="constant">EGL_VG_ALPHA_FORMAT_PRE</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_VG_COLORSPACE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the color space used by OpenVG when rendering to
+                    the surface, either
+                    <code class="constant">EGL_VG_COLORSPACE_sRGB</code> or
+                    <code class="constant">EGL_VG_COLORSPACE_LINEAR</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_WIDTH</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the width of the surface in pixels.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            Attribute <code class="constant">EGL_GL_COLORSPACE</code> is supported
+            only if the EGL version is 1.5 or greater.
+        </p>
+        <p>
+            Attribute <code class="constant">EGL_MULTISAMPLE_RESOLVE</code> is
+            supported only if the EGL version is 1.4 or greater.
+        </p>
+        <p>
+            Attributes <code class="constant">EGL_DISPLAY_SCALING</code>.
+            <code class="constant">EGL_HORIZONTAL_RESOLUTION</code>,
+            <code class="constant">EGL_PIXEL_ASPECT_RATIO</code>,
+            <code class="constant">EGL_RENDER_BUFFER</code>,
+            <code class="constant">EGL_SWAP_BEHAVIOR</code>, and
+            <code class="constant">EGL_VERTICAL_RESOLUTION</code> are supported
+            only if the EGL version is 1.2 or greater.
+        </p>
+        <p>
+            Querying attributes <code class="constant">EGL_TEXTURE_FORMAT</code>,
+            <code class="constant">EGL_TEXTURE_TARGET</code>,
+            <code class="constant">EGL_MIPMAP_TEXTURE</code>, or
+            <code class="constant">EGL_MIPMAP_LEVEL</code> for a non-pbuffer
+            surface is not an error, but <em class="parameter"><code>value</code></em> is
+            not modified.
+        </p>
+        <p>
+            <code class="constant">EGL_DISPLAY_SCALING</code> is the constant
+            value 10000. Floating-point values such as resolution and
+            pixel aspect ratio are scaled by this value before being
+            returned as integers so that sufficient precision to be
+            meaningful will be retained in the returned value.
+        </p>
+        <p>
+            For an offscreen (pbuffer or pixmap) surface, or a surface
+            whose pixel dot pitch or aspect ratio are unknown, querying
+            <code class="constant">EGL_HORIZONTAL_RESOLUTION</code>,
+            <code class="constant">EGL_PIXEL_ASPECT_RATIO</code>, or
+            <code class="constant">EGL_VERTICAL_RESOLUTION</code> will return the
+            constant value <code class="constant">EGL_UNKNOWN</code> (-1).
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure,
+            <code class="constant">EGL_TRUE</code> otherwise.
+            <em class="parameter"><code>value</code></em> is not modified when
+            <code class="constant">EGL_FALSE</code> is returned.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> has not been initialized.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_SURFACE</code> is generated if
+            <em class="parameter"><code>surface</code></em> is not an EGL surface.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> is generated if
+            <em class="parameter"><code>attribute</code></em> is not a valid surface attribute.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglCreatePbufferSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferSurface</span></span></a>,
+            <a class="citerefentry" href="eglCreatePixmapSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePixmapSurface</span></span></a>,
+            <a class="citerefentry" href="eglCreateWindowSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateWindowSurface</span></span></a>,
+            <a class="citerefentry" href="eglSurfaceAttrib.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSurfaceAttrib</span></span></a>,
+            <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

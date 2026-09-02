@@ -49,6 +49,7 @@ tint_target_add_dependencies(tint_utils_strconv lib
   tint_utils
   tint_utils_ice
   tint_utils_macros
+  tint_utils_memory
   tint_utils_rtti
   tint_utils_text
 )
@@ -73,4 +74,5 @@ tint_target_add_dependencies(tint_utils_strconv_test test
 
 tint_target_add_external_dependencies(tint_utils_strconv_test test
   "gtest"
+  "src_utils"
 )

@@ -1,0 +1,346 @@
+Name
+    
+    NV_texgen_emboss
+
+Name Strings
+
+    GL_NV_texgen_emboss
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Discontinued.
+
+    NVIDIA no longer supports this extension in driver updates
+    after November 2002.  Instead, use either ARB_vertex_program &
+    NV_vertex_program.
+
+Version
+
+    NVIDIA Date: January 3, 2003
+    $Date$ $Revision$
+    $Id: //sw/main/docs/OpenGL/specs/old/GL_NV_texgen_emboss.txt#2 $
+
+Number
+
+    193
+
+Dependencies
+
+    ARB_multitexture.
+
+    Written based on the wording of the OpenGL 1.2 specification and the
+    ARB_multitexture extension.
+
+Overview
+
+    This extension provides a new texture coordinate generation mode
+    suitable for multitexture-based embossing (or bump mapping) effects.
+
+    Given two texture units, this extension generates the texture
+    coordinates of a second texture unit (an odd-numbered texture unit)
+    as a perturbation of a first texture unit (an even-numbered texture
+    unit one less than the second texture unit).  The perturbation is
+    based on the normal, tangent, and light vectors.  The normal vector
+    is supplied by glNormal; the light vector is supplied as a direction
+    vector to a specified OpenGL light's position; and the tanget
+    vector is supplied by the second texture unit's current texture
+    coordinate.  The perturbation is also scaled by program-supplied
+    scaling constants.
+
+    If both texture units are bound to the same texture representing a
+    height field, by subtracting the difference between the resulting two
+    filtered texels, programs can achieve a per-pixel embossing effect.
+
+Issues
+
+    Can you do embossing on any texture unit?
+
+      NO.  Just odd numbered units.  This meets a constraint of the
+      proposed hardware implementation, and because embossing takes two
+      texture units anyway, it shouldn't be a real limitation.
+
+    Can you just enable one coordinate of a texture unit for embossing?
+
+      Yes but NOT REALLY.  The texture coordinate generation formula
+      is specified such that only when ALL the coordinates are enabled
+      and are using embossing, do you get the embossing computation.
+      Otherwise, you get undefined values for texture coordinates enabled
+      for texture coordinate generation and setup for embossing.
+
+    Does the light specified have to be enabled for embossing to work?
+
+      Yes, currently.  But perhaps we could require implementations to
+      enable a phantom light (the light colors would be black).
+
+    Could the emboss constant just be the reciprocal of the width and
+    height of the texture units texture if that's what the programmer
+    will have it be most of the time?
+
+      NO.  Too much work and there may be reasons for the programmer to
+      control this.
+
+    OpenGL's base texture environment functionality isn't powerful enough
+    to do the subtraction needed for embossing.  Where would you get
+    powerful enough texture environment functionality.
+
+      Another extension.  Try NV_register_combiners.
+
+    What is the interpretation of CT?
+
+      For the purposes of embossing, CT should be thought of as the
+      vertex's tangent vector.  This tangent vector indicates the direction
+      on the "surface" where PCTs is not changing and PCTt is increasing.
+
+    Are the CT and PCT variables the user-supplied current texture
+    coordinates?
+
+      YES.  Except when the texture unit's texture coordinate evaluator
+      is enabled, then CT and PCT use the respective evaluated texture
+      coordinates.
+
+      This extension specification's language "Denote as CT the texture
+      unit's current texture coordinates" and "Denote as PCT the previous
+      texture unit's current texture coordinates" refers to the "current
+      texture coordinates" OpenGL state which is the state specified
+      via glTexCoord.  Plus the exception for evaluators.
+
+      To be explicit, PCT is NOT the result of texgen or the texture
+      matrix.  Likewise, CT is NOT the result of texgen or the
+      texture matrix.  PCT and CT are the respective texture unit's
+      evaluated texture coordinate if the vertex is evaluated with
+      texture coordinate evaluation enabled, otherwise if the vertex is
+      generated via vertex arrays with the respective texture coordinate
+      array enabled, the texture coordinate from the texture coordinate
+      array, otherwise the respective current texture coordinate is used.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameters of TexGend, TexGenf, and TexGeni
+    when <pname> parameter is TEXTURE_GEN_MODE:
+
+        EMBOSS_MAP_NV                      0x855F
+
+    When the <pname> parameter of TexGendv, TexGenfv, and TexGeniv is
+    TEXTURE_GEN_MODE, then the array <params> may also contain
+    EMBOSS_MAP_NV.
+
+    Accepted by the <pname> parameters of GetTexGendv, GetTexGenfv,
+    GetTexGeniv, TexGend, TexGendv, TexGenf, TexGenfv, TexGeni, and
+    TexGeniv:
+
+        EMBOSS_LIGHT_NV                    0x855D
+        EMBOSS_CONSTANT_NV                 0x855E
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+--  Section 2.10.4 "Generating Texture Coordinates"
+
+    Change the last sentence in the 1st paragraph to:
+
+    "If <pname> is TEXTURE_GEN_MODE, then either <params> points to
+    or <param> is an integer that is one of the symbolic constants
+    OBJECT_LINEAR, EYE_LINEAR, SPHERE_MAP, or EMBOSS_MAP_NV."
+
+    Add these paragraphs after the 4th paragraph:
+
+    "When used with a suitable texture, suitable explicit texture
+    coordinates, a suitable (extended) texture environment,
+    suitable lighting parameters, and suitable embossing parameters,
+    calling TexGen with TEXTURE_GEN_MODE indicating EMBOSS_MAP_NV
+    can simulate the lighting effect of embossing on a polygon.
+    The error INVALID_ENUM occurs when the active texture unit has an
+    even number.
+
+    The emboss constant and emboss light parameters for controlling
+    the EMBOSS_MAP_NV mode are specified by calling TexGen with pname
+    set to EMBOSS_CONSTANT_NV and EMBOSS_LIGHT_NV respectively.
+
+    When pname is EMBOSS_CONSTANT_NV, param or what params points
+    to is a scalar value.  An error INVALID_ENUM occurs if pname is
+    EMBOSS_CONSTANT_NV and coord is R or Q. An error INVALID_ENUM
+    also occurs if pname is EMBOSS_CONSTANT_NV and the active texture
+    unit number is even.
+
+    When pname is EMBOSS_LIGHT_NV, param or what params points to is
+    a symbolic constant of the form LIGHTi, indicating that light i
+    is to have the specified parameter set.  An error INVALID_ENUM
+    occurs if pname is EMBOSS_LIGHT_NV and coord is R or Q.  An error
+    INVALID_ENUM occurs if pname is EMBOSS_LIGHT_NV and the active
+    texture unit number is even.  An error INVALID_ENUM occurs if
+    pname is EMBOSS_LIGHT_NV and the value i for LIGHTi is negative
+    or is greater than or equal to the value of MAX_LIGHTS.
+
+    If TEXTURE_GEN_MODE indicates EMBOSS_MAP_NV, the generation function
+    for the coordinates S, T, R, and Q is computed as follows.
+
+    Denote as L the light direction vector from the vertex's eye
+    position to the position of the light specified by the coordinate's
+    EMBOSS_LIGHT_NV state (the direction vector is computed as described
+    in Section 3.13.1).
+
+    Denote as N the current normal after transformation to eye
+    coordinates.
+
+    Denote as CT the texture unit's current texture coordinates
+    transformed to eye coordinates by normal transformation (as
+    described in Section 3.10.3) and normalized.
+
+    However, if the vertex is evaluated (as described in Section 5.1)
+    and the texture unit's texture coordinate map is enabled, use the
+    texture unit's evaluated texture coordinate to compute CT.
+
+    Denote as B the cross product of N and the <s,t,r> vector of CT.
+
+        Bx = Ny*CTr - CTt*Nz
+        By = Nz*CTs - CTr*Nx
+        Bz = Nx*CTt - CTs*Ny
+
+    Denote as BN the normalized version of the vector B.
+
+        BNx = Bx / sqrt(Bx*Bx + By*By + Bz*Bz);
+        BNy = By / sqrt(Bx*Bx + By*By + Bz*Bz);
+        BNz = Bz / sqrt(Bx*Bx + By*By + Bz*Bz);
+
+    Denote as T the cross product of B and N.
+
+        Tx = BNy*Nz - Ny*BNz
+        Ty = BNz*Nx - Nz*BNx
+        Tz = BNx*Ny - Nx*BNy
+
+    Observe that BN and T are orthonormal.
+
+    Denote as PCT the previous texture unit's current texture
+    coordinates.  If the number of the texture unit for the texture
+    coordinates being generated is n, then the previous texture unit
+    is texture unit number n-1.  Note that n is restricted to be odd.
+
+    However, if the vertex is evaluated (as described in Section 5.1)
+    and the previous texture unit's texture coordinate map is enabled,
+    use the previous texture unit's evaluated texture coordinate to
+    compute PCT.
+
+    Denote Ks as the S coordinate's EMBOSS_CONSTANT_NV state.  Denote Kt
+    as the T coordinate's EMBOSS_CONSTANT_NV state.  These constants
+    should typically be set to the reciprocal of the width and height
+    respectively of the texture map used for embossing.
+
+    Denote E as follows:
+
+        Es = PCTs + Ks * (Lx*BNx + Ly*BNy + Lz*BNz) * PCTq
+        Et = PCTt - Kt * (Lx*Tx + Ly*Ty + Lz*Tz) * PCTq
+        Er = PCTr
+        Eq = PCTq
+
+    Then the value assigned to an s, t, r, and q coordinates are Es,
+    Et, Er, and Eq respectively.  However, for this assignment to
+    occur, the following three conditions must be met.  First, all the
+    texture coordinate generation modes of all the texture coordinates
+    (S, T, R, and Q) of the texture unit must be set to EMBOSS_MAP_NV.
+    Second, all the texture coordinate generation modes of the texture
+    unit must be enabled.  Third, the EMBOSS_LIGHT_NV parameters of
+    coordinates S and T must be identical and the light and lighting
+    must be enabled.  If these conditions are not met, the values of
+    all coordinates in the texture unit with the EMBOSS_MAP_NV mode
+    are undefined."
+
+    The last paragraph's first sentence should be changed to:
+
+    "The state required for texture coordinate generation comprises
+    a five-valued integer for each coordinate indicating coordinate
+    generation mode, and a bit for each coordinate to indicate whether
+    texture coordinate generation is enabled or disabled.  In addition,
+    four coefficients are required for the four coordinates for each
+    of EYE_LINEAR and OBJECT_LINEAR; also, an emboss constant and
+    emboss light are required for each of the four coordinates....
+    The initial values for emboss constants and emboss lights are 1.0
+    and LIGHT0 respectively."
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated when TexGen is called with a <pname>
+    of TEXTURE_GEN_MODE, a <param> value or value of what <params>
+    points to of EMBOSS_MAP_NV, and the active texture unit is even.
+
+    INVALID_ENUM is generated when TexGen is called with a <pname>
+    of EMBOSS_CONSTANT_NV and the active texture unit is even.
+
+    INVALID_ENUM is generated when TexGen is called with a <pname>
+    of EMBOSS_LIGHT_NV and the active texture unit is even.
+
+    INVALID_ENUM is generated when TexGen is called with a <coord>
+    of R or Q when <pname> indicates EMBOSS_CONSTANT_NV.
+
+    INVALID_ENUM is generated when TexGen is called with a <coord>
+    of R or Q when <pname> indicates EMBOSS_LIGHT_NV.
+
+    INVALID_ENUM is generated when TexGen is called with a <pname>
+    of EMBOSS_LIGHT_NV and the value of i for the parameter LIGHTi is
+    negative or is greater than or equal to the value of MAX_LIGHTS.
+
+New State
+
+(table 6.14, p204) change the entry for TEXTURE_GEN_MODE to:
+
+    Get Value            Type    Get Command     Initial Value   Description        Sec    Attribute
+    ---------            ----    -----------     -------------   -----------        ------ ---------
+    TEXTURE_GEN_MODE     4xZ5    GetTexGeniv     EYE_LINEAR      Function used for  2.10.4 texture
+                                                                 texgen (for s,t,r,
+                                                                 and q)
+    EMBOSS_CONSTANT_NV   4xR     GetTexGenfv     1.0             Scaling constant   2.10.4 texture
+                                                                 for emboss texgen
+    EMBOSS_LIGHT_NV      4xZ8*   GetTexGeniv     LIGHT0          Light used for     2.10.4 texture
+                                                                 embossing.
+
+When ARB_multitexture is supported, the Type column is per-texture unit.
+
+(the TEXTURE_GEN_MODE type changes from 4xZ3 to 4xZ5)
+
+New Implementation State
+
+    None
+
+Revision History
+
+    2001/02/20 - Status changed to deprecated.
+    1/3/2003 changed status to "discontinued"

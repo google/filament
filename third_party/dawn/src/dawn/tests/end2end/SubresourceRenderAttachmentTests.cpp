@@ -27,10 +27,10 @@
 
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -97,20 +97,22 @@ class SubresourceRenderAttachmentTest : public DawnTest {
         const uint32_t renderTargetSize = textureSize >> baseMipLevel;
         switch (type) {
             case Type::Color: {
-                std::vector<utils::RGBA8> expected(renderTargetSize * renderTargetSize,
-                                                   expectedColor);
+                std::vector<utils::RGBA8> expected(
+                    static_cast<size_t>(renderTargetSize) * renderTargetSize, expectedColor);
                 EXPECT_TEXTURE_EQ(expected.data(), renderTarget, {0, 0, baseArrayLayer},
                                   {renderTargetSize, renderTargetSize}, baseMipLevel);
                 break;
             }
             case Type::Depth: {
-                std::vector<float> expected(renderTargetSize * renderTargetSize, expectedDepth);
+                std::vector<float> expected(
+                    static_cast<size_t>(renderTargetSize) * renderTargetSize, expectedDepth);
                 EXPECT_TEXTURE_EQ(expected.data(), renderTarget, {0, 0, baseArrayLayer},
                                   {renderTargetSize, renderTargetSize}, baseMipLevel);
                 break;
             }
             case Type::Stencil: {
-                std::vector<uint8_t> expected(renderTargetSize * renderTargetSize, expectedStencil);
+                std::vector<uint8_t> expected(
+                    static_cast<size_t>(renderTargetSize) * renderTargetSize, expectedStencil);
                 EXPECT_TEXTURE_EQ(expected.data(), renderTarget, {0, 0, baseArrayLayer},
                                   {renderTargetSize, renderTargetSize}, baseMipLevel,
                                   wgpu::TextureAspect::StencilOnly);

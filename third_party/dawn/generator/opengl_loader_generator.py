@@ -180,7 +180,6 @@ def compute_params(root, supported_extensions):
         section_procs = []
         for command in section.findall('./require/command'):
             proc_name = command.attrib['name']
-            assert all_procs[proc_name].alias == None
             section_procs.append(all_procs[proc_name])
 
         section_enums = []

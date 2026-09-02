@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglSurfaceAttrib - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglSurfaceAttrib">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglSurfaceAttrib — 
+            set an <abbr class="acronym">EGL</abbr> surface attribute
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglSurfaceAttrib</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSurface <var class="pdparam">surface</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">attribute</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">value</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL display connection.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>surface</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attribute</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface attribute to set.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>value</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the attributes required value.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglSurfaceAttrib</code> sets the value of
+            <em class="parameter"><code>attribute</code></em> for
+            <em class="parameter"><code>surface</code></em> to
+            <em class="parameter"><code>value</code></em>.
+            <em class="parameter"><code>attribute</code></em> can be one of the
+            following:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MIPMAP_LEVEL</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    For mipmap textures, the
+                    <code class="constant">EGL_MIPMAP_LEVEL</code> attribute
+                    indicates which level of the mipmap should be
+                    rendered. If the value of this attribute is outside
+                    the range of supported mipmap levels, the closest
+                    valid mipmap level is selected for rendering. The
+                    default value is <code class="constant">0</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MULTISAMPLE_RESOLVE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the filter to use when resolving the
+                    multisample buffer (this may occur when swapping or
+                    copying the surface, or when changing the client API
+                    context bound to the surface). A
+                    <em class="parameter"><code>value</code></em> of
+                    <code class="constant">EGL_MULTISAMPLE_RESOLVE_DEFAULT</code>
+                    chooses the default implementation-defined filtering
+                    method, while
+                    <code class="constant">EGL_MULTISAMPLE_RESOLVE_BOX</code>
+                    chooses a one-pixel wide box filter placing equal
+                    weighting on all multisample values.
+                </p>
+              <p>
+                    The initial value of
+                    <code class="constant">EGL_MULTISAMPLE_RESOLVE</code> is
+                    <code class="constant">EGL_MULTISAMPLE_RESOLVE_DEFAULT</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_SWAP_BEHAVIOR</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the effect on the color buffer of posting
+                    a surface with
+                    <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a>.
+                    A <em class="parameter"><code>value</code></em> of
+                    <code class="constant">EGL_BUFFER_PRESERVED</code> indicates
+                    that color buffer contents are unaffected, while
+                    <code class="constant">EGL_BUFFER_DESTROYED</code> indicates
+                    that color buffer contents may be destroyed or
+                    changed by the operation.
+                </p>
+              <p>
+                    The initial value of
+                    <code class="constant">EGL_SWAP_BEHAVIOR</code> is chosen by
+                    the implementation.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            Attribute <code class="constant">EGL_MULTISAMPLE_RESOLVE</code> is
+            supported only if the EGL version is 1.4 or greater.
+        </p>
+        <p>
+            Attribute <code class="constant">EGL_SWAP_BEHAVIOR</code> is
+            supported only if the EGL version is 1.2 or greater.
+        </p>
+        <p>
+            If the value of pbuffer attribute
+            <code class="constant">EGL_TEXTURE_FORMAT</code> is
+            <code class="constant">EGL_NO_TEXTURE</code>, the value of attribute
+            <code class="constant">EGL_TEXTURE_TARGET</code> is
+            <code class="constant">EGL_NO_TEXTURE</code>, or
+            <em class="parameter"><code>surface</code></em> is not a pbuffer, then
+            attribute <code class="constant">EGL_MIPMAP_LEVEL</code> may be set,
+            but has no effect.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure,
+            <code class="constant">EGL_TRUE</code> otherwise.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            <em class="parameter"><code>attribute</code></em> is
+            <code class="constant">EGL_MULTISAMPLE_RESOLVE</code>,
+            <em class="parameter"><code>value</code></em> is
+            <code class="constant">EGL_MULTISAMPLE_RESOLVE_BOX</code>, and the
+            <code class="constant">EGL_SURFACE_TYPE</code> attribute of the
+            <span class="type">EGLConfig</span> used to create
+            <em class="parameter"><code>surface</code></em> does not contain
+            <code class="constant">EGL_MULTISAMPLE_RESOLVE_BOX_BIT</code>.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            <em class="parameter"><code>attribute</code></em> is
+            <code class="constant">EGL_SWAP_BEHAVIOR</code>,
+            <em class="parameter"><code>value</code></em> is
+            <code class="constant">EGL_BUFFER_PRESERVED</code>, and the
+            <code class="constant">EGL_SURFACE_TYPE</code> attribute of the
+            <span class="type">EGLConfig</span> used to create
+            <em class="parameter"><code>surface</code></em> does not contain
+            <code class="constant">EGL_SWAP_BEHAVIOR_PRESERVED_BIT</code>.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> has not been initialized.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_SURFACE</code> is generated if
+            <em class="parameter"><code>surface</code></em> is not an EGL surface.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> is generated if
+            <em class="parameter"><code>attribute</code></em> is not a valid surface attribute.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglCreatePbufferSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePbufferSurface</span></span></a>,
+            <a class="citerefentry" href="eglCreatePixmapSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreatePixmapSurface</span></span></a>,
+            <a class="citerefentry" href="eglCreateWindowSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateWindowSurface</span></span></a>,
+            <a class="citerefentry" href="eglQuerySurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQuerySurface</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

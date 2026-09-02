@@ -35,7 +35,7 @@ TmpFile::TmpFile(std::string) {}
 
 TmpFile::~TmpFile() = default;
 
-bool TmpFile::Append(const void*, size_t) const {
+bool TmpFile::Append(std::span<const std::byte>) const {
     return false;
 }
 

@@ -1,0 +1,79 @@
+Name
+
+    HUAWEI_shader_binary
+
+Name Strings
+
+    GL_HUAWEI_shader_binary
+
+Contributors
+
+    Peng Li, HUAWEI Technologies
+
+Contact
+
+    Pan Gao (gaopan24 'at' hisilicon 'dot' com)
+
+Version
+
+    Last Modified Date: Jan 12, 2026
+    Revision: 2
+
+Number
+
+    OpenGL ES Extension #350
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+
+    This extension is written based on the wording of the OpenGL ES 2.0.25 specification.
+
+Overview
+
+    This extension enables OpenGL ES 2.0 applications running on HUAWEI
+    GPU devices to use shader binaries precompiled with Maleoon shader compiler.
+
+    The shader objects loaded with this extension are functionally equivalent to
+    shaders created from source without further restrictions on OpenGL ES objects
+    or states they could be worked with.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <binaryFormat> parameter of ShaderBinary:
+
+        SHADER_BINARY_HUAWEI              0x9770
+
+Additions to Chapter 2 of the OpenGL ES 2.0 Specification (OpenGL ES Operation)
+
+    At the end of section 2.10.2 (Loading Shader Binaries), add:
+
+    "Using a <binaryFormat> of SHADER_BINARY_HUAWEI will result in implementation attempting
+    to load shader binaries in <binary> according to the format developed by HUAWEI."
+
+Errors
+
+    An INVALID_VALUE error is generated if the <binary> parameter points
+    to an invalid binary stream that is incompatible or outdated with implementation
+    on the given devices.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    #2  Jan 12, 2026  Pan Gao           Fix enum definition to align with naming conventions
+    #1  Aug 21, 2025  Peng Li           First draft

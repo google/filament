@@ -1,0 +1,315 @@
+Name
+
+    EXT_point_parameters
+
+Name Strings
+
+    GL_EXT_point_parameters
+
+Version
+
+    Revision Date: September 23, 2010
+    Version: 1.8
+
+Number
+
+    54
+
+Dependencies
+
+     SGIS_multisample affects the definition of this extension.
+
+Overview
+
+    This extension supports additional geometric characteristics of points. It
+    can be used to render particles or tiny light sources, commonly referred
+    as "Light points".
+
+    The raster brightness of a point is a function of the point area, point
+    color, point transparency, and the response of the display's electron gun
+    and phosphor. The point area and the point transparency are derived from the
+    point size, currently provided with the <size> parameter of glPointSize.
+
+    The primary motivation is to allow the size of a point to be affected by
+    distance attenuation. When distance attenuation has an effect, the final
+    point size decreases as the distance of the point from the eye increases.
+
+    The secondary motivation is a mean to control the mapping from the point
+    size to the raster point area and point transparency. This is done in order
+    to increase the dynamic range of the raster brightness of points. In other
+    words, the alpha component of a point may be decreased (and its transparency
+    increased) as its area shrinks below a defined threshold.
+
+    This extension defines a derived point size to be closely related to point
+    brightness. The brightness of a point is given by:
+
+                        1
+        dist_atten(d) = -------------------
+                        a + b * d + c * d^2
+
+        brightness(Pe) = Brightness * dist_atten(|Pe|)
+
+    where 'Pe' is the point in eye coordinates, and 'Brightness' is some initial
+    value proportional to the square of the size provided with glPointSize. Here
+    we simplify the raster brightness to be a function of the rasterized point
+    area and point transparency.
+
+                    brightness(Pe)                      brightness(Pe) >= Threshold_Area
+        area(Pe) =
+                    Threshold_Area                      Otherwise
+
+        factor(Pe) = brightness(Pe)/Threshold_Area
+
+        alpha(Pe) = Alpha * factor(Pe)
+
+    where 'Alpha' comes with the point color (possibly modified by lighting).
+
+    'Threshold_Area' above is in area units. Thus, it is proportional to the
+    square of the threshold provided by the programmer through this extension.
+
+    The new point size derivation method applies to all points, while the
+    threshold applies to multisample points only.
+
+Issues
+
+    *   Does point alpha modification affect the current color ?
+
+        No.
+
+    *   Do we need a special function glGetPointParameterfvEXT, or get by with
+        glGetFloat ?
+
+        No.
+
+    *   If alpha is 0, then we could toss the point before it reaches the
+        fragment stage.
+
+        No.  This can be achieved with enabling the alpha test with reference of
+        0 and function of LEQUAL.
+
+    *   Do we need a disable for applying the threshold ? The default threshold
+        value is 1.0. It is applied even if the point size is constant.
+
+        If the default threshold is not overriden, the area of multisample
+        points with provided constant size of less than 1.0, is mapped to 1.0,
+        while the alpha component is modulated accordingly, to compensate for
+        the larger area. For multisample points this is not a problem, as there
+        are no relevant applications yet. As mentioned above, the threshold does
+        not apply to alias or antialias points.
+
+        The alternative is to have a disable of threshold application, and state
+        that threshold (if not disabled) applies to non antialias points only
+        (that is, alias and multisample points).
+
+        The behavior without an enable/disable looks fine.
+
+    *   Future extensions (to the extension)
+
+        1. GL_POINT_FADE_ALPHA_CLAMP_EXT
+
+        When the derived point size is larger than the threshold size defined by
+        the GL_POINT_FADE_THRESHOLD_SIZE_EXT parameter, it might be desired to
+        clamp the computed alpha to a minimum value, in order to keep the point
+        visible. In this case the formula below change:
+
+        factor = (derived_size/threshold)^2
+
+                        factor                  clamp <= factor
+        clamped_value =
+                        clamp                   factor < clamp
+
+                 1.0                            derived_size >= threshold
+        alpha *=
+                 clamped_value                  Otherwise
+
+        where clamp is defined by the GL_POINT_FADE_ALPHA_CLAMP_EXT new parameter.
+
+New Procedures and Functions
+
+    void glPointParameterfEXT ( GLenum pname, GLfloat param );
+    void glPointParameterfvEXT ( GLenum pname, const GLfloat *params );
+
+New Tokens
+
+    Accepted by the <pname> parameter of glPointParameterfEXT, and the <pname>
+    of glGet:
+
+        GL_POINT_SIZE_MIN_EXT
+        GL_POINT_SIZE_MAX_EXT
+        GL_POINT_FADE_THRESHOLD_SIZE_EXT
+
+    Accepted by the <pname> parameter of glPointParameterfvEXT, and the <pname>
+    of glGet:
+
+        GL_POINT_SIZE_MIN_EXT              0x8126
+        GL_POINT_SIZE_MAX_EXT              0x8127
+        GL_POINT_FADE_THRESHOLD_SIZE_EXT   0x8128
+        GL_DISTANCE_ATTENUATION_EXT        0x8129
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    All parameters of the glPointParameterfEXT and glPointParameterfvEXT
+    functions set various values applied to point rendering. The derived point
+    size is defined to be the <size> provided with glPointSize modulated with a
+    distance attenuation factor.
+
+    The parameters GL_POINT_SIZE_MIN_EXT and GL_POINT_SIZE_MAX_EXT simply
+    define an upper and lower bounds respectively on the derived point size.
+
+    The above parameters affect non multisample points as well as multisample
+    points, while the GL_POINT_FADE_THRESHOLD_SIZE_EXT parameter, has no effect
+    on non multisample points. If the derived point size is larger than
+    the threshold size defined by the GL_POINT_FADE_THRESHOLD_SIZE_EXT
+    parameter, the derived point size is used as the diameter of the rasterized
+    point, and the alpha component is intact. Otherwise, the threshold size is
+    set to be the diameter of the rasterized point, while the alpha component is
+    modulated accordingly, to compensate for the larger area.
+
+    The distance attenuation function coefficients, namely a, b, and c in:
+
+                        1
+        dist_atten(d) = -------------------
+                        a + b * d + c * d^2
+
+    are defined by the <pname> parameter GL_DISTANCE_ATTENUATION_EXT of the
+    function glPointParameterfvEXT. By default a = 1, b = 0, and c = 0.
+
+    Let 'size' be the point size provided with glPointSize,  let 'dist' be the
+    distance of the point from the eye, and let 'threshold' be the threshold size
+    defined by the GL_POINT_FADE_THRESHOLD_SIZE parameter of
+    glPointParameterfEXT. The derived point size is given by:
+
+        derived_size = size * sqrt(dist_atten(dist))
+
+    Note that when default values are used, the above formula reduces to:
+
+        derived_size = size
+
+    the diameter of the rasterized point is given by:
+
+                   derived_size                 derived_size >= threshold
+        diameter =
+                   threshold                    Otherwise
+
+    The alpha of a point is calculated to allow the fading of points instead of
+    shrinking them past a defined threshold size. The alpha component of the
+    rasterized point is given by:
+
+                 1                              derived_size >= threshold
+        alpha *=
+                 (derived_size/threshold)^2     Otherwise
+
+    The threshold defined by GL_POINT_FADE_THRESHOLD_SIZE_EXT is not clamped
+    to the minimum and maximum point sizes.
+
+    Points do not affect the current color.
+
+    This extension doesn't change the feedback or selection behavior of points.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Two new GL rendering commands are added. The following commands are
+    sent to the server as part of a glXRender request:
+
+        PointParameterfEXT
+            2           8+4*n           rendering command length
+            2           2065            rendering command opcode
+            4           ENUM            pname
+                        0x8126    n=1   POINT_SIZE_MIN_EXT
+                        0x8127    n=1   POINT_SIZE_MAX_EXT
+                        0x8128    n=1   POINT_FADE_THRESHOLD_SIZE_EXT
+            4           FLOAT32         param
+
+        PointParameterfvEXT
+            2           8+4*n           rendering command length
+            2           2066            rendering command opcode
+            4           ENUM            pname
+                        0x8126    n=1   POINT_SIZE_MIN_EXT
+                        0x8127    n=1   POINT_SIZE_MAX_EXT
+                        0x8128    n=1   POINT_FADE_THRESHOLD_SIZE_EXT
+                        0x8129    n=3   POINT_DISTANCE_ATTENUATION_EXT
+            4*n         LISTofFLOAT32   params
+
+Dependencies on SGIS_multisample
+
+    If SGIS_multisample is not implemented, then the references to
+    multisample points are invalid, and should be ignored.
+
+Errors
+
+    INVALID_ENUM is generated if PointParameterfEXT parameter <pname> is not
+    GL_POINT_SIZE_MIN_EXT, GL_POINT_SIZE_MAX_EXT, or
+    GL_POINT_FADE_THRESHOLD_SIZE_EXT.
+
+    INVALID_ENUM is generated if PointParameterfvEXT parameter <pname> is
+    not GL_POINT_SIZE_MIN_EXT, GL_POINT_SIZE_MAX_EXT,
+    GL_POINT_FADE_THRESHOLD_SIZE_EXT, or GL_DISTANCE_ATTENUATION_EXT
+
+    INVALID_VALUE is generated when values are out of range according to:
+
+    <pname>                                     valid range
+    --------                                    -----------
+    GL_POINT_SIZE_MIN_EXT                      >= 0
+    GL_POINT_SIZE_MAX_EXT                      >= 0
+    GL_POINT_FADE_THRESHOLD_SIZE_EXT           >= 0
+
+    Issues
+    ------
+    -   should we generate INVALID_VALUE or just clamp?
+
+New State
+
+    Get Value                           Get Command     Type    Initial Value   Attribute
+    ---------                           -----------     ----    ---------       ---------
+    GL_POINT_SIZE_MIN_EXT               GetFloatv       R       0               point
+    GL_POINT_SIZE_MAX_EXT               GetFloatv       R       M               point
+    GL_POINT_FADE_THRESHOLD_SIZE_EXT    GetFloatv       R       1               point
+    GL_DISTANCE_ATTENUATION_EXT         GetFloatv       3xR     (1,0,0)         point
+
+    M is the largest available point size.
+
+New Implementation Dependent State
+
+    None
+
+Backwards Compatibility
+
+    This extension replaces SGIS_point_parameters. The procedures, tokens,
+    and name strings now refer to EXT instead of SGIS. Enumerant values are
+    unchanged. SGI implementations which previously provided this
+    functionality should support both forms of the extension.
+
+    EXT_point_parameters was promoted to ARB_point_parameters on June
+    20, 2000. The EXT version is now considered obsolete.
+
+Revision History
+
+    * 1.8 (September 23, 2010) pbrown - add "const" qualifier to <params>
+      argument to PointParameterfvARB.
+
+    * 1.7 (March 12, 2002) - added GLX protocol, reverse engineered from
+      SGI's GLX implementation.
+
+    * 1.6 (August 21, 1997) - promoted from SGIS to EXT. Made the
+      dependency on SGIS_multisample optional.

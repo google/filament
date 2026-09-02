@@ -27,7 +27,9 @@
 
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
+#include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/glsl/writer/helper_test.h"
+#include "src/tint/utils/internal_limits.h"
 
 namespace tint::glsl::writer {
 namespace {
@@ -82,6 +84,56 @@ void v_2(uint v_3) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   v_2(gl_LocalInvocationIndex);
+}
+)");
+}
+
+TEST_F(GlslWriterTest, RenameInvalidIdentifiers) {
+    auto* str =
+        ty.Struct(mod.symbols.New("MyStruct!"), {
+                                                    {mod.symbols.Register("$a"), ty.i32()},
+                                                    {mod.symbols.Register("b@"), ty.vec4i()},
+                                                });
+    auto* foo = b.Function("f%oo", ty.u32());
+    auto* param = b.FunctionParam("pa^ram", ty.u32());
+    foo->AppendParam(param);
+    b.Append(foo->Block(), [&] {  //
+        b.Return(foo, param);
+    });
+
+    auto* func = b.ComputeFunction("main");
+    auto* idx = b.FunctionParam("123", ty.u32());
+    idx->SetBuiltin(core::BuiltinValue::kLocalInvocationIndex);
+    func->AppendParam(idx);
+    b.Append(func->Block(), [&] {  //
+        auto* var = b.Var("&str", ty.ptr<function>(str));
+        auto* val = b.Load(var);
+        mod.SetName(val, "va(l");
+        auto* a = b.Access<i32>(val, 0_u);
+        mod.SetName(a, ")a");
+        b.Let("let=", b.Call<u32>(foo, idx));
+        b.Return(func);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
+    EXPECT_EQ(output_.glsl, GlslHeader() + R"(
+
+struct tint_struct {
+  int member_0;
+  ivec4 member_1;
+};
+
+uint v(uint v_1) {
+  return v_1;
+}
+void main_inner(uint v_2) {
+  tint_struct v_3 = tint_struct(0, ivec4(0));
+  uint v_4 = v(v_2);
+}
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main() {
+  main_inner(gl_LocalInvocationIndex);
 }
 )");
 }
@@ -153,7 +205,8 @@ TEST_F(GlslWriterTest, CanGenerate_AtomicStoreMax_Unsupported) {
     auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* access = b.Access(ty.ptr<storage, read_write>(ty.atomic(ty.u64())), var, 0_u);
-        b.Call<void>(core::BuiltinFn::kAtomicStoreMax, access, 1_u);
+        b.Call<void>(core::BuiltinFn::kAtomicStoreMax, access,
+                     b.Bitcast(ty.u64(), b.Splat(ty.vec2u(), 1_u)));
         b.Return(func);
     });
 
@@ -178,7 +231,8 @@ TEST_F(GlslWriterTest, CanGenerate_AtomicStoreMin_Unsupported) {
     auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* access = b.Access(ty.ptr<storage, read_write>(ty.atomic(ty.u64())), var, 0_u);
-        b.Call<void>(core::BuiltinFn::kAtomicStoreMin, access, 1_u);
+        b.Call<void>(core::BuiltinFn::kAtomicStoreMin, access,
+                     b.Bitcast(ty.u64(), b.Splat(ty.vec2u(), 1_u)));
         b.Return(func);
     });
 
@@ -227,6 +281,66 @@ void main() {
 )");
 
     EXPECT_EQ(output_.workgroup_info.storage_size, 0x100000000ull);
+}
+
+TEST_F(GlslWriterTest, CanGenerate_StructMemberPadding_TooLarge) {
+    ty.Get<core::type::Struct>(
+        mod.symbols.New("S"),
+        tint::Vector{ty.Get<core::type::StructMember>(mod.symbols.New("a"), ty.i32(), 0u, 0u, 4u,
+                                                      4u, core::IOAttributes{}),
+                     ty.Get<core::type::StructMember>(
+                         mod.symbols.New("b"), ty.i32(), 1u,
+                         static_cast<uint32_t>(tint::internal_limits::kMaxStructMemberPadding + 4),
+                         4u, 4u, core::IOAttributes{})},
+        8u /* size */);
+
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] { b.Return(ep); });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason, testing::HasSubstr("is larger than the maximum"));
+}
+
+TEST_F(GlslWriterTest, U16_Via_BufferView) {
+    mod.properties.Add(core::ir::Property::kAllowBufferTypes);
+    auto* v = b.Var(ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        auto* view1 = b.CallExplicit(ty.ptr(storage, ty.f16()), core::BuiltinFn::kBufferView,
+                                     Vector<core::ir::TemplateParameter, 1>{ty.f16()}, v, 0_u);
+        b.Load(view1);
+        auto* view2 = b.CallExplicit(ty.ptr(storage, ty.u32()), core::BuiltinFn::kBufferView,
+                                     Vector<core::ir::TemplateParameter, 1>{ty.u32()}, v, 0_u);
+        b.Load(view2);
+        b.Return(ep);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.glsl;
+    EXPECT_EQ(output_.glsl, GlslHeader() + R"(#extension GL_AMD_gpu_shader_int16: require
+#extension GL_AMD_gpu_shader_half_float: require
+
+layout(binding = 0, std430)
+buffer tint_symbol_1_ssbo {
+  uint16_t inner[];
+} v;
+uint tint_bitcast_from_16bit(u16vec2 src) {
+  return packFloat2x16(uint16BitsToFloat16(src));
+}
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main() {
+  uint v_1 = ((mix(0u, 0u, ((uint(v.inner.length()) * 2u) < 2u)) * 1u) / 2u);
+  uint16BitsToFloat16(v.inner[v_1]);
+  uint v_2 = ((mix(0u, 0u, ((uint(v.inner.length()) * 2u) < 4u)) * 1u) / 2u);
+  tint_bitcast_from_16bit(u16vec2(v.inner[v_2], v.inner[(v_2 + 1u)]));
+}
+)");
 }
 
 }  // namespace

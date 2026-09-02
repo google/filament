@@ -25,11 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/OpenGLVersion.h"
+#include "src/dawn/native/opengl/OpenGLVersion.h"
 
 #include <cctype>
 #include <string>
 #include <tuple>
+
+#include "src/utils/compiler.h"
 
 namespace dawn::native::opengl {
 
@@ -41,15 +43,15 @@ MaybeError OpenGLVersion::Initialize(GLGetProcProc getProc) {
 
     const char* version = reinterpret_cast<const char*>(getString(GL_VERSION));
 
-    if (strstr(version, "OpenGL ES") != nullptr) {
+    if (DAWN_UNSAFE_TODO(strstr(version, "OpenGL ES")) != nullptr) {
         // ES spec states that the GL_VERSION string will be in the following format:
         // "OpenGL ES N.M vendor-specific information"
         mStandard = Standard::ES;
-        mMajorVersion = version[10] - '0';
-        mMinorVersion = version[12] - '0';
+        mMajorVersion = DAWN_UNSAFE_TODO(version[10]) - '0';
+        mMinorVersion = DAWN_UNSAFE_TODO(version[12]) - '0';
 
         // The minor version shouldn't get to two digits.
-        DAWN_ASSERT(strlen(version) <= 13 || !isdigit(version[13]));
+        DAWN_UNSAFE_TODO(DAWN_ASSERT(strlen(version) <= 13 || !isdigit(version[13])));
     } else {
         // OpenGL spec states the GL_VERSION string will be in the following format:
         // <version number><space><vendor-specific information>
@@ -58,10 +60,10 @@ MaybeError OpenGLVersion::Initialize(GLGetProcProc getProc) {
         // digits
         mStandard = Standard::Desktop;
         mMajorVersion = version[0] - '0';
-        mMinorVersion = version[2] - '0';
+        mMinorVersion = DAWN_UNSAFE_TODO(version[2]) - '0';
 
         // The minor version shouldn't get to two digits.
-        DAWN_ASSERT(strlen(version) <= 3 || !isdigit(version[3]));
+        DAWN_UNSAFE_TODO(DAWN_ASSERT(strlen(version) <= 3 || !isdigit(version[3])));
     }
 
     return {};

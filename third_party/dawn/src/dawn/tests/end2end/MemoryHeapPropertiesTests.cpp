@@ -27,7 +27,8 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -38,7 +39,7 @@ class MemoryHeapPropertiesTest : public DawnTest {
         EXPECT_GT(memoryHeapProperties.heapCount, 0u);
         for (size_t i = 0; i < memoryHeapProperties.heapCount; ++i) {
             // Check the heap is non-zero in size.
-            EXPECT_GT(memoryHeapProperties.heapInfo[i].size, 0ull);
+            DAWN_UNSAFE_TODO(EXPECT_GT(memoryHeapProperties.heapInfo[i].size, 0ull));
 
             constexpr wgpu::HeapProperty kValidProps =
                 wgpu::HeapProperty::DeviceLocal | wgpu::HeapProperty::HostVisible |
@@ -46,10 +47,11 @@ class MemoryHeapPropertiesTest : public DawnTest {
                 wgpu::HeapProperty::HostCached;
 
             // Check the heap properties only contain the set of valid enums.
-            EXPECT_EQ(memoryHeapProperties.heapInfo[i].properties & ~kValidProps, 0u);
+            DAWN_UNSAFE_TODO(
+                EXPECT_EQ(memoryHeapProperties.heapInfo[i].properties & ~kValidProps, 0u));
 
             // Check the heap properties have at least one bit.
-            EXPECT_NE(uint32_t(memoryHeapProperties.heapInfo[i].properties), 0u);
+            DAWN_UNSAFE_TODO(EXPECT_NE(uint32_t(memoryHeapProperties.heapInfo[i].properties), 0u));
         }
     }
 };

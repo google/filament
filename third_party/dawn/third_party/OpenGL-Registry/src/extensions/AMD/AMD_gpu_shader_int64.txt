@@ -1,0 +1,796 @@
+Name
+
+    AMD_gpu_shader_int64
+
+Name Strings
+
+    GL_AMD_gpu_shader_int64
+
+Contact
+
+    Daniel Rakos, AMD (daniel.rakos 'at' amd.com)
+
+Contributors
+
+    Daniel Rakos, AMD
+    Graham Sellers, AMD
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         07/07/2014
+    Author Revision:            3
+
+Number
+
+    OpenGL Extension #451
+
+Dependencies
+
+    This extension is written against the OpenGL 4.4 (Core Profile)
+    Specification.
+
+    This extension is written against version 4.40 of the OpenGL Shading
+    Language Specification.
+
+    OpenGL 4.0 and GLSL 4.00 are required.
+
+    This extension interacts with NV_gpu_shader5.
+
+    This extension interacts with NV_shader_buffer_load.
+
+    This extension interacts with EXT_direct_state_access.
+
+    This extension interacts with NV_vertex_attrib_integer_64bit.
+
+    This extension interacts with EXT_shader_integer_mix.
+
+Overview
+
+    This extension was developed based on the NV_gpu_shader5 extension to
+    allow implementations supporting 64-bit integers to expose the feature
+    without the additional requirements that are present in NV_gpu_shader5.
+
+    The extension introduces the following features for all shader types:
+
+      * support for 64-bit scalar and vector integer data types, including
+        uniform API, uniform buffer object, transform feedback, and shader
+        input and output support;
+
+      * new built-in functions to pack and unpack 64-bit integer types into a
+        two-component 32-bit integer vector;
+
+      * new built-in functions to convert double-precision floating-point
+        values to or from their 64-bit integer bit encodings;
+
+      * vector relational functions supporting comparisons of vectors of
+        64-bit integer types; and
+
+      * common functions abs, sign, min, max, clamp, and mix supporting
+        arguments of 64-bit integer types.
+
+    This extension is designed to be a functional superset of the 64-bit
+    integer support introduced by NV_gpu_shader5 and to be source code
+    compatible with that, thus the new procedures, functions, and tokens
+    are identical to those found in that extension.
+
+
+New Procedures and Functions
+
+    (The functions are identical to those defined in NV_gpu_shader5.)
+
+    void Uniform1i64NV(int location, int64EXT x);
+    void Uniform2i64NV(int location, int64EXT x, int64EXT y);
+    void Uniform3i64NV(int location, int64EXT x, int64EXT y, int64EXT z);
+    void Uniform4i64NV(int location, int64EXT x, int64EXT y, int64EXT z,
+                       int64EXT w);
+    void Uniform1i64vNV(int location, sizei count, const int64EXT *value);
+    void Uniform2i64vNV(int location, sizei count, const int64EXT *value);
+    void Uniform3i64vNV(int location, sizei count, const int64EXT *value);
+    void Uniform4i64vNV(int location, sizei count, const int64EXT *value);
+
+    void Uniform1ui64NV(int location, uint64EXT x);
+    void Uniform2ui64NV(int location, uint64EXT x, uint64EXT y);
+    void Uniform3ui64NV(int location, uint64EXT x, uint64EXT y, uint64EXT z);
+    void Uniform4ui64NV(int location, uint64EXT x, uint64EXT y, uint64EXT z,
+                       uint64EXT w);
+    void Uniform1ui64vNV(int location, sizei count, const uint64EXT *value);
+    void Uniform2ui64vNV(int location, sizei count, const uint64EXT *value);
+    void Uniform3ui64vNV(int location, sizei count, const uint64EXT *value);
+    void Uniform4ui64vNV(int location, sizei count, const uint64EXT *value);
+
+    void GetUniformi64vNV(uint program, int location, int64EXT *params);
+
+
+    (The following function is also provided by NV_shader_buffer_load.)
+
+    void GetUniformui64vNV(uint program, int location, uint64EXT *params);
+
+
+    (All of the following ProgramUniform* functions are supported if and only
+     if EXT_direct_state_access is supported.)
+
+    void ProgramUniform1i64NV(uint program, int location, int64EXT x);
+    void ProgramUniform2i64NV(uint program, int location, int64EXT x,
+                              int64EXT y);
+    void ProgramUniform3i64NV(uint program, int location, int64EXT x, 
+                              int64EXT y, int64EXT z);
+    void ProgramUniform4i64NV(uint program, int location, int64EXT x, 
+                              int64EXT y, int64EXT z, int64EXT w);
+    void ProgramUniform1i64vNV(uint program, int location, sizei count,
+                               const int64EXT *value);
+    void ProgramUniform2i64vNV(uint program, int location, sizei count,
+                               const int64EXT *value);
+    void ProgramUniform3i64vNV(uint program, int location, sizei count,
+                               const int64EXT *value);
+    void ProgramUniform4i64vNV(uint program, int location, sizei count,
+                               const int64EXT *value);
+
+    void ProgramUniform1ui64NV(uint program, int location, uint64EXT x);
+    void ProgramUniform2ui64NV(uint program, int location, uint64EXT x, 
+                               uint64EXT y);
+    void ProgramUniform3ui64NV(uint program, int location, uint64EXT x, 
+                               uint64EXT y, uint64EXT z);
+    void ProgramUniform4ui64NV(uint program, int location, uint64EXT x, 
+                               uint64EXT y, uint64EXT z, uint64EXT w);
+    void ProgramUniform1ui64vNV(uint program, int location, sizei count,
+                                const uint64EXT *value);
+    void ProgramUniform2ui64vNV(uint program, int location, sizei count,
+                                const uint64EXT *value);
+    void ProgramUniform3ui64vNV(uint program, int location, sizei count,
+                                const uint64EXT *value);
+    void ProgramUniform4ui64vNV(uint program, int location, sizei count, 
+                                const uint64EXT *value);
+
+
+New Tokens
+
+    Returned by the <type> parameter of GetActiveAttrib, GetActiveUniform, and
+    GetTransformFeedbackVarying:
+
+    (The tokens are identical to those defined in NV_gpu_shader5.)
+
+        INT64_NV                                        0x140E
+        UNSIGNED_INT64_NV                               0x140F
+
+        INT8_NV                                         0x8FE0
+        INT8_VEC2_NV                                    0x8FE1
+        INT8_VEC3_NV                                    0x8FE2
+        INT8_VEC4_NV                                    0x8FE3
+        INT16_NV                                        0x8FE4
+        INT16_VEC2_NV                                   0x8FE5
+        INT16_VEC3_NV                                   0x8FE6
+        INT16_VEC4_NV                                   0x8FE7
+        INT64_VEC2_NV                                   0x8FE9
+        INT64_VEC3_NV                                   0x8FEA
+        INT64_VEC4_NV                                   0x8FEB
+        UNSIGNED_INT8_NV                                0x8FEC
+        UNSIGNED_INT8_VEC2_NV                           0x8FED
+        UNSIGNED_INT8_VEC3_NV                           0x8FEE
+        UNSIGNED_INT8_VEC4_NV                           0x8FEF
+        UNSIGNED_INT16_NV                               0x8FF0
+        UNSIGNED_INT16_VEC2_NV                          0x8FF1
+        UNSIGNED_INT16_VEC3_NV                          0x8FF2
+        UNSIGNED_INT16_VEC4_NV                          0x8FF3
+        UNSIGNED_INT64_VEC2_NV                          0x8FF5
+        UNSIGNED_INT64_VEC3_NV                          0x8FF6
+        UNSIGNED_INT64_VEC4_NV                          0x8FF7
+        FLOAT16_NV                                      0x8FF8
+        FLOAT16_VEC2_NV                                 0x8FF9
+        FLOAT16_VEC3_NV                                 0x8FFA
+        FLOAT16_VEC4_NV                                 0x8FFB
+
+
+Additions to Chapter 7 of the OpenGL 4.4 (Core Profile) Specification
+(Program Objects)
+
+    Modify Section 7.3.1, Program Interfaces
+
+    (add to Table 7.3, OpenGL Shading Language type tokens, p. 107)
+
+    +----------------------------+--------------+--------+--------+--------+
+    | Type Name Token            | Keyword      | Attrib |  Xfb   | Buffer |
+    +----------------------------+--------------+--------+--------+--------+
+    | INT64_NV                   | int64_t      |   *    |   *    |   *    |
+    | INT64_VEC2_NV              | i64vec2      |   *    |   *    |   *    |
+    | INT64_VEC3_NV              | i64vec3      |   *    |   *    |   *    |
+    | INT64_VEC4_NV              | i64vec4      |   *    |   *    |   *    |
+    | UNSIGNED_INT64_NV          | uint64_t     |   *    |   *    |   *    |
+    | UNSIGNED_INT64_VEC2_NV     | u64vec2      |   *    |   *    |   *    |
+    | UNSIGNED_INT64_VEC3_NV     | u64vec3      |   *    |   *    |   *    |
+    | UNSIGNED_INT64_VEC4_NV     | u64vec4      |   *    |   *    |   *    |
+    +----------------------------+--------------+--------+--------+--------+
+
+    Modify Section 7.6, Uniform Variables
+
+    (modify second paragraph on p. 120)
+
+        Scalar, vector, and matrix uniforms with double-precision components,
+    and scalar and vector uniforms with 64-bit integer components will consume
+    no more than twice the number of components of equivalent uniforms with
+    single-precision components.
+
+
+    Modify Section 7.6.1, Loading Uniform Variables
+
+    (add to the list of commands in first paragraph on p. 125)
+
+      void Uniform{1,2,3,4}{i64,ui64}NV(int location, T value);
+      void Uniform{1,2,3,4}{i64,ui64}vNV(int location, T value);
+
+    (insert after third paragraph on p. 127)
+
+      The Uniform*i64{v}NV and Uniform*ui{v}NV commands will load count sets
+    of one to four 64-bit signed or unsigned integer values into a uniform
+    location defined as a 64-bit signed or unsigned integer scalar or vector
+    types.
+
+
+    Modify Section 7.6.2.1, Uniform Buffer Object Storage
+
+    (modify the first two bullets of the first paragraph on p. 130)
+
+      * Members of type bool int, uint, float, double, int64_t, and uint64_t
+        are respectively extracted from a buffer object by reading a single
+        uint, int, uint, float, double, int64_t, or uint64_t value at the
+        specified offset.
+
+      * Vectors with N elements with basic data types of bool, int, uint,
+        float, double, int64_t, or uint64_t are extracted as N values in
+        consecutive memory locations beginning at the specified offset, with
+        components stored in order with the first (X) component at the
+        lowest offset. The GL data type used for component extraction is
+        derived according to the rules for scalar members above.
+
+
+    Modify Section 7.13, Shader, Program, and Program Pipeline Queries
+
+    (add to the list of commands in last paragraph on p. 155)
+
+      void GetUniformi64vNV(uint program, int location, int64* params)
+      void GetUniformui64vNV(uint program, int location, uint64* params)
+
+
+Additions to Chapter 11 of the OpenGL 4.4 (Core Profile) Specification
+(Programmable Vertex Processing)
+
+    Modify Section 11.1.1, Vertex Attributes
+
+    (modify third sentence of second paragraph on p. 344)
+
+    ... hardware resources. For the purposes of this test, attribute variables
+    of the type dvec3, dvec4, dmat2x3, dmat2x3, dmat3, dmat3x4, dmat4x3,
+    dmat4, i64vec3, i64vec4, u64vec3, and u64vec4 may count as consuming twice
+    as many attributes as equivalent single-precision types. While these types
+    use the same number of generic attributes as their single-precision
+    vectors of internal storage for each three- or four-component
+    double-precision or 64-bit integer vector.
+
+
+    Modify Section 11.1.2.1, Output Variables
+
+    (modify last sentence of fourth paragraph on p. 345)
+
+    ... multiple components. Each component of variables declared as double-
+    precision floating point scalars, vectors, or matrices, or declared as
+    64-bit integer scalars or vectors may be counted as consuming two
+    components.
+
+    (modify third bullet of the first paragraph on p. 349)
+
+      * any variable containing double-precision floating-point or 64-bit
+        integer components
+
+        - has an xfb_offset layout qualifier that is not a multiple of eight;
+          or
+        - is associated with a binding point with an xfb_stride layout
+          qualifier that is not a multiple of eight;
+
+    (modify second paragraph on p. 349)
+
+      For transform feedback purposes, each component of outputs declared as
+    double-precision floating-point scalars, vectors, or matrices, or 64-bit
+    integer scalars or vectors are considered to consume eight basic machine
+    units, and each component of any other type is considered to consume four
+    basic machine units.
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.40
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_AMD_gpu_shader_int64 : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_AMD_gpu_shader_int64       1
+
+
+Additions to Chapter 3 of the OpenGL Shading Language Specification (Basics)
+
+    Modify Section 3.6, Keywords
+
+    (add the following to the list of reserved keywords at p. 15)
+
+    int64_t  i64vec2  i64vec3  i64vec4  uint64_t  u64vec2  u64vec3  u64vec4
+
+
+Additions to Chapter 4 of the OpenGL Shading Language Specification
+(Variables and Types)
+
+    Modify Section 4.1, Basic Types
+
+    (add to the basic "Transparent Types" table, p. 19)
+
+    +-----------+------------------------------------------------------------+
+    | Type      | Meaning                                                    |
+    +-----------+------------------------------------------------------------+
+    | int64_t   | a 64-bit signed integer                                    |
+    | uint64_t  | a 64-bit unsigned integer                                  |
+    | i64vec2   | a two-component 64-bit signed integer vector               |
+    | i64vec3   | a three-component 64-bit signed integer vector             |
+    | i64vec4   | a four-component 64-bit signed integer vector              |
+    | u64vec2   | a two-component 64-bit unsigned integer vector             |
+    | u64vec3   | a three-component 64-bit unsigned integer vector           |
+    | u64vec4   | a four-component 64-bit unsigned integer vector            |
+    +-----------+------------------------------------------------------------+
+
+
+    Modify Section 4.1.3, Integers
+
+    (replace first paragraph of the section, p. 23)
+
+    Signed and unsigned integer variables are fully supported. In this
+    document, the term integer is meant to generally include both signed and
+    unsigned integers, including both 32-bit and 64-bit integers. Unsigned
+    integers of type uint, uvec2, uvec3, and uvec4 have exactly 32 bits of
+    precision, while unsigned integers of type uint64_t, u64vec2, u64vec3, and
+    u64vec4 have exactly 64 bits of precision. Signed integers of type int,
+    ivec2, ivec3, and ivec4 have exactly 32 bits of precision, while signed
+    integers of type int64_t, i64vec2, i64vec3, and i64vec4 have exactly
+    64 bits of precision. Addition, subtraction, and shift operations
+    resulting in overflow or underflow will not cause any exceptions, nor
+    will they saturate, rather they will "wrap" to yield the low-order bits
+    of the result. Divison and multiplication operations resulting in overflow
+    or underflow will not cause any exception but will result in an undefined
+    value.
+
+    (add after the first paragraph of the section, p. 23)
+
+    Variables with the types "int64_t" and "uint64_t" represent signed and
+    unsigned integer values, respectively, with exactly 64 bits of precision.
+
+    (modify grammar rule for "integer-suffix", p. 24)
+
+      integer-suffix: one of
+        u U l L ul UL
+
+    (modify first sentence of second paragraph on p. 24)
+
+    No white space is allowed between the digits of an integer constant,
+    including after the leading 0 or after the leading 0x or 0X of a constant,
+    or before the suffix u, U, l, L, ul, or UL.
+
+    (modify third sentence of second paragraph on p. 24)
+
+    When the suffix u or U is present, the literal has type uint. When the
+    suffix l or L is present, the literal has type int64_t. When the suffix
+    ul or UL is present, the literal has type uint64_t. Otherwise, the type is
+    int.
+
+
+    Modify Section 4.1.10, Implicit Conversions
+
+    (modify table of implicit conversions on p. 33)
+
+    +----------------------+-------------------------------------------------+
+    | Type of expression   | Can be implicitly converted to                  |
+    +----------------------+-------------------------------------------------+
+    | int                  | uint, int64_t, uint64_t, float, double          |
+    | uint                 | uint64_t, float, double                         |
+    | int64_t              | uint64_t, double                                |
+    | uint64_t             | double                                          |
+    | ivec2                | uvec2, i64vec2, u64vec2, vec2, dvec2            |
+    | ivec3                | uvec3, i64vec3, u64vec3, vec3, dvec3            |
+    | ivec4                | uvec4, i64vec4, u64vec4, vec4, dvec4            |
+    | uvec2                | u64vec2, vec2, dvec2                            |
+    | uvec3                | u64vec3, vec3, dvec3                            |
+    | uvec4                | u64vec4, vec4, dvec4                            |
+    | i64vec2              | u64vec2, dvec2                                  |
+    | i64vec3              | u64vec3, dvec3                                  |
+    | i64vec4              | u64vec4, dvec4                                  |
+    | u64vec2              | dvec2                                           |
+    | u64vec3              | dvec3                                           |
+    | u64vec4              | dvec4                                           |
+    +----------------------+-------------------------------------------------+
+
+
+    Modify Section 4.3.6, Output Variables
+
+    (modify third and fourth sentence of second paragraph on p. 46)
+
+    ... in a fragment shader. Fragment outputs can only be float, single-
+    precision floating-point vectors, signed or unsigned 32-bit integer
+    vectors, or arrays of any these. It is a compile-time error to declare any
+    double-precision type, 64-bit integer type, matrix, or structure as an
+    output.
+
+
+Additions to Chapter 5 of the OpenGL Shading Language Specification
+(Operators and Expressions)
+
+    Modify Section 5.4.1, Conversion and Scalar Constructors
+
+    (add after first list of constructor examples on p. 91)
+
+      int64_t(double) // converts a double value to a 64-bit signed integer
+      uint64_t(bool)  // converts a Boolean value to a 64-bit unsigned integer
+
+    (modify second sentence of first paragraph on p. 92)
+
+    ... is dropped. It is undefined to convert a negative floating-point value
+    to an uint or uint64_t.
+
+    (replace third paragraph on p. 92)
+
+    The constructors int(uint) and int64_t(uint64_t) preserve the bit pattern
+    in the argument, which will change the argument's value if its sign bit is
+    set. The constructor uint(int) and uint64_t(int64_t) preserve the bit
+    pattern in the argument, which will change its value if it is negative.
+
+
+Additions to Chapter 6 of the OpenGL Shading Language Specification
+(Statements and Structure)
+
+    Modify Section 6.1, Function Defintions
+
+    (replace second rule in third paragraph on p. 106)
+
+      2. A match involving a conversion from a signed integer, unsigned
+         integer, or floating-point type to a similar type having a larger
+         number of bits is better than a match involving any other implicit
+         conversion.
+
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    (insert after third sentence of last paragraph on p. 132)
+
+    ... genUType is used as the argument. Where the input arguments (and
+    corresponding output) can be int64_t, i64vec2, i64vec3, i64vec4,
+    genI64Type is used as the argument. Where the input arguments (and
+    corresponding output) can be uint64_t, u64vec2, u64vec3, u64vec4,
+    genU64Type is used as the argument.
+
+
+    Modify Section 8.3, Common Functions
+
+    (add to the table of common functions on p. 136)
+
+    +------------------------------------------------+----------------------------------------------------+
+    | Syntax                                         | Desciption                                         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type abs(genI64Type x)                   | Returns x if x >= 0; otherwise it returns -x.      |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type sign(genI64Type x)                  | Returns 1 if x > 0, 0 if x = 0, or -1 if x < 0.    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type min(genI64Type x,                   | Returns y if y < x; otherwise it returns x.        |
+    |                genI64Type y)                   |                                                    |
+    | genI64Type min(genI64Type x,                   |                                                    |
+    |                int64_t y)                      |                                                    |
+    | genU64Type min(genU64Type x,                   |                                                    |
+    |                genU64Type y)                   |                                                    |
+    | genU64Type min(genU64Type x,                   |                                                    |
+    |                uint64_t y)                     |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type max(genI64Type x,                   | Returns y if x < y; otherwise it returns x.        |
+    |                genI64Type y)                   |                                                    |
+    | genI64Type max(genI64Type x,                   |                                                    |
+    |                int64_t y)                      |                                                    |
+    | genU64Type max(genU64Type x,                   |                                                    |
+    |                genU64Type y)                   |                                                    |
+    | genU64Type max(genU64Type x,                   |                                                    |
+    |                uint64_t y)                     |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type clamp(genI64Type x,                 | Returns min(max(x, minVal), maxVal).               |
+    |                  genI64Type minVal,            |                                                    |
+    |                  genI64Type maxVal)            | Results are undefined if minVal > maxVal.          |
+    | genI64Type clamp(genI64Type x,                 |                                                    |
+    |                  int64_t minVal,               |                                                    |
+    |                  int64_t maxVal)               |                                                    |
+    | genU64Type clamp(genU64Type x,                 |                                                    |
+    |                  genU64Type minVal,            |                                                    |
+    |                  genU64Type maxVal)            |                                                    |
+    | genU64Type clamp(genU64Type x,                 |                                                    |
+    |                  uint64_t minVal,              |                                                    |
+    |                  uint64_t maxVal)              |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type mix(genI64Type x,                   | Selects which vector each returned component comes |
+    |                genI64Type y,                   | from. For a component of a that is false, the      |
+    |                genBType a)                     | corresponding component of x is returned. For a    |
+    | genU64Type mix(genU64Type x,                   | component of a that is true, the corresponding     |
+    |                genU64Type y,                   | component of y is returned.                        |
+    |                genBType a)                     |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genI64Type doubleBitsToInt64(genDType value)   | Returns a signed or unsigned 64-bit integer value  |
+    | genU64Type doubleBitsToUint64(genDType value)  | representing the encoding of a double. The double  |
+    |                                                | value's bit-level representation is preserved      |
+    +------------------------------------------------+----------------------------------------------------+
+    | genDType int64BitsToDouble(genI64Type value)   | Returns a double value corresponding to a signed   |
+    | genDType uint64BitsToDouble(genU64Type value)  | or unsigned integer encoding of a double. If a NaN |
+    |                                                | is passed in, it will not signal, and the          |
+    |                                                | resulting value is unspecified. If an Inf is       |
+    |                                                | passed in, the resulting value is the              |
+    |                                                | corresponding Inf.                                 |
+    +------------------------------------------------+----------------------------------------------------+
+
+
+    Rename Section 8.4, Floating-Point Pack and Unpack Functions to
+    8.4, Floating-Point and Integer Pack and Unpack Functions
+
+
+    Modify Section 8.4, Floating-Point and Integer Pack and Unpack Functions
+
+    (add to the table of pack and unpack functions on p. 141)
+
+    +-----------------------------------+------------------------------------------------------+
+    | Syntax                            | Desciption                                           |
+    +-----------------------------------+------------------------------------------------------+
+    | int64_t packInt2x32(ivec2 v)      | Returns a signed or unsigned 64-bit integer obtained |
+    | uint64_t packUint2x32(uvec2 v)    | by packing the components of a two-component signed  |
+    |                                   | or unsigned integer vector, respectively. The first  |
+    |                                   | vector component specifies the 32 least significant  |
+    |                                   | bits; the second component specifies the 32 most     |
+    |                                   | significant bits.                                    |
+    +-----------------------------------+------------------------------------------------------+
+    | ivec2 unpackInt2x32(int64_t v)    | Returns a signed or unsigned integer vector built    |
+    | uvec2 unpackUint2x32(uint64_t v)  | from a 64-bit signed or unsigned integer scalar,     |
+    |                                   | respectively. The first component of the vector      |
+    |                                   | contains the 32 least significant bits of the input; |
+    |                                   | the second component contains the 32 most            |
+    |                                   | significant bits.                                    |
+    +-----------------------------------+------------------------------------------------------+
+
+
+    Modify Section, 8.7, Vector Relational Functions
+
+    (add to the table of placeholders at the top of p. 147)
+
+    +-------------+-----------------------------+
+    | Placeholder | Specific Types Allowed      |
+    +-------------+-----------------------------+
+    | i64vec      | i64vec2, i64vec3, i64vec4   |
+    | u64vec      | u64vec2, u64vec3, u64vec4   |
+    +-------------+-----------------------------+
+
+    (add to the table of vector relational functions at the bottom of p. 147)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Desciption                                    |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec lessThan(i64vec x, i64vec y)         | Returns the component-wise compare of x < y.  |
+    | bvec lessThan(u64vec x, u64vec y)         |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec lessThanEqual(i64vec x, i64vec y)    | Returns the component-wise compare of x <= y. |
+    | bvec lessThanEqual(u64vec x, u64vec y)    |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec greaterThan(i64vec x, i64vec y)      | Returns the component-wise compare of x > y.  |
+    | bvec greaterThan(u64vec x, u64vec y)      |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec greaterThanEqual(i64vec x, i64vec y) | Returns the component-wise compare of x >= y. |
+    | bvec greaterThanEqual(u64vec x, u64vec y) |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec equal(i64vec x, i64vec y)            | Returns the component-wise compare of x == y. |
+    | bvec equal(u64vec x, u64vec y)            |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec notEqual(i64vec x, i64vec y)         | Returns the component-wise compare of x != y. |
+    | bvec notEqual(u64vec x, u64vec y)         |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+    Modify Section 9, Shading Language Grammar for Core Profile
+
+    (add to the list of tokens on p. 180)
+
+      ...
+      INT64 UINT64 I64VEC2 I64VEC3 I64VEC4 U64VEC2 U64VEC3 U64VEC4
+      ...
+      INT64CONSTANT UINT64CONSTANT
+
+    (add to the rule of "primary_expression" on p. 181)
+
+      primary_expression:
+        ...
+        INT64CONSTANT
+        UINT64CONSTANT
+        ...
+
+    (add to the rule of "type_specifier_nonarray" on p. 188)
+
+      type_specifier_nonarray:
+        ...
+        INT64
+        UINT64
+        ...
+        I64VEC2
+        I64VEC3
+        I64VEC4
+        U64VEC2
+        U64VEC3
+        U64VEC4
+        ...
+
+
+Dependencies on NV_gpu_shader5
+
+    If the shader enables only NV_gpu_shader5, but not AMD_gpu_shader_int64
+    then implicit conversions from int and uint types to int64_t and uint64_t
+    types are not allowed. Also, the overloaded built-in functions abs,
+    sign, min, max, clamp, and mix are not available.
+
+
+Dependencies on NV_shader_buffer_load
+
+    If NV_shader_buffer_load is supported, that specification should be edited
+    as follows, to allow pointers to dereference the new data types added by
+    this extension.
+
+    Modify "Section 2.20.X, Shader Memory Access" from NV_shader_buffer_load.
+
+    (add rules for loads of variables having the new data types from this
+    extension to the list of bullets following "When a shader dereferences a
+    pointer variable")
+
+    - Data of type int64_t and uint64_t are read from or written to memory as
+      a signel 64-bit signed and unsigned integer value, respectively, at the
+      specified GPU address.
+
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is supported, that specification should be
+    edited as follows to include new ProgramUniform* functions.
+
+    (add to the list of ProgramUniform* commands)
+
+        void ProgramUniform{1,2,3,4}{i64,ui64}NV
+            (uint program int location, T value);
+        void ProgramUniform{1,2,3,4}{i64,ui64}vNV
+            (uint program, int location, const T *value);
+
+Dependencies on NV_vertex_attrib_integer_64bit
+
+    This extension only provides the ability to specify 64-bit integer input
+    variables in a GLSL vertex shader, but does not provide a way to specify
+    the values of the corresponding vertex attributes via the OpenGL API.
+    The NV_vertex_attrib_integer_64bit extension exactly provides that
+    functionality.
+
+
+Dependencies on EXT_shader_integer_mix
+
+    If EXT_shader_integer_mix is not supported remove all references to the
+    new overloaded built-in functions of mix.
+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) How the functionality in this extension different than the 64-bit
+        integer support introduced by NV_gpu_shader5?
+
+      RESOLVED: This extension is designed to be source code compatible with
+      the 64-bit integer support in NV_gpu_shader5. However, it is a
+      functional superset of that, as it adds the following additional
+      features:
+
+        * support for overloaded versions of the functions abs, sign, min,
+          max, clamp, and mix that accept 64-bit integers as parameters.
+
+    (2) How do the implicit conversions impact binary operators?
+
+      RESOLVED: For binary operators, we prefer converting to a common type
+      that is as close as possible in size and type to the original
+      expression.
+
+    (3) How do the implicit conversions impact function overloading rules?
+
+      RESOLVED: We extend the preference rules in core OpenGL to account
+      for the new data types, adding a rule to favor conversion from 32-bit
+      integers to 64-bit integers over coversions to floating-point values.
+
+    (4) What should be done to distinguish between 32- and 64-bit integer
+        constants?
+
+      RESOLVED: We will use "L" and "UL" to identify signed and unsigned
+      64-bit integer constants; the use of "L" matches a similar ("long")
+      suffix in the C programming language.  C leaves the size of integer
+      types implementation-dependent, and many implementations require an "LL"
+      suffix to declare 64-bit integer constants.  With our size definitions,
+      "L" will be considered sufficient to make an integer constant 64-bit.
+
+    (5) Should provide support for vertex attributes with 64-bit components,
+        and if so, how should the support be provided in the OpenGL API?
+
+      RESOLVED: Yes, but in order to specify 64-bit vertex attribute values
+      in the OpenGL API support for NV_vertex_attrib_integer_64bit or a
+      similar extension is also required.
+
+    (6) Should we support 64-bit integer uniforms in the default uniform
+        block?
+
+      DISCUSSION: There isn't much value in extending the standalone uniform
+      API, as uniform buffers provide a way more efficient way to feed
+      uniforms to the shaders, but in order to achieve feature parity with
+      the 64-bit integer support in NV_gpu_shader5 it might be favorable to
+      add support for it.
+
+      RESOLVED: Yes, for compatibility with NV_gpu_shader5.
+
+    (7) Should we support 64-bit integer types as members of uniform blocks,
+        shader storage buffer blocks, or as transform feedback varyings?
+
+      RESOLVED: Yes, support all of them. 64-bit integers will consume eight
+      basic machine units just like double-precision floating-point variables.
+
+    (8) How do the uniform loading commands introduced by this extension
+        interact similar commands added by NV_shader_buffer_load?
+
+      RESOLVED: NV_shader_buffer_load provided the command Uniformui64NV to
+      load pointer uniforms with a single 64-bit unsigned integer.  This
+      extension provides vectors of 64-bit unsigned integers, so we needed
+      Uniform{2,3,4}ui64NV commands.  We chose to provide a Uniform1ui64NV
+      command, which will be functionally equivalent to Uniformui64NV.
+
+    (9) Should we provide distinct sized types for 32-bit integers, floats,
+        and doubles?
+
+      RESOLVED: No. While NV_gpu_shader5 does add such types, it seems there
+      isn't much value in adding those in this extension, especially because
+      this extension strictly focuses on supporting 64-bit integers.
+
+    (10) Can the 64-bit uniform APIs be used to load values for uniforms of
+         type "bool", "bvec2", "bvec3", or "bvec4"?
+
+      RESOLVED: No. OpenGL 2.0 and beyond did allow "bool" variable to be
+      set with Uniform*i* and Uniform*f APIs, and OpenGL 3.0 extended that
+      support to Uniform*ui* for orthogonality.  But it seems pointless to
+      extended this capability forward to 64-bit Uniform APIs as well.
+
+    (11) There exists both an UNSIGNED_INT64_AMD and UNSIGNED_INT64_NV token
+         with different values (the former existed earlier) so which one
+         this extension should use?
+
+      DISCUSSION: No functions in this extension accept these values as
+      inputs, they only should return one of these in various scenarios.
+
+      RESOLVED: This extension will return the value of UNSIGNED_INT64_NV to
+      stay source code compatible with NV_gpu_shader5. However, future
+      extensions that should accept any of these tokens as inputs should
+      accept both of them.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -------------------------------------------------
+     3    07/07/14  drakos    Fixed inconsistency in implicit conversion rules.
+     2    31/04/14  gsellers  Ready to post.
+     1    10/09/13  drakos    Initial revision.

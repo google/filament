@@ -33,11 +33,13 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/NonCopyable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/UsageValidationMode.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/UsageValidationMode.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/compiler.h"
+#include "src/utils/non_copyable.h"
+#include "src/utils/span.h"
 
 namespace tint::wgsl {
 enum class Extension : uint8_t;
@@ -53,27 +55,26 @@ ResultOrError<Ref<ShaderModuleBase>> CreateShaderModule(
 ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
                                                     std::string_view label,
                                                     wgpu::BufferUsage usage,
-                                                    const void* data,
-                                                    uint64_t size);
+                                                    Span<const std::byte> data);
 
 template <typename T>
 ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
                                                     wgpu::BufferUsage usage,
                                                     std::initializer_list<T> data) {
-    return CreateBufferFromData(device, "", usage, data.begin(), uint32_t(sizeof(T) * data.size()));
+    return CreateBufferFromData(device, "", usage, SpanAsBytes(Span<const T>(data)));
 }
 template <typename T>
 ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
                                                     std::string_view label,
                                                     wgpu::BufferUsage usage,
                                                     std::initializer_list<T> data) {
-    return CreateBufferFromData(device, label, usage, data.begin(),
-                                uint32_t(sizeof(T) * data.size()));
+    return CreateBufferFromData(device, label, usage, SpanAsBytes(Span<const T>(data)));
 }
 
 ResultOrError<Ref<PipelineLayoutBase>> MakeBasicPipelineLayout(
     DeviceBase* device,
-    const Ref<BindGroupLayoutBase>& bindGroupLayout);
+    const Ref<BindGroupLayoutBase>& bindGroupLayout,
+    uint32_t immediateSize = 0);
 
 // Helpers to make creating bind group layouts look nicer:
 //
@@ -164,17 +165,15 @@ const char* GetLabelForTrace(const std::string& label);
 // Given a std vector, allocate an equivalent array that can be returned in an API's foos/fooCount
 // pair of fields. The apiData must eventually be freed using FreeApiSeq.
 template <typename T>
-void AllocateApiSeqFromStdVector(const T** apiData, size_t* apiSize, const std::vector<T>& vector) {
-    size_t size = vector.size();
-    *apiSize = size;
-
-    if (size > 0) {
-        T* mutableData = new T[size];
-        memcpy(mutableData, vector.data(), size * sizeof(T));
-        *apiData = mutableData;
-    } else {
-        *apiData = nullptr;
+Span<const T> AllocateApiSeqFromStdVector(const std::vector<T>& vector) {
+    if (vector.empty()) {
+        return {};
     }
+    // TODO(https://crbug.com/512465980): Use dawn::HeapArray
+    T* data = new T[vector.size()];
+    // TODO(https://crbug.com/524406299): Use Span::CopyFrom.
+    DAWN_UNSAFE_TODO(memcpy(data, vector.data(), vector.size() * sizeof(T)));
+    return DAWN_UNSAFE_TODO({data, vector.size()});
 }
 
 // Free an API sequence that was allocated by AllocateApiSeqFromStdVector

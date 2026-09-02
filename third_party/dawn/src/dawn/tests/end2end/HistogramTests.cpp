@@ -27,9 +27,9 @@
 
 #include <memory>
 
-#include "dawn/platform/metrics/HistogramMacros.h"
-#include "dawn/tests/DawnTest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 namespace {

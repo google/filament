@@ -1,0 +1,292 @@
+Name
+
+    ARB_derivative_control
+
+Name Strings
+
+    GL_ARB_derivative_control
+
+Contact
+
+    John Kessenich (cepheus 'at' frii.com)
+
+Contributors
+
+    Bill Licea-Kane, Qualcomm
+        
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Last Modified Date: 7-Aug-2014
+    Revision: 3
+
+Number
+
+    ARB Extension #163
+
+Dependencies
+
+    This extension is written against the GLSL 4.40 Specification.
+
+    OpenGL 4.0 and GLSL 4.00 or later are required.
+
+Overview
+
+    This extension provides control over the spacial granularity at which the
+    underlying implementation computes derivatives.  
+
+    For example, for the coarse-granularity derivative, a single x derivative
+    could be computed for each 2x2 group of pixels, using that same derivative
+    value for all 4 pixels.  For the fine-granularity derivative, two
+    derivatives could be computed for each 2x2 group of pixels; one for the top
+    row and one for the bottom row.  Implementations vary somewhat on how this
+    is done.
+
+    To select the coarse derivative, use:
+
+        dFdxCoarse(p)
+        dFdyCoarse(p)
+        fwidthCoarse(p)
+
+    To select the fine derivative, use:
+
+        dFdxFine(p)
+        dFdyFine(p)
+        fwidthFine(p)
+
+    To select which ever is "better" (based on performance, API hints, or other
+    factors), use:
+
+        dFdx(p)
+        dFdy(p)
+        fwidth(p)
+
+    This last set is the set of previously existing built-ins for derivatives,
+    and continues to work in a backward compatible way.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL Specification
+
+    None.
+
+Additions to the OpenGL Shading Language
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_ARB_derivative_control : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+        #define GL_ARB_derivative_control 1
+
+Section 4.3.3 Constant Expressions
+
+    Update the following sentence:
+    
+    "The following built-in functions must return 0 when evaluated with an
+    argument that is a constant expression.
+
+        dFdx
+        dFdy
+        fwidth
+        dFdxCoarse
+        dFdyCoarse
+        fwidthCoarse
+        dFdxFine
+        dFdyFine
+        fwidthFine"
+
+Section 8.13.1 Derivative Functions
+
+    After "dFdy is approximated similarly, with y replacing x.", add the
+    following:
+
+    "With multi-sample rasterization, for any given fragment or sample, 
+    either neighboring fragments or samples may be considered.
+
+    "It is typical to consider a 2x2 square of fragments or samples, and 
+    compute independent dFdxFine per row and independent dFdyFine per column, 
+    while computing only a single dFdxCoarse and a single dFdyCoarse for the
+    entire 2x2 square.Thus, all second-order coarse derivatives, e.g., 
+    dFdxCoarse(dFdxCoarse(x)), may be 0, even for non-linear arguments. 
+    However, second-order fine derivatives, e.g., dFdxFine(dFdxFine(x)) 
+    will properly reflect the difference between the independent fine 
+    derivatives computed within the 2x2 square."
+
+    Remove the following paragraphs:
+
+    "A GL implementation may use the above or other methods to perform the 
+    calculation, subject to the following conditions:
+
+    "The method may use piecewise linear approximations. Such linear 
+    approximations imply that higher order derivatives, dFdx(dFdx(x)) and 
+    above, are undefined.
+
+    "The method may assume that the function evaluated is continuous. Therefore
+    derivatives within nonuniform control flow are undefined."
+
+    Change the last paragraph before the table to say
+
+    "In some implementations, varying degrees of derivative accuracy for dFdx 
+    and dFdy may be obtained by providing GL hints (section 21.4 "Hints" of the
+    OpenGL Graphics System Specification), allowing a user to make an image 
+    quality versus speed trade off.These hints have no effect on dFdxCoarse, 
+    dFdyCoarse, dFdxFineand dFdyFine."
+
+    Add the following built-in functions to the table:
+        
+        genType dFdxFine(genType p)
+
+    "Returns the partial derivative of p with respect to the window x
+    coordinate.  Will use local differencing based on the value of p for the
+    current fragment and its immediate neighbor(s)."
+
+        genType dFdyFine(genType p)
+
+    "Returns the partial derivative of p with respect to the window y 
+    coordinate.  Will use local differencing based on the value of p for the
+    current fragment and its immediate neighbor(s)."
+
+        genType fwidthFine(genType p)
+
+    "Return abs(dFdxFine(p)) + abs(dFdyFine(p))."
+
+        genType dFdxCoarse(genType p)
+
+    "Returns the partial derivative of p with respect to the window x
+    coordinate.  Will use local differencing based on the value of p for the
+    current fragment's neighbors, and will possibly, but not necessarily,
+    include the value of p for the current fragment.  That is, over a 
+    given area, the implementation can compute x derivatives in fewer 
+    unique locations than would be allowed for dFdxFine(p)."
+
+        genType dFdyCoarse(genType p)
+
+    "Returns the partial derivative of p with respect to the window y
+    coordinate.  Will use local differencing based on the value of p for the
+    current fragment's neighbors, and will possibly, but not necessarily,
+    include the value of p for the current fragment.  That is, over a
+    given area, the implementation can compute y derivatives in fewer
+    unique locations than would be allowed for dFdyFine(p)."
+
+        genType fwidthCoarse(genType p)
+
+    "Returns abs(dFdxCoarse(p)) + abs(dFdyCoarse(p))."
+
+    Change the existing descriptions to the following:
+
+        genType dFdx(genType p)
+
+    "Returns either dFdxFine(p) or dFdxCoarse(p), based on implementation
+    choice, presumably whichever is the faster, or by whichever is selected
+    in the API through quality-versus-speed hints."
+
+        genType dFdy(genType p)
+
+    "Returns either dFdyFine(p) or dFdyCoarse(p), based on implementation
+    choice, presumably whichever is the faster, or by whichever is selected
+    in the API through quality-versus-speed hints."
+
+    Doing the above change would remove:
+
+    [Old Language to remove...]
+    "These two functions are commonly used to estimate the 
+    filter width used to anti-alias procedural textures. We
+    are assuming that the expression is being evaluated in 
+    parallel on a SIMD array so that at any given point in 
+    time the value of the function is known at the grid points 
+    represented by the SIMD array. Local differencing 
+    between SIMD array elements can therefore be used to 
+    derive dFdx, dFdy, etc."
+
+        getType fwidth(getType p)
+
+    "Returns abs(dFdx(p)) + abs(dFdy(p))."
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    No new API errors.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    1.  Allow support on pre-4.0 versions?
+
+        Resolution:  No, require 4.0.
+
+    2.  Define higher-order derivatives?  Currently we say they are undefined,
+        but don't see why they can't say more (like coarse is 0, and fine might
+        be something you'd expect).
+
+           dFdxFine(dFdyFine(a))      should work
+           dFdxCoarse(dFdyCoarse(a))  should work or be 0
+
+        Generally, the descriptive part of the derivative section may need
+        slight tweaking, based on the decisions made.
+
+        Resolution:  Yes, be more specific about how higher-order derivitives
+        behave.  See the changes to the descriptive part of section 8.13.1.
+
+Revision History
+
+    Revision 1, 17-Apr-2014 (JohnK)
+      - Create first version.
+    Revision 2, 12-May-2014 (JohnK)
+      - Write overview section
+    Revision 3, 7-Aug-2014 (JohnK)
+      - Match the core specification WRT to Bill's input derivatives, etc.
+      - Add Bill as a contributor.
+      - Close the issues.

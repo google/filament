@@ -30,8 +30,8 @@
 
 #include <android/hardware_buffer.h>
 
-#include "dawn/common/DynamicLib.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -51,7 +51,14 @@ class AHBFunctions {
     DynamicLib mNativeWindowLib;
 };
 
-SharedTextureMemoryProperties GetAHBSharedTextureMemoryProperties(
+// Encapsulates the SharedTextureMemoryProperties that describe the AHardwareBuffer and additional
+// supplementary information.
+struct AHBSharedTextureMemoryProperties {
+    SharedTextureMemoryProperties properties;
+    bool isProtected;
+};
+
+AHBSharedTextureMemoryProperties GetAHBSharedTextureMemoryProperties(
     const AHBFunctions* ahbFunctions,
     ::AHardwareBuffer* aHardwareBuffer);
 

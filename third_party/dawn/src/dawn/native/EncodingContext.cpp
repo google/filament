@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/EncodingContext.h"
+#include "src/dawn/native/EncodingContext.h"
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ErrorData.h"
-#include "dawn/native/IndirectDrawValidationEncoder.h"
-#include "dawn/native/RenderBundleEncoder.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/IndirectDrawValidationEncoder.h"
+#include "src/dawn/native/RenderBundleEncoder.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 
@@ -41,14 +41,16 @@ EncodingContext::EncodingContext(DeviceBase* device, const ApiObjectBase* initia
     : mDevice(device),
       mTopLevelEncoder(initialEncoder),
       mCurrentEncoder(initialEncoder),
+      mPendingCommands(device->GetMemoryBlockAllocator()),
       mStatus(Status::Open) {
-    DAWN_ASSERT(!initialEncoder->IsError());
+    DAWN_CHECK(!initialEncoder->IsError());
 }
 
 EncodingContext::EncodingContext(DeviceBase* device, ErrorMonad::ErrorTag tag)
     : mDevice(device),
       mTopLevelEncoder(nullptr),
       mCurrentEncoder(nullptr),
+      mPendingCommands(/*pool=*/nullptr),
       mStatus(Status::ErrorAtCreation) {}
 
 EncodingContext::~EncodingContext() {
@@ -65,12 +67,16 @@ void EncodingContext::Destroy() {
         CommandIterator commands = AcquireCommands();
         FreeCommands(&commands);
     }
+    mPendingCommands.Destroy();
+    for (CommandAllocator& allocator : mAllocators) {
+        allocator.Destroy();
+    }
 
     CloseWithStatus(Status::Destroyed);
 }
 
 CommandIterator EncodingContext::AcquireCommands() {
-    DAWN_ASSERT(!mWereCommandsAcquired);
+    DAWN_CHECK(!mWereCommandsAcquired);
     mWereCommandsAcquired = true;
 
     CommitCommands(std::move(mPendingCommands));
@@ -111,7 +117,7 @@ void EncodingContext::HandleError(std::unique_ptr<ErrorData> error) {
 }
 
 void EncodingContext::WillBeginRenderPass() {
-    DAWN_ASSERT(mCurrentEncoder == mTopLevelEncoder);
+    DAWN_CHECK(mCurrentEncoder == mTopLevelEncoder);
     if (mDevice->IsValidationEnabled() || mDevice->MayRequireDuplicationOfIndirectParameters()) {
         // When validation is enabled or indirect parameters require duplication, we are going
         // to want to capture all commands encoded between and including BeginRenderPassCmd and
@@ -125,8 +131,8 @@ void EncodingContext::WillBeginRenderPass() {
 
 void EncodingContext::EnterPass(const ApiObjectBase* passEncoder) {
     // Assert we're at the top level.
-    DAWN_ASSERT(mCurrentEncoder == mTopLevelEncoder);
-    DAWN_ASSERT(passEncoder != nullptr);
+    DAWN_CHECK(mCurrentEncoder == mTopLevelEncoder);
+    DAWN_CHECK(passEncoder != nullptr);
 
     mCurrentEncoder = passEncoder;
 }
@@ -135,8 +141,8 @@ MaybeError EncodingContext::ExitRenderPass(const ApiObjectBase* passEncoder,
                                            RenderPassResourceUsageTracker usageTracker,
                                            CommandEncoder* commandEncoder,
                                            IndirectDrawMetadata indirectDrawMetadata) {
-    DAWN_ASSERT(mCurrentEncoder != mTopLevelEncoder);
-    DAWN_ASSERT(mCurrentEncoder == passEncoder);
+    DAWN_CHECK(mCurrentEncoder != mTopLevelEncoder);
+    DAWN_CHECK(mCurrentEncoder == passEncoder);
 
     mCurrentEncoder = mTopLevelEncoder;
 
@@ -175,8 +181,8 @@ MaybeError EncodingContext::ExitRenderPass(const ApiObjectBase* passEncoder,
 
 void EncodingContext::ExitComputePass(const ApiObjectBase* passEncoder,
                                       ComputePassResourceUsage usages) {
-    DAWN_ASSERT(mCurrentEncoder != mTopLevelEncoder);
-    DAWN_ASSERT(mCurrentEncoder == passEncoder);
+    DAWN_CHECK(mCurrentEncoder != mTopLevelEncoder);
+    DAWN_CHECK(mCurrentEncoder == passEncoder);
 
     mCurrentEncoder = mTopLevelEncoder;
     mComputePassUsages.push_back(std::move(usages));
@@ -192,29 +198,29 @@ void EncodingContext::EnsurePassExited(const ApiObjectBase* passEncoder) {
 }
 
 const RenderPassUsages& EncodingContext::GetRenderPassUsages() const {
-    DAWN_ASSERT(!mWereRenderPassUsagesAcquired);
+    DAWN_CHECK(!mWereRenderPassUsagesAcquired);
     return mRenderPassUsages;
 }
 
 RenderPassUsages EncodingContext::AcquireRenderPassUsages() {
-    DAWN_ASSERT(!mWereRenderPassUsagesAcquired);
+    DAWN_CHECK(!mWereRenderPassUsagesAcquired);
     mWereRenderPassUsagesAcquired = true;
     return std::move(mRenderPassUsages);
 }
 
 const ComputePassUsages& EncodingContext::GetComputePassUsages() const {
-    DAWN_ASSERT(!mWereComputePassUsagesAcquired);
+    DAWN_CHECK(!mWereComputePassUsagesAcquired);
     return mComputePassUsages;
 }
 
 ComputePassUsages EncodingContext::AcquireComputePassUsages() {
-    DAWN_ASSERT(!mWereComputePassUsagesAcquired);
+    DAWN_CHECK(!mWereComputePassUsagesAcquired);
     mWereComputePassUsagesAcquired = true;
     return std::move(mComputePassUsages);
 }
 
-std::vector<IndirectDrawMetadata> EncodingContext::AcquireIndirectDrawMetadata() {
-    DAWN_ASSERT(!mWereIndirectDrawMetadataAcquired);
+ityp::vector<PassIndex, IndirectDrawMetadata> EncodingContext::AcquireIndirectDrawMetadata() {
+    DAWN_CHECK(!mWereIndirectDrawMetadataAcquired);
     mWereIndirectDrawMetadataAcquired = true;
     return std::move(mIndirectDrawMetadata);
 }

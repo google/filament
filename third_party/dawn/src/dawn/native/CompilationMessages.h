@@ -32,11 +32,11 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/NonCopyable.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/non_copyable.h"
 
 namespace tint::diag {
 class Diagnostic;
@@ -45,7 +45,7 @@ class List;
 
 namespace dawn::native {
 
-uint64_t CountUTF16CodeUnitsFromUTF8String(const std::string_view& utf8String);
+size_t CountUTF16CodeUnitsFromUTF8String(std::string_view utf8String);
 
 // CompilationMessageContent is serializable and holds the content of each compilation message.
 #define COMPILATION_MESSAGE_CONTENT_MEMBER(X) \

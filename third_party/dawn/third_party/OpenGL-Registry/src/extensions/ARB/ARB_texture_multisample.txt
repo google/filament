@@ -1,0 +1,701 @@
+Name
+
+    ARB_texture_multisample
+
+Name Strings
+
+    GL_ARB_texture_multisample
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2009-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:         February 28, 2014
+    Revision:                   12
+
+Number
+
+    ARB Extension #67
+
+Dependencies
+
+    This extension is written against the OpenGL 3.1 specification.
+
+Overview
+
+    This extension provides support for two new types of "multisample
+    textures" - two-dimensional and two-dimensional array - as well as
+    mechanisms to fetch a specific sample from such a texture in a shader,
+    and to attach such textures to FBOs for rendering.
+
+    This extension also includes the following functionality, first described
+    in NV_explicit_multisample:
+
+     * A query in the API to query the location of samples within the pixel
+
+     * An explicit control for the multisample sample mask to augment the
+       control provided by SampleCoverage
+
+New Procedures and Functions
+
+    void TexImage2DMultisample(enum target, sizei samples, enum internalformat,
+                               sizei width, sizei height,
+                               boolean fixedsamplelocations);
+
+    void TexImage3DMultisample(enum target, sizei samples, enum internalformat,
+                               sizei width, sizei height, sizei depth,
+                               boolean fixedsamplelocations);
+
+    void GetMultisamplefv(enum pname, uint index, float *val);
+
+    void SampleMaski(uint index, bitfield mask);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetMultisamplefv:
+
+        SAMPLE_POSITION                             0x8E50
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        SAMPLE_MASK                                 0x8E51
+
+    Accepted by the <target> parameter of GetBooleani_v and
+    GetIntegeri_v:
+
+        SAMPLE_MASK_VALUE                           0x8E52
+
+    Accepted by the <target> parameter of BindTexture and
+    TexImage2DMultisample:
+
+        TEXTURE_2D_MULTISAMPLE                      0x9100
+
+    Accepted by the <target> parameter of TexImage2DMultisample:
+
+        PROXY_TEXTURE_2D_MULTISAMPLE                0x9101
+
+    Accepted by the <target> parameter of BindTexture and
+    TexImage3DMultisample:
+
+        TEXTURE_2D_MULTISAMPLE_ARRAY                0x9102
+
+    Accepted by the <target> parameter of TexImage3DMultisample:
+
+        PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY          0x9103
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv,
+    and GetFloatv:
+
+        MAX_SAMPLE_MASK_WORDS                       0x8E59
+        MAX_COLOR_TEXTURE_SAMPLES                   0x910E
+        MAX_DEPTH_TEXTURE_SAMPLES                   0x910F
+        MAX_INTEGER_SAMPLES                         0x9110
+        TEXTURE_BINDING_2D_MULTISAMPLE              0x9104
+        TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY        0x9105
+
+    Accepted by the <pname> parameter of GetTexLevelParameter
+
+        TEXTURE_SAMPLES                             0x9106
+        TEXTURE_FIXED_SAMPLE_LOCATIONS              0x9107
+
+    Returned by the <type> parameter of GetActiveUniform:
+
+        SAMPLER_2D_MULTISAMPLE                      0x9108
+        INT_SAMPLER_2D_MULTISAMPLE                  0x9109
+        UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE         0x910A
+        SAMPLER_2D_MULTISAMPLE_ARRAY                0x910B
+        INT_SAMPLER_2D_MULTISAMPLE_ARRAY            0x910C
+        UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY   0x910D
+
+Additions to Chapter 2 of the OpenGL 3.1 Specification (OpenGL Operation)
+
+    Add to table 2.9 "OpenGL Shading Language type tokens" page 56:
+
+    Type Name Token                              Keyword
+    -----------------------------------------    ------------
+    SAMPLER_2D_MULTISAMPLE                       sampler2DMS
+    SAMPLER_2D_MULTISAMPLE_ARRAY                 sampler2DMSArray
+    INT_SAMPLER_2D_MULTISAMPLE_ARRAY             isampler2DMSArray
+    UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE          usampler2DMS
+    UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY    usampler2DMSArray
+
+    Add to section 2.11.7, after subsection "Texel Fetches"
+
+    Multisample Texel Fetches
+
+    Multisample texel fetches are similar to standard texel fetches.
+    Since multisample buffers can't have mipmaps, there is no LOD
+    parameter. Instead, there is an integer parameter which selects the
+    sample number to be fetched from the buffer. The number identifying
+    the sample is the same as the value used to query the sample
+    location using GetMultisamplefv. Multisample textures support only
+    NEAREST filtering.
+
+    Additionally, this fetch may only be performed on a multisample
+    texture sampler. No other sample or fetch commands may be performed
+    on a multisample texture sampler.
+
+Additions to Chapter 3 of the OpenGL 3.1 Specification (Rasterization)
+
+    (Insert into section 3.3.1, Multisampling after the discussion of
+    the query for SAMPLES)
+
+    The location of a given sample is queried with the command
+
+        void GetMultisamplefv(enum pname, uint index, float *val);
+
+    <pname> must be SAMPLE_POSITION and <index> corresponds to the
+    sample for which the location should be returned. The sample
+    location is returned as two floating point values in <val[0]> and
+    <val[1]>, each between 0 and 1, corresponding to the <x> and <y>
+    locations respectively in GL pixel space of that sample. (0.5, 0.5)
+    thus corresponds to the pixel center. An INVALID_ENUM error is
+    generated if <pname> is not SAMPLE_POSITION. An INVALID_VALUE error
+    is generated if <index> is greater than or equal to the value of
+    SAMPLES. If the multisample mode does not have fixed sample
+    locations, the returned values may only reflect the locations of
+    samples within some pixels.
+
+    Modify Section 3.8.1, Texture Image Specification (p. 143)
+
+    Add the two new targets to MAX_TEXTURE_SIZE description:
+
+    In a similar fashion, the maximum allowable width of a texel array
+    for a one or two-dimensional, one- or two-dimensional array,
+    two-dimensional multisample, or two-dimensional multisample array
+    texture, and the maximum allowable height of a two-dimensional,
+    two-dimensional array, two- dimensional multisample, or
+    two-dimensional multisample array texture, must be at least
+    2^(k-lod)+2*b_t for image arrays of level 0 through k, where k is
+    the log base 2 of MAX_TEXTURE_SIZE.
+
+    (Insert new Section 3.8.4, Multisample Textures.  Renumber subsequent
+    sections.)
+
+    In addition to the texture types described in previous sections, two
+    additional types of textures are supported. A multisample texture is
+    similar to a two-dimensional or two-dimensional array texture,
+    except it contains multiple samples per texel. Multisample textures
+    do not have multiple image levels.
+
+    The commands
+
+        void TexImage2DMultisample(enum target, sizei samples,
+                                   enum internalformat,
+                                   sizei width, sizei height,
+                                   boolean fixedsamplelocations);
+
+        void TexImage3DMultisample(enum target, sizei samples,
+                                   enum internalformat,
+                                   sizei width, sizei height, sizei depth,
+                                   boolean fixedsamplelocations);
+
+    establish the data storage, format, dimensions, and number of
+    samples of a multisample texture's image. For TexImage2DMultisample,
+    <target> must be TEXTURE_2D_MULTISAMPLE or
+    PROXY_TEXTURE_2D_MULTISAMPLE and for TexImage3DMultisample <target>
+    must be TEXTURE_2D_MULTISAMPLE_ARRAY or
+    PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY. <width> and <height> are the
+    dimensions in texels of the texture.
+
+    <internalformat> must be color-renderable, depth-renderable, or
+    stencil- renderable (as defined in section 4.4.4). The error
+    INVALID_OPERATION may be generated if any of the following are true:
+
+    * <internalformat> is a depth/stencil-renderable format and
+      <samples> is greater than the value of MAX_DEPTH_TEXTURE_SAMPLES
+    * <internalformat> is a color-renderable format and <samples> is
+      greater than the value of MAX_COLOR_TEXTURE_SAMPLES
+    * <internalformat> is a signed or unsigned integer format and
+      <samples> is greater than the value of MAX_INTEGER_SAMPLES.
+
+    If <fixedsamplelocations> is TRUE, the image will use identical
+    sample locations and the same number of samples for all texels in
+    the image, and the sample locations will not depend on the
+    internalformat or size of the image. 
+
+    An INVALID_VALUE error is generated by TexImage2DMultisample if <width>
+    or <height> is greater than the value of MAX_TEXTURE_SIZE. An
+    INVALID_VALUE error is generated by TexImage3DMultisample if <width>,
+    <height>, or <depth> is greater than the value of MAX_3DTEXTURE_SIZE; An
+    INVALID_VALUE error is generated if <samples> is greater than the value
+    of MAX_SAMPLES. An OUT_OF_MEMORY error is generated if the GL is unable
+    to create a texture level of the requested size.
+
+    When a multisample texture is accessed in a shader, the access takes
+    one vector of integers describing which texel to fetch and an
+    integer corresponding to the sample numbers described in section
+    3.3.1 describing which sample within the texel to fetch. No standard
+    sampling instructions are allowed on the multisample texture
+    targets.
+
+    Modify Section 3.8.11, Texture Completeness (p. 154)
+
+    (insert after first paragraph of section, p. 154)
+
+    For multisample textures, a texture is complete if each dimension of
+    the texture's level is positive.
+
+    Modify Section 3.8.12, Texture State and Proxy State (p. 155)
+
+    (insert into the first paragraph of the section, p. 155)
+
+    ... the compressed flag set to FALSE, and a zero compressed size).
+    Multisample textures contain an integer identifying the number of
+    samples in each texel. The buffer texture target has associated an
+    integer containing ...
+
+    (add a new paragraph after the paragraph starting with "Proxy Arrays...")
+
+    Proxy array for two-dimensional multisample and two-dimensional
+    multisample array textures are operated on in the same way when
+    TexImage2DMultisample is called with <target> specified as
+    PROXY_TEXTURE_2D_MULTISAMPLE, or TexImage3DMultisample is called
+    with <target> specified as PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY.
+
+    Modify Section 3.8.13, Texture Objects (p. 157)
+
+    (modify first paragraphs of section, p. 157, simply adding
+     references to multisample textures)
+
+    In addition to the default textures TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE,
+    TEXTURE_BUFFER, TEXTURE_CUBE_MAP, TEXTURE_2D_MULTISAMPLE, and
+    TEXTURE_2D_MULTISAMPLE_ARRAY, named one-, two-, and
+    three-dimensional, one- and two-dimensional array, rectangular,
+    buffer, cube map, two-dimensional multisample, and two- dimensional
+    multisample array texture objects can be created and operated upon.
+    The name space for texture objects is the unsigned integers, with
+    zero reserved by the GL.
+
+    ...
+
+    In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE,
+    TEXTURE_BUFFER, TEXTURE_CUBE_MAP, TEXTURE_2D_MULTISAMPLE, and
+    TEXTURE_2D_MULTISAMPLE_ARRAY have one-, two-, and three-dimensional,
+    one- and two-dimensional array, rectangular, buffer, cube map,
+    two-dimensional multisample, and two-dimensional multisample array
+    texture state vectors respectively associated with them. In order
+    that access to these initial textures not be lost, they are treated
+    as texture objects all of whose names are 0. The initial one-, two-,
+    three- dimensional, one- and two-dimensional array, rectangular,
+    buffer, cube map, two-dimensional multisample, and two-dimensional
+    multisample array texture is therefore operated upon, queried, and
+    applied as TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE, TEXTURE_BUFFER,
+    TEXTURE_CUBE_MAP, TEXTURE_2D_MULTISAMPLE, and
+    TEXTURE_2D_MULTISAMPLE_ARRAY respectively while 0 is bound to the
+    corresponding targets.
+
+    (modify second paragraph, p. 158)
+
+    The texture object name space, including the initial one-, two-, and
+    three-dimensional, one- and two-dimensional array, rectangular,
+    buffer, cube map, two-dimensional multisample, and two-dimensional
+    multisample array texture objects, is shared among all texture
+    units. A texture object may be bound to more than one texture unit
+    simultaneously. After a texture object is bound, any GL operations
+    on that target object affect any other texture units to which the
+    same texture object is bound.
+
+Additions to Chapter 4 of the OpenGL 3.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 4.1.3, Multisample Fragment Operations
+
+    Modify the first paragraph to include SAMPLE_MASK and
+    SAMPLE_MASK_VALUE on the list of values the coverage value is
+    modified based on.
+
+    Modify the discussion of SAMPLE_COVERAGE to start with "Next" instead of
+    "Finally"
+
+    Add after the discussion of SAMPLE_COVERAGE:
+
+    Finally, if SAMPLE_MASK is enabled, the fragment coverage is ANDed
+    with the coverage value SAMPLE_MASK_VALUE. The value of
+    SAMPLE_MASK_VALUE is specified using
+
+        void SampleMaski(GLuint index, GLbitfield mask);
+
+    with <mask> set to the desired mask for <maskNumber>.
+    SAMPLE_MASK_VALUE is queried by calling GetIntegeri_v with <pname>
+    set to SAMPLE_MASK_VALUE and the index set to <maskNumber>. Bit B of
+    mask M corresponds to sample 32*M+B as described in Section 3.3.1.
+    The error INVALID_VALUE is generated if the mask word indexed is
+    greater than or equal to MAX_SAMPLE_MASK_WORDS.
+
+    Modify Section 4.4.2, Attaching Images to Framebuffer Objects, p. 203
+
+    (the first paragraph of RenderbufferStorageMultisample p. 205)
+
+    ... If either <width> or <height> is greater than the value of
+    MAX_RENDERBUFFER_SIZE, or if <samples> is greater than the value of
+    MAX_SAMPLES, then the error INVALID_VALUE is generated. If
+    <internalformat> is a signed or unsigned integer format and
+    <samples> is greater than the value of MAX_INTEGER_SAMPLES, then the
+    error INVALID_OPERATION is generated. (see ``Required Renderbuffer
+    Formats'' below). ...
+
+    (The second paragraph of "Required Renderbuffer Formats" p. 206):
+
+    Implementations must support creation of renderbuffers in these
+    required formats with up to the value of MAX_SAMPLES multisamples,
+    with the exception that the signed and unsigned integer formats are
+    required only to support creation of renderbuffers with up to the
+    value of MAX_INTEGER_SAMPLES multisamples, which must be at least
+    one.
+
+    Modify the description of FrameBufferTextureARB in
+    ARB_geometry_shader4, to allow multisample array textures with
+    FramebufferTextureARB:
+
+    If <texture> is the name of a three-dimensional texture, cube map
+    texture, one- or two-dimensional array texture, or two-dimensional
+    multisample array texture, the texture level attached to the
+    framebuffer attachment point is an array of images, and the
+    framebuffer attachment is considered layered.
+
+    (At the end of p. 208, describing FrameBufferTexture*D)
+
+    If <textarget> is TEXTURE_RECTANGLE, TEXTURE_2D_MULTISAMPLE, or
+    TEXTURE_2D_MULTISAMPLE_ARRAY, then <level> must be zero.
+
+    ...
+
+    For FramebufferTexture2D, if <texture> is not zero, then <textarget>
+    must be one of of TEXTURE_2D, TEXTURE_RECTANGLE,
+    TEXTURE_CUBE_MAP_POSITIVE_X, TEXTURE_CUBE_MAP_POSITIVE_Y,
+    TEXTURE_CUBE_MAP_POSITIVE_Z, TEXTURE_CUBE_MAP_NEGATIVE_X,
+    TEXTURE_CUBE_MAP_NEGATIVE_Y, TEXTURE_CUBE_MAP_NEGATIVE_Z, or
+    TEXTURE_2D_MULTISAMPLE.
+
+    ...
+
+    The command
+
+        void FramebufferTextureLayer(enum target, enum attachment,
+                                     uint texture, int level, int layer);
+
+    operates identically to FramebufferTexture3D, except that it
+    attaches a single layer of a three-dimensional, one- or
+    two-dimensional array, or two-dimensional multisample array texture
+    layer is an integer indicating the layer sample number, and is
+    treated identically to the layer parameter in FramebufferTexture3D.
+    The error INVALID_VALUE is generated if texture is non-zero and
+    layer is negative. The error INVALID_OPERATION is generated if
+    texture is non-zero and is not the name of a three dimensional, two-
+    dimensional multisample array, or one-or two-dimensional array
+    texture. Unlike FramebufferTexture3D, no textarget parameter is
+    accepted. ...
+
+
+    Modify Section 4.4.4, Framebuffer Completeness, p. 212
+
+    (Modify the last bullet at the top of p. 215)
+
+    - The value of RENDERBUFFER_SAMPLES is the same for all attached
+      renderbuffers; the value of TEXTURE_SAMPLES is the same for all
+      attached textures; and, if the attached images are a mix of
+      renderbuffers and textures, the value of RENDERBUFFER_SAMPLES
+      matches the value of TEXTURE_SAMPLES.
+
+      { FRAMEBUFFER_INCOMPLETE_MULTISAMPLE }
+
+    - The value of TEXTURE_FIXED_SAMPLE_LOCATIONS is the same for all
+      attached textures; if the attached images are a mix of
+      renderbuffers and textures, the value of
+      TEXTURE_FIXED_SAMPLE_LOCATIONS must be TRUE for all attached
+      textures.
+
+      { FRAMEBUFFER_INCOMPLETE_MULTISAMPLE }
+
+Additions to Chapter 6 of the OpenGL 3.1 Specification (State and
+State Requests)
+
+    Edit Section 6.1.3, p. 223 (Enumerated Queries)
+
+    Add TEXTURE_2D_MULTISAMPLE, PROXY_TEXTURE_2D_MULTISAMPLE,
+    TEXTURE_2D_MULTISAMPLE_ARRAY, and PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY
+    to the list of valid targets for GetTexLevelParameter{if}v.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Errors
+
+    The error INVALID_VALUE is generated by GetBooleani_v and
+    GetIntegeri_v if <target> is SAMPLE_MASK_VALUE and <index> is greater
+    than or equal to MAX_SAMPLE_MASK_WORDS.
+
+    The error INVALID_VALUE is generated by SampleMaski if <index> is
+    greater than or equal to MAX_SAMPLE_MASK_WORDS.
+
+    The error INVALID_ENUM is generated by GetMultisamplefv if <pname>
+    is not SAMPLE_POSITION.
+
+    The error INVALID_VALUE is generated by GetMultisamplefv if <index> is
+    greater than or equal to the value of SAMPLES.
+
+    The error INVALID_OPERATION is generated by TexImage2DMultisample
+    and TexImage3DMultisample if the number of samples exceeds the
+    implementation dependent maximum for the given internal format.
+
+    The error INVALID_VALUE is generated by TexImage2DMultisample
+    TexImage3DMultisample if either <width> or <height> is greater than the
+    value of MAX_TEXTURE_SIZE, or if <samples> is greater than the value of
+    MAX_SAMPLES.
+
+    The error INVALID_VALUE is generated by TexImage3DMultisample if
+    <width>, <height>, or <depth> is greater than the value of
+    MAX_3D_TEXTURE_SIZE, or if <samples> is greater than the value of
+    MAX_SAMPLES.
+
+    The error OUT_OF_MEMORY is generated by TexImage2DMultisample and
+    TexImage3DMultisample if the GL is unable to create a texture level
+    of the requested size.
+
+    The error INVALID_OPERATION is generated by
+    RenderbufferStorageMultisample if <internalformat> is a signed or
+    unsigned integer format and <samples> is greater than the value of
+    MAX_INTEGER_SAMPLES.
+
+New State
+
+    Get Value                       Get Command    Type    Initial Value
+    ---------                       -----------    ----    -------------
+    SAMPLE_MASK                     IsEnabled      B       FALSE
+    SAMPLE_MASK_VALUE               GetIntegeri_v  nxZ+    ~0
+
+    Where n is the number of sample mask words (the value of
+    MAX_SAMPLE_MASK_WORDS) the implementation supports.
+
+    (add to table 6.12, Texture State Per Texture Unit/Binding Point p. 250)
+
+                                                               Initial
+    Get Value                              Type    Get Command  Value  Description                 Sec.
+    ------------------------------------   ----     ----------- ------- --------------------------- ------
+    TEXTURE_BINDING_2D_MULTISAMPLE        32*xZ+   GetIntegerv    0    Texture object bound to     3.8.13
+                                                                       TEXTURE_2D_MULTISAMPLE
+    TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY  32*xZ+   GetIntegerv    0    Texture object bound to     3.8.13
+                                                                       TEXTURE_2D_MULTISAMPLE_ARRAY
+
+    (add to table 6.14, Textures (state per texture image p. 252)
+
+                                                                Initial
+    Get Value                       Type  Get Command            Value  Description                 Sec.
+    ----------------------          ----  -------------------   ------- --------------------------- ------
+    TEXTURE_SAMPLES                  Z+   GetTexLevelParameter     0    Number of samples per texel 3.8.4
+    TEXTURE_FIXED_SAMPLE_LOCATIONS   B    GetTexLevelParameter   TRUE   Whether the image uses a    3.8.4
+                                                                        fixed sample pattern
+
+    (add to table 6.41, Framebuffer dependent Values, p. 279)
+
+                                                        Initial
+    Get Value           Type        Get Command         Value           Description      Sec.
+    ------------------  ----------  ------------------  --------------  ---------------  ------
+    SAMPLE_POSITION     N*2*R[0,1]  GetMultisamplefv    implementation  Explicit sample  3.2.1
+                                                        dependent       positions
+
+    Where N is the number of samples (the value of SAMPLES) the framebuffer supports.
+
+New Implementation Dependent State
+
+                                                      Minimum
+    Get Value                    Type    Get Command  Value   Description                   Sec.
+    ---------                    ------- -----------  ------- ------------------------      ------
+    MAX_SAMPLE_MASK_WORDS        Z+      GetIntegerv  1       maximum number of sample      4.1.3
+                                                              mask words
+    MAX_COLOR_TEXTURE_SAMPLES    Z+      GetIntegerv  1       maximum number of samples     4.1.3
+                                                              in a color multisample
+                                                              texture
+    MAX_DEPTH_TEXTURE_SAMPLES    Z+      GetIntegerv  1       maximum number of samples     4.1.3
+                                                              in a depth/stencil
+                                                              multisample texture
+    MAX_INTEGER_SAMPLES          Z+      GetIntegerv  1       Maximum number of samples     4.4.2
+                                                              in integer format
+                                                              multisample buffers
+
+Modifications to the OpenGL Shading Language Specification, Version 1.40
+
+    Including the following line in a shader can be used to control the
+    language featured described in this extension:
+
+      #extension GL_ARB_texture_multisample : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_texture_multisample 1
+
+    Add to section 3.6 "Keywords"
+
+    The following new sampler types are added:
+
+      sampler2DMS, isampler2DMS, usampler2DMS,
+      sampler2DMSArray, isampler2DMSArray, usampler2DMSArray
+
+    Add to section 4.1 "Basic Types"
+
+    Add the following sampler type to the "Floating Point Sampler Types"
+    table:
+
+      sampler2DMS                handle for accessing a 2D multisample texture
+      sampler2DMSArray           handle for accessing a 2D multisample array texture
+
+    Add the following sampler type to the "Unsigned Integer Sampler
+    Types" table:
+
+      usampler2DMS               handle for accessing an unsigned integer 2D multisample texture
+      usampler2DMSArray          handle for accessing an unsigned integer 2D multisample array texture
+
+    Add the following sampler type to the "Integer Sampler Types" table:
+
+      isampler2DMS               handle for accessing an integer 2D multisample texture
+      isampler2DMSArray          handle for accessing an integer 2D multisample array texture
+
+    Add to section 8.7 "Texture Lookup Functions"
+
+    Add new functions to the set of allowed texture lookup functions:
+
+    Syntax:
+
+      gvec4 texelFetch(gsampler2DMS sampler, ivec2 P, int sample)
+      gvec4 texelFetch(gsampler2DMSArray sampler, ivec3 P, int sample)
+
+    Description:
+
+      Use integer texture coordinate <P> to lookup a single sample
+      <sample> on the texture bound to <sampler> as described in section
+      2.11.7.1 of the OpenGL specification "Multisample Texel Fetches".
+
+    Syntax:
+
+      ivec2 textureSize(gsampler2DMS sampler)
+      ivec3 textureSize(gsampler2DMSArray sampler)
+
+    Description:
+
+      Returns the dimensions, width and height of level 0 for the
+      texture bound to <sampler>, as described in section 2.11.7.1 of
+      the OpenGL specification section "Texture Size Query".
+
+Examples
+
+Issues
+
+    (1) Do we need new "max size" queries for the new targets?
+
+    RESOLVED: No. The existing MAX_TEXTURE_SIZE applies to 2D multisample
+    textures, and MAX_3D_TEXTURE_SIZE to 3D multisample textures.
+
+    (2) What commands may be used on multisample textures?
+
+    RESOLVED: Multisample textures can be bound for rendering and texturing,
+    but they cannot be loaded/read with SubImage commands (TexSubImage,
+    CopyTexSubImage, GetTexImage), they don't support compressed formats,
+    and they don't need TexParameters since they can only be fetched with
+    texelFetchMultisample.
+
+    (3) Should the new TexImage commands take an "int level" argument?
+
+    RESOLVED: No. We can add new commands if/when we ever add mipmapped
+    multisample textures.
+
+    (4) GetMultisamplefv takes an index to support >32 samples, but
+        NV_gpu_shader4_1's gl_SampleMask is only 32 bits. What gives?
+
+    RESOLVED: This is gpu_shader4_1's problem, not ARB_texture_multisample's
+    problem.
+
+    (5) Should GLSL include a query to return the sample count of a
+        texture, either as part of textureSizeMultisample or
+        stand-alone?
+
+    RESOLVED: No, there hasn't been a demand for it.
+
+    (6) How does SAMPLE_POSITION interact with
+        EXT_fragment_coord_conventions?
+
+    RESOLVED: The SAMPLE_POSITION query is not in any way affected by
+    the shader state added in EXT_fragment_coord_conventions. It is
+    expected that the returned values will not actually be used within
+    the shader, but rather to compute filter weights on the CPU, so
+    whether the fragment coord is inverted or translated by 0.5 doesn't
+    matter.
+
+    (7) Should we use "TexImage3DMultisample" to make things look like
+        regular 2D arrays, or just have TexImage2DArrayMultisample?
+
+    RESOLVED: Leave it as is.
+
+    (8) How should we deal with varying sample locations?
+
+    RESOLVED: Allow the application to explicitly request fixed sample
+    locations for when a texture will be used to do custom downsamples.
+    When this is requested, the values returned by GetMultisamplefv will
+    be valid for all texels in the image and can be used to construct
+    elaborate filter kernels that can safely be used across the entire
+    image.
+
+    (9) Are depth multisample textures supported?
+
+    RESOLVED: Some implementations may not support texturing from a
+    multisample depth/stencil texture. In that case, they would export
+    MAX_DEPTH_TEXTURE_SAMPLES = 1.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    12    2/28/14   Jon Leech Add missing error for invalid <pname> to       
+                              GetMultisamplefv, and change texture size
+                              limits for TexImage3DMultisample to the value
+                              of MAX_3D_TEXTURE_SIZE (Bugs 11134, 11135).
+    11    9/23/13   Jon Leech Change type of <internalformat> argument to    
+                              enum (Bug 10496).
+    10    8/02/09   Jon Leech Reformat to 80 columns and assign ARB
+                              extension number.
+    9     7/23/09   groth     Update return of textureSize(gsampler2DMSarray)
+    8     7/20/09   Jon Leech Assign enum values.
+    7     6/26/09   groth     Update some language to correspond to gl3.2
+    6     6/11/09   groth     Add new max queries to token section
+    5     5/28/09   groth     Add MAX_INTEGER_SAMPLES query.
+    4     5/22/09   jbolz     Add max sample queries.
+    3     5/14/09   jbolz     Add allowance for not supporting multisample
+                              depth textures.
+    2     5/08/09   jbolz     Add allowance for varying sample locations,
+                              and a mechanism to request fixed locations.
+                              Resolve some issues.
+    1     4/30/09   jbolz     First revision.
+

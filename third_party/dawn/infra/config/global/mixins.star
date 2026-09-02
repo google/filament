@@ -161,6 +161,13 @@ targets.mixin(
 )
 
 targets.mixin(
+    name = "litert_lm_benchmark_merge",
+    merge = targets.merge(
+        script = "//scripts/merge_scripts/merge_litert_lm_benchmark_results.py",
+    ),
+)
+
+targets.mixin(
     name = "use_wire",
     args = [
         "--use-wire",

@@ -43,6 +43,7 @@ Loop::Loop(Id id, ir::Block* i, ir::MultiInBlock* b, ir::MultiInBlock* c)
     TINT_ASSERT(initializer_);
     TINT_ASSERT(body_);
     TINT_ASSERT(continuing_);
+    TINT_ASSERT(!initializer_->Is<MultiInBlock>());
 
     if (initializer_) {
         initializer_->SetParent(this);
@@ -58,7 +59,7 @@ Loop::Loop(Id id, ir::Block* i, ir::MultiInBlock* b, ir::MultiInBlock* c)
 Loop::~Loop() = default;
 
 Loop* Loop::Clone(CloneContext& ctx) {
-    auto* new_init = ctx.ir.blocks.Create<MultiInBlock>();
+    auto* new_init = ctx.ir.blocks.Create<ir::Block>();
     auto* new_body = ctx.ir.blocks.Create<MultiInBlock>();
     auto* new_continuing = ctx.ir.blocks.Create<MultiInBlock>();
 
@@ -103,6 +104,7 @@ bool Loop::HasInitializer() const {
 }
 
 void Loop::SetInitializer(ir::Block* block) {
+    TINT_ASSERT(!block || !block->Is<MultiInBlock>());
     if (initializer_ && initializer_->Parent() == this) {
         initializer_->SetParent(nullptr);
     }

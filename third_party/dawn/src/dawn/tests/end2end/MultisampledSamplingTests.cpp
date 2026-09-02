@@ -25,12 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <cstddef>
 #include <vector>
 
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -222,8 +224,8 @@ TEST_P(MultisampledSamplingTest, SamplePositions) {
 
             wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPass);
             renderPassEncoder.SetPipeline(drawPipeline);
-            renderPassEncoder.SetVertexBuffer(0, vBuffer, kQuadNumBytes * sampleOffset,
-                                              kQuadNumBytes);
+            renderPassEncoder.SetVertexBuffer(
+                0, vBuffer, static_cast<uint64_t>(kQuadNumBytes) * sampleOffset, kQuadNumBytes);
             renderPassEncoder.Draw(4);
             renderPassEncoder.End();
 
@@ -276,6 +278,182 @@ TEST_P(MultisampledSamplingTest, SamplePositions) {
     expectedData = {0, 0, 0, 1, 0, 0, 0, 0.7};
     EXPECT_BUFFER_FLOAT_RANGE_EQ(expectedData.data(), outputBuffer, 7 * alignedResultSize, 8)
         << "horizontal sample 3";
+}
+
+// Test for a bug whereby u32 division corrupts implicit texture LOD calculations with 4x MSAA on
+// Apple Silicon due to our workaround that introduces volatile instructions.
+// See https://crbug.com/533785363
+TEST_P(MultisampledSamplingTest, ImplicitDerivativeFromU32Div) {
+    // TODO(crbug.com/468061892): Fails on Windows 11/AMD RX 5500 XT w/ backend validation.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
+    // Texture 256x256 with 2 mip levels.
+    wgpu::TextureDescriptor texDesc;
+    texDesc.dimension = wgpu::TextureDimension::e2D;
+    texDesc.size = {256, 256, 1};
+    texDesc.mipLevelCount = 2;
+    texDesc.sampleCount = 1;
+    texDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    texDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
+    wgpu::Texture texture = device.CreateTexture(&texDesc);
+
+    // Write white to mip 0 (256x256).
+    {
+        std::vector<utils::RGBA8> whiteData(static_cast<size_t>(256 * 256), utils::RGBA8::kWhite);
+        wgpu::Buffer stagingBuffer = utils::CreateBufferFromData(
+            device, whiteData.data(), whiteData.size() * sizeof(utils::RGBA8),
+            wgpu::BufferUsage::CopySrc);
+        wgpu::TexelCopyBufferInfo bufferInfo =
+            utils::CreateTexelCopyBufferInfo(stagingBuffer, 0, 1024, 256);
+        wgpu::TexelCopyTextureInfo textureInfo =
+            utils::CreateTexelCopyTextureInfo(texture, 0, {0, 0, 0});
+        wgpu::Extent3D writeSize = {256, 256, 1};
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        encoder.CopyBufferToTexture(&bufferInfo, &textureInfo, &writeSize);
+        wgpu::CommandBuffer commands = encoder.Finish();
+        queue.Submit(1, &commands);
+    }
+
+    // Write black to mip 1 (128x128).
+    {
+        std::vector<utils::RGBA8> blackData(static_cast<size_t>(128 * 128), utils::RGBA8::kBlack);
+        wgpu::Buffer stagingBuffer = utils::CreateBufferFromData(
+            device, blackData.data(), blackData.size() * sizeof(utils::RGBA8),
+            wgpu::BufferUsage::CopySrc);
+        wgpu::TexelCopyBufferInfo bufferInfo =
+            utils::CreateTexelCopyBufferInfo(stagingBuffer, 0, 512, 128);
+        wgpu::TexelCopyTextureInfo textureInfo =
+            utils::CreateTexelCopyTextureInfo(texture, 1, {0, 0, 0});
+        wgpu::Extent3D writeSize = {128, 128, 1};
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        encoder.CopyBufferToTexture(&bufferInfo, &textureInfo, &writeSize);
+        wgpu::CommandBuffer commands = encoder.Finish();
+        queue.Submit(1, &commands);
+    }
+
+    wgpu::SamplerDescriptor samplerDesc;
+    samplerDesc.minFilter = wgpu::FilterMode::Linear;
+    samplerDesc.magFilter = wgpu::FilterMode::Linear;
+    samplerDesc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+    wgpu::Sampler sampler = device.CreateSampler(&samplerDesc);
+
+    // Create an 8x8 grid of quads that cover the screen with a small margin.
+    std::vector<float> vertices;
+    auto vertex = [&](int column, int row) {
+        float u = static_cast<float>(column) / 8.0f;
+        float v = static_cast<float>(row) / 8.0f;
+        vertices.insert(vertices.end(), {u * 1.6f - 0.8f, v * 1.6f - 0.8f, 0.0f, u, 1.0f - v});
+    };
+    for (int row = 0; row < 8; row++) {
+        for (int column = 0; column < 8; column++) {
+            vertex(column, row);
+            vertex(column + 1, row);
+            vertex(column, row + 1);
+            vertex(column, row + 1);
+            vertex(column + 1, row);
+            vertex(column + 1, row + 1);
+        }
+    }
+    wgpu::Buffer vertexBuffer = utils::CreateBufferFromData(
+        device, vertices.data(), vertices.size() * sizeof(float), wgpu::BufferUsage::Vertex);
+
+    wgpu::ShaderModule shaderModule = utils::CreateShaderModule(device, R"(
+        struct VertexOutput {
+            @builtin(position) pos : vec4f,
+            @location(0) uv : vec2f,
+        }
+
+        @vertex
+        fn vs(@location(0) position: vec3f, @location(1) uv: vec2f) -> VertexOutput {
+            var out: VertexOutput;
+            out.pos = vec4f(position.xy, 0.0, 1.0);
+            out.uv = uv;
+            return out;
+        }
+
+        @group(0) @binding(0) var t: texture_2d<f32>;
+        @group(0) @binding(1) var s: sampler;
+        @group(0) @binding(2) var<uniform> materialIndex: u32;
+
+        @fragment
+        fn fs(input: VertexOutput) -> @location(0) vec4f {
+            let offset = f32(materialIndex / 2u);
+            let uv = input.uv + vec2f(offset);
+            let texel = textureSample(t, s, uv);
+            return vec4f(texel.rgb, 1.0);
+        })");
+
+    utils::ComboRenderPipelineDescriptor desc;
+    desc.vertex.module = shaderModule;
+    desc.cFragment.module = shaderModule;
+    desc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
+    desc.primitive.cullMode = wgpu::CullMode::Back;
+    desc.multisample.count = 4;
+    desc.cFragment.targetCount = 1;
+    desc.cTargets[0].format = wgpu::TextureFormat::RGBA8Unorm;
+
+    desc.vertex.bufferCount = 1;
+    desc.cBuffers[0].attributeCount = 2;
+    desc.cBuffers[0].arrayStride = uint64_t{5} * sizeof(float);
+    desc.cAttributes[0].format = wgpu::VertexFormat::Float32x3;
+    desc.cAttributes[0].offset = 0;
+    desc.cAttributes[0].shaderLocation = 0;
+    desc.cAttributes[1].format = wgpu::VertexFormat::Float32x2;
+    desc.cAttributes[1].offset = uint64_t{3} * sizeof(float);
+    desc.cAttributes[1].shaderLocation = 1;
+
+    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&desc);
+
+    // Canvas size 720x720.
+    wgpu::TextureDescriptor msaaDesc;
+    msaaDesc.dimension = wgpu::TextureDimension::e2D;
+    msaaDesc.size = {720, 720, 1};
+    msaaDesc.mipLevelCount = 1;
+    msaaDesc.sampleCount = 4;
+    msaaDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    msaaDesc.usage = wgpu::TextureUsage::RenderAttachment;
+    wgpu::Texture msaaTexture = device.CreateTexture(&msaaDesc);
+
+    wgpu::TextureDescriptor resolveDesc;
+    resolveDesc.dimension = wgpu::TextureDimension::e2D;
+    resolveDesc.size = {720, 720, 1};
+    resolveDesc.mipLevelCount = 1;
+    resolveDesc.sampleCount = 1;
+    resolveDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    resolveDesc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    wgpu::Texture resolveTexture = device.CreateTexture(&resolveDesc);
+
+    // Uniform buffer for the material index.
+    uint32_t materialIndex = 0;
+    wgpu::Buffer uBuffer = utils::CreateBufferFromData(
+        device, &materialIndex, sizeof(materialIndex), wgpu::BufferUsage::Uniform);
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {
+                                                         {0, texture.CreateView()},
+                                                         {1, sampler},
+                                                         {2, uBuffer, 0, sizeof(materialIndex)},
+                                                     });
+
+    utils::ComboRenderPassDescriptor renderPass({msaaTexture.CreateView()});
+    renderPass.cColorAttachments[0].resolveTarget = resolveTexture.CreateView();
+    renderPass.cColorAttachments[0].loadOp = wgpu::LoadOp::Clear;
+    renderPass.cColorAttachments[0].clearValue = {0.5f, 0.5f, 0.5f, 1.0f};
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bindGroup);
+    pass.SetVertexBuffer(0, vertexBuffer);
+    pass.Draw(static_cast<uint32_t>(vertices.size() / 5));
+    pass.End();
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // Expect all pixels in the inner 500x500 square to be white.
+    // The grid spans from x = 0.1*720 = 72 to x = 0.9*720 = 648, so
+    // the range [100,100] -> [600,600] is strictly inside that grid.
+    std::vector<utils::RGBA8> expectedData(static_cast<size_t>(500 * 500), utils::RGBA8::kWhite);
+    EXPECT_TEXTURE_EQ(expectedData.data(), resolveTexture, {100, 100}, {500, 500});
 }
 
 DAWN_INSTANTIATE_TEST(MultisampledSamplingTest,

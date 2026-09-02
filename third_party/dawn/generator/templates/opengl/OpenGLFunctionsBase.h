@@ -30,8 +30,8 @@
 
 #include <unordered_set>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 

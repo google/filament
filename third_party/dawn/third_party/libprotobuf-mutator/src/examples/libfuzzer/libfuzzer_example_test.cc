@@ -25,12 +25,12 @@ int GetError(int exit_code) { return WSTOPSIG(exit_code); }
 
 TEST_F(LibFuzzerExampleTest, Text) {
   EXPECT_EQ(kDefaultLibFuzzerError,
-            GetError(RunFuzzer("libfuzzer_example", 1000, 10000000)));
+            GetError(RunFuzzer("libfuzzer_example", 1000, 100000)));
 }
 
 TEST_F(LibFuzzerExampleTest, Binary) {
   EXPECT_EQ(kDefaultLibFuzzerError,
-            GetError(RunFuzzer("libfuzzer_bin_example", 1000, 10000000)));
+            GetError(RunFuzzer("libfuzzer_bin_example", 1000, 100000)));
 }
 
 }  // namespace

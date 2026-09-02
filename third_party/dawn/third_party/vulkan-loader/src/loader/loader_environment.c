@@ -205,16 +205,18 @@ void determine_filter_type(const char *filter_string, enum loader_filter_string_
                 *filter_type = FILTER_STRING_SPECIAL;
                 *new_start = filter_string;
                 *new_length = filter_length;
+                return;
             } else {
                 star_begin = true;
             }
         }
         if ('*' == filter_string[filter_length - 1]) {
             // Not really valid, but just catch this case so if someone accidentally types "**" it will also mean everything
-            if (filter_length == 2) {
+            if (star_begin && filter_length == 2) {
                 *filter_type = FILTER_STRING_SPECIAL;
                 *new_start = filter_string;
                 *new_length = filter_length;
+                return;
             } else {
                 star_end = true;
             }
@@ -264,7 +266,7 @@ VkResult parse_generic_filter_environment_var(const struct loader_instance *inst
     }
 
     for (uint32_t iii = 0; iii < env_var_len; ++iii) {
-        parsing_string[iii] = (char)tolower(env_var_value[iii]);
+        parsing_string[iii] = (char)tolower((unsigned char)env_var_value[iii]);
     }
     parsing_string[env_var_len] = '\0';
 
@@ -275,14 +277,12 @@ VkResult parse_generic_filter_environment_var(const struct loader_instance *inst
         const char *actual_start;
         size_t actual_len;
         determine_filter_type(token, &cur_filter_type, &actual_start, &actual_len);
-        if (actual_len > VK_MAX_EXTENSION_NAME_SIZE) {
-            loader_strncpy(filter_struct->filters[filter_struct->count].value, VK_MAX_EXTENSION_NAME_SIZE, actual_start,
-                           VK_MAX_EXTENSION_NAME_SIZE);
-        } else {
-            loader_strncpy(filter_struct->filters[filter_struct->count].value, VK_MAX_EXTENSION_NAME_SIZE, actual_start,
-                           actual_len);
-        }
-        filter_struct->filters[filter_struct->count].length = actual_len;
+        // value holds at most VK_MAX_EXTENSION_NAME_SIZE - 1 chars plus the null terminator. Keep the stored length in sync
+        // with what actually fits so the matcher never walks past the buffer, and make sure it stays null terminated.
+        size_t stored_len = actual_len < VK_MAX_EXTENSION_NAME_SIZE - 1 ? actual_len : VK_MAX_EXTENSION_NAME_SIZE - 1;
+        loader_strncpy(filter_struct->filters[filter_struct->count].value, VK_MAX_EXTENSION_NAME_SIZE, actual_start, stored_len);
+        filter_struct->filters[filter_struct->count].value[stored_len] = '\0';
+        filter_struct->filters[filter_struct->count].length = stored_len;
         filter_struct->filters[filter_struct->count++].type = cur_filter_type;
         if (filter_struct->count >= MAX_ADDITIONAL_FILTERS) {
             break;
@@ -324,7 +324,7 @@ VkResult parse_layers_disable_filter_environment_var(const struct loader_instanc
     }
 
     for (uint32_t iii = 0; iii < env_var_len; ++iii) {
-        parsing_string[iii] = (char)tolower(env_var_value[iii]);
+        parsing_string[iii] = (char)tolower((unsigned char)env_var_value[iii]);
     }
     parsing_string[env_var_len] = '\0';
 
@@ -346,14 +346,13 @@ VkResult parse_layers_disable_filter_environment_var(const struct loader_instanc
                 disable_struct->disable_all_explicit = true;
             }
         } else {
-            if (actual_len > VK_MAX_EXTENSION_NAME_SIZE) {
-                loader_strncpy(disable_struct->additional_filters.filters[cur_count].value, VK_MAX_EXTENSION_NAME_SIZE,
-                               actual_start, VK_MAX_EXTENSION_NAME_SIZE);
-            } else {
-                loader_strncpy(disable_struct->additional_filters.filters[cur_count].value, VK_MAX_EXTENSION_NAME_SIZE,
-                               actual_start, actual_len);
-            }
-            disable_struct->additional_filters.filters[cur_count].length = actual_len;
+            // Keep the stored length in sync with what actually fits (value is VK_MAX_EXTENSION_NAME_SIZE bytes including
+            // the null terminator) so the matcher never reads past the buffer.
+            size_t stored_len = actual_len < VK_MAX_EXTENSION_NAME_SIZE - 1 ? actual_len : VK_MAX_EXTENSION_NAME_SIZE - 1;
+            loader_strncpy(disable_struct->additional_filters.filters[cur_count].value, VK_MAX_EXTENSION_NAME_SIZE, actual_start,
+                           stored_len);
+            disable_struct->additional_filters.filters[cur_count].value[stored_len] = '\0';
+            disable_struct->additional_filters.filters[cur_count].length = stored_len;
             disable_struct->additional_filters.filters[cur_count].type = cur_filter_type;
             disable_struct->additional_filters.count++;
             if (disable_struct->additional_filters.count >= MAX_ADDITIONAL_FILTERS) {
@@ -385,6 +384,18 @@ VkResult parse_layer_environment_var_filters(const struct loader_instance *inst,
     return res;
 }
 
+// Case-insensitive compare of `count` bytes of a name against a filter value. Filter values are already lowercased when
+// they get parsed (see parse_generic_filter_environment_var), so we only need to fold the name side as we go. The caller
+// guarantees both sides have at least `count` valid bytes.
+static bool name_segment_matches_filter_value(const char *name_segment, const char *lowercase_filter_value, size_t count) {
+    for (size_t iii = 0; iii < count; ++iii) {
+        if ((char)tolower((unsigned char)name_segment[iii]) != lowercase_filter_value[iii]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Check to see if the provided layer name matches any of the filter strings.
 // This will properly check against:
 //  - substrings "*string*"
@@ -393,50 +404,45 @@ VkResult parse_layer_environment_var_filters(const struct loader_instance *inst,
 //  - full string names "string"
 bool check_name_matches_filter_environment_var(const char *name, const struct loader_envvar_filter *filter_struct) {
     bool ret_value = false;
-    const size_t name_len = strlen(name);
-    char lower_name[VK_MAX_EXTENSION_NAME_SIZE];
-    for (uint32_t iii = 0; iii < name_len; ++iii) {
-        lower_name[iii] = (char)tolower(name[iii]);
-    }
-    lower_name[name_len] = '\0';
+    size_t name_len = strlen(name);
+    // Compare each filter against `name` directly. name_segment_matches_filter_value does a case-insensitive compare
+    // (filter values are already lowercased at parse time), so there's no need to make a lowercased copy of name first
+    // and no limit on how long name can be.
     for (uint32_t filt = 0; filt < filter_struct->count; ++filt) {
-        // Check if the filter name is longer (this is with all special characters removed), and if it is
-        // continue since it can't match.
-        if (filter_struct->filters[filt].length > name_len) {
+        const struct loader_envvar_filter_value *filter = &filter_struct->filters[filt];
+        // The filter (with its wildcards stripped) is longer than the name, so it can't possibly match.
+        if (filter->length > name_len) {
             continue;
         }
-        switch (filter_struct->filters[filt].type) {
+        switch (filter->type) {
             case FILTER_STRING_SPECIAL:
-                if (!strcmp(VK_LOADER_DISABLE_ALL_LAYERS_VAR_1, filter_struct->filters[filt].value) ||
-                    !strcmp(VK_LOADER_DISABLE_ALL_LAYERS_VAR_2, filter_struct->filters[filt].value) ||
-                    !strcmp(VK_LOADER_DISABLE_ALL_LAYERS_VAR_3, filter_struct->filters[filt].value)) {
+                if (!strcmp(VK_LOADER_DISABLE_ALL_LAYERS_VAR_1, filter->value) ||
+                    !strcmp(VK_LOADER_DISABLE_ALL_LAYERS_VAR_2, filter->value) ||
+                    !strcmp(VK_LOADER_DISABLE_ALL_LAYERS_VAR_3, filter->value)) {
                     ret_value = true;
                 }
                 break;
 
             case FILTER_STRING_SUBSTRING:
-                if (NULL != strstr(lower_name, filter_struct->filters[filt].value)) {
-                    ret_value = true;
+                // Slide the filter along the name looking for a match, stopping as soon as one is found.
+                for (size_t start = 0; start + filter->length <= name_len; ++start) {
+                    if (name_segment_matches_filter_value(name + start, filter->value, filter->length)) {
+                        ret_value = true;
+                        break;
+                    }
                 }
                 break;
 
             case FILTER_STRING_SUFFIX:
-                if (0 == strncmp(lower_name + name_len - filter_struct->filters[filt].length, filter_struct->filters[filt].value,
-                                 filter_struct->filters[filt].length)) {
-                    ret_value = true;
-                }
+                ret_value = name_segment_matches_filter_value(name + name_len - filter->length, filter->value, filter->length);
                 break;
 
             case FILTER_STRING_PREFIX:
-                if (0 == strncmp(lower_name, filter_struct->filters[filt].value, filter_struct->filters[filt].length)) {
-                    ret_value = true;
-                }
+                ret_value = name_segment_matches_filter_value(name, filter->value, filter->length);
                 break;
 
             case FILTER_STRING_FULLNAME:
-                if (0 == strncmp(lower_name, filter_struct->filters[filt].value, name_len)) {
-                    ret_value = true;
-                }
+                ret_value = (name_len == filter->length) && name_segment_matches_filter_value(name, filter->value, filter->length);
                 break;
         }
         if (ret_value) {
@@ -578,7 +584,7 @@ void parse_id_filter_environment_var(const struct loader_instance *inst, const c
     // Allocate a separate string since scan_for_next_comma modifies the original string
     parsing_string = loader_stack_alloc(env_var_len + 1);
     for (uint32_t iii = 0; iii < env_var_len; ++iii) {
-        parsing_string[iii] = (char)tolower(env_var_value[iii]);
+        parsing_string[iii] = (char)tolower((unsigned char)env_var_value[iii]);
     }
     parsing_string[env_var_len] = '\0';
 
@@ -586,6 +592,14 @@ void parse_id_filter_environment_var(const struct loader_instance *inst, const c
     char *context = NULL;
     char *token = thread_safe_strtok(parsing_string, ",", &context);
     while (NULL != token) {
+        if (filter_struct->count >= MAX_ADDITIONAL_FILTERS) {
+            loader_log(inst, VULKAN_LOADER_WARN_BIT, 0,
+                       "parse_id_filter_environment_var: Exceeded maximum number of filters (%d) for env var '%s'. "
+                       "Remaining entries will be ignored.",
+                       MAX_ADDITIONAL_FILTERS, env_var_name);
+            break;
+        }
+
         struct loader_envvar_id_filter_value *filter_value = &filter_struct->filters[filter_struct->count];
 
         char *pEnd;

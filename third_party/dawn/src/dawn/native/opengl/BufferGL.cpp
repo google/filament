@@ -25,16 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/BufferGL.h"
+#include "src/dawn/native/opengl/BufferGL.h"
 
 #include <algorithm>
 #include <utility>
 #include <vector>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/native/opengl/UtilsGL.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/opengl/UtilsGL.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::opengl {
 
@@ -73,14 +75,17 @@ ResultOrError<Ref<Buffer>> Buffer::Create(Device* device,
         DAWN_GL_TRY(gl, GenBuffers(1, &buffer->mBuffer));
         DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, buffer->mBuffer));
 
+        auto allocatedSize = buffer->mAllocatedSize.value();
         if (clear) {
-            std::vector<uint8_t> clearValues(buffer->mAllocatedSize, 1u);
-            DAWN_GL_TRY_ALWAYS_CHECK(gl, BufferData(GL_ARRAY_BUFFER, buffer->mAllocatedSize,
-                                                    clearValues.data(), GL_STATIC_DRAW));
+            std::vector<uint8_t> clearValues(checked_cast<size_t>(allocatedSize), 1u);
+            DAWN_GL_TRY_ALWAYS_CHECK(
+                gl, BufferData(GL_ARRAY_BUFFER, checked_cast<GLsizeiptr>(allocatedSize),
+                               clearValues.data(), GL_STATIC_DRAW));
         } else {
             // Buffers start uninitialized if you pass nullptr to glBufferData.
             DAWN_GL_TRY_ALWAYS_CHECK(
-                gl, BufferData(GL_ARRAY_BUFFER, buffer->mAllocatedSize, nullptr, GL_STATIC_DRAW));
+                gl, BufferData(GL_ARRAY_BUFFER, checked_cast<GLsizeiptr>(allocatedSize), nullptr,
+                               GL_STATIC_DRAW));
         }
         return {};
     }));
@@ -98,13 +103,13 @@ Buffer::Buffer(Device* device, const UnpackedPtr<BufferDescriptor>& descriptor)
     // Allocate at least 4 bytes so clamped accesses are always in bounds.
     // Align with 4 byte to avoid out-of-bounds access issue in compute emulation for 2 byte
     // element.
-    uint64_t alignment = 4u;
+    size_t alignment = 4u;
     // Round uniform buffer sizes up to a multiple of 16 bytes since Tint will polyfill them as
     // array<vec4u, ...>.
     if (GetUsage() & wgpu::BufferUsage::Uniform) {
         alignment = 16u;
     }
-    mAllocatedSize = Align(std::max(GetSize(), uint64_t(4u)), alignment);
+    mAllocatedSize = Align(std::max(GetSize(), uint64_t{4}), alignment);
 }
 
 Buffer::~Buffer() = default;
@@ -184,9 +189,10 @@ MaybeError Buffer::InitializeToZero() {
 
     DAWN_TRY(device->EnqueueGL([self = Ref<Buffer>(this), size = GetAllocatedSize()](
                                    const OpenGLFunctions& gl) -> MaybeError {
-        const std::vector<uint8_t> clearValues(size, 0u);
+        const std::vector<uint8_t> clearValues(checked_cast<size_t>(size), 0u);
         DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, self->mBuffer));
-        DAWN_GL_TRY(gl, BufferSubData(GL_ARRAY_BUFFER, 0, size, clearValues.data()));
+        DAWN_GL_TRY(gl, BufferSubData(GL_ARRAY_BUFFER, 0, checked_cast<GLsizeiptr>(size),
+                                      clearValues.data()));
         return {};
     }));
     device->IncrementLazyClearCountForTesting();
@@ -203,38 +209,38 @@ bool Buffer::IsCPUWritableAtCreation() const {
 }
 
 MaybeError Buffer::MapAtCreationImpl() {
+    mMappedDataOffsetInBuffer = 0u;
+
     auto device = ToBackend(GetDevice());
     if (device->IsToggleEnabled(Toggle::GLDefer)) {
-        mCPUStaging.resize(GetAllocatedSize());
-        mMappedData = mCPUStaging.data();
+        mCPUStaging.resize(checked_cast<size_t>(GetAllocatedSize()));
+        mMappedData = mCPUStaging;
         return {};
     }
+
     return device->ExecuteGL(
         ExecutionQueueBase::SubmitMode::Normal, [this](const OpenGLFunctions& gl) -> MaybeError {
             DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, mBuffer));
-            mMappedData = DAWN_GL_TRY_ALWAYS_CHECK(
-                gl, MapBufferRange(GL_ARRAY_BUFFER, 0, GetAllocatedSize(), GL_MAP_WRITE_BIT));
+            void* mappedPointer = DAWN_GL_TRY_ALWAYS_CHECK(
+                gl, MapBufferRange(GL_ARRAY_BUFFER, 0, checked_cast<GLsizeiptr>(GetAllocatedSize()),
+                                   GL_MAP_WRITE_BIT));
+            // SAFETY: A successful call to glMapBufferRange returns a pointer to `length` bytes of
+            // data.
+            mMappedData = DAWN_UNSAFE_BUFFERS(
+                {static_cast<std::byte*>(mappedPointer), checked_cast<size_t>(GetAllocatedSize())});
             return {};
         });
 }
 
 MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) {
-    // This allows the specific code sequence of MapAsync(Write) / WaitAny() to work in deferral
-    // at the cost of a host-side copy. This should be removed in favour of eager buffer mapping,
-    // once that's implemented.
-    if ((mode & wgpu::MapMode::Write) && GetDevice()->IsToggleEnabled(Toggle::ShadowCopyMapWrite)) {
-        mCPUStaging.resize(GetSize());
-        mMappedData = mCPUStaging.data();
-        return {};
-    }
+    // We only map the range requested by the MapAsync call so mMappedData will correspond to an
+    // interval in the buffer that can be at an offset from the start.
+    mMappedDataOffsetInBuffer = offset;
 
-    // It is an error to map an empty range in OpenGL. We always have at least a 4-byte buffer
-    // so we extend the range to be 4 bytes.
+    // It is an error to map an empty range in OpenGL so skip empty glMapBufferRange calls.
     if (size == 0) {
-        if (offset != 0) {
-            offset -= 4;
-        }
-        size = 4;
+        mMappedData = {};
+        return {};
     }
 
     auto deviceGuard = GetDevice()->GetGuard();
@@ -250,20 +256,20 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
             // This does GPU->CPU synchronization, we could require a high
             // version of OpenGL that would let us map the buffer unsynchronized.
             DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, self->mBuffer));
-            void* mappedData = nullptr;
+            void* mappedPointer = nullptr;
             if (mode & wgpu::MapMode::Read) {
-                mappedData = DAWN_GL_TRY_ALWAYS_CHECK(
+                mappedPointer = DAWN_GL_TRY_ALWAYS_CHECK(
                     gl, MapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT));
             } else {
                 DAWN_ASSERT(mode & wgpu::MapMode::Write);
-                mappedData = DAWN_GL_TRY_ALWAYS_CHECK(
+                mappedPointer = DAWN_GL_TRY_ALWAYS_CHECK(
                     gl, MapBufferRange(GL_ARRAY_BUFFER, offset, size,
                                        GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT));
             }
 
-            // The frontend asks that the pointer returned by GetMappedPointer is from the start of
-            // the resource but OpenGL gives us the pointer at offset. Remove the offset.
-            self->mMappedData = static_cast<uint8_t*>(mappedData) - offset;
+            // SAFETY: A successful call to glMapBufferRange returns a pointer to `length` bytes of
+            // data.
+            self->mMappedData = DAWN_UNSAFE_BUFFERS({static_cast<std::byte*>(mappedPointer), size});
             return {};
         });
 }
@@ -272,9 +278,9 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
     return {};
 }
 
-void* Buffer::GetMappedPointerImpl() {
-    // The mapping offset has already been removed.
-    return mMappedData;
+Span<std::byte> Buffer::GetMappedRangeImpl(size_t offset, size_t size) {
+    DAWN_ASSERT(offset >= mMappedDataOffsetInBuffer);
+    return mMappedData.subspan(offset - mMappedDataOffsetInBuffer, size);
 }
 
 void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
@@ -285,13 +291,25 @@ void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
     if (newState == BufferState::Destroyed) {
         return;
     }
+
+    // There is nothing to do for empty mappings, and the buffer wasn't even mapped.
+    if (mMappedData.empty()) {
+        return;
+    }
+
     IgnoreErrors(
         device->EnqueueGL([self = Ref<Buffer>(this)](const OpenGLFunctions& gl) -> MaybeError {
             DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, self->mBuffer));
             if (self->mCPUStaging.size() > 0) {
-                auto mappedData = DAWN_GL_TRY_ALWAYS_CHECK(
-                    gl, MapBufferRange(GL_ARRAY_BUFFER, 0, self->GetSize(), GL_MAP_WRITE_BIT));
-                memcpy(mappedData, self->mCPUStaging.data(), self->GetSize());
+                void* mappedPointer = DAWN_GL_TRY_ALWAYS_CHECK(
+                    gl, MapBufferRange(GL_ARRAY_BUFFER, self->mMappedDataOffsetInBuffer,
+                                       self->mCPUStaging.size(), GL_MAP_WRITE_BIT));
+
+                // SAFETY: A successful call to glMapBufferRange returns a pointer to `length` bytes
+                // of data.
+                Span<std::byte> mappedData = DAWN_UNSAFE_BUFFERS(
+                    {static_cast<std::byte*>(mappedPointer), self->mCPUStaging.size()});
+                mappedData.CopyFrom(self->mCPUStaging);
                 self->mCPUStaging.resize(0);
             }
             DAWN_GL_TRY(gl, UnmapBuffer(GL_ARRAY_BUFFER));
@@ -301,7 +319,7 @@ void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
 
 void Buffer::DestroyImpl(DestroyReason reason) {
     BufferBase::DestroyImpl(reason);
-    mMappedData = nullptr;
+    mMappedData = {};
 
     IgnoreErrors(ToBackend(GetDevice())
                      ->EnqueueDestroyGL(this, &Buffer::GetHandle, reason,

@@ -27,9 +27,9 @@
 
 #include <vector>
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -174,7 +174,7 @@ class ExternalTextureTest : public ValidationTest {
     static constexpr wgpu::TextureFormat kBiplanarPlane0Format = wgpu::TextureFormat::R8Unorm;
     static constexpr wgpu::TextureFormat kBiplanarPlane1Format = wgpu::TextureFormat::RG8Unorm;
 
-    std::array<float, 12> mPlaceholderConstantArray;
+    std::array<float, 12> mPlaceholderConstantArray = {};
 
     wgpu::Queue queue;
     wgpu::Texture defaultTexture;

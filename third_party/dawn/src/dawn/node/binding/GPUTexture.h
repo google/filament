@@ -44,6 +44,7 @@ class GPUTexture final : public interop::GPUTexture {
     GPUTexture(wgpu::Device device, const wgpu::TextureDescriptor& desc, wgpu::Texture texture);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::Texture&() const { return texture_; }
 
     // interop::GPUTexture interface compliance

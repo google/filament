@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_NULL_WRITER)
 ################################################################################
 # Target:    tint_lang_null_writer_common
 # Kind:      lib
+# Condition: TINT_BUILD_NULL_WRITER
 ################################################################################
 tint_add_target(tint_lang_null_writer_common lib
   lang/null/writer/common/options.cc
@@ -53,9 +55,12 @@ tint_target_add_dependencies(tint_lang_null_writer_common lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
 )
 
 tint_target_add_external_dependencies(tint_lang_null_writer_common lib
   "src_utils"
 )
+
+endif(TINT_BUILD_NULL_WRITER)

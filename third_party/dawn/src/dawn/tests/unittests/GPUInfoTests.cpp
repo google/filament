@@ -27,7 +27,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dawn/common/GPUInfo.h"
+#include "src/dawn/common/GPUInfo.h"
 
 namespace dawn {
 namespace {

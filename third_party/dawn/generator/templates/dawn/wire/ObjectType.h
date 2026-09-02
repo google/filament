@@ -28,7 +28,7 @@
 #ifndef DAWNWIRE_OBJECTTYPE_AUTOGEN_H_
 #define DAWNWIRE_OBJECTTYPE_AUTOGEN_H_
 
-#include "dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_array.h"
 
 namespace dawn::wire {
 

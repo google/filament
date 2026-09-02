@@ -159,7 +159,7 @@ TEST_F(WgslASTPrinterTest, Emit_GlobalConst) {
 
 TEST_F(WgslASTPrinterTest, Emit_OverridableConstants) {
     Override("a", ty.f32());
-    Override("b", ty.f32(), Id(7_a));
+    Override("b", ty.f32(), Vector{Id(7_a)});
 
     ASTPrinter& gen = Build();
 

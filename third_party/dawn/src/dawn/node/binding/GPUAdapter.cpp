@@ -101,7 +101,7 @@ interop::Interface<interop::GPUSupportedFeatures> GPUAdapter::getFeatures(Napi::
 
 interop::Interface<interop::GPUSupportedLimits> GPUAdapter::getLimits(Napi::Env env) {
     dawn::utils::ComboLimits limits;
-    if (!adapter_.GetLimits(limits.GetLinked())) {
+    if (adapter_.GetLimits(limits.GetLinked()) != wgpu::Status::Success) {
         Napi::Error::New(env, "failed to get adapter limits").ThrowAsJavaScriptException();
     }
 
@@ -161,7 +161,7 @@ interop::Promise<interop::Interface<interop::GPUDevice>> GPUAdapter::requestDevi
                     binding::Errors::OperationError(env, "Limit \"" #LIMIT "\" out of range.")); \
                 return promise;                                                                  \
             }                                                                                    \
-            *dawnLimit = jsLimit;                                                                \
+            *dawnLimit = static_cast<DawnLimitType>(jsLimit);                                    \
         }                                                                                        \
         descriptor.requiredLimits.erase(#LIMIT);                                                 \
     }

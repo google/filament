@@ -1,0 +1,301 @@
+Name
+
+    NV_shader_atomic_counters
+
+Name Strings
+
+    GL_NV_shader_atomic_counters
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:         June 23, 2011
+    NVIDIA Revision:            1
+
+Number
+
+    423
+
+Dependencies
+
+    ARB_shader_atomic_counters and NV_gpu_program5 are required.
+
+    This extension is written against the NV_gpu_program4 specification, as
+    extended by NV_gpu_program5.
+
+Overview
+
+    This extension builds upon the ARB_shader_atomic_counters and
+    NV_gpu_program5 extensions to provide assembly language support for
+    incrementing, decrementing, and querying the values of atomic counters
+    stored in buffer object memory.
+
+    The extension uses the same set of atomic counter buffer binding points as
+    the ARB_shader_atomic_counters extension; applications using this
+    extension should use the APIs specified there to bind buffers.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    (All modifications are relative to Section 2.X, GPU Programs, from the
+     NV_gpu_program4 specification.)
+
+    Modify Section 2.X.2, Program Grammar
+
+    (add after the long list of grammar rules) If a program specifies the
+    NV_shader_atomic_counters program option, the following rules are added
+    to the NV_gpu_program4 base program grammar:
+
+    <instruction>           ::= <AtomCtrInstruction>
+
+    <AtomCtrInstruction>    ::= <ATOMCTRop_instruction>
+
+    <ATOMCTRop_instuction>  ::= <ATOMCTRop> <opModifiers> <instResult> ","
+                                  <counterUseV>
+
+    <ATOMCop>               ::= "ATOMCTR"
+
+    <opModifier>            ::= "INCR"
+                              | "DECR"
+                              | "GET"
+
+    <namingStatement>       ::= <COUNTER_statement>
+
+    <COUNTER_statement>     ::= "COUNTER" <establishName> <counterSingleInit>
+    <COUNTER_statement>     ::= "COUNTER" <establishName> <optArraySize>
+                                  <counterMultipleInit>
+
+    <counterSingleInit>     ::= <counterUseDS>
+
+    <counterMultipleInit>   ::= "{" <counterItemList> "}"
+
+    <counterItemList>       ::= <counterUseDM>
+    <counterItemList>       ::= <counterUseDM> "," <counterItemList>
+
+    <counterUseV>           ::= <counterVarName> <optArrayMem>
+
+    <counterUseDS>          ::= <counterBufBinding> <arrayMemAbs>
+
+    <counterUseDM>          ::= <counterUseDS>
+    <counterUseDM>          ::= <counterBufBinding>
+    <counterUseDM>          ::= <counterBufBinding> <arrayRange>
+
+    <counterBufBinding>     ::= "program" "." "counter" <arrayMemAbs>
+
+
+    Add New Section 2.X.3.Y, Atomic Counter Buffers, after Section 2.X.3.6,
+    Program Parameter Buffers
+
+    Atomic counter buffers are arrays consisting of single-component unsigned
+    integer values stored in a buffer object.  The GL provides an
+    implementation-dependent number of atomic counter buffer object binding
+    points to which buffer objects can be attached.  Atomic counter variables
+    can be changed either by updating the contents of bound buffer objects, by
+    changing the buffer object attached to a binding point, or by using the
+    ATOMCTR instruction in a shader to increment or decrement the current
+    value.
+
+    Atomic counter buffer bindings are established by calling BindBufferBase,
+    BindBufferOffsetEXT, or BindBufferRange with a target of
+    ATOMIC_COUNTER_BUFFER, as documented in the ARB_shader_atomic_counters
+    extension.  The number of atomic counter buffer object binding points is
+    given by the value of the constant MAX_ATOMIC_COUNTER_BUFFER_BINDINGS.
+    There is a limit on the maximum number of words of a buffer object that
+    can be accessed using any single parameter buffer binding point, given by
+    the implementation-dependent constant MAX_ATOMIC_COUNTER_BUFFER_SIZE.
+    Buffer objects larger than this size may be used, but the results of
+    accessing portions of the buffer object beyond the limit are undefined.
+
+    Atomic counter variables may only be used as operands in the ATOMCTR
+    instruction; they may not be used by used as results or operands in
+    general instructions.  Atomic counter variables must be declared
+    explicitly via the <COUNTER_statement> grammar rule.  Atomic counter
+    buffer bindings can not be used directly in executable instructions.
+
+    Atomic counter variables may be declared as arrays, but all bindings
+    assigned to the array must use the same binding point and must increase
+    consecutively.
+
+      Binding                        Components  Underlying State
+      -----------------------------  ----------  -----------------------------
+      program.counter[a][b]          (x,x,x,x)   atomic counter buffer a,
+                                                   element b
+      program.counter[a][b..c]        (x,x,x,x)  atomic counter buffer a,
+                                                   elements b through c
+      program.counter[a]              (x,x,x,x)  atomic counter buffer a,
+                                                   all elements
+
+      Table X.Y: Atomic Counter Buffer Bindings.  <a> indicates a buffer
+      number, <b> and <c> indicate individual elements.
+
+    If an atomic counter buffer binding matches "program.counter[a][b]", the
+    atomic counter variable is associated with element <b> of the buffer
+    object bound to binding point <a>.  If no buffer object is bound to
+    binding point <a>, or the bound buffer object is not large enough to hold
+    an element <b>, reads from the binding return zero and writes to the
+    binding have no effect.  The binding point <a> must be a nonnegative
+    integer constant.
+
+    For atomic counter array declarations, "program.counter[a][b..c]" is
+    equivalent to specifying elements <b> through <c> of the buffer object
+    bound to binding point <a> in order.
+
+    For atomic counter array declarations, "program.counter[a]" is equivalent
+    to specifying the entire buffer -- elements 0 through <n>-1, where <n> is
+    either the size of the array (if declared) or the implementation-dependent
+    maximum atomic counter buffer object size limit (if no size is declared).
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (Add to the set of opcodes in Table X.13)
+
+                  Modifiers 
+      Instruction F I C S H D  Out Inputs    Description
+      ----------- - - - - - -  --- --------  --------------------------------
+      ATOMCTR     - X X - - U  s   -         atomic counter operation
+
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+    (Add to Table X.14, Instruction Modifiers, and to the corresponding
+    description following the table)
+
+      Modifier  Description
+      --------  -----------------------------------------------
+      INCR      Increment an atomic counter variable
+      DECR      Decrement an atomic counter variable
+      GET       Query the value of an atomic counter variable
+
+    For atomic counter instructions, the "INCR", "DECR", and "GET" atomic
+    counter instruction modifiers specify an operation to perform on an atomic
+    counter variable.  Atomic counter instruction modifiers are supported by
+    the ATOMCTR instruction and are covered in more detail in the description
+    of that instruction.
+
+    Modify Section 2.X.6, Program Options
+
+    + Atomic Counter Support (NV_shader_atomic_counters)
+
+    If a program specifies the "NV_shader_atomic_counters" option, it may use
+    the COUNTER statement to declare atomic counter variables and the ATOMCTR
+    instruction to increment, decrement, or query the values of atomic counter
+    variables.
+
+
+    Modify Section 2.X.8, Program Instruction Set
+
+    Section 2.X.8.Z, ATOMCTR:  Atomic Counter Operation
+
+    The ATOMCTR instruction performs an atomic global counter operation by
+    reading from memory corresponding to the atomic counter variable specified
+    in the instruction, optionally modifying that memory, and then returning
+    an scalar unsigned integer result.  The memory transaction is atomic,
+    guaranteeing that no other write to the memory accessed will occur between
+    the time it is read and written by the ATOMCTR instruction.
+
+    The ATOMCTR instruction requires an atomic counter instruction modifier,
+    as enumerated in Table X.Y.  The instruction modifier specifies the type
+    of operation to perform.
+
+      atomic
+      modifier   operation
+      --------   -------------------------------------------------
+       INCR      increment counter (returns non-incremented value)
+       DECR      decrement counter (returns decremented value)
+       GET       query counter
+
+     Table X.Y, Supported atomic and storage modifiers for the ATOM
+     instruction.
+
+    ATOMCTR performs a scalar atomic operation and returns an atomic counter
+    value in the <x> component of the result vector.  The <y>, <z>, and <w>
+    components of the result vector are undefined.
+      
+      address = AtomicCounterAddress(op0);
+      result = BufferMemoryLoad(address, U32);
+      switch (atomicModifier) {
+      case INCR:
+        writeval = result + 1;
+        break;
+      case DECR:
+        writeval = result - 1;
+        result = writeval;   // return decremented value
+        break;
+      case GET:
+        return result;  // no memory store
+      BufferMemoryStore(address, writeval, U32);
+
+    If an incremented or decremented counter value overflows the representable
+    range of counter values, it will wrap.
+
+    ATOMCTR supports only signed and unsigned integer data type modifiers, but
+    no storage modifers.  The memory holding the atomic counter and the result
+    vector are treated as scalar signed or unsigned integers, according to the
+    data type modifier.
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Should this extension have its own extension string entry, or should
+        its existence be implied by the presence of the
+        ARB_shader_atomic_counters and NV_gpu_program5 extensions?
+
+      RESOLVED:  Provide a separate extension string entry.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------- --------  --------------------------------------------
+     1    20-Jun-11 pbrown    Internal spec development.

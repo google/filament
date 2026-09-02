@@ -28,11 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_SUBSTITUTE_OVERRIDES_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_SUBSTITUTE_OVERRIDES_H_
 
-#include <unordered_map>
-
 #include "src/tint/api/common/substitute_overrides_config.h"
-#include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/reflection.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -41,13 +37,6 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
-
-/// The capabilities that the transform can support.
-const core::ir::Capabilities kSubstituteOverridesCapabilities{
-    core::ir::Capability::kAllowOverrides,
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kAllow16BitIntegers,
-};
 
 /// Substitute overrides to their constant values.
 /// @param module the module to transform

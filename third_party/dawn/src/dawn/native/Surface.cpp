@@ -25,23 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Surface.h"
+#include "src/dawn/native/Surface.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "dawn/common/Platform.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/SwapChain.h"
-#include "dawn/native/Texture.h"
 #include "dawn/native/ValidationUtils_autogen.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/SwapChain.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/utils/platform.h"
 
 #if DAWN_PLATFORM_IS(WINDOWS)
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 #endif  // DAWN_PLATFORM_IS(WINDOWS)
 
 #if defined(DAWN_USE_WINDOWS_UI)
@@ -50,8 +50,8 @@
 #endif  // defined(DAWN_USE_WINDOWS_UI)
 
 #if defined(DAWN_USE_X11)
-#include "dawn/common/xlib_with_undefs.h"
-#include "dawn/native/X11Functions.h"
+#include "src/dawn/common/xlib_with_undefs.h"
+#include "src/dawn/native/X11Functions.h"
 #endif  // defined(DAWN_USE_X11)
 
 namespace dawn::native {
@@ -84,6 +84,9 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
             break;
         case Surface::Type::XlibWindow:
             s->Append("XlibWindow");
+            break;
+        case Surface::Type::Undefined:
+            DAWN_UNREACHABLE();
             break;
     }
     return {true};
@@ -178,7 +181,7 @@ ResultOrError<UnpackedPtr<SurfaceDescriptor>> ValidateSurfaceDescriptor(
         case wgpu::SType::SurfaceSourceWaylandSurface: {
             auto* subDesc = descriptor.Get<SurfaceSourceWaylandSurface>();
             DAWN_ASSERT(subDesc != nullptr);
-            // Unfortunately we can't check the validity of wayland objects. Only that they
+            // Unfortunately we can\'t check the validity of wayland objects. Only that they
             // aren't nullptr.
             DAWN_INVALID_IF(subDesc->display == nullptr, "Wayland display is nullptr.");
             DAWN_INVALID_IF(subDesc->surface == nullptr, "Wayland surface is nullptr.");
@@ -252,7 +255,6 @@ MaybeError ValidateSurfaceConfiguration(DeviceBase* device,
     textureDesc.size = {config->width, config->height};
     textureDesc.format = config->format;
     textureDesc.dimension = wgpu::TextureDimension::e2D;
-    textureDesc.viewFormatCount = config->viewFormatCount;
     textureDesc.viewFormats = config->viewFormats;
 
     UnpackedPtr<TextureDescriptor> unpackedTextureDesc;
@@ -383,46 +385,46 @@ DeviceBase* Surface::GetCurrentDevice() const {
 }
 
 Surface::Type Surface::GetType() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mType;
 }
 
 void* Surface::GetAndroidNativeWindow() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::AndroidWindow);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::AndroidWindow);
     return mAndroidNativeWindow;
 }
 
 void* Surface::GetMetalLayer() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::MetalLayer);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::MetalLayer);
     return mMetalLayer;
 }
 
 void* Surface::GetWaylandDisplay() const {
-    DAWN_ASSERT(mType == Type::WaylandSurface);
+    DAWN_CHECK(mType == Type::WaylandSurface);
     return mWaylandDisplay;
 }
 
 void* Surface::GetWaylandSurface() const {
-    DAWN_ASSERT(mType == Type::WaylandSurface);
+    DAWN_CHECK(mType == Type::WaylandSurface);
     return mWaylandSurface;
 }
 
 void* Surface::GetHInstance() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::WindowsHWND);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::WindowsHWND);
     return mHInstance;
 }
 void* Surface::GetHWND() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::WindowsHWND);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::WindowsHWND);
     return mHWND;
 }
 
 IUnknown* Surface::GetCoreWindow() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::WindowsCoreWindow);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::WindowsCoreWindow);
 #if defined(DAWN_USE_WINDOWS_UI)
     return mCoreWindow.Get();
 #else
@@ -431,8 +433,8 @@ IUnknown* Surface::GetCoreWindow() const {
 }
 
 IUnknown* Surface::GetUWPSwapChainPanel() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::WindowsUWPSwapChainPanel);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::WindowsUWPSwapChainPanel);
 #if defined(DAWN_USE_WINDOWS_UI)
     return mUWPSwapChainPanel.Get();
 #else
@@ -441,8 +443,8 @@ IUnknown* Surface::GetUWPSwapChainPanel() const {
 }
 
 IUnknown* Surface::GetWinUISwapChainPanel() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::WindowsWinUISwapChainPanel);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::WindowsWinUISwapChainPanel);
 #if defined(DAWN_USE_WINDOWS_UI)
     return mWinUISwapChainPanel.Get();
 #else
@@ -451,18 +453,18 @@ IUnknown* Surface::GetWinUISwapChainPanel() const {
 }
 
 void* Surface::GetXDisplay() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::XlibWindow);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::XlibWindow);
     return mXDisplay;
 }
 uint64_t Surface::GetXWindow() const {
-    DAWN_ASSERT(!IsError());
-    DAWN_ASSERT(mType == Type::XlibWindow);
+    DAWN_CHECK(!IsError());
+    DAWN_CHECK(mType == Type::XlibWindow);
     return mXWindow;
 }
 
 MaybeError Surface::Configure(const SurfaceConfiguration* configIn) {
-    SurfaceConfiguration config = configIn->WithTrivialFrontendDefaults();
+    SurfaceConfiguration config = WithTrivialFrontendDefaults(*configIn);
     DAWN_CHECK(config.device);
     // Configured-or-not is specified as a client-side state, so it must be
     // maintained even on error surfaces.
@@ -513,8 +515,8 @@ MaybeError Surface::Configure(const SurfaceConfiguration* configIn) {
 
 MaybeError Surface::Unconfigure() {
     if (IsError()) {
-        DAWN_ASSERT(mSwapChain == nullptr);
-        DAWN_ASSERT(mCurrentDevice == nullptr);
+        DAWN_CHECK(mSwapChain == nullptr);
+        DAWN_CHECK(mCurrentDevice == nullptr);
         return DAWN_VALIDATION_ERROR("%s is invalid.", this);
     }
     mCurrentDevice = nullptr;
@@ -540,12 +542,9 @@ MaybeError Surface::GetCapabilities(AdapterBase* adapter, SurfaceCapabilities* c
         [&capabilities](const PhysicalDeviceSurfaceCapabilities& caps) -> MaybeError {
             capabilities->nextInChain = nullptr;
             capabilities->usages = caps.usages;
-            utils::AllocateApiSeqFromStdVector(&capabilities->formats, &capabilities->formatCount,
-                                               caps.formats);
-            utils::AllocateApiSeqFromStdVector(&capabilities->presentModes,
-                                               &capabilities->presentModeCount, caps.presentModes);
-            utils::AllocateApiSeqFromStdVector(&capabilities->alphaModes,
-                                               &capabilities->alphaModeCount, caps.alphaModes);
+            capabilities->formats = utils::AllocateApiSeqFromStdVector(caps.formats);
+            capabilities->presentModes = utils::AllocateApiSeqFromStdVector(caps.presentModes);
+            capabilities->alphaModes = utils::AllocateApiSeqFromStdVector(caps.alphaModes);
             return {};
         }));
 

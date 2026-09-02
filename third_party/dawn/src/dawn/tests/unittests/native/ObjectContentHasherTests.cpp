@@ -30,8 +30,8 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/ObjectContentHasher.h"
-#include "dawn/tests/DawnNativeTest.h"
+#include "src/dawn/native/ObjectContentHasher.h"
+#include "src/dawn/tests/DawnNativeTest.h"
 
 namespace dawn::native {
 namespace {

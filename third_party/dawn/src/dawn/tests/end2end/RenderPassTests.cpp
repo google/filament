@@ -28,15 +28,43 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
 
 constexpr uint32_t kRTSize = 16;
 constexpr wgpu::TextureFormat kFormat = wgpu::TextureFormat::RGBA8Unorm;
+
+// Passes if the pixel matches any of the given candidate colors.
+class ExpectEqualToOneOf : public detail::CustomTextureExpectation {
+  public:
+    explicit ExpectEqualToOneOf(std::vector<utils::RGBA8> candidates)
+        : mCandidates(std::move(candidates)) {}
+
+    uint32_t DataSize() override { return sizeof(utils::RGBA8); }
+
+    testing::AssertionResult Check(const void* data, size_t size) override {
+        DAWN_ASSERT(size == DataSize());
+        utils::RGBA8 actual = *static_cast<const utils::RGBA8*>(data);
+        for (const utils::RGBA8& candidate : mCandidates) {
+            if (actual == candidate) {
+                return testing::AssertionSuccess();
+            }
+        }
+        testing::AssertionResult result = testing::AssertionFailure();
+        result << "Expected " << actual << " to equal one of:";
+        for (const utils::RGBA8& candidate : mCandidates) {
+            result << " " << candidate;
+        }
+        return result;
+    }
+
+  private:
+    std::vector<utils::RGBA8> mCandidates;
+};
 
 class RenderPassTest : public DawnTest {
   protected:
@@ -88,6 +116,9 @@ class RenderPassTest : public DawnTest {
 
 // Test using two different render passes in one commandBuffer works correctly.
 TEST_P(RenderPassTest, TwoRenderPassesInOneCommandBuffer) {
+    // TODO(crbug.com/523211960): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     if (IsOpenGL() || IsMetal()) {
         // crbug.com/950768
         // This test is consistently failing on OpenGL and flaky on Metal.
@@ -136,6 +167,9 @@ TEST_P(RenderPassTest, TwoRenderPassesInOneCommandBuffer) {
 // fragment shader outputs in the render pipeline, the load operation is LoadOp::Load and the store
 // operation is StoreOp::Store.
 TEST_P(RenderPassTest, NoCorrespondingFragmentShaderOutputs) {
+    // TODO(crbug.com/523211960): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::Texture renderTarget = CreateDefault2DTexture();
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
 
@@ -234,6 +268,53 @@ TEST_P(RenderPassTest, ClearLowestMipOfR8Unorm) {
     EXPECT_BUFFER_U8_EQ(255, buf, 0);
 }
 
+// Test that clearing one slice of an R8Unorm texture works. Regression test for crbug.com/501499832
+// with toggle metal_render_r8_rg8_unorm_small_mip_to_temp_texture and --enable-backend-validation.
+TEST_P(RenderPassTest, ClearR8UnormDepthSlice) {
+    const uint32_t kLastMipLevel = 2;
+
+    // Create the texture and buffer used for readback.
+    wgpu::TextureDescriptor texDesc;
+    texDesc.dimension = wgpu::TextureDimension::e3D;
+    texDesc.format = wgpu::TextureFormat::R8Unorm;
+    texDesc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    texDesc.size = {32, 32, 8};
+    texDesc.mipLevelCount = kLastMipLevel + 1;
+    wgpu::Texture tex = device.CreateTexture(&texDesc);
+
+    wgpu::BufferDescriptor bufDesc;
+    bufDesc.size = 8;
+    bufDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer buf = device.CreateBuffer(&bufDesc);
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+
+    // Clear the texture with a render pass.
+    {
+        wgpu::TextureViewDescriptor viewDesc;
+        viewDesc.baseMipLevel = kLastMipLevel;
+
+        utils::ComboRenderPassDescriptor renderPass({tex.CreateView(&viewDesc)});
+        renderPass.cColorAttachments[0].clearValue = {1.0f, 0.0f, 0.0f, 1.0f};
+        renderPass.cColorAttachments[0].loadOp = wgpu::LoadOp::Clear;
+        renderPass.cColorAttachments[0].storeOp = wgpu::StoreOp::Store;
+        renderPass.cColorAttachments[0].depthSlice = 1;
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        pass.End();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    static uint8_t expected[]{
+        // Slice 0 still initialized to 0.0
+        0,
+        // Slice 1 cleared to 1.0
+        255,
+    };
+    EXPECT_TEXTURE_EQ(expected, tex, {0, 0, 0}, {1, 1, 2}, kLastMipLevel);
+}
+
 // Test that clearing a depth16unorm texture with multiple subresources works. This is a regression
 // test for dawn:1389 where Intel Metal devices fail to do that correctly, requiring a workaround.
 TEST_P(RenderPassTest, ClearMultisubresourceAfterWriteDepth16Unorm) {
@@ -283,7 +364,8 @@ TEST_P(RenderPassTest, ClearMultisubresourceAfterWriteDepth16Unorm) {
 
                     // Use a distinct value for each subresource.
                     uint16_t value = level * 10 + layer;
-                    std::vector<uint16_t> data(copySize.width * copySize.height, value);
+                    std::vector<uint16_t> data(
+                        static_cast<size_t>(copySize.width) * copySize.height, value);
                     queue.WriteTexture(&texelCopyTextureInfo, data.data(),
                                        data.size() * sizeof(uint16_t), &texelCopyBufferLayout,
                                        &copySize);
@@ -342,7 +424,8 @@ TEST_P(RenderPassTest, ClearMultisubresourceAfterWriteDepth16Unorm) {
                     uint32_t mipHeight = height >> level;
                     if (cleared) {
                         // Check the subresource is cleared as expected.
-                        std::vector<uint16_t> data(mipWidth * mipHeight, 0xCCCC);
+                        std::vector<uint16_t> data(static_cast<size_t>(mipWidth) * mipHeight,
+                                                   0xCCCC);
                         EXPECT_TEXTURE_EQ(data.data(), tex, {0, 0, layer}, {mipWidth, mipHeight},
                                           level)
                             << "cleared texture data should have been 0xCCCC at:" << "\nlayer: "
@@ -352,7 +435,8 @@ TEST_P(RenderPassTest, ClearMultisubresourceAfterWriteDepth16Unorm) {
                         // Without the workaround, they are 0.
                         uint16_t value =
                             level * 10 + layer;  // Compute the expected value for the subresource.
-                        std::vector<uint16_t> data(mipWidth * mipHeight, value);
+                        std::vector<uint16_t> data(static_cast<size_t>(mipWidth) * mipHeight,
+                                                   value);
                         EXPECT_TEXTURE_EQ(data.data(), tex, {0, 0, layer}, {mipWidth, mipHeight},
                                           level)
                             << "written texture data should still be " << value
@@ -371,7 +455,7 @@ DAWN_INSTANTIATE_TEST(
     D3D12Backend({}, {"use_d3d12_render_pass"}),
     MetalBackend(),
 
-    // for dawn:1071 regression
+    // for crbug.com/40096166 and crbug.com/501499832 regressions
     MetalBackend({"metal_render_r8_rg8_unorm_small_mip_to_temp_texture"}),
 
     // for dawn:1389 regression
@@ -398,6 +482,9 @@ class RenderPassRenderAreaTest : public RenderPassTest {
 
 // Tests that clear and draw operations are clipped to the render area.
 TEST_P(RenderPassRenderAreaTest, ClipsDrawing) {
+    // TODO(crbug.com/523211958): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     constexpr uint32_t kSize = 64;
 
     wgpu::Texture renderTarget1 = CreateDefault2DTexture(kSize);
@@ -489,6 +576,106 @@ TEST_P(RenderPassRenderAreaTest, ClipsClearNonAligned) {
 DAWN_INSTANTIATE_TEST(RenderPassRenderAreaTest,
                       VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
                       VulkanBackend({}, {"vulkan_use_dynamic_rendering"}));
+
+class RenderPassTestWithUndefinedLoadStoreOp : public RenderPassTest {
+  protected:
+    void SetUp() override {
+        RenderPassTest::SetUp();
+
+        // Skip all tests if the DawnAllowUndefinedLoadStoreOp feature is not supported.
+        DAWN_TEST_UNSUPPORTED_IF(
+            !SupportsFeatures({wgpu::FeatureName::DawnAllowUndefinedLoadStoreOp}));
+    }
+
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        std::vector<wgpu::FeatureName> requiredFeatures = {};
+        if (SupportsFeatures({wgpu::FeatureName::DawnAllowUndefinedLoadStoreOp})) {
+            requiredFeatures.push_back(wgpu::FeatureName::DawnAllowUndefinedLoadStoreOp);
+        }
+        return requiredFeatures;
+    }
+};
+
+// Test using LoadOp::Undefined
+TEST_P(RenderPassTestWithUndefinedLoadStoreOp, LoadOpUndefined) {
+    wgpu::Texture renderTarget = CreateDefault2DTexture();
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+
+    {
+        // In the first render pass we clear renderTarget to red.
+        utils::ComboRenderPassDescriptor renderPass({renderTarget.CreateView()});
+        renderPass.cColorAttachments[0].clearValue = {1.0f, 0.0f, 0.0f, 1.0f};
+
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        pass.End();
+    }
+
+    {
+        // In the second render pass we use LoadOp::Undefined, which will be converted to either
+        // Load or Clear depending on the backend's preference.
+        utils::ComboRenderPassDescriptor renderPass({renderTarget.CreateView()});
+        renderPass.cColorAttachments[0].loadOp = wgpu::LoadOp::Undefined;
+
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        pass.End();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // If Undefined was converted to Load, the color from the 1st render pass should be intact
+    // (kRed). If it was converted to Clear, the texture is cleared with default zero values
+    // (kZero). Either is a valid outcome.
+    EXPECT_TEXTURE_EQ(new ExpectEqualToOneOf({utils::RGBA8::kRed, utils::RGBA8::kZero}),
+                      renderTarget, {1, kRTSize - 1, 0}, {1, 1, 1});
+    EXPECT_TEXTURE_EQ(new ExpectEqualToOneOf({utils::RGBA8::kRed, utils::RGBA8::kZero}),
+                      renderTarget, {kRTSize - 1, 1, 0}, {1, 1, 1});
+}
+
+// Test using StoreOp::Undefined
+TEST_P(RenderPassTestWithUndefinedLoadStoreOp, StoreOpUndefined) {
+    wgpu::Texture renderTarget = CreateDefault2DTexture();
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+
+    {
+        // In the first render pass we clear renderTarget to red and store with Undefined.
+        utils::ComboRenderPassDescriptor renderPass({renderTarget.CreateView()});
+        renderPass.cColorAttachments[0].clearValue = {1.0f, 0.0f, 0.0f, 1.0f};
+        renderPass.cColorAttachments[0].storeOp = wgpu::StoreOp::Undefined;
+
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        pass.End();
+    }
+
+    {
+        // In the second render pass we use LoadOp::Load, so the result depends on whether
+        // StoreOp::Undefined was converted to Store or Discard in the 1st render pass.
+        utils::ComboRenderPassDescriptor renderPass({renderTarget.CreateView()});
+        renderPass.cColorAttachments[0].loadOp = wgpu::LoadOp::Load;
+
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        pass.End();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // If Undefined was converted to Store, the color from the 1st render pass should be intact
+    // (kRed). If it was converted to Discard, the texture is left with default zero values
+    // (kZero). Either is a valid outcome.
+    EXPECT_TEXTURE_EQ(new ExpectEqualToOneOf({utils::RGBA8::kRed, utils::RGBA8::kZero}),
+                      renderTarget, {1, kRTSize - 1, 0}, {1, 1, 1});
+    EXPECT_TEXTURE_EQ(new ExpectEqualToOneOf({utils::RGBA8::kRed, utils::RGBA8::kZero}),
+                      renderTarget, {kRTSize - 1, 1, 0}, {1, 1, 1});
+}
+
+DAWN_INSTANTIATE_TEST(RenderPassTestWithUndefinedLoadStoreOp,
+                      D3D11Backend(),
+                      D3D12Backend(),
+                      MetalBackend(),
+                      OpenGLBackend(),
+                      OpenGLESBackend(),
+                      VulkanBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -76,8 +76,8 @@ class BuddyAllocator {
             free.pNext = nullptr;
         }
 
-        uint64_t mOffset;
-        uint64_t mSize;
+        uint64_t mOffset = 0;
+        uint64_t mSize = 0;
 
         // Pointer to this block's buddy, iff parent is split.
         // Used to quickly merge buddy blocks upon de-allocate.

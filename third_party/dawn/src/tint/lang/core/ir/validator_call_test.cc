@@ -674,4 +674,47 @@ TEST_F(IR_ValidatorTest, CallBuiltinFn_SubgroupBroadcast_NonConstId) {
 )")) << res.Failure();
 }
 
+TEST_F(IR_ValidatorTest, CallBuiltinFn_VectorClamp_Disallowed) {
+    mod.properties.Add(Property::kDisallowVectorMinMaxClamp);
+
+    auto* x = b.FunctionParam<vec4f>();
+    auto* lo = b.FunctionParam<vec4f>();
+    auto* hi = b.FunctionParam<vec4f>();
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({x, lo, hi});
+    b.Append(func->Block(), [&] {
+        b.Call<vec4f>(core::BuiltinFn::kClamp, x, lo, hi);
+        b.Return(func);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:3:20 error: clamp: vector clamp disallowed by the DisallowVectorMinMaxClamp property
+    %5:vec4<f32> = clamp %2, %3, %4
+                   ^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, CallBuiltinFn_BufferArrayView_FixedFootprint) {
+    mod.properties.Add(core::ir::Property::kAllowBufferTypes);
+    auto* bar = b.Function("bar", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    bar->SetParams({p});
+    b.Append(bar->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.array(ty.vec2f(), 2)), BuiltinFn::kBufferArrayView,
+                       Vector<TemplateParameter, 1>{ty.array(ty.vec2f(), 2)}, p, 0_i, 32_i);
+        b.Return(bar);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(R"(bufferArrayView result type must not have a fixed footprint)"))
+        << res.Failure();
+}
+
 }  // namespace tint::core::ir

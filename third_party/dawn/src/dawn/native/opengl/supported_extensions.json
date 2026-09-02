@@ -36,6 +36,7 @@
         "GL_EXT_texture_format_BGRA8888",
         "GL_APPLE_texture_format_BGRA8888",
         "GL_EXT_color_buffer_float",
-        "GL_EXT_color_buffer_half_float"
+        "GL_EXT_color_buffer_half_float",
+        "GL_EXT_multisampled_render_to_texture"
     ]
 }

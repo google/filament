@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/PooledResourceMemoryAllocator.h"
+#include "src/dawn/native/PooledResourceMemoryAllocator.h"
 
 #include <utility>
 
-#include "dawn/native/Device.h"
+#include "src/dawn/native/Device.h"
 
 namespace dawn::native {
 
@@ -37,12 +37,12 @@ PooledResourceMemoryAllocator::PooledResourceMemoryAllocator(ResourceHeapAllocat
     : mHeapAllocator(heapAllocator) {}
 
 PooledResourceMemoryAllocator::~PooledResourceMemoryAllocator() {
-    DAWN_ASSERT(mPool.empty());
+    DAWN_CHECK(mPool.empty());
 }
 
 void PooledResourceMemoryAllocator::FreeRecycledAllocations() {
     for (auto& resourceHeap : mPool) {
-        DAWN_ASSERT(resourceHeap != nullptr);
+        DAWN_CHECK(resourceHeap != nullptr);
         mHeapAllocator->DeallocateResourceHeap(std::move(resourceHeap));
     }
 
@@ -75,4 +75,32 @@ void PooledResourceMemoryAllocator::DeallocateResourceHeap(
 uint64_t PooledResourceMemoryAllocator::GetPoolSizeForTesting() const {
     return mPool.size();
 }
+
+void AllocationSizeTracker::Increment(uint64_t incrementSize) {
+    Mutex::AutoLock lock(&mMutex);
+    mTotalSize += incrementSize;
+}
+
+void AllocationSizeTracker::Decrement(ExecutionSerial currentSerial, uint64_t decrementSize) {
+    Mutex::AutoLock lock(&mMutex);
+    DAWN_ASSERT(mTotalSize >= decrementSize);
+    mMemoryToDecrement.Enqueue(decrementSize, currentSerial);
+}
+
+void AllocationSizeTracker::UpdateCompletedSerialTo(ExecutionSerial completedSerial) {
+    Mutex::AutoLock lock(&mMutex);
+    for (auto& size : mMemoryToDecrement.IterateUpTo(completedSerial)) {
+        mTotalSize -= size;
+    }
+    mMemoryToDecrement.ClearUpTo(completedSerial);
+}
+
+void AllocationSizeTracker::AssumeCommandsComplete() {
+    Mutex::AutoLock lock(&mMutex);
+    for (auto& size : mMemoryToDecrement.IterateAll()) {
+        mTotalSize -= size;
+    }
+    mMemoryToDecrement.Clear();
+}
+
 }  // namespace dawn::native

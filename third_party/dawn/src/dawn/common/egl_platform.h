@@ -35,15 +35,15 @@
 #error "EGL/egl.h included before egl_platform.h"
 #endif
 
-#include "dawn/common/Platform.h"
+#include "src/utils/platform.h"
 
 // Import headers with undefs prior to importing EGL on configurations where it is needed.
 #if DAWN_PLATFORM_IS(WINDOWS)
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 #endif  // DAWN_PLATFORM_IS(WINDOWS)
 
 #if defined(DAWN_USE_X11)
-#include "dawn/common/xlib_with_undefs.h"
+#include "src/dawn/common/xlib_with_undefs.h"
 #endif  // defined(DAWN_USE_X11)
 
 // The actual inclusion of EGL.h!

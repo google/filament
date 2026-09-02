@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_WGPU_SHAREDFENCEWGPU_H_
 #define SRC_DAWN_NATIVE_WGPU_SHAREDFENCEWGPU_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/SharedFence.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/SharedFence.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
 
 namespace dawn::native::webgpu {
 

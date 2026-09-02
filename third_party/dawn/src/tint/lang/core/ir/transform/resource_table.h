@@ -46,6 +46,7 @@ namespace tint::core::ir::transform {
 // Backend specific override methods for resource table
 class ResourceTableHelper {
   public:
+    ResourceTableHelper() = default;
     virtual ~ResourceTableHelper();
 
     // Returns a map of types to the var which is used to access the memory of that type
@@ -53,6 +54,11 @@ class ResourceTableHelper {
         core::ir::Builder& b,
         const BindingPoint& bp,
         const std::vector<ResourceType>& types) const = 0;
+
+    ResourceTableHelper(const ResourceTableHelper&) = delete;
+    ResourceTableHelper(ResourceTableHelper&&) = delete;
+    ResourceTableHelper& operator=(const ResourceTableHelper&) = delete;
+    ResourceTableHelper& operator=(ResourceTableHelper&&) = delete;
 };
 
 /// This transform updates the provided IR to support resource_table restrictions/requirements.

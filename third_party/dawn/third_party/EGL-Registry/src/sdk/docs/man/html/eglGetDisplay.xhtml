@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglGetDisplay - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglGetDisplay">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglGetDisplay — 
+            return an <abbr class="acronym">EGL</abbr> display connection
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLDisplay <strong class="fsfunc">eglGetDisplay</strong>(</code>
+              </td>
+              <td>NativeDisplayType <var class="pdparam">native_display</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>native_display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the display to connect to.
+                        <code class="constant">EGL_DEFAULT_DISPLAY</code> indicates the default display.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglGetDisplay</code> obtains the
+            <abbr class="acronym">EGL</abbr> display connection for the native
+            display <em class="parameter"><code>native_display</code></em>.
+        </p>
+        <p>
+            The behavior of <code class="function">eglGetDisplay</code> is similar to
+            that of
+            <a class="citerefentry" href="eglGetPlatformDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetPlatformDisplay</span></span></a>,
+            but is specified in terms of implementation-specific behavior
+            rather than platform-specific extensions. As for
+            <a class="citerefentry" href="eglGetPlatformDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetPlatformDisplay</span></span></a>,
+            EGL considers the returned <span class="type">EGLDisplay</span> as belonging
+            to the same platform as <em class="parameter"><code>display_id</code></em>.
+            However, the set of platforms to which
+            <em class="parameter"><code>display_id</code></em> is permitted to belong, as
+            well as the actual type of <em class="parameter"><code>display_id</code></em>,
+            are implementation-specific. If
+            <em class="parameter"><code>display_id</code></em> is
+            <code class="constant">EGL_DEFAULT_DISPLAY</code>, a <em class="firstterm">default
+            display</em> is returned. Multiple calls made to
+            <code class="function">eglGetDisplay</code> with the same
+            <em class="parameter"><code>display_id</code></em> will return the same
+            <span class="type">EGLDisplay</span> handle.
+        </p>
+        <p>
+            If <em class="parameter"><code>display_id</code></em> is
+            <code class="constant">EGL_DEFAULT_DISPLAY</code>, a default display connection is returned.
+        </p>
+        <p>
+            If no display connection matching <em class="parameter"><code>native_display</code></em> is
+            available, <code class="constant">EGL_NO_DISPLAY</code> is returned. No
+            error is generated.
+        </p>
+        <p>
+            Use <a class="citerefentry" href="eglInitialize.xhtml"><span class="citerefentry"><span class="refentrytitle">eglInitialize</span></span></a>
+            to initialize the display connection.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglInitialize.xhtml"><span class="citerefentry"><span class="refentrytitle">eglInitialize</span></span></a>,
+            <a class="citerefentry" href="eglGetPlatformDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetPlatformDisplay</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

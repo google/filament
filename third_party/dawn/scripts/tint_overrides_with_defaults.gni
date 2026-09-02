@@ -25,6 +25,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import("//build/config/sanitizers/sanitizers.gni")
 import("//build_overrides/tint.gni")
 
 # This file contains Tint-related build flags.
@@ -62,7 +63,7 @@ declare_args() {
 
   # Path to googletest checkout
   if (!defined(tint_googletest_dir)) {
-    tint_googletest_dir = "//third_party/googletest"
+    tint_googletest_dir = "//third_party/googletest/src"
   }
 
   # Path to spirv-headers checkout
@@ -142,11 +143,6 @@ declare_args() {
     tint_build_ir_binary = tint_has_protobuf
   }
 
-  # Build the tintd language server
-  if (!defined(tint_build_tintd)) {
-    tint_build_tintd = false
-  }
-
   # Build unittests
   if (!defined(tint_build_unittests)) {
     tint_build_unittests = true
@@ -157,10 +153,26 @@ declare_args() {
     tint_build_benchmarks = true
   }
 
+  # Build fuzzers
+  if (!defined(tint_build_fuzzers)) {
+    tint_build_fuzzers = use_fuzzing_engine
+  }
+
   # Enable building Mesa as part of Tint fuzzers
   if (!defined(tint_build_mesa)) {
     tint_build_mesa = false
   }
+}
+
+# Intentionally not allowing is_wasm, even though it is Linux like,
+# because it uses a different toolchain
+if (tint_build_mesa && (!is_linux || is_android || is_chromeos)) {
+  assert(false, "Building Mesa is only supported on Linux")
+}
+if (tint_build_mesa && is_msan) {
+  assert(
+      false,
+      "Building Mesa with MSAN is not supported, due to pre-built dependencies not being instrumented for MSAN")
 }
 
 declare_args() {

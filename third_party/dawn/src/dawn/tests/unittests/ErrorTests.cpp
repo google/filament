@@ -27,9 +27,9 @@
 
 #include <memory>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ErrorData.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ErrorData.h"
 
 namespace dawn::native {
 namespace {

@@ -1,0 +1,166 @@
+Name
+
+    ATI_map_object_buffer
+
+Name Strings
+
+    GL_ATI_map_object_buffer
+
+Contact
+
+    Rick Hammerstone, AMD (rick.hammerstone 'at' amd.com)
+
+Status
+
+    Complete.
+
+Version
+
+    0.3 - 11/04/06
+    Updated contact info after ATI/AMD merger.
+
+    0.2 - 01/15/01
+    Modified map call to return a pointer and take a single <buffer>
+    argument. Cleaned up spec.
+
+    0.1 - 11/26/01
+    Initial revision
+
+Number
+
+    288
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    OpenGL 1.1 is required. ATI_vertex_array_object is required by
+    this extension. 
+
+    
+Overview
+
+    This extension provides a mechanism for an application to obtain
+    the virtual address of an object buffer. This allows the
+    application to directly update the contents of an object buffer
+    and avoid any intermediate copies.
+
+    
+Issues
+
+    Should we use Lock and Unlock terminology?
+    
+	UNRESOLVED: This could be confusing. D3D uses "Lock" to mean
+ 	that something is available for the application to update and
+ 	won't be changed by the driver. However, in the compiled
+ 	vertex array extension, "Lock" is used to mean that the
+ 	application will not be changing the contents of a vertex
+ 	buffer.
+
+    
+New Procedures and Functions
+    
+    void *MapObjectBufferATI(uint buffer)
+    
+    void UnmapObjectBufferATI(uint buffer)
+    
+
+New Tokens
+    
+    None
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    Added to the description of Vertex Array Objects:
+
+    The object buffer interface provides a mechanism for an
+    application to store data in persistent memory that can be
+    accessed directly by the graphics hardware. The memory is accessed
+    through handles, and data must be copied into the memory by the
+    driver. This provides a platform-independent mechanism for
+    updating the object buffers, and allows the driver to optimally
+    manage the object buffers.
+
+    However, in cases where object buffers are being frequently
+    updated, the overhead of memory copies can degrade overall
+    application performance. The command
+
+	void *MapObjectBufferATI(uint buffer)
+
+    allows the application to obtain a pointer to the object buffer
+    named <buffer>. If <buffer> is not the name of an existing object
+    buffer, MapObjectBufferATI returns a null pointer.
+
+    The size of the region mapped by MapObjectBufferATI is equal to
+    the size of the object buffer. This size can be queried by calling
+    GetObjectBufferivATI or GetObjectBufferfvATI with the token
+    OBJECT_BUFFER_SIZE_ATI.
+
+    When an application issues a MapObjectBufferATI command, all
+    rendering commands that reference data stored in <buffer> must
+    complete before the call to MapObjectBufferATI returns. When the
+    call returns, the data in <buffer> can be updated immediately.
+
+    If an application desires to update an object buffer using this
+    interface, it should create the object buffer using DYNAMIC_ATI as
+    the usage parameter. Direct updates to object buffers that were
+    created with STATIC_ATI as the usage parameter may operate at
+    reduced performance.
+
+    When an application is finished updating an object buffer, it uses
+    the command
+
+	void UnmapObjectBufferATI(uint buffer)
+
+    to indicate to the driver that it has completed updating the
+    object buffer specified by <buffer>. An application must call
+    UnmapObjectBufferATI before issuing any rendering commands that
+    use the data stored in <buffer>.
+
+    Attempts to update an object buffer by direct memory writes after
+    UnmapObjectBufferATI has been called result in undefined behavior
+    and may generate an error. UpdateObjectBufferATI can be used to
+    update an object buffer at any time, regardless of whether it is
+    mapped or not.
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    Added to section 5.4, as part of the discussion of what commands
+    are compiled into display lists:
+
+    MapObjectBufferATI and UnmapObjectBufferATI are not included in
+    display lists, but are executed immediately.
+
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State
+Requests)
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if the <buffer> argument of
+    MapObjectBuffer or UnmapObjectBuffer does not specify a valid
+    object buffer. 
+
+    INVALID_OPERATION may be generated if a rendering command is
+    issued that uses an object buffer that is currently mapped.
+
+New State
+
+    None
+    
+
+Implementation Notes
+

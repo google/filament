@@ -30,8 +30,8 @@
 #include <utility>
 
 #include "GLFW/glfw3.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/Platform.h"
+#include "src/utils/log.h"
+#include "src/utils/platform.h"
 #include "webgpu/webgpu_glfw.h"
 
 #if DAWN_PLATFORM_IS(WINDOWS)
@@ -40,7 +40,9 @@
 #if defined(DAWN_USE_X11)
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
-#if defined(DAWN_USE_WAYLAND)
+// GLFW's native Wayland accessors only exist if GLFW was built with its Wayland
+// backend; the GN build isn't (DAWN_GLFW_NO_WAYLAND).
+#if defined(DAWN_USE_WAYLAND) && !defined(DAWN_GLFW_NO_WAYLAND)
 #define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
 #include "GLFW/glfw3native.h"
@@ -83,8 +85,8 @@ SetupWindowAndGetSurfaceDescriptor(GLFWwindow* window) {
             }};
 #elif defined(DAWN_ENABLE_BACKEND_METAL)
     return SetupWindowAndGetSurfaceDescriptorCocoa(window);
-#elif defined(DAWN_USE_WAYLAND) || defined(DAWN_USE_X11)
-#if defined(GLFW_PLATFORM_WAYLAND) && defined(DAWN_USE_WAYLAND)
+#elif (defined(DAWN_USE_WAYLAND) && !defined(DAWN_GLFW_NO_WAYLAND)) || defined(DAWN_USE_X11)
+#if defined(GLFW_PLATFORM_WAYLAND) && defined(DAWN_USE_WAYLAND) && !defined(DAWN_GLFW_NO_WAYLAND)
     if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
         wgpu::SurfaceSourceWaylandSurface* desc = new wgpu::SurfaceSourceWaylandSurface();
         desc->display = glfwGetWaylandDisplay();

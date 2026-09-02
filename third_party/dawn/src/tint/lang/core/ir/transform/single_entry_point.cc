@@ -105,9 +105,13 @@ Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
 }  // namespace
 
 Result<SuccessType> SingleEntryPoint(Module& ir, std::string_view entry_point_name) {
-    AssertValid(ir, kSingleEntryPointCapabilities, "before core.SingleEntryPoint");
+    AssertValid(ir, "before core.SingleEntryPoint");
 
-    return Run(ir, entry_point_name);
+    TINT_CHECK_RESULT(Run(ir, entry_point_name));
+
+    ir.properties.Remove(Property::kAllowMultipleEntryPoints);
+
+    return Success;
 }
 
 }  // namespace tint::core::ir::transform

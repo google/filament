@@ -233,47 +233,48 @@ note: while analyzing entry point 'fragShader')");
 
 TEST_F(ResolverBuiltinsValidationTest, UseFragDepthModeWithoutExtension) {
     // @fragment
-    // fn fs_main() -> @builtin(frag_depth, any) f32 { return 1.0; }
-    Func(
-        "fs_main", tint::Empty, ty.f32(),
-        Vector{
-            Return(1_f),
-        },
-        Vector{
-            Stage(ast::PipelineStage::kFragment),
-        },
-        Vector{
-            Builtin(Source{{12, 34}}, core::BuiltinValue::kFragDepth, core::BuiltinDepthMode::kAny),
-        });
+    // fn fs_main() -> @builtin(frag_depth, greater) f32 { return 1.0; }
+    Func("fs_main", tint::Empty, ty.f32(),
+         Vector{
+             Return(1_f),
+         },
+         Vector{
+             Stage(ast::PipelineStage::kFragment),
+         },
+         Vector{
+             Builtin(Source{{12, 34}}, core::BuiltinValue::kFragDepth,
+                     core::BuiltinDepthMode::kGreater),
+         });
 
     Resolver resolver{this, wgsl::AllowedFeatures{}};
     EXPECT_FALSE(resolver.Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        "12:34 error: use of '@builtin(frag_depth, any)' attribute requires the 'fragment_depth' "
-        "language feature");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: use of '@builtin(frag_depth, greater)' attribute requires the "
+              "'fragment_depth' "
+              "language feature");
 }
 
 TEST_F(ResolverBuiltinsValidationTest, UseFragDepthModeIsInvalidForPosition) {
     // @vertex
-    // fn main() -> @builtin(position, any) vec4f { return vec4f(); }
+    // fn main() -> @builtin(position, greater) vec4f { return vec4f(); }
     Func("main", tint::Empty, ty.vec4<f32>(),
          Vector{
              Return(Call(ty.vec4<f32>())),
          },
          Vector{Stage(ast::PipelineStage::kVertex)},
          Vector{
-             Builtin(Source{{12, 34}}, core::BuiltinValue::kPosition, core::BuiltinDepthMode::kAny),
+             Builtin(Source{{12, 34}}, core::BuiltinValue::kPosition,
+                     core::BuiltinDepthMode::kGreater),
          });
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
-              "12:34 error: Builtin depth mode 'any' cannot be used for '@builtin(position)'");
+              "12:34 error: Builtin depth mode 'greater' cannot be used for '@builtin(position)'");
 }
 
 TEST_F(ResolverBuiltinsValidationTest, UseFragDepthModeIsInvalidForPositionInStruct) {
     // struct Output {
-    //   @builtin(position, any) pos : vec4f;
+    //   @builtin(position, greater) pos : vec4f;
     // };
     // @vertex
     // fn main() -> Output {
@@ -283,7 +284,7 @@ TEST_F(ResolverBuiltinsValidationTest, UseFragDepthModeIsInvalidForPositionInStr
         "Output", Vector{
                       Member("pos", ty.vec4<f32>(),
                              Vector{Builtin(Source{{12, 34}}, core::BuiltinValue::kPosition,
-                                            core::BuiltinDepthMode::kAny)}),
+                                            core::BuiltinDepthMode::kGreater)}),
                   });
     Func(Source{{12, 34}}, "main", tint::Empty, ty.Of(output),
          Vector{
@@ -295,7 +296,7 @@ TEST_F(ResolverBuiltinsValidationTest, UseFragDepthModeIsInvalidForPositionInStr
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
-              "12:34 error: Builtin depth mode 'any' cannot be used for '@builtin(position)'");
+              "12:34 error: Builtin depth mode 'greater' cannot be used for '@builtin(position)'");
 }
 
 TEST_F(ResolverBuiltinsValidationTest, StructBuiltinInsideEntryPoint_Ignored) {

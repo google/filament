@@ -54,13 +54,15 @@ add_library(webgpu_c_bundled SHARED)
 target_sources(webgpu_c_bundled PRIVATE
     ${WEBGPU_JNI_SOURCES}
     ${WEBGPU_JNI_HEADERS}
+    GPUImportedAHB.cpp
     JNIContext.cpp
     JNIContext.h
     Util.cpp
 )
 
-target_include_directories(webgpu_c_bundled PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(webgpu_c_bundled PRIVATE android webgpu_dawn dawn_common dawn_internal_config)
+target_include_directories(webgpu_c_bundled PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${DAWN_BUILD_GEN_DIR}/cpp)
+target_link_libraries(webgpu_c_bundled PRIVATE android sync webgpu_dawn dawn_common dawn_internal_config)
+target_link_options(webgpu_c_bundled PRIVATE "-Wl,-z,max-page-size=16384")
 
 # Copy headers for webgpu_c_bundled over.
 add_custom_command(DEPENDS dawncpp_headers POST_BUILD
@@ -87,3 +89,4 @@ target_link_libraries(webgpu_wrapper_tests
     googletest::gmock
     junit-gtest::junit-gtest
 )
+target_link_options(webgpu_wrapper_tests PRIVATE "-Wl,-z,max-page-size=16384")

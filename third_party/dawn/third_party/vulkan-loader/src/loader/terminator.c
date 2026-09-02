@@ -360,7 +360,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties2(Vk
             icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties(phys_dev_term->phys_dev, pQueueFamilyPropertyCount, NULL);
         } else {
             // Allocate a temporary array for the output of the old function
-            VkQueueFamilyProperties *properties = loader_stack_alloc(*pQueueFamilyPropertyCount * sizeof(VkQueueFamilyProperties));
+            uint32_t allocated_count = *pQueueFamilyPropertyCount;
+            VkQueueFamilyProperties *properties = loader_stack_alloc(allocated_count * sizeof(VkQueueFamilyProperties));
             if (properties == NULL) {
                 *pQueueFamilyPropertyCount = 0;
                 loader_log(icd_term->this_instance, VULKAN_LOADER_ERROR_BIT, 0,
@@ -371,7 +372,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceQueueFamilyProperties2(Vk
 
             icd_term->dispatch.GetPhysicalDeviceQueueFamilyProperties(phys_dev_term->phys_dev, pQueueFamilyPropertyCount,
                                                                       properties);
-            for (uint32_t i = 0; i < *pQueueFamilyPropertyCount; ++i) {
+            // The driver reports the written count back in pQueueFamilyPropertyCount; never copy past the array we sized.
+            for (uint32_t i = 0; i < *pQueueFamilyPropertyCount && i < allocated_count; ++i) {
                 // Write to the VkQueueFamilyProperties2KHR struct
                 memcpy(&pQueueFamilyProperties[i].queueFamilyProperties, &properties[i], sizeof(VkQueueFamilyProperties));
 
@@ -464,8 +466,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperti
                 pFormatInfo->tiling, pPropertyCount, NULL);
         } else {
             // Allocate a temporary array for the output of the old function
-            VkSparseImageFormatProperties *properties =
-                loader_stack_alloc(*pPropertyCount * sizeof(VkSparseImageMemoryRequirements));
+            uint32_t allocated_count = *pPropertyCount;
+            VkSparseImageFormatProperties *properties = loader_stack_alloc(allocated_count * sizeof(VkSparseImageFormatProperties));
             if (properties == NULL) {
                 *pPropertyCount = 0;
                 loader_log(icd_term->this_instance, VULKAN_LOADER_ERROR_BIT, 0,
@@ -477,7 +479,8 @@ VKAPI_ATTR void VKAPI_CALL terminator_GetPhysicalDeviceSparseImageFormatProperti
             icd_term->dispatch.GetPhysicalDeviceSparseImageFormatProperties(
                 phys_dev_term->phys_dev, pFormatInfo->format, pFormatInfo->type, pFormatInfo->samples, pFormatInfo->usage,
                 pFormatInfo->tiling, pPropertyCount, properties);
-            for (uint32_t i = 0; i < *pPropertyCount; ++i) {
+            // The driver reports the written count back in pPropertyCount; never copy past the array we sized.
+            for (uint32_t i = 0; i < *pPropertyCount && i < allocated_count; ++i) {
                 // Write to the VkSparseImageFormatProperties2KHR struct
                 memcpy(&pProperties[i].properties, &properties[i], sizeof(VkSparseImageFormatProperties));
 

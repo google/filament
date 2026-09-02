@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/MutexProtected.h"
+#include "src/dawn/common/MutexProtected.h"
 
 namespace dawn::native {
 

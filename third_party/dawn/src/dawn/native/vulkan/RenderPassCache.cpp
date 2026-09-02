@@ -25,20 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/RenderPassCache.h"
+#include "src/dawn/native/vulkan/RenderPassCache.h"
 
 #include <concepts>
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/Enumerator.h"
-#include "dawn/common/HashUtils.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
 
 namespace dawn::native::vulkan {
 
@@ -46,7 +47,7 @@ namespace {
 
 // Contains the attachment description that will be chained in the create info
 // The order of all attachments in attachmentDescs is "color-depthstencil-resolve".
-constexpr uint8_t kMaxAttachmentCount = kMaxColorAttachments * 2 + 1;
+constexpr uint32_t kMaxAttachmentCount = kMaxColorAttachments * 2 + 1;
 
 class RenderPassCreateInfo {
   public:
@@ -62,6 +63,7 @@ class RenderPassCreateInfo {
             colorAttachmentRefs[i] = defaultRef;
             resolveAttachmentRefs[i] = defaultRef;
             inputAttachmentRefs[i] = defaultRef;
+            framebufferFetchAttachmentRefs[i] = defaultRef;
         }
         depthStencilAttachmentRef = defaultRef;
 
@@ -72,11 +74,12 @@ class RenderPassCreateInfo {
     PerColorAttachment<VkAttachmentReference> colorAttachmentRefs;
     PerColorAttachment<VkAttachmentReference> resolveAttachmentRefs;
     PerColorAttachment<VkAttachmentReference> inputAttachmentRefs;
-    VkAttachmentReference depthStencilAttachmentRef;
+    PerColorAttachment<VkAttachmentReference> framebufferFetchAttachmentRefs;
+    VkAttachmentReference depthStencilAttachmentRef = {};
 
     std::array<VkAttachmentDescription, kMaxAttachmentCount> attachmentDescs = {};
     std::array<VkSubpassDescription, 2> subpassDescs = {};
-    std::array<VkSubpassDependency, 2> subpassDependencies = {};
+    std::array<VkSubpassDependency, 3> subpassDependencies = {};
 
     VkRenderPassCreateInfo createInfo = {};
 };
@@ -98,6 +101,7 @@ class RenderPassCreateInfo2 {
             colorAttachmentRefs[i] = defaultRef;
             resolveAttachmentRefs[i] = defaultRef;
             inputAttachmentRefs[i] = defaultRef;
+            framebufferFetchAttachmentRefs[i] = defaultRef;
         }
         depthStencilAttachmentRef = defaultRef;
 
@@ -108,11 +112,13 @@ class RenderPassCreateInfo2 {
             attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         }
 
-        for (auto i : Range(2)) {
+        for (auto i : Range(subpassDescs.size())) {
             subpassDescs[i].sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
             subpassDescs[i].pNext = nullptr;
             subpassDescs[i].viewMask = 0;
+        }
 
+        for (auto i : Range(subpassDependencies.size())) {
             subpassDependencies[i].sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
             subpassDependencies[i].pNext = nullptr;
             subpassDependencies[i].viewOffset = 0;
@@ -127,11 +133,12 @@ class RenderPassCreateInfo2 {
     PerColorAttachment<VkAttachmentReference2> colorAttachmentRefs;
     PerColorAttachment<VkAttachmentReference2> resolveAttachmentRefs;
     PerColorAttachment<VkAttachmentReference2> inputAttachmentRefs;
-    VkAttachmentReference2 depthStencilAttachmentRef;
+    PerColorAttachment<VkAttachmentReference2> framebufferFetchAttachmentRefs;
+    VkAttachmentReference2 depthStencilAttachmentRef = {};
 
     std::array<VkAttachmentDescription2, kMaxAttachmentCount> attachmentDescs = {};
     std::array<VkSubpassDescription2, 2> subpassDescs = {};
-    std::array<VkSubpassDependency2, 2> subpassDependencies = {};
+    std::array<VkSubpassDependency2, 3> subpassDependencies = {};
 
     VkRenderPassCreateInfo2 createInfo = {};
 };
@@ -139,6 +146,8 @@ class RenderPassCreateInfo2 {
 template <class InfoType>
 void InitializePassInfo(Device* device, const RenderPassCacheQuery& query, InfoType& passInfo) {
     VkSampleCountFlagBits vkSampleCount = VulkanSampleCount(query.sampleCount);
+
+    const bool framebufferFetchEnabled = device->HasFeature(Feature::FramebufferFetch);
 
     // The Vulkan subpasses want to know the layout of the attachments with VkAttachmentRef.
     // Precompute them as they must be pointer-chained in VkSubpassDescription.
@@ -149,7 +158,13 @@ void InitializePassInfo(Device* device, const RenderPassCacheQuery& query, InfoT
         auto& attachmentDesc = passInfo.attachmentDescs[attachmentCount];
 
         attachmentRef.attachment = attachmentCount;
-        attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        // If we can read from a color attachment it must use VK_IMAGE_LAYOUT_GENERAL for the color
+        // attachment description. As long as the initial/final layouts are
+        // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, the choice of the VK_IMAGE_LAYOUT_GENERAL for
+        // the subpass layout is efficient; the few GPUs that treat VK_IMAGE_LAYOUT_GENERAL
+        // differently recognize this pattern and keep the internal layout optimal.
+        attachmentRef.layout = framebufferFetchEnabled ? VK_IMAGE_LAYOUT_GENERAL
+                                                       : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         attachmentDesc.flags = 0;
         attachmentDesc.format = VulkanImageFormat(device, query.colorFormats[i]);
@@ -272,8 +287,45 @@ void InitializePassInfo(Device* device, const RenderPassCacheQuery& query, InfoT
     auto& subpassDesc = passInfo.subpassDescs[subpassCount];
     subpassDesc.flags = 0;
     subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpassDesc.inputAttachmentCount = 0;
-    subpassDesc.pInputAttachments = nullptr;
+
+    if (framebufferFetchEnabled) {
+        // When framebuffer fetch is enable add a corresponding input attachment for each color
+        // attachment in case we need to read from it.
+        for (auto i : query.colorMask) {
+            auto& attachmentRef = passInfo.colorAttachmentRefs[i];
+
+            auto& inputRef = passInfo.framebufferFetchAttachmentRefs[i];
+            inputRef.attachment = attachmentRef.attachment;
+            inputRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+            if constexpr (std::same_as<InfoType, RenderPassCreateInfo2>) {
+                inputRef.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            }
+        }
+
+        subpassDesc.inputAttachmentCount = static_cast<uint8_t>(highestColorAttachmentIndexPlusOne);
+        subpassDesc.pInputAttachments = passInfo.framebufferFetchAttachmentRefs.data();
+
+        if (device->GetFramebufferFetchMode() == VulkanFramebufferFetchMode::kCoherentExt) {
+            subpassDesc.flags |=
+                VK_SUBPASS_DESCRIPTION_RASTERIZATION_ORDER_ATTACHMENT_COLOR_ACCESS_BIT_EXT;
+        } else if (device->GetFramebufferFetchMode() ==
+                   VulkanFramebufferFetchMode::kCoherentSelfDep) {
+            // Adding the self-dependency should be basically free on coherent hardware since
+            // rasterization already happens in order.
+            auto& dependency = passInfo.subpassDependencies[dependencyCount];
+            dependency.srcSubpass = subpassCount;
+            dependency.dstSubpass = subpassCount;
+            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+            dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+            dependencyCount++;
+        }
+    } else {
+        subpassDesc.inputAttachmentCount = 0;
+        subpassDesc.pInputAttachments = nullptr;
+    }
     subpassDesc.colorAttachmentCount = static_cast<uint8_t>(highestColorAttachmentIndexPlusOne);
     subpassDesc.pColorAttachments = passInfo.colorAttachmentRefs.data();
 

@@ -23,13 +23,10 @@
 #include <string>
 #include <algorithm>
 #include <assert.h>
-#include <unordered_map>
-#include <memory>
 #include <vector>
 
 #include "vulkan/vk_layer.h"
 #include "generated/vk_dispatch_table_helper.h"
-#include "loader/vk_loader_layer.h"
 
 // Export full support of instance extension VK_EXT_direct_mode_display extension
 #if !defined(TEST_LAYER_EXPORT_DIRECT_DISP)
@@ -104,7 +101,7 @@ struct saved_wrapped_handles_storage {
     std::vector<wrapped_debug_util_mess_obj *> debug_util_messengers;
 };
 
-saved_wrapped_handles_storage saved_wrapped_handles;
+static saved_wrapped_handles_storage saved_wrapped_handles;
 
 VkInstance unwrap_instance(const VkInstance instance, wrapped_inst_obj **inst) {
     *inst = reinterpret_cast<wrapped_inst_obj *>(instance);
@@ -159,7 +156,7 @@ const VkLayerProperties global_layer = {
     "LunarG Test Layer",
 };
 
-uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
+static uint32_t loader_layer_if_version = CURRENT_LOADER_LAYER_INTERFACE_VERSION;
 
 VKAPI_ATTR VkResult VKAPI_CALL wrap_vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
                                                      const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
@@ -406,7 +403,7 @@ VKAPI_ATTR VkResult VKAPI_CALL wrap_vkEnumeratePhysicalDevices(VkInstance instan
             }
             phys_devs[i].obj = reinterpret_cast<void *>(pPhysicalDevices[i]);
             phys_devs[i].inst = inst;
-            pPhysicalDevices[i] = reinterpret_cast<VkPhysicalDevice>(&phys_devs[i]);
+            pPhysicalDevices[i] = reinterpret_cast<VkPhysicalDevice>(phys_devs + i);
         }
     }
     return result;

@@ -612,7 +612,7 @@ var LibraryWebGPU = {
 
     fillAdapterInfoStruct__deps: ['$stringToNewUTF8', '$lengthBytesUTF8'],
     fillAdapterInfoStruct: (info, infoStruct) => {
-      {{{ gpu.makeCheckDescriptor('infoStruct') }}}
+      {{{ gpu.makeCheck('infoStruct') }}}
 
       // Populate subgroup limits.
       {{{ makeSetValue('infoStruct', C_STRUCTS.WGPUAdapterInfo.subgroupMinSize, 'info.subgroupMinSize', 'u32') }}};
@@ -643,6 +643,29 @@ var LibraryWebGPU = {
       {{{ makeSetValue('infoStruct', C_STRUCTS.WGPUAdapterInfo.adapterType, 'adapterType', 'i32') }}};
       {{{ makeSetValue('infoStruct', C_STRUCTS.WGPUAdapterInfo.vendorID, '0', 'u32') }}};
       {{{ makeSetValue('infoStruct', C_STRUCTS.WGPUAdapterInfo.deviceID, '0', 'u32') }}};
+
+      WebGPU.iterateExtensions(infoStruct, {
+        {{{ gpu.SType.AdapterPropertiesSubgroupMatrixConfigs }}}: (ext) => {
+          let configCount = 0;
+          let configsPtr = {{{ gpu.NULLPTR }}};
+          if (info.subgroupMatrixConfigs) {
+            configCount = info.subgroupMatrixConfigs.length;
+            configsPtr = _malloc(configCount * {{{ C_STRUCTS.WGPUSubgroupMatrixConfig.__size__ }}});
+            for (const [i, cfg] of info.subgroupMatrixConfigs.entries()) {
+              const ptr = configsPtr + i * {{{ C_STRUCTS.WGPUSubgroupMatrixConfig.__size__ }}};
+              const componentType = WebGPU.SubgroupMatrixComponentType.indexOf(cfg.componentType);
+              const resultComponentType = WebGPU.SubgroupMatrixComponentType.indexOf(cfg.resultComponentType);
+              {{{ makeSetValue('ptr', C_STRUCTS.WGPUSubgroupMatrixConfig.componentType, 'componentType', 'i32') }}};
+              {{{ makeSetValue('ptr', C_STRUCTS.WGPUSubgroupMatrixConfig.resultComponentType, 'resultComponentType', 'i32') }}};
+              {{{ makeSetValue('ptr', C_STRUCTS.WGPUSubgroupMatrixConfig.M, 'cfg.M', 'u32') }}};
+              {{{ makeSetValue('ptr', C_STRUCTS.WGPUSubgroupMatrixConfig.N, 'cfg.N', 'u32') }}};
+              {{{ makeSetValue('ptr', C_STRUCTS.WGPUSubgroupMatrixConfig.K, 'cfg.K', 'u32') }}};
+            }
+          }
+          {{{ makeSetValue('ext', C_STRUCTS.WGPUAdapterPropertiesSubgroupMatrixConfigs.configs, 'configsPtr', '*') }}};
+          {{{ makeSetValue('ext', C_STRUCTS.WGPUAdapterPropertiesSubgroupMatrixConfigs.configCount, 'configCount', '*') }}};
+        },
+      });
     },
 
     // Maps from enum number to enum string.
@@ -1386,6 +1409,14 @@ var LibraryWebGPU = {
     }
   },
 
+  wgpuComputePassEncoderSetImmediates: (passPtr, offset, data, size) => {
+    var pass = WebGPU.getJsObject(passPtr);
+    // There is a size limitation for ArrayBufferView. Work around by passing in a subarray
+    // instead of the whole heap. crbug.com/1201109
+    var subarray = HEAPU8.subarray(data, data + size);
+    pass.setImmediates(offset, subarray, 0, size);
+  },
+
   wgpuComputePassEncoderSetPipeline: (passPtr, pipelinePtr) => {
     var pass = WebGPU.getJsObject(passPtr);
     var pipeline = WebGPU.getJsObject(pipelinePtr);
@@ -1690,6 +1721,7 @@ var LibraryWebGPU = {
       "label": WebGPU.makeStringFromOptionalStringView(
         descriptor + {{{ C_STRUCTS.WGPUPipelineLayoutDescriptor.label }}}),
       "bindGroupLayouts": bgls,
+      "immediateSize": {{{ makeGetValue('descriptor', C_STRUCTS.WGPUPipelineLayoutDescriptor.immediateSize, 'u32') }}},
     };
 
     var device = WebGPU.getJsObject(devicePtr);
@@ -2252,6 +2284,14 @@ var LibraryWebGPU = {
     }
   },
 
+  wgpuRenderBundleEncoderSetImmediates: (passPtr, offset, data, size) => {
+    var pass = WebGPU.getJsObject(passPtr);
+    // There is a size limitation for ArrayBufferView. Work around by passing in a subarray
+    // instead of the whole heap. crbug.com/1201109
+    var subarray = HEAPU8.subarray(data, data + size);
+    pass.setImmediates(offset, subarray, 0, size);
+  },
+
   wgpuRenderBundleEncoderSetIndexBuffer: (passPtr, bufferPtr, format, offset, size) => {
     var pass = WebGPU.getJsObject(passPtr);
     var buffer = WebGPU.getJsObject(bufferPtr);
@@ -2375,6 +2415,14 @@ var LibraryWebGPU = {
     } else {
       pass.setBindGroup(groupIndex, group, HEAPU32, {{{ getHeapOffset('dynamicOffsetsPtr', 'u32') }}}, dynamicOffsetCount);
     }
+  },
+
+  wgpuRenderPassEncoderSetImmediates: (passPtr, offset, data, size) => {
+    var pass = WebGPU.getJsObject(passPtr);
+    // There is a size limitation for ArrayBufferView. Work around by passing in a subarray
+    // instead of the whole heap. crbug.com/1201109
+    var subarray = HEAPU8.subarray(data, data + size);
+    pass.setImmediates(offset, subarray, 0, size);
   },
 
   wgpuRenderPassEncoderSetBlendConstant: (passPtr, colorPtr) => {

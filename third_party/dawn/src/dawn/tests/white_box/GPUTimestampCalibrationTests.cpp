@@ -25,15 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/white_box/GPUTimestampCalibrationTests.h"
+#include "src/dawn/tests/white_box/GPUTimestampCalibrationTests.h"
 
 #include <vector>
 
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -81,10 +82,11 @@ class ExpectBetweenTimestamps : public detail::Expectation {
         }
 
         for (size_t i = 0; i < size / sizeof(uint64_t); ++i) {
-            if (actual[i] < mMinValue || actual[i] > mMaxValue) {
+            if (DAWN_UNSAFE_TODO(actual[i]) < mMinValue ||
+                DAWN_UNSAFE_TODO(actual[i]) > mMaxValue) {
                 return testing::AssertionFailure()
                        << "Expected data[" << i << "] to be between " << mMinValue << " and "
-                       << mMaxValue << ", actual " << actual[i] << "\n";
+                       << mMaxValue << ", actual " << DAWN_UNSAFE_TODO(actual[i]) << "\n";
             }
         }
 
@@ -279,7 +281,11 @@ class GPUTimestampCalibrationTests : public DawnTestWithParams<GPUTimestampCalib
         queue.Submit(1, &resolveCommands);
 
         float errorToleranceRatio = 0.0f;
-        if (!HasToggleEnabled("disable_timestamp_query_conversion")) {
+
+        // The internal shader runs if either timestamp conversion or quantization is enabled.
+        bool needsConversion = !HasToggleEnabled("disable_timestamp_query_conversion");
+        bool needsQuantization = HasToggleEnabled("timestamp_quantization");
+        if (needsConversion || needsQuantization) {
             float period = mBackend->GetTimestampPeriod();
             gpuTimestamp0 = static_cast<uint64_t>(static_cast<double>(gpuTimestamp0 * period));
             gpuTimestamp1 = static_cast<uint64_t>(static_cast<double>(gpuTimestamp1 * period));
@@ -307,11 +313,12 @@ TEST_P(GPUTimestampCalibrationTests, TimestampsCalibration) {
 
 DAWN_INSTANTIATE_TEST_P(
     GPUTimestampCalibrationTests,
-    // Test with the disable_timestamp_query_conversion toggle forced on and off.
-    {D3D12Backend({"disable_timestamp_query_conversion"}, {}),
-     D3D12Backend({}, {"disable_timestamp_query_conversion"}),
-     MetalBackend({"disable_timestamp_query_conversion"}, {}),
-     MetalBackend({}, {"disable_timestamp_query_conversion"})},
+    // Test both with the timestamp quantization/conversion shader running and without. The shader
+    // runs if either timestamp conversion or quantization is enabled.
+    {D3D12Backend(),
+     D3D12Backend({"disable_timestamp_query_conversion"}, {"timestamp_quantization"}),
+     MetalBackend(),
+     MetalBackend({"disable_timestamp_query_conversion"}, {"timestamp_quantization"})},
     {wgpu::FeatureName::TimestampQuery,
      wgpu::FeatureName::ChromiumExperimentalTimestampQueryInsidePasses},
     {EncoderType::NonPass, EncoderType::ComputePass, EncoderType::RenderPass});

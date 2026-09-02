@@ -18,7 +18,7 @@
 # ~~~
 cmake_minimum_required(VERSION 3.22.1)
 
-project(VULKAN_LOADER VERSION 1.4.349 LANGUAGES C)
+project(VULKAN_LOADER VERSION 1.4.360 LANGUAGES C)
 
 option(CODE_COVERAGE "Enable Code Coverage" OFF)
 if (CODE_COVERAGE)
@@ -53,8 +53,16 @@ if(WIN32)
 endif()
 
 find_package(VulkanHeaders ${PROJECT_VERSION} CONFIG QUIET)
-if (${VulkanHeaders_VERSION} VERSION_GREATER ${PROJECT_VERSION})
+if (DEFINED ${VulkanHeaders_VERSION} AND ${VulkanHeaders_VERSION} VERSION_GREATER ${PROJECT_VERSION})
     message(WARNING "The Vulkan Headers version ${VulkanHeaders_VERSION} is newer than the expected version ${PROJECT_VERSION} used by the Vulkan-Loader. May cause issues.")
+endif()
+
+# Workaround AppleClang using the wrong headers when there are headers in /usr/local/include
+if (CMAKE_C_COMPILER_ID STREQUAL AppleClang AND TARGET Vulkan::Headers AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
+    get_target_property(vulkan_headers_aliased Vulkan::Headers ALIASED_TARGET)
+    if (NOT vulkan_headers_aliased)
+        set_target_properties(Vulkan::Headers PROPERTIES SYSTEM OFF)
+    endif()
 endif()
 
 include(GNUInstallDirs)
@@ -160,7 +168,15 @@ target_link_libraries(loader_common_options INTERFACE platform_wsi)
 # Enable beta Vulkan extensions
 target_compile_definitions(loader_common_options INTERFACE VK_ENABLE_BETA_EXTENSIONS)
 
-string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" SYSTEM_PROCESSOR)
+# Use the target architecture when it is known. Visual Studio generators set CMAKE_GENERATOR_PLATFORM from the -A option
+# (e.g. arm64, arm64ec), which is what we need to pick the right assembler when the host and target differ (such as
+# building arm64/arm64ec on an x64 host). Other generators (Ninja, Makefiles, non-Windows) leave it empty, so fall back
+# to the host processor there.
+if (CMAKE_GENERATOR_PLATFORM)
+    string(TOLOWER "${CMAKE_GENERATOR_PLATFORM}" SYSTEM_PROCESSOR)
+else()
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" SYSTEM_PROCESSOR)
+endif()
 
 option(BUILD_WERROR "Enable warnings as errors")
 
@@ -316,3 +332,47 @@ if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+
+# Building Arm64X binaries requires 2 builds. One for the arm64 code, and the other for the x64.
+# Source https://learn.microsoft.com/en-us/windows/arm/arm64x-build#building-an-arm64x-dll-with-cmake
+if(DEFINED BUILD_AS_ARM64X)
+ 	set(ARM64X_TARGETS vulkan)
+
+    # directory where the link.rsp file generated during arm64 build will be stored
+    set(arm64ReproDir "${CMAKE_CURRENT_SOURCE_DIR}/repros")
+
+    # This function reads in the content of the rsp file outputted from arm64 build for a target. Then passes the arm64 libs, objs and def file to the linker using /machine:arm64x to combine them with the arm64ec counterparts and create an arm64x binary.
+
+    function(set_arm64_dependencies n)
+        set(REPRO_FILE "${arm64ReproDir}/${n}.rsp")
+        file(STRINGS "${REPRO_FILE}" ARM64_OBJS REGEX obj\"$)
+        file(STRINGS "${REPRO_FILE}" ARM64_DEF REGEX def\"$)
+        file(STRINGS "${REPRO_FILE}" ARM64_LIBS REGEX lib\"$)
+        string(REPLACE "\"" ";" ARM64_OBJS "${ARM64_OBJS}")
+        string(REPLACE "\"" ";" ARM64_LIBS "${ARM64_LIBS}")
+        string(REPLACE "\"" ";" ARM64_DEF "${ARM64_DEF}")
+        string(REPLACE "/def:" "/defArm64Native:" ARM64_DEF "${ARM64_DEF}")
+
+        target_sources(${n} PRIVATE ${ARM64_OBJS})
+        target_link_options(${n} PRIVATE /machine:arm64x "${ARM64_DEF}" "${ARM64_LIBS}")
+    endfunction()
+
+    # During the arm64 build, create link.rsp files that containes the absolute path to the inputs passed to the linker (objs, def files, libs).
+
+    if("${BUILD_AS_ARM64X}" STREQUAL "ARM64")
+        add_custom_target(mkdirs ALL COMMAND cmd /c (if not exist \"${arm64ReproDir}/\" mkdir \"${arm64ReproDir}\" ))
+        foreach (n ${ARM64X_TARGETS})
+            add_dependencies(${n} mkdirs)
+            # tell the linker to produce this special rsp file that has absolute paths to its inputs
+            target_link_options(${n} PRIVATE "/LINKREPROFULLPATHRSP:${arm64ReproDir}/${n}.rsp")
+        endforeach()
+
+    # During the ARM64EC build, modify the link step appropriately to produce an arm64x binary
+    elseif("${BUILD_AS_ARM64X}" STREQUAL "ARM64EC")
+        foreach (n ${ARM64X_TARGETS})
+            set_arm64_dependencies(${n})
+        endforeach()
+    endif()
+endif()
+

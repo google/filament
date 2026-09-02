@@ -246,6 +246,30 @@ class Function final : public Castable<Function, CallTarget> {
         return std::nullopt;
     }
 
+    /// Adds `var` as a transitively referenced subgroup matrix with required matrix size `size`.
+    /// If `var` is already transitively referenced, the maximum size is kept.
+    /// @param var the global variable
+    /// @param size the required matrix size
+    void AddTransitivelyReferencedSubgroupMatrixSize(const GlobalVariable* var, uint64_t size) {
+        auto where = transitively_referenced_subgroup_matrix_sizes_.Get(var);
+        if (where) {
+            *where = std::max(*where, size);
+        } else {
+            transitively_referenced_subgroup_matrix_sizes_.Add(var, size);
+        }
+    }
+
+    /// @return The largest required matrix size transitively referencing `var`. std::nullopt if it
+    /// is unreferenced.
+    std::optional<uint64_t> TransitivelyReferencedSubgroupMatrixSize(
+        const GlobalVariable* var) const {
+        auto where = transitively_referenced_subgroup_matrix_sizes_.Get(var);
+        if (where) {
+            return *where;
+        }
+        return std::nullopt;
+    }
+
   private:
     Function(const Function&) = delete;
     Function(Function&&) = delete;
@@ -267,6 +291,7 @@ class Function final : public Castable<Function, CallTarget> {
 
     std::optional<const Source*> directly_used_subgroup_matrix_ = std::nullopt;
     Hashmap<const GlobalVariable*, uint64_t, 8> transitively_referenced_unsized_buffer_sizes_;
+    Hashmap<const GlobalVariable*, uint64_t, 8> transitively_referenced_subgroup_matrix_sizes_;
 
     std::optional<uint32_t> return_location_;
 };

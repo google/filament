@@ -30,8 +30,8 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -121,7 +121,7 @@ class MatrixVectorMultiplyPerf : public DawnPerfTestWithParams<MatrixVectorMulti
     }
 
     uint64_t GetMaxStorageBufferBindingSizeNeeded() {
-        return BytesPerElement() * GetParam().mRows * GetParam().mCols;
+        return static_cast<uint64_t>(BytesPerElement()) * GetParam().mRows * GetParam().mCols;
     }
 
     void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
@@ -191,13 +191,14 @@ void MatrixVectorMultiplyPerf::SetUpPerfTest() {
 
     wgpu::BufferDescriptor bufferDesc;
     bufferDesc.usage = wgpu::BufferUsage::Storage;
-    bufferDesc.size = BytesPerElement() * GetParam().mRows * GetParam().mCols;
+    bufferDesc.size =
+        static_cast<uint64_t>(BytesPerElement()) * GetParam().mRows * GetParam().mCols;
     wgpu::Buffer matrix = device.CreateBuffer(&bufferDesc);
 
-    bufferDesc.size = BytesPerElement() * GetParam().mCols;
+    bufferDesc.size = static_cast<uint64_t>(BytesPerElement()) * GetParam().mCols;
     wgpu::Buffer vector = device.CreateBuffer(&bufferDesc);
 
-    bufferDesc.size = BytesPerElement() * GetParam().mRows;
+    bufferDesc.size = static_cast<uint64_t>(BytesPerElement()) * GetParam().mRows;
     wgpu::Buffer result = device.CreateBuffer(&bufferDesc);
 
     uint32_t uniformData[] = {GetParam().mRows, /* packed cols */ GetParam().mCols / 4};

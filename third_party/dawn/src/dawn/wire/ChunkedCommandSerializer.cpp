@@ -25,14 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
+#include "src/dawn/wire/ChunkedCommandSerializer.h"
 
-#include "dawn/wire/ChunkedCommandSerializer.h"
-
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::wire {
 
@@ -51,25 +47,21 @@ void ChunkedCommandSerializer::Flush() {
     mSerializer->Flush();
 }
 
-void ChunkedCommandSerializer::SerializeChunkedCommand(const char* allocatedBuffer,
-                                                       size_t totalSize) {
+void ChunkedCommandSerializer::SerializeChunkedCommand(Span<const std::byte> allocatedBuffer) {
     // Constant regarding the size of the WireChunkedCommandCmd that can be computed once.
-    static size_t kWireChunkedCmdPrefixSize = ChunkedCommandCmd{0, 0, nullptr, 0}.GetRequiredSize();
+    static size_t kWireChunkedCmdPrefixSize = ChunkedCommandCmd{0, 0, {}}.GetRequiredSize();
 
     ChunkedCommandCmd cmd;
     cmd.id = mNextChunkedCommandId++;
-    cmd.size = totalSize;
+    cmd.size = allocatedBuffer.size();
 
-    size_t remainingSize = totalSize;
-    while (remainingSize > 0) {
-        cmd.chunkData = allocatedBuffer;
-        cmd.chunkSize = std::min(remainingSize, mMaxAllocationSize - kWireChunkedCmdPrefixSize);
+    while (!allocatedBuffer.empty()) {
+        size_t chunkSize =
+            std::min(allocatedBuffer.size(), mMaxAllocationSize - kWireChunkedCmdPrefixSize);
+        cmd.chunkData = allocatedBuffer.TakeFirst(chunkSize);
         DAWN_ASSERT(cmd.GetRequiredSize() <= mMaxAllocationSize);
 
         SerializeCommand(cmd);
-
-        allocatedBuffer += cmd.chunkSize;
-        remainingSize -= cmd.chunkSize;
     }
 }
 

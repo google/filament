@@ -1,0 +1,226 @@
+Name
+
+    ARB_shader_image_size
+
+Name Strings
+
+    GL_ARB_shader_image_size
+
+Contact
+
+    Christophe Riccio, AMD (christophe.riccio@amd.com)
+
+Contributors
+
+    Jeannot Breton, NVIDIA
+    
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: July 19, 2012
+    Revision: 3
+
+Number
+
+    ARB Extension #136
+
+Dependencies
+
+    OpenGL 4.2 is required.
+
+    OpenGL Shading Language 4.20 is required
+
+    This extension is written against the OpenGL 4.2 specification and 
+    version 4.20 of the OpenGL Shading Language Specification.
+
+    This extension interacts with NV_gpu_program5 and 
+    EXT_shader_image_load_store.
+    
+Overview
+    This extension provides GLSL built-in functions allowing shaders to query
+    the size of an image.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 4.20.11
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_image_size
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_image_size 1
+
+    Add to section 8.11 "Image Functions"
+
+    Syntax:
+      int imageSize(gimage1D image)
+      ivec2 imageSize(gimage2D image)
+      ivec3 imageSize(gimage3D image)
+      ivec2 imageSize(gimageCube image)
+      ivec3 imageSize(gimageCubeArray image)
+      ivec2 imageSize(gimageRect image)
+      ivec2 imageSize(gimage1DArray image)
+      ivec3 imageSize(gimage2DArray image)
+      int imageSize(gimageBuffer image)
+      ivec2 imageSize(gimage2DMS image)
+      ivec3 imageSize(gimage2DMSArray image)
+      
+Description:
+
+    Returns the dimensions of the image or images bound to <image>.  For arrayed 
+    images, the last component of the return value will hold the size of the 
+    array.  Cube images return the dimensions of one face, and number of cubes 
+    in the cube map array, if arrayed.
+
+Dependencies on NV_gpu_program5 and EXT_shader_image_load_store
+
+    If NV_gpu_program5 and EXT_shader_image_load_store are supported and 
+    "OPTION ARB_shader_image_size" is specified in an assembly program, the 
+    following edits are made to extend the assembly programming model 
+    documented in the NV_gpu_program4 extension and extended by NV_gpu_program5 
+    and EXT_shader_image_load_store.  
+
+    If NV_gpu_program5 and EXT_shader_image_load_store are not supported, or if 
+    "OPTION ARB_shader_image_size" is not specified in an assembly program, the
+    contents of this dependencies section should be ignored.
+
+    Section 2.X.2, Program Grammar
+
+    (add the following rules to the grammar)
+
+      <ImageInstruction>:     ::= <IMQop_instruction>
+
+      <IMQop_instruction:>    ::= <IMQop> <opModifiers> <instResult> ","
+                                       <imageAccess>
+   
+      <IMQop>                 ::= "IMQ"
+
+
+    Modify Section 2.X.4, Program Execution Environment  
+
+      Instr-      Modifiers 
+      uction  V  F I C S H D  Out Inputs    Description
+      ------- -- - - - - - -  --- --------  --------------------------------      
+      IMQ     50 - - - - - S  vs  i         image size query
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+    as extended by NV_gpu_program5)
+
+      + Image size query (ARB_shader_image_size)
+
+      If a program specifies the "ARB_shader_image_size" option, it may use the
+      IMQ instruction.  If this option is not specified, a program will fail to
+      compile if it uses this instruction.
+
+    Section 2.X.8.Z, IMQ:  Image size query
+
+    The IMQ instruction returns the dimensions of the image unit specified by
+    <imageUnit>.  Eleven image targets are supported:  1D, 2D, 3D, RECT, CUBE,
+    BUFFER, ARRAY1D, ARRAY2D, ARRAYCUBE, 2DMS, and ARRAY2DMS. 
+
+    For one-dimensional, one-dimensional array and buffer textures, the "x" 
+    component of the result vector is filled with the width of the image(s).
+    For two-dimensional, rectangle, cube map, two-dimensional array, cube map
+    array, three-dimensional, two-dimensional multisample and two-dimensional 
+    multisample array textures, the "x" and "y" components are filled with the
+    width and height of the image(s).  
+    
+    Additionally, when the entire one-dimensional array texture level is bound,
+    the "y" component of the result vector is filled with the number of layers
+    in the image(s).  When the entire two-dimensional array or two-dimensional
+    multisample array texture level is bound, the "z" component of the result 
+    vector is filled with the number of layers in the image(s).  When the 
+    entire cube map array texture level is bound, the "z" component of the 
+    result vector is filled with the number of cubes in the cube map array.
+    When the entire three-dimensional texture level is bound, the "z" component
+    of the result vector is filled with the depth of the image(s).  All other
+    components of the result vector are undefined.  
+
+    IMQ supports no storage modifier, since the image size is independent of 
+    the image unit format.  It supports no data type modifiers; the result 
+    vector is interpreted as signed integers.
+
+Conformance Tests
+
+    <TBD>
+
+Issues
+
+    none
+    
+Revision History
+
+    Revision 3, 2012/7/19 (JBreton)
+      - Add interaction with NV_gpu_program5 and EXT_shader_image_load_store,
+        providing a new image size query instruction to the assembly program.
+
+    Revision 2, 2012/5/12 (JohnK)
+      - Expand description to include details consistent with textureSize().
+
+    Revision 1, 2012/03/30 (criccio)
+      - First draft

@@ -265,9 +265,9 @@ TEST(ICDInterfaceVersion2PlusEnumerateAdapterPhysicalDevices, VerifyGroupResults
     auto& test_physical_device_3 = driver.add_and_get_physical_device(physical_device_names[3]);
     auto& test_physical_device_4 = driver.add_and_get_physical_device(physical_device_names[4]);
 
-    driver.physical_device_groups.emplace_back(test_physical_device_0).use_physical_device(test_physical_device_1);
-    driver.physical_device_groups.emplace_back(test_physical_device_2);
-    driver.physical_device_groups.emplace_back(test_physical_device_3).use_physical_device(test_physical_device_4);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({0, 1}));
+    driver.physical_device_groups.emplace_back(2);
+    driver.physical_device_groups.push_back(PhysicalDeviceGroup({3, 4}));
 
     auto& known_driver = known_driver_list.at(2);  // which driver this test pretends to be
     DXGI_ADAPTER_DESC1 desc1{};
@@ -419,9 +419,9 @@ TEST(MultipleDriverConfig, DifferentICDsWithDevices) {
 
 TEST(MultipleDriverConfig, DifferentICDsWithDevicesAndGroups) {
     FrameworkEnvironment env{};
-    env.add_icd(TEST_ICD_PATH_EXPORT_ICD_GIPA);
-    env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
-    env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
+    TestICD& icd0 = env.add_icd(TEST_ICD_PATH_EXPORT_ICD_GIPA);
+    TestICD& icd1 = env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1));
+    TestICD& icd2 = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
 
     // The loader has to be able to handle drivers that support device groups in combination
     // with drivers that don't support device groups.  When this is the case, the loader needs
@@ -430,27 +430,23 @@ TEST(MultipleDriverConfig, DifferentICDsWithDevicesAndGroups) {
     // device groups returned info.
 
     // ICD 0 :  No 1.1 support (so 1 device will become 1 group in loader)
-    TestICD& icd0 = env.get_test_icd(0);
-    icd0.add_and_get_physical_device("physical_device_0");
+    icd0.add_physical_device("physical_device_0");
     icd0.min_icd_interface_version = 5;
     icd0.max_icd_interface_version = 5;
     icd0.set_icd_api_version(VK_API_VERSION_1_0);
 
     // ICD 1 :  1.1 support (with 1 group with 2 devices)
-    TestICD& icd1 = env.get_test_icd(1);
     auto& pd1 = icd1.add_and_get_physical_device("physical_device_1").set_api_version(VK_API_VERSION_1_1);
     auto& pd2 = icd1.add_and_get_physical_device("physical_device_2").set_api_version(VK_API_VERSION_1_1);
-    icd1.physical_device_groups.emplace_back(pd1);
-    icd1.physical_device_groups.back().use_physical_device(pd2);
+    icd1.physical_device_groups.push_back(PhysicalDeviceGroup({0, 1}));
     icd1.min_icd_interface_version = 5;
     icd1.max_icd_interface_version = 5;
     icd1.set_icd_api_version(VK_API_VERSION_1_1);
 
     // ICD 2 :  No 1.1 support (so 3 devices will become 3 groups in loader)
-    TestICD& icd2 = env.get_test_icd(2);
-    icd2.add_and_get_physical_device("physical_device_3");
-    icd2.add_and_get_physical_device("physical_device_4");
-    icd2.add_and_get_physical_device("physical_device_5");
+    icd2.add_physical_device("physical_device_3");
+    icd2.add_physical_device("physical_device_4");
+    icd2.add_physical_device("physical_device_5");
     icd2.min_icd_interface_version = 5;
     icd2.max_icd_interface_version = 5;
     icd2.set_icd_api_version(VK_API_VERSION_1_0);

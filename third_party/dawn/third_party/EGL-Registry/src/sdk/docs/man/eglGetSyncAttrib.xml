@@ -1,0 +1,148 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglGetSyncAttrib">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglGetSyncAttrib</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetSyncAttrib</refname>
+        <refpurpose>
+            Return an attribute of a sync object
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+            <funcdef>EGLBoolean <function>eglGetSyncAttrib</function></funcdef>
+            <paramdef>(EGLDisplay <parameter>display</parameter></paramdef>
+            <paramdef>EGLSync <parameter>sync</parameter></paramdef>
+            <paramdef>EGLint <parameter>attribute</parameter></paramdef>
+            <paramdef>EGLAttrib *<parameter>value</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>sync</parameter></term>
+                <listitem><para>
+                    Specifies the sync object to query.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attribute</parameter></term>
+                <listitem><para>
+                    Specifies the EGL sync object attribute to query.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>value</parameter></term>
+                <listitem><para>
+                    Returns the requested attribute value.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglGetSyncAttrib</function> is used to query
+            attributes of the sync object <parameter>sync</parameter>. Legal
+            values for <parameter>attribute</parameter> depend on the type
+            of sync object, as shown in table
+            <xref linkend="tab-syncattr"/>. Assuming no errors are
+            generated, <constant>EGL_TRUE</constant> is returned and the
+            value of the queried attribute is returned in
+            *<parameter>value</parameter>.
+        </para>
+        <table frame="all" xml:id="tab-syncattr">
+            <title>
+                Attributes accepted by <function>eglGetSyncAttrib</function>
+            </title>
+            <tgroup cols="3" align="left" colsep="1" rowsep="1">
+                <thead>
+                    <row>
+                        <entry>Attribute</entry>
+                        <entry>Description</entry>
+                        <entry>Supported Sync Objects</entry>
+                    </row>
+                </thead>
+                <tbody>
+                    <row>
+                        <entry>Attribute</entry>
+                        <entry>Description</entry>
+                        <entry>Supported Sync Objects</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_SYNC_TYPE</constant></entry>
+                        <entry>Type of the sync object</entry>
+                        <entry>All</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_SYNC_STATUS</constant></entry>
+                        <entry>Status of the sync object</entry>
+                        <entry>All</entry>
+                    </row>
+                    <row>
+                        <entry><constant>EGL_SYNC_CONDITION</constant></entry>
+                        <entry>Signaling condition</entry>
+                        <entry>
+                            <constant>EGL_SYNC_FENCE</constant> or
+                            <constant>EGL_SYNC_CL_EVENT</constant>
+                        </entry>
+                    </row>
+                </tbody>
+            </tgroup>
+        </table>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            On failure, <function>eglGetSyncAttrib</function> returns
+            <constant>EGL_FALSE</constant> and *<parameter>value</parameter>
+            is not modified.
+        </para>
+        <para>
+            If <parameter>sync</parameter> is not a valid sync object for
+            <parameter>display</parameter>, an
+            <constant>EGL_BAD_PARAMETER</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>attribute</parameter> is not one of the attributes
+            in table <xref linkend="tab-syncattr"/>, an
+            <constant>EGL_BAD_ATTRIBUTE</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>attribute</parameter> is not supported for the
+            type of sync object passed in <parameter>sync</parameter>, an
+            <constant>EGL_BAD_MATCH</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>display</parameter> does not match the display
+            passed to <function>eglCreateSync</function> when
+            <parameter>sync</parameter> was created, behaviour is undefined.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglGetSyncAttrib</function> is available only if the
+            EGL version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateSync</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

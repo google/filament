@@ -1,0 +1,134 @@
+
+Name
+
+    SUN_convolution_border_modes
+
+Name Strings
+
+    GL_SUN_convolution_border_modes
+
+Contact
+
+    Ron Bielaski, Sun (Ron.Bielaski 'at' eng.sun.com)
+    Jack Middleton, Sun (Jack.Middleton 'at' eng.sun.com)
+
+Status
+
+    Shipping 
+
+Version
+
+    $Date: 1999/12/28 01:40:37 $ $Revision: 1.3 $
+    SUN Date: 1999/06/26 05:05:47 Revision: 1.3
+
+Number
+
+    182
+
+Dependencies
+
+    EXT_convolution is required
+
+Overview
+
+    This extension provides an additional border mode for the
+    EXT_convolution extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of ConvolutionParameteriEXT,
+    and ConvolutionParameterfEXT, and by the <params> parameter of
+    ConvolutionParameterivEXT and ConvolutionParameterfvEXT, when the
+    <pname> parameter is CONVOLUTION_BORDER_MODE_EXT:
+
+	WRAP_BORDER_SUN				0x81D4
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    The description of the convolution border mode is replaced with
+    the following:
+
+    The convolution border mode for a specific convolution filter is
+    specified using ConvolutionParameteriEXT with the <target>
+    parameter set to the name of the filter, the <pname> parameter
+    set to CONVOLUTION_BORDER_MODE_EXT, and <param> set to one of
+    REDUCE_EXT, IGNORE_BORDER_HP, CONSTANT_BORDER_HP,
+    WRAP_BORDER_SUN, or REPLICATE_BORDER_HP.
+
+    If the convolution border mode is WRAP_BORDER_SUN, the output image
+    has the same dimensions as the source image, and the source image is
+    assumed to be continuously wrapped in both x and y directions.
+    Therefore, source image pixels in the Cw columns on the right edge
+    are used in the convolution computation for the Cw columns on the
+    left edge of the image, and vice versa.  Similarly, source image
+    pixels in the Ch rows on the top of the image are used in the
+    convolution computation for the Ch rows on the bottom of the
+    image and vice versa.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    No new protocol is needed.
+
+Dependencies on EXT_convolution
+
+    EXT_convolution is required.  This extension adds capability to
+    the convolution operations defined in that extension.
+
+Errors
+
+    INVALID_ENUM is generated if ConvolutionParameterivEXT or
+    ConvolutionParameterfvEXT parameter <pname> is not
+    CONVOLUTION_FILTER_SCALE_EXT, CONVOLUTION_FILTER_BIAS_EXT,
+    CONVOLUTION_BORDER_MODE_EXT, or CONVOLUTION_BORDER_COLOR_HP.
+
+    INVALID_ENUM is generated if ConvolutionParameteriEXT,
+    ConvolutionParameterfEXT, ConvolutionParameterivEXT, or
+    ConvolutionParameterfvEXT parameter <pname> is
+    CONVOLUTION_BORDER_MODE_EXT and parameter <params> is
+    not one of REDUCE_EXT, IGNORE_BORDER_HP, CONSTANT_BORDER_HP,
+    WRAP_BORDER_SUN, or REPLICATE_BORDER_HP.
+
+    INVALID_ENUM is generated if GetConvolutionParameterivEXT or
+    GetConvolutionParameterfvEXT parameter <pname> is not
+    CONVOLUTION_FILTER_SCALE_EXT, CONVOLUTION_FILTER_BIAS_EXT,
+    CONVOLUTION_BORDER_MODE_EXT, CONVOLUTION_FORMAT_EXT,
+    CONVOLUTION_WIDTH_EXT, CONVOLUTION_HEIGHT_EXT,
+    MAX_CONVOLUTION_WIDTH_EXT, MAX_CONVOLUTION_HEIGHT_EXT,
+    or CONVOLUTION_BORDER_COLOR_HP.
+
+New State
+  
+    None
+
+New Implementation Dependent State
+
+    None
+Revision History
+
+    6/24/99 - Added fields from the new extension template.
+

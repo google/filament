@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/BackendConnection.h"
+#include "src/dawn/native/BackendConnection.h"
 
-#include "dawn/native/Instance.h"
+#include "src/dawn/native/Instance.h"
 
 namespace dawn::native {
 

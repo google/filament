@@ -33,7 +33,7 @@
 #include <functional>
 
 #include "src/tint/utils/math/hash.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint {
 

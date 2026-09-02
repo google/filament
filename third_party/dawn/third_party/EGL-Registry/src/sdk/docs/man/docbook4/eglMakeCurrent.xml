@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglMakeCurrent">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglMakeCurrent</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglMakeCurrent</refname>
+        <refpurpose>
+            attach an EGL rendering context to EGL surfaces
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglMakeCurrent</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>draw</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>read</parameter></paramdef>
+                <paramdef>EGLContext <parameter>context</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>Specifies the <acronym>EGL</acronym> display connection.</para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>draw</parameter></term>
+                <listitem>
+                    <para>Specifies the <acronym>EGL</acronym> draw surface.</para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>read</parameter></term>
+                <listitem>
+                    <para>Specifies the <acronym>EGL</acronym> read surface.</para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>context</parameter></term>
+                <listitem>
+                    <para>Specifies the <acronym>EGL</acronym> rendering context
+                        to be attached to the surfaces.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglMakeCurrent</function> binds <parameter>context</parameter>
+            to the current rendering thread and to the <parameter>draw</parameter>
+            and <parameter>read</parameter> surfaces. <parameter>draw</parameter>
+            is used for all GL operations except for any pixel data read back
+            (<citerefentry><refentrytitle>glReadPixels</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glCopyTexImage2D</refentrytitle></citerefentry>, and
+            <citerefentry><refentrytitle>glCopyTexSubImage2D</refentrytitle></citerefentry>),
+            which is taken from the frame buffer values of
+            <parameter>read</parameter>.
+        </para>
+        <para>
+            If the calling thread has already a current rendering context, that
+            context is flushed and marked as no longer current.
+        </para>
+        <para>
+            The first time that <parameter>context</parameter> is made current,
+            the viewport and scissor dimensions are set to the size of the
+            <parameter>draw</parameter> surface. The viewport and
+            scissor are not modified when <parameter>context</parameter> is
+            subsequently made current.
+        </para>
+        <para>
+            To release the current context without assigning a new one, call
+            <function>eglMakeCurrent</function> with <parameter>draw</parameter>
+            and <parameter>read</parameter> set to
+            <constant>EGL_NO_SURFACE</constant> and <parameter>context</parameter>
+            set to <constant>EGL_NO_CONTEXT</constant>.
+        </para>
+        <para>
+            Use
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentDisplay</refentrytitle></citerefentry>, and
+            <citerefentry><refentrytitle>eglGetCurrentSurface</refentrytitle></citerefentry>
+            to query the current rendering context and associated display connection and surfaces.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise. If <constant>EGL_FALSE</constant>
+            is returned, the previously current rendering context and
+            surfaces (if any) remain unchanged.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>draw</parameter> or <parameter>read</parameter> is not an
+            EGL surface.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONTEXT</constant> is generated if
+            <parameter>context</parameter> is not an EGL rendering context.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>draw</parameter> or
+            <parameter>read</parameter>
+            are not compatible with
+            <parameter>context</parameter>, or if
+            <parameter>context</parameter> is set to
+            <constant>EGL_NO_CONTEXT</constant> and
+            <parameter>draw</parameter> or
+            <parameter>read</parameter>
+            are not set to
+            <constant>EGL_NO_SURFACE</constant>, or if
+            <parameter>draw</parameter> or
+            <parameter>read</parameter> are set to
+            <constant>EGL_NO_SURFACE</constant> and
+            <parameter>context</parameter> is not set to
+            <constant>EGL_NO_CONTEXT</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_ACCESS</constant> is generated if
+            <parameter>context</parameter>
+            is current to some other thread.
+        </para>
+        <para>
+            <constant>EGL_BAD_NATIVE_PIXMAP</constant> may be generated if
+            a native pixmap underlying either
+            <parameter>draw</parameter> or
+            <parameter>read</parameter>
+            is no longer valid.
+        </para>
+        <para>
+            <constant>EGL_BAD_NATIVE_WINDOW</constant> may be generated if
+            a native window underlying either
+            <parameter>draw</parameter> or
+            <parameter>read</parameter>
+            is no longer valid.
+        </para>
+        <para>
+            <constant>EGL_BAD_CURRENT_SURFACE</constant> is generated if
+            the previous context has unflushed commands and the previous surface
+            is no longer valid.
+        </para>
+        <para>
+            <constant>EGL_BAD_ALLOC</constant> may be generated if
+            allocation of ancillary buffers for <parameter>draw</parameter> or
+            <parameter>read</parameter> were delayed until
+            <function>eglMakeCurrent</function> is called, and there are not
+            enough resources to allocate them.
+        </para>
+        <para>
+            <constant>EGL_CONTEXT_LOST</constant> is generated if a power management
+            event has occurred. The application must destroy all contexts and
+            reinitialise OpenGL ES state and objects to continue rendering.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>glReadPixels</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glCopyTexImage2D</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glCopyTexSubImage2D</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

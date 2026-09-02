@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/benchmarks/NullDeviceSetup.h"
+#include "src/dawn/tests/benchmarks/NullDeviceSetup.h"
 
 #include <benchmark/benchmark.h>
 #include <dawn/webgpu_cpp.h>
@@ -34,10 +34,10 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Log.h"
 #include "dawn/dawn_proc.h"
 #include "dawn/native/DawnNative.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
 
 namespace dawn {
 

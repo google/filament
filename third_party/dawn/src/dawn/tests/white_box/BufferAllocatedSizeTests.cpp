@@ -27,9 +27,9 @@
 
 #include <algorithm>
 
-#include "dawn/common/Math.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 namespace {

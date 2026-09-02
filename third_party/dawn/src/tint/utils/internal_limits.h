@@ -38,6 +38,9 @@
 
 namespace tint::internal_limits {
 
+// Limits the nest depth of composite types
+constexpr size_t kMaxNestDepthOfCompositeType = 255;
+
 // Limits the number of elements appearing in the constructor for an array
 constexpr size_t kMaxArrayConstructorElements = 32767;
 
@@ -51,7 +54,20 @@ constexpr int64_t kMaxSubgroupSize = 128;
 constexpr int64_t kQuadSize = 4;
 
 // A @size attribute maximum size
-constexpr int64_t kMaxStructMemberPadding = 10 * 1024 * 1024;
+constexpr int64_t kMaxStructMemberPadding = 10LL * 1024 * 1024;
+
+// Limits the size of result types instructions that will be transiently created, i.e. not buffers.
+// Specifically  prevents unreasonably large initializers when printing in the backend. The related
+// minimum maximums from the spec are 8kB, so this should be significantly beyond what a user
+// expects to work.
+constexpr int64_t kMaxTemporaryStorageSize = 10LL * 1024 * 1024;
+
+// The maximum number of locations allowed for shader IO.
+// This hard limit is derived from spirv-val (kMaxLocations in
+// https://github.com/KhronosGroup/SPIRV-Tools/blob/main/source/val/validate_interfaces.cpp).
+// Device-specific API limits will likely be much lower, but will be caught by Dawn before
+// shader module generation.
+constexpr uint32_t kMaxLocations = 4096;
 
 }  // namespace tint::internal_limits
 

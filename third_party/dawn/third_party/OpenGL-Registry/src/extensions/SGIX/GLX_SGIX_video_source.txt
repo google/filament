@@ -1,0 +1,132 @@
+
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_video_source
+
+Name Strings
+
+    GLX_SGIX_video_source
+
+Version
+
+    $Date: 1995/02/18 22:25:03 $ $Revision: 1.2 $
+
+Number
+
+    43
+
+Dependencies
+
+    SGI_make_current_read is required.
+
+Overview
+
+    This extension provides the capability to source pixel data from a
+    video stream.  A new type of GLXDrawable (GLXVideoSourceSGIX) is
+    introduced which represents the drain node of a Video Library (VL)
+    path.  A GLXVideoSourceSGIX may be specified as the <read> parameter
+    to glXMakeCurrentReadSGI to indicate that pixel data should be read
+    from the specified video source instead of from the framebuffer.  A
+    GLXVideoSourceSGIX may only be specified as a <read> drawable.
+
+Issues
+
+    * Should there be a way to query the configuration
+      of a GLXVideoSourceSGIX?
+
+New Procedures and Functions
+
+    typedef XID GLXVideoSourceSGIX;
+
+    GLXVideoSourceSGIX glXCreateGLXVideoSourceSGIX(Display *display,
+						   int screen,
+						   VLServer server,
+						   VLPath path,
+						   int nodeClass,
+						   VLNode drainNode);
+
+    void glXDestroyGLXVideoSourceSGIX(Display *dpy,
+				      GLXVideoSourceSGIX glxvideosource);
+
+New Tokens
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+    XXX - not complete yet
+
+    A GLXVideoSourceSGIX is created using the glXCreateGLXVideoSourceSGIX
+    command.  The parameter <display> specifies a connection to an X server.
+    The parameter <screen> specifies the screen on which the GLXVideoSourceSGIX
+    should be created.  The parameter <server> specifies a connection to a
+    video server.  The parameter <path> specifies a video transfer path.
+    The parameter <drainNode> specifies a VLNode which must be a VL_DRAIN
+    node on the video transfer path specified by <path>.  The parameter
+    <nodeClass> specifies the class of the VLNode specified by <drainNode>.
+
+    A GLXVideoSourceSGIX may only be used with GLXContexts created on the
+    same same screen.
+
+    The configuration of a GLXVideoSourceSGIX is static, and is fixed at
+    the time that the GLXVideoSourceSGIX is created.  If any of the controls
+    which affect the transfer of video data to the GL are changed on the video
+    transfer path for which a particular GLXVideoSourceSGIX was created, the
+    GLXVideoSourceSGIX should be destroyed and a new GLXVideoSourceSGIX
+    should be created.  Otherwise, the data read from the GLXVideoSourceSGIX
+    will be undefined.
+
+    A GLXVideoSourceSGIX is destroyed by calling glXDestroyGLXVideoSourceSGIX
+
+Dependencies on SGI_make_current_read
+
+    XXX - not complete yet
+
+Errors
+
+    XXX - not complete yet
+
+    BadMatch is generated if glXMakeCurrent parameter <drawable> is a
+    GLXVideoSourceSGIX.
+
+    BadMatch is generated if glXMakeCurrentReadSGI parameter <draw> is a
+    GLXVideoSourceSGIX.
+
+    BadMatch is generated if glXMakeCurrentReadSGI parameter <read> is a
+    GLXVideoSourceSGIX which was created for a different screen than the
+    GLXContext specified by the parameter <ctx>.
+
+    GLXBadDrawable is generated if glXDestroyGLXVideoSourceSGIX parameter
+    <glxvideosource> is not a valid GLXVideoSourceSGIX.
+
+    BadAlloc is generated if glXCreateGLXVideoSourceSGIX is unable to allocate
+    the resources needed to create a GLXVideoSourceSGIX.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.

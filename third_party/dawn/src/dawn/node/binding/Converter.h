@@ -44,6 +44,7 @@
 #include "src/dawn/node/binding/Errors.h"
 #include "src/dawn/node/interop/NodeAPI.h"
 #include "src/dawn/node/interop/WebGPU.h"
+#include "src/utils/compiler.h"
 
 namespace wgpu::binding {
 
@@ -69,6 +70,7 @@ DECLARE_IMPL(GPUPipelineLayout);
 DECLARE_IMPL(GPUQuerySet);
 DECLARE_IMPL(GPURenderBundle);
 DECLARE_IMPL(GPURenderPipeline);
+DECLARE_IMPL(GPUResourceTable);
 DECLARE_IMPL(GPUSampler);
 DECLARE_IMPL(GPUShaderModule);
 DECLARE_IMPL(GPUTexture);
@@ -237,6 +239,8 @@ class Converter {
     [[nodiscard]] bool Convert(wgpu::StoreOp& out, const interop::GPUStoreOp& in);
 
     [[nodiscard]] bool Convert(wgpu::BindGroupEntry& out, const interop::GPUBindGroupEntry& in);
+
+    [[nodiscard]] bool Convert(wgpu::BindingResource& out, const interop::GPUBindingResource& in);
 
     [[nodiscard]] bool Convert(wgpu::BindGroupLayoutEntry& out,
                                const interop::GPUBindGroupLayoutEntry& in);
@@ -415,7 +419,7 @@ class Converter {
         }
         auto* els = Allocate<std::remove_const_t<OUT>>(in.size());
         for (size_t i = 0; i < in.size(); i++) {
-            if (!Convert(els[i], in[i])) {
+            if (!Convert(DAWN_UNSAFE_TODO(els[i]), in[i])) {
                 return false;
             }
         }
@@ -436,7 +440,7 @@ class Converter {
         auto* els = Allocate<std::remove_const_t<OUT>>(in.size());
         size_t i = 0;
         for (auto& [key, value] : in) {
-            if (!Convert(els[i++], key, value)) {
+            if (!Convert(DAWN_UNSAFE_TODO(els[i++]), key, value)) {
                 return false;
             }
         }

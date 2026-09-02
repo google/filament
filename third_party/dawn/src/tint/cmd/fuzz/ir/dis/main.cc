@@ -34,6 +34,7 @@
 #include "src/tint/api/tint.h"
 #include "src/tint/cmd/common/helper.h"
 #include "src/tint/lang/core/ir/binary/decode.h"
+#include "src/tint/lang/core/ir/binary/encode.h"
 #include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/spirv/writer/writer.h"
@@ -42,6 +43,7 @@
 #include "src/tint/utils/command/cli.h"
 #include "src/tint/utils/containers/transform.h"
 #include "src/tint/utils/macros/defer.h"
+#include "src/tint/utils/text/base64.h"
 #include "src/tint/utils/text/color_mode.h"
 #include "src/tint/utils/text/string.h"
 #include "src/tint/utils/text/styled_text.h"
@@ -99,6 +101,7 @@ enum class Format : uint8_t {
     kSpirv,
     kSpvAsm,
     kWgsl,
+    kTirb,
 };
 
 /// @param filename the filename to inspect
@@ -112,6 +115,9 @@ Format InferFormat(const std::string& filename) {
     }
     if (filename.ends_with(".wgsl")) {
         return Format::kWgsl;
+    }
+    if (filename.ends_with(".tirb")) {
+        return Format::kTirb;
     }
     return Format::kUnknown;
 }
@@ -127,6 +133,7 @@ struct Options {
     bool validate = false;
     bool dump_wgsl = false;
     bool dump_spirv = false;
+    bool strip_invalid_identifiers = false;
 };
 
 bool ParseArgs(tint::VectorRef<std::string_view> arguments, Options* opts) {
@@ -134,10 +141,11 @@ bool ParseArgs(tint::VectorRef<std::string_view> arguments, Options* opts) {
 
     OptionSet options;
 
-    tint::Vector<EnumName<Format>, 3> format_enum_names{
+    tint::Vector<EnumName<Format>, 4> format_enum_names{
         EnumName(Format::kSpirv, "spirv"),
         EnumName(Format::kSpvAsm, "spvasm"),
         EnumName(Format::kWgsl, "wgsl"),
+        EnumName(Format::kTirb, "tirb"),
     };
 
     auto& fmt = options.Add<EnumOption<Format>>("format",
@@ -145,7 +153,8 @@ bool ParseArgs(tint::VectorRef<std::string_view> arguments, Options* opts) {
 If not provided, will be inferred from output filename extension:
   .spvasm -> spvasm
   .spv    -> spirv
-  .wgsl   -> wgsl)",
+  .wgsl   -> wgsl
+  .tirb   -> tirb)",
                                                 format_enum_names, ShortName{"f"});
     TINT_DEFER(opts->format = fmt.value.value_or(Format::kUnknown));
 
@@ -179,6 +188,11 @@ If not provided, will be inferred from output filename extension:
         "Writes the SPIR-V form of input to stdout, may fail due to validation errors",
         Alias{"emit-spirv"}, Default{false});
     TINT_DEFER(opts->dump_spirv = *dump_spirv.value);
+
+    auto& strip_invalid_identifiers =
+        options.Add<BoolOption>("strip-invalid-identifiers",
+                                "Strip invalid identifiers instead of erroring", Default{false});
+    TINT_DEFER(opts->strip_invalid_identifiers = *strip_invalid_identifiers.value);
 
     auto& help = options.Add<BoolOption>("help", "Show usage", ShortName{"h"});
 
@@ -265,8 +279,11 @@ void EmitIR(const Options& options, tint::core::ir::Module& module) {
 /// Prints WGSL shader to STDOUT or to a file as determined by options
 /// @param options options passed into the binary
 /// @param module IR module parsed from input protobuf
+/// @param data the sidecar data to be included as a comment
 /// @returns true if all operations succeeded, otherwise false. Prints error messages to STDERR
-bool EmitWGSL(const Options& options, tint::core::ir::Module& module) {
+bool EmitWGSL(const Options& options,
+              tint::core::ir::Module& module,
+              std::span<const std::byte> data) {
     if (!options.dump_wgsl && options.format != Format::kWgsl) {
         return true;
     }
@@ -279,13 +296,23 @@ bool EmitWGSL(const Options& options, tint::core::ir::Module& module) {
         return false;
     }
 
+    std::string wgsl = output->wgsl;
+    if (!data.empty()) {
+        auto base64 = tint::EncodeBase64(data);
+        if (base64 != tint::Success) {
+            std::cerr << "Failed to encode sidecar data to base64: " << base64.Failure() << "\n";
+            return false;
+        }
+        wgsl = "// " + base64.Get() + "\n" + wgsl;
+    }
+
     if (options.dump_wgsl) {
-        options.printer->Print(tint::StyledText{} << output->wgsl);
+        options.printer->Print(tint::StyledText{} << wgsl);
         options.printer->Print(tint::StyledText{} << "\n");
     }
 
     if (options.format == Format::kWgsl) {
-        if (!tint::cmd::WriteFile(options.output_filename, "w", output->wgsl)) {
+        if (!tint::cmd::WriteFile(options.output_filename, "w", wgsl)) {
             std::cerr << "Unable to print WGSL to file, " << options.output_filename << "\n";
             return false;
         }
@@ -341,6 +368,52 @@ bool EmitSpv(const Options& options, tint::core::ir::Module& module) {
     return true;
 }
 
+/// Write out fuzzer test case protobuf in binary format
+/// @param proto test case proto to write out
+/// @param options the options that ir_fuzz_dis was invoked with
+/// @returns true on success
+bool WriteTestCaseProto(const tint::cmd::fuzz::ir::pb::Root& proto, const Options& options) {
+    tint::Vector<std::byte, 0> buffer;
+    size_t len = proto.ByteSizeLong();
+    buffer.Resize(len);
+    if (len > 0) {
+        if (!proto.SerializeToArray(&buffer[0], static_cast<int>(len))) {
+            std::cerr << "Failed to serialize test case protobuf";
+            return false;
+        }
+    }
+
+    if (!tint::cmd::WriteFile(options.output_filename, "wb", ToStdVector(buffer))) {
+        std::cerr << "Failed to write protobuf binary out to file '" << options.output_filename
+                  << "'\n";
+        return false;
+    }
+
+    return true;
+}
+
+/// Prints IR test case protobuf to a file as determined by options
+/// @param options options passed into the binary
+/// @param module IR module parsed from input protobuf
+/// @param fuzz_pb the root test case protobuf to be updated and written
+/// @returns true if all operations succeeded, otherwise false. Prints error messages to STDERR
+bool EmitTirb(const Options& options,
+              tint::core::ir::Module& module,
+              tint::cmd::fuzz::ir::pb::Root& fuzz_pb) {
+    if (options.format != Format::kTirb) {
+        return true;
+    }
+
+    auto ir_pb = tint::core::ir::binary::EncodeToProto(module);
+    if (ir_pb != tint::Success) {
+        std::cerr << " Failed to encode IR to proto: " << ir_pb.Failure() << "\n";
+        return false;
+    }
+    fuzz_pb.set_allocated_module(ir_pb.Get().release());
+
+    return WriteTestCaseProto(fuzz_pb, options);
+}
+
 /// Converts and displays the given test case file as determined by the options
 ///
 /// NB: There is multiple ::Decode calls, because each emission step may modify the passed in Module
@@ -349,14 +422,19 @@ bool EmitSpv(const Options& options, tint::core::ir::Module& module) {
 /// @param options options passed into the binary
 /// @returns true if all operations succeeded, otherwise false. Prints error messages to STDERR
 bool Run(const Options& options) {
-    auto fuzz_pb = GenerateFuzzCaseProto(options);
-    if (fuzz_pb != tint::Success) {
-        std::cerr << "Failed to read test case protobuf: " << fuzz_pb.Failure() << "\n";
+    auto fuzz_pb_result = GenerateFuzzCaseProto(options);
+    if (fuzz_pb_result != tint::Success) {
+        std::cerr << "Failed to read test case protobuf: " << fuzz_pb_result.Failure() << "\n";
         return false;
     }
+    auto fuzz_pb = std::move(fuzz_pb_result.Get());
+
+    tint::core::ir::binary::DecoderOptions decoder_options{
+        .strip_invalid_identifiers = options.strip_invalid_identifiers,
+    };
 
     {
-        auto module = tint::core::ir::binary::Decode(fuzz_pb.Get().module());
+        auto module = tint::core::ir::binary::Decode(fuzz_pb.module(), decoder_options);
         if (module != tint::Success) {
             std::cerr << "Unable to decode ir protobuf from test case protobuf: "
                       << module.Failure() << "\n";
@@ -365,25 +443,11 @@ bool Run(const Options& options) {
     }
 
     {
-        auto module = tint::core::ir::binary::Decode(fuzz_pb.Get().module());
+        auto module = tint::core::ir::binary::Decode(fuzz_pb.module(), decoder_options);
         EmitIR(options, module.Get());
 
         if (options.validate) {
-            auto res = tint::core::ir::Validate(
-                module.Get(),
-                tint::core::ir::Capabilities{
-                    tint::core::ir::Capability::kAllow8BitIntegers,
-                    tint::core::ir::Capability::kAllow64BitIntegers,
-                    tint::core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
-                    tint::core::ir::Capability::kAllowHandleVarsWithoutBindings,
-                    tint::core::ir::Capability::kAllowModuleScopeLets,
-                    tint::core::ir::Capability::kAllowOverrides,
-                    tint::core::ir::Capability::kAllowRefTypes,
-                    tint::core::ir::Capability::kAllowVectorElementPointer,
-                    tint::core::ir::Capability::kMslAllowEntryPointInterface,
-                    tint::core::ir::Capability::kAllowPhonyInstructions,
-                    tint::core::ir::Capability::kAllowAnyLetType,
-                });
+            auto res = tint::core::ir::Validate(module.Get());
             if (res == tint::Success) {
                 std::cout << "IR module is valid.\n";
             } else {
@@ -393,16 +457,26 @@ bool Run(const Options& options) {
     }
 
     {
-        auto module = tint::core::ir::binary::Decode(fuzz_pb.Get().module());
-        if (!EmitWGSL(options, module.Get())) {
+        auto module = tint::core::ir::binary::Decode(fuzz_pb.module(), decoder_options);
+        auto data = std::as_bytes(std::span(fuzz_pb.data()));
+        if (!EmitWGSL(options, module.Get(), data)) {
             return false;
         }
     }
 
     {
-        auto module = tint::core::ir::binary::Decode(fuzz_pb.Get().module());
+        auto module = tint::core::ir::binary::Decode(fuzz_pb.module(), decoder_options);
         if (!EmitSpv(options, module.Get())) {
             return false;
+        }
+    }
+
+    {
+        auto module = tint::core::ir::binary::Decode(fuzz_pb.module(), decoder_options);
+        if (module == tint::Success) {
+            if (!EmitTirb(options, module.Get(), fuzz_pb)) {
+                return false;
+            }
         }
     }
 

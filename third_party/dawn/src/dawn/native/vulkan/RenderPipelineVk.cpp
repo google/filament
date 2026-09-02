@@ -25,25 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/RenderPipelineVk.h"
+#include "src/dawn/native/vulkan/RenderPipelineVk.h"
 
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "dawn/native/CreatePipelineAsyncEvent.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/PipelineCacheVk.h"
-#include "dawn/native/vulkan/PipelineLayoutVk.h"
-#include "dawn/native/vulkan/RenderPassCache.h"
-#include "dawn/native/vulkan/ShaderModuleVk.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/ImmediatesLayoutVk.h"
+#include "src/dawn/native/vulkan/PipelineCacheVk.h"
+#include "src/dawn/native/vulkan/PipelineLayoutVk.h"
+#include "src/dawn/native/vulkan/RenderPassCache.h"
+#include "src/dawn/native/vulkan/ShaderModuleVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::vulkan {
 
@@ -145,6 +145,8 @@ VkFormat VulkanVertexFormat(wgpu::VertexFormat format) {
             return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
         case wgpu::VertexFormat::Unorm8x4BGRA:
             return VK_FORMAT_B8G8R8A8_UNORM;
+        case wgpu::VertexFormat::Snorm10_10_10_2:
+            return VK_FORMAT_A2B10G10R10_SNORM_PACK32;
         default:
             DAWN_UNREACHABLE();
     }
@@ -347,9 +349,11 @@ uint16_t PackStencilOpState(VkStencilOpState state, VkBool32 enabled) {
     DAWN_ASSERT(static_cast<uint32_t>(state.passOp) < 8);
     DAWN_ASSERT(static_cast<uint32_t>(state.depthFailOp) < 8);
     DAWN_ASSERT(static_cast<uint32_t>(state.compareOp) < 8);
-    uint16_t packed = state.failOp | state.passOp << 3 | state.depthFailOp << 6 |
-                      state.compareOp << 9 |
-                      (enabled ? 0x8000 : 0);  // Set high bit if stencil is enabled.
+    uint16_t packed = static_cast<uint16_t>(
+        static_cast<uint32_t>(state.failOp) | static_cast<uint32_t>(state.passOp) << 3u |
+        static_cast<uint32_t>(state.depthFailOp) << 6u |
+        static_cast<uint32_t>(state.compareOp) << 9u |
+        (enabled ? 0x8000u : 0u));  // Set high bit if stencil is enabled.
     return packed;
 }
 
@@ -392,10 +396,10 @@ Ref<RenderPipeline> RenderPipeline::CreateUninitialized(
 }
 
 MaybeError RenderPipeline::InitializeImpl() {
-    // Gather list of internal immediate constants used by this pipeline
+    // Gather list of internal immediates used by this pipeline
     if ((NeedsPixelCenterPolyfill() || UsesFragDepth()) && !HasUnclippedDepth()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, clampFragDepth), sizeof(ClampFragDepthArgs));
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, clampFragDepth),
+                                                sizeof(ClampFragDepthArgs));
     }
 
     if (GetDevice()->NeedsStaticSamplerForExternalTexture() && GetLayout()->HasExternalTextures()) {
@@ -408,15 +412,19 @@ MaybeError RenderPipeline::InitializeImpl() {
     bool buildCacheKey =
         !GetDevice()->GetTogglesState().IsEnabled(Toggle::VulkanMonolithicPipelineCache);
 
-    Specialization specialization = {
-        .layout = {.pushConstantBytes = ToPushConstantBytes(mImmediateMask)},
-    };
+    Specialization specialization = {.layout = {
+                                         .pushConstantBytes = ToPushConstantBytes(mImmediateMask),
+                                     }};
+    if (UsesFramebufferFetch()) {
+        specialization.layout.framebufferFetchAttachmentCount =
+            AttachmentCount(GetColorAttachmentsMask());
+    }
 
     SpecializationResult r;
     DAWN_TRY_ASSIGN(r, InitializeSpecialization(specialization, buildCacheKey));
     mHandles = {.pipeline = r.pipeline->Get(), .layout = r.layout->Get()};
 
-    mSpecializations.emplace(std::move(specialization), std::move(r));
+    mSpecializations->emplace(std::move(specialization), std::move(r));
 
     return {};
 }
@@ -425,10 +433,21 @@ ResultOrError<PipelineHandles> RenderPipeline::GetOrCreateSpecializedHandle(
     Specialization&& specializationIn) {
     Specialization specialization = specializationIn;
     specialization.layout.pushConstantBytes = ToPushConstantBytes(mImmediateMask);
+    if (UsesFramebufferFetch()) {
+        specialization.layout.framebufferFetchAttachmentCount =
+            AttachmentCount(GetColorAttachmentsMask());
+    }
 
-    if (auto it = mSpecializations.find(specialization); it != mSpecializations.end()) {
-        return PipelineHandles{.pipeline = it->second.pipeline->Get(),
-                               .layout = it->second.layout->Get()};
+    if (auto specialized =
+            mSpecializations.ConstUse([&](auto specializations) -> std::optional<PipelineHandles> {
+                if (auto it = specializations->find(specialization); it != specializations->end()) {
+                    return PipelineHandles{.pipeline = it->second.pipeline->Get(),
+                                           .layout = it->second.layout->Get()};
+                }
+                return std::nullopt;
+            });
+        specialized) {
+        return *specialized;
     }
 
     // Do no make a new cache key, so that the VkPipelineCache from InitializeImpl is used for all
@@ -436,10 +455,16 @@ ResultOrError<PipelineHandles> RenderPipeline::GetOrCreateSpecializedHandle(
     SpecializationResult r;
     DAWN_TRY_ASSIGN(r, InitializeSpecialization(specialization, /*buildCacheKey=*/false));
 
-    auto handles = PipelineHandles{.pipeline = r.pipeline->Get(), .layout = r.layout->Get()};
+    return mSpecializations.Use([&](auto specializations) -> ResultOrError<PipelineHandles> {
+        auto handles = PipelineHandles{.pipeline = r.pipeline->Get(), .layout = r.layout->Get()};
 
-    mSpecializations.emplace(std::move(specialization), std::move(r));
-    return handles;
+        auto [it, inserted] = specializations->insert({specialization, r});
+        if (!inserted) {
+            return PipelineHandles{.pipeline = it->second.pipeline->Get(),
+                                   .layout = it->second.layout->Get()};
+        }
+        return handles;
+    });
 }
 
 ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSpecialization(
@@ -481,9 +506,40 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
         // string_view returned by GetIsolatedEntryPointName() points to a null-terminated string.
         shaderStage->pName = device->GetIsolatedEntryPointName().data();
 
+        if (device->GetDeviceInfo().HasExt(DeviceExt::SubgroupSizeControl) &&
+            shaderStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
+            // This is required to ensure SubgroupSize is reported as the actual size of the
+            // subgroups (even if some invocations may be disabled). This becomes unnecessary with
+            // SPIR-V 1.6.
+            shaderStage->flags |= VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT;
+        }
+
         stageCount++;
         return {};
     };
+
+    std::optional<uint32_t> pixelCenterPolyfillLocation = std::nullopt;
+    if (NeedsPixelCenterPolyfill()) {
+        const EntryPointMetadata* vtx = GetStage(SingleShaderStage::Vertex).metadata;
+        for (size_t i = 0; i < vtx->usedInterStageVariables.size(); ++i) {
+            if (vtx->usedInterStageVariables[i] == false) {
+                pixelCenterPolyfillLocation = uint32_t(i);
+                break;
+            }
+        }
+        if (!pixelCenterPolyfillLocation.has_value()) {
+            return DAWN_INTERNAL_ERROR(
+                "unable to find a free vertex location for the pixel center polyfill");
+        }
+
+        if (HasStage(SingleShaderStage::Fragment)) {
+            const EntryPointMetadata* frag = GetStage(SingleShaderStage::Fragment).metadata;
+            // Because the fragment stage must be a subset of the vertex stage, if the value was
+            // free in the vertex stage it _must_ be free in the fragment stage.
+            DAWN_ASSERT(frag->usedInterStageVariables[pixelCenterPolyfillLocation.value()] ==
+                        false);
+        }
+    }
 
     // Add the vertex stage that's always present.
     DAWN_TRY(AddShaderStage({
@@ -491,8 +547,9 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
         .layout = layout,
         .immediateMask = GetImmediateMask(),
         .ycbcrExternalTextures = &specialization.ycbcrExternalTextures,
+        .polyfillPixelCenter = pixelCenterPolyfillLocation,
         .emitPointSize = GetPrimitiveTopology() == wgpu::PrimitiveTopology::PointList,
-        .polyfillPixelCenter = NeedsPixelCenterPolyfill(),
+        .pipelineUsesFramebufferFetch = UsesFramebufferFetch(),
     }));
 
     // Add the fragment stage if present.
@@ -502,12 +559,13 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
             .layout = layout,
             .immediateMask = GetImmediateMask(),
             .ycbcrExternalTextures = &specialization.ycbcrExternalTextures,
-            .polyfillPixelCenter = NeedsPixelCenterPolyfill(),
+            .polyfillPixelCenter = pixelCenterPolyfillLocation,
+            .pipelineUsesFramebufferFetch = UsesFramebufferFetch(),
             .needsMultisampledFramebufferFetch = UseSampleRateShading() && UsesFramebufferFetch(),
         }));
     }
 
-    PipelineVertexInputStateCreateInfoTemporaryAllocations tempAllocations;
+    PipelineVertexInputStateCreateInfoTemporaryAllocations tempAllocations{};
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo =
         ComputeVertexInputDesc(&tempAllocations);
 
@@ -552,7 +610,7 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
     rasterization.cullMode = VulkanCullMode(GetCullMode());
     rasterization.frontFace = VulkanFrontFace(GetFrontFace());
     rasterization.depthBiasEnable = IsDepthBiasEnabled() ? VK_TRUE : VK_FALSE;
-    rasterization.depthBiasConstantFactor = GetDepthBias();
+    rasterization.depthBiasConstantFactor = static_cast<float>(GetDepthBias());
     rasterization.depthBiasClamp = GetDepthBiasClamp();
     rasterization.depthBiasSlopeFactor = GetDepthBiasSlopeScale();
     rasterization.lineWidth = 1.0f;
@@ -562,8 +620,8 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
     multisample.pNext = nullptr;
     multisample.flags = 0;
     multisample.rasterizationSamples = VulkanSampleCount(GetSampleCount());
-    multisample.sampleShadingEnable = VK_FALSE;
-    multisample.minSampleShading = 0.0f;
+    multisample.sampleShadingEnable = UsesFramebufferFetch() ? VK_TRUE : VK_FALSE;
+    multisample.minSampleShading = 1.0f;
     // VkPipelineMultisampleStateCreateInfo.pSampleMask is an array of length
     // ceil(rasterizationSamples / 32) and since we're passing a single uint32_t
     // we have to assert that this length is indeed 1.
@@ -605,6 +663,13 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
         colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         colorBlend.pNext = nullptr;
         colorBlend.flags = 0;
+
+        if (UsesFramebufferFetch() &&
+            device->GetFramebufferFetchMode() == VulkanFramebufferFetchMode::kCoherentExt) {
+            colorBlend.flags |=
+                VK_PIPELINE_COLOR_BLEND_STATE_CREATE_RASTERIZATION_ORDER_ATTACHMENT_ACCESS_BIT_EXT;
+        }
+
         // LogicOp isn't supported so we disable it.
         colorBlend.logicOpEnable = VK_FALSE;
         colorBlend.logicOp = VK_LOGIC_OP_CLEAR;
@@ -662,14 +727,14 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
 
         dynamicStates.push_back(VK_DYNAMIC_STATE_STENCIL_OP_EXT);
         mDynamicState.packedFrontStencil =
-            PackStencilOpState(depthStencilState.front, depthStencilState.stencilTestEnable);
+            PackStencilOpState(depthStencilState.front, mDynamicState.stencilTestEnable);
         depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
         depthStencilState.front.passOp = VK_STENCIL_OP_KEEP;
         depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
         depthStencilState.front.compareOp = VK_COMPARE_OP_NEVER;
 
         mDynamicState.packedBackStencil =
-            PackStencilOpState(depthStencilState.back, depthStencilState.stencilTestEnable);
+            PackStencilOpState(depthStencilState.back, mDynamicState.stencilTestEnable);
         depthStencilState.back.failOp = VK_STENCIL_OP_KEEP;
         depthStencilState.back.passOp = VK_STENCIL_OP_KEEP;
         depthStencilState.back.depthFailOp = VK_STENCIL_OP_KEEP;
@@ -680,7 +745,7 @@ ResultOrError<RenderPipeline::SpecializationResult> RenderPipeline::InitializeSp
     dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamic.pNext = nullptr;
     dynamic.flags = 0;
-    dynamic.dynamicStateCount = dynamicStates.size();
+    dynamic.dynamicStateCount = checked_cast<uint32_t>(dynamicStates.size());
     dynamic.pDynamicStates = dynamicStates.data();
 
     // The create info chains in a bunch of things created on the stack here or inside state
@@ -917,7 +982,7 @@ VkPipelineVertexInputStateCreateInfo RenderPipeline::ComputeVertexInputDesc(
 
         VkVertexInputBindingDescription* bindingDesc = &tempAllocations->bindings[bindingCount];
         bindingDesc->binding = static_cast<uint8_t>(slot);
-        bindingDesc->stride = bindingInfo.arrayStride;
+        bindingDesc->stride = checked_cast<uint32_t>(bindingInfo.arrayStride);
         bindingDesc->inputRate = VulkanInputRate(bindingInfo.stepMode);
 
         bindingCount++;
@@ -933,7 +998,7 @@ VkPipelineVertexInputStateCreateInfo RenderPipeline::ComputeVertexInputDesc(
         attributeDesc->location = static_cast<uint8_t>(loc);
         attributeDesc->binding = static_cast<uint8_t>(attributeInfo.vertexBufferSlot);
         attributeDesc->format = VulkanVertexFormat(attributeInfo.format);
-        attributeDesc->offset = attributeInfo.offset;
+        attributeDesc->offset = checked_cast<uint32_t>(attributeInfo.offset);
 
         attributeCount++;
     }
@@ -1001,7 +1066,7 @@ RenderPipeline::~RenderPipeline() = default;
 void RenderPipeline::DestroyImpl(DestroyReason reason) {
     RenderPipelineBase::DestroyImpl(reason);
 
-    mSpecializations.clear();
+    mSpecializations->clear();
 
     // Handles were owned by refs in mSpecializations that were just deleted.
     mHandles = {};

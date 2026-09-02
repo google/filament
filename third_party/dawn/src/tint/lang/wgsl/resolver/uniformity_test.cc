@@ -325,11 +325,11 @@ class BasicTest : public UniformityAnalysisTestBase,
             case kSubgroupMatrixConstruct:
                 return "_ = subgroup_matrix_result<f32, 8, 8>()";
             case kSubgroupMatrixLoad:
-                return "_ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>("
-                       "&subgroup_matrix_data, 0, false, 4)";
+                return "_ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>("
+                       "&subgroup_matrix_data, 0, 8)";
             case kSubgroupMatrixStore:
-                return "subgroupMatrixStore(&subgroup_matrix_data, 0, "
-                       "subgroup_matrix_right_zero, false, 4)";
+                return "subgroupMatrixStore<row_major>(&subgroup_matrix_data, 0, "
+                       "subgroup_matrix_right_zero, 8)";
             case kSubgroupMatrixMultiply:
                 return "_ = subgroupMatrixMultiply<f32>("
                        "subgroup_matrix_left_zero, subgroup_matrix_right_zero)";
@@ -6020,6 +6020,41 @@ test:7:7 note: reading from read_write storage buffer 'non_uniform' may result i
 )");
 }
 
+TEST_F(UniformityAnalysisTest, AssignUniformFromFunctionCallResult_InNonUniformControlFlow) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> non_uniform : i32;
+
+fn bar() -> i32 {
+  return 0;
+}
+
+fn foo() {
+  var v = 0;
+  if (non_uniform == 0) {
+    v = bar();
+  }
+  if (v == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:14:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:10:3 note: control flow depends on possibly non-uniform value
+  if (non_uniform == 0) {
+  ^^
+
+test:10:7 note: reading from read_write storage buffer 'non_uniform' may result in a non-uniform value
+  if (non_uniform == 0) {
+      ^^^^^^^^^^^
+)");
+}
+
 TEST_F(UniformityAnalysisTest, LoadNonUniformThroughPointer) {
     std::string src = R"(
 @group(0) @binding(0) var<storage, read_write> non_uniform : i32;
@@ -7912,6 +7947,87 @@ test:5:3 note: control flow depends on possibly non-uniform value
 test:5:13 note: reading from read_write storage buffer 'v' may result in a non-uniform value
   if (any((&v).xy == vec2())) {
             ^
+)");
+}
+
+TEST_F(UniformityAnalysisTest, VectorSwizzleAssignment_FullSwizzle_UniformPromotion) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> v_rw : vec3<i32>;
+@group(0) @binding(1) var<storage> v_u : vec3<i32>;
+
+fn foo() {
+  var x = v_rw;
+  x.xyz = v_u;
+  if (x.x == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, true);
+}
+
+TEST_F(UniformityAnalysisTest, VectorSwizzleAssignment_FullPermutation_UniformPromotion) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> v_rw : vec3<i32>;
+@group(0) @binding(1) var<storage> v_u : vec3<i32>;
+
+fn foo() {
+  var x = v_rw;
+  x.zyx = v_u;
+  if (x.x == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, true);
+}
+
+TEST_F(UniformityAnalysisTest, VectorSwizzleAssignment_Chained_FullSwizzle_UniformPromotion) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> v_rw : vec3<i32>;
+@group(0) @binding(1) var<storage> v_u : vec3<i32>;
+
+fn foo() {
+  var x = v_rw;
+  x.xyz.yxz = v_u;
+  if (x.x == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, true);
+}
+
+TEST_F(UniformityAnalysisTest, VectorSwizzleAssignment_PartialSwizzle_NoUniformPromotion) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> v_rw : vec3<i32>;
+@group(0) @binding(1) var<storage> v_u : vec2<i32>;
+
+fn foo() {
+  var x = v_rw;
+  x.xy = v_u;
+  if (x.x == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:9:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:8:3 note: control flow depends on possibly non-uniform value
+  if (x.x == 0) {
+  ^^
+
+test:6:11 note: reading from read_write storage buffer 'v_rw' may result in a non-uniform value
+  var x = v_rw;
+          ^^^^
 )");
 }
 
@@ -9905,6 +10021,43 @@ test:7:12 note: reading from read_write storage buffer 'rw' may result in a non-
 )");
 }
 
+TEST_F(UniformityAnalysisTest,
+       ArrayElement_ElementBecomesUniform_ThroughCapturedPartialPointerLetChain) {
+    // For aggregate types, we conservatively consider them to be non-uniform once they
+    // become non-uniform. Test that after assigning a uniform value to an element through a
+    // pointer, the whole array is still considered to be non-uniform.
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> rw : i32;
+
+fn foo() {
+  var arr : array<i32, 4>;
+  let pa1 = &arr[2];
+  let pa2 = pa1;
+  let pa3 = pa2;
+  arr[1] = rw;
+  *pa3 = 42;
+  if (arr[1] == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:12:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:11:3 note: control flow depends on possibly non-uniform value
+  if (arr[1] == 0) {
+  ^^
+
+test:9:12 note: reading from read_write storage buffer 'rw' may result in a non-uniform value
+  arr[1] = rw;
+           ^^
+)");
+}
+
 TEST_F(UniformityAnalysisTest, ArrayElement_ElementBecomesUniform_ThroughCapturedPointer) {
     // For aggregate types, we conservatively consider them to be non-uniform once they
     // become non-uniform. Test that after assigning a uniform value to an element through a
@@ -10223,6 +10376,113 @@ test:12:3 note: control flow depends on possibly non-uniform value
 test:10:17 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
   let p = &(arr[non_uniform]);
                 ^^^^^^^^^^^
+)");
+}
+
+TEST_F(UniformityAnalysisTest,
+       ArrayElement_AssignUniformToDifferentElement_ViaPartialPointerParameter) {
+    std::string src = R"(
+var<private> non_uniform : i32;
+
+fn bar(p : ptr<function, i32>) {
+  *p = 0;
+}
+
+fn foo() {
+  var arr : array<i32, 4>;
+  arr[0] = non_uniform;
+
+  let p = &(arr[1]);
+  bar(p);
+  if (arr[0] == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:15:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:14:3 note: control flow depends on possibly non-uniform value
+  if (arr[0] == 0) {
+  ^^
+
+test:10:12 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
+  arr[0] = non_uniform;
+           ^^^^^^^^^^^
+)");
+}
+
+TEST_F(UniformityAnalysisTest, Composite_BecomesNonUniformViaCallInIndexExpression_RHS) {
+    std::string src = R"(
+@group(0) @binding(0)
+var<storage, read_write> non_uniform: vec4u;
+
+fn bar(p: ptr<function, vec4u>) -> u32 {
+  *p = non_uniform;
+  return 0;
+}
+
+fn foo() {
+  var v: vec4u;
+  let x = v[bar(&v)];
+  if (x == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:14:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:13:3 note: control flow depends on possibly non-uniform value
+  if (x == 0) {
+  ^^
+
+test:12:17 note: contents of pointer may become non-uniform after calling 'bar'
+  let x = v[bar(&v)];
+                ^^
+)");
+}
+
+TEST_F(UniformityAnalysisTest, Composite_BecomesNonUniformViaCallInIndexExpression_LHS) {
+    std::string src = R"(
+@group(0) @binding(0)
+var<storage, read_write> non_uniform: vec4u;
+
+fn bar(p: ptr<function, vec4u>) -> u32 {
+  *p = non_uniform;
+  return 0u;
+}
+
+fn foo() {
+  var v: vec4u;
+  v[bar(&v)] = 42;
+  if (v.z == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:14:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:13:3 note: control flow depends on possibly non-uniform value
+  if (v.z == 0) {
+  ^^
+
+test:12:9 note: contents of pointer may become non-uniform after calling 'bar'
+  v[bar(&v)] = 42;
+        ^^
 )");
 }
 
@@ -11024,6 +11284,74 @@ fn main() {
     RunTest(src, true);
 }
 
+TEST_F(UniformityAnalysisTest, ShortCircuiting_NonUniformValueBecomesUniformInRHS) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> non_uniform : i32;
+
+fn bar(p : ptr<function, i32>) -> bool {
+  *p = 42;
+  return true;
+}
+
+fn foo() {
+  var v = non_uniform;
+  _ = false && bar(&v);
+  if (v == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:13:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:12:3 note: control flow depends on possibly non-uniform value
+  if (v == 0) {
+  ^^
+
+test:10:11 note: reading from read_write storage buffer 'non_uniform' may result in a non-uniform value
+  var v = non_uniform;
+          ^^^^^^^^^^^
+)");
+}
+
+TEST_F(UniformityAnalysisTest, ShortCircuiting_UniformValueBecomesNonUniformInRHS) {
+    std::string src = R"(
+@group(0) @binding(0) var<storage, read_write> non_uniform : i32;
+
+fn bar(p : ptr<function, i32>) -> bool {
+  *p = non_uniform;
+  return true;
+}
+
+fn foo() {
+  var v = 42;
+  _ = true && bar(&v);
+  if (v == 0) {
+    workgroupBarrier();
+  }
+}
+)";
+
+    RunTest(src, false);
+    EXPECT_EQ(error_,
+              R"(test:13:5 error: 'workgroupBarrier' must only be called from uniform control flow
+    workgroupBarrier();
+    ^^^^^^^^^^^^^^^^
+
+test:12:3 note: control flow depends on possibly non-uniform value
+  if (v == 0) {
+  ^^
+
+test:11:19 note: contents of pointer may become non-uniform after calling 'bar'
+  _ = true && bar(&v);
+                  ^^
+)");
+}
+
 TEST_F(UniformityAnalysisTest, DeadCode_AfterReturn) {
     // Dead code after a return statement shouldn't cause uniformity errors.
     std::string src = R"(
@@ -11538,15 +11866,15 @@ var<workgroup> buffer : array<array<f32, 64>, 4>;
 
 fn foo() {
   let p = &buffer[non_uniform];
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(p, 0, false, 4);
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(p, 0, 8);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:10:61 error: 'subgroupMatrixLoad' requires argument 0 to be uniform
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(p, 0, false, 4);
-                                                            ^
+              R"(test:10:72 error: 'subgroupMatrixLoad' requires argument 0 to be uniform
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(p, 0, 8);
+                                                                       ^
 
 test:9:19 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
   let p = &buffer[non_uniform];
@@ -11563,19 +11891,19 @@ var<private> non_uniform: u32;
 var<workgroup> buffer : array<f32, 64>;
 
 fn foo() {
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(&buffer, non_uniform, false, 4);
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(&buffer, non_uniform, 8);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:9:70 error: 'subgroupMatrixLoad' requires argument 1 to be uniform
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(&buffer, non_uniform, false, 4);
-                                                                     ^^^^^^^^^^^
+              R"(test:9:81 error: 'subgroupMatrixLoad' requires argument 1 to be uniform
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(&buffer, non_uniform, 8);
+                                                                                ^^^^^^^^^^^
 
-test:9:70 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(&buffer, non_uniform, false, 4);
-                                                                     ^^^^^^^^^^^
+test:9:81 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(&buffer, non_uniform, 8);
+                                                                                ^^^^^^^^^^^
 )");
 }
 
@@ -11588,19 +11916,19 @@ var<private> non_uniform: u32;
 var<workgroup> buffer : array<f32, 64>;
 
 fn foo() {
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(&buffer, 0, false, non_uniform);
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(&buffer, 0, non_uniform);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:9:80 error: 'subgroupMatrixLoad' requires argument 3 to be uniform
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(&buffer, 0, false, non_uniform);
-                                                                               ^^^^^^^^^^^
+              R"(test:9:84 error: 'subgroupMatrixLoad' requires argument 2 to be uniform
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(&buffer, 0, non_uniform);
+                                                                                   ^^^^^^^^^^^
 
-test:9:80 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
-  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>>(&buffer, 0, false, non_uniform);
-                                                                               ^^^^^^^^^^^
+test:9:84 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
+  _ = subgroupMatrixLoad<subgroup_matrix_result<f32, 8, 8>, row_major>(&buffer, 0, non_uniform);
+                                                                                   ^^^^^^^^^^^
 )");
 }
 
@@ -11615,15 +11943,15 @@ var<workgroup> buffer : array<array<f32, 64>, 4>;
 fn foo() {
   let p = &buffer[non_uniform];
   let value = subgroup_matrix_result<f32, 8, 8>();
-  subgroupMatrixStore(p, 0, value, false, 4);
+  subgroupMatrixStore<row_major>(p, 0, value, 8);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:11:23 error: 'subgroupMatrixStore' requires argument 0 to be uniform
-  subgroupMatrixStore(p, 0, value, false, 4);
-                      ^
+              R"(test:11:34 error: 'subgroupMatrixStore' requires argument 0 to be uniform
+  subgroupMatrixStore<row_major>(p, 0, value, 8);
+                                 ^
 
 test:9:19 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
   let p = &buffer[non_uniform];
@@ -11641,19 +11969,19 @@ var<workgroup> buffer : array<f32, 64>;
 
 fn foo() {
   let value = subgroup_matrix_result<f32, 8, 8>();
-  subgroupMatrixStore(&buffer, non_uniform, value, false, 4);
+  subgroupMatrixStore<row_major>(&buffer, non_uniform, value, 8);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:10:32 error: 'subgroupMatrixStore' requires argument 1 to be uniform
-  subgroupMatrixStore(&buffer, non_uniform, value, false, 4);
-                               ^^^^^^^^^^^
+              R"(test:10:43 error: 'subgroupMatrixStore' requires argument 1 to be uniform
+  subgroupMatrixStore<row_major>(&buffer, non_uniform, value, 8);
+                                          ^^^^^^^^^^^
 
-test:10:32 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
-  subgroupMatrixStore(&buffer, non_uniform, value, false, 4);
-                               ^^^^^^^^^^^
+test:10:43 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
+  subgroupMatrixStore<row_major>(&buffer, non_uniform, value, 8);
+                                          ^^^^^^^^^^^
 )");
 }
 
@@ -11676,19 +12004,19 @@ fn bar() -> subgroup_matrix_result<f32, 8, 8> {
 }
 
 fn foo() {
-  subgroupMatrixStore(&buffer, 0, bar(), false, 4);
+  subgroupMatrixStore<row_major>(&buffer, 0, bar(), 8);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:19:35 error: 'subgroupMatrixStore' requires argument 2 to be uniform
-  subgroupMatrixStore(&buffer, 0, bar(), false, 4);
-                                  ^^^^^
+              R"(test:19:46 error: 'subgroupMatrixStore' requires argument 2 to be uniform
+  subgroupMatrixStore<row_major>(&buffer, 0, bar(), 8);
+                                             ^^^^^
 
-test:19:35 note: return value of 'bar' may be non-uniform
-  subgroupMatrixStore(&buffer, 0, bar(), false, 4);
-                                  ^^^^^
+test:19:46 note: return value of 'bar' may be non-uniform
+  subgroupMatrixStore<row_major>(&buffer, 0, bar(), 8);
+                                             ^^^^^
 )");
 }
 
@@ -11702,19 +12030,19 @@ var<workgroup> buffer : array<f32, 64>;
 
 fn foo() {
   let value = subgroup_matrix_result<f32, 8, 8>();
-  subgroupMatrixStore(&buffer, 0, value, false, non_uniform);
+  subgroupMatrixStore<row_major>(&buffer, 0, value, non_uniform);
 }
 )";
 
     RunTest(src, false);
     EXPECT_EQ(error_,
-              R"(test:10:49 error: 'subgroupMatrixStore' requires argument 4 to be uniform
-  subgroupMatrixStore(&buffer, 0, value, false, non_uniform);
-                                                ^^^^^^^^^^^
+              R"(test:10:53 error: 'subgroupMatrixStore' requires argument 3 to be uniform
+  subgroupMatrixStore<row_major>(&buffer, 0, value, non_uniform);
+                                                    ^^^^^^^^^^^
 
-test:10:49 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
-  subgroupMatrixStore(&buffer, 0, value, false, non_uniform);
-                                                ^^^^^^^^^^^
+test:10:53 note: reading from module-scope private variable 'non_uniform' may result in a non-uniform value
+  subgroupMatrixStore<row_major>(&buffer, 0, value, non_uniform);
+                                                    ^^^^^^^^^^^
 )");
 }
 
@@ -12048,7 +12376,7 @@ TEST_P(UniformityAnalysisDiagnosticFilterTest, Directive_SubgroupMatrixUniformit
 
 fn foo() {
   if (non_uniform == 42) {
-    _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&data, 0, false, 4);
+    _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>, row_major>(&data, 0, 8);
   }
 }
 )";
@@ -12129,7 +12457,7 @@ TEST_P(UniformityAnalysisDiagnosticFilterTest,
 @group(0) @binding(1) var<storage, read_write> data : array<f32>;
 
 fn foo() {
-  _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&data, non_uniform, false, 4);
+  _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>, row_major>(&data, non_uniform, 8);
 }
 )";
 
@@ -12234,7 +12562,7 @@ enable chromium_experimental_subgroup_matrix;
        << param << ", chromium.subgroup_matrix_uniformity)" <<
         R"(fn foo() {
   if (non_uniform == 42) {
-    _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&data, 0, false, 4);
+    _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>, row_major>(&data, 0, 8);
   }
 }
 )";
@@ -13241,6 +13569,30 @@ test:15:11 note: reading from module-scope private variable 'non_uniform' may re
   var f = non_uniform;
           ^^^^^^^^^^^
 )");
+}
+
+TEST_F(UniformityAnalysisTest, AssignmentEval_LHS_BufferView) {
+    std::string src = R"(
+var<workgroup> b : buffer<128>;
+
+fn main() {
+  *bufferView<u32>(&b, 0) = 0;
+}
+)";
+
+    RunTest(src, true);
+}
+
+TEST_F(UniformityAnalysisTest, AssignmentEval_LHS_BufferArrayView) {
+    std::string src = R"(
+var<workgroup> b : buffer<128>;
+
+fn main() {
+  bufferArrayView<array<u32>>(&b, 0, 128)[0] = 0;
+}
+)";
+
+    RunTest(src, true);
 }
 
 class SubgroupUniformityTest : public UniformityAnalysisTestBase,

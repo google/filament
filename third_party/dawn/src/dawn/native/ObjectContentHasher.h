@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/HashUtils.h"
+#include "src/dawn/common/HashUtils.h"
 
 namespace dawn::native {
 

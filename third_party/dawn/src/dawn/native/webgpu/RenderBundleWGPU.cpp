@@ -25,22 +25,22 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/RenderBundleWGPU.h"
+#include "src/dawn/native/webgpu/RenderBundleWGPU.h"
 
 #include <utility>
 #include <vector>
 
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/webgpu/BindGroupWGPU.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/CommandBufferHelpers.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/RenderPipelineWGPU.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/webgpu/BindGroupWGPU.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/CommandBufferHelpers.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/RenderPipelineWGPU.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
 
 namespace dawn::native::webgpu {
 
@@ -92,8 +92,8 @@ void EncodeRenderBundleCommand(const DawnProcTable& wgpu,
 
         case Command::InsertDebugMarker: {
             auto cmd = commands.NextCommand<InsertDebugMarkerCmd>();
-            char* label = commands.NextData<char>(cmd->length + 1);
-            wgpu.renderBundleEncoderInsertDebugMarker(encoder, {label, cmd->length});
+            std::string_view label = NextNullTerminatedString(&commands, cmd->length);
+            wgpu.renderBundleEncoderInsertDebugMarker(encoder, {label.data(), label.size()});
             break;
         }
 
@@ -105,20 +105,20 @@ void EncodeRenderBundleCommand(const DawnProcTable& wgpu,
 
         case Command::PushDebugGroup: {
             auto cmd = commands.NextCommand<PushDebugGroupCmd>();
-            char* label = commands.NextData<char>(cmd->length + 1);
-            wgpu.renderBundleEncoderPushDebugGroup(encoder, {label, cmd->length});
+            std::string_view label = NextNullTerminatedString(&commands, cmd->length);
+            wgpu.renderBundleEncoderPushDebugGroup(encoder, {label.data(), label.size()});
             break;
         }
 
         case Command::SetBindGroup: {
             auto cmd = commands.NextCommand<SetBindGroupCmd>();
-            uint32_t* dynamicOffsets = nullptr;
-            if (cmd->dynamicOffsetCount > 0) {
+            ityp::span<BindingIndex, const uint32_t> dynamicOffsets;
+            if (cmd->dynamicOffsetCount != BindingIndex{0u}) {
                 dynamicOffsets = commands.NextData<uint32_t>(cmd->dynamicOffsetCount);
             }
-            wgpu.renderBundleEncoderSetBindGroup(encoder, static_cast<uint32_t>(cmd->index),
-                                                 ToBackend(cmd->group)->GetInnerHandle(),
-                                                 cmd->dynamicOffsetCount, dynamicOffsets);
+            wgpu.renderBundleEncoderSetBindGroup(
+                encoder, static_cast<uint32_t>(cmd->index), ToBackend(cmd->group)->GetInnerHandle(),
+                uint32_t{dynamicOffsets.size()}, dynamicOffsets.data());
             break;
         }
 
@@ -148,9 +148,8 @@ void EncodeRenderBundleCommand(const DawnProcTable& wgpu,
         case Command::SetImmediates: {
             auto cmd = commands.NextCommand<SetImmediatesCmd>();
             DAWN_ASSERT(cmd->size > 0);
-            uint8_t* value = nullptr;
-            value = commands.NextData<uint8_t>(cmd->size);
-            wgpu.renderBundleEncoderSetImmediates(encoder, cmd->offset, value, cmd->size);
+            Span<const uint8_t> data = commands.NextData<uint8_t>(cmd->size);
+            wgpu.renderBundleEncoderSetImmediates(encoder, cmd->offset, data.data(), data.size());
             break;
         }
 
@@ -180,6 +179,7 @@ RenderBundle::RenderBundle(RenderBundleEncoderBase* encoder,
                        encoder->AcquireAttachmentState(),
                        encoder->IsDepthReadOnly(),
                        encoder->IsStencilReadOnly(),
+                       encoder->UsesResourceTable(),
                        std::move(usages),
                        std::move(indirectDrawMetaData)),
       RecordableObject(schema::ObjectType::RenderBundle),

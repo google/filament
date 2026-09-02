@@ -1,0 +1,151 @@
+Name
+
+    OES_vertex_half_float
+
+Name Strings
+
+    GL_OES_vertex_half_float
+
+Contact
+
+    Aaftab Munshi (amunshi@ati.com)
+
+Notice
+
+    Copyright (c) 2005-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    None.
+
+Status
+
+    Ratified by the Khronos BOP, July 22, 2005.
+
+Version
+
+    April 22, 2007 (version #3)
+
+Number
+
+    OpenGL ES Extension #38
+
+Dependencies
+
+    This extension is written against the OpenGL 2.0 specification
+
+Overview
+
+    This extension adds a 16-bit floating pt data type (aka half float) 
+    to vertex data specified using vertex arrays.  The 16-bit floating-point
+    components have 1 sign bit, 5 exponent bits, and 10 mantissa bits.
+    
+    The half float data type can be very useful in specifying vertex attribute 
+    data such as color, normals, texture coordinates etc.  By using half floats 
+    instead of floats, we reduce the memory requirements by half.  Not only does 
+    the memory footprint reduce by half, but the memory bandwidth required for
+    vertex transformations also reduces by the same amount approximately.
+    Another advantage of using half floats over short/byte data types is that we 
+    do not needto scale the data.  For example, using SHORT for texture coordinates 
+    implies that we need to scale the input texture coordinates in the shader or 
+    set an appropriate scale matrix as the texture matrix for fixed function pipeline.
+    Doing these additional scaling operations impacts vertex transformation
+    performance.
+
+Issues
+
+    1.  Should there be a half-float version of VertexAttrib{1234}[v] functions
+
+    RESOLUTION: No.  
+    
+    There is no reason to support this, as these functions are not
+    performance or memory footprint critical.  It is much more important that the
+    vertex data specified using vertex arrays be able to support half float data
+    format.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of VertexPointer, NormalPointer,
+    ColorPointer, SecondaryColorPointer, IndexPointer, FogCoordPointer, 
+    TexCoordPointer, and VertexAttribPointer
+
+        HALF_FLOAT_OES      0x8D61
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Add a new section 2.1.2.  This new section is copied from the 
+    ARB_texture_float extension.
+
+    2.1.2  16-Bit Floating-Point Numbers
+
+    A 16-bit floating-point number has a 1-bit sign (S), a 5-bit
+    exponent (E), and a 10-bit mantissa (M).  The value of a 16-bit
+    floating-point number is determined by the following:
+
+        (-1)^S * 0.0,                        if E == 0 and M == 0,
+        (-1)^S * 2^-14 * (M / 2^10),         if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if 0 < E < 31,
+        (-1)^S * INF,                        if E == 31 and M == 0, or
+        NaN,                                 if E == 31 and M != 0,
+
+    where
+
+        S = floor((N mod 65536) / 32768),
+        E = floor((N mod 32768) / 1024), and
+        M = N mod 1024.
+
+    Implementations are also allowed to use any of the following
+    alternative encodings:
+
+        (-1)^S * 0.0,                        if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M == 0, or
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M != 0,
+
+    Any representable 16-bit floating-point value is legal as input
+    to a GL command that accepts 16-bit floating-point data.  The
+    result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but
+    must not lead to GL interruption or termination.  Providing a
+    denormalized number or negative zero to GL must yield predictable
+    results.
+
+    Modifications to section 2.8 (Vertex Arrays)
+
+    Add HALF_FLOAT_OES as a valid <type> value in Table 2.4.
+        
+    For <type> the values BYTE, SHORT, INT, FLOAT, and DOUBLE indicate
+    types byte, short, int, float, and double, respectively; and the values
+    UNSIGNED_BYTE, UNSIGNED_SHORT, and UNSIGNED_INT indicate types ubyte,
+    ushort, and uint, respectively.  A <type> value of HALF_FLOAT_OES represents
+    a 16-bit floating point number with 1 sign bits, 5 exponent bits,
+    and 10 mantissa bits.
+
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Revision History
+
+    June 15, 2005    Aaftab Munshi    First draft of extension.
+    June 22, 2005    Aaftab Munshi    Renamed HALF_FLOAT token to HALF_FLOAT_OES
+    #3, 2007/04/22   Jon Leech        Add version date and extension number.

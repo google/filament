@@ -28,8 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_BUILTIN_SCALARIZE_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_BUILTIN_SCALARIZE_H_
 
-#include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -39,36 +38,13 @@ class Module;
 
 namespace tint::core::ir::transform {
 
-/// The capabilities that the transform can support.
-const Capabilities kBuiltinScalarizeCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kAllow16BitIntegers,
-    core::ir::Capability::kAllow64BitIntegers,
-    core::ir::Capability::kAllowPointSizeBuiltin,
-    core::ir::Capability::kAllowVectorElementPointer,
-    core::ir::Capability::kAllowHandleVarsWithoutBindings,
-    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
-    core::ir::Capability::kAllowAnyLetType,
-    core::ir::Capability::kMslAllowEntryPointInterface,
-    core::ir::Capability::kAllowModuleScopeLets,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-};
-
 /// The scalarizer configuration options
 struct BuiltinScalarizeConfig {
-    // Set to true to scalarize clamp builtin
-    bool scalarize_clamp = false;
-
-    // Set to true to scalarize max builtin
-    bool scalarize_max = false;
-
-    // Set to true to scalarize min builtin
-    bool scalarize_min = false;
+    // Set to true to scalarize min/max/clamp builtins.
+    bool scalarize_min_max_clamp = false;
 
     /// Reflection for this class
-    TINT_REFLECT(BuiltinScalarizeConfig, scalarize_clamp, scalarize_max, scalarize_min);
+    TINT_REFLECT(BuiltinScalarizeConfig, scalarize_min_max_clamp);
 };
 
 /// BuiltinScalarize is a transform that replaces calls to builtin vector functions with scalar

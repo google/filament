@@ -50,6 +50,10 @@
 	path = tools/code_coverage
 	url = https://chromium.googlesource.com/chromium/src/tools/code_coverage
 	gclient-condition = dawn_standalone and checkout_clang_coverage_tools
+[submodule "third_party/chromium-tools-build/src"]
+	path = third_party/chromium-tools-build/src
+	url = https://chromium.googlesource.com/chromium/tools/build
+	gclient-condition = dawn_standalone and checkout_clang_tidy
 [submodule "tools/mb"]
 	path = tools/mb
 	url = https://chromium.googlesource.com/chromium/src/tools/mb
@@ -62,8 +66,8 @@
 	path = third_party/libFuzzer/src
 	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/compiler-rt/lib/fuzzer.git
 	gclient-condition = dawn_standalone
-[submodule "third_party/googletest"]
-	path = third_party/googletest
+[submodule "third_party/googletest/src"]
+	path = third_party/googletest/src
 	url = https://chromium.googlesource.com/external/github.com/google/googletest
 	gclient-condition = dawn_standalone
 [submodule "third_party/catapult"]
@@ -74,14 +78,18 @@
 	path = third_party/google_benchmark/src
 	url = https://chromium.googlesource.com/external/github.com/google/benchmark.git
 	gclient-condition = dawn_standalone
+[submodule "third_party/perfetto"]
+	path = third_party/perfetto
+	url = https://chromium.googlesource.com/external/github.com/google/perfetto.git
+	gclient-condition = dawn_standalone
 [submodule "third_party/mesa/src"]
 	path = third_party/mesa/src
 	url = https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/
-	gclient-condition = dawn_standalone and checkout_mesa
+	gclient-condition = checkout_mesa and host_os == "linux"
 [submodule "third_party/meson/src"]
 	path = third_party/meson/src
 	url = https://chromium.googlesource.com/external/github.com/mesonbuild/meson
-	gclient-condition = dawn_standalone and checkout_mesa
+	gclient-condition = checkout_mesa and host_os == "linux"
 [submodule "third_party/jinja2"]
 	path = third_party/jinja2
 	url = https://chromium.googlesource.com/chromium/src/third_party/jinja2
@@ -149,16 +157,9 @@
 	path = third_party/abseil-cpp
 	url = https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp
 	gclient-condition = dawn_standalone
-[submodule "third_party/dxc"]
-	path = third_party/dxc
-	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectXShaderCompiler
 [submodule "third_party/directx-shader-compiler/src"]
 	path = third_party/directx-shader-compiler/src
 	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectXShaderCompiler
-[submodule "third_party/dxheaders"]
-	path = third_party/dxheaders
-	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectX-Headers
-	gclient-condition = host_os != "win"
 [submodule "third_party/directx-headers/src"]
 	path = third_party/directx-headers/src
 	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectX-Headers
@@ -204,15 +205,31 @@
 	path = third_party/libprotobuf-mutator/src
 	url = https://chromium.googlesource.com/external/github.com/google/libprotobuf-mutator.git
 	gclient-condition = dawn_standalone
-[submodule "third_party/jsoncpp"]
-	path = third_party/jsoncpp
-	url = https://chromium.googlesource.com/external/github.com/open-source-parsers/jsoncpp.git
-	gclient-condition = dawn_tintd
-[submodule "third_party/langsvr"]
-	path = third_party/langsvr
-	url = https://github.com/google/langsvr.git
-	gclient-condition = dawn_tintd
 [submodule "third_party/partition_alloc"]
 	path = third_party/partition_alloc
 	url = https://chromium.googlesource.com/chromium/src/base/allocator/partition_allocator.git
 	gclient-condition = dawn_standalone
+[submodule "third_party/android_sdk"]
+	path = third_party/android_sdk
+	url = https://chromium.googlesource.com/chromium/src/third_party/android_sdk
+	gclient-condition = checkout_android and dawn_standalone
+[submodule "third_party/android_build_tools"]
+	path = third_party/android_build_tools
+	url = https://chromium.googlesource.com/chromium/src/third_party/android_build_tools
+	gclient-condition = checkout_android and dawn_standalone
+[submodule "third_party/cpu_features/src"]
+	path = third_party/cpu_features/src
+	url = https://chromium.googlesource.com/external/github.com/google/cpu_features.git
+	gclient-condition = checkout_android and dawn_standalone
+[submodule "third_party/ijar"]
+	path = third_party/ijar
+	url = https://chromium.googlesource.com/chromium/src/third_party/ijar
+	gclient-condition = checkout_android and dawn_standalone
+[submodule "third_party/libunwind/src"]
+	path = third_party/libunwind/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libunwind.git
+	gclient-condition = checkout_android and dawn_standalone
+[submodule "third_party/litert-lm/src"]
+	path = third_party/litert-lm/src
+	url = https://chromium.googlesource.com/external/github.com/google-ai-edge/LiteRT-LM.git
+	gclient-condition = checkout_litert_lm

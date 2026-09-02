@@ -32,9 +32,9 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/replay/ReadHead.h"
 #include "dawn/replay/Replay.h"
 #include "src/dawn/replay/CaptureWalker.h"
+#include "src/dawn/replay/ReadHead.h"
 
 namespace dawn::replay {
 
@@ -43,6 +43,7 @@ namespace dawn::replay {
 // have to scan it once to find all the commands for a UI.
 class CaptureImpl : public Capture, public CaptureWalker {
   public:
+    using CaptureWalker::Walk;
     static std::unique_ptr<CaptureImpl> Create(CaptureStream& commandStream,
                                                size_t commandSize,
                                                CaptureStream& contentStream,
@@ -51,7 +52,8 @@ class CaptureImpl : public Capture, public CaptureWalker {
 
     bool Walk(RootCommandVisitor& visitor) override;
 
-  protected:
+    std::vector<SurfaceInfo> GetSurfaceInfos() const override;
+
     ReadHead GetCommandReadHead() const override;
     ReadHead GetContentReadHead() const override;
 

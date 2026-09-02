@@ -37,11 +37,11 @@
 
 namespace tint::spirv::validate {
 
-Result<SuccessType> Validate(std::span<const uint32_t> spirv, spv_target_env target_env) {
+Result<SuccessType> Validate(std::span<const uint32_t> spirv, const Options& options) {
     Vector<diag::Diagnostic, 4> diags;
     diags.Push(diag::Diagnostic{});  // Filled in on error
 
-    spvtools::SpirvTools tools(target_env);
+    spvtools::SpirvTools tools(options.target_env);
     tools.SetMessageConsumer(
         [&](spv_message_level_t level, const char*, const spv_position_t& pos, const char* msg) {
             diag::Diagnostic diag;
@@ -70,6 +70,7 @@ Result<SuccessType> Validate(std::span<const uint32_t> spirv, spv_target_env tar
     // time by scanning the whole module and building a string table.
     spvtools::ValidatorOptions val_opts;
     val_opts.SetFriendlyNames(false);
+    val_opts.SetUniformBufferStandardLayout(options.uniform_buffer_standard_layout);
 
     if (tools.Validate(spirv.data(), spirv.size(), val_opts)) {
         return Success;

@@ -1,0 +1,228 @@
+Name
+
+    WIN_specular_fog
+
+Name Strings
+
+    GL_WIN_specular_fog
+
+Version
+
+    $Date: 1997/4/3 
+
+Number
+
+    114
+
+Dependencies
+
+    none
+
+Overview
+
+    Specularly lit textures enhance the realism of a scene greatly.
+    Using the current OpenGL lighting model, one cannot obtain specularly lit 
+    textures. This is because in the current OpenGL lighting model lighting
+    is done ahead of texturing and texture-functions such as modulate are 
+    inadequate for such a simulation. What needs to be addressed is that, 
+    somehow an additional interpolant (specular color of that material) needs 
+    to be propagated till that stage of the pipeline where texture-mapping is
+    performed. This interpolant is then added on to the fragment's color
+    resulting from the texturing process before proceeding with the rest of 
+    the pipeline.
+
+    This can be addressed very easily in software, but hardware
+    is not so malleable. Currently most hardware does not support such a
+
+    lighting model. However, some current hardware does support fogging,
+    which takes place in the pipeline after texturing. This hardware 
+    assumes that the fog blend factor f is computed per-vertex and
+    interpolates the value across the primitive. The WIN_specular_fog
+    extension enables the use of such existing fog circuitry to obtain 
+    specularly lit textures without much performance degradation. 
+
+    To use it the programmer simply enables the extension with a call to
+    Enable with the appropriate enumerant and sets the fog color to the 
+    desired specular color.
+
+Issues
+
+    1) This extension works only if: 
+                * Lighting is enabled.
+                * Texturing is enabled.
+                * Texture function is MODULATE.
+                * Two sided lighting is disabled.
+                * RenderMode is RENDER.
+
+    2) When both fogging and the extension are enabled, the FOG_HINT bit
+       is ignored.
+
+    3) One limitation is that the FOG_COLOR is used as the specular-highlight
+       color. 
+
+    4) PushAttrib and PopAttrib calls save and restore the extension related
+       state when the FOG_BIT is set, along with the rest of the fog related
+       state information. 
+    
+    5) The highlight computed by this extension is linear-interpolation based 
+       and therefore appears similar to the highlights available for untextured 
+       Gouraud polygons. If Phong shading (ext #113) is enabled this similarity
+       will no longer hold as the Phong highlight is computed per-pixel.  This
+       can result in the enabling of texture causing the highlight to move and 
+       change shape.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable and IsEnabled:
+
+    FOG_SPECULAR_TEXTURE_WIN                  0x80EC
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv
+     and GetFloatv
+    
+    FOG_SPECULAR_TEXTURE_WIN                  0x80EC
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+    In section 2.6 titled "Begin/End Paradigm", add to the paragraph ending
+    with "...its assigned color, and its texture coordinates", the following
+    line:
+    "In addition to these, an implementation may choose to associate a fog
+    blend factor f with the processed vertex, which is computed per vertex to 
+    speed up fogging calcutaions. This value f is also used to store the
+    specular color factor computed in the lighting stage, to be applied after
+    texturing by the fog sub-system."
+
+    Modify the line "This may alter the primitive by altering....." to
+    "This may alter the primitive by altering vertex coordinates, texture 
+    coordinates, fog blend-factor and color".
+
+    Figure 2.2 should be edited so that the "Associated Data" box includes
+    Fog value.
+
+    After the last paragraph of Section 2.13, "Colors and Coloring", the
+    following paragraph is added:
+
+    "If the WIN_specular_fog extension is enabled the fog value, which 
+    represents the specular highlight color for the fragment, is computed 
+    when lighting computation takes place."
+    
+    Add the following to Section 2.13.1 as the last paragraph of subsection
+    titled "Lighting":
+    "When the WIN_specular_fog extension is enabled, the parameters used for 
+    computing the color of the vertex are used to compute the fog value 
+    associated with the vertex. This value represents the specular color of 
+    the vertex. This value is used by the fog sub-system to add a specular 
+    color to the vertex after texturing has taken place. This is a way 
+    around one of OpenGL's shortcomings, where lighting is done before 
+    texturing resulting in a complete loss of specular highlights."
+
+    Add the following to Section 2.13.1, subsection titled "Lighting 
+    Operation", after the set of lighting equations and the line ending
+    "... V is zero":
+    "If the following conditions are met:
+        1) WIN_specular_fog is enabled, 
+        2) Texturing is enabled, 
+        3) Texture function is MODULATE, 
+        4) Two sided lighting is disabled,
+        5) RenderMode is RENDER.
+    Then the fog value of the vertex is computed to be:
+   
+                    n-1                        ^  srm
+    f = max (0, 1 - Sum [(att )(spot )(f )(n . h )   ])      (2.6)"
+                    i=0      i      i   i       i 
+
+      = 1 , if the conditions are not met.
+
+    Renumber eq. 2.6 to 2.7.
+    
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Modify the first line of the second paragraph to:
+    "A grid square along with its parameters of assigned color, z (depth),
+    texture coordinates, normal and eye coordinates (for phong shading) 
+    and f (fog blend-factor)"
+
+    In Section 3.4.1 "Basic Line Segment Rasterization", modify the line
+
+    "The value of an associated datum f......." after equation 3.1 to:
+
+    "The value of an associated datum f for the fragment, whether it be R, G,
+    B, or A (in RGBA mode) or a color index (in color index mode), or normal,
+    eye coordinate or material properties (when phong-shaded), or the s, t, or
+    r texture coordinate or fog blend factor.......... is found as"
+
+    Change the title of Section 3.9 from "Fog" to "Fog and Specular 
+    Highlights"
+    
+    Change the first line "If enabled..." to 
+    "If either fog or WIN_specular_fog are enabled, the fog blends a fog-color
+    (which is also the specular highlight color) with a rasterized fragment's
+    post-texturing color using a blend-factor f."
+
+    Add the following line to the first paragraph:
+    "WIN_specular_fog is enabled and disabled with the Enable and Disable 
+    commands using the symbolic constant FOG_SPECULAR_TEXTURE_WIN."
+
+    Change equations 3.16 3.17 and 3.18 to:
+         
+    f = f' * exp (-d.z)      (3.16)
+                        
+    f = f' * exp ((-d.z)**2) (3.17)
+    f = f' * (e - z)/(e - s) (3.18)
+
+    Modify the following line "(z is the eye-coordinate distance....)" to:
+    "(z is the eye-coordinate distance from the eye, (0,0,0,1) in eye 
+    coordinates, f' is the specular color factor computed in equation 2.6
+    at the time of lighting)"
+
+    Modify the line beginning "Further, f need not ....."
+    to the following:
+    "Further, if WIN_specular_fog is enabled, f must be computed at each
+    vertex after f' has been computed during the lighting stage. f forms a
+    part of the data associated with the processed vertex and is interpolated
+    as other data are."
+
+    Modify the first line of the last paragraph in section 3.9 beginning
+
+    "The state required ..." to:
+    The state required for fog consists of a three valued integer to select
+    the fog equation, three .... a single bit to indicate whether or not fog
+    is enabled and another bit to indicate whether or not WIN_specular_fog
+    is enabled."
+    
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State
+Requests)
+
+    None
+
+Dependencies on other extensions
+
+    None
+
+Errors
+
+    None
+
+New State
+                                                           Initial
+    Get Value                         Get Command   Type    Value 	Attrib
+    ---------                         -----------   ----    ------- 	------
+    FOG_SPECULAR_TEXTURE_WIN          IsEnabled     B       GL_FALSE 	WIN_specular_fog/enable
+
+New Implementation Dependent State
+
+    None
+

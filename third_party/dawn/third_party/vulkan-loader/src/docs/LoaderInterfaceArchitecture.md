@@ -46,6 +46,7 @@
   - [Globs](#globs)
   - [Case-Insensitive](#case-insensitive)
   - [Environment Variable Priority](#environment-variable-priority)
+  - [Multiple Filtering](#multiple-filtering)
 - [Table of Debug Environment Variables](#table-of-debug-environment-variables)
   - [Active Environment Variables](#active-environment-variables)
   - [Deprecated Environment Variables](#deprecated-environment-variables)
@@ -1059,6 +1060,26 @@ discovery.
         <br/>
         set<br/>
         &nbsp;&nbsp;VK_LOADER_DRIVER_ID_FILTER=1-3:13<br/><br/>
+    </small></td>
+  </tr>
+  <tr>
+    <td><small>
+        <i>VK_LOADER_SEARCH_ONLY_IN_BUNDLE</i>
+    </small></td>
+    <td><small>
+        Prevents searching for layer and driver manifests outside of the
+        Application Bundle. Meant to isolate applications shipping on macOS/iOS
+        in a bundle from using system installed layers and drivers.
+    </small></td>
+    <td><small>
+        <b>macOS/iOS only</b><br/>
+        This functionality is only available with Loaders built with version
+        1.4.359 of the Vulkan headers and later.
+    </small></td>
+    <td><small>
+        export<br/>
+        &nbsp;&nbsp;VK_LOADER_SEARCH_ONLY_IN_BUNDLE=1<br/>
+        <br/>
     </small></td>
   </tr>
 </table>

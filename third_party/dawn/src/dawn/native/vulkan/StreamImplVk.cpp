@@ -28,10 +28,10 @@
 #include <cstring>
 #include <map>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/stream/Stream.h"
-#include "dawn/native/vulkan/RenderPassCache.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/stream/Stream.h"
+#include "src/dawn/native/vulkan/RenderPassCache.h"
+#include "src/utils/assert.h"
 
 #include <vulkan/utility/vk_struct_helper.hpp>
 
@@ -73,10 +73,10 @@ void SerializePnextImpl(stream::Sink* sink, const VkBaseOutStructure* root) {
     }
 }
 
-template <typename VK_STRUCT_TYPE,
-          typename... VK_STRUCT_TYPES,
-          typename = std::enable_if_t<(sizeof...(VK_STRUCT_TYPES) > 0)>>
-void SerializePnextImpl(stream::Sink* sink, const VkBaseOutStructure* root) {
+template <typename VK_STRUCT_TYPE, typename... VK_STRUCT_TYPES>
+void SerializePnextImpl(stream::Sink* sink, const VkBaseOutStructure* root)
+    requires(sizeof...(VK_STRUCT_TYPES) > 0)
+{
     SerializePnextImpl<VK_STRUCT_TYPE>(sink, root);
     SerializePnextImpl<VK_STRUCT_TYPES...>(sink, root);
 }
@@ -92,10 +92,10 @@ const VkBaseOutStructure* ToVkBaseOutStructure(const VK_STRUCT_TYPE* t) {
 
 }  // namespace detail
 
-template <typename... VK_STRUCT_TYPES,
-          typename VK_STRUCT_TYPE,
-          typename = std::enable_if_t<(sizeof...(VK_STRUCT_TYPES) > 0)>>
-void SerializePnext(stream::Sink* sink, const VK_STRUCT_TYPE* t) {
+template <typename... VK_STRUCT_TYPES, typename VK_STRUCT_TYPE>
+void SerializePnext(stream::Sink* sink, const VK_STRUCT_TYPE* t)
+    requires(sizeof...(VK_STRUCT_TYPES) > 0)
+{
     const VkBaseOutStructure* root = detail::ToVkBaseOutStructure(t);
     detail::ValidatePnextImpl<VK_STRUCT_TYPES...>(root);
     detail::SerializePnextImpl<VK_STRUCT_TYPES...>(sink, root);

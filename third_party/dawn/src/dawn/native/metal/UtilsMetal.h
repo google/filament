@@ -33,21 +33,23 @@
 #include <string>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/NSRef.h"
-#include "dawn/native/PassResourceUsage.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/ShaderModuleMTL.h"
-#include "dawn/native/metal/TextureMTL.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/PassResourceUsage.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/ShaderModuleMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
 
 namespace dawn::native {
 struct BeginRenderPassCmd;
 struct ProgrammableStage;
 struct EntryPointMetadata;
-enum class SingleShaderStage;
+enum class SingleShaderStage : uint8_t;
 }  // namespace dawn::native
 
 namespace dawn::native::metal {
+
+MTLTextureType MetalTextureViewType(wgpu::TextureViewDimension dimension, bool multisampled);
 
 MTLPixelFormat MetalPixelFormat(const DeviceBase* device, wgpu::TextureFormat format);
 
@@ -80,7 +82,7 @@ MTLOrigin ToMTLOrigin(const TexelOrigin3D& origin);
 // When using argument buffers, we use the compacted BindingIndex directly in MSL, instead of
 // remapping to per-resource-type indices (from GetBindingIndexInfo) like we do without argbufs.
 inline uint32_t ToMTLArgumentBufferIndex(BindingIndex bindingIndex) {
-    return uint32_t(bindingIndex);
+    return uint32_t{bindingIndex};
 }
 
 // For different reasons a WebGPU copy may need to be split into multiple copies for Metal. This

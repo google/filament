@@ -17,8 +17,6 @@
 
 package androidx.webgpu.helper
 
-import android.os.Handler
-import android.os.Looper
 import android.view.Surface
 import androidx.webgpu.GPUAdapter
 import androidx.webgpu.BackendType
@@ -26,45 +24,151 @@ import androidx.webgpu.GPUDevice
 import androidx.webgpu.GPUDeviceDescriptor
 import androidx.webgpu.DeviceLostCallback
 import androidx.webgpu.DeviceLostException
-import androidx.webgpu.DeviceLostReason
-import androidx.webgpu.ErrorType
 import androidx.webgpu.GPUInstance
 import androidx.webgpu.GPUInstanceDescriptor
-import androidx.webgpu.InternalException
-import androidx.webgpu.OutOfMemoryException
 import androidx.webgpu.GPURequestAdapterOptions
-import androidx.webgpu.RequestAdapterStatus
 import androidx.webgpu.GPUSurface
-import androidx.webgpu.RequestDeviceStatus
 import androidx.webgpu.GPUSurfaceDescriptor
 import androidx.webgpu.GPUSurfaceSourceAndroidNativeWindow
 import androidx.webgpu.UncapturedErrorCallback
-import androidx.webgpu.UnknownException
-import androidx.webgpu.ValidationException
 import androidx.webgpu.GPU.createInstance
 import androidx.webgpu.WebGpuRuntimeException
 import androidx.webgpu.helper.Util.windowFromSurface
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import java.util.concurrent.Executors
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 
-private const val POLLING_DELAY_MS = 100L
-
-public abstract class WebGpu : AutoCloseable {
-    public abstract val instance: GPUInstance
-    public abstract val webgpuSurface: GPUSurface
-    public abstract val device: GPUDevice
+/**
+ * Single-threaded [CoroutineDispatcher] dedicated to running all WebGPU/Dawn JNI operations.
+ *
+ * The native Dawn engine is not thread-safe for concurrent access. To prevent race conditions
+ * and segmentation faults, all WebGPU operations (including initialization, processEvents polling,
+ * queue submission, and teardown/cleanup) must be executed sequentially on this dispatcher thread.
+ */
+private fun createDefaultWebGpuDispatcher(): CoroutineDispatcher {
+    return Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "WebGPU-Thread").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
 }
 
-public suspend fun createWebGpu(
-    surface: Surface? = null,
-    instanceDescriptor: GPUInstanceDescriptor = GPUInstanceDescriptor(),
-    requestAdapterOptions: GPURequestAdapterOptions = GPURequestAdapterOptions(),
-    deviceDescriptor: GPUDeviceDescriptor = GPUDeviceDescriptor(
+private const val POLLING_DELAY_MS = 16L // 60 FPS polling
+
+/**
+ * A helper class representing a WebGPU environment, encapsulating the instance, adapter, device,
+ * and surface. All operations on these components should be executed on the dedicated dispatcher.
+ */
+public abstract class WebGpu : AutoCloseable {
+    public abstract val instance: GPUInstance
+    public abstract val adapter: GPUAdapter
+    public abstract val device: GPUDevice
+    public abstract val webgpuSurface: GPUSurface
+    public abstract val dispatcher: CoroutineDispatcher
+
+    protected val isClosed: AtomicBoolean = AtomicBoolean(false)
+
+    /**
+     * Executes the given suspending [block] on the dedicated WebGPU dispatcher.
+     *
+     * Use this method to wrap all operations on native WebGPU objects (like creating buffers,
+     * pipeline creation, or issuing draw/compute calls) to ensure thread-safety.
+     *
+     * @param block The block of code to execute.
+     * @return The result of executing the block.
+     */
+    public suspend fun <T> execute(block: suspend () -> T): T {
+        return withContext(dispatcher) {
+            block()
+        }
+    }
+
+    /**
+     * Runs a continuous loop on the WebGPU dispatcher to poll for and process WebGPU events.
+     * This is required for asynchronous operations (e.g., buffer mapping callbacks) to trigger.
+     */
+    public suspend fun processEventsLoop() {
+        withContext(dispatcher) {
+            while (currentCoroutineContext().isActive && !isClosed.get()) {
+                instance.processEvents()
+                delay(POLLING_DELAY_MS)
+            }
+        }
+    }
+
+}
+
+private val defaultDeviceDescriptor
+    get() = GPUDeviceDescriptor(
         deviceLostCallback = defaultDeviceLostCallback,
         deviceLostCallbackExecutor = Executor(Runnable::run),
         uncapturedErrorCallback = defaultUncapturedErrorCallback,
         uncapturedErrorCallbackExecutor = Executor(Runnable::run)
-    ),
-): WebGpu {
+    )
+
+/**
+ * Creates a [WebGpu] environment using a newly created default single-threaded dispatcher.
+ *
+ * @param surface An optional Android [Surface] to bind to WebGPU.
+ * @param instanceDescriptor Options for configuring the native WebGPU instance.
+ * @param requestAdapterOptions Options for selecting the GPU adapter (e.g., backend type).
+ * @param deviceDescriptor Options for requesting the GPU device.
+ * @return A configured [WebGpu] instance.
+ */
+public suspend fun createWebGpu(
+    surface: Surface? = null,
+    instanceDescriptor: GPUInstanceDescriptor = GPUInstanceDescriptor(),
+    requestAdapterOptions: GPURequestAdapterOptions = GPURequestAdapterOptions(),
+    deviceDescriptor: GPUDeviceDescriptor = defaultDeviceDescriptor
+): WebGpu = createWebGpuInternal(
+    dispatcher = createDefaultWebGpuDispatcher(),
+    isDispatcherOwned = true,
+    surface = surface,
+    instanceDescriptor = instanceDescriptor,
+    requestAdapterOptions = requestAdapterOptions,
+    deviceDescriptor = deviceDescriptor
+)
+
+/**
+ * Creates a [WebGpu] environment using the provided [dispatcher].
+ *
+ * @param dispatcher A custom [CoroutineDispatcher] to use for executing WebGPU JNI operations.
+ *                   Must be single-threaded.
+ * @param surface An optional Android [Surface] to bind to WebGPU.
+ * @param instanceDescriptor Options for configuring the native WebGPU instance.
+ * @param requestAdapterOptions Options for selecting the GPU adapter (e.g., backend type).
+ * @param deviceDescriptor Options for requesting the GPU device.
+ * @return A configured [WebGpu] instance.
+ */
+public suspend fun createWebGpu(
+    dispatcher: CoroutineDispatcher,
+    surface: Surface? = null,
+    instanceDescriptor: GPUInstanceDescriptor = GPUInstanceDescriptor(),
+    requestAdapterOptions: GPURequestAdapterOptions = GPURequestAdapterOptions(),
+    deviceDescriptor: GPUDeviceDescriptor = defaultDeviceDescriptor
+): WebGpu = createWebGpuInternal(
+    dispatcher = dispatcher,
+    isDispatcherOwned = false,
+    surface = surface,
+    instanceDescriptor = instanceDescriptor,
+    requestAdapterOptions = requestAdapterOptions,
+    deviceDescriptor = deviceDescriptor
+)
+
+private suspend fun createWebGpuInternal(
+    dispatcher: CoroutineDispatcher,
+    isDispatcherOwned: Boolean,
+    surface: Surface?,
+    instanceDescriptor: GPUInstanceDescriptor,
+    requestAdapterOptions: GPURequestAdapterOptions,
+    deviceDescriptor: GPUDeviceDescriptor,
+): WebGpu = withContext(dispatcher) {
     initLibrary()
 
     val instance = createInstance(instanceDescriptor)
@@ -80,34 +184,34 @@ public suspend fun createWebGpu(
 
     val adapter = requestAdapter(instance, requestAdapterOptions)
     val device = requestDevice(adapter, deviceDescriptor)
+    val dispatcherThread = Thread.currentThread()
 
-    var isClosing = false
-    // Long-running event poller for async methods. Can be removed when
-    // https://issues.chromium.org/issues/323983633 is fixed.
-    val handler = Handler(Looper.getMainLooper())
-    fun nextProcess() {
-        handler.postDelayed({
-            if (isClosing) {
-                return@postDelayed
-            }
-            instance.processEvents()
-            nextProcess()
-        }, POLLING_DELAY_MS)
-    }
-    nextProcess()
-
-    return object : WebGpu() {
+    object : WebGpu() {
         override val instance = instance
+        override val adapter = adapter
         override val webgpuSurface
             get() = checkNotNull(webgpuSurface)
         override val device = device
+        override val dispatcher = dispatcher
 
         override fun close() {
-            isClosing = true
+            if (isClosed.getAndSet(true)) return
             //device.close() // TODO(b/428866400): Uncomment when fixed.
-            webgpuSurface?.close()
-            instance.close()
-            adapter.close()
+            val cleanup = {
+                webgpuSurface?.close()
+                adapter.close()
+                instance.close()
+                if (isDispatcherOwned) {
+                    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
+                }
+            }
+            if (Thread.currentThread() == dispatcherThread) {
+                cleanup()
+            } else {
+                runBlocking(dispatcher) {
+                    cleanup()
+                }
+            }
         }
     }
 }

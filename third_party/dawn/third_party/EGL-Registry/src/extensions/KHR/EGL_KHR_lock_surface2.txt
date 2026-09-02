@@ -1,0 +1,1077 @@
+Name
+
+    KHR_lock_surface2
+
+Name Strings
+
+    EGL_KHR_lock_surface2
+
+Contributors
+
+    Mark Callow
+    Gary King
+    Jon Leech
+    Marko Lukat
+    Alon Or-bach
+    Tim Renouf
+
+Contacts
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2006-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    This extension is obsolete and has been replaced by
+    EGL_KHR_lock_surface3. Khronos recommends implementers who support this
+    extension also implement lock_surface3, and begin transitioning
+    developers to using that extension. See issue 21 for the reason.
+
+    Complete. Version 2 approved by the Khronos Board of Promoters on
+    May 28, 2010.
+    Implemented by Antix Labs.
+
+Version
+
+    Version 3, December 4, 2013
+
+Number
+
+    EGL Extension #16
+
+Dependencies
+
+    Requires EGL 1.0 and EGL_KHR_lock_surface version 18.
+
+    This extension is written against the wording of the EGL 1.3
+    and EGL 1.4 Specifications. Unless otherwise specified, each change
+    applies to both specifications. Unless otherwise specified, a page
+    number refers to the EGL 1.3 specification.
+
+    This extension is written against the wording of EGL_KHR_lock_surface
+    version 18.
+
+Overview
+
+    This extension slightly modifies and clarifies some semantic aspects
+    of the EGL_KHR_lock_surface extension, in a way that is backwards
+    compatible for applications.
+
+    The extension is presented here as the full text of the
+    EGL_KHR_lock_surface extension (minus the Status, Version, Number and
+    Dependencies sections at the start) as modified by the changes made by
+    this EGL_KHR_lock_surface2 extension. A diff utility can be used between
+    EGL_KHR_lock_surface version 18 and this EGL_KHR_lock_surface2 extension
+    to show the exact changes.
+
+    An application which needs to tell whether the implementation supports
+    EGL_KHR_lock_surface2, or just the original EGL_KHR_lock_surface, can
+    use eglQueryString with EGL_EXTENSIONS to query the list of
+    implemented extensions.
+
+    The changes over EGL_KHR_lock_surface can be summarized as follows:
+
+      * EGL_KHR_lock_surface had the EGL_MAP_PRESERVE_PIXELS_KHR attribute on
+        eglLockSurfaceKHR, but failed to point out how the surface attribute
+        EGL_SWAP_BEHAVIOR would interact with lock surface rendering.
+        EGL_KHR_lock_surface2 specifies that the locked buffer contains the
+        back buffer pixels if EGL_SWAP_BEHAVIOR is EGL_BUFFER_PRESERVED
+        _or_ if EGL_MAP_PRESERVE_PIXELS_KHR is EGL_TRUE, and provides a way to
+        set EGL_SWAP_BEHAVIOR on creation of a lockable window surface,
+        even if EGL_SWAP_BEHAVIOR is not otherwise modifiable.
+        EGL_SWAP_BEHAVIOR now defaults to EGL_BUFFER_PRESERVED for a
+        lockable surface.
+
+      * EGL_KHR_lock_surface failed to specify its interaction with the
+        EGL requirement that a context be current at eglSwapBuffers; no
+        context is used for lock surface rendering. EGL_KHR_lock_surface2
+        relaxes that requirement for a lockable window surface, in a way
+        that is anticipated to apply to all window surfaces in a future
+        version of EGL.
+
+      * Wording in EGL_KHR_lock_surface could be read to imply that almost
+        all surface attributes are invariant for a lockable surface.
+        EGL_KHR_lock_surface2 clarifies the wording.
+
+      * EGL_KHR_lock_surface2 clarifies what is returned when
+        the attribute EGL_MATCH_FORMAT_KHR is queried, especially when
+        one of the "inexact" formats was used to choose the config.
+
+      * EGL_KHR_lock_surface did not specify when a surface could change size.
+        EGL_KHR_lock_surface2 specifies that a surface cannot change size
+        when it is locked.
+
+      * EGL_KHR_lock_surface2 adds the config attribute
+        EGL_BITMAP_PIXEL_SIZE_KHR, to allow an application to dynamically
+        detect pixel layout for a format with a "hole", such as RGBU8888
+        (where "U" means "unused").
+
+New Tokens
+
+    Accepted by the <attribute> parameter of eglQuerySurface:
+
+        EGL_BITMAP_PIXEL_SIZE_KHR           0x3110
+
+Full text of EGL_KHR_lock_surface plus EGL_KHR_lock_surface2:
+
+Overview
+
+    This extension allows mapping color buffers of EGL surfaces into the
+    client address space. This is useful primarily for software
+    rendering on low-end devices which do not support EGL client
+    rendering APIs, although it may be implemented efficiently on more
+    capable devices as well.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    EGLBoolean eglLockSurfaceKHR(EGLDisplay dpy, EGLSurface surface,
+                                 const EGLint *attrib_list);
+    EGLBoolean eglUnlockSurfaceKHR(EGLDisplay dpy,
+                                   EGLSurface surface);
+
+New Tokens
+
+    Returned in the EGL_SURFACE_TYPE bitmask attribute of EGLConfigs:
+
+        EGL_LOCK_SURFACE_BIT_KHR            0x0080
+        EGL_OPTIMAL_FORMAT_BIT_KHR          0x0100
+
+    Accepted as an attribute name in the <attrib_list> argument of
+    eglChooseConfig, and the <attribute> argument of eglGetConfigAttrib:
+
+        EGL_MATCH_FORMAT_KHR                0x3043
+
+    Accepted as attribute values for the EGL_MATCH_FORMAT_KHR attribute
+    of eglChooseConfig, and defined as possible values of that attribute
+    when querying it:
+
+        EGL_FORMAT_RGB_565_EXACT_KHR        0x30C0
+        EGL_FORMAT_RGBA_8888_EXACT_KHR      0x30C2
+
+    Accepted as attribute values for the EGL_MATCH_FORMAT_KHR attribute
+    of eglChooseConfig:
+
+        EGL_FORMAT_RGB_565_KHR              0x30C1
+        EGL_FORMAT_RGBA_8888_KHR            0x30C3
+
+    Accepted as attribute names in the <attrib_list> argument of
+    eglLockSurfaceKHR:
+
+        EGL_MAP_PRESERVE_PIXELS_KHR         0x30C4
+        EGL_LOCK_USAGE_HINT_KHR             0x30C5
+
+    Accepted as bit values in the EGL_LOCK_USAGE_HINT_KHR bitmask attribute
+    of eglLockSurfaceKHR:
+
+        EGL_READ_SURFACE_BIT_KHR            0x0001
+        EGL_WRITE_SURFACE_BIT_KHR           0x0002
+
+    Accepted by the <attribute> parameter of eglQuerySurface:
+
+        EGL_BITMAP_POINTER_KHR              0x30C6
+        EGL_BITMAP_PITCH_KHR                0x30C7
+        EGL_BITMAP_ORIGIN_KHR               0x30C8
+        EGL_BITMAP_PIXEL_RED_OFFSET_KHR     0x30C9
+        EGL_BITMAP_PIXEL_GREEN_OFFSET_KHR   0x30CA
+        EGL_BITMAP_PIXEL_BLUE_OFFSET_KHR    0x30CB
+        EGL_BITMAP_PIXEL_ALPHA_OFFSET_KHR   0x30CC
+        EGL_BITMAP_PIXEL_LUMINANCE_OFFSET_KHR 0x30CD
+        EGL_BITMAP_PIXEL_SIZE_KHR           0x3110
+
+    Returns in the *<value> parameter of eglQuerySurface when
+    <attribute> is EGL_BITMAP_ORIGIN_KHR:
+
+        EGL_LOWER_LEFT_KHR                  0x30CE
+        EGL_UPPER_LEFT_KHR                  0x30CF
+
+Additions to Chapter 2 of the EGL 1.3 Specification (EGL Operation)
+
+    Add to the end of section 2.2.2:
+
+        Finally, some surfaces may be <locked>, which allows the
+        implementation to map buffers of that surface into client memory
+        for use by software renderers(fn). Locked surfaces cannot be
+        used for any other purpose. When a locked surface is <unlocked>,
+        any changes to the mapped buffer(s) are reflected in the actual
+        graphics or system memory containing the surface.
+
+           [fn: on implementations not supporting mapping graphics
+            memory, or which do not wish to take the stability and
+            security risks that entail, mapping may be done using
+            copy-out and copy-in behavior.]
+
+Additions to Chapter 3 of the EGL 1.3 Specification (EGL Functions and Errors)
+
+    Add to the description of the EGL_BAD_ACCESS error in section 3.1:
+
+       "... or, a surface is locked)."
+
+    Add to table 3.2 ("Types of surfaces supported by an EGLConfig")
+
+        EGL Token Name              Description
+        --------------------        ------------------------------------
+        EGL_LOCK_SURFACE_BIT_KHR    EGLConfig allows locking surfaces
+        EGL_OPTIMAL_FORMAT_BIT_KHR  This format is considered optimal
+                                    (preferred) when locking / mapping /
+                                    unlocking is being done.
+
+    Change the first paragraph under "Other EGLConfig Attribute
+    Descriptions" on p. 16:
+
+       "EGL_SURFACE_TYPE is a mask indicating both the surface types
+        that can be created by the corresponding EGLConfig (the config
+        is said to <support> those surface types), and the optional
+        behaviors such surfaces may allow. The valid bit settings are
+        shown in Table 3.2."
+
+    Add a new paragraph following the second paragraph of the same
+    section:
+
+       "If EGL_LOCK_SURFACE_BIT_KHR is set in EGL_SURFACE_TYPE, then
+        a surface created from the EGLConfig may be locked, mapped into
+        client memory, and unlocked. Locking is described in section
+        3.5.6. If EGL_OPTIMAL_FORMAT_BIT_KHR is set in
+        EGL_SURFACE_TYPE, then the surface is considered optimal (by
+        the implementation) from a performance standpoint when buffer
+        mapping is being done."
+
+    Replace the second paragraph of section 3.3 "EGL Versioning":
+
+       "The EGL_CLIENT_APIS string describes which client rendering APIs
+        are supported. It is zero-terminated and contains a
+        space-separated list of API names, which may include
+        ``OpenGL_ES'' if OpenGL ES is supported, and ``OpenVG'' if
+        OpenVG is supported. If no client APIs are supported, then the
+        empty string is returned."
+
+    Insert a new paragraph and table in section 3.4.1 "Querying
+    Configurations", following the description of
+    EGL_MATCH_NATIVE_PIXMAP on page 21:
+
+       "If EGL_MATCH_FORMAT_KHR is specified in <attrib_list>, it must
+        be followed by one of the attribute values EGL_DONT_CARE,
+        EGL_NONE, or one of the format tokens in table
+        [locksurf.format].
+
+        When EGL_MATCH_FORMAT_KHR has the value EGL_NONE, only configs
+        which cannot be locked or mapped will match. Such configs must
+        not have the EGL_LOCK_SURFACE_BIT_KHR set in EGL_SURFACE_TYPE.
+
+        When EGL_MATCH_FORMAT_KHR has the value EGL_DONT_CARE, it is
+        ignored.
+
+        When EGL_MATCH_FORMAT_KHR has one of the values in table
+        [locksurf.format], only EGLConfigs describing surfaces whose
+        color buffers have the specified format, when mapped with
+        eglLockSurface, will match this attribute. In this case, the
+        EGL_<component>_SIZE attributes of resulting configs must agree
+        with the specific component sizes specified by the format."
+
+        Specific Format Name            Description
+        --------------------            -----------
+        EGL_FORMAT_RGB_565_EXACT_KHR    RGB565 fields in order from MSB to LSB within a 16-bit integer
+        EGL_FORMAT_RGB_565_KHR          RGB565 fields in implementation-chosen order within a 16-bit integer
+        EGL_FORMAT_RGBA_8888_EXACT_KHR  RGBA8888 fields in B, G, R, A byte order in memory
+        EGL_FORMAT_RGBA_8888_KHR        RGBA8888 fields in implementation-chosen order within a 32-bit integer
+        ------------------------------------------------------------------------------------------------------
+        Table [locksurf.format]: Specific formats for mapped pixels.
+
+    Add to table 3.4 ("Default values and match critera for EGLConfig
+    attributes") on page 22:
+
+        Attribute            Default         Selection   Sort    Sort
+                                             Criteria    Order   Priority
+        -------------------- -------------   ---------   -----   --------
+        EGL_MATCH_FORMAT_KHR EGL_DONT_CARE   Exact       None    -
+
+    Add EGL_MATCH_FORMAT_KHR to the last paragraph in section 3.4.1 on
+    p. 23, describing attributes not used for sorting EGLConfigs.
+
+    Add a new paragraph to the end of section 3.4.3 "Querying Configuration
+    Attributes":
+
+       "Querying the EGL_MATCH_FORMAT_KHR attribute results in EGL_NONE
+        for an EGLConfig that is not lockable, one of the "exact" formats
+        (EGL_FORMAT_RGB_565_EXACT_KHR, EGL_FORMAT_RGBA_8888_EXACT_KHR)
+        if the color buffer matches that format when mapped with
+        eglLockSurface, or for any other format a value that is not
+        EGL_NONE or EGL_DONT_CARE but is otherwise undefined. In particular,
+        the color buffer format matching one of the "inexact" formats
+        does not guarantee that that EGL_FORMAT_* value is returned."
+
+    In section 3.5.1 "Creating On-Screen Rendering Surfaces", add the
+    following to the paragraph that lists the attributes that can be set
+    in attrib_list:
+
+       "... and EGL_SWAP_BEHAVIOR."
+
+    and add a new penultimate paragraph:
+
+       "EGL_SWAP_BEHAVIOR specifies the initial value of the
+        EGL_SWAP_BEHAVIOR surface attribute (section 3.5.6), and is thus
+        either EGL_BUFFER_PRESERVED or EGL_BUFFER_DESTROYED. This setting
+        of EGL_SWAP_BEHAVIOR at surface creation time is supported only
+        for a lockable surface, i.e. where the EGLConfig has
+        EGL_LOCK_SURFACE_BIT_KHR set in EGL_SURFACE_TYPE."
+
+    In EGL 1.4, also add the following text to that same paragraph:
+
+       "For such a lockable surface, whether it is possible to change
+        the EGL_SWAP_BEHAVIOR attribute after surface creation is
+        determined by EGL_SWAP_BEHAVIOR_PRESERVED_BIT in the
+        EGL_SURFACE_TYPE EGLConfig attribute."
+
+    Add a new section following the current section 3.5.5:
+
+       "3.5.6 Locking and Mapping Rendering Surfaces
+
+        A rendering surface may be <locked> by calling
+
+            EGLBoolean eglLockSurfaceKHR(EGLDisplay dpy,
+                                         EGLSurface surface,
+                                         const EGLint *attrib_list);
+
+        While a surface is locked, only two operations can be performed
+        on it. First, a surface attribute may be queried using
+        eglQuerySurface. This includes the case of querying
+        EGL_BITMAP_POINTER_KHR, which causes the surface to be
+        <mapped> (if not already mapped) and gives
+        a pointer into client memory corresponding to the memory
+        of the mapped buffer. Second, the surface may be unlocked. Any
+        attempts to use a locked surface in other EGL APIs will fail and
+        generate an EGL_BAD_ACCESS error.
+
+        While a surface is locked, its dimensions (the values of the EGL_WIDTH
+        and EGL_HEIGHT surface attributes) do not change. They may change
+        at any other time, therefore an application must query these
+        attributes <after> the call to eglLockSurfaceKHR to ensure that it has
+        the correct size of the mapped buffer.
+
+        <attrib_list> specifies additional parameters affecting the locking
+        operation. The list has the same structure as described for
+        eglChooseConfig. Attributes that may be defined are shown in table
+        [locksurf.attr], together with their default values if not specified
+        in <attrib_list>, and possible values which may be specified for
+        them in <attrib_list>.
+
+        Attribute Name              Type    Default Value              Possible Values
+        -----------------------     ------- -------------              -------------------------
+        EGL_MAP_PRESERVE_PIXELS_KHR boolean EGL_FALSE                  EGL_TRUE / EGL_FALSE
+        EGL_LOCK_USAGE_HINT_KHR     bitmask EGL_READ_SURFACE_BIT_KHR | Any combination of
+                                            EGL_WRITE_SURFACE_BIT_KHR  EGL_READ_SURFACE_BIT_KHR
+                                                                       and EGL_WRITE_SURFACE_BIT_KHR
+        --------------------------------------------------------------
+        Table [locksurf.attr]: eglLockSurfaceKHR attribute names,
+        default values, and possible values.
+
+        On failure, the surface is unaffected and eglLockSurfaceKHR
+        returns EGL_FALSE. An EGL_BAD_ACCESS error is generated if any
+        of these condition, are true:
+
+          * <surface> was created with an EGLConfig whose
+            EGL_SURFACE_TYPE attribute does not contain
+            EGL_LOCK_SURFACE_BIT_KHR.
+          * <surface> is already locked.
+          * Any client API is current to <surface>.
+
+        An EGL_BAD_ATTRIBUTE error is generated if an attribute or
+        attribute value not described in table [locksurf.attr] is
+        specified.
+
+        Mapping Buffers of a Locked Surface
+        -----------------------------------
+
+        The color buffer of a locked surface can be <mapped> by calling
+        eglQuerySurface (see section 3.5.7) with <attribute>
+        EGL_BITMAP_POINTER_KHR(fn). The query returns a pointer to a
+        buffer in client memory corresponding to the color buffer of
+        <surface>. In the case of a back-buffered surface, color buffer
+        refers to the back buffer.
+
+           [fn: "mapped" only means that the pointer returned is
+            intended to *correspond* to graphics memory. Implementation
+            are not required to return an actual pointer into graphics
+            memory, and often will not.]
+
+
+        The contents of the mapped buffer are initially undefined(fn)
+        unless either the EGL_MAP_PRESERVE_PIXELS_KHR attribute of
+        eglLockSurfaceKHR is set to EGL_TRUE, or (for a window surface)
+        the EGL_SWAP_BEHAVIOR surface attribute is set to
+        EGL_BUFFER_PRESERVE, in which case the contents
+        of the buffer are taken from the contents of <surface>'s color
+        buffer. The default value of EGL_MAP_PRESERVE_PIXELS_KHR is
+        EGL_FALSE.
+
+           [fn: In order to avoid pipeline stalls and readback delays on
+            accelerated implementations, we do not mandate that the
+            current contents of a color buffer appear when it's mapped
+            to client memory, unless the EGL_MAP_PRESERVE_PIXELS_KHR
+            flag is set or (for a window surface) EGL_SWAP_BEHAVIOR is
+            set to EGL_BUFFER_PRESERVE. Applications using mapped
+            buffers which are not
+            preserved must write to every pixel of the buffer before
+            unlocking the surface. This constraint is considered
+            acceptable for the intended usage scenario (full-frame
+            software renderers). Such an application may lock-render-unlock
+            multiple times per frame (i.e. per eglSwapBuffers) by setting
+            EGL_MAP_PRESERVE_PIXELS_KHR to EGL_TRUE for the second and
+            subsequent locks.
+
+            Note that EGL_SWAP_BEHAVIOR also controls whether the color
+            buffer contents are preserved over a call to eglSwapBuffers.]
+
+        The EGL_LOCK_USAGE_HINT_KHR attribute of eglLockSurfaceKHR is a
+        bitmask describing the intended use of the mapped buffer. If the
+        mask contains EGL_READ_SURFACE_BIT_KHR, data will be read from
+        the mapped buffer. If the mask contains
+        EGL_WRITE_SURFACE_BIT_KHR, data will be written to the mapped
+        buffer. Implementations must support both reading and writing to
+        a mapped buffer regardless of the value of
+        EGL_LOCK_USAGE_HINT_KHR, but performance may be better if the
+        hint is consistent with the actual usage of the buffer. The
+        default value of EGL_LOCK_USAGE_HINT_KHR hints that both reads
+        and writes to the mapped buffer will be done.
+
+        Other attributes of the mapped buffer describe the format of
+        pixels it contains, including its pitch (EGL_BITMAP_PITCH_KHR),
+        origin (EGL_BITMAP_ORIGIN_KHR), and the bit location of each color
+        component within a pixel (EGL_BITMAP_PIXEL_x_OFFSET_KHR). These
+        attributes may be queried using eglQuerySurface, and are described
+        in more detail in section 3.5.7.
+
+        The EGL_BITMAP_POINTER_KHR and EGL_BITMAP_PITCH_KHR attributes
+        of a locked surface may change following successive calls to
+        eglLockSurfaceKHR(fn), so they must be queried each time a
+        buffer is mapped. Other attributes of a mapped buffer (listed in
+        the paragraph above) are invariant and need be queried only once
+        following surface creation.
+
+           [fn: The pointer and pitch of a mapped buffer may change due
+            to display mode changes, for example.]
+
+        Mapping will not suceed if client memory to map the surface into
+        cannot be allocated. In this case, querying eglQuerySurface with
+        <attribute> EGL_BITMAP_POINTER_KHR will fail and generate an EGL
+        error.
+
+        Unlocking Surfaces
+        ------------------
+
+        A rendering surface may be <unlocked> by calling
+
+            EGLBoolean eglUnlockSurfaceKHR(EGLDisplay dpy,
+                                           EGLSurface surface);
+
+        Any mapped buffers of <surface> become unmapped following
+        eglUnlockSurfaceKHR. Any changes made to mapped buffers of
+        <surface> which it was locked are reflected in the surface after
+        unlocking(fn).
+
+           [fn: This language enables implementations to either map
+            video memory, or copy from a separate buffer in client
+            memory.]
+
+        If <surface> was created with an EGLConfig whose
+        EGL_SURFACE_TYPE attribute contains EGL_OPTIMAL_FORMAT_BIT_KHR,
+        then the surface is considered optimal (by the implementation)
+        from a performance standpoint when buffer mapping is being
+        done(fn).
+
+           [fn: This often means that the format of all mapped buffers
+            corresponds directly to the format of those buffers in
+            <surface>, so no format conversions are required during
+            unmapping. This results in a high-performance software
+            rendering path. But "optimal format" is really just a hint
+            from EGL that this config is preferred, whatever the actual
+            reason.]
+
+        On failure, eglUnlockSurfaceKHR returns EGL_FALSE. An
+        EGL_BAD_ACCESS error is generated if any of these conditions are
+        true:
+
+          * <surface> is already unlocked.
+          * A display mode change occurred while the surface was locked,
+            and the implementation was unable to reflect mapped buffer
+            state(fn). In this case, <surface> will still be unlocked.
+            However, the contents of the previously mapped buffers of
+            <surface> become undefined, rather than reflecting changes
+            made in the mapped buffers in client memory.
+
+           [fn: Usually this may only occur with window surfaces which
+            have been mapped. EGL does not have an event mechanism to
+            indicate display mode changes. If such a mechanism exists
+            (using native platform events or the OpenKODE event system),
+            applications should respond to mode changes by regenerating
+            all visible window content, including re-doing any software
+            rendering overlapping the mode change.]"
+
+    Add to table 3.5 ("Queryable surface attributes and types")
+
+        Attribute                   Type    Description
+        ---------                   ----    -----------
+        EGL_BITMAP_POINTER_KHR      pointer Address of a mapped color buffer (MCB).
+        EGL_BITMAP_PITCH_KHR        integer Number of bytes between the start of
+                                            adjacent rows in an MCB.
+        EGL_BITMAP_ORIGIN_KHR       enum    Bitmap origin & direction
+        EGL_BITMAP_PIXEL_x_OFFSET_KHR integer Bit location of each color buffer
+                                              component within a pixel in an MCB.
+        EGL_BITMAP_PIXEL_SIZE_KHR   integer Bits per pixel
+
+    In EGL 1.4 only, in the description of eglSurfaceAttrib properties
+    that can be set in section 3.5.6 (renumbered to 3.5.7), on page 35,
+    add to the first paragraph describing EGL_SWAP_BEHAVIOR:
+
+       "The value of EGL_SWAP_BEHAVIOR also affects the semantics of
+        eglLockSurfaceKHR for a lockable window surface. See section 3.5.6."
+
+    In EGL 1.4 only, in the description of eglSurfaceAttrib properties
+    that can be set in section 3.5.6 (renumbered to 3.5.7), on page 35,
+    change the paragraph concerning the initial value of EGL_SWAP_BEHAVIOR
+    to:
+
+       "The initial value of EGL_SWAP_BEHAVIOR is chosen by the
+        implementation, except for a lockable window surface (i.e. where the
+        EGLConfig has both EGL_LOCK_SURFACE_BIT_KHR and EGL_WINDOW_BIT set in
+        EGL_SURFACE_TYPE), where the default is EGL_BUFFER_PRESERVED, but it
+        may be overridden by specifying EGL_SWAP_BEHAVIOR to
+        eglCreateWindowSurface."
+
+    In EGL 1.3 only, in the description of eglQuerySurface properties
+    that can be queried in section 3.5.6 (renumbered to 3.5.7), on page 33,
+    add to the paragraph describing EGL_SWAP_BEHAVIOR:
+
+       "The value of EGL_SWAP_BEHAVIOR also affects the semantics of
+        eglLockSurfaceKHR for a lockable window surface. See section 3.5.6.
+        For a lockable window surface (one whose EGLConfig has both
+        EGL_LOCK_SURFACE_BIT_KHR and EGL_WINDOW_BIT set in EGL_SURFACE_TYPE),
+        the value of this attribute may be set in the eglCreateWindowSurface
+        call, and if not set there defaults to EGL_BUFFER_PRESERVED. See
+        section 3.5.1. The default for a non-lockable surface is chosen by the
+        implementation."
+
+    Add to the description of eglQuerySurface properties in section
+    3.5.6 (renumbered to 3.5.7) on page 33:
+
+       "Properties of a bitmap surface which may be queried include:
+          * EGL_BITMAP_POINTER_KHR, which maps the color buffer of a
+            locked surface and returns the address in client memory of
+            the mapped buffer.
+          * EGL_BITMAP_PITCH_KHR, which returns the number of bytes
+            between successive rows of a mapped buffer.
+          * EGL_BITMAP_ORIGIN_KHR, which describes the way in which a
+            mapped color buffer is displayed on the screen. Possible
+            values are either EGL_LOWER_LEFT_KHR or EGL_UPPER_LEFT_KHR,
+            indicating that the first pixel of the mapped buffer
+            corresponds to the lower left or upper left of a visible
+            window, respectively.
+          * EGL_BITMAP_PIXEL_<x>_OFFSET_KHR, which describes the bit
+            location of the least significant bit of each color
+            component of a pixel within a mapped buffer. <x> is one of
+            RED, GREEN, BLUE, ALPHA, or LUMINANCE.
+
+            The offset for a color component should be treated as the
+            number of bits to left shift the component value to place it
+            within a n-bit
+            integer containing the pixel, where n is the number of bits
+            per pixel. If a color
+            component does not exist in the mapped buffer, then the bit
+            offset of that component is zero. If a color component
+            does exist but not in a single contiguous range of bits,
+            then the value of the attribute is EGL_UNKNOWN.
+
+          * EGL_BITMAP_PIXEL_SIZE_KHR, which returns the number of bits
+            per pixel, assumed to be least significant leftmost if there
+            are multiple pixels per byte. The attribute takes the value
+            EGL_UNKNOWN if this assumption is not true, or if pixels are not
+            laid out left to right in memory (for example pairs of 16-bit
+            pixels are swapped in memory).
+
+        In addition to these attributes, the number of bits for each
+        color component of a pixel within a mapped buffer is obtained by
+        querying the EGL_<x>_SIZE attribute of the EGLConfig used to
+        create the surface, where <x> is <x> is one of RED, GREEN, BLUE,
+        ALPHA, or LUMINANCE.
+
+        Querying EGL_BITMAP_POINTER_KHR and EGL_BITMAP_PITCH_KHR is only
+        allowed when <surface> is mapped (see section 3.5.6). Querying
+        either of these attributes for the first time after calling
+        eglLockSurfaceKHR causes the color buffer of the locked surface
+        to be mapped. Querying them again before unlocking the surface
+        will return the same values as the first time. However, after
+        calling eglUnlockSurfaceKHR, these properties become undefined.
+        After a second call to eglLockSurfaceKHR, these properties may
+        again be queried, but their values may have changed.
+
+        Other properties of the mapped color buffer of a surface
+        (in the list above) are
+        invariant, and need be queried only once following surface
+        creation. If <surface> was created with an EGLConfig whose
+        EGL_SURFACE_TYPE attribute does not contain
+        EGL_LOCK_SURFACE_BIT_KHR, queries of EGL_BITMAP_ORIGIN_KHR,
+        EGL_BITMAP_PIXEL_<x>_OFFSET_KHR and EGL_BITMAP_PIXEL_SIZE_KHR
+        return undefined values."
+
+    Add to the description of eglQuerySurface errors in the last
+    paragraph of section 3.5.6 (renumbered to 3.5.7) on page 34:
+
+       "... If <attribute> is either EGL_BITMAP_POINTER_KHR or
+        EGL_BITMAP_PITCH_KHR, and either <surface> is not locked using
+        eglLockSurfaceKHR, or <surface> is locked but mapping fails,
+        then an EGL_BAD_ACCESS error is generated."
+
+    In section 3.9.3 Posting Semantics on page 46, append to the first
+    paragraph:
+
+       "This restriction does not apply to lockable surfaces; for such
+        a surface, eglSwapBuffers and eglCopyBuffers may be called for
+        a surface not bound to any client API context(fn).
+
+           [fn: Normally this would only be done when using methods other
+            than client API rendering to specify the color buffer contents,
+            such as software rendering to a locked surface.]"
+
+    and replace the second paragraph ("If <dpy> and <surface> ... not be
+    executed until posting is completed.") with:
+
+       "If <surface> is bound to a current client API context for the calling
+        thread, eglSwapBuffers and eglCopyBuffers perform an implicit flush
+        operation on the context (glFlush for an OpenGL or OpenGL ES context,
+        vgFlush for an OpenVG context). Subsequent client API commands can be
+        issued immediately, but will not be executed until posting is
+        completed.
+
+        If <surface> is current to a client API context in any thread other
+        than the calling thread, eglSwapBuffers and eglCopyBuffers will fail.
+
+    and append the following sentence to the eglSwapInterval paragraph:
+
+       "The swap interval has no effect on an eglSwapBuffers for a surface
+        not bound to a current client API context."
+
+    In 3.9.4 Posting Errors, change the sentence "If <surface> is not bound
+    to the calling thread's current context, an EGL_BAD_SURFACE error is
+    generated." to:
+
+       "If <surface> is bound to a current context in a thread other
+        than the calling thread, an EGL_BAD_SURFACE error is generated."
+
+
+Issues
+
+ 1) What is the rationale for this extension?
+
+    Software renderers on low-end implementations need an efficient way
+    to draw pixel data to the screen. High-end implementations must
+    support the same interface for compatibility, while not compromising
+    the accelerability of OpenGL ES and OpenVG client APIs using
+    dedicated graphics hardware and memory.
+
+    Using lock/unlock semantics enables low-end implementations to
+    expose pointers directly into display memory (as extremely dangerous
+    as that may be), while high-end implementations may choose to create
+    backing store in client memory when mapping a buffer, and copy it to
+    graphics memory when the surface is unlocked. Making the initial
+    contents of a mapped buffer undefined means that no readbacks from
+    graphics memory are required, avoiding pipeline stalls.
+
+    This extension is not intended to support mixed-mode (client API and
+    software) rendering. Since mapped buffer contents are undefined,
+    unless the buffer is explicitly preserved (which may be unacceptably
+    expensive on many implementations), applications doing software
+    rendering must touch every pixel of mapped buffers at least once
+    before unlocking the surface.
+
+ 2) Do we need to know if locked surfaces are "fast" or "native"?
+
+    RESOLVED: Yes. This is indicated with the EGL_OPTIMAL_FORMAT_BIT_KHR
+    of EGL_SURFACE_TYPE. However, note that there is no way to guarantee
+    what "fast" or "no format conversions" really means; this is little
+    more than an implementation hint.
+
+ 3) Should we be able to map buffers other than the color buffer?
+
+    RESOLVED: Not initially. However, the <attrib_list> parameter of
+    eglLockSurfaceKHR supports this in the future. There is no <buffer>
+    attribute to eglQuerySurface, so such a layered extension would have
+    to either create a new naming convention (such as
+    EGL_BITMAP_{DEPTH,COLOR,STENCIL,ALPHA_MASK}_POINTER), or define an
+    extended query eglQuerySurfaceBuffer() which takes a <buffer>
+    parameter. It would also be tricky to support interleaved depth /
+    stencil formats. But the attribute list offers some future-proofing
+    at low cost.
+
+ 4) What properties of mapped buffers can be queried?
+
+    RESOLVED: A pointer to the buffer and its pitch, both of which may
+    change in successive lock/unlock cycles. These may be queried only
+    while the underlying surface is locked, and are undefined after
+    unlocking. The first query following locking is the point at which
+    actual buffer mapping must occur.
+
+    RESOLVED: Additionally, the pixel size, origin, and color component
+    bitfield size and offset for each component, which are invariant
+    and may be queried at any time.
+
+ 5) How are mode changes indicated? What happens to the mapped
+    buffer during a mode change?
+
+    RESOLVED: UnlockSurfaceKHR fails and raises an error if a mode
+    change occurred while the surface was locked (although the surface
+    still ends up in the unlocked state - this is necessary since
+    there's no way to clear the error!). If a mode change occurs while a
+    buffer is mapped, the implementation must still allow the
+    application to access mapped buffer memory, even though the contents
+    of the mapped buffer may not be reflected in the changed window
+    after unmapping.
+
+    Note: There's no convenient way to indicate mode changes while
+    a surface is unlocked, despite that being useful to tell apps they
+    have to redraw. The problem is that we don't have an event system,
+    and the power management functionality is overkill since the only
+    resources which are likely to be damaged by a mode change are
+    visible window contents. Fortunately, this problem is beyond the
+    scope of this extension.
+
+ 6) Does locking a surface imply mapping its buffers?
+
+    RESOLVED: No. Locking simply places the surface in that state and
+    prevents it from being made current / swapped / etc. Buffers are
+    mapped only when their pointers or pitch are queried using
+    eglQuerySurface.
+
+    An interesting side effect of this resolution is that calling
+    eglLockSurfaceKHR immediately followed by eglUnlockSurfaceKHR DOES
+    NOT CHANGE THE CONTENTS OF BUFFERS, since none of them were mapped.
+    Likewise locking a surface, querying a buffer pointer or pitch, and
+    then unlocking it without changing the mapped buffer contents causes
+    the surface contents of the mapper buffer(s) to become undefined.
+
+    At the Atlanta F2F, there was a suggestion that eglLockSurfaceKHR
+    should immediately map the color buffer and return a pointer to it,
+    on the basis that this would make it harder for applications to
+    mistakenly use an old buffer pointer from a previous mapping cycle.
+    At the same time, people working on more powerful GPUs wanted the
+    lock operation to be lightweight. These are not consistent goals and
+    we have thus far chosen to separate the lightweight locking, and
+    more expensive mapping operations.
+
+ 7) Can buffer contents be preserved in mapping?
+
+    RESOLVED: Yes. The default behavior is to discard / leave undefined
+    the mapped buffer contents, but the EGL_MAP_PRESERVE_PIXELS_KHR flag
+    may be specified to eglLockSurfaceKHR.
+
+ 8) Should usage hints be provided during mapping?
+
+    RESOLVED: Yes, they may be provided in the EGL_LOCK_USAGE_HINT_KHR
+    bitmask attribute to eglLockSurfaceKHR. Implementations are required
+    to behave correctly no matter the value of the flag vs. the
+    operations actually performed, so the hint may be ignored.
+
+ 9) Should we be able to lock subrectangles of a surface?
+
+    RESOLVED: No. However, the attribute list parameter of
+    eglLockSurfaceKHR allows a layered extension to implement this
+    behavior by specifying an origin and size to map within the buffer.
+
+10) Should the BITMAP_PIXEL_<component>_OFFSET attributes belong to the
+    surface, or the config?
+
+    RESOLVED: Part of the surface. Configs supporting a specific format
+    are matched with config attribute EGL_MATCH_FORMAT_KHR, which
+    supports specific bit-exact formats such as
+    EGL_FORMAT_565_EXACT_KHR.
+
+11) Can the pixel size in a mapped buffer be derived from the
+    EGL_BUFFER_SIZE attribute of the config used to create it?
+
+    RESOLVED: Yes. In principle, hardware using padding bytes in its
+    framebuffer storage could be a problem, and a separate
+    BITMAP_PIXEL_SIZE surface attribute would be needed. However, we
+    don't think implementations are likely to waste graphics memory and
+    bandwidth in this fashion.
+
+12) How are color component locations within a pixel described?
+
+    RESOLVED: Each R, G, B, and A component has a queryable bit offset
+    within an integer. The size of the integer depends on the total size
+    of the pixel; for the 565 formats, the pixel is a 16-bit integer.
+    For the 8888 formats, the pixel is a 32-bit integer.
+
+    We cannot describe component locations with byte locations, since
+    the 565 formats have components straddling byte boundaries. However,
+    this means that offsets for the RGBA8888_EXACT format are different
+    between little- and big-endian CPUs, since the desired format is B,
+    G, R, A components laid out as bytes in increasing memory order.
+
+13) Can mapped buffer contents be affected by other EGL operations?
+
+    RESOLVED: No. A locked surface only allows two operations:
+    unlocking, and mapping. No other EGL operations can take place while
+    the surface is locked (if this were not the case, then
+    eglSwapBuffers might destroy the contents of a mapped buffer).
+
+    It is possible that operations outside the scope of EGL could affect
+    a mapped color buffer. For example, if a surface's color buffer were
+    made up of an EGLImage, one of the EGL client APIs could draw to
+    that image while it was mapped. Responsibility for avoiding this
+    situation is in the hands of the client.
+
+14) Can EGL_MATCH_FORMAT_KHR be queried for a config?
+
+    RESOLVED: Yes. Unlockable configs return EGL_NONE for this
+    attribute.
+
+    For a config whose format matches one of the EGL_FORMAT_*_EXACT_KHR
+    definitions, that value is returned.
+
+    For a config whose format does not match one of the
+    EGL_FORMAT_*_EXACT_KHR definitions, but it does match one of the
+    inexact definitions, we do not want to specify that it returns that
+    value, since that precludes it returning an exact format if one were
+    to be defined in a future extension, or a future version of this
+    extension.
+
+    Therefore, for a config whose format does not match a defined
+    "exact" format, the attribute returns a value other than the defined
+    "exact" formats and EGL_NONE and EGL_DONT_CARE.
+
+15) Is a goal of this extension to support "mixed-mode" rendering (both
+    software and EGL client API rendering to the same surface)?
+
+    RESOLVED: No. An implementation *can* choose to export configs
+    supporting creation of lockable surfaces which also support
+    rendering by OpenGL ES, OpenVG, or other client APIs (when the
+    surface is not locked). But there is nothing in the extension
+    requiring this, and the motivation for the extension is simply to
+    support software rendering.
+
+16) Can mapping a locked surface fail?
+
+    RESOLVED: Yes, if memory can't be allocated in the client. This is
+    indicated by queries of EGL_BITMAP_POINTER_KHR and
+    EGL_BITMAP_PITCH_KHR failing and generating an EGL_BAD_ACCESS error.
+
+17) How does the application specify that it would like the pixels in the
+    mapped buffer to be preserved from the state at the last unlock?
+    [Bug 4410]
+
+    There are actually two items that need to be configurable:
+
+    a. Whether eglSwapBuffers preserves the color buffer.
+
+    b. Whether eglLockSurfaceKHR puts the color buffer pixels into the
+       locked buffer.
+
+    An implementation may use two different render paths depending on whether
+    the application is full frame rendering or incrementally rendering, where
+    the full frame rendering path may involve less copying than the
+    incrementally rendering path. The implementation needs to know in advance
+    which path to use; finding out from EGL_MAP_PRESERVE_PIXELS_KHR on
+    eglLockSurfaceKHR whether that lock should have the color buffer pixels
+    from the last eglUnlockSurfaceKHR in the last frame is too late.
+
+    This need to know in advance only applies to (a).
+
+    Note that the original EGL_KHR_lock_surface extension failed to state
+    that EGL_SWAP_BEHAVIOR needed to be set to EGL_BUFFER_PRESERVED for
+    incremental rendering.
+
+    RESOLVED: EGL_MAP_PRESERVE_PIXELS_KHR continues to control (b), as in the
+    original EGL_KHR_lock_surface extension. EGL_SWAP_BEHAVIOR continues
+    to control (a), as in unextended EGL. It is possible to set
+    EGL_SWAP_BEHAVIOR in eglCreateWindowSurface, even on EGL versions
+    before 1.4, and even if the config does not have
+    EGL_SWAP_BEHAVIOR_PRESERVED_BIT set in EGL_SURFACE_TYPE.
+
+    For a lockable window surface, EGL_SWAP_BEHAVIOR needs to default to
+    EGL_BUFFER_PRESERVED, and having EGL_SWAP_BEHAVIOR set to
+    EGL_BUFFER_PRESERVED needs to override EGL_MAP_PRESERVE_PIXELS_KHR. This is for
+    compatibility with version 1 of this extension, which had EGL_SWAP_BEHAVIOR
+    as the sole means of controlling (a) and (b).
+
+    This resolution is backward compatible with the original
+    EGL_KHR_lock_surface extension as it now defaults to preserving pixels,
+    and thus has that default for an old application that does not know about
+    setting EGL_SWAP_BEHAVIOR=EGL_BUFFER_DESTROYED to optimize full frame
+    rendering.  The downside is a possible performance reduction of an old
+    application that does not want pixels preserved, until it is appropriately
+    modified and recompiled.
+
+18) When can a lockable surface change size? [Bug 4522]
+
+    RESOLVED: The surface cannot change size while it is locked. For any
+    window size change during that time, EGL defers the corresponding
+    surface size change until some time after the unlock.
+    The implication is that an application must get the surface size
+    _after_locking, otherwise the size may have changed in between the
+    attribute query and the lock.
+
+    As part of this change, using eglQuerySurface on any surface attribute
+    while the surface is locked has been allowed.
+
+19) Should we provide for more than one pixel per byte, or a format with
+    a "hole", or a byte-swapped 16-bit format? [Bug 4513]
+
+    For the use case where the application uses EGL_FORMAT_* to
+    determine the pixel format, this is not an issue. For the use case
+    where the application is written to cope with any format by reading
+    the EGL_BITMAP_* attributes and adjusting its rendering at runtime,
+    this is an issue.
+
+    RESOLVED: We add a new attribute EGL_BITMAP_PIXEL_SIZE_KHR which gives
+    the pixel size in bits.
+    The use of this attribute assumes that multiple pixels packed into
+    a byte are arranged least significant on the left, and that pixels
+    are arranged leftmost first in memory. If either of these assumptions
+    is false, then EGL_BITMAP_PIXEL_SIZE_KHR is EGL_UNKNOWN to indicate
+    that an application attempting to use these attributes to adjust its
+    rendering code will not work.
+
+    We also define that any of the EGL_BITMAP_PIXEL_x_OFFSET_KHR attributes
+    have a value of EGL_UNKNOWN if the corresponding color component is not
+    a contiguous bit range.
+
+20) EGL states that surface must be bound to the thread's current context
+    when posting, but there is no current context when using lock surface.
+    eglSwapInterval is also related to the context. [Bug 5923]
+
+    RESOLVED: The posting restrictions are relaxed, so it is allowed to
+    post for a surface not bound to any client API context. In this case
+    no eglSwapInterval setting affects an eglSwapBuffers. This relaxation
+    only applies to a lockable surface so that this extension continues
+    to be implementable as a middleware layer on top of a "real" EGL.
+    The relaxation applies to a surface that is both lockable and client
+    API renderable; the implicit flush in a post only occurs when the surface
+    is bound to a current API context. Posting a surface bound to a different
+    thread's current API context is still disallowed.
+
+21) Why has this extension been obsoleted and replaced by
+    EGL_KHR_lock_surface3?
+
+    RESOLVED: Starting with the December 4, 2013 release of EGL 1.4, EGLint
+    is defined to be the same size as the native platform "int" type. Handle
+    and pointer attribute values *cannot* be represented in attribute lists
+    on platforms where sizeof(handle/pointer) > sizeof(int). Existing
+    extensions which assume this functionality are being replaced with new
+    extensions specifying new entry points to work around this issue. See
+    the latest EGL 1.4 Specification for more details.
+
+
+Revision History
+
+    Version 3, 2013/12/04 - Add issue 21 explaining that the bitmap pointer
+        cannot be safely queried using this extension on 64-bit platforms,
+        and suggesting EGL_KHR_lock_surface3 instead. Change formal
+        parameter names from 'display' to 'dpy' to match other EGL APIs.
+    Version 2, 2010/03/10
+        Allocated extension number 16.
+        [Bug 6089] Clarified that it is the back buffer of a back-buffered
+            surface that is mapped.
+        [Bug 4410] Issue 17: Reinstate EGL_MAP_PRESERVE_PIXELS_KHR attribute on
+            eglLockSurfaceKHR as the means of configuring whether a locked
+            buffer contains pixel data from the color buffer, as in
+            EGL_KHR_lock_surface, but, for a lockable window surface,
+            make EGL_SWAP_BEHAVIOR=EGL_BUFFER_PRESERVED override the effect
+            of that attribute. Tidy wording so that behavior, and that the
+            default of EGL_SWAP_BEHAVIOR must be EGL_BUFFER_PRESERVED, only
+            applies to lockable window surfaces, not lockable pbuffer or
+            pixmap surfaces.
+        [Bug 5923] Issue 20: A config that is lockable and renderable by
+            an EGL client API is now allowed. Posting restrictions are relaxed
+            to allow posting for a lockable surface not bound to any client
+            API context.
+        [Bug 5143] Fixed typos EGL_SURFACE_TYPE_KHR. Added summary of
+            changes over EGL_KHR_lock_surface.
+    Version 1, 2010/01/19
+        [Bug 4410] Issue 17: Change to use EGL_SWAP_BEHAVIOR as the
+            primary means of determining whether the application wants pixels
+            preserved between lock/unlock cycles.
+            Allowed setting of EGL_SWAP_BEHAVIOR in
+            eglCreateWindowSurface for a lockable surface. Made the
+            default EGL_BUFFER_PRESERVED on a lockable surface to maintain
+            compatibility with the original lock surface extension.
+        [Bug 3192] Wording clarification to avoid accidentally suggesting
+            that almost all surface attributes are invariant.
+        [Bug 4518] Issue 14: Clarify the returned value when
+            EGL_MATCH_FORMAT_KHR is queried.
+        [Bug 4522] Issue 18: Clarify that a locked surface cannot change
+            size.
+        [Bug 4513] Issue 19: Added EGL_BITMAP_PIXEL_SIZE_KHR.
+        [Bug 5923] Issue 20: Must be no current context when posting
+            a lockable surface. In that case any eglSwapInterval setting
+            is ignored. Disallowed a config that is lockable and renderable
+            by an EGL client API.
+
+Revision History of original EGL_KHR_lock_surface extension
+
+    Version 18, 2010/03/23 - Added introductory remark referring to the
+        EGL_KHR_lock_surface2 extension. 
+    Version 17, 2008/10/08 - Updated status (approved as part of
+        OpenKODE 1.0).
+    Version 16, 2008/01/24 - Add issue 16 noting that mapping can fail,
+        and a corresponding new error condition for eglQuerySurface.
+        Clean up the issues list.
+    Version 15, 2008/01/09 - Add issue 15 noting that supporting
+        mixed-mode rendering is not a goal or requirement of the
+        extension.
+    Version 14, 2007/11/07 - change ARGB_8888_EXACT back to
+        RGBA_8888_EXACT, since the offsets are now dependent on the
+        endianness of the CPU. Add issue 12 describing this, and clarify
+        that offsets are within a 16- or 32-bit integer depending on the
+        format. Added issue 13 clarifying that locked buffer contents
+        are not affected by eglSwapBuffers, because eglSwapBuffers
+        cannot be issued on a mapped surface. Allow querying
+        EGL_MATCH_FORMAT_KHR for a config, and added related issue 14.
+    Version 13, 2007/05/10 - change RGBA_8888_EXACT to ARGB_8888_EXACT
+        to match hardware layout.
+    Version 12, 2007/04/06 - clarify that when EGL_MATCH_FORMAT_KHR is
+        EGL_DONT_CARE, it does not affect component size of selected
+        configs.
+    Version 11, 2007/04/05 - add missing KHR suffix to some tokens.
+    Version 10, 2007/04/05 - assign enumerant values. Add OpenKODE 1.0
+        Provisional disclaimer.
+    Version 9, 2007/03/26 - add format tokens to "New Tokens"
+        section. Correct description of RGBA format tokens.
+    Version 8, 2007/03/26 - add issue 11 noting theoretical possibility
+        of EGL_BUFFER_SIZE not directly corresponding to the mapped
+        pixel size. Add EGL_MATCH_FORMAT_KHR attribute to
+        eglChooseConfig, and 565 / 8888 formats for it.
+    Version 7, 2007/03/25 - note in issue 5 that access to a mapped
+        buffer must continue to work even after a mode change. Add KHR
+        suffix to new functions and tokens. Remove BITMAP_PIXEL_<x>_BITS
+        and BITMAP_PIXEL_SIZE tokens, which duplicate information in the
+        EGLConfig. Add issue 10 asking whether bitmap pixel offset
+        attributes belong to the config, or to the surface.
+    Version 6, 2007/02/26 - allow EGL_CLIENT_APIS string to be empty in
+        implementations supporting only this extension.
+    Version 5, 2007/02/05 - update contributor list. Changed bit offset
+        queries to return LSB offset, rather than MSB offset.
+    Version 4, 2007/02/02 - correct extension name. Change
+        name of FAST_UNLOCK_BIT_KHR to OPTIMAL_FORMAT_BIT_KHR.
+        Replace buffer_mask parameter of eglLockSurfaceKHR with an
+        attribute list. Add the EGL_MAP_PRESERVE_PIXELS_KHR and
+        EGL_LOCK_USAGE_HINT_KHR attributes per request from Gary. Add issues
+        7, 8, and 9 describing these attributes and how to support
+        locking subrects in a layered extension, by extending the
+        attribute list.
+    Version 3, 2007/02/01 - the implementation once again controls the
+        mapped buffer memory. There is no longer a separate bitmap
+        surface type; any type surface may potentially be mapped, using
+        lock/unlock semantics.
+    Version 2, 2006/12/22 - simplify by only supporting drawing from
+        client memory to EGL surface color buffers. Specify use of
+        OpenGL DrawPixels terminology. Change name of the extension to
+        EGL_KHR_draw_pixels, since there is no longer any "bitmap
+        surface" involved.
+    Version 1, 2006/12/14 - write up as formal spec language for
+        external review.

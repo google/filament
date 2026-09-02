@@ -33,7 +33,7 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/Platform.h"
+#include "src/utils/platform.h"
 
 namespace dawn {
 
@@ -51,7 +51,26 @@ std::optional<std::string> GetModuleDirectory();
 
 #if DAWN_PLATFORM_IS(MACOS)
 void GetMacOSVersion(int32_t* majorVersion, int32_t* minorVersion = nullptr);
-bool IsMacOSVersionAtLeast(uint32_t majorVersion, uint32_t minorVersion = 0);
+bool IsMacOSVersionAtLeast(uint32_t majorVersion,
+                           uint32_t minorVersion = 0,
+                           uint32_t patchVersion = 0);
+#endif
+
+#if DAWN_PLATFORM_IS(WINDOWS)
+struct WindowsVersion {
+    // Refer to
+    // https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information for a
+    // comprehensive list of Windows version build numbers (for example, 26200.8246 corresponds to
+    // Windows 11, version 25H2).
+    uint32_t buildNumber = 0;
+    uint32_t updateBuildRevision = 0;
+
+    auto operator<=>(const WindowsVersion&) const = default;
+};
+
+WindowsVersion GetCurrentWindowsVersion();
+
+bool IsWindowsDeveloperModeEnabled();
 #endif
 
 class ScopedEnvironmentVar {

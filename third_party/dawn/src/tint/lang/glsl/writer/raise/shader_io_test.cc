@@ -41,7 +41,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 class GlslWriter_ShaderIOTest : public core::ir::transform::TransformTest {
   public:
     GlslWriter_ShaderIOTest() {
-        capabilities.Add(core::ir::Capability::kLoosenValidationForShaderIO);
+        mod.properties.Add(core::ir::Property::kAllowBackendSpecificShaderIO);
     }
 };
 
@@ -68,6 +68,24 @@ TEST_F(GlslWriter_ShaderIOTest, NoInputsOrOutputs) {
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
+}
+
+TEST_F(GlslWriter_ShaderIOTest, BgraSwizzle_NonF32) {
+    auto* ep = b.Function("foo", ty.void_());
+    auto* color = b.FunctionParam("color", ty.vec4i());
+    color->SetLocation(0);
+    ep->SetParams({color});
+    ep->SetStage(core::ir::Function::PipelineStage::kVertex);
+
+    b.Append(ep->Block(), [&] { b.Return(ep); });
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.bgra_swizzle_locations.insert(0);
+
+    auto result = RunWithFailure(ShaderIO, config);
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, "BGRA swizzle is only supported for f32 types");
 }
 
 TEST_F(GlslWriter_ShaderIOTest, Parameters_NonStruct) {

@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_GLFORMAT_H_
 #define SRC_DAWN_NATIVE_OPENGL_GLFORMAT_H_
 
-#include "dawn/native/Format.h"
-#include "dawn/native/opengl/OpenGLFunctions.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/opengl/OpenGLFunctions.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 

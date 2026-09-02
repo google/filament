@@ -35,6 +35,8 @@ import("${dawn_root}/scripts/dawn_features.gni")
 import("build/add_hlsl_hctgen.gni")
 import("build/built_target_action.gni")
 import("build/cmake_configure_file.gni")
+import("build/embed_hlsl_header.gni")
+import("build/generate_embedded_hlsl_headers.gni")
 import("build/generate_version_include.gni")
 import("build/message_compiler.gni")
 
@@ -50,7 +52,8 @@ declare_args() {
 }
 
 # Native ARCH values can be found in LLVM's llvm/cmake/config-ix.cmake
-# Components of the triple can be found in LLVM's llvm/TargetParser/Triple.h and it's .cpp
+# Components of the triple can be found in LLVM's llvm/TargetParser/Triple.h and
+# it's .cpp
 if (target_cpu == "x86") {
   native_target = "X86"
   llvm_triple_arch = "x86"
@@ -94,8 +97,8 @@ cmake_configure_file("config-header") {
   input = "$dawn_dxc_dir/include/llvm/Config/config.h.cmake"
   output = "$target_gen_dir/include/llvm/Config/config.h"
   values = [
-    # TODO(amaiorano): Many of the flags set here are duplicated for the "llvm-config-header" target below.
-    # Factor this out somehow (template?).
+    # TODO(amaiorano): Many of the flags set here are duplicated for the
+    # "llvm-config-header" target below. Factor this out somehow (template?).
     "LLVM_ENABLE_THREADS=1",
     "LLVM_HAS_ATOMICS=1",
     "HAVE_INTTYPES_H=1",
@@ -567,17 +570,17 @@ config("common_config") {
 
   if (is_win) {
     include_dirs += [
-      # $dawn_dxc_dir/lib/Support/assert.cpp depends on a "assert.h" include for the windows path,
-      # but the other architectures include <assert.h>. The system include would be shadowed if this
-      # include directory is added.
+      # $dawn_dxc_dir/lib/Support/assert.cpp depends on a "assert.h" include for
+      # the windows path, but the other architectures include <assert.h>. The
+      # system include would be shadowed if this include directory is added.
       "$dawn_dxc_dir/include/llvm/llvm_assert",
     ]
   }
 }
 
-# Template with common configs and defines used by all static_library and source_set targets.
-# Do not use this for the top-level targets (executable, loadable_module) to avoid exposing
-# includes and defines.
+# Template with common configs and defines used by all static_library and
+# source_set targets. Do not use this for the top-level targets (executable,
+# loadable_module) to avoid exposing includes and defines.
 template("dxc_module") {
   assert(defined(invoker.target_type), "must set target_type")
   assert(invoker.target_type == "static_library" ||
@@ -597,11 +600,13 @@ template("dxc_module") {
     use_libcxx_modules = use_libcxx_modules
 
     if (is_win) {
-      # DXC is built with multibyte character set, so it expects Win32 functions to map the ANSI ones, not the UNICODE ones.
+      # DXC is built with multibyte character set, so it expects Win32 functions
+      # to map the ANSI ones, not the UNICODE ones.
       configs -= [ "//build/config/win:unicode" ]
     }
     if (dawn_dxc_enable_asserts_in_ndebug && !is_debug) {
-      # Do as CMake option "LLVM_ENABLE_ASSERTIONS" does: undef NDEBUG and define _DEBUG
+      # Do as CMake option "LLVM_ENABLE_ASSERTIONS" does: undef NDEBUG and
+      # define _DEBUG
       configs -= [ "//build/config:release" ]
       if (!is_win) {
         defines += [ "_DEBUG" ]
@@ -1464,6 +1469,7 @@ dxcompiler_sourceset("lib_dxilpixpasses") {
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilAddPixelHitInstrumentation.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilAnnotateWithVirtualRegister.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilDbgValueToDbgDeclare.cpp",
+    "$dawn_dxc_dir/lib/DxilPIXPasses/DxilDebugBreakInstrumentation.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilDebugInstrumentation.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilForceEarlyZ.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilNonUniformResourceIndexInstrumentation.cpp",
@@ -2073,9 +2079,60 @@ dxcompiler_sourceset("clang_lib_index") {
     "$dawn_dxc_dir/tools/clang/lib/Index/USRGeneration.cpp",
   ]
 }
+
+# Targets that handle generating embedded HLSL headers
+embed_hlsl_target_dir = "$target_gen_dir/HLSLEmbeddedHeaders"
+embed_hlsl_header("enable_if") {
+  input = "$dawn_dxc_dir/tools/clang/lib/Headers/hlsl/enable_if"
+  output = "$embed_hlsl_target_dir/enable_if.inc"
+}
+embed_hlsl_header("vector_utils") {
+  input = "$dawn_dxc_dir/tools/clang/lib/Headers/hlsl/vector_utils"
+  output = "$embed_hlsl_target_dir/vector_utils.inc"
+}
+embed_hlsl_header("type_traits") {
+  input = "$dawn_dxc_dir/tools/clang/lib/Headers/hlsl/type_traits"
+  output = "$embed_hlsl_target_dir/type_traits.inc"
+}
+embed_hlsl_header("dx_linalg") {
+  input = "$dawn_dxc_dir/tools/clang/lib/Headers/hlsl/dx/linalg.h"
+  output = "$embed_hlsl_target_dir/dx/linalg.h.inc"
+}
+generate_embedded_hlsl_headers("hlsl_embedded_headers") {
+  deps = [
+    ":dx_linalg",
+    ":enable_if",
+    ":type_traits",
+    ":vector_utils",
+  ]
+
+  # hlsl_embedded_entries in CMake
+  inputs = [
+    "$embed_hlsl_target_dir/enable_if.inc",
+    "$embed_hlsl_target_dir/vector_utils.inc",
+    "$embed_hlsl_target_dir/type_traits.inc",
+    "$embed_hlsl_target_dir/dx/linalg.h.inc",
+  ]
+
+  target_dir = embed_hlsl_target_dir
+
+  # hlsl_embedded_decls in CMake
+  decls_output = "$embed_hlsl_target_dir/HLSLEmbeddedHeadersDecls.inc"
+
+  # hlsl_embedded_entries_inc in CMake
+  entries_output = "$embed_hlsl_target_dir/HLSLEmbeddedHeadersEntries.inc"
+}
+
 dxcompiler_sourceset("clang_lib_lex") {
   target_type = "static_library"  # Ensure unused globals are stripped
+  include_dirs = [
+    target_out_dir,
+    target_gen_dir,
+    embed_hlsl_target_dir,
+  ]
+  deps = [ ":hlsl_embedded_headers" ]
   sources = [
+    "$dawn_dxc_dir/tools/clang/lib/Lex/HLSLEmbeddedHeaders.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Lex/HLSLMacroExpander.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Lex/HeaderMap.cpp",
     "$dawn_dxc_dir/tools/clang/lib/Lex/HeaderSearch.cpp",
@@ -2314,13 +2371,14 @@ source_set("windows_version_resource") {
     # Include version.inc
     "INCLUDE_HLSL_VERSION_FILE",
 
-    # TODO(crbug.com/1473311): For now, GN's rc.exe doesn't handle empty string macros
-    # the same way as MS's rc.exe, so we make these single space strings.
+    # TODO(crbug.com/1473311): For now, GN's rc.exe doesn't handle empty string
+    # macros the same way as MS's rc.exe, so we make these single space strings.
     "RC_INTERNAL_NAME=\" \"",
     "RC_ORIGINAL_FILENAME=\" \"",
   ]
   include_dirs = [
-    # Use our custom "version.inc" that includes DXC's version.inc and overrides fields
+    # Use our custom "version.inc" that includes DXC's version.inc and overrides
+    # fields
     "build/",
   ]
   sources = [ "$dawn_dxc_dir/resources/windows_version_resource.rc" ]
@@ -2385,7 +2443,8 @@ executable("dxc") {
   use_libcxx_modules = use_libcxx_modules
 
   if (is_win) {
-    # DXC is built with multibyte character set, so it expects Win32 functions to map the ANSI ones, not the UNICODE ones.
+    # DXC is built with multibyte character set, so it expects Win32 functions
+    # to map the ANSI ones, not the UNICODE ones.
     configs -= [ "//build/config/win:unicode" ]
   }
 
@@ -2412,7 +2471,8 @@ executable("dxc") {
   ]
 }
 
-# Define a target to copy the DXIL signing library, dxil.dll, to the output directory
+# Define a target to copy the DXIL signing library, dxil.dll, to the output
+# directory
 if (is_win) {
   import("//build/config/win/visual_studio_version.gni")
   copy("copy_dxil_dll") {

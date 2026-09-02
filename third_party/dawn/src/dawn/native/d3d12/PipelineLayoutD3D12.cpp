@@ -25,38 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/PipelineLayoutD3D12.h"
+#include "src/dawn/native/d3d12/PipelineLayoutD3D12.h"
 
 #include <limits>
 #include <sstream>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/BindGroupLayoutD3D12.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/PlatformFunctionsD3D12.h"
-#include "dawn/native/d3d12/ResourceTableD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/BindGroupLayoutD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/PlatformFunctionsD3D12.h"
+#include "src/dawn/native/d3d12/ResourceTableD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 using Microsoft::WRL::ComPtr;
 
 namespace dawn::native::d3d12 {
 namespace {
-
-// Reserve register names for internal use. This registers map to bindings in the shader,
-// but are not directly related to allocation of the root signature.
-// In the root signature, it the index of the root parameter where these registers are
-// used that determines the layout of the root signature.
-// TODO(crbug.com/366291600): Use Immediates to support internal constants.
-static constexpr uint32_t kRenderOrComputeInternalRegisterSpace = kMaxBindGroups + 1;
-static constexpr uint32_t kRenderOrComputeInternalBaseRegister = 0;
-
-static constexpr uint32_t kDynamicStorageBufferLengthsRegisterSpace = kMaxBindGroups + 2;
-static constexpr uint32_t kDynamicStorageBufferLengthsBaseRegister = 0;
-
-static constexpr uint32_t kDynamicStorageBufferOffsetsRegisterSpace = kMaxBindGroups + 3;
-static constexpr uint32_t kDynamicStorageBufferOffsetsBaseRegister = 0;
 
 static constexpr uint32_t kImmediatesRegisterSpace = kMaxBindGroups + 4;
 static constexpr uint32_t kImmediatesBaseRegister = 0;
@@ -66,10 +53,6 @@ static constexpr uint32_t kImmediatesBaseRegister = 0;
 static constexpr uint32_t kBaseResourceTableRegisterSpace = kMaxBindGroups + 5;
 
 static constexpr uint32_t kInvalidResourceTableRootParameterIndex =
-    std::numeric_limits<uint32_t>::max();
-static constexpr uint32_t kInvalidDynamicStorageBufferLengthsParameterIndex =
-    std::numeric_limits<uint32_t>::max();
-static constexpr uint32_t kInvalidDynamicStorageBufferOffsetsParameterIndex =
     std::numeric_limits<uint32_t>::max();
 static constexpr uint32_t kInvalidDynamicUniformBufferParameterIndex =
     std::numeric_limits<uint32_t>::max();
@@ -96,10 +79,15 @@ HRESULT SerializeRootParameter1_0(Device* device,
                                   const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& rootSignature1_1,
                                   ID3DBlob** ppBlob,
                                   ID3DBlob** ppErrorBlob) {
+    // SAFETY: pParameters + NumParameters must define a valid range of D2D12_ROOT_PARAMETER1s.
+    Span<const D3D12_ROOT_PARAMETER1> rootParameters1_1 = DAWN_UNSAFE_BUFFERS(
+        {rootSignature1_1.Desc_1_1.pParameters, rootSignature1_1.Desc_1_1.NumParameters});
+
+    std::vector<D3D12_ROOT_PARAMETER> rootParameters1_0(rootParameters1_1.size());
     std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> allDescriptorRanges1_0;
-    std::vector<D3D12_ROOT_PARAMETER> rootParameters1_0(rootSignature1_1.Desc_1_1.NumParameters);
+
     for (size_t i = 0; i < rootParameters1_0.size(); ++i) {
-        const D3D12_ROOT_PARAMETER1& rootParameter1_1 = rootSignature1_1.Desc_1_1.pParameters[i];
+        const D3D12_ROOT_PARAMETER1& rootParameter1_1 = rootParameters1_1[i];
 
         rootParameters1_0[i].ParameterType = rootParameter1_1.ParameterType;
         rootParameters1_0[i].ShaderVisibility = rootParameter1_1.ShaderVisibility;
@@ -118,16 +106,22 @@ HRESULT SerializeRootParameter1_0(Device* device,
                     rootParameter1_1.Descriptor.ShaderRegister;
                 break;
 
-            case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+            case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE: {
+                Span<const D3D12_DESCRIPTOR_RANGE1> descriptorRanges1_1 =
+                    // SAFETY: pDescriptorRanges + NumDescriptorRanges must define a valid range of
+                    // D3D12_DESCRIPTOR_RANGE1 values.
+                    DAWN_UNSAFE_BUFFERS({rootParameter1_1.DescriptorTable.pDescriptorRanges,
+                                         rootParameter1_1.DescriptorTable.NumDescriptorRanges});
+
                 rootParameters1_0[i].DescriptorTable.NumDescriptorRanges =
-                    rootParameter1_1.DescriptorTable.NumDescriptorRanges;
+                    static_cast<UINT>(descriptorRanges1_1.size());
                 if (rootParameters1_0[i].DescriptorTable.NumDescriptorRanges > 0) {
                     std::vector<D3D12_DESCRIPTOR_RANGE> descriptorRanges1_0(
                         rootParameters1_0[i].DescriptorTable.NumDescriptorRanges);
                     for (uint32_t index = 0;
                          index < rootParameter1_1.DescriptorTable.NumDescriptorRanges; ++index) {
                         const D3D12_DESCRIPTOR_RANGE1& descriptorRange1_1 =
-                            rootParameter1_1.DescriptorTable.pDescriptorRanges[index];
+                            descriptorRanges1_1[index];
                         descriptorRanges1_0[index].BaseShaderRegister =
                             descriptorRange1_1.BaseShaderRegister;
                         descriptorRanges1_0[index].NumDescriptors =
@@ -142,6 +136,7 @@ HRESULT SerializeRootParameter1_0(Device* device,
                         allDescriptorRanges1_0.back().data();
                 }
                 break;
+            }
 
             default:
                 DAWN_UNREACHABLE();
@@ -171,7 +166,55 @@ ResultOrError<Ref<PipelineLayout>> PipelineLayout::Create(
 }
 
 MaybeError PipelineLayout::Initialize() {
-    Device* device = ToBackend(GetDevice());
+    BindGroupMask bindGroupMask = GetBindGroupLayoutsMask();
+    BindGroupIndex highestBindGroupIndex = GetHighestBitIndexPlusOne(bindGroupMask);
+    PerBindGroup<const CachedObject*> cachedObjects;
+    for (BindGroupIndex i : Range(highestBindGroupIndex)) {
+        if (bindGroupMask[i]) {
+            cachedObjects[i] = GetBindGroupLayout(i);
+        } else {
+            cachedObjects[i] = GetDevice()->GetEmptyBindGroupLayout()->GetInternalBindGroupLayout();
+        }
+    }
+
+    // Record bind group layout objects and user immediate data size into pipeline layout cache key.
+    // It represents pipeline layout base attributes and ignored future changes caused by internal
+    // immediate data size from pipeline.
+    uint32_t numSetLayoutsWithHoles =
+        static_cast<uint32_t>(GetHighestBitIndexPlusOne(bindGroupMask));
+    StreamIn(&mCacheKey, stream::Iterable(cachedObjects.data(), numSetLayoutsWithHoles),
+             GetImmediateDataRangeByteSize());
+
+    DAWN_TRY(BuildBaseRootParameters());
+
+    return {};
+}
+
+ResultOrError<Ref<PipelineLayoutHandle>> PipelineLayout::GetOrCreatePipelineLayoutHandle(
+    const ImmediateMask& pipelineImmediateMask) {
+    // Check cache
+    Ref<PipelineLayoutHandle> pipelineLayoutHandle;
+    mPipelineLayoutHandles.Use([&](auto pipelineLayoutHandles) {
+        auto it = pipelineLayoutHandles->find(pipelineImmediateMask);
+        if (it != pipelineLayoutHandles->end()) {
+            pipelineLayoutHandle = it->second;
+        }
+    });
+
+    if (pipelineLayoutHandle != nullptr) {
+        return pipelineLayoutHandle;
+    }
+
+    DAWN_TRY_ASSIGN(pipelineLayoutHandle, CreatePipelineLayoutHandle(pipelineImmediateMask));
+
+    return mPipelineLayoutHandles.Use([&](auto pipelineLayoutHandles) {
+        return pipelineLayoutHandles
+            ->insert({pipelineImmediateMask, std::move(pipelineLayoutHandle)})
+            .first->second;
+    });
+}
+
+MaybeError PipelineLayout::BuildBaseRootParameters() {
     // Parameters are D3D12_ROOT_PARAMETER_TYPE which is either a root table, constant, or
     // descriptor.
     std::vector<D3D12_ROOT_PARAMETER1> rootParameters;
@@ -186,10 +229,10 @@ MaybeError PipelineLayout::Initialize() {
         staticSamplerCount += bindGroupLayout->GetStaticSamplerCount();
     }
 
-    std::vector<D3D12_DESCRIPTOR_RANGE1> resourceTableCbvUavSrvDescriptorRanges;
+    ResourceTable::DescriptorRanges resourceTableRanges;
     if (UsesResourceTable()) {
-        resourceTableCbvUavSrvDescriptorRanges = ResourceTable::GetCbvUavSrvDescriptorRanges(*this);
-        rangesCount += resourceTableCbvUavSrvDescriptorRanges.size();
+        DAWN_TRY_ASSIGN(resourceTableRanges, ResourceTable::GetDescriptorRanges(*this));
+        rangesCount += resourceTableRanges.cbvUavSrvs.size() + resourceTableRanges.samplers.size();
     }
 
     // We are taking pointers to `ranges`, so we cannot let it resize while we're pushing to it.
@@ -227,10 +270,14 @@ MaybeError PipelineLayout::Initialize() {
         return static_cast<uint32_t>(rootParameters.size() - 1);
     };
 
-    mResourceTableRootParameterIndex = kInvalidResourceTableRootParameterIndex;
+    mResourceTableCbvUavSrvRootParameterIndex = kInvalidResourceTableRootParameterIndex;
+    mResourceTableSamplerRootParameterIndex = kInvalidResourceTableRootParameterIndex;
     if (UsesResourceTable()) {
-        if (auto paramIndex = SetRootDescriptorTable(resourceTableCbvUavSrvDescriptorRanges)) {
-            mResourceTableRootParameterIndex = *paramIndex;
+        if (auto paramIndex = SetRootDescriptorTable(resourceTableRanges.cbvUavSrvs)) {
+            mResourceTableCbvUavSrvRootParameterIndex = *paramIndex;
+        }
+        if (auto paramIndex = SetRootDescriptorTable(resourceTableRanges.samplers)) {
+            mResourceTableSamplerRootParameterIndex = *paramIndex;
         }
     }
 
@@ -295,7 +342,8 @@ MaybeError PipelineLayout::Initialize() {
             // Set visibilities according to bind group layout descriptor.
             rootParameter.ShaderVisibility = ShaderVisibilityType(bindingInfo.visibility);
 
-            mDynamicUniformRootParameterIndices[group][dynamicBindingIndex] = rootParameters.size();
+            mDynamicUniformRootParameterIndices[group][dynamicBindingIndex] =
+                static_cast<uint32_t>(rootParameters.size());
             rootParameters.emplace_back(rootParameter);
         }
     }
@@ -304,94 +352,65 @@ MaybeError PipelineLayout::Initialize() {
     // |ranges| will have resized and the pointers in the |rootParameter|s will be invalid.
     DAWN_ASSERT(rangeIndex == rangesCount);
 
-    D3D12_ROOT_PARAMETER1 renderOrComputeInternalConstants{};
-    renderOrComputeInternalConstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    renderOrComputeInternalConstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    // Always allocate 3 constants for either:
-    //  - vertex_index and instance_index
-    //  - num_workgroups_x, num_workgroups_y and num_workgroups_z
-    // NOTE: We should consider delaying root signature creation until we know how many values
-    // we need
-    renderOrComputeInternalConstants.Constants.Num32BitValues = 3;
-    renderOrComputeInternalConstants.Constants.RegisterSpace =
-        kRenderOrComputeInternalRegisterSpace;
-    renderOrComputeInternalConstants.Constants.ShaderRegister =
-        kRenderOrComputeInternalBaseRegister;
-    mFirstIndexOffsetParameterIndex = static_cast<uint32_t>(rootParameters.size());
-    mNumWorkgroupsParameterIndex = static_cast<uint32_t>(rootParameters.size());
-    // NOTE: We should consider moving this entry to earlier in the root signature since offsets
-    // would need to be updated often
-    rootParameters.emplace_back(renderOrComputeInternalConstants);
-
-    // For dynamic storage buffers, we store the length and offset of each binding as root
-    // constants. Lengths and offsets are bound to separate groups, but share the same binding value
-    // (aka register offset). Here we populate mDynamicStorageBufferInfo with this mapping of
-    // dynamic storage buffer bind group to register offset, which will be used to update the root
-    // constant values, as well as to tell Tint to emit loads from these root constant values for
-    // lengths and offsets. Each bind group's length/offset data is stored contiguously in the root
-    // constant, so we also compute and store the first register offset for each group where the
-    // data should start.
-    uint32_t dynamicStorageBufferInfoShaderRegisterOffset = 0;
+    // For dynamic storage buffers, we store the length and offset of each binding in the immediate
+    // block. Here we populate mDynamicStorageBufferInfo with the mapping of dynamic storage buffer
+    // bind group to its index into that immediate data, which is used both to update the immediate
+    // values and to tell Tint to emit loads from them for lengths and offsets. Each bind group's
+    // length/offset data is stored contiguously, so we also compute and store the first index for
+    // each group where the data should start.
+    uint32_t dynamicStorageBufferCount = 0;
     for (BindGroupIndex group : GetBindGroupLayoutsMask()) {
         const BindGroupLayoutInternalBase* bgl = GetBindGroupLayout(group);
-        const size_t dynamicStorageBufferCount =
+        const size_t bglDynamicStorageBufferCount =
             static_cast<size_t>(bgl->GetDynamicStorageBufferCount());
 
         BindGroupDynamicStorageBufferInfo info;
-        info.firstRegisterOffset = dynamicStorageBufferInfoShaderRegisterOffset;
-        info.bindingAndRegisterOffsets.reserve(dynamicStorageBufferCount);
+        info.firstImmediateIndex = dynamicStorageBufferCount;
+        info.bindingAndImmediateIndices.reserve(bglDynamicStorageBufferCount);
 
         for (BindingIndex bindingIndex : bgl->GetDynamicBufferIndices()) {
             if (bgl->IsStorageBufferBinding(bindingIndex)) {
-                info.bindingAndRegisterOffsets.push_back(
-                    {bgl->GetBindingInfo(bindingIndex).binding,
-                     dynamicStorageBufferInfoShaderRegisterOffset++});
+                info.bindingAndImmediateIndices.push_back(
+                    {bgl->GetBindingInfo(bindingIndex).binding, dynamicStorageBufferCount++});
             }
         }
-        DAWN_ASSERT(info.bindingAndRegisterOffsets.size() == dynamicStorageBufferCount);
+        DAWN_ASSERT(info.bindingAndImmediateIndices.size() == bglDynamicStorageBufferCount);
         mDynamicStorageBufferInfo[group] = std::move(info);
     }
 
-    if (dynamicStorageBufferInfoShaderRegisterOffset > 0) {
-        auto createRootConstants = [&](uint32_t num32BitValues, uint32_t registerSpace,
-                                       uint32_t shaderRegister) -> uint32_t {
-            D3D12_ROOT_PARAMETER1 rootParam{};
-            rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-            rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-            rootParam.Constants.Num32BitValues = num32BitValues;
-            rootParam.Constants.RegisterSpace = registerSpace;
-            rootParam.Constants.ShaderRegister = shaderRegister;
-            rootParameters.emplace_back(rootParam);
-            return static_cast<uint32_t>(rootParameters.size() - 1);
-        };
+    mDynamicStorageBufferCount = dynamicStorageBufferCount;
 
-        // Create the same number of root constants for both the lengths and the offsets of each
-        // dynamic storage buffer
-        mDynamicStorageBufferLengthsParameterIndex = createRootConstants(
-            dynamicStorageBufferInfoShaderRegisterOffset, kDynamicStorageBufferLengthsRegisterSpace,
-            kDynamicStorageBufferLengthsBaseRegister);
-        mDynamicStorageBufferOffsetsParameterIndex = createRootConstants(
-            dynamicStorageBufferInfoShaderRegisterOffset, kDynamicStorageBufferOffsetsRegisterSpace,
-            kDynamicStorageBufferOffsetsBaseRegister);
-    } else {
-        mDynamicStorageBufferLengthsParameterIndex =
-            kInvalidDynamicStorageBufferLengthsParameterIndex;
-        mDynamicStorageBufferOffsetsParameterIndex =
-            kInvalidDynamicStorageBufferOffsetsParameterIndex;
-    }
+    // Stash the layout-invariant parameters so each PipelineLayoutHandle can be built from them
+    // without recomputing or mutating shared state. The descriptor table entries in rootParameters
+    // point into ranges; moving the vectors into the const struct preserves those pointers and
+    // keeps them immutable thereafter.
+    mInvariantParams.emplace(std::move(rootParameters), std::move(ranges),
+                             std::move(staticSamplers));
 
-    if (GetImmediateDataRangeByteSize() > 0) {
-        D3D12_ROOT_PARAMETER1 immediateConstants{};
-        immediateConstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-        immediateConstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        immediateConstants.Constants.Num32BitValues =
-            GetImmediateDataRangeByteSize() / sizeof(uint32_t);
-        immediateConstants.Constants.RegisterSpace = kImmediatesRegisterSpace;
-        immediateConstants.Constants.ShaderRegister = kImmediatesBaseRegister;
-        mImmediatesParameterIndex = rootParameters.size();
-        rootParameters.emplace_back(immediateConstants);
-    } else {
-        mImmediatesParameterIndex = kInvalidImmediatesParameterIndex;
+    return {};
+}
+
+ResultOrError<Ref<PipelineLayoutHandle>> PipelineLayout::CreatePipelineLayoutHandle(
+    const ImmediateMask& pipelineImmediateMask) {
+    Device* device = ToBackend(GetDevice());
+    DAWN_ASSERT(mInvariantParams.has_value());
+
+    // Start from the layout-invariant base parameters and append the immediates root parameter,
+    // whose size depends on the pipeline's internal immediate usage. Everything here operates on
+    // locals so that this method has no side effects and can run concurrently on pipeline-creation
+    // worker threads. The descriptor table entries copied from rootParameters keep pointing into
+    // mInvariantParams->ranges, which is stable for the lifetime of the layout.
+    std::vector<D3D12_ROOT_PARAMETER1> rootParameters = mInvariantParams->rootParameters;
+    uint32_t immediatesParameterIndex = kInvalidImmediatesParameterIndex;
+    if (pipelineImmediateMask.count() > 0) {
+        D3D12_ROOT_PARAMETER1 immediates{};
+        immediates.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+        immediates.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        immediates.Constants.Num32BitValues = static_cast<UINT>(pipelineImmediateMask.count());
+        immediates.Constants.RegisterSpace = kImmediatesRegisterSpace;
+        immediates.Constants.ShaderRegister = kImmediatesBaseRegister;
+        immediatesParameterIndex = static_cast<uint32_t>(rootParameters.size());
+        rootParameters.emplace_back(immediates);
     }
 
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC versionedRootSignatureDescriptor = {};
@@ -400,16 +419,18 @@ MaybeError PipelineLayout::Initialize() {
         static_cast<uint32_t>(rootParameters.size());
     versionedRootSignatureDescriptor.Desc_1_1.pParameters = rootParameters.data();
     versionedRootSignatureDescriptor.Desc_1_1.NumStaticSamplers =
-        static_cast<uint32_t>(staticSamplers.size());
-    versionedRootSignatureDescriptor.Desc_1_1.pStaticSamplers = staticSamplers.data();
+        static_cast<uint32_t>(mInvariantParams->staticSamplers.size());
+    versionedRootSignatureDescriptor.Desc_1_1.pStaticSamplers =
+        mInvariantParams->staticSamplers.data();
     versionedRootSignatureDescriptor.Desc_1_1.Flags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
+    ComPtr<ID3DBlob> rootSignatureBlob;
     DAWN_TRY([&]() -> MaybeError {
         ComPtr<ID3DBlob> error;
         if (device->IsToggleEnabled(Toggle::D3D12UseRootSignatureVersion1_1) &&
-            SUCCEEDED(device->GetFunctions()->d3d12SerializeVersionedRootSignature(
-                &versionedRootSignatureDescriptor, &mRootSignatureBlob, &error))) [[likely]] {
+            SUCCEEDED(device->GetFunctions()->SerializeVersionedRootSignature(
+                &versionedRootSignatureDescriptor, &rootSignatureBlob, &error))) [[likely]] {
             return {};
         }
         // If using root signature version 1.1 failed, try again with root signature version 1.0.
@@ -424,7 +445,7 @@ MaybeError PipelineLayout::Initialize() {
             messageStream << static_cast<const char*>(error->GetBufferPointer()) << "\n";
         }
         HRESULT hr = SerializeRootParameter1_0(device, versionedRootSignatureDescriptor,
-                                               &mRootSignatureBlob, &error);
+                                               &rootSignatureBlob, &error);
         if (SUCCEEDED(hr)) [[likely]] {
             return {};
         }
@@ -435,38 +456,32 @@ MaybeError PipelineLayout::Initialize() {
         DAWN_TRY(CheckHRESULT(hr, messageStream.str().c_str()));
         return {};
     }());
+
+    ComPtr<ID3D12RootSignature> rootSignature;
     DAWN_TRY(CheckHRESULT(device->GetD3D12Device()->CreateRootSignature(
-                              0, mRootSignatureBlob->GetBufferPointer(),
-                              mRootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&mRootSignature)),
+                              0, rootSignatureBlob->GetBufferPointer(),
+                              rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)),
                           "D3D12 create root signature"));
-    StreamIn(&mCacheKey, mRootSignatureBlob.Get());
-    return {};
+
+    return PipelineLayoutHandle::Create(ToBackend(GetDevice()), std::move(rootSignature),
+                                        std::move(rootSignatureBlob), immediatesParameterIndex,
+                                        pipelineImmediateMask);
 }
 
 void PipelineLayout::DestroyImpl(DestroyReason reason) {
     PipelineLayoutBase::DestroyImpl(reason);
-
-    Device* device = ToBackend(GetDevice());
-    device->ReferenceUntilUnused(mRootSignature);
-
-    // The ID3D12CommandSignature object should not be referenced by GPU operations in-flight on
-    // Command Queue when it is being deleted. According to D3D12 debug layer, "it is not safe to
-    // final-release objects that may have GPU operations pending. This can result in application
-    // instability (921)".
-    if (mDispatchIndirectCommandSignatureWithNumWorkgroups.Get()) {
-        device->ReferenceUntilUnused(mDispatchIndirectCommandSignatureWithNumWorkgroups);
-    }
-    if (mDrawIndirectCommandSignatureWithInstanceVertexOffsets.Get()) {
-        device->ReferenceUntilUnused(mDrawIndirectCommandSignatureWithInstanceVertexOffsets);
-    }
-    if (mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets.Get()) {
-        device->ReferenceUntilUnused(mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets);
-    }
+    mPipelineLayoutHandles->clear();
 }
 
-uint32_t PipelineLayout::GetResourceTableRootParameterIndex() const {
-    DAWN_ASSERT(mResourceTableRootParameterIndex != kInvalidResourceTableRootParameterIndex);
-    return mResourceTableRootParameterIndex;
+uint32_t PipelineLayout::GetResourceTableCbvUavSrvRootParameterIndex() const {
+    DAWN_ASSERT(mResourceTableCbvUavSrvRootParameterIndex !=
+                kInvalidResourceTableRootParameterIndex);
+    return mResourceTableCbvUavSrvRootParameterIndex;
+}
+
+uint32_t PipelineLayout::GetResourceTableSamplerRootParameterIndex() const {
+    DAWN_ASSERT(mResourceTableSamplerRootParameterIndex != kInvalidResourceTableRootParameterIndex);
+    return mResourceTableSamplerRootParameterIndex;
 }
 
 uint32_t PipelineLayout::GetBaseResourceTableRegisterSpace() const {
@@ -483,17 +498,13 @@ uint32_t PipelineLayout::GetSamplerRootParameterIndex(BindGroupIndex group) cons
     return mSamplerRootParameterIndices[group];
 }
 
-ID3D12RootSignature* PipelineLayout::GetRootSignature() const {
-    return mRootSignature.Get();
-}
-
-ID3DBlob* PipelineLayout::GetRootSignatureBlob() const {
-    return mRootSignatureBlob.Get();
-}
-
 const PipelineLayout::DynamicStorageBufferInfo& PipelineLayout::GetDynamicStorageBufferInfo()
     const {
     return mDynamicStorageBufferInfo;
+}
+
+uint32_t PipelineLayout::GetDynamicStorageBufferCount() const {
+    return mDynamicStorageBufferCount;
 }
 
 uint32_t PipelineLayout::GetDynamicUniformRootParameterIndex(BindGroupIndex group,
@@ -511,164 +522,12 @@ uint32_t PipelineLayout::GetDynamicUniformRootParameterIndex(BindGroupIndex grou
     return mDynamicUniformRootParameterIndices[group][bindingIndex];
 }
 
-uint32_t PipelineLayout::GetFirstIndexOffsetRegisterSpace() const {
-    return kRenderOrComputeInternalRegisterSpace;
-}
-
-uint32_t PipelineLayout::GetFirstIndexOffsetShaderRegister() const {
-    return kRenderOrComputeInternalBaseRegister;
-}
-
-uint32_t PipelineLayout::GetFirstIndexOffsetParameterIndex() const {
-    return mFirstIndexOffsetParameterIndex;
-}
-
-uint32_t PipelineLayout::GetNumWorkgroupsRegisterSpace() const {
-    return kRenderOrComputeInternalRegisterSpace;
-}
-
-uint32_t PipelineLayout::GetNumWorkgroupsShaderRegister() const {
-    return kRenderOrComputeInternalBaseRegister;
-}
-
-uint32_t PipelineLayout::GetNumWorkgroupsParameterIndex() const {
-    return mNumWorkgroupsParameterIndex;
-}
-
-uint32_t PipelineLayout::GetDynamicStorageBufferLengthsRegisterSpace() const {
-    return kDynamicStorageBufferLengthsRegisterSpace;
-}
-
-uint32_t PipelineLayout::GetDynamicStorageBufferLengthsShaderRegister() const {
-    return kDynamicStorageBufferLengthsBaseRegister;
-}
-
-uint32_t PipelineLayout::GetDynamicStorageBufferLengthsParameterIndex() const {
-    DAWN_ASSERT(mDynamicStorageBufferLengthsParameterIndex !=
-                kInvalidDynamicStorageBufferLengthsParameterIndex);
-    return mDynamicStorageBufferLengthsParameterIndex;
-}
-
-uint32_t PipelineLayout::GetDynamicStorageBufferOffsetsRegisterSpace() const {
-    return kDynamicStorageBufferOffsetsRegisterSpace;
-}
-
-uint32_t PipelineLayout::GetDynamicStorageBufferOffsetsShaderRegister() const {
-    return kDynamicStorageBufferOffsetsBaseRegister;
-}
-
-uint32_t PipelineLayout::GetDynamicStorageBufferOffsetsParameterIndex() const {
-    DAWN_ASSERT(mDynamicStorageBufferOffsetsParameterIndex !=
-                kInvalidDynamicStorageBufferOffsetsParameterIndex);
-    return mDynamicStorageBufferOffsetsParameterIndex;
-}
-
 uint32_t PipelineLayout::GetImmediatesRegisterSpace() const {
     return kImmediatesRegisterSpace;
 }
 
 uint32_t PipelineLayout::GetImmediatesShaderRegister() const {
     return kImmediatesBaseRegister;
-}
-
-uint32_t PipelineLayout::GetImmediatesParameterIndex() const {
-    DAWN_ASSERT(mImmediatesParameterIndex != kInvalidImmediatesParameterIndex);
-    return mImmediatesParameterIndex;
-}
-
-ID3D12CommandSignature* PipelineLayout::GetDispatchIndirectCommandSignatureWithNumWorkgroups() {
-    // mDispatchIndirectCommandSignatureWithNumWorkgroups won't be created until it is needed.
-    if (mDispatchIndirectCommandSignatureWithNumWorkgroups.Get() != nullptr) {
-        return mDispatchIndirectCommandSignatureWithNumWorkgroups.Get();
-    }
-
-    D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[2] = {};
-    argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-    argumentDescs[0].Constant.RootParameterIndex = GetNumWorkgroupsParameterIndex();
-    argumentDescs[0].Constant.Num32BitValuesToSet = 3;
-    argumentDescs[0].Constant.DestOffsetIn32BitValues = 0;
-
-    // A command signature must contain exactly 1 Draw / Dispatch / DispatchMesh / DispatchRays
-    // command. That command must come last.
-    argumentDescs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
-
-    D3D12_COMMAND_SIGNATURE_DESC programDesc = {};
-    programDesc.ByteStride = 6 * sizeof(uint32_t);
-    programDesc.NumArgumentDescs = 2;
-    programDesc.pArgumentDescs = argumentDescs;
-
-    // The root signature must be specified if and only if the command signature changes one of
-    // the root arguments.
-    ToBackend(GetDevice())
-        ->GetD3D12Device()
-        ->CreateCommandSignature(&programDesc, GetRootSignature(),
-                                 IID_PPV_ARGS(&mDispatchIndirectCommandSignatureWithNumWorkgroups));
-    return mDispatchIndirectCommandSignatureWithNumWorkgroups.Get();
-}
-
-ID3D12CommandSignature* PipelineLayout::GetDrawIndirectCommandSignatureWithInstanceVertexOffsets() {
-    // mDrawIndirectCommandSignatureWithInstanceVertexOffsets won't be created until it is
-    // needed.
-    if (mDrawIndirectCommandSignatureWithInstanceVertexOffsets.Get() != nullptr) {
-        return mDrawIndirectCommandSignatureWithInstanceVertexOffsets.Get();
-    }
-
-    D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[2] = {};
-    argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-    argumentDescs[0].Constant.RootParameterIndex = GetFirstIndexOffsetParameterIndex();
-    argumentDescs[0].Constant.Num32BitValuesToSet = 2;
-    argumentDescs[0].Constant.DestOffsetIn32BitValues = 0;
-
-    // A command signature must contain exactly 1 Draw / Dispatch / DispatchMesh / DispatchRays
-    // command. That command must come last.
-    argumentDescs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
-
-    D3D12_COMMAND_SIGNATURE_DESC programDesc = {};
-    programDesc.ByteStride = 6 * sizeof(uint32_t);
-    programDesc.NumArgumentDescs = 2;
-    programDesc.pArgumentDescs = argumentDescs;
-
-    // The root signature must be specified if and only if the command signature changes one of
-    // the root arguments.
-    ToBackend(GetDevice())
-        ->GetD3D12Device()
-        ->CreateCommandSignature(
-            &programDesc, GetRootSignature(),
-            IID_PPV_ARGS(&mDrawIndirectCommandSignatureWithInstanceVertexOffsets));
-    return mDrawIndirectCommandSignatureWithInstanceVertexOffsets.Get();
-}
-
-ID3D12CommandSignature*
-PipelineLayout::GetDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets() {
-    // mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets won't be created until it
-    // is needed.
-    if (mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets.Get() != nullptr) {
-        return mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets.Get();
-    }
-
-    D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[2] = {};
-    argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-    argumentDescs[0].Constant.RootParameterIndex = GetFirstIndexOffsetParameterIndex();
-    argumentDescs[0].Constant.Num32BitValuesToSet = 2;
-    argumentDescs[0].Constant.DestOffsetIn32BitValues = 0;
-
-    // A command signature must contain exactly 1 Draw / Dispatch / DispatchMesh / DispatchRays
-    // command. That command must come last.
-    argumentDescs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-
-    D3D12_COMMAND_SIGNATURE_DESC programDesc = {};
-    programDesc.ByteStride = 7 * sizeof(uint32_t);
-    programDesc.NumArgumentDescs = 2;
-    programDesc.pArgumentDescs = argumentDescs;
-
-    // The root signature must be specified if and only if the command signature changes one of
-    // the root arguments.
-    ToBackend(GetDevice())
-        ->GetD3D12Device()
-        ->CreateCommandSignature(
-            &programDesc, GetRootSignature(),
-            IID_PPV_ARGS(&mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets));
-    return mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets.Get();
 }
 
 }  // namespace dawn::native::d3d12

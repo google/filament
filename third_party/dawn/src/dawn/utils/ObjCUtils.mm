@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/utils/ObjCUtils.h"
+#include "src/dawn/utils/ObjCUtils.h"
 
 #include <QuartzCore/CALayer.h>
 

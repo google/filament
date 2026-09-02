@@ -25,10 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/wire/client/ObjectBase.h"
 
-#include "dawn/common/Assert.h"
-#include "dawn/wire/client/Client.h"
+#include <utility>
+
+#include "src/dawn/wire/client/Client.h"
+#include "src/dawn/wire/client/Instance.h"
+#include "src/utils/assert.h"
 
 namespace dawn::wire::client {
 
@@ -70,16 +73,15 @@ void ObjectBase::Unregister() {
     mClient = nullptr;
 }
 
-ObjectWithEventsBase::ObjectWithEventsBase(const ObjectBaseParams& params,
-                                           const ObjectHandle& eventManagerHandle)
-    : ObjectBase(params), mEventManagerHandle(eventManagerHandle) {}
+ObjectWithEventsBase::ObjectWithEventsBase(const ObjectBaseParams& params, Ref<Instance> instance)
+    : ObjectBase(params), mInstance(std::move(instance)) {}
 
-const ObjectHandle& ObjectWithEventsBase::GetEventManagerHandle() const {
-    return mEventManagerHandle;
+Ref<Instance> ObjectWithEventsBase::GetInstance() const {
+    return mInstance;
 }
 
 EventManager& ObjectWithEventsBase::GetEventManager() const {
-    return GetClient()->GetEventManager(mEventManagerHandle);
+    return mInstance->GetEventManager();
 }
 
 }  // namespace dawn::wire::client

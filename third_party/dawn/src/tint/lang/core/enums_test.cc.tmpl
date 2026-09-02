@@ -17,6 +17,7 @@ See:
 {{- $addr_space_enum := ($I.Sem.Enum "address_space") -}}
 {{- $interpolation_sampling_enum := ($I.Sem.Enum "interpolation_sampling") -}}
 {{- $interpolation_type_enum := ($I.Sem.Enum "interpolation_type") -}}
+{{- $majorness_enum := ($I.Sem.Enum "majorness") -}}
 {{- $subgroup_matrix_kind_enum := ($I.Sem.Enum "subgroup_matrix_kind") -}}
 {{- $texel_format_enum := ($I.Sem.Enum "texel_format") -}}
 {{- $builtin_type_enum := ($I.Sem.Enum "builtin_type") -}}
@@ -49,6 +50,8 @@ namespace interpolation_sampling_tests {
 namespace interpolation_type_tests {
 {{ Eval "TestParsePrintEnum" $interpolation_type_enum }}
 }  // namespace interpolation_type_tests
+
+{{ Eval "TestParsePrintEnum" $majorness_enum }}
 
 {{ Eval "TestParsePrintEnum" $texel_format_enum}}
 
