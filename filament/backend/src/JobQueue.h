@@ -87,8 +87,9 @@ public:
     /**
      * Pushes a new job into queue.
      *
-     * If the queue is in the process of shutting down (via a call to `stop`), this method does
-     * nothing (a no-op) and returns an invalid job ID.
+     * If the queue is in the process of shutting down (via a call to `stop`), the job is not
+     * queued but destroyed on the calling thread. Also, this method returns `InvalidJobId`, and a
+     * placeholder for a valid `preIssuedJobId` is cleaned up internally.
      *
      * @param job The function/lambda to be executed.
      * @param preIssuedJobId The previously issued job ID where this job is assigned to.

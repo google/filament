@@ -18,6 +18,7 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 
@@ -31,7 +32,12 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
     JobId jobId = preIssuedJobId;
     {
         LockGuard const lock(mQueueMutex);
-        if (mIsStopping) {
+        if (UTILS_UNLIKELY(mIsStopping)) {
+            // This queue is stopping, so any placeholder previously issued should be removed here.
+            if (jobId != InvalidJobId) {
+                mJobsMap.erase(jobId);
+            }
+            LOG(WARNING) << "JobQueue::push() called after stop(), the job is dropped";
             return InvalidJobId;
         }
 

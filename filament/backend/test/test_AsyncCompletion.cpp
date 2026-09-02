@@ -152,3 +152,23 @@ TEST_F(AsyncCompletionTest, DroppedJobInvokesCallback) {
     ASSERT_EQ(1u, statuses.size()) << "a dropped job must schedule its completion callback";
     EXPECT_EQ(AsyncCallStatus::CANCELED, statuses[0]);
 }
+
+TEST_F(AsyncCompletionTest, JobDroppedByStoppingQueueInvokesCallback) {
+    // The other way `push()` drops a job: the queue is stopping. That is the teardown path. An
+    // asynchronous call issued afterwards must be canceled.
+    JobQueue::Ptr queue = JobQueue::create();
+    Statuses statuses;
+
+    queue->stop();
+    JobQueue::JobId const pushedId = queue->push(
+            [completion = DriverBase::AsyncCompletion(getDriver(), nullptr, recordStatus,
+                     &statuses)]() mutable {
+                completion.schedule(AsyncCallStatus::COMPLETED);
+            });
+    EXPECT_EQ(JobQueue::InvalidJobId, pushedId);
+
+    purge();
+    ASSERT_EQ(1u, statuses.size())
+            << "a job dropped by a stopping queue must schedule its completion callback";
+    EXPECT_EQ(AsyncCallStatus::CANCELED, statuses[0]);
+}
