@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include <jni.h>
+#include "common/NioUtils.h"
 
-#include <filament/RenderableManager.h>
 #include <filament/MaterialInstance.h>
-#include <common/JniUtils.h>
+#include <filament/RenderableManager.h>
 
 #include <utils/Entity.h>
 
-#include "common/NioUtils.h"
+#include <common/JniUtils.h>
+#include <jni.h>
 
 using namespace filament;
 using namespace utils;
