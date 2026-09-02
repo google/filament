@@ -1,0 +1,8 @@
+{
+  "dawn-mac-arm64-apple-m2-exp-rel": {},
+  "dawn-mac-arm64-builder-rel": {
+    "additional_compile_targets": [
+      "default"
+    ]
+  }
+}

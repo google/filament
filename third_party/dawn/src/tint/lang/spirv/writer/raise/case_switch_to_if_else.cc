@@ -46,12 +46,6 @@ namespace tint::spirv::writer::raise {
 
 namespace {
 
-const core::ir::Capabilities kCaseSwitchToIfElseCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-};
-
 /// PIMPL state for the transform, for a single function.
 struct State {
     /// The IR module.
@@ -147,7 +141,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> CaseSwitchToIfElse(core::ir::Module& ir) {
-    core::ir::AssertValid(ir, kCaseSwitchToIfElseCapabilities, "before spirv.CaseSwitchToIfElse");
+    core::ir::AssertValid(ir, "before spirv.CaseSwitchToIfElse");
 
     State{ir}.Process();
 

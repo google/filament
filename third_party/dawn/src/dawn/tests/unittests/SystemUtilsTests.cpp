@@ -27,15 +27,14 @@
 
 #include <string>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/SystemUtils.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
 
-using ::testing::_;
 using ::testing::Pair;
 
 // Tests for GetEnvironmentVar

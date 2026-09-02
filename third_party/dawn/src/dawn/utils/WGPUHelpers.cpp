@@ -25,23 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 #include <algorithm>
 #include <cstring>
-#include <iomanip>
-#include <mutex>
 #include <queue>
-#include <sstream>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/Numeric.h"
+#include "src/dawn/common/Constants.h"
+#include "src/utils/numeric.h"
+#include "src/utils/platform.h"
 
-#ifndef __EMSCRIPTEN__
-#include "dawn/common/ExternalTextureParams.h"
-#endif  // __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
+#include "src/dawn/common/ExternalTextureParams.h"
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 //
 namespace dawn::utils {
 
@@ -59,7 +56,7 @@ wgpu::ShaderModule CreateShaderModule(const wgpu::Device& device, const std::str
 
 wgpu::Buffer CreateBufferFromData(const wgpu::Device& device,
                                   const void* data,
-                                  uint64_t size,
+                                  size_t size,
                                   wgpu::BufferUsage usage,
                                   std::string_view label) {
     wgpu::BufferDescriptor descriptor;
@@ -78,7 +75,7 @@ ComboRenderPassDescriptor::ComboRenderPassDescriptor(
     for (uint32_t i = 0; i < kMaxColorAttachments; ++i) {
         cColorAttachments[i].loadOp = wgpu::LoadOp::Clear;
         cColorAttachments[i].storeOp = wgpu::StoreOp::Store;
-        cColorAttachments[i].clearValue = {0.0f, 0.0f, 0.0f, 0.0f};
+        cColorAttachments[i].clearValue = {0.0, 0.0, 0.0, 0.0};
     }
 
     cDepthStencilAttachmentInfo.depthClearValue = 1.0f;
@@ -146,12 +143,7 @@ void ComboRenderPassDescriptor::UnsetDepthStencilLoadStoreOpsForFormat(wgpu::Tex
     }
 }
 
-BasicRenderPass::BasicRenderPass()
-    : width(0),
-      height(0),
-      color(nullptr),
-      colorFormat(wgpu::TextureFormat::RGBA8Unorm),
-      renderPassInfo() {}
+BasicRenderPass::BasicRenderPass() = default;
 
 BasicRenderPass::BasicRenderPass(uint32_t texWidth,
                                  uint32_t texHeight,
@@ -327,7 +319,7 @@ BindingInitializationHelper::BindingInitializationHelper(
     externalTextureBindingEntry.externalTexture = externalTexture;
 }
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 wgpu::TexelBufferBindingLayout kTexelBufferBindingLayout = {};
 
 BindingLayoutEntryInitializationHelper::BindingLayoutEntryInitializationHelper(
@@ -338,16 +330,16 @@ BindingLayoutEntryInitializationHelper::BindingLayoutEntryInitializationHelper(
     visibility = entryVisibility;
     nextInChain = bindingLayout;
 }
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 BindingInitializationHelper::BindingInitializationHelper(
     uint32_t binding,
     const wgpu::TexelBufferView& texelBufferView)
     : binding(binding) {
     texelBufferBindingEntry.texelBufferView = texelBufferView;
 }
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 BindingLayoutEntryInitializationHelper::BindingLayoutEntryInitializationHelper(
     const wgpu::BindGroupLayoutEntry& entry)
@@ -389,7 +381,7 @@ wgpu::BindGroupEntry BindingInitializationHelper::GetAsBinding() const {
         externalTextureBindingEntry.nextInChain = result.nextInChain;
         result.nextInChain = &externalTextureBindingEntry;
     }
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     if (texelBufferBindingEntry.texelBufferView != nullptr) {
         // Insert the texel buffer binding entry at the head of the chain while
         // preserving any existing chained structures on `result`. The layout is
@@ -398,7 +390,7 @@ wgpu::BindGroupEntry BindingInitializationHelper::GetAsBinding() const {
         texelBufferBindingEntry.nextInChain = result.nextInChain;
         result.nextInChain = &texelBufferBindingEntry;
     }
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
     return result;
 }
@@ -420,7 +412,7 @@ wgpu::BindGroup MakeBindGroup(
     return device.CreateBindGroup(&descriptor);
 }
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 wgpu::ExternalTexture MakePassthroughExternalTexture(const wgpu::Device& device,
                                                      const wgpu::Texture& plane0,
                                                      const wgpu::Texture& plane1) {
@@ -438,7 +430,7 @@ wgpu::ExternalTexture MakePassthroughExternalTexture(const wgpu::Device& device,
     };
     return device.CreateExternalTexture(&etDesc);
 }
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 bool BackendRequiresCompat(wgpu::BackendType backend) {
     switch (backend) {
@@ -461,13 +453,12 @@ const absl::flat_hash_map<wgpu::FeatureName, absl::flat_hash_set<wgpu::FeatureNa
     kImplicitlyEnabledFeaturesMap = {
         {wgpu::FeatureName::TextureFormatsTier1, {wgpu::FeatureName::RG11B10UfloatRenderable}},
         {wgpu::FeatureName::TextureFormatsTier2, {wgpu::FeatureName::TextureFormatsTier1}},
-
-// Below are experimental features that are not supported by Emscripten.
-#ifndef __EMSCRIPTEN__
-        {wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl,
-         {wgpu::FeatureName::Subgroups}},
-#endif
-
+        {wgpu::FeatureName::SubgroupSizeControl, {wgpu::FeatureName::Subgroups}},
+        {wgpu::FeatureName::ChromiumExperimentalSubgroupMatrix, {wgpu::FeatureName::Subgroups}},
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
+        {wgpu::FeatureName::BufferMapExtendedUsages,
+         {wgpu::FeatureName::BufferMapWriteExtendedUsages}},
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
         // Add other implicit enabling rules here
 };
 

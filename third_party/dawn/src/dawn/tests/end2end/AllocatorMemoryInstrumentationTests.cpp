@@ -25,9 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <limits>
-
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 namespace {
@@ -42,7 +40,10 @@ class AllocatorMemoryInstrumentationTest : public DawnTest {
 };
 
 // Test the detailed memory usage reported by GetAllocatorMemoryInfo()
-TEST_P(AllocatorMemoryInstrumentationTest, GetAllocatorMemoryInfoVulkan) {
+TEST_P(AllocatorMemoryInstrumentationTest, GetAllocatorMemoryInfo) {
+    native::AllocatorMemoryInfo memInfo = native::GetAllocatorMemoryInfo(device.Get());
+    auto usedMemoryInInitialization = memInfo.totalUsedMemory;
+
     // Create a buffer with size 32.
     constexpr uint64_t kBufferSize = 32;
     constexpr wgpu::BufferDescriptor kBufferDesc = {
@@ -50,43 +51,34 @@ TEST_P(AllocatorMemoryInstrumentationTest, GetAllocatorMemoryInfoVulkan) {
         .size = kBufferSize,
     };
 
-    // Creating the buffer should allocate memory with Vulkan ResourceMemoryAllocator.
+    // Creating the buffer should allocate memory with ResourceMemoryAllocator.
     wgpu::Buffer uniformBuffer = device.CreateBuffer(&kBufferDesc);
     EXPECT_TRUE(uniformBuffer);
 
-    native::AllocatorMemoryInfo memInfo = native::GetAllocatorMemoryInfo(device.Get());
+    memInfo = native::GetAllocatorMemoryInfo(device.Get());
     EXPECT_GT(memInfo.totalAllocatedMemory, 0u);
     EXPECT_GT(memInfo.totalUsedMemory, 0u);
     EXPECT_GE(memInfo.totalAllocatedMemory, memInfo.totalUsedMemory);
     auto prevAllocatedMemory = memInfo.totalAllocatedMemory;
 
     uniformBuffer.Destroy();
-    // Process the destroy so that the pending command serials are updated.
 
-    // Need an empty Submit in order for Future to wait for queue serial.
+    // Reclaiming the buffer's memory is handled by ResourceMemoryAllocator, which is registered as
+    // a BestEffort (Lowest) priority serial processor. As documented on QueuePriority, Lowest
+    // priority work is intentionally *not* processed by user-facing waits such as WaitAny; those
+    // only process UserVisible and higher priority work in order to stay responsive. Lowest
+    // priority work is only processed by device.Tick(), which in turn only does work while the
+    // queue still has scheduled commands. So issue an empty submit to give the queue scheduled
+    // work, then tick until the queue is idle to let the Lowest-priority reclamation run.
     device.GetQueue().Submit(0, nullptr);
-    // Use Futures WaitAny to wait for the queue to update serial.
-    wgpu::FutureWaitInfo waitInfo{};
-    waitInfo.future = device.GetQueue().OnSubmittedWorkDone(
-        wgpu::CallbackMode::WaitAnyOnly, [](wgpu::QueueWorkDoneStatus, wgpu::StringView) {});
-    const auto& instance = device.GetAdapter().GetInstance();
-    auto status =
-        instance.WaitAny(1, &waitInfo, /*timeoutNS=*/std::numeric_limits<uint64_t>::max());
-    ASSERT_EQ(status, wgpu::WaitStatus::Success);
-
-    // TODO(chromium:404568017): This submit should not really be needed to free the memory but is
-    // needed for now. Investigate this.
-    device.GetQueue().Submit(0, nullptr);
-    // Tick needed in order to call ResourceMemoryAllocator::Tick.
-    device.Tick();
+    WaitForAllOperations();
 
     memInfo = native::GetAllocatorMemoryInfo(device.Get());
-    // Vulkan used memory should be 0 now.
-    EXPECT_EQ(memInfo.totalUsedMemory, 0u);
+    EXPECT_EQ(memInfo.totalUsedMemory, usedMemoryInInitialization);
     EXPECT_LE(memInfo.totalAllocatedMemory, prevAllocatedMemory);
 }
 
-DAWN_INSTANTIATE_TEST(AllocatorMemoryInstrumentationTest, VulkanBackend());
+DAWN_INSTANTIATE_TEST(AllocatorMemoryInstrumentationTest, D3D12Backend(), VulkanBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

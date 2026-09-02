@@ -50,7 +50,7 @@ namespace {{metadata.namespace}} {
                 break;
             {% endfor %}
               default:
-                o << "{{as_cppType(type.name)}}::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<{{as_cppType(type.name)}}>::type>(value);
+                o << "{{as_cppType(type.name)}}::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<std::underlying_type<{{as_cppType(type.name)}}>::type>(value);
           }
           return o;
       }
@@ -91,7 +91,7 @@ namespace {{metadata.namespace}} {
           if (!first) {
             o << "|";
           }
-          o << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<{{as_cppType(type.name)}}>::type>(value);
+          o << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<std::underlying_type<{{as_cppType(type.name)}}>::type>(value);
         }
 
         if (moreThanOneBit) {

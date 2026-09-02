@@ -55,6 +55,7 @@ class WhileStatement final : public Castable<WhileStatement, CompoundStatement> 
     ~WhileStatement() override;
 
     /// @returns the AST node
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::WhileStatement* Declaration() const;
 
     /// @returns the whilecondition expression

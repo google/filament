@@ -33,12 +33,12 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
-#include "dawn/tests/white_box/SharedTextureMemoryTests.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/tests/white_box/SharedTextureMemoryTests.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -291,7 +291,8 @@ TEST_P(SharedTextureMemoryTests, GPUWriteThenCPURead) {
     auto* pixels = static_cast<utils::RGBA8*>(ptr);
     for (uint32_t r = 0; r < aHardwareBufferDesc.height; ++r) {
         for (uint32_t c = 0; c < aHardwareBufferDesc.width; ++c) {
-            EXPECT_EQ(pixels[r * aHardwareBufferDesc.stride + c], utils::RGBA8(128, 255, 64, 255))
+            EXPECT_EQ(DAWN_UNSAFE_TODO(pixels[r * aHardwareBufferDesc.stride + c]),
+                      utils::RGBA8(128, 255, 64, 255))
                 << r << ", " << c;
         }
     }
@@ -355,7 +356,7 @@ TEST_P(SharedTextureMemoryTests, CPUWriteThenGPURead) {
     auto* pixels = static_cast<utils::RGBA8*>(ptr);
     for (uint32_t r = 0; r < aHardwareBufferDesc.height; ++r) {
         for (uint32_t c = 0; c < aHardwareBufferDesc.width; ++c) {
-            pixels[r * aHardwareBufferDesc.stride + c] =
+            DAWN_UNSAFE_TODO(pixels[r * aHardwareBufferDesc.stride + c]) =
                 expected[r * aHardwareBufferDesc.width + c];
         }
     }
@@ -374,6 +375,124 @@ TEST_P(SharedTextureMemoryTests, CPUWriteThenGPURead) {
     memory.BeginAccess(texture, &beginDesc);
     EXPECT_TEXTURE_EQ(expected.data(), texture, {0, 0},
                       {aHardwareBufferDesc.width, aHardwareBufferDesc.height});
+}
+
+// Test clearing the texture memory on the device using MSRTSS, then reading it on the CPU.
+TEST_P(SharedTextureMemoryTests, MSRTSSWriteThenCPURead) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures(
+        {wgpu::FeatureName::SharedFenceSyncFD, wgpu::FeatureName::MSAARenderToSingleSampled}));
+
+    AHardwareBuffer_Desc aHardwareBufferDesc = {
+        .width = 4,
+        .height = 4,
+        .layers = 1,
+        .format = AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+        .usage = AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER | AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN,
+    };
+    AHardwareBuffer* aHardwareBuffer;
+    EXPECT_EQ(AHardwareBuffer_allocate(&aHardwareBufferDesc, &aHardwareBuffer), 0);
+
+    // Get actual desc for allocated buffer so we know the stride for cpu data.
+    AHardwareBuffer_describe(aHardwareBuffer, &aHardwareBufferDesc);
+
+    wgpu::SharedTextureMemoryAHardwareBufferDescriptor stmAHardwareBufferDesc;
+    stmAHardwareBufferDesc.handle = aHardwareBuffer;
+
+    wgpu::SharedTextureMemoryDescriptor desc;
+    desc.nextInChain = &stmAHardwareBufferDesc;
+
+    wgpu::SharedTextureMemory memory = device.ImportSharedTextureMemory(&desc);
+    wgpu::Texture texture = memory.CreateTexture();
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    utils::ComboRenderPassDescriptor passDescriptor({texture.CreateView()});
+    passDescriptor.cColorAttachments[0].storeOp = wgpu::StoreOp::Store;
+    passDescriptor.cColorAttachments[0].loadOp = wgpu::LoadOp::Clear;
+    passDescriptor.cColorAttachments[0].clearValue = {0.5001, 1.0, 0.2501, 1.0};
+
+    // Enable MSRTSS for this pass
+    wgpu::DawnRenderPassSampleCount renderPassSampleCount;
+    renderPassSampleCount.sampleCount = 4;
+    passDescriptor.nextInChain = &renderPassSampleCount;
+
+    encoder.BeginRenderPass(&passDescriptor).End();
+    wgpu::CommandBuffer commandBuffer = encoder.Finish();
+
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc = {};
+    wgpu::SharedTextureMemoryVkImageLayoutBeginState beginLayout{};
+    if (IsVulkan()) {
+        beginLayout.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        beginLayout.newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        beginDesc.nextInChain = &beginLayout;
+    }
+    memory.BeginAccess(texture, &beginDesc);
+
+    device.GetQueue().Submit(1, &commandBuffer);
+
+    wgpu::SharedTextureMemoryEndAccessState endState = {};
+    wgpu::SharedTextureMemoryVkImageLayoutEndState endLayout{};
+    if (IsVulkan()) {
+        endState.nextInChain = &endLayout;
+    }
+    memory.EndAccess(texture, &endState);
+
+    wgpu::SharedFenceExportInfo exportInfo;
+    endState.fences[0].ExportInfo(&exportInfo);
+
+    // AHardwareBuffer_lock requires a fd to wait on. Otherwise we would need wait until the
+    // submitted work is finished here.
+    DAWN_TEST_UNSUPPORTED_IF(exportInfo.type != wgpu::SharedFenceType::SyncFD);
+
+    wgpu::SharedFenceSyncFDExportInfo syncFdExportInfo;
+    exportInfo.nextInChain = &syncFdExportInfo;
+    endState.fences[0].ExportInfo(&exportInfo);
+
+    // AHardwareBuffer_lock consumes the fd, so duplicate it before passing.
+    // The original fd will be closed when endState is destroyed.
+    const int dupFd = dup(syncFdExportInfo.handle);
+    EXPECT_GE(dupFd, 0);
+
+    void* ptr;
+    EXPECT_EQ(AHardwareBuffer_lock(aHardwareBuffer, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, dupFd,
+                                   nullptr, &ptr),
+              0);
+
+    auto* pixels = static_cast<utils::RGBA8*>(ptr);
+    for (uint32_t r = 0; r < aHardwareBufferDesc.height; ++r) {
+        for (uint32_t c = 0; c < aHardwareBufferDesc.width; ++c) {
+            EXPECT_EQ(DAWN_UNSAFE_TODO(pixels[r * aHardwareBufferDesc.stride + c]),
+                      utils::RGBA8(128, 255, 64, 255))
+                << r << ", " << c;
+        }
+    }
+
+    EXPECT_EQ(AHardwareBuffer_unlock(aHardwareBuffer, nullptr), 0);
+    AHardwareBuffer_release(aHardwareBuffer);
+}
+
+// Ensure that importing protected AHBs is unsupported.
+TEST_P(SharedTextureMemoryTests, ProtectedUnsupported) {
+    AHardwareBuffer_Desc aHardwareBufferDesc = {
+        .width = 4,
+        .height = 4,
+        .layers = 1,
+        .format = AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+        .usage = AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER | AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT,
+    };
+    AHardwareBuffer* aHardwareBuffer;
+    EXPECT_EQ(AHardwareBuffer_allocate(&aHardwareBufferDesc, &aHardwareBuffer), 0);
+
+    // Get actual desc for allocated buffer so we know the stride for cpu data.
+    AHardwareBuffer_describe(aHardwareBuffer, &aHardwareBufferDesc);
+
+    wgpu::SharedTextureMemoryAHardwareBufferDescriptor stmAHardwareBufferDesc;
+    stmAHardwareBufferDesc.handle = aHardwareBuffer;
+
+    wgpu::SharedTextureMemoryDescriptor desc;
+    desc.nextInChain = &stmAHardwareBufferDesc;
+
+    ASSERT_DEVICE_ERROR_MSG(device.ImportSharedTextureMemory(&desc),
+                            testing::HasSubstr("Unsupported AHardwareBuffer usage"));
 }
 
 DAWN_INSTANTIATE_PREFIXED_TEST_P(Vulkan,
@@ -415,5 +534,6 @@ DAWN_INSTANTIATE_PREFIXED_TEST_P(
     {OpenGLESBackend()},
     {SharedTextureMemoryTestAndroidEGLSyncOpenGLESBackend::GetInstance()},
     {1});
+
 }  // anonymous namespace
 }  // namespace dawn

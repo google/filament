@@ -45,6 +45,7 @@
 #include "src/tint/lang/core/ir/type/array_count.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/ir/value.h"
+#include "src/tint/utils/math/math.h"
 #include "src/utils/numeric.h"
 
 namespace tint::core::ir::transform {
@@ -85,6 +86,11 @@ struct State {
             if (auto* var = inst->As<core::ir::Var>()) {
                 if (auto* ary = var->Result()->Type()->UnwrapPtr()->As<core::type::Array>()) {
                     if (ary->Count()->Is<core::ir::type::ValueArrayCount>()) {
+                        vars_with_value_array_count.Push(var);
+                    }
+                }
+                if (auto* buf = var->Result()->Type()->UnwrapPtr()->As<core::type::Buffer>()) {
+                    if (buf->Count()->Is<core::ir::type::ValueArrayCount>()) {
                         vars_with_value_array_count.Push(var);
                     }
                 }
@@ -164,6 +170,32 @@ struct State {
         // Workgroup size and subgroup size MUST be evaluated prior to 'propagate' because workgroup
         // size and subgroup size parameters are not proper usages.
         for (auto func : ir.functions) {
+            for (auto* param : func->Params()) {
+                if (auto* old_ptr = param->Type()->As<core::type::Pointer>()) {
+                    TINT_CHECK_RESULT_UNWRAP(new_ptr, ReplaceOverrideType(old_ptr));
+                    if (new_ptr) {
+                        param->SetType(new_ptr);
+                        auto usages = param->UsagesSorted();
+                        while (!usages.IsEmpty()) {
+                            auto use = usages.Pop();
+                            auto* inst = use.instruction;
+                            // This is an edge case where we have to specifically verify bounds
+                            // access for these new arrays for all usages.
+                            if (NeedsEval(inst)) {
+                                TINT_CHECK_RESULT(eval::Eval(b, inst));
+                            }
+                            if (!inst->Is<core::ir::Let>()) {
+                                continue;
+                            }
+
+                            inst->Result()->SetType(new_ptr);
+                            for (auto& u : inst->Result()->UsagesSorted()) {
+                                usages.Push(u);
+                            }
+                        }
+                    }
+                }
+            }
             if (!func->IsCompute()) {
                 continue;
             }
@@ -195,44 +227,21 @@ struct State {
             auto sgs = func->SubgroupSize();
             if (sgs.has_value()) {
                 TINT_CHECK_RESULT_UNWRAP(new_sg, CalculateOverride(sgs.value()));
+                if (!IsPowerOfTwo(new_sg->Value()->ValueAs<uint32_t>())) {
+                    return diag::Failure("@subgroup_size value must be a power of two");
+                }
                 func->SetSubgroupSize(new_sg);
             }
         }
 
-        // Replace array types MUST be evaluate prior to 'propagate' because array count values are
-        // not proper usages.
+        // Replace array/buffer types MUST be evaluate prior to 'propagate' because array count
+        // values are not proper usages.
         for (auto var : vars_with_value_array_count) {
             auto* old_ptr = var->Result()->Type()->As<core::type::Pointer>();
             TINT_IR_ASSERT(ir, old_ptr);
 
-            auto* old_ty = old_ptr->UnwrapPtr()->As<core::type::Array>();
-            auto* cnt = old_ty->Count()->As<core::ir::type::ValueArrayCount>();
-            TINT_IR_ASSERT(ir, cnt);
-
-            TINT_CHECK_RESULT_UNWRAP(new_value, CalculateOverride(cnt->value));
-
-            // Pipeline creation error for zero or negative sized array. This is important as we do
-            // not check constant evaluation access against zero size.
-            int64_t cnt_size_check = new_value->Value()->ValueAs<AInt>();
-            if (cnt_size_check < 1) {
-                diag::Diagnostic error = MakeError(ir.SourceOf(cnt->value));
-                error << "array count (" << cnt_size_check << ") must be greater than 0";
-                return diag::Failure(error);
-            }
-
-            uint32_t num_elements = new_value->Value()->ValueAs<uint32_t>();
-            uint64_t new_ary_size = uint64_t{num_elements} * old_ty->ImplicitStride();
-            if (new_ary_size > std::numeric_limits<uint32_t>::max()) {
-                diag::Diagnostic error = MakeError(ir.SourceOf(cnt->value));
-                error << "array size (" << new_ary_size << ") is too large";
-                return diag::Failure(error);
-            }
-
-            auto* new_cnt = ty.Get<core::type::ConstantArrayCount>(num_elements);
-            auto* new_ty = ty.Get<core::type::Array>(old_ty->ElemType(), new_cnt,
-                                                     static_cast<uint32_t>(new_ary_size));
-
-            auto* new_ptr = ty.ptr(old_ptr->AddressSpace(), new_ty, old_ptr->Access());
+            TINT_CHECK_RESULT_UNWRAP(new_ptr, ReplaceOverrideType(old_ptr));
+            TINT_IR_ASSERT(ir, new_ptr);
             var->Result()->SetType(new_ptr);
 
             // The `Var` type needs to propagate to certain usages.
@@ -276,6 +285,64 @@ struct State {
         }
 
         return Success;
+    }
+
+    diag::Result<const core::type::Pointer*> ReplaceOverrideType(
+        const core::type::Pointer* old_ptr) {
+        const core::ir::type::ValueArrayCount* cnt = nullptr;
+        auto* old_ary_ty = old_ptr->UnwrapPtr()->As<core::type::Array>();
+        if (old_ary_ty) {
+            cnt = old_ary_ty->Count()->As<core::ir::type::ValueArrayCount>();
+        }
+        auto* old_buf_ty = old_ptr->UnwrapPtr()->As<core::type::Buffer>();
+        if (old_buf_ty) {
+            cnt = old_buf_ty->Count()->As<core::ir::type::ValueArrayCount>();
+        }
+        if (!cnt) {
+            return nullptr;
+        }
+
+        TINT_CHECK_RESULT_UNWRAP(new_value, CalculateOverride(cnt->value));
+
+        // Pipeline creation error for zero or negative sized array. This is important as we do
+        // not check constant evaluation access against zero size.
+        int64_t cnt_size_check = new_value->Value()->ValueAs<AInt>();
+        if (cnt_size_check < 1) {
+            diag::Diagnostic error = MakeError(ir.SourceOf(cnt->value));
+            error << "array count (" << cnt_size_check << ") must be greater than 0";
+            return diag::Failure(error);
+        }
+
+        uint32_t num_elements = new_value->Value()->ValueAs<uint32_t>();
+        auto* new_cnt = ty.Get<core::type::ConstantArrayCount>(num_elements);
+
+        const core::type::Type* new_ty = nullptr;
+        if (old_ary_ty) {
+            uint64_t new_ary_size = uint64_t{num_elements} * old_ary_ty->ImplicitStride();
+            if (new_ary_size > std::numeric_limits<uint32_t>::max()) {
+                diag::Diagnostic error = MakeError(ir.SourceOf(cnt->value));
+                error << "array size (" << new_ary_size << ") is too large";
+                return diag::Failure(error);
+            }
+
+            new_ty = ty.Get<core::type::Array>(old_ary_ty->ElemType(), new_cnt,
+                                               static_cast<uint32_t>(new_ary_size));
+        } else {
+            TINT_IR_ASSERT(ir, old_buf_ty);
+            const uint32_t divisor = ir.properties.Contains(Property::kAllow16BitFloats) ||
+                                             ir.properties.Contains(Property::kAllow16BitIntegers)
+                                         ? 2
+                                         : 4;
+            if (num_elements % divisor != 0) {
+                diag::Diagnostic error = MakeError(ir.SourceOf(cnt->value));
+                error << "buffer size must be evenly divisible by " << divisor;
+                return diag::Failure(error);
+            }
+            new_ty = ty.Get<core::type::Buffer>(new_cnt);
+        }
+
+        auto* new_ptr = ty.ptr(old_ptr->AddressSpace(), new_ty, old_ptr->Access());
+        return new_ptr;
     }
 
     diag::Result<SuccessType> EvalConstExprIf() {
@@ -385,7 +452,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> SubstituteOverrides(Module& ir, const SubstituteOverridesConfig& cfg) {
-    AssertValid(ir, kSubstituteOverridesCapabilities, "before core.SubstituteOverrides");
+    AssertValid(ir, "before core.SubstituteOverrides");
     {
         auto result = State{ir, cfg}.Process();
         if (result != Success) {
@@ -395,7 +462,11 @@ Result<SuccessType> SubstituteOverrides(Module& ir, const SubstituteOverridesCon
 
     // TODO(crbug.com/382300469): This function should take in a constant module but it does not due
     // to missing constant functions.
-    return tint::core::ir::ValidateConstParam(ir);
+    TINT_CHECK_RESULT(tint::core::ir::ValidateConstParam(ir));
+
+    ir.properties.Remove(Property::kAllowOverrides);
+
+    return Success;
 }
 
 }  // namespace tint::core::ir::transform

@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_SHAREDTEXTUREFENCEVk_H_
 #define SRC_DAWN_NATIVE_VULKAN_SHAREDTEXTUREFENCEVk_H_
 
-#include "dawn/common/Platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/SharedFence.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/SharedFence.h"
+#include "src/utils/platform.h"
 
 namespace dawn::native::vulkan {
 
@@ -53,16 +53,16 @@ class SharedFence final : public SharedFenceBase {
         StringView label,
         const SharedFenceVkSemaphoreZirconHandleDescriptor* descriptor);
 
-    const dawn::utils::SystemHandle& GetHandle() const;
+    const SystemHandle& GetHandle() const;
 
   private:
-    SharedFence(Device* device, StringView label, dawn::utils::SystemHandle handle);
+    SharedFence(Device* device, StringView label, SystemHandle handle);
     void DestroyImpl(DestroyReason reason) override;
 
     MaybeError ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& info) const override;
 
     wgpu::SharedFenceType mType;
-    dawn::utils::SystemHandle mHandle;
+    SystemHandle mHandle;
 };
 
 }  // namespace dawn::native::vulkan

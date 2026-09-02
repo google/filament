@@ -1,0 +1,19 @@
+diff --git a/third_party/dawn/src/dawn/native/Buffer.cpp b/third_party/dawn/src/dawn/native/Buffer.cpp
+index b11718df0cf..99773cca355 100644
+--- a/third_party/dawn/src/dawn/native/Buffer.cpp
++++ b/third_party/dawn/src/dawn/native/Buffer.cpp
+@@ -342,8 +342,13 @@ class BufferBase::MapAsyncEvent final : public EventManager::TrackedEvent {
+         //    but otherwise this finishes on the same path as #2.
+         // 4. Event was created for an error and `mBuffer` was always null. This uses
+         //    `mErrorMessage`` and `mStatus` as set in the constructor when running the callback.
+-        RecursiveMutex::AutoLock lock;
++        // Filament workaround: `buffer` must be declared before `lock` so that when `Complete()`
++        // exits, `lock` destructs first (unlocking `mPendingMapMutex` safely while `buffer` is still alive).
++        // If `lock` is declared first, `buffer` destructs first; if `buffer` is the last reference
++        // keeping `BufferBase` alive, `BufferBase` is deleted and `lock`'s destructor accesses freed
++        // memory on unlock (Use-After-Free).
+         Ref<BufferBase> buffer = mBuffer.Promote();
++        RecursiveMutex::AutoLock lock;
+         if (buffer) {
+             // Locking the mutex provides synchronization so that either path #1 or #2 is taken if
+             // Complete() and Unmap() race on different threads.

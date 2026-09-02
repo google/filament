@@ -1,0 +1,30 @@
+# -----------------------------------------------------------------------------
+# ShaderCompiler DXC Main Nightly Build Pipeline Entry Point
+# -----------------------------------------------------------------------------
+
+name: DXC.Main.Nightly.$(date:yyMMdd).$(rev:rr).$(Build.SourceBranchName)
+
+trigger: none
+
+parameters:
+- name: BuildConfigurations
+  type: object
+  default: [Release, Debug]
+
+- name: BuildPlatforms
+  type: object
+  default: [x64, x86, arm64]
+
+resources:
+  repositories:
+    - repository: XboxDXC
+      type: git
+      name: Xbox/Xbox.ShaderCompiler.DXC
+      ref: refs/heads/Xbox
+
+extends:
+  template: azure-pipelines\templates\DXC.Main.Nightly.template.yml@XboxDXC
+  parameters:
+    BuildConfigurations: ${{parameters.BuildConfigurations}}
+    BuildPlatforms: ${{parameters.BuildPlatforms}}
+    StatusEmail: $(StatusEmail)

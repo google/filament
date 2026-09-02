@@ -27,9 +27,10 @@
 
 #include <memory>
 
-#include "dawn/common/PlacementAllocated.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/PlacementAllocated.h"
+#include "src/utils/heap_array.h"
 
 namespace dawn {
 namespace {
@@ -65,9 +66,9 @@ struct Bar : Foo {
 
 // Test that deletion calls the destructor and does not free memory.
 TEST_F(PlacementAllocatedTests, DeletionDoesNotFreeMemory) {
-    void* ptr = malloc(sizeof(Foo));
+    HeapArray<std::byte> placement{sizeof(Foo)};
 
-    Foo* foo = new (ptr) Foo();
+    Foo* foo = new (placement.data()) Foo();
 
     EXPECT_CALL(*mockDestructor, Call(foo, DestructedClass::Foo));
     delete foo;
@@ -75,16 +76,14 @@ TEST_F(PlacementAllocatedTests, DeletionDoesNotFreeMemory) {
     // Touch the memory, this shouldn't crash.
     static_assert(sizeof(Foo) >= sizeof(uint32_t));
     *reinterpret_cast<uint32_t*>(foo) = 42;
-
-    free(ptr);
 }
 
 // Test that destructing an instance of a derived class calls the derived, then base destructor, and
 // does not free memory.
 TEST_F(PlacementAllocatedTests, DeletingDerivedClassCallsBaseDestructor) {
-    void* ptr = malloc(sizeof(Bar));
+    HeapArray<std::byte> placement{sizeof(Bar)};
 
-    Bar* bar = new (ptr) Bar();
+    Bar* bar = new (placement.data()) Bar();
 
     {
         InSequence s;
@@ -96,16 +95,14 @@ TEST_F(PlacementAllocatedTests, DeletingDerivedClassCallsBaseDestructor) {
     // Touch the memory, this shouldn't crash.
     static_assert(sizeof(Bar) >= sizeof(uint32_t));
     *reinterpret_cast<uint32_t*>(bar) = 42;
-
-    free(ptr);
 }
 
 // Test that destructing an instance of a base class calls the derived, then base destructor, and
 // does not free memory.
 TEST_F(PlacementAllocatedTests, DeletingBaseClassCallsDerivedDestructor) {
-    void* ptr = malloc(sizeof(Bar));
+    HeapArray<std::byte> placement{sizeof(Bar)};
 
-    Foo* foo = new (ptr) Bar();
+    Foo* foo = new (placement.data()) Bar();
 
     {
         InSequence s;
@@ -117,8 +114,6 @@ TEST_F(PlacementAllocatedTests, DeletingBaseClassCallsDerivedDestructor) {
     // Touch the memory, this shouldn't crash.
     static_assert(sizeof(Bar) >= sizeof(uint32_t));
     *reinterpret_cast<uint32_t*>(foo) = 42;
-
-    free(ptr);
 }
 
 }  // anonymous namespace

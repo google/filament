@@ -46,9 +46,11 @@ Case C(Value input, Value expected) {
     return Case{std::move(input), std::move(expected)};
 }
 
-/// Convenience overload to creates a Case with just scalars
-template <typename T, typename U, typename = std::enable_if_t<!IsValue<T>>>
-Case C(T input, U expected) {
+/// Convenience overload to create a Case with just scalars
+template <typename T, typename U>
+Case C(T input, U expected)
+    requires(!IsValue<T>)
+{
     return Case{Val(input), Val(expected)};
 }
 

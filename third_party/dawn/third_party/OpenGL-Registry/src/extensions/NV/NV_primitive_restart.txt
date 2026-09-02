@@ -1,0 +1,280 @@
+Name
+
+    NV_primitive_restart
+
+Name Strings
+
+    GL_NV_primitive_restart
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2002.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Implemented in CineFX (NV30) Emulation driver, August 2002.
+    Shipping in Release 40 NVIDIA driver for CineFX hardware, January 2003.
+
+Version
+
+    NVIDIA Date: August 29, 2002 (version 0.1)
+
+Number
+
+    285
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 specification.
+
+Overview
+
+    This extension allows applications to easily and inexpensively
+    restart a primitive in its middle.  A "primitive restart" is simply
+    the same as an End command, followed by another Begin command with
+    the same mode as the original.  The typical expected use of this
+    feature is to draw a mesh with many triangle strips, though primitive
+    restarts are legal for all primitive types, even for points (where
+    they are not useful).
+
+    Although the EXT_multi_draw_arrays extension did reduce the overhead
+    of such drawing techniques, they still remain more expensive than one
+    would like.
+
+    This extension provides an extremely lightweight primitive restart,
+    which is accomplished by allowing the application to choose a special
+    index number that signals that a primitive restart should occur,
+    rather than a vertex being provoked.  This index can be an arbitrary
+    32-bit integer for maximum application convenience.
+
+    In addition, for full orthogonality, a special OpenGL command is
+    provided to restart primitives when in immediate mode.  This command
+    is not likely to increase performance in any significant fashion, but
+    providing it greatly simplifies the specification and implementation
+    of display list compilation and indirect rendering.
+
+Issues
+
+    *   What should the default primitive restart index be?
+
+        RESOLVED: Zero.  It's tough to pick another number that is
+        meaningful for all three element data types.  In practice, apps
+        are likely to set it to 0xFFFF or 0xFFFFFFFF.
+
+    *   Are primitives other than triangle strips supported?
+
+        RESOLVED: Yes.  One example of how this can be useful is for
+        rendering a heightfield.  The "standard" way to render a
+        heightfield uses a number of triangle strips, one for each row of
+        the grid.  Another method, which can produce higher-quality
+        meshes, is to render a number of 8-triangle triangle fans.  This
+        has the effect of alternating the direction of tessellation, as
+        shown in the diagram below.  Primitive restarts enhance the
+        performance of both techniques.
+
+        -------------------------        -------------------------
+        | /| /| /| /| /| /| /| /|        |\ | /|\ | /|\ | /|\ | /|
+        |/ |/ |/ |/ |/ |/ |/ |/ |        | \|/ | \|/ | \|/ | \|/ |
+        -------------------------        ---*-----*-----*-----*---
+        | /| /| /| /| /| /| /| /|        | /|\ | /|\ | /|\ | /|\ |
+        |/ |/ |/ |/ |/ |/ |/ |/ |        |/ | \|/ | \|/ | \|/ | \|
+        -------------------------        -------------------------
+
+                Two strips             Four fans (centers marked '*')
+
+    *   How is this feature turned on and off?
+
+        RESOLVED: Via a glEnable/DisableClientState setting.  It is not
+        possible to select a restart index that is guaranteed to be
+        unused.
+
+    *   Is the immediate mode PrimitiveRestartNV needed?
+
+        RESOLVED: Yes.  It is difficult to make indirect rendering to
+        work without it, and it is near impossible to make display lists
+        work without it.  It is a very clean way to resolve these issues.
+
+    *   How is indirect rendering handled?
+
+        RESOLVED: Because of PrimitiveRestartNV, it works very easily.
+        PrimitiveRestartNV has a wire protocol and therefore it can
+        easily be inserted as needed.  The server tracks the current
+        Begin mode, relieving the client of this burden.
+
+        Note that in practice, we expect that this feature is essentially
+        useless for indirect rendering.
+
+    *   How does this extension interact with NV_element_array and
+        NV_vertex_array_range?
+
+        RESOLVED: It doesn't, not even for performance.  It should be
+        fast on hardware that supports the feature with or without the
+        use of element arrays, with or without vertex array range.
+
+        XXXmjc Is it feasible to guarantee fast performance even in the
+        non-VAR, non-CVA, non-DRE case???  Possibly not.
+
+    *   Does this extension affect ArrayElement and DrawArrays, or just
+        DrawElements?
+
+        RESOLVED: All of them.  It applies to ArrayElement and to the
+        rest as a consequence.  It is likely not useful with any other
+        than DrawElements, but nevertheless not prohibited.
+
+    *   In the case of ArrayElement, what happens if the restart index is
+        used outside Begin/End?
+
+        RESOLVED: Since this is defined as being equivalent to a call to
+        PrimitiveRestartNV, and PrimitiveRestartNV is an
+        INVALID_OPERATION when not inside Begin/End, this is just an
+        error.
+
+    *   For DrawRangeElements/LockArrays purposes, must the restart index
+        lie within the start/end range?
+
+        RESOLVED: No, this would to some extent defeat the point if the
+        restart index was, e.g., 0xFFFFFFFF.  I don't believe any spec
+        language is required here, since hitting this index does not
+        cause a vertex to be dereferenced.
+
+    *   Should this state push/pop?
+
+        RESOLVED: Yes, as vertex array client state.
+
+New Procedures and Functions
+
+    void PrimitiveRestartNV(void);
+    void PrimitiveRestartIndexNV(uint index);
+
+New Tokens
+
+    Accepted by the <array> parameter of EnableClientState and
+    DisableClientState, by the <cap> parameter of IsEnabled, and by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        PRIMITIVE_RESTART_NV                           0x8558
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        PRIMITIVE_RESTART_INDEX_NV                     0x8559
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    Add a section 2.6.X "Primitive Restarts", immediately after section
+    2.6.2 "Polygon Edges" (page 19):
+
+    "2.6.X  Primitive Restarts
+
+    An OpenGL primitive may be restarted with the command
+
+      void PrimitiveRestartNV(void)
+
+    Between the execution of a Begin and its corresponding End, this
+    command is equivalent to a call to End, followed by a call to Begin
+    where the mode argument is the same mode as that used by the previous
+    Begin.  Outside the execution of a Begin and its corresponding End,
+    this command generates the error INVALID_OPERATION."
+
+
+    Add PrimitiveRestartNV to the list of commands that are allowed
+    between Begin and End in section 2.6.3 "GL Commands within Begin/End"
+    (page 19).
+
+
+    Add to section 2.8 "Vertex Arrays", after the description of
+    ArrayElement (page 24):
+
+    "Primitive restarting is enabled or disabled by calling
+    EnableClientState or DisableClientState with parameter
+    PRIMITIVE_RESTART_NV.  The command
+
+      void PrimitiveRestartIndexNV(uint index)
+
+    specifies the index of a vertex array element that is treated
+    specially when primitive restarting is enabled.  When ArrayElement is
+    called between an execution of Begin and the corresponding execution
+    of End, if i is equal to PRIMITIVE_RESTART_INDEX_NV, then no vertex
+    data is derefererenced, and no current vertex state is modified.
+    Instead, it is as if PrimitiveRestartNV had been called."
+
+
+    Replace the last paragraph of section 2.8 "Vertex Arrays" (page 28)
+    with the following:
+
+    "If the number of supported texture units (the value of
+    MAX_TEXTURE_UNITS) is k, then the client state required to implement
+    vertex arrays consists of 7+k boolean values, 5+k memory pointers,
+    5+k integer stride values, 4+k symbolic constants representing array
+    types, 3+k integers representing values per element, and an unsigned
+    integer representing the restart index.  In the initial state, the
+    boolean values are each disabled, the memory pointers are each null,
+    the strides are each zero, the array types are each FLOAT, the
+    integers representing values per element are each four, and the
+    restart index is zero."
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    Add to the end of Section 5.4 "Display Lists":
+
+    "PrimitiveRestartIndexNV is not compiled into display lists, but is
+    executed immediately."
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None.
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of
+    glXRender requests:
+
+        PrimitiveRestartNV
+            2       4               rendering command length
+            2       364             rendering command opcode
+
+        PrimitiveRestartIndexNV
+            2       8               rendering command length
+            2       365             rendering command opcode
+            4       CARD32          index
+
+Errors
+
+    The error INVALID_OPERATION is generated if PrimitiveRestartNV is
+    called outside the execution of Begin and the corresponding execution
+    of End.
+
+    The error INVALID_OPERATION is generated if PrimitiveRestartIndexNV
+    is called between the execution of Begin and the corresponding
+    execution of End.
+
+New State
+
+                                                           Initial
+   Get Value                       Get Command     Type    Value      Sec    Attrib
+   ---------                       -----------     ----    -------    ----   ------------
+   PRIMITIVE_RESTART_NV            IsEnabled       B       FALSE      2.8    vertex-array
+   PRIMITIVE_RESTART_INDEX_NV      GetIntegerv     Z+      0          2.8    vertex-array
+
+Revision History
+
+    none yet

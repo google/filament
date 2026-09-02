@@ -28,10 +28,13 @@
 #ifndef SRC_DAWN_WIRE_WIREDESERIALIZEALLOCATOR_H_
 #define SRC_DAWN_WIRE_WIREDESERIALIZEALLOCATOR_H_
 
+#include <optional>
 #include <vector>
 
 #include "dawn/wire/WireCmd_autogen.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/utils/heap_array.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire {
 // A really really simple implementation of the DeserializeAllocator. It's main feature
@@ -40,17 +43,20 @@ namespace dawn::wire {
 class WireDeserializeAllocator : public DeserializeAllocator {
   public:
     WireDeserializeAllocator();
-    virtual ~WireDeserializeAllocator();
+    ~WireDeserializeAllocator() override;
 
-    void* GetSpace(size_t size) override;
+    std::optional<Span<std::byte>> TryGetSpace(size_t size) override;
 
     void Reset();
 
   private:
-    size_t mRemainingSize = 0;
-    raw_ptr<char, AllowPtrArithmetic> mCurrentBuffer = nullptr;
-    char mStaticBuffer[2048];
-    std::vector<raw_ptr<char>> mAllocations;
+    static constexpr size_t kDefaultBufferSize = 2048;
+
+    std::array<std::byte, kDefaultBufferSize> mStaticBuffer;
+    std::vector<HeapArray<std::byte>> mAllocations;
+    // TODO(https://crbug.com/526537224): Maybe use RawSpan instead of Span, but we will need to
+    // verify that works with the static buffer also.
+    Span<std::byte> mCurrentBuffer = mStaticBuffer;
 };
 }  // namespace dawn::wire
 

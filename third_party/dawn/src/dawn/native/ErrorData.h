@@ -35,7 +35,7 @@
 #include <vector>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/Compiler.h"
+#include "src/dawn/common/Compiler.h"
 
 namespace wgpu {
 enum class ErrorType : uint32_t;
@@ -58,9 +58,9 @@ class [[nodiscard]] ErrorData {
     ErrorData(InternalErrorType type, std::string message);
 
     struct BacktraceRecord {
-        const char* file;
-        const char* function;
-        int line;
+        const char* file = nullptr;
+        const char* function = nullptr;
+        int line = 0;
     };
     void AppendBacktrace(const char* file, const char* function, int line);
     void AppendContext(std::string context);
@@ -97,7 +97,7 @@ class [[nodiscard]] ErrorData {
     std::string GetFormattedMessage() const;
 
   private:
-    InternalErrorType mType;
+    InternalErrorType mType = {};
     std::string mMessage;
     std::vector<BacktraceRecord> mBacktrace;
     std::vector<std::string> mContexts;

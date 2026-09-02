@@ -34,23 +34,29 @@
 #                       Do not modify this file directly
 ################################################################################
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//src/tint:flags.bzl", "COPTS")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+
+exports_files(glob(["*.def", "*.tmpl"], allow_empty = True))
+
 cc_library(
   name = "system",
   srcs = [
   ] + select({
-    ":_not_tint_build_is_linux__and__not_tint_build_is_mac__and__not_tint_build_is_win_": [
+    "@platforms//os:linux": [],
+    "@platforms//os:macos": [],
+    "@platforms//os:windows": [],
+    "//conditions:default": [
       "terminal_other.cc",
     ],
-    "//conditions:default": [],
   }) + select({
-    ":_not_tint_build_is_win_": [
+    "@platforms//os:windows": [],
+    "//conditions:default": [
       "env_other.cc",
     ],
-    "//conditions:default": [],
   }) + select({
-    ":tint_build_is_linux": [
+    "@platforms//os:linux": [
       "executable_path_linux.cc",
     ],
     "//conditions:default": [],
@@ -60,12 +66,12 @@ cc_library(
     ],
     "//conditions:default": [],
   }) + select({
-    ":tint_build_is_mac": [
+    "@platforms//os:macos": [
       "executable_file_mac.cc",
     ],
     "//conditions:default": [],
   }) + select({
-    ":tint_build_is_win": [
+    "@platforms//os:windows": [
       "env_windows.cc",
       "executable_path_windows.cc",
       "terminal_windows.cc",
@@ -90,50 +96,12 @@ cc_library(
   visibility = ["//visibility:public"],
 )
 
-alias(
-  name = "tint_build_is_linux",
-  actual = "//src/tint:tint_build_is_linux_true",
-)
-
-alias(
-  name = "_not_tint_build_is_linux_",
-  actual = "//src/tint:tint_build_is_linux_false",
-)
-
-alias(
-  name = "tint_build_is_mac",
-  actual = "//src/tint:tint_build_is_mac_true",
-)
-
-alias(
-  name = "_not_tint_build_is_mac_",
-  actual = "//src/tint:tint_build_is_mac_false",
-)
-
-alias(
-  name = "tint_build_is_win",
-  actual = "//src/tint:tint_build_is_win_true",
-)
-
-alias(
-  name = "_not_tint_build_is_win_",
-  actual = "//src/tint:tint_build_is_win_false",
-)
-
 selects.config_setting_group(
     name = "tint_build_is_linux_or_tint_build_is_mac",
     match_any = [
-        "tint_build_is_linux",
-        "tint_build_is_mac",
+        "@platforms//os:linux",
+        "@platforms//os:macos",
     ],
 )
 
-selects.config_setting_group(
-    name = "_not_tint_build_is_linux__and__not_tint_build_is_mac__and__not_tint_build_is_win_",
-    match_all = [
-        ":_not_tint_build_is_linux_",
-        ":_not_tint_build_is_mac_",
-        ":_not_tint_build_is_win_",
-    ],
-)
 

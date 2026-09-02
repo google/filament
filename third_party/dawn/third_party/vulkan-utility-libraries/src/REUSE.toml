@@ -1,0 +1,40 @@
+version = 1
+SPDX-PackageName = "Vulkan Utility Libraries"
+SPDX-FileCopyrightText = "2026 The Khronos Group, Inc."
+SPDX-PackageDownloadLocation = "https://github.com/KhronosGroup/Vulkan-Utility-Libraries"
+
+[[annotations]]
+path = "docs/Configuring-Vulkan-Layers-Whitepaper.pdf"
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "scripts/known_good.json"
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "scripts/CMakeLists.txt"
+precedence = "closest"
+SPDX-FileCopyrightText = "LunarG, Inc."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "scripts/update_deps.py"
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Glslang Authors. All rights reserved.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "Apache-2.0"

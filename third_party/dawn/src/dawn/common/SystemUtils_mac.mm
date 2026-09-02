@@ -27,23 +27,23 @@
 
 #import <Foundation/NSProcessInfo.h>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/SystemUtils.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 
 void GetMacOSVersion(int32_t* majorVersion, int32_t* minorVersion) {
     NSOperatingSystemVersion version = [[NSProcessInfo processInfo] operatingSystemVersion];
     DAWN_ASSERT(majorVersion != nullptr);
-    *majorVersion = version.majorVersion;
+    *majorVersion = static_cast<int32_t>(version.majorVersion);
     if (minorVersion != nullptr) {
-        *minorVersion = version.minorVersion;
+        *minorVersion = static_cast<int32_t>(version.minorVersion);
     }
 }
 
-bool IsMacOSVersionAtLeast(uint32_t majorVersion, uint32_t minorVersion) {
-    return
-        [NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:{majorVersion, minorVersion, 0}];
+bool IsMacOSVersionAtLeast(uint32_t majorVersion, uint32_t minorVersion, uint32_t patchVersion) {
+    return [NSProcessInfo.processInfo
+        isOperatingSystemAtLeastVersion:{majorVersion, minorVersion, patchVersion}];
 }
 
 }  // namespace dawn

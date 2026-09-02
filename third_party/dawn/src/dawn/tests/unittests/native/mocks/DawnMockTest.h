@@ -30,9 +30,9 @@
 
 #include <vector>
 
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/unittests/native/mocks/DeviceMock.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/unittests/native/mocks/DeviceMock.h"
 
 namespace dawn::native {
 

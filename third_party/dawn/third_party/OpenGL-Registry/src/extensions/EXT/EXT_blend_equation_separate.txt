@@ -1,0 +1,300 @@
+Name
+
+    EXT_blend_equation_separate
+
+Name Strings
+
+    GL_EXT_blend_equation_separate
+
+Contact
+
+    Mark Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2003.
+
+Version
+
+    Date: 12/23/2003  Version 1.0
+
+Status
+
+    Shipping as of May 2004 for GeForce6.
+
+Number
+
+    299
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.5 specification.
+
+    OpenGL 1.4 (or ARB_imaging, or EXT_blend_minmax and/or
+    EXT_blend_subtract) is required for blend equation support.
+
+    EXT_blend_func_separate is presumed but not required.
+
+    EXT_blend_logic_op interacts with this extension.
+
+Overview
+
+    EXT_blend_func_separate introduced separate RGB and alpha blend
+    factors.  EXT_blend_minmax introduced a distinct blend equation for
+    combining source and destination blend terms.  (EXT_blend_subtract &
+    EXT_blend_logic_op added other blend equation modes.)  OpenGL 1.4
+    integrated both functionalities into the core standard.
+
+    While there are separate blend functions for the RGB and alpha blend
+    factors, OpenGL 1.4 provides a single blend equation that applies
+    to both RGB and alpha portions of blending.
+
+    This extension provides a separate blend equation for RGB and alpha
+    to match the generality available for blend factors.
+
+IP Status
+
+    No known IP issues.
+
+Issues
+
+    Why not use ATI_blend_equation_separate?
+
+        Apple supports this extension in OS X 10.2 but the extension
+        lacks a specification and, as explained in subsequent issues,
+        the token naming is inconsistent with OpenGL conventions.
+
+    What should the token names be?
+
+        RESOLVED:  Follow the precedent of EXT_blend_equation_separate.
+        For example, GL_BLEND_DST becomes GL_BLEND_DST_RGB
+        and GL_BLEND_DST_ALPHA.  So GL_BLEND_EQUATION becomes
+        GL_BLEND_EQUATION_RGB (same value as GL_BLEND_EQUATION) and
+        GL_BLEND_EQUATION_ALPHA.
+
+        This is different from the ATI_blend_equation_separate approach
+        which introduces the single name GL_ALPHA_BLEND_EQUATION_ATI
+        (no RGB name is introduced).  The existing OpenGL convention
+        (example: ARB_texture_env_combine) is to use _RGB and _ALPHA as
+        a suffix for enumerants, not a prefix.
+
+    How should get token values be assigned?
+
+        RESOLVED:  GL_BLEND_EQUATION_RGB_EXT has the same value as
+        GL_BLEND_EQUATION.  See "Compatibility" section.
+
+        For compatibility with ATI_blend_equation_separate,
+        GL_BLEND_EQUATION_ALPHA_EXT shares the same value (0x883D)
+        with the ATI_blend_equation_separate's GL_ALPHA_BLEND_EQUATION_ATI
+        token.  The GL_BLEND_EQUATION_ALPHA_EXT name uses the suffixing
+        convention (rather than prefixing) for adding _ALPHA addition
+        as done by ARB_texture_env_combine and EXT_blend_func_separate.
+
+New Procedures and Functions
+
+    void BlendEquationSeparateEXT(enum modeRGB,
+                                  enum modeAlpha);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        BLEND_EQUATION_RGB_EXT             0x8009 (same as BLEND_EQUATION)
+        BLEND_EQUATION_ALPHA_EXT           0x883D
+
+Additions to Chapter 2 of the 1.5 GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.5 GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.5 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Replace the "Blend Equation" discussion in section 4.1.7 (Blending)
+    with the following:
+
+    "The equations used to control blending are determined by the blend
+    equations.  Blend equations are specified with the commands:
+
+      void BlendEquation(enum mode);
+      void BlendEquationSeparateEXT(enum modeRGB, enum modeAlpha);
+
+    BlendEquationSeparateEXT arguments modeRGB determines the RGB blend
+    function while modeAlpha determines the alpha blend equation.
+    BlendEquation argument mode determines both the RGB and alpha blend
+    equations.  modeRGB and modeAlpha must each be one of FUNC_ADD,
+    FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MIN, or MAX.
+
+    Destination (framebuffer) components are taken to be fixed-point
+    values represented according to the scheme in section 2.13.9
+    (Final Color Processing), as are source (fragment) components.
+    Constant color components are taken to be floating point values.
+    [ed: paragraph unchanged except that floating-point is hyphenated.]
+
+    Prior to blending, each fixed-point color component undergoes an
+    implied conversion to floating-point.  This conversion must leave
+    the values 0 and 1 invariant.  Blending components are treated as
+    if carried out in floating-point.  [ed: paragraph unchanged except
+    that floating-point is hyphenated.]
+
+    Table 4.blendeq provides the corresponding per-component blend
+    equations for each mode, whether acting on RGB components for modeRGB
+    or the alpha component for modeAlpha.
+
+    In the table, the "s" subscript on a color component abbreviation
+    (R, G, B, or A) refers to the source color component for an incoming
+    fragment, the "d" subscript on a color component abbreviation refers
+    to the destination color component at the corresponding framebuffer
+    location,  and the "c" subscript on a color component abbreviation
+    refers to the constant blend color component.  A color component
+    abbreviation without a subscript refers to the new color component
+    resulting from blending.  Additionally, Sr, Sg, Sb, and Sa are
+    the red, green, blue, and alpha components of the source weighting
+    factors determined by the source blend function, and Dr, Dg, Db, and
+    Da are the red, green, blue, and alpha components of the destination
+    weighting factors determined by the destination blend function.
+    Blend functions are described below.
+
+    Mode                   RGB components          Alpha component
+    ---------------------  ----------------------  ----------------------
+    FUNC_ADD               Rc = Rs * Sr + Rd * Dr  Ac = As * Sa + Ad * Da
+                           Gc = Gs * Sg + Gd * Dg
+                           Bc = Bs * Sb + Bd * Db
+    ---------------------  ----------------------  ----------------------
+    FUNC_SUBTRACT          Rc = Rs * Sr - Rd * Dr  Ac = As * Sa - Ad * Da
+                           Gc = Gs * Sg - Gd * Dg
+                           Bc = Bs * Sb - Bd * Db
+    ---------------------  ----------------------  ----------------------
+    FUNC_REVERSE_SUBTRACT  Rc = Rd * Sr - Rs * Dr  Ac = Ad * Sa - As * Da
+                           Gc = Gd * Sg - Gs * Dg
+                           Bc = Bd * Sb - Bs * Db
+    ---------------------  ----------------------  ----------------------
+    MIN                    Rc = min(Rs, Rd)        Ac = min(As, Ad)
+                           Gc = min(Gs, Gd)
+                           Bc = min(Bs, Bd)
+    ---------------------  ----------------------  ----------------------
+    MAX                    Rc = max(Rs, Rd)        Ac = max(As, Ad)
+                           Gc = max(Gs, Gd)
+                           Bc = max(Bs, Bd)
+    ---------------------  ----------------------  ----------------------
+
+    Table 4.blendeq:  RGB and alpha blend equations are their
+    per-component equations controlling the color components resulting
+    from blending for each mode."
+
+    In the "Blending State" paragraph, replace the initial lines with...
+
+    "The state required for blending is two integers for the RGB and alpha
+    blend equations, four integer indicating the source and destination
+    RGB and alpha blending functions, four floating-point values to store
+    the RGBA constant blend color, and a bit indicating whether blending
+    is enabled or disabled.  The initial blending equations for RGB and
+    alpha are FUNC_ADD. ..."
+
+Additions to Chapter 5 of the 1.5 GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.5 GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent
+    to the server as part of a glXRender request:
+
+        BlendEquationSeparateEXT
+            2           12              rendering command length
+            2           4228            rendering command opcode
+            4           ENUM            modeRGB
+            4           ENUM            modeAlpha
+
+Dependencies on EXT_blend_logic_op
+
+    If EXT_blend_logic_op and EXT_blend_equation_separate are both
+    supported, the logic op blend equation should be supported separately
+    for RGB and alpha as with the other blend equation modes.
+
+    And add to the table 4.blendeq this line:
+
+    Mode                   RGB components          Alpha component
+    ---------------------  ----------------------  ----------------------
+    LOGIC_OP               Rc = Rs OP Rd           Ac = As OP Ad
+                           Gc = Gs OP Gd
+                           Bc = Bs OP Bd
+    ---------------------  ----------------------  ----------------------
+
+    where OP denotes the logical operation controlled by LogicOp (see
+    table 4.2).
+
+    Note: there is no support for a distinct RGB logical operation
+    and alpha logical operation (that could be provided by another
+    extension).
+
+Errors
+
+    INVALID_ENUM is generated if either the modeRGB or modeAlpha
+    parameter of BlendEquationSeparateEXT is not one of FUNC_ADD,
+    FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    INVALID_OPERATION is generated if BlendEquationSeparateEXT
+    is executed between the execution of Begin and the corresponding
+    execution of End.
+
+New State
+
+                                                 Initial
+    Get Value                 Get Command  Type  Value     Attribute
+    ------------------------  -----------  ----  --------  ------------
+    BLEND_EQUATION_RGB_EXT    GetIntegerv  Z     FUNC_ADD  color-buffer
+    BLEND_EQUATION_ALPHA_EXT  GetIntegerv  Z     FUNC_ADD  color-buffer
+
+    [remove BLEND_EQUATION from the table, add a note "v1.5 BLEND_EQUATON"
+    beside BLEND_EQUATION_RGB_EXT to note the legacy name.]
+
+New Implementation Dependent State
+
+    None
+
+Compatibility
+
+    The BLEND_EQUATION_RGB_EXT query token has the same value as the
+    legacy BLEND_EQUATION query token.  This means querying the legacy
+    BLEND_EQUATION state is identical to querying the RGB blend equation
+    state.
+
+    This is a different approach than taken by the EXT_blend_func_separate
+    extension, but matches the approach taken by other "split" OpenGL
+    state such as the SMOOTH_POINT_SIZE_RANGE and ALIASED_POINT_SIZE_RANGE
+    values split from POINT_SIZE_RANGE.
+
+    In the EXT_blend_func_separate case, four new token names
+    (BLEND_DST_RGB, BLEND_SRC_RGB, BLEND_DST_ALPHA, and BLEND_DST_RGB)
+    with four new token values (0x80C8, 0x80C9, 0x80CA, and 0x80CB
+    respectively) were added.  Querying the legacy BLEND_DST (0x0BE0) and
+    BLEND_RGB (0x0BE1) returns the same value as querying BLEND_SRC_RGB
+    and BLEND_DST_RGB respectively but this was never explicitly
+    documented.
+
+    In the case of the point size ranges, SMOOTH_POINT_SIZE_RANGE was
+    given the same value as POINT_SIZE_RANGE (0x0B12) and a single new
+    token ALIASED_POINT_SIZE_RANGE (0x846D).
+
+    The point size ranges approach is preferable because it minimizes
+    the confusion about how the legacy name should be treated by
+    implementations because the legacy name shares its value with
+    the new name.  This is less prone to confusion by developers and
+    implementers and less effort to implement.
+
+    For token value compatibility with ATI_blend_equation_separate,
+    GL_BLEND_EQUATION_ALPHA_EXT shares the same value (0x883D) with the
+    ATI_blend_equation_separate's GL_ALPHA_BLEND_EQUATION_ATI token.

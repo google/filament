@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -155,6 +155,71 @@ func TestGatherWgslFiles(t *testing.T) {
 
 			if tc.verify != nil {
 				tc.verify(t, wrapper)
+			}
+		})
+	}
+}
+
+func TestCheckInputFileType(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  []byte
+		mode     FuzzMode
+		wantErr  bool
+		errMatch string
+	}{
+		{
+			name:    "Valid WGSL text file",
+			content: []byte("@fragment\nfn main() {}\n"),
+			mode:    FuzzModeWgsl,
+			wantErr: false,
+		},
+		{
+			name:     "Invalid WGSL - binary file with null byte",
+			content:  []byte{0x00, 0x01, 0x02, 0x03},
+			mode:     FuzzModeWgsl,
+			wantErr:  true,
+			errMatch: "wrong file type detected: expected a text file for WGSL mode, but '/test' appears to be binary. Did you forget to add the -ir flag?",
+		},
+		{
+			name:    "Valid IR binary file (contains null byte)",
+			content: []byte{0x0a, 0x08, 0x00, 0x12, 0x04, 0x01, 0x02, 0x03},
+			mode:    FuzzModeIr,
+			wantErr: false,
+		},
+		{
+			name:     "Invalid IR - text file",
+			content:  []byte("@fragment\nfn main() {}\n"),
+			mode:     FuzzModeIr,
+			wantErr:  true,
+			errMatch: "wrong file type detected: expected a binary file for IR mode, but '/test' appears to be text. Did you mean to remove the -ir flag?",
+		},
+		{
+			name:    "Empty file in WGSL mode (Success)",
+			content: []byte{},
+			mode:    FuzzModeWgsl,
+			wantErr: false,
+		},
+		{
+			name:    "Empty file in IR mode (Success)",
+			content: []byte{},
+			mode:    FuzzModeIr,
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := oswrapper.CreateFSTestOSWrapper()
+			err := fs.WriteFile("/test", tc.content, 0666)
+			require.NoError(t, err)
+
+			err = checkInputFileType("/test", tc.mode, fs)
+			if tc.wantErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errMatch)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

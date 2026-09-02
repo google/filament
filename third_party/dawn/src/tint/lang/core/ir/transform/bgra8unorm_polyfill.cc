@@ -145,7 +145,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> Bgra8UnormPolyfill(Module& ir) {
-    core::ir::AssertValid(ir, kBgra8UnormPolyfillCapabilities, "before core.Bgra8UnormPolyfill");
+    core::ir::AssertValid(ir, "before core.Bgra8UnormPolyfill");
 
     State{ir}.Process();
 

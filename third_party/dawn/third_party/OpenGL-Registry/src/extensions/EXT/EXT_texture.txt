@@ -1,0 +1,440 @@
+Name
+
+    EXT_texture
+
+Name Strings
+
+    GL_EXT_texture
+
+Version
+
+    $Date: 1996/04/05 19:17:03 $ $Revision: 1.21 $
+
+Number
+
+    4
+
+Dependencies
+
+    None
+
+Overview
+
+    The original intention of this extension was simply to support various
+    numeric resolutions of color components in texture images.  While it
+    accomplishes this, it also accomplishes a larger task, that of
+    formalizing the notion of an internal format for images, corresponding
+    to the external format that already existed for image data in host
+    memory.  This notion of an internal image format will be used
+    extensively in later extensions, especially those concerned with pixel
+    manipulation.
+
+    The idea of an internal format is simple: rather than treating a
+    retained image as having 1, 2, 3, or 4 components, treat it as though
+    it has a specific format, such as LUMINANCE_ALPHA, or just ALPHA.  Then
+    define the semantics of the use of internal images with these formats in
+    a consistent way.  Because texture mapping is already defined in GL, the
+    semantics for internal-format images were chosen to match those of the 1,
+    2, 3, and 4 component internal images that already existed.  The new
+    semantics are a superset of the old ones, however, so this extension
+    adds capabilities to GL, as well as allowing internal resolutions to be
+    specified.
+
+    This extension also defines a robust method for applications to
+    determine what combinations of texture dimensions and resolutions are
+    supported by an implementation.  It also introduces a new texture
+    environment: REPLACE_EXT.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <components> parameter of TexImage1D and TexImage2D:
+
+        ALPHA4_EXT                       0x803B
+        ALPHA8_EXT                       0x803C
+        ALPHA12_EXT                      0x803D
+        ALPHA16_EXT                      0x803E
+        LUMINANCE4_EXT                   0x803F
+        LUMINANCE8_EXT                   0x8040
+        LUMINANCE12_EXT                  0x8041
+        LUMINANCE16_EXT                  0x8042
+        LUMINANCE4_ALPHA4_EXT            0x8043
+        LUMINANCE6_ALPHA2_EXT            0x8044
+        LUMINANCE8_ALPHA8_EXT            0x8045
+        LUMINANCE12_ALPHA4_EXT           0x8046
+        LUMINANCE12_ALPHA12_EXT          0x8047
+        LUMINANCE16_ALPHA16_EXT          0x8048
+        INTENSITY_EXT                    0x8049
+        INTENSITY4_EXT                   0x804A
+        INTENSITY8_EXT                   0x804B
+        INTENSITY12_EXT                  0x804C
+        INTENSITY16_EXT                  0x804D
+        RGB2_EXT                         0x804E
+        RGB4_EXT                         0x804F
+        RGB5_EXT                         0x8050
+        RGB8_EXT                         0x8051
+        RGB10_EXT                        0x8052
+        RGB12_EXT                        0x8053
+        RGB16_EXT                        0x8054
+        RGBA2_EXT                        0x8055
+        RGBA4_EXT                        0x8056
+        RGB5_A1_EXT                      0x8057
+        RGBA8_EXT                        0x8058
+        RGB10_A2_EXT                     0x8059
+        RGBA12_EXT                       0x805A
+        RGBA16_EXT                       0x805B
+
+    Accepted by the <pname> parameters of GetTexLevelParameteriv and
+    GetTexLevelParameterfv:
+
+        TEXTURE_RED_SIZE_EXT             0x805C
+        TEXTURE_GREEN_SIZE_EXT           0x805D
+        TEXTURE_BLUE_SIZE_EXT            0x805E
+        TEXTURE_ALPHA_SIZE_EXT           0x805F
+        TEXTURE_LUMINANCE_SIZE_EXT       0x8060
+        TEXTURE_INTENSITY_SIZE_EXT       0x8061
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnvfi when the <pname> parameter value is
+    GL_TEXTURE_ENV_MODE
+
+        REPLACE_EXT                      0x8062
+
+    Accepted by the <target> parameters of TexImage1D,
+    GetTexLevelParameteriv, and GetTexLevelParameterfv:
+
+        PROXY_TEXTURE_1D_EXT             0x8063
+
+    Accepted by the <target> parameters of TexImage2D,
+    GetTexLevelParameteriv, and GetTexLevelParameterfv:
+
+        PROXY_TEXTURE_2D_EXT             0x8064
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    A new error token value, TEXTURE_TOO_LARGE_EXT, is defined and added to
+    table 2.3:
+
+                                                                           Offending
+                                                                           command
+        Error                   Description                                ignored?
+        -----                   -----------                                ---------
+        INVALID_ENUM            enum argument out of range                 Yes
+        INVALID_VALUE           Numeric argument out of range              Yes
+        INVALID_OPERATION       Operation illegal in current state         Yes
+        STACK_OVERFLOW          Command would cause a stack overflow       Yes
+        STACK_UNDERFLOW         Command would cause a stack underflow      Yes
+        TEXTURE_TOO_LARGE_EXT   The specified texture is too large         Yes
+        OUT_OF_MEMORY           Not enough memory left to execute command  Unknown
+
+        Table 2.3: Summary of GL errors
+
+     and defined as follows:
+
+        TEXTURE_TOO_LARGE_EXT            0x8065
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Many additional values can be specified for the <components> parameter
+    of TexImage1D and TexImage2D.  The GL Specification indicates (in
+    section 3.8) that only values 1, 2, 3, and 4 can be specified.  This
+    extension defines semantics for the currently existing tokens ALPHA,
+    RGB, RGBA, LUMINANCE, and LUMINANCE_ALPHA, and also defines semantics
+    for many new tokens.  Each of the new tokens (except INTENSITY_EXT)
+    indicates a desired storage resolution, as well as a base format.  These
+    tokens are:
+
+                                                                Red     Green   Blue    Alpha   Luminance   Intensity
+        Token name                      Base format             Bits    Bits    Bits    Bits    Bits        Bits
+        ----------                      -----------             ----    ----    ----    ----    ----        ----
+
+        ALPHA4_EXT                      ALPHA                                             4
+        ALPHA8_EXT                      ALPHA                                             8
+        ALPHA12_EXT                     ALPHA                                            12
+        ALPHA16_EXT                     ALPHA                                            16
+        LUMINANCE4_EXT                  LUMINANCE                                                 4
+        LUMINANCE8_EXT                  LUMINANCE                                                 8
+        LUMINANCE12_EXT                 LUMINANCE                                                12
+        LUMINANCE16_EXT                 LUMINANCE                                                16
+        LUMINANCE4_ALPHA4_EXT           LUMINANCE_ALPHA                                   4       4
+        LUMINANCE6_ALPHA2_EXT           LUMINANCE_ALPHA                                   2       6
+        LUMINANCE8_ALPHA8_EXT           LUMINANCE_ALPHA                                   8       8
+        LUMINANCE12_ALPHA4_EXT          LUMINANCE_ALPHA                                   4      12
+        LUMINANCE12_ALPHA12_EXT         LUMINANCE_ALPHA                                  12      12
+        LUMINANCE16_ALPHA16_EXT         LUMINANCE_ALPHA                                  16      16
+        INTENSITY_EXT                   INTENSITY_EXT                                                        ?
+        INTENSITY4_EXT                  INTENSITY_EXT                                                        4
+        INTENSITY8_EXT                  INTENSITY_EXT                                                        8
+        INTENSITY12_EXT                 INTENSITY_EXT                                                       12
+        INTENSITY16_EXT                 INTENSITY_EXT                                                       16
+        RGB2_EXT                        RGB                       2       2       2                
+        RGB4_EXT                        RGB                       4       4       4                
+        RGB5_EXT                        RGB                       5       5       5                
+        RGB8_EXT                        RGB                       8       8       8                
+        RGB10_EXT                       RGB                      10      10      10                
+        RGB12_EXT                       RGB                      12      12      12                
+        RGB16_EXT                       RGB                      16      16      16                
+        RGBA2_EXT                       RGBA                      2       2       2       2        
+        RGBA4_EXT                       RGBA                      4       4       4       4        
+        RGB5_A1_EXT                     RGBA                      5       5       5       1        
+        RGBA8_EXT                       RGBA                      8       8       8       8        
+        RGB10_A2_EXT                    RGBA                     10      10      10       2        
+        RGBA12_EXT                      RGBA                     12      12      12      12        
+        RGBA16_EXT                      RGBA                     16      16      16      16        
+
+    All implementations of this extension support the base formats ALPHA,
+    LUMINANCE, LUMINANCE_ALPHA, RGB, and RGBA.  All implementations also
+    accept all the tokens in the table above, but may not allocate storage
+    exactly equal to that indicated in the table.  Instead, storage is
+    allocated to best match the resolutions in the table.  The determination
+    of best match is left to the implementation.  Storage allocation for the
+    base formats (as well as for formats "1", "2", "3", and "4") is an
+    implementation dependent compromise of component resolution,
+    performance, image size, and memory availability.
+    
+    It is acceptable for an implementation to vary its allocation of
+    internal component resolution based on any TexImage1D or TexImage2D
+    parameter, but the allocation must not be a function of any other
+    factor, and cannot be changed once it is established.  In particular,
+    allocations must be invariant -- the same allocation must be made each
+    time a texture image is specified with the same parameter values.
+    Provision is made for an application to determine what component
+    resolutions are available without having to fully specify the texture
+    (see below).
+
+    A set of mipmap arrays is incomplete (see the Mipmapping section of the
+    GL Specification) if different internal formats are specified for arrays
+    in the set, even if the resulting formats of the arrays are identical.
+    An implementation can, however, report different component precisions
+    for the arrays in the set, even if all were specified with the same
+    internal format.  (The set of arrays will be complete in this case.)
+
+    The assignments of texture component values from color components
+    "extracted" from the incoming image (see the discussion in section 3.8
+    of the GL Specification) are defined by this new version of Table 3.6:
+
+        Base Internal Format    red     green   blue    alpha   luminance       intensity
+        --------------------    ---     -----   ----    -----   ---------       ---------
+
+        ALPHA                                           A
+        LUMINANCE                                               R
+        LUMINANCE_ALPHA                                 A       R
+        INTENSITY_EXT                                                           R
+        RGB                     R       G       B
+        RGBA                    R       G       B       A
+
+        Table 3.6: Correspondence of texture components to extracted
+        R, G, B, and A values.
+
+    Texture components are assigned to Rt, Gt, Bt, and At.
+    Table 3.8 (Texture functions) refers to these components.
+    The assignments are defined by the following table:
+
+                                Texture Environment
+                                -------------------
+
+        Base Texture Format     Rt      Gt      Bt      At
+        -------------------     --      --      --      --
+
+        LUMINANCE               Lt      Lt      Lt      x
+
+        ALPHA                   x       x       x       At
+
+        INTENSITY_EXT           It      It      It      It
+
+        LUMINANCE_ALPHA         Lt      Lt      Lt      At
+
+        RGB                     Rt      Gt      Bt      x
+
+        RGBA                    Rt      Gt      Bt      At
+
+        Table ??: Mapping of Texture Components to Rt, Gt, Bt, At.
+
+    Where there appears an "x", the assignment is "don't care", since
+    that component is not used by the texture environment.
+
+    This extension redefines the application of a texture to the color
+    components of a fragment.  In particular, a new texture environment, REPLACE,
+    and two new texture formats, ALPHA and INTENSITY_EXT, are included.
+    Table 3.8 (Texture functions) of the GL
+    Specification is replaced by the following table:
+
+                                Texture Environment
+                                -------------------
+
+        Base Texture Format     REPLACE         MODULATE        BLEND                           DECAL
+        -------------------     -------         --------        -----                           -----
+
+        LUMINANCE               Rv =    Rt      Rv = Rf * Rt    Rv = Rf * (1-Rt) + Rc * Rt      undefined
+                                Gv =    Gt      Gv = Gf * Gt    Gv = Gf * (1-Gt) + Gc * Gt
+                                Bv =    Bt      Bv = Bf * Bt    Bv = Bf * (1-Bt) + Bc * Bt
+                                Av = Af         Av = Af         Av = Af
+
+        ALPHA                   Rv = Rf         Rv = Rf         Rv = Rf                         undefined
+                                Gv = Gf         Gv = Gf         Gv = Gf
+                                Bv = Bf         Bv = Bf         Bv = Bf
+                                Av =    At      Av = Af * At    Av = Af * At
+
+        INTENSITY_EXT           Rv =    Rt      Rv = Rf * Rt    Rv = Rf * (1-Rt) + Rc * Rt      undefined
+                                Gv =    Gt      Gv = Gf * Gt    Gv = Gf * (1-Gt) + Gc * Gt
+                                Bv =    Bt      Bv = Bf * Bt    Bv = Bf * (1-Bt) + Bc * Bt
+                                Av =    At      Av = Af * At    Av = Af * (1-At) + Ac * At
+
+        LUMINANCE_ALPHA         Rv =    Rt      Rv = Rf * Rt    Rv = Rf * (1-Rt) + Rc * Rt      undefined
+                                Gv =    Gt      Gv = Gf * Gt    Gv = Gf * (1-Gt) + Gc * Gt
+                                Bv =    Bt      Bv = Bf * Bt    Bv = Bf * (1-Bt) + Bc * Bt
+                                Av =    At      Av = Af * At    Av = Af * At
+
+        RGB                     Rv =    Rt      Rv = Rf * Rt    Rv = Rf * (1-Rt) + Rc * Rt      Rv =    Rt
+                                Gv =    Gt      Gv = Gf * Gt    Gv = Gf * (1-Gt) + Gc * Gt      Gv =    Gt
+                                Bv =    Bt      Bv = Bf * Bt    Bv = Bf * (1-Bt) + Bc * Bt      Bv =    Bt
+                                Av = Af         Av = Af         Av = Af                         Av = Af
+
+        RGBA                    Rv =    Rt      Rv = Rf * Rt    Rv = Rf * (1-Rt) + Rc * Rt      Rv = Rf * (1-At) + Rt * At
+                                Gv =    Gt      Gv = Gf * Gt    Gv = Gf * (1-Gt) + Gc * Gt      Gv = Gf * (1-At) + Gt * At
+                                Bv =    Bt      Bv = Bf * Bt    Bv = Bf * (1-Bt) + Bc * Bt      Bv = Bf * (1-At) + Bt * At
+                                Av =    At      Av = Af * At    Av = Af * At                    Av = Af
+
+        Table 3.8: Texture functions.
+
+    Finally, for backward compatibility, the semantics of <components>
+    values 1, 2, 3, and 4 are identical to those of LUMINANCE,
+    LUMINANCE_ALPHA, RGB, and RGBA respectively.  The one exception is that
+    the token values for 1, 2, 3, and 4 are not the same as the token values
+    LUMINANCE, LUMINANCE_ALPHA, RGB, and RGBA.
+
+    Query support
+    -------------
+
+    Alternate sets of partial per-level texture state are defined for
+    the proxy textures PROXY_TEXTURE_1D_EXT and PROXY_TEXTURE_2D_EXT.
+    Specifically, TEXTURE_WIDTH, TEXTURE_HEIGHT, TEXTURE_BORDER,
+    TEXTURE_COMPONENTS, TEXTURE_RED_SIZE_EXT, TEXTURE_GREEN_SIZE_EXT,
+    TEXTURE_BLUE_SIZE_EXT, TEXTURE_ALPHA_SIZE_EXT,
+    TEXTURE_LUMINANCE_SIZE_EXT, and TEXTURE_INTENSITY_SIZE_EXT are
+    maintained for proxy textures.  When TexImage2D is called with
+    <target> set to PROXY_TEXTURE_2D_EXT, these proxy state values are
+    always recomputed and updated, even if the texture is too large to
+    actually be used.  If the texture is too large, all of these state
+    variables are set to zero.  If the texture could be accommodated
+    by TexImage2D called with <target> TEXTURE_2D, these values are
+    set as though TEXTURE_2D were being defined.  All of these state
+    value can be queried with GetTexLevelParameteriv or
+    GetTexLevelParameterfv with <target> set to PROXY_TEXTURE_2D_EXT.
+    Calling TexImage2D with <target> PROXY_TEXTURE_2D_EXT has no
+    effect on the actual 2-dimensional texture or its state.
+
+    To determine the maximum array size for a mipmap texture, specify and
+    query the proxy texture at the highest level that accurately reflects the
+    aspect ratio of the desired level zero array.
+
+    There is no image associated with PROXY_TEXTURE_2D_EXT.  Therefore
+    PROXY_TEXTURE_2D_EXT cannot be used as a texture, and its image must
+    never be queried using GetTexImage.  (The error INVALID_ENUM results if
+    this is attempted.)  Likewise, there is no nonlevel-related state
+    associated with a proxy texture, so calling GetTexParameteriv or
+    GetTexParameterfv with <target> PROXY_TEXTURE_2D_EXT results in the
+    error INVALID_ENUM.
+
+    The proxy 1-dimensional texture behaves identically to the proxy
+    2-dimensional texture, except that its state does not include
+    TEXTURE_HEIGHT.
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    TexImage1D with a proxy target and TexImage2D with a proxy target
+    are not included in display lists, but are instead executed
+    immediately.
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    GetTexLevelParameteriv, when called with <pname> TEXTURE_COMPONENTS,
+    returns the value of the <components> state variable as specified by the
+    application.  This remains true even if the actual internal format
+    matches that of another token.
+
+    GetTexLevelParameteriv, when called with <pname> TEXTURE_RED_SIZE_EXT,
+    TEXTURE_GREEN_SIZE_EXT, TEXTURE_BLUE_SIZE_EXT, TEXTURE_ALPHA_SIZE_EXT,
+    TEXTURE_LUMINANCE_SIZE_EXT, or TEXTURE_INTENSITY_SIZE_EXT returns the
+    actual number of bits of internal storage for red, green, blue, alpha,
+    luminance, or intensity.  This value may not match the value of the
+    specified internal format.
+
+    GetTexImage continues to operate as though ReadPixels were called with
+    the texture image as the framebuffer.  The assignments of texture
+    component values to the initial R, G, B, and A values of the read-back
+    texel (prior to PixelTransfer and PixelStorage operations) are:
+
+        Base Internal Format    R               G       B       A
+        --------------------    -               -       -       -
+
+        ALPHA                   0.0             0.0     0.0     alpha
+        LUMINANCE               luminance       0.0     0.0     0.0                                             
+        LUMINANCE_ALPHA         luminance       0.0     0.0     alpha
+        INTENSITY_EXT           intensity       0.0     0.0     0.0
+        RGB                     red             green   blue    0.0
+        RGBA                    red             green   blue    alpha
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on EXT_abgr
+
+    Token ABGR_EXT cannot be used to specify internal texture image formats.
+
+Errors
+
+    The GL Specification requires that INVALID_VALUE be generated if any
+    texture dimension is specified less than zero, greater than
+    MAX_TEXTURE_SIZE, or with a value that cannot be represented as 2**k +
+    2*border, for some integer k.  This extension eliminates the requirement
+    that all dimensions be specified less than or equal to MAX_TEXTURE_SIZE,
+    and replaces it with a new error token and error condition.
+    INVALID_VALUE is generated if any texture dimension is specified less
+    than zero, or with a value that cannot be represented as 2**k + 2*border.
+    TEXTURE_TOO_LARGE_EXT is generated if the texture is too large to be
+    accommodated, for whatever reason.  An implementation must specify
+    MAX_TEXTURE_SIZE such that TEXTURE_TOO_LARGE_EXT is never generated if
+    all the dimensions of the texture are less than or equal to
+    MAX_TEXTURE_SIZE.  Also, TEXTURE_TOO_LARGE_EXT is never generated when
+    the target is a proxy texture, such as PROXY_TEXTURE_1D_EXT or
+    PROXY_TEXTURE_2D_EXT.
+
+    This change to the error semantics does not require that the major
+    revision level be incremented, because the GL Specification allows for
+    changes to error semantics (Section 2.5).
+
+New State
+
+                                                                                        Initial
+    Get Value                           Get Command             Type                    Value   Attrib
+    ---------                           -----------             ----                    ------- ------
+    TEXTURE_RED_SIZE_EXT                GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_GREEN_SIZE_EXT              GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_BLUE_SIZE_EXT               GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_ALPHA_SIZE_EXT              GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_LUMINANCE_SIZE_EXT          GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_INTENSITY_SIZE_EXT          GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+
+    TEXTURE                             GetTexImage             2 x 1 x levels x I      null       -
+    TEXTURE_WIDTH                       GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_HEIGHT                      GetTexLevelParameteriv  1 x 2 x levels x Z+     0          -
+    TEXTURE_BORDER                      GetTexLevelParameteriv  2 x 2 x levels x Z+     0          -
+    TEXTURE_COMPONENTS                  GetTexLevelParameteriv  2 x 2 x levels x Z42    1          -
+
+New Implementation Dependent State
+
+    None

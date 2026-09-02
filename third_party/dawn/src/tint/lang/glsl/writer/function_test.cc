@@ -38,7 +38,7 @@ TEST_F(GlslWriterTest, Function_Empty) {
     func->Block()->Append(b.Return(func));
 
     Options opts{};
-    auto result = Generate(opts, core::ir::Function::PipelineStage::kCompute);
+    auto result = Generate(opts);
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
@@ -55,7 +55,7 @@ TEST_F(GlslWriterTest, Function_ComputeWgSize) {
     func->Block()->Append(b.Return(func));
 
     Options opts{};
-    auto result = Generate(opts, core::ir::Function::PipelineStage::kCompute);
+    auto result = Generate(opts);
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 2, local_size_y = 4, local_size_z = 6) in;

@@ -1,0 +1,204 @@
+Name
+
+    APPLE_client_storage
+	
+Name Strings
+
+    GL_APPLE_client_storage
+
+Contact
+
+    Geoff Stahl, Apple (gstahl 'at' apple.com)
+
+Status
+
+    Complete
+
+Version
+
+    $Date: 2002/08/27 01:40:16 $ $Revision: 1.6 $
+
+Number
+
+    270
+	
+Dependencies
+
+    OpenGL 1.1 is required.
+    The extension is written against the OpenGL 1.2.1 Specification.
+	
+Overview
+
+	This extension provides a simple mechanism to optimize texture data handling
+	by clients.  GL implementations normally maintain a copy of texture image
+	data supplied clients when any of the various texturing commands, such as
+	TexImage2D, are invoked.  This extension eliminates GL's internal copy of
+	the texture image data and allows a client to maintain this data locally for
+	textures when the UNPACK_CLIENT_STORAGE_APPLE pixel storage parameter is
+	TRUE at the time of texture specification.  Local texture data storage is
+	especially useful in cases where clients maintain internal copies of
+	textures used in any case.  This results in what could be considered an
+	extra copy of the texture image data.  Assuming all operations are error
+	free, the use of client storage has no affect on the result of texturing
+	operations and will not affect rendering results. APPLE_client_storage
+	allows clients to optimize memory requirements and copy operations it also
+	requires adherence to specific rules in maintaining texture image data.
+
+	Clients using this extension are agreeing to preserve a texture's image data
+	for the life of the texture.  The life of the texture is defined, in this
+	case, as the time from first issuing the TexImage3D, TexImage2D or
+	TexImage1D command, for the specific texture object with the
+	UNPACK_CLIENT_STORAGE_APPLE pixel storage parameter set to TRUE, until the
+	DeleteTextures command or another TexImage command for that same object. 
+	Only after DeleteTextures has completed, or new texture is specified, can
+	the local texture memory be released, as it will no longer be utilized by
+	OpenGL.  Changing the UNPACK_CLIENT_STORAGE_APPLE pixel storage parameter
+	will have no additional effect once the texturing command has been issued
+	and specifically will not alleviate the client from maintaining the texture
+	data.
+
+	Client storage is implemented as a pixel storage parameter which affects
+	texture image storage at the time the texturing command is issued.  As with
+	other pixel storage parameters this state may differ from the time the
+	texturing command in executed if the command is placed in a display list. 
+	The PixelStore command is used to set the parameter
+	UNPACK_CLIENT_STORAGE_APPLE.  Values can either be TRUE or FALSE, with TRUE
+	representing the use of client local storage and FALSE indicating the OpenGL
+	engine and not the client will be responsible for maintaining texture
+	storage for future texturing commands issued per the OpenGL specification.
+	The default state for the UNPACK_CLIENT_STORAGE_APPLE parameter is FALSE
+
+	Client storage is only available for texture objects and not the default
+	texture (of any target type).  This means that a texture object has to
+	generated and bound to be used with client storage.  Setting
+	UNPACK_CLIENT_STORAGE_APPLE to TRUE and texturing with the default texture
+	will result in normally texturing with GL maintaining a copy of the texture
+	image data.
+
+	Normally, client storage will be used in conjunction with normal texturing
+	techniques.  An application would use GenTextures to generate texture
+	objects as needed.  BindTexture to the texture object name of interest. 
+	Enable client storage via the PixelStore command setting the
+	UNPACK_CLIENT_STORAGE_APPLE parameter to TRUE. Then use TexImage3D,
+	TexImage2D or TexImage1D to specify the texture image.  If no further use of
+	client storage is desired, it is recommended to again use the PixelStore
+	command, in this case setting the UNPACK_CLIENT_STORAGE_APPLE parameter to
+	FALSE to disable client storage, since this pixel state is maintained unless
+	explicitly set by the PixelStore command.
+
+	If an application needs to modify the texture, using TexSubImage for
+	example, it should be noted that the pointer passed to TexSubImage1D,
+	TexSubImage2D or TexSubImage3D does not have to the same, or within the
+	original texture memory.  It if is not, there is the likelihood of GL
+	copying the new data to the original texture memory owned by the client,
+	thus actually modifying this texture image data.  This does not affect
+	requirement to maintain the original texture memory but also does not add
+	the requirement to maintain the sub image data, due to the copy.
+
+	Once a client has completed use of the texture stored in client memory, it
+	should issue a DeleteTextures command to delete the texture object or issue
+	a texture command, with the same target type, for the object, with either a
+	different data pointer, or UNPACK_CLIENT_STORAGE_APPLE set to false, in any
+	case, breaking the tie between GL and the texture buffer.  An implicit Flush
+	command is issued in these cases, ensuring all access to the texture by
+	OpenGL is complete.  Only at this point can the texture buffer be safely
+	released.  Releasing the texture buffer prior has undefined results and will
+	very possibly display texel anomalies at run time.  System level memory
+	management and paging schemes should not affect the use of client storage. 
+	Consider in any case, that GL has an alias of the base pointer for this
+	block of texture memory which is maintained until GL is finished rendering
+	with the texture and it has been deleted or reassigned to another set of
+	texture data.  As long as this alias exists, applications must not
+	de-allocate, move or purge this memory.
+
+New Procedures and Functions
+
+	None
+	
+New Tokens
+
+	Accepted by the <pname> parameters of PixelStore:
+
+	UNPACK_CLIENT_STORAGE_APPLE    0x85B2
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+	
+    - (3.6.1, p. 75) Add new PixelStore parameter:
+	
+	Add to Table 3.1 (p. 76):
+
+      Parameter Name               Type     Initial Value    Valid Range
+      --------------               ----     -------------    -----------
+      UNPACK_CLIENT_STORAGE_APPLE  boolean  FALSE            TRUE/FALSE
+    
+    - (3.8.1, p. 117) Last paragraph first sentence changed to:
+
+	  "If the pixel storage parameter UNPACK_CLIENT_STORAGE_APPLE is false the
+	  image indicated to the GL by the image pointer is decoded and copied into
+	  the GL's internal memory."
+    
+    - (3.8.1, p. 118) Add paragraphs before to last paragraph in section:
+
+	  "If the pixel storage parameter UNPACK_CLIENT_STORAGE_APPLE is TRUE, GL
+	  will not copy but instead will attempt to decode the texture image
+	  data directly from client memory.  GL will fall back to the default copy
+	  and decode behavior if modifications to the texture image data are
+	  required to decode the texels.  This fall back may occur if ARB_imaging is
+	  enabled, texture image data format or internal format indexed,
+	  UNPACK_SWAP_BYTES is TRUE, or texturing from the default texture object. 
+	  Otherwise, GL will attempt to use the client local memory directly to
+	  decode the texels.
+
+	  Clients using the UNPACK_CLIENT_STORAGE_APPLE pixel storage parameter will
+	  maintain a texture's image data for the life of the texture.  The life of
+	  the texture in this case is the time from issuing this texture command,
+	  for the specific texture object, until the DeleteTextures command or
+	  another texture command for this same texture object. Only after
+	  DeleteTextures has completed, or new texture image data is specified, can
+	  the client local memory be released.  Releasing the texture buffer prior
+	  has undefined results and will very possibly display texel anomalies at
+	  run time.  System level memory management and paging schemes should not
+	  affect the use of client local storage. Consider, that GL has an alias of
+	  the base pointer for this block of client memory which is maintained until
+	  GL is finished rendering with the texture and it has been deleted or
+	  reassigned to other texture image data.  As long as this alias exists,
+	  clients must not de-allocate, move or purge this memory.  Otherwise,
+	  texturing from with client local storage is unchanged from the default
+	  copy and decode behavior."
+
+    - (3.8.2, p. 123) Add final paragraph in section:
+
+	  "Note, if the existing target texture array has enabled client local
+	  storage via the UNPACK_CLIENT_STORAGE_APPLE pixel storage parameter and if
+	  client local storage is being used, TexSubImage and CopyTexImage may
+	  directly modify the client memory being used as storage for a texture's
+	  image data."
+	  
+Additions to Chapter 6 of the 1.2.1 Specification (State and State Requests)
+
+	None
+	
+Additions to the GLX Specification
+
+	None
+	
+GLX Protocol
+
+	None
+	
+Errors
+
+	None (Texturing using client local storage behaves as texturing with client
+	local storage and no additional errors are generated)
+
+New State
+	(table 6.17, p. 207)
+	Get Value                   Type  Get Command Initial Value Description                 Sec. Attribute
+	---------                   ----  ----------- ------------- -----------                 ---- ---------
+	UNPACK_CLIENT_STORAGE_APPLE B     GetBooleanv FALSE         Value of                    4.3  pixel-store
+                                                                UNPACK_CLIENT_STORAGE_APPLE
+
+New Implementation Dependent State
+
+	None

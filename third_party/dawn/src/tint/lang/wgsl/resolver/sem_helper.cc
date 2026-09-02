@@ -122,11 +122,8 @@ StyledText SemHelper::Describe(const sem::Expression* expr) const {
         [&](const sem::BuiltinEnumExpression<core::TexelFormat>* fmt) {
             text << "texel format " << style::Enum(fmt->Value());
         },
-        [&](const sem::BuiltinEnumExpression<core::TextureFilterable>* filterable) {
-            text << "texture filterable " << style::Enum(filterable->Value());
-        },
-        [&](const sem::BuiltinEnumExpression<core::SamplerFiltering>* filtering) {
-            text << "sampler filtering " << style::Enum(filtering->Value());
+        [&](const sem::BuiltinEnumExpression<core::Majorness>* major) {
+            text << "majorness " << style::Enum(major->Value());
         },
         [&](const UnresolvedIdentifier* ui) {
             auto name = ui->Identifier()->identifier->symbol.NameView();

@@ -1,0 +1,58 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglGetCurrentSurface">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglGetCurrentSurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetCurrentSurface</refname>
+        <refpurpose>
+            return the read or draw surface for the current <acronym>EGL</acronym> rendering context
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSurface <function>eglGetCurrentSurface</function></funcdef>
+                <paramdef>EGLint <parameter>readdraw</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>readdraw</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies whether to return the read surface
+                        (<constant>EGL_READ</constant>) or the draw surface
+                        (<constant>EGL_DRAW</constant>).
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglGetCurrentSurface</function> returns the read or draw
+            surface attached to the current
+            <acronym>EGL</acronym> rendering context, as specified by
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>.
+            If no context is current, <constant>EGL_NO_SURFACE</constant> is returned.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>    </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

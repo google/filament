@@ -30,8 +30,8 @@
 
 #if defined(DAWN_ENABLE_RENDERDOC)
 
-#include "dawn/native/Device.h"
 #include "renderdoc/api/app/renderdoc_app.h"
+#include "src/dawn/native/Device.h"
 
 namespace dawn::native::utils {
 

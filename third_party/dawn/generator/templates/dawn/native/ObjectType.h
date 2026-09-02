@@ -27,10 +27,10 @@
 
 {% set namespace_name = Name(metadata.native_namespace) %}
 {% set DIR = namespace_name.concatcase().upper() %}
-#ifndef {{DIR}}_OBJECTTPYE_AUTOGEN_H_
-#define {{DIR}}_OBJECTTPYE_AUTOGEN_H_
+#ifndef {{DIR}}_OBJECTTYPE_AUTOGEN_H_
+#define {{DIR}}_OBJECTTYPE_AUTOGEN_H_
 
-#include "dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_array.h"
 
 #include <cstdint>
 
@@ -56,4 +56,4 @@ namespace {{native_namespace}} {
 } // namespace {{native_namespace}}
 
 
-#endif  // {{DIR}}_OBJECTTPYE_AUTOGEN_H_
+#endif  // {{DIR}}_OBJECTTYPE_AUTOGEN_H_

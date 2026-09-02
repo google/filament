@@ -1,0 +1,266 @@
+Name
+
+    ARB_texture_stencil8
+
+Name Strings
+
+    GL_ARB_texture_stencil8
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Piers Daniell, NVIDIA
+    Daniel Koch, NVIDIA
+    Jon Leech
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date:         August 26, 2013
+    Revision:                   5
+
+Number
+
+    ARB Extension #150
+
+Dependencies
+
+    This extension is written against the OpenGL 4.3 specification
+    (Compatibility Profile).
+
+Overview
+
+    This extension accepts STENCIL_INDEX8 as a texture internal format, and
+    adds STENCIL_INDEX8 to the required internal format list. This removes the
+    need to use renderbuffers if a stencil-only format is desired.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <format> parameter of TexImage3D, TexImage2D, TexImage1D,
+    TexSubImage3D, TexSubImage2D, TexSubImage1D, or GetTexImage:
+
+        STENCIL_INDEX           0x1901  /* existing enum */
+
+    Accepted by the <internalformat> parameter of TexImage3D, TexImage2D,
+    TexImage1D, CopyTexImage2D, CopyTexImage1D, TexStorage3D, TexStorage2D,
+    TexStorage1D, TexImage3DMultisample, TexImage2DMultisample,
+    TexStorage3DMultisample, TexStorage2DMultisample:
+
+        STENCIL_INDEX8          0x8D48  /* existing enum */
+
+Additions to Chapter 8 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Textures and Samplers)
+
+    Modify Section 8.5 Texture Image Specification, p. 205
+
+    In the first paragraph, replace "The <format> STENCIL_INDEX is not allowed"
+    with "An INVALID_OPERATION error is generated if the <format> is
+    STENCIL_INDEX and the base internal format is not STENCIL_INDEX."
+
+
+    Modify the last paragraph of p. 207 to include STENCIL_INDEX:
+
+    "Textures with a base internal format of DEPTH_COMPONENT, DEPTH_STENCIL,
+    or STENCIL_INDEX are supported by texture image specification commands
+    only if <target> is TEXTURE_1D, TEXTURE_2D, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE, TEXTURE_CUBE_MAP,
+    TEXTURE_CUBE_MAP_ARRAY, TEXTURE_2D_MULTISAMPLE,
+    TEXTURE_2D_MULTISAMPLE_ARRAY, PROXY_TEXTURE_1D, PROXY_TEXTURE_2D,
+    PROXY_TEXTURE_1D_ARRAY, PROXY_TEXTURE_2D_ARRAY, PROXY_TEXTURE_RECTANGLE,
+    PROXY_TEXTURE_CUBE_MAP, PROXY_TEXTURE_CUBE_MAP_ARRAY,
+    PROXY_TEXTURE_2D_MULTISAMPLE or PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY."
+
+    Add a row to Table 8.18: Conversion from RGBA, depth, and stencil pixel
+    components to internal texture, table, or filter components
+
+        Base Internal Format    RGBA, Depth, and Stencil Values     Internal Components
+
+        STENCIL_INDEX           Stencil                             S
+
+
+    Add to the list of required texture internal formats:
+
+        - Stencil formats: STENCIL_INDEX8
+
+
+    Add rows to Table 8.21: Correspondence of sized internal depth and stencil
+    formats to base internal formats, internal data type, and desired component
+    resolutions for each sized internal format
+
+        Sized Internal Format       Base Internal Format    D bits      S bits
+
+        STENCIL_INDEX8              STENCIL_INDEX           <blank>     8
+
+    Modify Section 8.6 Alternate Texture Image Specification Commands, p. 222
+
+    ...The image is taken from the framebuffer exactly as if these arguments
+    were passed to CopyPixels (see section 18.3) with argument type set to
+    COLOR, DEPTH, DEPTH_STENCIL, or STENCIL_INDEX, depending on internalformat,
+    stopping after pixel transfer processing is complete.
+
+    Modify Section 8.11 Texture Queries, p. 246
+
+    If format is DEPTH_COMPONENT, DEPTH_STENCIL, or STENCIL_INDEX then each
+    depth component and/or stencil index is assigned with the same ordering of
+    rows and images.
+
+    Modifications to the errors section for GetTexImage, p. 247,
+
+    Delete the following error:
+
+    An INVALID_ENUM error is generated if <format> is STENCIL_INDEX.
+
+    Add a bullet to the list of reasons for INVALID_OPERATION error:
+
+    - <format> is STENCIL_INDEX and the base internal format is not
+      STENCIL_INDEX or DEPTH_STENCIL.
+
+    Modify 8.17 Texture Completeness, p. 263
+
+    Modify the bullet point on p. 263 describing required texture filter
+    modes for an integer texture in order to determine texture completeness,
+    to add STENCIL_INDEX textures explicitly:
+
+    - The internal format of the texture is integer (see tables 8.19-8.20)
+      or STENCIL_INDEX, and either the magnification filter is not NEAREST,
+      or the minification filter is neither NEAREST nor
+      NEAREST_MIPMAP_NEAREST.
+
+    Modify 8.22.1 Depth Texture Comparison Mode, p. 278
+
+    - If the base internal format is STENCIL_INDEX, then r = St
+
+Additions to Chapter 11 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Programmable Vertex Processing)
+
+    Modify 11.1.3.5 Texture Access p. 390
+
+    Texture lookups involving texture objects with an internal format of DEPTH_-
+    STENCIL can read the stencil value as described in section 8.22 by setting
+    the DEPTH_STENCIL_TEXTURE_MODE to STENCIL_COMPONENT. Textures with a
+    STENCIL_INDEX base internal format may also be used to read stencil data.
+    The stencil value is read as an integer and assigned to Rt. An unsigned
+    integer sampler must be used to lookup the stencil component, otherwise
+    the results are undefined.
+
+
+Additions to Chapter 15 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Programmable Fragment Processing)
+
+    Modify 15.2.1 Texture Access, p.510
+
+    Repace the paragraph "The stencil index texture internal component is
+    ignored if the base internal format is DEPTH_STENCIL" with:
+
+    Texture lookups involving textures with stencil index data generate a
+    texture base color Cb by using stencil values St directly, if either the
+    texture has a base internal format of STENCIL_INDEX or the texture has a
+    base internal format of DEPTH_STENCIL and a DEPTH_STENCIL_TEXTURE_MODE
+    of STENCIL_COMPONENT.
+
+
+New Implementation Dependent State
+
+    None.
+
+New State
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+    None.
+
+Errors
+
+    An INVALID_OPERATION error is generated by GetTexImage if <format>
+    is STENCIL_INDEX and the base internal format is not STENCIL_INDEX or
+    DEPTH_STENCIL.
+
+    An INVALID_OPERATION error is generated by TexImage3D, TexImage2D,
+    TexImage1D, TexSubImage3D, TexSubImage2D, or TexSubImage1D
+    if <format> is STENCIL_INDEX and the base internal format is not
+    <STENCIL_INDEX>.
+
+    An INVALID_OPERATION error is generated by TexImage3D, TexImage2D,
+    TexImage1D, TexSubImage3D, TexSubImage2D, or TexSubImage1D if
+    <format> is STENCIL_INDEX and <target> is not one of TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE,
+    TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY, PROXY_TEXTURE_1D,
+    PROXY_TEXTURE_2D, PROXY_TEXTURE_1D_ARRAY, PROXY_TEXTURE_2D_ARRAY,
+    PROXY_TEXTURE_RECTANGLE, PROXY_TEXTURE_CUBE_MAP, or
+    PROXY_TEXTURE_CUBE_MAP_ARRAY.
+
+Issues
+
+
+    (1) What is the interaction with ARB_stencil_texturing's
+        DEPTH_STENCIL_TEXTURE_MODE?
+
+    RESOLVED: That piece of state is ignored because the base internal format
+    of a STENCIL_INDEX texture is not DEPTH_STENCIL.
+
+    (2) Does the presence of this extension imply that the implementation
+    supports a true 8-bit stencil buffer?
+
+    RESOLVED: No, some OpenGL implementations may internally expand a
+    format like STENCIL_INDEX8 to DEPTH24_STENCIL8, but will make such a format
+    behave as if there were no depth bits.  Additionally, implementations may
+    not support independent depth and stencil attachments; a framebuffer with a
+    STENCIL_INDEX8 stencil attachment and a DEPTH_COMPONENT24 depth attachment
+    may be treated as unsupported (FRAMEBUFFER_UNSUPPORTED).
+
+    (3) Should we support stencil formats that have a number of bits that is
+    not exactly supported in the implementation? 8-bits is universally
+    supported, but 1/4/16-bits are not.
+
+    RESOLVED: Only accept STENCIL_INDEX8, which is universally supported.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+     1    03/20/13  jbolz     Internal revisions.
+     2    05/30/13  dgkoch    Add tokens and errors section.
+                              Update errors for GetTexImage.
+     3    06/28/13  Jon Leech Fix dates in revision history. Change filter
+                              modes for texture completeness (Bug 10372).
+     4    08/08/13  pdaniell  Fix the functions that accept STENCIL_INDEX8 as
+                              an <internalformat> parameter (Bug 10558).
+     5    08/26/13  pdaniell  Fix the list of texture targets that support
+                              stencil (and depth and depth/stencil) textures
+                              to include the multisample targets (Bug 10558).

@@ -1,0 +1,164 @@
+
+Name
+
+    SGIX_subdiv_patch
+
+Name Strings
+
+    GL_SGIX_subdiv_patch
+
+Version:
+
+    $Date: 1999/12/28 01:40:36 $ $Revision: 1.4 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    None
+
+Overview:
+
+    This extension provides support for rendering subdivision surfaces.
+    Subdivision surfaces are defined as a repeated refinement of an
+    initial control mesh. The direct and simple representation of a surface
+    is attractive for rendering, where trimming bottlenecks can be avoided.
+    The key strengths of subdivision surfaces are:
+
+        - Ability to render arbitrary meshes.
+        - Geometry compression, which is evident by the virtue of refinement.
+        - Continuous LOD control, that relieves the application from keeping
+        multiple geometry definitions, per-frame.
+
+    Triangular mesh representation is more convenient for rendering and is
+    considered first. Other representations as well as non-triangular ones
+    can be considered in a separate extension.
+
+    The API is mainly concerned with a geometrical primitive extracted from
+    the base mesh. The primitive is a topological definition for a triangle
+    pair and all its neighboring vertices. In addition, vertices and
+    edges may be tagged for representing sharp features. This primitive
+    is called the 'subdivision patch..
+
+Issues:
+
+    * We can reduce tokens for defining sharp vertices and have the
+    implementation detect most of the tags. Is that the right trade off?
+
+    * Is a per-corner maximum valence criteria preferred? (compared to
+    accumulative criteria)
+
+    * How do we fare against the recently presented surface simplification?
+
+    * View dependency is simple per-object but complex for partials.
+
+    * There seems to be a de-facto standard evolving in the industry
+    which uses quadrilaterals as the base primitive. Currently, we are
+    providing Loop's technique. The API (for the  most part) remains
+    the same. Shall we expose both techniques?
+
+TODO:
+
+    * fragment light space dependencies (e.g. tangent and binorm).
+
+New Procedures and Functions:
+
+    void glSubdivPatchSGIX(const void **vertexData,
+                        const void **vertexTag,
+                        const void **edgeTag);
+    void glSubdivPatchParameterfSGIX(GLenum pname, GLfloat param);
+    void glSubdivPatchParameteriSGIX(GLenum pname, GLint param);
+
+New Tokens:
+
+    Accepted by vertexTag:
+
+        GL_SUBDIVPATCH_SMOOTH_SGIX
+        GL_SUBDIVPATCH_DART_BIT_SGIX
+        GL_SUBDIVPATCH_CREASE_REGULAR_BIT_SGIX
+        GL_SUBDIVPATCH_CREASE_IRREGULAR_BIT_SGIX
+        GL_SUBDIVPATCH_CORNER_BIT_SGIX
+        GL_SUBDIVPATCH_CONICAL_BIT_SGIX
+
+    Accepted by edgeTag:
+
+        GL_SUBDIVPATCH_SMOOTH_SGIX
+        GL_SUBDIV_PATCH_SHARP_BIT_SGIX
+
+    Accepted by the <pname> parameter of glSubdivPatchParameteriSGIX or
+    glSubdivPatchParameterfSGIX are:
+
+        GL_SUBDIVPATCH_LEVEL_SGIX
+        GL_SUBDIVPATCH_FORMAT_SGIX
+
+    Accepted by the <param> parameter GL_SUBDIVPATCH_FORMAT_SGIX of
+    glSubdivPatchParameteriSGIX or glSubdivPatchParameterfSGIX are:
+
+        GL_V3F
+        GL_C3F_V3F
+        GL_T2F_V3F
+        GL_T2F_C3F_V3F
+
+    Accepted by the pname parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        GL_SUBDIVPATCH_LEVEL_SGIX
+        GL_SUBDIVPATCH_FORMAT_SGIX
+        GL_SUBDIVPATCH_VALENCE_MAX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation):
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization):
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer):
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions):
+
+    5.7 Subdivision Surfaces
+
+    [This part to be filled out with operation details.]
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests):
+
+    None
+
+Additions to the GLX Specification:
+
+    None
+
+Dependencies on SGI_extension_name:
+
+    None
+
+Errors:
+
+    INVALID_ENUM is generated if the <pname> parameter is
+    not GL_SUBDIVPATCH_LEVEL_SGIX or GL_SUBDIVPATCH_FORMAT_SGIX.
+
+    INVALID_ENUM is generated if the <param> parameter is not
+    one of GL_V3F, GL_C4UB_V3F, GL_T2F_V3F, or GL_T2F_C4UB_V3F, when the
+    <pname> parameter is GL_SUBDIVPATCH_FORMAT_SGIX.
+
+    INVALID_OPERATION is generated if any of the valence counts exceeds
+    GL_SUBDIVPATCH_VALENCE_MAX_SGIX.
+
+New State:
+
+    Get Value                   Get Command     Type    Initial Value
+    ---------                   -----------     ----    ------------
+    GL_SUBDIVPATCH_LEVEL_SGIX   GetFloatv       F       3
+    GL_SUBDIVPATCH_FORMAT_SGIX  GetIntegerv     I       GL_V3F
+
+New Implementation Dependent State
+
+    None
+

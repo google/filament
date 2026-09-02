@@ -1,0 +1,221 @@
+Name
+
+    NV_copy_depth_to_color
+
+Name Strings
+
+    GL_NV_copy_depth_to_color
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping (version 1.0)
+
+Version
+
+    Date:       October 17, 2001
+    Version:    1.0
+
+Number
+
+    243
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+    Requires support for the NV_packed_depth_stencil extension.
+
+Overview
+
+    Some applications, especially systems for distributed OpenGL
+    rendering, would like to have a fast way of copying their depth
+    buffer into a color buffer; for example, this allows the depth buffer
+    to be scanned out, allowing downstream compositing operations.
+
+    To do this operation in unextended OpenGL, the app must use
+    glReadPixels of GL_DEPTH_COMPONENT data, followed by glDrawPixels of
+    RGBA data.  However, this typically will not provide adequate
+    performance.
+
+    This extension provides a way to copy the depth data directly into
+    the color buffer, by adding two new options for the "type" parameter
+    of glCopyPixels: GL_DEPTH_STENCIL_TO_RGBA_NV and
+    GL_DEPTH_STENCIL_TO_BGRA_NV.
+
+    Typically, OpenGL implementations support many more bits of depth
+    precision than color precision per channel.  On many PC platforms, it
+    is common, for example, to have 24 bits of depth, 8 bits of stencil,
+    and 8 bits of red, green, blue, and alpha.
+
+    In such a framebuffer configuration, the most effective way to copy
+    the data without this extension would be to perform a glReadPixels of
+    GL_UNSIGNED_INT_24_8_NV/GL_DEPTH_STENCIL_NV (using the existing
+    NV_packed_depth_stencil extension), followed by a glDrawPixels of
+    GL_UNSIGNED_INT_8_8_8_8/GL_RGBA or GL_BGRA data.  This places the
+    depth data in the color channels and the stencil data in the alpha
+    channel.
+
+    This extension's new operations concatenates these two operations,
+    providing a CopyPixels command that does both of these steps in one.
+    This provides a large performance speedup, since no pixel data must
+    be transfered across the bus.
+
+Issues
+
+    *   Does this spec need a dependency on NV_packed_depth_stencil?
+
+        RESOLVED: It doesn't need it, but it does.  It makes the spec a
+        whole lot easier to write.  In theory, this extension can be
+        supported without support for NV_packed_depth_stencil; in
+        practice, it is very unlikely that any implementation will ever
+        support this extension, but not NV_packed_depth_stencil.
+
+    *   Should we support copies to both RGBA and BGRA?
+
+        RESOLVED: Yes.  We support this, so there is no reason not to
+        allow users to choose.
+
+    *   Should pixel transfer operations, fragment operations, and
+        PixelZoom be applied on the new CopyPixels operations?
+
+        RESOLVED: Yes.  This is really just a different source data type
+        for a CopyPixels of COLOR data, so, even though the typical usage
+        case of this extension differs, there is little reason to cripple
+        the spec with a nonorthogonality here.
+
+    *   What is the interaction with depth testing and stencil testing?
+
+        RESOLVED: They are allowed.  This means that there are
+        read-modify-write hazards with overlapping CopyPixels, but they
+        are no worse than with other forms of overlapping CopyPixels; the
+        rule remains that (effectively) all source data must be read
+        before any fragments are generated.
+
+        That having been said, it is anticipated that applications would
+        turn these off before performing the copy, because they would
+        likely impact performance on many implementations, especially if
+        the source and destination regions overlapped.
+
+    *   Should a mode useful for 16-bit depth buffers be supported?
+
+        RESOLVED: No, that seems fairly uninteresting.
+
+    *   What restrictions should apply to the use of this extension, both
+        in terms of the current color buffer format and the current depth
+        buffer format?
+
+        RESOLVED: None beyond the requirement that the drawable must have
+        both a depth buffer and a stencil buffer.  This is similar to the
+        behavior chosen in NV_packed_depth_stencil.  For example, a
+        ReadPixels of DEPTH_STENCIL_NV data is supported, even if the
+        drawable does not have 24 bits of depth and 8 bits of stencil.
+        Although it is not anticipated that this extension will be useful
+        in other modes, it is specified to work nonetheless.
+
+    *   What useful things can be done with the stencil in the alpha?
+
+        Although it is mostly meaningless to try to blend using the
+        stencil, one useful way of using this feature is to use the alpha
+        test.  This allows the app to kill certain pixels based on the
+        stencil during this operation.  The app could clear the color
+        buffer first, creating a "background" depth value, and then the
+        CopyPixels pass could overwrite that on selected pixels.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <type> parameter of CopyPixels:
+
+        DEPTH_STENCIL_TO_RGBA_NV                       0x886E
+        DEPTH_STENCIL_TO_BGRA_NV                       0x886F
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Update the second, third, and fourth paragraphs of section 4.3.3
+    (page 162) to say:
+
+    "<type> is a symbolic constant that must be one of COLOR, STENCIL,
+    DEPTH, or DEPTH_STENCIL_NV, indicating that the values to be
+    transfered are colors, stencil values, depth values, or depth/stencil
+    pairs, respectively. The first four arguments have the same
+    interpretation as the corresponding arguments to ReadPixels.
+
+    Values are obtained from the framebuffer, converted (if appropriate),
+    then subjected to the pixel transfer operations described in section
+    3.6.5, just as if ReadPixels were called with the corresponding
+    arguments.  If the <type> is STENCIL or DEPTH, then it is as if the
+    <format> for ReadPixels were STENCIL_INDEX or DEPTH_COMPONENT,
+    respectively.  If the <type> is COLOR, then if the GL is in RGBA
+    mode, it is as if the <format> were RGBA, while if the GL is in color
+    index mode, it is as if the <format> were COLOR_INDEX.  If the <type>
+    is any of DEPTH_STENCIL_NV, DEPTH_STENCIL_TO_RGBA_NV, or
+    DEPTH_STENCIL_TO_BGRA_NV, it is as if the <format> were
+    DEPTH_STENCIL_NV.
+
+    The groups of elements so obtained are then written to the
+    framebuffer just as if DrawPixels had been given <width> and
+    <height>, beginning with final conversion of elements.  The effective
+    <format> is the same as that already described, unless <type> is
+    DEPTH_STENCIL_TO_RGBA_NV or DEPTH_STENCIL_TO_BGRA_NV.  In that case,
+    first, the groups of elements are packed into pixel groups of type
+    UNSIGNED_INT_24_8_NV.  Then, if <type> is DEPTH_STENCIL_TO_RGBA_NV,
+    they are unpacked as if their type was UNSIGNED_INT_8_8_8_8 and
+    their format was RGBA, and if <type> is DEPTH_STENCIL_TO_BGRA_NV,
+    they are unpacked as if their type was UNSIGNED_INT_8_8_8_8 and
+    their format was BGRA.  In either case, the effective <format> of the
+    pixels to be written to the framebuffer is RGBA."
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    The error INVALID_OPERATION is generated if CopyPixels is called
+    where type is DEPTH_STENCIL_TO_RGBA_NV or DEPTH_STENCIL_TO_BGRA_NV
+    and there is not both a depth buffer and a stencil buffer.
+
+    The error INVALID_OPERATION is generated if CopyPixels is called
+    where type is DEPTH_STENCIL_TO_RGBA_NV or DEPTH_STENCIL_TO_BGRA_NV
+    and the GL is in color index mode.
+
+New State
+
+    None.
+
+Revision History
+
+    none yet

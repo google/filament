@@ -1,0 +1,94 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_line_quality_hint
+
+Name Strings
+
+    GL_SGIX_line_quality_hint
+
+Contact
+
+    Terrence Crane, SGI (tcrane 'at' sgi.com)
+
+Status
+
+    XXX - Not complete yet!!!
+
+Version
+
+    $Date$
+
+Number
+
+    XXX TBD
+
+Dependencies
+
+    None
+
+Overview
+
+    On VPro graphics systems, rendering very short lines sometimes
+    causes pixel dropouts. This hint works around the hardware issue by
+    dropping back to a software line rasterization path.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of glHint and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+	LINE_QUALITY_HINT_SGIX		0x835B
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Add to section 5.6 ("Hints"):
+
+    If the <target> argument of Hint is specified as
+    LINE_QUALITY_HINT_SGIX, then the <hint> argument indicates the
+    desired quality of line rasterization. The NICEST hint trades off
+    performance for increased pixel accuracy.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value		    Get Command     Type    Value	    Attrib
+    ---------		    -----------     ----    -------	    ------
+    LINE_QUALITY_HINT_SGIX  GetIntegerv     Z3	    DONT_CARE	    hint
+
+New Implementation Dependent State
+
+    None

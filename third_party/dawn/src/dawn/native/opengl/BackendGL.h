@@ -30,7 +30,7 @@
 
 #include <vector>
 
-#include "dawn/native/BackendConnection.h"
+#include "src/dawn/native/BackendConnection.h"
 
 namespace dawn::native::opengl {
 

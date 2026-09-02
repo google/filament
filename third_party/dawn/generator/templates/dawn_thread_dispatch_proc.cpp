@@ -2,11 +2,14 @@
 {% set prefix = Prefix.lower() %}
 #include "dawn/{{prefix}}_thread_dispatch_proc.h"
 
+#include <algorithm>
 #include <thread>
+
+#include "dawn/dawn_version.h"
 
 static {{Prefix}}ProcTable nullProcs;
 static {{Prefix}}ProcTable defaultProc;
-thread_local {{Prefix}}ProcTable perThreadProcs;
+static thread_local {{Prefix}}ProcTable perThreadProcs;
 
 void {{prefix}}ProcSetDefaultThreadProcs(const {{Prefix}}ProcTable* procs) {
     if (procs) {
@@ -65,15 +68,20 @@ void {{prefix}}ProcSetPerThreadProcs(const {{Prefix}}ProcTable* procs) {
     {% endfor %}
 {% endfor %}
 
-extern "C" {
-    {{Prefix}}ProcTable {{prefix}}ThreadDispatchProcTable = {
+    constexpr {{Prefix}}ProcTable MakeThreadDispatchProcTable() {
+        {{Prefix}}ProcTable procs = {};
+        std::ranges::copy(dawn::kDawnVersion, procs.version);
         {% for function in by_category["function"] %}
-            ThreadDispatch{{as_cppType(function.name)}},
+            procs.{{as_varName(function.name)}} = ThreadDispatch{{as_cppType(function.name)}};
         {% endfor %}
         {% for (type, methods) in c_methods_sorted_by_parent %}
             {% for method in methods %}
-                ThreadDispatch{{as_MethodSuffix(type.name, method.name)}},
+                procs.{{as_varName(type.name, method.name)}} = ThreadDispatch{{as_MethodSuffix(type.name, method.name)}};
             {% endfor %}
         {% endfor %}
-    };
+        return procs;
+    }
+
+extern "C" {
+    {{Prefix}}ProcTable {{prefix}}ThreadDispatchProcTable = MakeThreadDispatchProcTable();
 }

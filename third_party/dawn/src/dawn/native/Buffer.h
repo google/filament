@@ -33,17 +33,17 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/FutureUtils.h"
-#include "dawn/common/NonCopyable.h"
-#include "dawn/native/DeviceGuard.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/SharedBufferMemory.h"
-#include "dawn/native/UsageValidationMode.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/FutureUtils.h"
+#include "src/dawn/native/DeviceGuard.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/SharedBufferMemory.h"
+#include "src/dawn/native/UsageValidationMode.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/non_copyable.h"
 
 namespace dawn::native {
 
@@ -134,6 +134,8 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     wgpu::BufferUsage GetUsage() const;
 
     MaybeError MapAtCreation();
+    // Attempts to map at creation; on OOM logs and returns false so callers can return nullptr.
+    bool TryMapAtCreation(bool fakeOOMAtNativeMap);
 
     // Changes buffer state to denote it's being used. The buffer must be unmapped so this isn't
     // suitable for buffers that could be used by external API calls. `ScopedUseBuffer` will resets
@@ -153,7 +155,7 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     bool NeedsInitialization() const;
     void MarkUsedInPendingCommands();
     void MarkUsedInPendingCommands(ExecutionSerial pendingSerial);
-    virtual MaybeError UploadData(uint64_t bufferOffset, const void* data, size_t size);
+    virtual MaybeError UploadData(uint64_t bufferOffset, Span<const std::byte> data);
 
     // SharedResource impl.
     ExecutionSerial OnEndAccess() override;
@@ -161,10 +163,30 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     bool HasAccess() const override;
     bool IsDestroyed() const override;
     void SetInitialized(bool initialized) override;
-    bool IsInitialized() const override;
+    bool IsResourceInitialized() const override;
 
-    void* GetMappedPointer();
-    void* GetMappedRange(size_t offset, size_t size, bool writable = true);
+    Span<std::byte> GetMappedRange(size_t offset = 0, size_t size = wgpu::kWholeMapSize);
+    template <typename T>
+    Span<T> GetMappedRangeSpan(size_t offset = 0, size_t size = wgpu::kWholeMapSize) {
+        // TODO(https://crbug.com/507484971): Use ReinterpretSpan once HeapArray returns allocations
+        // for byte types that are aligned to at least 16 (and max_align_t). This is not possible to
+        // support yet because PartitionAlloc lacks support for operator new (std::max_align_t,
+        // std::nothrow) that would be used inside these HeapArrays. This means that at the moment
+        // we may be returning unaligned pointers, but this 1) was already the case before this
+        // change and 2) will be fixed as soon as HeapArray's alignment is fixed.
+        Span<std::byte> s = GetMappedRange(offset, size);
+        DAWN_CHECK(s.size_bytes() % sizeof(T) == 0u);
+
+        auto* ptr = std::launder(reinterpret_cast<T*>(s.data()));
+        return DAWN_UNSAFE_TODO(Span<T>{ptr, s.size_bytes() / sizeof(T)});
+    }
+    template <typename T>
+    T* GetMappedDataAs() {
+        return GetMappedRangeSpan<T>(0, sizeof(T)).data();
+    }
+
+    // Returns the mapped memory allocation, including padding bytes.
+    Span<std::byte> GetFullMappedAllocatedRange();
 
     // Internal non-reentrant version of Unmap. This is used in workarounds or additional copies.
     // Note that this will fail if the map event is pending since that should never happen
@@ -180,8 +202,8 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
                        const WGPUBufferMapCallbackInfo& callbackInfo);
     void* APIGetMappedRange(size_t offset, size_t size);
     const void* APIGetConstMappedRange(size_t offset, size_t size);
-    wgpu::Status APIWriteMappedRange(size_t offset, void const* data, size_t size);
-    wgpu::Status APIReadMappedRange(size_t offset, void* data, size_t size);
+    wgpu::Status APIWriteMappedRange(size_t offset, Span<const std::byte> data);
+    wgpu::Status APIReadMappedRange(size_t offset, Span<std::byte> data);
     void APIUnmap();
     void APIDestroy();
     wgpu::BufferUsage APIGetUsage() const;
@@ -193,6 +215,8 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     TexelBufferViewBase* APICreateTexelView(const TexelBufferViewDescriptor* descriptor);
 
     ApiObjectList* GetTexelBufferViewTrackingList();
+
+    BufferState GetState() const;
 
   protected:
     BufferBase(DeviceBase* device, const UnpackedPtr<BufferDescriptor>& descriptor);
@@ -206,12 +230,11 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     // creation. Otherwise, returns false indicating that backend specific mapping was used instead.
     ResultOrError<bool> MapAtCreationInternal();
 
-    BufferState GetState() const;
     wgpu::MapMode MapMode() const;
     size_t MapOffset() const;
     size_t MapSize() const;
 
-    uint64_t mAllocatedSize = 0;
+    std::optional<uint64_t> mAllocatedSize{};
 
   private:
     class MapAsyncEvent;
@@ -228,7 +251,7 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     // Performs backend specific work to finalize mapping. `newState` is the state the buffer will
     // be in after this returns.
     virtual MaybeError FinalizeMapImpl(BufferState newState) = 0;
-    virtual void* GetMappedPointerImpl() = 0;
+    virtual Span<std::byte> GetMappedRangeImpl(size_t offset, size_t size) = 0;
     // Performs backend specific work to unmap. `oldState` is the state of the buffer before unmap
     // operation started. The device mutex is not locked when this is called so the implementation
     // should lock if required.
@@ -241,6 +264,11 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     MaybeError ValidateMapAsync(wgpu::MapMode mode, size_t offset, size_t size) const;
     MaybeError ValidateUnmap() const;
     bool CanGetMappedRange(bool writable, size_t offset, size_t size) const;
+
+    // Return std::nullopt on validation error.
+    std::optional<Span<std::byte>> GetMappedRangeInternal(size_t offset,
+                                                          size_t size,
+                                                          bool writable);
     MaybeError UnmapInternal(bool forDestroy);
 
     // Updates internal state to reflect that the buffer is now mapped.
@@ -256,7 +284,7 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     const bool mIsHostMapped = false;
     bool mIsDataInitialized = false;
 
-    Atomic<ExecutionSerial, std::memory_order_relaxed> mLastUsageSerial{ExecutionSerial(0)};
+    Atomic<ExecutionSerial, std::memory_order_relaxed> mLastUsageSerial{ExecutionSerial(0u)};
 
     // Once MapAsync() returns a future there is a possible race between MapAsyncEvent completing
     // and the buffer being unmapped as they can happen on different threads. `mPendingMapMutex`
@@ -265,7 +293,7 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     // until after `mPendingMapEvent` is reset and potential race is averted.
     // Note: MutexProtected isn't used here due to Use() providing MapAsyncEvent* instead of
     // Ref<MapAsyncEvent> which doesn't allow resetting the Ref.
-    Mutex mPendingMapMutex;
+    RecursiveMutex mPendingMapMutex;
     Ref<MapAsyncEvent> mPendingMapEvent;
 
     // Track texel buffer views created from this buffer so they can be destroyed when the buffer is
@@ -306,12 +334,24 @@ class BufferBase : public SharedResource, public WeakRefSupport<BufferBase> {
     // staging buffer recursively.
     Ref<BufferBase> mStagingBuffer = nullptr;
 
+    // Tracks whether the buffer was mapped at creation and hasn't been unmapped yet.
+    // Used by OnBeginAccess() to restore the correct state for SharedBufferMemory buffers.
+    bool mIsMappedAtCreation = false;
+
     // Mapping specific states.
     wgpu::MapMode mMapMode = wgpu::MapMode::None;
+    // Offset from the start of the buffer to the start of the mapped region. In other words,
+    // (mMappedPointer + mMapOffset) gives the first valid address of the mapping region.
     size_t mMapOffset = 0;
+    // Map size we expose to the API.
     size_t mMapSize = 0;
-    // TODO(crbug.com/485825675): Investigate this dangling pointers.
-    raw_ptr<void, DanglingUntriaged> mMappedPointer = nullptr;
+    // Size of the actually accessible region of memory.
+    size_t mAllocatedMapSize = 0;
+    // The range of bytes that are currently mapped When MappedAtCreation, the range points at
+    // GetAllocatedSize() bytes instead of only GetSize() bytes so that the padding bytes may be
+    // initialized.
+    // TODO(https://crbug.com/526537224): Use RawSpan.
+    Span<std::byte> mMappedRange;
 };
 
 }  // namespace dawn::native

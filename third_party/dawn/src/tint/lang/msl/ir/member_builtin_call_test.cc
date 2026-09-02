@@ -76,7 +76,7 @@ TEST_F(IR_MslMemberBuiltinCallTest, CloneWithExplicitParams) {
     auto* coords = b.FunctionParam("coords", ty.vec2f());
     auto* builtin =
         b.MemberCall<MemberBuiltinCall>(mod.Types().void_(), BuiltinFn::kSample, t, s, coords);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<core::ir::TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());
@@ -177,7 +177,7 @@ TEST_F(IR_MslMemberBuiltinCallTest, TooFewArgs) {
     EXPECT_EQ(res.Failure().reason,
               R"(:3:17 error: get_width: no matching call to 'get_width(texture_2d<f32>)'
 
-22 candidate functions:
+16 candidate functions:
  • 'get_width(texture: texture_depth_multisampled_2d  ✗ ) -> u32'
  • 'get_width(texture: texture_storage_1d<F, A>  ✗ ) -> u32'
  • 'get_width(texture: texture_1d<T>  ✗ ) -> u32' where:
@@ -186,9 +186,6 @@ TEST_F(IR_MslMemberBuiltinCallTest, TooFewArgs) {
       ✓  'T' is 'f32', 'i32' or 'u32'
  • 'get_width(texture: texture_multisampled_2d<T>  ✗ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
- • 'get_width(texture: texture_1d<f32, F>  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
  • 'get_width(texture: texture_depth_2d  ✗ , u32  ✗ ) -> u32'
  • 'get_width(texture: texture_depth_2d_array  ✗ , u32  ✗ ) -> u32'
  • 'get_width(texture: texture_depth_cube  ✗ , u32  ✗ ) -> u32'
@@ -204,21 +201,6 @@ TEST_F(IR_MslMemberBuiltinCallTest, TooFewArgs) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'get_width(texture: texture_cube_array<T>  ✗ , u32  ✗ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
- • 'get_width(texture: texture_2d<f32, F>  ✗ , u32  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_2d_array<f32, F>  ✗ , u32  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_3d<f32, F>  ✗ , u32  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_cube<f32, F>  ✗ , u32  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_cube_array<f32, F>  ✗ , u32  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
 
     %3:u32 = %t.get_width
                 ^^^^^^^^^
@@ -252,7 +234,7 @@ TEST_F(IR_MslMemberBuiltinCallTest, TooManyArgs) {
         res.Failure().reason,
         R"(:3:17 error: get_width: no matching call to 'get_width(texture_2d<f32>, u32, u32, u32)'
 
-22 candidate functions:
+16 candidate functions:
  • 'get_width(texture: texture_2d<T>  ✓ , u32  ✓ ) -> u32' where:
       ✗  overload expects 2 arguments, call passed 4 arguments
       ✓  'T' is 'f32', 'i32' or 'u32'
@@ -271,30 +253,12 @@ TEST_F(IR_MslMemberBuiltinCallTest, TooManyArgs) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'get_width(texture: texture_cube_array<T>  ✗ , u32  ✓ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
- • 'get_width(texture: texture_2d<f32, F>  ✗ , u32  ✓ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_2d_array<f32, F>  ✗ , u32  ✓ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_3d<f32, F>  ✗ , u32  ✓ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_cube<f32, F>  ✗ , u32  ✓ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'get_width(texture: texture_cube_array<f32, F>  ✗ , u32  ✓ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
  • 'get_width(texture: texture_depth_multisampled_2d  ✗ ) -> u32'
  • 'get_width(texture: texture_storage_1d<F, A>  ✗ ) -> u32'
  • 'get_width(texture: texture_1d<T>  ✗ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'get_width(texture: texture_multisampled_2d<T>  ✗ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
- • 'get_width(texture: texture_1d<f32, F>  ✗ ) -> u32' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
 
     %3:u32 = %t.get_width 0u, 1u, 2u
                 ^^^^^^^^^

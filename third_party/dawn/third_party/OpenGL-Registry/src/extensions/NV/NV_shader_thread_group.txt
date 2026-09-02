@@ -1,0 +1,1001 @@
+Name
+
+    NV_shader_thread_group
+
+Name Strings
+
+    GL_NV_shader_thread_group
+
+Contributors
+
+    Jeannot Breton, NVIDIA
+    Pat Brown, NVIDIA
+    Eric Werness, NVIDIA
+    Mark Kilgard, NVIDIA
+
+Contact
+
+    Jeannot Breton, NVIDIA Corporation (jbreton 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         7/21/2015
+    NVIDIA Revision:            4
+
+Number
+
+    OpenGL Extension #447
+
+Dependencies
+
+    This extension is written against the OpenGL 4.3 (Compatibility Profile)
+    Specification.
+
+    This extension is written against version 4.30 (revision 07) of the OpenGL 
+    Shading Language Specification.
+
+    OpenGL 4.3 and GLSL 4.3 are required.
+
+    This extension interacts with NV_gpu_program5
+
+    This extension interacts with NV_compute_program5
+
+    This extension interacts with NV_tessellation_program5
+
+Overview
+
+    Implementations of the OpenGL Shading Language may, but are not required 
+    to, run multiple shader threads for a single stage as a SIMD thread group, 
+    where individual execution threads are assigned to thread groups in an 
+    undefined, implementation-dependent order.  This extension provides a set 
+    of new features to the OpenGL Shading Language to query thread states and 
+    to share data between fragments within a 2x2 pixel quad. 
+    
+    More specifically the following functionalities were added:
+
+    *   New uniform variables and tokens to query the number of threads in a 
+        warp, the number of warps running on a SM and the number of SMs on the 
+        GPU.
+    
+    *   New shader inputs to query the thread id, the warp id and the SM id.
+
+    *   New shader inputs to query if a fragment shader thread is a helper
+        thread.
+        
+    *   New shader built-in functions to query the state of a Boolean condition
+        over all threads in a thread group.
+        
+    *   New shader built-in functions to query which threads are active within
+        a thread group.        
+        
+    *   New fragment shader built-in functions to share data between fragments 
+        within a 2x2 pixel quad.
+
+    Shaders using the new functionalities provided by this extension should 
+    enable this functionality via the construct
+    
+        #extension GL_NV_shader_thread_group : require     (or enable)
+
+    This extension also specifies some modifications to the program assembly
+    language to support the thread state query and thread data sharing
+    functionalities.
+
+    Note that in this extension specification warp and thread group have the
+    same meaning.  A warp is a group of threads that get executed in lockstep.
+    Each thread in a warp executes the same instruction of a program, but on
+    different data.
+
+New Procedures and Functions
+
+    None
+
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev: 
+
+        WARP_SIZE_NV                                    0x9339
+        WARPS_PER_SM_NV                                 0x933A
+        SM_COUNT_NV                                     0x933B
+
+
+Modifications to The OpenGL Shading Language Specification, Version 4.30 
+(Revision 07)
+
+    Including the following line in a shader can be used to control the 
+    language features described in this extension:
+
+      #extension GL_NV_shader_thread_group : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_NV_shader_thread_group         1
+
+    Modify Section 7.1, Built-in Languages Variable, p. 110
+
+    (Add to the list of built-in variables for the compute, vertex, geometry,
+     tessellation control, tessellation evaluation and fragment languages)
+    
+        in uint  gl_ThreadInWarpNV;
+        in uint  gl_ThreadEqMaskNV;
+        in uint  gl_ThreadGeMaskNV;
+        in uint  gl_ThreadGtMaskNV;
+        in uint  gl_ThreadLeMaskNV;
+        in uint  gl_ThreadLtMaskNV;
+        in uint  gl_WarpIDNV;
+        in uint  gl_SMIDNV;
+        
+    (Add to the list of built-in variables for the fragment languages)
+
+        in bool  gl_HelperThreadNV;
+
+    (Add those paragraphs at the end of this section)
+    
+    The variable gl_ThreadInWarpNV hold the id of the thread within the thread
+    group(or warp).  This variable is in the range 0 to gl_WarpSizeNV-1, where 
+    gl_WarpSizeNV is the total number of thread in a warp.
+    
+    The variable gl_ThreadEqMaskNV is a bitfield in which the bit equal to the
+    current thread id is set.  The variable gl_ThreadGeMaskNV is a bitfield in
+    which bits greater or equal to the current thread id are set.  The variable
+    gl_ThreadGtMaskNV is a bitfield in which bits greater than the current
+    thread id are set.  The variable gl_ThreadLeMaskNV is a bitfield in which
+    bits lower or equal to the current thread id are set.  The variable
+    gl_ThreadLtMaskNV is a bitfield in which bits lower than the current thread
+    id are set.  
+
+    The value of gl_ThreadEqMaskNV, gl_ThreadGeMaskNV, gl_ThreadGtMaskNV,
+    gl_ThreadLeMaskNV and gl_ThreadLtMaskNV are derived from the value of 
+    gl_ThreadInWarpNV using simple bit-shift arithmetic, they don't take into
+    account the value of the thread group active mask.  For example, if the
+    application wants a bitfield in which bits lower or equal to the current
+    thread id are set only for active threads, the result of gl_ThreadLeMaskNV
+    will need to be ANDed with the thread group active mask.
+
+    The variable gl_WarpIDNV hold the warp id of the executing thread.  This 
+    variable is in the range 0 to gl_WarpsPerSMNV-1, where gl_WarpsPerSMNV is
+    the maximum number of warp executing on a SM.
+    
+    The variable gl_SMIDNV hold the SM id of the executing thread.  This
+    variable is in the range 0 to gl_SMCountNV-1, where gl_SMCountNV is the
+    number of SM on the GPU.
+    
+    The variable gl_HelperThreadNV specifies if the current thread is a helper
+    thread.  In implementations supporting this extension, fragment shader
+    invocations may be arranged in SIMD thread groups of 2x2 fragments called
+    "quad".  When a fragment shader instruction is executed on a quad, it's
+    possible that some fragments within the quad will execute the instruction
+    even if they are not covered by the primitive.  Those threads are called
+    helper threads.  Their outputs will be discarded and they will not execute
+    global store functions, but the intermediate values they compute can still
+    be used by thread group sharing functions or by fragment derivative
+    functions like dFdx and dFdy.
+    
+
+    Modify Section 7.4, Built-In Uniform State, p. 125
+
+    (Add to the list of built-in uniform variable declaration)
+    
+        uniform uint  gl_WarpSizeNV;
+        uniform uint  gl_WarpsPerSMNV;
+        uniform uint  gl_SMCountNV;
+
+    (Add this paragraph at the end of this section)
+    
+    The variable gl_WarpSizeNV is the total number of thread in a warp.  The
+    variable gl_WarpsPerSMNV is the maximum number of warp executing on a SM.
+    The variable gl_SMCountNV is the number of SM on the GPU.
+    
+    
+    Modify Section 8.3, Common Functions, p. 133
+ 
+    (add a function to query which threads are active within a thread group)
+
+    Syntax:
+
+      uint  activeThreadsNV(void)
+
+    In the value returned by activeThreadsNV(), bit <N> is set to 1 if the
+    corresponding thread in the SIMD thread group is executing the call to
+    activeThreadsNV() and 0 otherwise.  A bit in the return value may be set
+    to zero due to conditional flow control (e.g., returning from a function,
+    executing the "else" part of an "if" statement) or SIMD thread group was
+    dispatched without a full collection of threads.
+ 
+    (add a function to query the state of a Boolean condition over all the 
+    threads in a thread group)
+
+    Syntax:
+
+      uint  ballotThreadNV(bool value)
+
+    The function ballotThreadNV() computes a 32-bit bitfield.  It looks at the
+    condition <value> for each active thread of a thread group and set to 1 
+    each bit for which the condition in the corresponding thread is true.  Bits
+    for threads with false condition are set to 0.  Bits for inactive threads 
+    are also set to 0.  It's possible to query the active thread mask by 
+    calling the function activeThreadsNV.
+
+    (add a function to share data between fragment in a quad)
+
+    Syntax:
+
+        float  quadSwizzle0NV(float swizzledValue, [float unswizzledValue])
+        vec2   quadSwizzle0NV(vec2  swizzledValue, [vec2  unswizzledValue])
+        vec3   quadSwizzle0NV(vec3  swizzledValue, [vec3  unswizzledValue])
+        vec4   quadSwizzle0NV(vec4  swizzledValue, [vec4  unswizzledValue])
+
+        float  quadSwizzle1NV(float swizzledValue, [float unswizzledValue])
+        vec2   quadSwizzle1NV(vec2  swizzledValue, [vec2  unswizzledValue])
+        vec3   quadSwizzle1NV(vec3  swizzledValue, [vec3  unswizzledValue])
+        vec4   quadSwizzle1NV(vec4  swizzledValue, [vec4  unswizzledValue])
+
+        float  quadSwizzle2NV(float swizzledValue, [float unswizzledValue])
+        vec2   quadSwizzle2NV(vec2  swizzledValue, [vec2  unswizzledValue])
+        vec3   quadSwizzle2NV(vec3  swizzledValue, [vec3  unswizzledValue])
+        vec4   quadSwizzle2NV(vec4  swizzledValue, [vec4  unswizzledValue])
+
+        float  quadSwizzle3NV(float swizzledValue, [float unswizzledValue])
+        vec2   quadSwizzle3NV(vec2  swizzledValue, [vec2  unswizzledValue])
+        vec3   quadSwizzle3NV(vec3  swizzledValue, [vec3  unswizzledValue])
+        vec4   quadSwizzle3NV(vec4  swizzledValue, [vec4  unswizzledValue])
+
+        float  quadSwizzleXNV(float swizzledValue, [float unswizzledValue])
+        vec2   quadSwizzleXNV(vec2  swizzledValue, [vec2  unswizzledValue])
+        vec3   quadSwizzleXNV(vec3  swizzledValue, [vec3  unswizzledValue])
+        vec4   quadSwizzleXNV(vec4  swizzledValue, [vec4  unswizzledValue])
+
+        float  quadSwizzleYNV(float swizzledValue, [float unswizzledValue])
+        vec2   quadSwizzleYNV(vec2  swizzledValue, [vec2  unswizzledValue])
+        vec3   quadSwizzleYNV(vec3  swizzledValue, [vec3  unswizzledValue])
+        vec4   quadSwizzleYNV(vec4  swizzledValue, [vec4  unswizzledValue])
+
+    In implementations supporting this extension, if a primitive covers a
+    fragment at (x,y), its fragment shader invocation will be arranged in a
+    SIMD thread group with fragment shader invocations corresponding to three
+    neighboring pixels.  These four invocations are arranged in a 2x2 grid,
+    called a "quad".  If the neighbors of a fragment are not covered by the
+    primitive, fragment shader invocations will still be generated.  The
+    implementation may compute differences between values in these threads to
+    estimate derivatives for dFdx(), dFdy(), and for texture lookups with
+    automatic LOD calculations.
+
+    Fragments may have different locations in the quads based on the type of
+    render target.
+
+    When rendering to a window, fragments within a quad follow this pattern:
+    
+        ---------------------------------------------------
+        | gl_ThreadInWarpNV 4N+0 | gl_ThreadInWarpNV 4N+1 |
+        |     pixel (X+0,Y+1)    |     pixel (X+1,Y+1)    |
+        ---------------------------------------------------
+        | gl_ThreadInWarpNV 4N+2 | gl_ThreadInWarpNV 4N+3 |
+        |     pixel (X+0,Y+0)    |     pixel (X+1,Y+0)    |
+        ---------------------------------------------------
+
+    
+    When rendering to a framebuffer object, fragments within a quad follow this
+    pattern:
+    
+        ---------------------------------------------------
+        | gl_ThreadInWarpNV 4N+2 | gl_ThreadInWarpNV 4N+3 |
+        |     pixel (X+0,Y+1)    |     pixel (X+1,Y+1)    |
+        ---------------------------------------------------
+        | gl_ThreadInWarpNV 4N+0 | gl_ThreadInWarpNV 4N+1 |
+        |     pixel (X+0,Y+0)    |     pixel (X+1,Y+0)    |
+        ---------------------------------------------------
+    
+    There are 6 quadSwizzle functions that allow fragments within a quad to 
+    exchange data.  All those functions will read a floating point  
+    operand <swizzledValue>, which can come from any fragment in the quad. 
+    Another optional floating point operand <unswizzledValue>, which comes from
+    the current fragment, can be added to <swizzledValue>.  The only difference
+    between all those quadSwizzle functions is the location where they get the
+    <swizzledValue> operand within the 2x2 pixel quad.
+
+    quadSwizzle0NV will read the <swizzledValue> operand from the fragment 0:
+    
+        result[thread N] = swizzledValue[thread 0] + unswizzledValue[thread N]
+    
+
+    quadSwizzle1NV will read the <swizzledValue> operand from the fragment 1:
+    
+        result[thread N] = swizzledValue[thread 1] + unswizzledValue[thread N]
+
+
+    quadSwizzle2NV will read the <swizzledValue> operand from the fragment 2:
+    
+        result[thread N] = swizzledValue[thread 2] + unswizzledValue[thread N]
+
+
+    quadSwizzle3NV will read the <swizzledValue> operand from the fragment 3:
+    
+        result[thread N] = swizzledValue[thread 3] + unswizzledValue[thread N]
+
+
+    quadSwizzleXNV will read the <swizzledValue> operand for each fragment
+    from its neighbor in X:
+
+        result[thread 0] = swizzledValue[thread 1] + unswizzledValue[thread 0]
+        result[thread 1] = swizzledValue[thread 0] + unswizzledValue[thread 1]
+        result[thread 2] = swizzledValue[thread 3] + unswizzledValue[thread 2]
+        result[thread 3] = swizzledValue[thread 2] + unswizzledValue[thread 3]
+
+
+    quadSwizzleYNV will read the <swizzledValue> operand for each fragment
+    from its neighbor in Y:
+
+        result[thread 0] = swizzledValue[thread 2] + unswizzledValue[thread 0]
+        result[thread 1] = swizzledValue[thread 3] + unswizzledValue[thread 1]
+        result[thread 2] = swizzledValue[thread 0] + unswizzledValue[thread 2]
+        result[thread 3] = swizzledValue[thread 1] + unswizzledValue[thread 3]
+
+    
+    If any thread in a 2x2 pixel quad is inactive, the quad is divergent.  In
+    this case quadSwizzle will return 0 for all fragments in the quad.
+
+  
+Dependencies on NV_gpu_program5
+
+    If NV_gpu_program5 is supported and "OPTION NV_shader_thread_group" is 
+    specified in an assembly program, the following edits are made to extend 
+    the assembly programming model documented in the NV_gpu_program4 extension
+    and extended by NV_gpu_program5.  
+
+    If NV_gpu_program5 is not supported, or if "OPTION NV_shader_thread_group"
+    is not specified in an assembly program, the contents of this dependencies
+    section should be ignored.
+
+    Modify Section 2.X.2, Program Grammar
+
+    (add the following rules to the the NV_gpu_program4 and 
+     NV_gpu_program5 base grammars)
+
+    <VECTORop>              ::= "TGBALLOT"
+
+    <stateSingleItem>       ::= "state" "." <stateThreadItem>
+
+    <stateThreadItem>       ::= "thread" "." <stateThreadProperty>
+
+    <stateThreadProperty>   ::= "warpsize"
+                              | "warpspersm"
+                              | "smcount"
+
+    (add/change the following rules to the NV_fragment_program4 and 
+     NV_gpu_program5 base grammars)
+
+    <VECTORop>              ::= "QSWZ0"
+                              | "QSWZ1"
+                              | "QSWZ2"
+                              | "QSWZ3"
+                              | "QSWZX"
+                              | "QSWZY"
+
+    <attribBasic>           ::= <fragPrefix> "threadid"
+                              | <fragPrefix> "threadeqmask"
+                              | <fragPrefix> "threadltmask"
+                              | <fragPrefix> "threadlemask"
+                              | <fragPrefix> "threadgtmask"
+                              | <fragPrefix> "threadgemask"
+                              | <fragPrefix> "warpid"
+                              | <fragPrefix> "smid"
+                              | <fragPrefix> "helperthread"
+
+    (add/change the following rules to the NV_vertex_program4 and 
+     NV_gpu_program5 base grammars)
+
+    <attribBasic>           ::= <vtxPrefix> "threadid"
+                              | <vtxPrefix> "threadeqmask"
+                              | <vtxPrefix> "threadltmask"
+                              | <vtxPrefix> "threadlemask"
+                              | <vtxPrefix> "threadgtmask"
+                              | <vtxPrefix> "threadgemask"
+                              | <vtxPrefix> "warpid"
+                              | <vtxPrefix> "smid"
+
+    (add/change the following rules to the NV_geometry_program4 and 
+     NV_gpu_program5 base grammars)
+
+    <attribBasic>           ::= <primPrefix> "threadid"
+                              | <primPrefix> "threadeqmask"
+                              | <primPrefix> "threadltmask"
+                              | <primPrefix> "threadlemask"
+                              | <primPrefix> "threadgtmask"
+                              | <primPrefix> "threadgemask"
+                              | <primPrefix> "warpid"
+                              | <primPrefix> "smid"
+
+    Modify Section 2.X.3.2 of the NV_gpu_program4 specification, Program 
+    Attribute Variables.
+
+    (Add the table entries and relevant text describing the fragment program
+     input variable use to query thread states.)
+
+      Fragment Attribute Binding  Components  Underlying State
+      --------------------------  ----------  ----------------------------
+      ...
+      fragment.threadid           (id,-,-,-)  id of the current thread
+      fragment.threadeqmask       (m,-,-,-)   mask with the current thread
+      fragment.threadltmask       (m,-,-,-)   mask with lower thread
+      fragment.threadlemask       (m,-,-,-)   mask with lower or equal thread
+      fragment.threadgtmask       (m,-,-,-)   mask with greater thread
+      fragment.threadgemask       (m,-,-,-)   mask with greater or equal thread
+      fragment.warpid             (id,-,-,-)  warp id of the current thread
+      fragment.smid               (id,-,-,-)  SM id of the current thread
+      fragment.helperthread       (k,-,-,-)   current thread is a helper thread
+      ...
+
+    If a fragment attribute binding matches "fragment.threadid", the "x" 
+    component is filled with the thread id of the current thread.  The thread
+    id is an unsigned integer in the range 0 to 31.
+
+    If a fragment attribute binding matches "fragment.threadeqmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which the
+    bit equal to the current thread id is set.
+
+    If a fragment attribute binding matches "fragment.threadltmask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower than the current thread id are set.
+
+    If a fragment attribute binding matches "fragment.threadlemask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower or equal to the current thread id are set.
+
+    If a fragment attribute binding matches "fragment.threadgtmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater than the current thread id are set.
+
+    If a fragment attribute binding matches "fragment.threadgemask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater or equal to the current thread id are set.
+
+    If a fragment attribute binding matches "fragment.warpid", the "x"
+    component is filled with the warp id of the current thread.  The warp id is
+    an unsigned integer, the range of this value is hw dependent.
+
+    If a fragment attribute binding matches "fragment.smid", the "x" component
+    is filled with the SM id of the current thread.  The SM id is an unsigned 
+    integer, the range of this value is hw dependent.
+    
+    If a fragment attribute binding matches "fragment.helperthread", the "x"
+    component is an integer value equal to -1 when the current thread is a
+    helper thread and 0 otherwise.  In implementations supporting this
+    extension, fragment program invocations may be arranged in SIMD thread
+    groups of 2x2 fragments called "quad".  When a fragment program instruction
+    is executed on a quad, it's possible that some fragments within the quad
+    will execute the instruction even if they are not covered by the primitive.
+    Those threads are called helper threads.  Their outputs will be discarded
+    and they will not execute global store instructions, but the intermediate
+    values they compute can still be used by thread group sharing instructions
+    or by fragment derivative instructions like DDX and DDY.
+    
+    (Add the table entries and relevant text describing the vertex program 
+     attribute variable use to query thread states.)
+
+      Vertex Attribute Binding  Components  Underlying State
+      ------------------------  ----------  ----------------------------
+      ...
+      vertex.threadid           (id,-,-,-)  id of the current thread
+      vertex.threadeqmask       (m,-,-,-)   mask with the current thread
+      vertex.threadltmask       (m,-,-,-)   mask with lower thread
+      vertex.threadlemask       (m,-,-,-)   mask with lower or equal thread
+      vertex.threadgtmask       (m,-,-,-)   mask with greater thread
+      vertex.threadgemask       (m,-,-,-)   mask with greater or equal thread
+      vertex.warpid             (id,-,-,-)  warp id of the current thread
+      vertex.smid               (id,-,-,-)  SM id of the current thread
+      ...
+
+    If a vertex attribute binding matches "vertex.threadid", the "x" component
+    is filled with the thread id of the current thread.  The thread id is an
+    unsigned integer in the range 0 to 31.
+
+    If a vertex attribute binding matches "vertex.threadeqmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which the
+    bit equal to the current thread id is set.
+
+    If a vertex attribute binding matches "vertex.threadltmask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower than the current thread id are set.
+
+    If a vertex attribute binding matches "vertex.threadlemask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower or equal to the current thread id are set.
+
+    If a vertex attribute binding matches "vertex.threadgtmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater than the current thread id are set.
+
+    If a vertex attribute binding matches "vertex.threadgemask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater or equal to the current thread id are set.
+
+    If a vertex attribute binding matches "vertex.warpid", the "x" component is
+    filled with the warp id of the current thread.  The warp id is an unsigned
+    integer, the range of this value is hw dependent.
+
+    If a vertex attribute binding matches "vertex.smid", the "x" component
+    is filled with the SM id of the current thread.  The SM id is an unsigned 
+    integer, the range of this value is hw dependent.
+
+
+    (Add the table entries and relevant text describing the geometry program 
+     attribute variable use to query thread states.)
+
+      Geometry Attribute Binding  Components  Underlying State
+      --------------------------  ----------  ----------------------------
+      ...
+      primitive.threadid          (id,-,-,-)  id of the current thread
+      primitive.threadeqmask      (m,-,-,-)   mask with the current thread
+      primitive.threadltmask      (m,-,-,-)   mask with lower thread
+      primitive.threadlemask      (m,-,-,-)   mask with lower or equal thread
+      primitive.threadgtmask      (m,-,-,-)   mask with greater thread
+      primitive.threadgemask      (m,-,-,-)   mask with greater or equal thread
+      primitive.warpid            (id,-,-,-)  warp id of the current thread
+      primitive.smid              (id,-,-,-)  SM id of the current thread
+      ...
+
+    If a geometry attribute binding matches "primitive.threadid", the "x" 
+    component is filled with the thread id of the current thread.  The thread
+    id is an unsigned integer in the range 0 to 31.
+
+    If a geometry attribute binding matches "primitive.threadeqmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which the
+    bit equal to the current thread id is set.
+
+    If a geometry attribute binding matches "primitive.threadltmask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower than the current thread id are set.
+
+    If a geometry attribute binding matches "primitive.threadlemask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower or equal to the current thread id are set.
+
+    If a geometry attribute binding matches "primitive.threadgtmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater than the current thread id are set.
+
+    If a geometry attribute binding matches "primitive.threadgemask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater or equal to the current thread id are set.
+
+    If a geometry attribute binding matches "primitive.warpid", the "x"
+    component is filled with the warp id of the current thread.  The warp id is
+    an unsigned integer, the range of this value is hw dependent.
+
+    If a geometry attribute binding matches "primitive.smid", the "x" component
+    is filled with the SM id of the current thread.  The SM id is an unsigned 
+    integer, the range of this value is hw dependent.
+
+
+    (add the following subsection to section 2.X.3.3, Parameters)
+
+    Thread Group Property Bindings
+
+      Binding                        Components  Underlying State
+      -----------------------------  ----------  ----------------------------
+      state.thread.warpsize          (x,-,-,-)   total number of thread in a 
+                                                 warp
+      state.thread.warpspersm        (x,-,-,-)   maximum number of warp 
+                                                 executing on a SM
+      state.thread.smcount           (x,-,-,-)   number of SM on the GPU
+                                                     
+    If a program parameter binding matches "state.thread.warpsize", the "x"
+    component of the program parameter variable is filled with an integer value
+    indicating the total number of thread in a warp.  The "y", "z", and "w" 
+    components are undefined.
+
+    If a program parameter binding matches "state.thread.warpspersm", the "x"
+    component of the program parameter variable is filled with an integer value
+    indicating the maximum number of warp executing on a SM.  The "y", "z", and 
+    "w" components are undefined.
+
+    If a program parameter binding matches "state.thread.smcount", the "x"
+    component of the program parameter variable is filled with an integer value
+    indicating the number of SM on the GPU.  The "y", "z", and "w" components 
+    are undefined.
+    
+    
+    Modify Section 2.X.4, Program Execution Environment  
+
+    (Add the table entries and relevant text describing the program
+     instruction to query thread conditions.)
+    
+      Instr-      Modifiers 
+      uction   V  F I C S H D  Out Inputs    Description
+      -------  -- - - - - - -  --- --------  --------------------------------      
+      ...
+      TGBALLOT 50 X X X X - - F  vu  v        query a boolean in thread group     
+      ...
+
+
+    (Add the table entries and relevant text describing the fragment program 
+     instructions to exchange data between threads.)
+    
+      Instr-      Modifiers 
+      uction   V  F I C S H D  Out Inputs    Description
+      -------  -- - - - - - -  --- --------  --------------------------------      
+      ...
+      QSWZ0    50 X - - - - - F  v   v,v      add fragment 0 in a quad
+      QSWZ1    50 X - - - - - F  v   v,v      add fragment 1 in a quad
+      QSWZ2    50 X - - - - - F  v   v,v      add fragment 2 in a quad
+      QSWZ3    50 X - - - - - F  v   v,v      add fragment 3 in a quad
+      QSWZX    50 X - - - - - F  v   v,v      add fragments horizontally
+      QSWZY    50 X - - - - - F  v   v,v      add fragments vertically     
+      ...
+
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension, 
+     as extended by NV_gpu_program5)
+
+    + Shader thread group (NV_shader_thread_group)
+
+    If a fragment program specifies the "NV_shader_thread_group" option, it
+    may use the "fragment.threadid", "fragment.threadeqmask", 
+    "fragment.threadltmask", "fragment.threadlemask", "fragment.threadgtmask",
+    "fragment.threadgemask", "fragment.warpid", "fragment.smid", 
+    "fragment.helperthread", "state.thread.warpsize", "state.thread.warpspersm"
+    and "state.thread.smcount" bindings.  It may also use the "TGBALLOT",
+    "QSWZ0", "QSWZ1", "QSWZ2", "QSWZ3", "QSWZX" and "QSWZY" instructions.  If
+    this option is not specified, a program will fail to compile if it uses
+    those instructions or bindings.
+
+    If a vertex program specifies the "NV_shader_thread_group" option, it may
+    use the "vertex.threadid", "vertex.threadeqmask", "vertex.threadltmask",
+    "vertex.threadlemask", "vertex.threadgtmask", "vertex.threadgemask",
+    "vertex.warpid", "vertex.smid", "state.thread.warpsize", 
+    "state.thread.warpspersm" and "state.thread.smcount" bindings.  It may also
+    use the "TGBALLOT" instruction.  If this option is not specified, a program
+    will fail to compile if it uses those instructions or bindings.
+
+    If a geometry program specifies the "NV_shader_thread_group" option, it
+    may use the "primitive.threadid", "primitive.threadeqmask", 
+    "primitive.threadltmask", "primitive.threadlemask",
+    "primitive.threadgtmask", "primitive.threadgemask", "primitive.warpid",
+    "primitive.smid", "state.thread.warpsize", "state.thread.warpspersm" and
+    "state.thread.smcount" bindings.  It may also use the "TGBALLOT"
+    instruction.  If this option is not specified, a program will fail to 
+    compile if it uses those instructions or bindings.
+
+    Section 2.X.8.Z, QSWZ0:  add fragment 0 data to all fragment in a quad
+    
+    The QSWZ0 instruction produces a floating point result by adding the
+    first operand, a floating point value from fragment 0, to the second 
+    operand, another floating point value from the current fragment.  
+    
+    quadSwizzle0NV is the GLSL function that implements the same functionality
+    as the QSWZ0 assembly instruction.  The section 8.3 of the OpenGL Shading
+    Language Specification has more detail about the implementation of
+    quadSwizzle0NV.  This additional information also applies to QSWZ0.
+    
+    
+    Section 2.X.8.Z, QSWZ1:  add fragment 1 data to all fragment in a quad
+    
+    The QSWZ1 instruction produces a floating point result by adding the
+    first operand, a floating point value from fragment 1, to the second 
+    operand, another floating point value from the current fragment.  
+    
+    quadSwizzle1NV is the GLSL function that implements the same functionality
+    as the QSWZ1 assembly instruction.  The section 8.3 of the OpenGL Shading
+    Language Specification has more detail about the implementation of
+    quadSwizzle1NV.  This additional information also applies to QSWZ1.
+
+
+    Section 2.X.8.Z, QSWZ2:  add fragment 2 data to all fragment in a quad
+    
+    The QSWZ2 instruction produces a floating point result by adding the
+    first operand, a floating point value from fragment 2, to the second 
+    operand, another floating point value from the current fragment.  
+    
+    quadSwizzle2NV is the GLSL function that implements the same functionality
+    as the QSWZ2 assembly instruction.  The section 8.3 of the OpenGL Shading
+    Language Specification has more detail about the implementation of
+    quadSwizzle2NV.  This additional information also applies to QSWZ2.
+
+    
+    Section 2.X.8.Z, QSWZ3:  add fragment 3 data to all fragment in a quad
+    
+    The QSWZ3 instruction produces a floating point result by adding the
+    first operand, a floating point value from fragment 3, to the second 
+    operand, another floating point value from the current fragment.  
+    
+    quadSwizzle3NV is the GLSL function that implements the same functionality
+    as the QSWZ3 assembly instruction.  The section 8.3 of the OpenGL Shading
+    Language Specification has more detail about the implementation of
+    quadSwizzle3NV.  This additional information also applies to QSWZ3.
+    
+    
+    Section 2.X.8.Z, QSWZX:  add fragments in a quad horizontally
+
+    The QSWZX instruction produces a floating point result by adding the
+    first operand, a floating point value from the fragment neighbor in X to 
+    the current fragment, to the second operand, another floating point value 
+    from the current fragment.
+
+    quadSwizzleXNV is the GLSL function that implements the same functionality
+    as the QSWZX assembly instruction.  The section 8.3 of the OpenGL Shading
+    Language Specification has more detail about the implementation of
+    quadSwizzleXNV.  This additional information also applies to QSWZX.
+
+    
+    Section 2.X.8.Z, QSWZY:  add fragments in a quad vertically
+    
+    The QSWZY instruction produces a floating point result by adding the
+    first operand, a floating point value from the fragment neighbor in Y to 
+    the current fragment, to the second operand, another floating point value 
+    from the current fragment.
+
+    quadSwizzleYNV is the GLSL function that implements the same functionality
+    as the QSWZY assembly instruction.  The section 8.3 of the OpenGL Shading
+    Language Specification has more detail about the implementation of
+    quadSwizzleYNV.  This additional information also applies to QSWZY.
+    
+    
+    Section 2.X.8.Z, TGBALLOT:  query a boolean condition over a thread group
+
+    The TGBALLOT instruction produces a result vector by reading a vector
+    operand for each active thread in the current thread group and comparing 
+    each component to zero.  A result vector component contains an integer 
+    bitmask  value (described below) for which the bits in a component bitmask
+    are set if the value in the operand vector is non-zero for the 
+    corresponding thread, and not set otherwise.
+
+    Sometime when the instruction is in a conditional control flow block or 
+    when it's not possible to completely fill a thread group, only a subset of
+    the threads in the thread group will be active and will execute the 
+    TGBALLOT instruction.  Each bit in the bitfield corresponding to inactive 
+    threads will be set to 0.  It's possible to query the active thread mask 
+    by calling TGBALLOT with 1 as the first operand.
+
+      tmp = VectorLoad(op0);
+      result = { 0, 0, 0, 0 };
+      for (all active threads) {
+        if ([thread]tmp.x != 0) result.x |= 1 << thread;
+        if ([thread]tmp.y != 0) result.y |= 1 << thread;
+        if ([thread]tmp.z != 0) result.z |= 1 << thread;
+        if ([thread]tmp.w != 0) result.w |= 1 << thread;
+      }   
+
+Dependencies on NV_tessellation_program5
+
+    If NV_tessellation_program5 is supported and 
+    "OPTION NV_shader_thread_group" is specified in an assembly program, the
+    following edits are made to extend the assembly programming model
+    documented in the NV_gpu_program4 extension and extended by NV_gpu_program5
+    and NV_tessellation_program5.  
+
+    If NV_tessellation_program5 is not supported, or if
+    "OPTION NV_shader_thread_group" is not specified in an assembly program,
+    the contents of this dependencies section should be ignored.
+
+
+    Modify Section 2.X.2, Program Grammar
+
+    (add/change the following rules to the NV_gpu_program5 base grammars for
+     tessellation control programs)
+
+    <attribBasic>           ::= <primPrefix> "threadid"
+                              | <primPrefix> "threadeqmask"
+                              | <primPrefix> "threadltmask"
+                              | <primPrefix> "threadlemask"
+                              | <primPrefix> "threadgtmask"
+                              | <primPrefix> "threadgemask"
+                              | <primPrefix> "warpid"
+                              | <primPrefix> "smid"
+
+    (add/change the following rules to the NV_gpu_program5 base grammars for
+     tessellation evaluation programs)
+
+    <attribBasic>           ::= <primPrefix> "threadid"
+                              | <primPrefix> "threadeqmask"
+                              | <primPrefix> "threadltmask"
+                              | <primPrefix> "threadlemask"
+                              | <primPrefix> "threadgtmask"
+                              | <primPrefix> "threadgemask"
+                              | <primPrefix> "warpid"
+                              | <primPrefix> "smid"
+
+
+    Modify Section 2.X.3.2 of the NV_tessellation_program5 specification, 
+    Program Attribute Variables.
+
+    (Add the table entries and relevant text describing the Tessellation
+     control and evaluation program attribute variables use to query thread
+     states.)
+
+
+      Primitive Binding Suffix    Components  Underlying State
+      --------------------------  ----------  ----------------------------
+      ...
+      primitive.threadid         (id,-,-,-)  id of the current thread
+      primitive.threadeqmask     (m,-,-,-)   mask with the current thread
+      primitive.threadltmask     (m,-,-,-)   mask with lower thread
+      primitive.threadlemask     (m,-,-,-)   mask with lower or equal thread
+      primitive.threadgtmask     (m,-,-,-)   mask with greater thread
+      primitive.threadgemask     (m,-,-,-)   mask with greater or equal thread
+      primitive.warpid           (id,-,-,-)  warp id of the current thread
+      primitive.smid             (id,-,-,-)  SM id of the current thread
+      ...
+
+    If a attribute binding matches "primitive.threadid", the "x" component is
+    filled with the thread id of the current thread.  The thread id is an
+    unsigned integer in the range 0 to 31.
+
+    If a attribute binding matches "primitive.threadeqmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which the
+    bit equal to the current thread id is set.
+
+    If a attribute binding matches "primitive.threadltmask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower than the current thread id are set.
+
+    If a attribute binding matches "primitive.threadlemask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower or equal to the current thread id are set.
+
+    If a attribute binding matches "primitive.threadgtmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater than the current thread id are set.
+
+    If a attribute binding matches "primitive.threadgemask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater or equal to the current thread id are set.
+
+    If a attribute binding matches "primitive.warpid", the "x" component is
+    filled with the warp id of the current thread.  The warp id is an unsigned
+    integer, the range of this value is hw dependent.
+
+    If a attribute binding matches "primitive.smid", the "x" component is
+    filled with the SM id of the current thread.  The SM id is an unsigned 
+    integer, the range of this value is hw dependent.
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension, 
+     as extended by NV_gpu_program5 and NV_tessellation_program5)
+
+    + Shader thread group (NV_shader_thread_group)
+
+    If a program specifies the "NV_shader_thread_group" option, it may use
+    the "primitive.threadid", "primitive.threadeqmask",
+    "primitive.threadltmask", "primitive.threadlemask", 
+    "primitive.threadgtmask", "primitive.threadgemask", "primitive.warpid",
+    "primitive.smid", "state.thread.warpsize", "state.thread.warpspersm" and
+    "state.thread.smcount" bindings.  It may also use the "TGBALLOT"
+    instruction.  If this option is not specified, a program will fail to
+    compile if it uses those bindings.
+
+
+Dependencies on NV_compute_program5
+
+    If NV_compute_program5 is supported and "OPTION NV_shader_thread_group" is
+    specified in an assembly program, the following edits are made to extend 
+    the assembly programming model documented in the NV_gpu_program4 extension
+    and extended by NV_gpu_program5 and NV_compute_program5.  
+
+    If NV_compute_program5 is not supported, or if 
+    "OPTION NV_shader_thread_group" is not specified in an assembly program, 
+    the contents of this dependencies section should be ignored.
+
+    Section 2.X.2, Program Grammar
+
+    (add the following rules to the grammar)
+
+    <attribBasic>           ::= "invocation" "." "threadid"
+                              | "invocation" "." "threadeqmask"
+                              | "invocation" "." "threadltmask"
+                              | "invocation" "." "threadlemask"
+                              | "invocation" "." "threadgtmask"
+                              | "invocation" "." "threadgemask"
+                              | "invocation" "." "warpid"
+                              | "invocation" "." "smid"
+
+    Modify Section 2.X.3.2 of the NV_compute_program5 specification, Program 
+    Attribute Variables.
+
+    (Add the table entries and relevant text describing the compute program 
+     input variable use to query thread states.)
+
+      Attribute Binding           Components  Underlying State
+      --------------------------  ----------  ----------------------------
+      ...
+      invocation.threadid         (id,-,-,-)  id of the current thread
+      invocation.threadeqmask     (m,-,-,-)   mask with the current thread
+      invocation.threadltmask     (m,-,-,-)   mask with lower thread
+      invocation.threadlemask     (m,-,-,-)   mask with lower or equal thread
+      invocation.threadgtmask     (m,-,-,-)   mask with greater thread
+      invocation.threadgemask     (m,-,-,-)   mask with greater or equal thread
+      invocation.warpid           (id,-,-,-)  warp id of the current thread
+      invocation.smid             (id,-,-,-)  SM id of the current thread
+      ...
+
+    If a compute attribute binding matches "invocation.threadid", the "x" 
+    component is filled with the thread id of the current thread.  The thread
+    id is an unsigned integer in the range 0 to 31.
+
+    If a compute attribute binding matches "invocation.threadeqmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which the
+    bit equal to the current thread id is set.
+
+    If a compute attribute binding matches "invocation.threadltmask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower than the current thread id are set.
+
+    If a compute attribute binding matches "invocation.threadlemask", the "x" 
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    lower or equal to the current thread id are set.
+
+    If a compute attribute binding matches "invocation.threadgtmask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater than the current thread id are set.
+
+    If a compute attribute binding matches "invocation.threadgemask", the "x"
+    component is filled with a 32-bit unsigned integer bitfield in which bits
+    greater or equal to the current thread id are set.
+
+    If a compute attribute binding matches "invocation.warpid", the "x"
+    component is filled with the warp id of the current thread.  The warp id is
+    an unsigned integer, the range of this value is hw dependent.
+
+    If a compute attribute binding matches "invocation.smid", the "x" component
+    is filled with the SM id of the current thread.  The SM id is an unsigned 
+    integer, the range of this value is hw dependent.
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension, 
+     as extended by NV_gpu_program5 and NV_compute_program5)
+
+
+    + Shader thread group (NV_shader_thread_group)
+
+    If a program specifies the "NV_shader_thread_group" option, it may use the
+    "invocation.threadid", "invocation.threadeqmask", 
+    "invocation.threadltmask", "invocation.threadlemask", 
+    "invocation.threadgtmask", "invocation.threadgemask", "invocation.warpid",
+    "invocation.smid", "state.thread.warpsize", "state.thread.warpspersm" and 
+    "state.thread.smcount" bindings.  It may also use the "TGBALLOT"
+    instruction.  If this option is not specified, a program will fail to
+    compile if it uses those bindings.
+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+                                                             Minimum
+    Get Value                         Type  Get Command       Value   Description           Sec.   Attrib
+    --------------------------------  ----  ---------------  -------  --------------------- ------ ------
+    WARP_SIZE_NV                       Z+   GetIntegerv        1       total number of      2.X.3.3  -
+                                                                       thread in a warp.
+                                                                       
+    WARPS_PER_SM_NV                    Z+   GetIntegerv        1       maximum number of    2.X.3.3  -
+                                                                       warp executing on a
+                                                                       SM.
+                                                                       
+    SM_COUNT_NV                        Z+   GetIntegerv        1       number of SM on the  2.X.3.3  -
+                                                                       GPU.                                                                       
+      
+      
+Issues
+
+    None
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     4     7/21/15  jbreton    Update the layout of threads within a quad for
+                               window and framebuffer object rendering.
+     3     2/14/14  jbreton    Rename the extension from NVX to NV.
+     2      9/4/13  jbreton    Add helperThread attribute binding.   
+     1    12/19/12  jbreton    Internal revisions.

@@ -65,6 +65,7 @@ class Call final : public Castable<Call, ValueExpression> {
     const auto& Arguments() const { return arguments_; }
 
     /// @returns the AST node
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::CallExpression* Declaration() const {
         return static_cast<const ast::CallExpression*>(declaration_);
     }

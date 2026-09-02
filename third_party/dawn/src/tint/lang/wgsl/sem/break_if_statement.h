@@ -55,6 +55,7 @@ class BreakIfStatement final : public Castable<BreakIfStatement, CompoundStateme
     ~BreakIfStatement() override;
 
     /// @returns the AST node
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::BreakIfStatement* Declaration() const;
 
     /// @returns the break-if-statement condition expression

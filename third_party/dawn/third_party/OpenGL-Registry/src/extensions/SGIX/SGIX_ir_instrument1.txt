@@ -1,0 +1,129 @@
+XXX - incomplete
+
+Name
+
+    SGIX_ir_instrument1
+
+Name Strings
+
+    GL_SGIX_ir_instrument1
+
+Version
+
+    $Date: 1997/09/18 01:12:44 $ $Revision: 1.4 $
+
+Number
+
+    81
+
+Dependencies
+
+    SGIX_instruments is required
+
+Overview
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled:
+
+        IR_INSTRUMENT1_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Add to section 5.X entitled  Instruments:
+
+    Each implementation may require its own set of instruments.  An
+    enum for the instrument must be passed to Enable to enable
+    measurements of that instrument.
+
+    The format of any instrument measurement in the buffer should obey
+    some conventions. The first word of the measurement should be the
+    enum for the instrument itself. The second word of the measurement
+    should be the size in words of the entire measurement so that any
+    parser can step over measurements with which it is unfamiliar.
+
+    The IR_INSTRUMENT1_SGIX measurement uses 10 words of the buffer.
+    The first (index 0) will be the IR_INSTRUMENT1_SGIX enum itself,
+    the second word (index 1) will be 10. The following words are
+
+    COUNTEMPTY (index 2) 
+    Increments each time a datum such as a word of screen-space
+    geometry, or word of a pixel or texel could have been written to
+    next stage of the GL pipeline, but wasn't because there was no
+    data to write. This is an indication of back-end starvation.  The
+    counter is set to zero as a result of calling StartInstrumentsSGIX
+    and set to zero by ReadInstrumentsSGIX after the value has been
+    read and written back to the buffer.
+
+    COUNTDRAW (index 3)
+    Increments each time a datam such as a word of screen-space
+    geometry, or word of a pixel is written to the next stage of the
+    geometry pipeline.  The counter is set to zero as a result of
+    calling StartInstrumentsSGIX and set to zero by
+    ReadInstrumentsSGIX after the value has been read and written back
+    to the buffer.
+
+    COUNTLOAD (index 4)
+    Increments each time a texture load datum is written to the
+    texture memory.  The counter is set to zero as a result of calling
+    StartInstrumentsSGIX and set to zero by ReadInstrumentsSGIX after
+    the value has been read and written back to the buffer.
+
+    MAILBOX_TIMESTAMP (index 5)
+    Holds the value of COUNTALL at the time MAILBOX is written as a
+    result of calling StartInstrumentsSGIX or ReadInstrumentsSGIX.
+
+    COUNTALL (index 6)
+    Increments every 50mhz clock cycle. No effort to prevent wrapping
+    is made.
+
+    PAD (index 7)
+    Unused
+
+    MARKER (index 8)
+    Holds the value of marker passed to StopInstrumentsSGIX or
+    ReadInstrumentsSGIX for this measurement.
+
+    MAILBOX (index 9)
+    Holds a value that is used by the implementation. Typically a
+    sequence identifier, set after the buffer as been reset, starting
+    at 1 with the first measurement and incrementing by 1 for each
+    successive measurement.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New Implementation Dependent State
+
+    None
+

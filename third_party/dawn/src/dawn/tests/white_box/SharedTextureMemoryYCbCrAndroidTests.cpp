@@ -32,16 +32,16 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Algebra.h"
-#include "dawn/common/Assert.h"
-#include "dawn/common/ColorSpace.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Algebra.h"
+#include "src/dawn/common/ColorSpace.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 #include "vulkan/vulkan_core.h"
 
 namespace dawn {
@@ -77,7 +77,8 @@ AHardwareBuffer* MakeY8Cb8Cr8AHB(uint32_t width,
         uint8_t* dstData = static_cast<uint8_t*>(dst.data);
         for (uint32_t x : Range(srcWidth)) {
             for (uint32_t y : Range(srcHeight)) {
-                dstData[y * dst.rowStride + x * dst.pixelStride] = src[y * srcWidth + x];
+                DAWN_UNSAFE_TODO(dstData[y * dst.rowStride + x * dst.pixelStride]) =
+                    src[y * srcWidth + x];
             }
         }
     };
@@ -467,17 +468,17 @@ class SharedTextureMemoryVulkanYCbCrParamsTests : public DawnTestWithParams<VkYC
         // Vulkan has CrYCb (because Cr is "red", Y is "green" and Cb is "blue") but we want YCbCr.
         // Stay in 4D to undo the swizzle as it is before the application of the range, but have the
         // redo in 3D because it is after the range is applied.
-        constexpr math::Mat4x4f kUndoVulkanSwizzle = {
+        constexpr auto kUndoVulkanSwizzle = math::Mat4x4f::FromRows({
+            {0, 1, 0, 0},
             {0, 0, 1, 0},
             {1, 0, 0, 0},
-            {0, 1, 0, 0},
             {0, 0, 0, 1},
-        };
-        constexpr math::Mat3x3f kRedoVulkanSwizzle = {
-            {0, 1, 0},
+        });
+        constexpr auto kRedoVulkanSwizzle = math::Mat3x3f::FromRows({
             {0, 0, 1},
             {1, 0, 0},
-        };
+            {0, 1, 0},
+        });
 
         math::Mat4x3f rangeTransform;
         switch (GetParam().mVkYCbCrRange) {
@@ -624,7 +625,9 @@ TEST_P(SharedTextureMemoryVulkanYCbCrParamsTests, SampleY8Cb8Cr8AHB) {
         auto ycbcr = math::Vec4f(cr / 255.0, y / 255.0, cb / 255.0, 1.0);
         auto rgb = math::Mul(ycbcrToRgb, ycbcr);
 
-        auto expected = utils::RGBA8(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255, 255);
+        auto expected =
+            utils::RGBA8(static_cast<uint8_t>(rgb[0] * 255), static_cast<uint8_t>(rgb[1] * 255),
+                         static_cast<uint8_t>(rgb[2] * 255), 255);
         auto bottom = utils::RGBA8(expected.r - 1, expected.g - 1, expected.b - 1, 255);
         auto top = utils::RGBA8(expected.r + 1, expected.g + 1, expected.b + 1, 255);
 
@@ -953,7 +956,7 @@ TEST_P(SharedTextureMemoryOpaqueYCbCrAndroidForExternalTexture,
     }
 }
 
-// TODO
+// TODO(https://crbug.com/468988322):
 //  - Same pipeline check bindgroups get reapplied? Same pipeline check immediates get reapplied.
 
 DAWN_INSTANTIATE_TEST(SharedTextureMemoryOpaqueYCbCrAndroidForExternalTexture, VulkanBackend());

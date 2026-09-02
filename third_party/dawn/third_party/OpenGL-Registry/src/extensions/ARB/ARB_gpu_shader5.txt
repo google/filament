@@ -1,0 +1,2074 @@
+Name
+
+    ARB_gpu_shader5
+
+Name Strings
+
+    GL_ARB_gpu_shader5
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Bruce Merry, ARM
+    Chris Dodd, NVIDIA
+    Eric Werness, NVIDIA
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Nick Haemel, AMD
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Version 16, March 30, 2012
+
+Number
+
+    ARB Extension #88
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 (Compatibility Profile)
+    Specification.
+
+    This extension is written against Version 1.50 (Revision 09) of the OpenGL
+    Shading Language Specification.
+
+    OpenGL 3.2 and GLSL 1.50 are required.
+
+    This extension interacts with ARB_gpu_shader_fp64.
+
+    This extension interacts with NV_gpu_shader5.
+
+    This extension interacts with ARB_sample_shading.
+
+    This extension interacts with ARB_texture_gather.
+
+Overview
+
+    This extension provides a set of new features to the OpenGL Shading
+    Language and related APIs to support capabilities of new GPUs, extending
+    the capabilities of version 1.50 of the OpenGL Shading Language.  Shaders
+    using the new functionality provided by this extension should enable this
+    functionality via the construct
+
+      #extension GL_ARB_gpu_shader5 : require     (or enable)
+
+    This extension provides a variety of new features for all shader types,
+    including:
+
+      * support for indexing into arrays of samplers using non-constant
+        indices, as long as the index doesn't diverge if multiple shader
+        invocations are run in lockstep;
+
+      * extending the uniform block capability of OpenGL 3.1 and 3.2 to allow
+        shaders to index into an array of uniform blocks;
+
+      * support for implicitly converting signed integer types to unsigned
+        types, as well as more general implicit conversion and function
+        overloading infrastructure to support new data types introduced by
+        other extensions;
+
+      * a "precise" qualifier allowing computations to be carried out exactly
+        as specified in the shader source to avoid optimization-induced
+        invariance issues (which might cause cracking in tessellation);
+
+      * new built-in functions supporting:
+
+        * fused floating-point multiply-add operations;
+
+        * splitting a floating-point number into a significand and exponent
+          (frexp), or building a floating-point number from a significand and
+          exponent (ldexp);
+
+        * integer bitfield manipulation, including functions to find the
+          position of the most or least significant set bit, count the number
+          of one bits, and bitfield insertion, extraction, and reversal;
+
+        * packing and unpacking vectors of small fixed-point data types into a
+          larger scalar; and
+
+        * convert floating-point values to or from their integer bit
+          encodings;
+
+      * extending the textureGather() built-in functions provided by
+        ARB_texture_gather:
+
+        * allowing shaders to select any single component of a multi-component
+          texture to produce the gathered 2x2 footprint;
+
+        * allowing shaders to perform a per-sample depth comparison when
+          gathering the 2x2 footprint using for shadow sampler types;
+
+        * allowing shaders to use arbitrary offsets computed at run-time to
+          select a 2x2 footprint to gather from; and
+
+        * allowing shaders to use separate independent offsets for each of the
+          four texels returned, instead of requiring a fixed 2x2 footprint.
+
+    This extension also provides some new capabilities for individual
+    shader types, including:
+
+      * support for instanced geometry shaders, where a geometry shader may be
+        run multiple times for each primitive, including a built-in
+        gl_InvocationID to identify the invocation number;
+
+      * support for emitting vertices in a geometry program where each vertex
+        emitted may be directed independently at a specified vertex stream (as
+        provided by ARB_transform_feedback3), and where each shader output is
+        associated with a stream;
+
+      * support for reading a mask of covered samples in a fragment shader;
+        and
+
+      * support for interpolating a fragment shader input at a programmable
+        offset relative to the pixel center, a programmable sample number, or
+        at the centroid.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetProgramiv:
+
+        GEOMETRY_SHADER_INVOCATIONS                     0x887F
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    GetDoublev, and GetInteger64v:
+
+        MAX_GEOMETRY_SHADER_INVOCATIONS                 0x8E5A
+        MIN_FRAGMENT_INTERPOLATION_OFFSET               0x8E5B
+        MAX_FRAGMENT_INTERPOLATION_OFFSET               0x8E5C
+        FRAGMENT_INTERPOLATION_OFFSET_BITS              0x8E5D
+        MAX_VERTEX_STREAMS                              0x8E71
+
+    (note:  MAX_GEOMETRY_SHADER_INVOCATIONS,
+     MIN_FRAGMENT_INTERPOLATION_OFFSET, MAX_FRAGMENT_INTERPOLATION_OFFSET, and
+     FRAGMENT_INTERPOLATION_OFFSET_BITS have identical values to corresponding
+     "NV" enums from NV_gpu_program5.  MAX_VERTEX_STREAMS is also defined in
+     ARB_transform_feedback3.)
+
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.15.4, Geometry Shader Execution Environment, p. 121
+
+    (add two unnumbered subsections after "Texture Access", p. 122)
+
+    Instanced Geometry Shaders
+
+    For each input primitive received by the geometry shader pipeline stage,
+    the geometry shader may be run once or multiple times.  The number of
+    times a geometry shader should be executed for each input primitive may be
+    specified using a layout qualifier in a geometry shader of a linked
+    program.  If the invocation count is not specified in any layout
+    qualifier, the invocation count will be one.
+
+    Each separate geometry shader invocation is assigned a unique invocation
+    number.  For a geometry shader with <N> invocations, each input primitive
+    spawns <N> invocations, numbered 0 through <N>-1.  The built-in uniform
+    gl_InvocationID may be used by a geometry shader invocation to determine
+    its invocation number.
+
+    When executing instanced geometry shaders, the output primitives generated
+    from each input primitive are passed to subsequent pipeline stages using
+    the shader invocation number to order the output.  The first primitives
+    received by the subsequent pipeline stages are those emitted by the shader
+    invocation numbered zero, followed by those from the shader invocation
+    numbered one, and so forth.  Additionally, all output primitives generated
+    from a given input primitive are passed to subsequent pipeline stages
+    before any output primitives generated from subsequent input primitives.
+
+
+    Geometry Shader Vertex Streams
+
+    Geometry shaders may emit primitives to multiple independent vertex
+    streams.  Each vertex emitted by the geometry shader is directed at one of
+    the vertex streams.  As vertices are received on each stream, they are
+    arranged into primitives of the type specified by the geometry shader
+    output primitive type.  The shading language built-in functions
+    EndPrimitive() and EndStreamPrimitive() may be used to end the primitive
+    being assembled on a given vertex stream and start a new empty primitive
+    of the same type.  If an implementation supports <N> vertex streams, the
+    individual streams are numbered 0 through <N>-1.  There is no requirement
+    on the order of the streams to which vertices are emitted, and the number
+    of vertices emitted to each stream may be completely independent, subject
+    only to implementation-dependent output limits.
+
+    The primitives emitted to all vertex streams are passed to the transform
+    feedback stage to be captured and written to buffer objects in the manner
+    specified by the transform feedback state.  The primitives emitted to all
+    streams but stream zero are discarded after transform feedback.
+    Primitives emitted to stream zero are passed to subsequent pipeline stages
+    for clipping, rasterization, and subsequent fragment processing.
+
+    Geometry shaders that emit vertices to multiple vertex streams are
+    currently limited to using only the "points" output primitive type.  A
+    program will fail to link if it includes a geometry shader that calls the
+    EmitStreamVertex() built-in function and has any other output primitive
+    type parameter.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    Modify Section 3.3.1, Multisampling, p. 148
+
+    (add new paragraph at the end of the section, p. 149)
+
+    If MULTISAMPLE is enabled and the current program object includes a
+    fragment shader with one or more input variables qualified with "sample
+    in", the data associated with those variables will be assigned
+    independently.  The values for each sample must be evaluated at the
+    location of the sample.  The data associated with any other variables not
+    qualified with "sample in" need not be evaluated independently for each
+    sample.
+
+
+    Modify ARB_texture_gather, "Changes to Section 3.8.8"
+
+    (extend language describing the operation of textureGather, allowing the
+     new <comp> argument to select any of the four components from a
+     multi-component texel vector)
+
+    The textureGather and textureGatherOffset built-in shader functions...  A
+    four-component vector is then assembled by taking a single component from
+    the swizzled texture source colors of the four texels, in the order
+    T_i0_j1, T_i1_j1, T_i1_j0, and T_i0_j0.  The selected component is
+    identified by the optional <comp> argument, where the values zero, one,
+    two, and three identify the Rs, Gs, Bs, or As component, respectively.  If
+    <comp> is omitted, it is treated as identifying the Rs component.
+    Incomplete textures (section 3.8.10) are considered to return a texture
+    source color of (0,0,0,1) for all four source texels.
+
+    (add further language describing textureGatherOffsets)
+
+    The textureGatherOffsets built-in functions from the OpenGL Shading
+    Language return a vector derived from sampling four texels in the image
+    array of level <level_base>.  For each of the four texel offsets specified
+    by the <offsets> argument, the rules for the LINEAR minification filter
+    are applied to identify a 2x2 texel footprint, from which the single texel
+    T_i0_j0 is selected.  A four-component vector is then assembled by taking
+    a single component from each of the four T_i0_j0 texels in the same manner
+    as for the textureGather function.
+
+
+    Modify Section 3.12.1, Shader Variables, p. 273
+
+    (insert prior to the last paragraph of the section, p. 274)
+
+    When interpolating built-in and user-defined varying variables, the default
+    screen-space location at which these variables are sampled is defined in
+    previous rasterization sections.  The default location may be overriden by
+    interpolation qualifiers.  When interpolating variables declared using
+    "centroid in", the variable is sampled at a location within the pixel
+    covered by the primitive generating the fragment.  When interpolating
+    variables declared using "sample in" when MULTISAMPLE is enabled, the
+    fragment shader will be invoked separately for each covered sample and the
+    variable will be sampled at the corresponding sample point.
+
+    Additionally, built-in fragment shader functions provide further
+    fine-grained control over interpolation.  The built-in functions
+    interpolateAtCentroid() and interpolateAtSample() will sample variables as
+    though they were declared with the "centroid" or "sample" qualifiers,
+    respectively.  The built-in function interpolateAtOffset() will sample
+    variables at a specified (x,y) offset relative to the center of the pixel.
+    The range and granularity of offsets supported by this function is
+    implementation-dependent.  If either component of the specified offset is
+    less than MIN_FRAGMENT_INTERPOLATION_OFFSET or greater than
+    MAX_FRAGMENT_INTERPOLATION_OFFSET, the position used to interpolate the
+    variable is undefined.  Not all values of <offset> may be supported; x and
+    y offsets may be rounded to fixed-point values with the number of fraction
+    bits given by the implementation-dependent constant
+    FRAGMENT_INTERPOLATION_OFFSET_BITS.
+
+
+    Modify Section 3.12.2, Shader Execution, p. 274
+
+    (insert prior to the next-to-last paragraph in "Shader Inputs", p. 277)
+
+    The built-in variable gl_SampleMaskIn[] is an integer array holding
+    bitfields indicating the set of fragment samples covered by the primitive
+    corresponding to the fragment shader invocation.  The number of elements
+    in the array is ceil(<s>/32), where <s> is the maximum number of color
+    samples supported by the implementation.  Bit <n> of element <w> in the
+    array is set if and only if the sample numbered <w>*32+<n> is considered
+    covered for this fragment shader invocation.  When rendering to a
+    non-multisample buffer, or if multisample rasterization is disabled, all
+    bits are zero except for bit zero of the first array element.  That bit
+    will be one if the pixel is covered and zero otherwise.  Bits in the
+    sample mask corresponding to covered samples that will be killed due to
+    SAMPLE_COVERAGE or SAMPLE_MASK_NV will not be set (section 4.1.3).  When
+    per-sample shading is active due to the use of a fragment input qualified
+    by "sample", only the bit for the current sample is set in
+    gl_SampleMaskIn.  When OpenGL API state specifies multiple fragment shader
+    invocations for a given fragment, the sample mask for any single fragment
+    shader invocation may specify a subset of the covered samples for the
+    fragment.  In this case, the bit corresponding to each covered sample will
+    be set in exactly one fragment shader invocation.
+
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    Modify Section 6.1.16, Shader and Program Queries, p. 384
+
+    (add to long first paragraph, p. 386) ... If <pname> is
+    GEOMETRY_SHADER_INVOCATIONS, the number of geometry shader invocations per
+    primitive will be returned.  If GEOMETRY_VERTICES_OUT,
+    GEOMETRY_INPUT_TYPE, GEOMETRY_OUTPUT_TYPE, or GEOMETRY_SHADER_INVOCATIONS
+    are queried for a program which has not been linked successfully, or which
+    does not contain objects to form a geometry shader, then an
+    INVALID_OPERATION error is generated.
+
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 1.50
+(Revision 09)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_gpu_shader5 : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_gpu_shader5        1
+
+
+    Modify Section 3.6, Keywords, p. 14
+
+    (add to the keyword list)
+
+      sample
+
+
+    Modify Section 4.1.7, Samplers, p. 23
+
+    (modify 1st paragraph of the section, deleting the restriction requiring
+    constant indexing of sampler arrays but still requiring uniform indexing
+    across invocations) ... Samplers may aggregated into arrays within a
+    shader (using square brackets [ ]) and can be indexed with general integer
+    expressions.  The results of accessing a sampler array with an
+    out-of-bounds index are undefined. ...
+
+    (add new paragraph restricting the use of general integer expression in
+    sampler array indexing) When indexing an array of samplers, the integer
+    expression used to index the array must be uniform across shader
+    invocations.  If this restriction is not satisfied, the results of
+    accessing the sampler array are undefined.  For the purposes of this
+    uniformity test, the index used for texture lookups performed inside a
+    loop is considered uniform for the <n>th loop iteration if all shader
+    invocations that execute the loop at least <n> times compute the same
+    index on that iteration.  For texture lookups inside a function other than
+    main(), an index is considered uniform if the value is the same for all
+    invocations calling the function from the same point in the caller.  For
+    nested loops and function calls, the uniformity test requires that the
+    index match only those other shader invocations with identical loop
+    iteration counts and function call chains.
+
+
+    Modify Section 4.1.10, Implicit Conversions, p. 27
+
+    (modify table of implicit conversions)
+
+                                Can be implicitly
+        Type of expression        converted to
+        ---------------------   -----------------
+        int                     uint, float
+        ivec2                   uvec2, vec2
+        ivec3                   uvec3, vec3
+        ivec4                   uvec4, vec4
+
+        uint                    float
+        uvec2                   vec2
+        uvec3                   vec3
+        uvec4                   vec4
+
+    (modify second paragraph of the section) No implicit conversions are
+    provided to convert from unsigned to signed integer types or from
+    floating-point to integer types.  There are no implicit array or structure
+    conversions.
+
+    (insert before the final paragraph of the section) When performing
+    implicit conversion for binary operators, there may be multiple data types
+    to which the two operands can be converted.  For example, when adding an
+    int value to a uint value, both values can be implicitly converted to uint
+    and float.  In such cases, a floating-point type is chosen if either
+    operand has a floating-point type.  Otherwise, an unsigned integer type is
+    chosen if either operand has an unsigned integer type.  Otherwise, a
+    signed integer type is chosen.
+    
+
+    Modify Section 4.3, Storage Qualifiers, p. 29
+
+    (add to first table on the page)
+
+      Qualifier         Meaning
+      --------------    ----------------------------------------
+      sample in         linkage with per-sample interpolation
+      sample out        linkage with per-sample interpolation
+
+    (modify third paragraph, p. 29) These interpolation qualifiers may only
+    precede the qualifiers in, centroid in, sample in, out, centroid out, or
+    sample out in a declaration.  ...
+
+
+    Modify Section 4.3.4, Inputs, p. 31
+
+    (modify first paragraph of section) Shader input variables are declared
+    with the in, centroid in, or sample in storage qualifiers. ... Variables
+    declared as in, centroid in, or sample in may not be written to during
+    shader execution. ...
+
+    (modify third paragraph, p. 32) ...  Fragment shader inputs get
+    per-fragment values, typically interpolated from a previous stage's
+    outputs.  They are declared in fragment shaders with the in, centroid in,
+    or sample in storage qualifiers or the deprecated varying and centroid
+    varying storage qualifiers. ...
+
+    (add to examples immediately below)
+
+      sample in vec4 perSampleColor;
+
+
+    Modify Section 4.3.6, Outputs, p. 33
+
+    (modify first paragraph of section) Shader output variables are declared
+    with the out, centroid out, or sample out storage qualifiers. ...
+
+    (modify third paragraph of section) Vertex and geometry output variables
+    output per-vertex data and are declared using the out, centroid out, or
+    sample out storage qualifiers, or the deprecated varying storage
+    qualifier.
+
+    (add to examples immediately below)
+
+      sample out vec4 perSampleColor;
+
+    (modify last paragraph, p. 33) Fragment outputs output per-fragment data
+    and are declared using the out storage qualifier. It is an error to use
+    centroid out or sample out in a fragment shader. ...
+    
+
+    Modify Section 4.3.7, Interface Blocks, p. 34
+
+    (modify last paragaph, p. 36, removing the requirement for indexing
+    uniform blocks using constant expressions) For uniform blocks declared as
+    arrays, each individual array element corresponds to a separate buffer
+    object backing one instance of the block.  As the array size indicates the
+    number of buffer objects needed, uniform block array declarations must
+    specify an integral array size.  Arbitrary indices may be used to index a
+    uniform block array; integral constant expressions are not required.  If
+    the index used to access an array of uniform blocks is out-of-bounds, the
+    results of the access are undefined.
+
+
+    Modify Section 4.3.8.1, Input Layout Qualifiers, p. 37
+
+    (modify last paragraph, p. 37, and subsequent paragraphs on p. 38)
+
+    Geometry shaders support input layout qualifiers.  There are two types of
+    layout qualifiers used to specify an input primitive type and an
+    invocation count.  The input primitive type and invocation count
+    qualifiers are allowed only on the interface qualifier in, not on an input
+    block, block member, or variable.
+
+      layout-qualifier-id
+        points
+        lines
+        lines_adjacency
+        triangles
+        triangles_adjacency
+        invocations = integer-constant
+
+    The identifiers "points", "lines", "lines_adjacency", "triangles", and
+    "triangles_adjacency" are used to specify the type of input primitive
+    accepted by the geometry shader, and only one of these is accepted.  At
+    least one geometry shader (compilation unit) in a program must declare an
+    input primitive type, and all geometry shader input primitive type
+    declarations in a program must declare the same type.  It is not required
+    that all geometry shaders in a program declare an input primitive type.
+
+    The identifier "invocations" is used to specify the number of times the
+    geometry shader is invoked for each input primitive received.  Invocation
+    count declarations are optional.  If no invocation count is declared in
+    any geometry shader in the program, the geometry shader will be run once
+    for each input primitive.  If an invocation count is declared, all such
+    declarations must specify the same count.  If a shader specifies an
+    invocation count greater than the implementation-dependent maximum, it
+    will fail to compile.
+
+    For example,
+
+      layout(triangles, invocations=6) in;
+
+    will establish that all inputs to the geometry shader are triangles and
+    that the geometry shader is run six times for each triangle processed.
+
+    All geometry shader input unsized array declarations ...
+
+
+    Modify Section 4.3.8.2, Output Layout Qualifiers, p. 40
+
+    (modify second and subsequent paragraphs, p. 40)
+
+    Geometry shaders can have output layout qualifiers.  There are three types
+    of output layout qualifiers used to specify an output primitive type, a
+    maximum output vertex count, and per-output stream numbers.  The output
+    primitive type and output vertex count qualifiers are allowed only on the
+    interface qualifier out, not on an output block, block member, or variable
+    declaration.  The output stream number qualifier is allowed on the
+    interface qualifier out, or on output blocks or variable declarations.
+
+    The layout qualifier identifiers for geometry shader outputs are
+
+      layout-qualifier-id
+        points
+        line_strip
+        triangle_strip
+        max_vertices = integer-constant
+        stream = integer-constant
+
+    The identifiers "points", "line_strip", and "triangle_strip" are used to
+    specify the type of output primitive produced by the geometry shader, and
+    only one of these is accepted.  At least one geometry shader (compilation
+    unit) in a program must declare an output primitive type, and all geometry
+    shader output primitive type declarations in a program must declare the
+    same primitive type.  It is not required that all geometry shaders in a
+    program declare an output primitive type.
+
+    The identifier "max_vertices" is used to specify the maximum number of
+    vertices the shader will ever emit in a single invocation.  At least one
+    geometry shader (compilation unit) in a program must declare an maximum
+    output vertex count, and all geometry shader output vertex count
+    declarations in a program must declare the same count.  It is not required
+    that all geometry shaders in a program declare a count.
+
+    In the example,
+
+      layout(triangle_strip, max_vertices = 60) out; // order does not matter
+      layout(max_vertices = 60) out; // redeclaration okay
+      layout(triangle_strip) out; // redeclaration okay
+      layout(points) out; // error, contradicts triangle_strip
+      layout(max_vertices = 30) out; // error, contradicts 60
+
+    all outputs from the geometry shader are triangles and at most 60 vertices
+    will be emitted by the shader.  It is an error for the maximum number of
+    vertices to be greater than gl_MaxGeometryOutputVertices.
+
+    The identifier "stream" is used to specify that a geometry shader output
+    variable or block is associated with a particular vertex stream (numbered
+    beginning with zero).  A default stream number may be declared at global
+    scope by qualifying interface qualifier out as in this example:
+
+      layout(stream = 1) out;
+
+    The stream number specified in such a declaration replaces any previous
+    default and applies to all subsequent block and variable declarations
+    until a new default is established.  The initial default stream number is
+    zero.
+
+    Each output block or non-block output variable is associated with a vertex
+    stream.  If the block or variable is declared with a stream qualifier, it
+    is associated with the specified stream; otherwise, it is associated with
+    the current default stream.  A block member may be declared with a stream
+    qualifier, but the specified stream must match the stream associated with
+    the containing block.  One example:
+
+      layout(stream=1) out;             // default is now stream 1
+      out vec4 var1;                    // var1 gets default stream (1)
+      layout(stream=2) out Block1 {     // "Block1" belongs to stream 2
+        layout(stream=2) vec4 var2;     // redundant block member stream decl
+        layout(stream=3) vec2 var3;     // ILLEGAL (must match block stream)
+        vec3 var4;                      // belongs to stream 2
+      };
+      layout(stream=0) out;             // default is now stream 0
+      out vec4 var5;                    // var5 gets default stream (0)
+      out Block2 {                      // "Block2" gets default stream (0)
+        vec4 var6;
+      };
+      layout(stream=3) out vec4 var7;   // var7 belongs to stream 3
+
+    If a geometry shader output block or variable is declared more than once,
+    all such declarations must associate the variable with the same vertex
+    stream.  If any stream declaration specifies a non-existent stream number,
+    the shader will fail to compile.
+
+    Built-in geometry shader outputs are always associated with vertex stream
+    zero.
+
+    Each vertex emitted by the geometry shader is assigned to a specific
+    stream, and the attributes of the emitted vertex are taken from the set of
+    output blocks and variables assigned to the targeted stream.  After each
+    vertex is emitted, the values of all output variables become undefined.
+    Additionally, the output variables associated with each vertex stream may
+    share storage.  Writing to an output variable associated with one stream
+    may overwrite output variables associated with any other stream.  When
+    emitting each vertex, a geometry shader should write to all outputs
+    associated with the stream to which the vertex will be emitted and to no
+    outputs associated with any other stream.
+
+
+    Modify Section 4.3.9, Interpolation, p. 42
+
+    (modify first paragraph of section, add reference to sample in/out) The
+    presence of and type of interpolation is controlled by the storage
+    qualifiers centroid in, sample in, centroid out, and sample out, by the
+    optional interpolation qualifiers smooth, flat, and noperspective, and by
+    default behaviors established through the OpenGL API when no interpolation
+    qualifier is present. ...
+
+    (modify second paragraph) ... A variable may be qualified as flat centroid
+    or flat sample, which will mean the same thing as qualifying it only as
+    flat.
+
+    (replace last paragraph, p. 42) 
+
+    When multisample rasterization is disabled, or for fragment shader input
+    variables qualified with neither "centroid in" nor "sample in", the value
+    of the assigned variable may be interpolated anywhere within the pixel and
+    a single value may be assigned to each sample within the pixel, to the
+    extent permitted by the OpenGL Specification.
+
+    When multisample rasterization is enabled, "centroid" and "sample" may be
+    used to control the location and frequency of the sampling of the
+    qualified fragment shader input.  If a fragment shader input is qualified
+    with "centroid", a single value may be assigned to that variable for all
+    samples in the pixel, but that value must be interpolated at a location
+    that lies in both the pixel and in the primitive being rendered, including
+    any of the pixel's samples covered by the primitive.  Because the location
+    at which the variable is sampled may be different in neighboring pixels,
+    derivatives of centroid-sampled inputs may be less accurate than those for
+    non-centroid interpolated variables.  If a fragment shader input is
+    qualified with "sample", a separate value must be assigned to that
+    variable for each covered sample in the pixel, and that value must be
+    sampled at the location of the individual sample.
+
+
+    (Insert before Section 4.7, Order of Qualification, p. 47)
+
+    Section 4.Q, The Precise Qualifier
+
+    Some algorithms may require that floating-point computations be carried
+    out in exactly the manner specified in the source code, even if the
+    implementation supports optimizations that could produce nearly equivalent
+    results with higher performance.  For example, many GL implementations
+    support a "multiply-add" that can compute values such as
+
+      float result = (float(a) * float(b)) + float(c);
+
+    in a single operation.  The result of a floating-point multiply-add may
+    not always be identical to first doing a multiply yielding a
+    floating-point result, and then doing a floating-point add.  By default,
+    implementations are permitted to perform optimizations that effectively
+    modify the order of the operations used to evaluate an expression, even if
+    those optimizations may produce slightly different results relative to
+    unoptimized code.
+
+    The qualifier "precise" will ensure that operations contributing to a
+    variable's value are performed in the order and with the precision
+    specified in the source code.  Order of evaluation is determined by
+    operator precedence and parentheses, as described in Section 5.
+    Expressions must be evaluated with a precision consistent with the
+    operation; for example, multiplying two "float" values must produce a
+    single value with "float" precision.  This effectively prohibits the
+    arbitrary use of fused multiply-add operations if the intermediate
+    multiply result is kept at a higher precision.  For example:
+
+      precise out vec4 position;
+
+    declares that computations used to produce the value of "position" must be
+    performed precisely using the order and precision specified.  As with the
+    invariant qualifier (section 4.6.1), the precise qualifier may be used to
+    qualify a built-in or previously declared user-defined variable as being
+    precise:
+
+      out vec3 Color;
+      precise Color;            // make existing Color be precise
+
+    This qualifier will affect the evaluation of expressions used on the
+    right-hand side of an assignment if and only if:
+
+      * the variable assigned to is qualified as "precise"; or
+
+      * the value assigned is used later in the same function, either directly
+        or indirectly, on the right-hand of an assignment to a variable
+        declared as "precise".
+
+    Expressions computed in a function are treated as precise only if assigned
+    to a variable qualified as "precise" in that same function.  Any other
+    expressions within a function are not automatically treated as precise,
+    even if they are used to determine a value that is returned by the
+    function and directly assigned to a variable qualified as "precise".
+
+    Some examples of the use of "precise" include:
+
+      in vec4 a, b, c, d;
+      precise out vec4 v;
+
+      float func(float e, float f, float g, float h)
+      {
+        return (e*f) + (g*h);            // no special precision
+      }
+
+      float func2(float e, float f, float g, float h)
+      {
+        precise result = (e*f) + (g*h);  // ensures a precise return value
+        return result;
+      }
+
+      float func3(float i, float j, precise out float k)
+      {
+        k = i * i + j;                   // precise, due to <k> declaration
+      }
+
+      void main(void)
+      {
+        vec4 r = vec3(a * b);           // precise, used to compute v.xyz
+        vec4 s = vec3(c * d);           // precise, used to compute v.xyz
+        v.xyz = r + s;                          // precise                      
+        v.w = (a.w * b.w) + (c.w * d.w);        // precise
+        v.x = func(a.x, b.x, c.x, d.x);         // values computed in func()
+                                                // are NOT precise
+        v.x = func2(a.x, b.x, c.x, d.x);        // precise!
+        func3(a.x * b.x, c.x * d.x, v.x);       // precise!
+      }
+
+
+    Modify Section 4.7, Order of Qualification, p. 47
+
+    When multiple qualifications are present, they must follow a strict order.
+    This order is as follows:
+
+      precise-qualifier invariant-qualifier interpolation-qualifier storage-qualifier
+         precision-qualifier
+
+
+    Modify Section 5.9, Expressions, p. 57
+
+    (modify bulleted list as follows, adding support for implicit conversion
+    between signed and unsigned types)
+
+    Expressions in the shading language are built from the following:
+
+    * Constants of type bool, int, int64_t, uint, uint64_t, float, all vector
+      types, and all matrix types.
+
+    ...
+
+    * The operator modulus (%) operates on signed or unsigned integer scalars
+      or vectors.  If the fundamental types of the operands do not match, the
+      conversions from Section 4.1.10 "Implicit Conversions" are applied to
+      produce matching types.  ...
+
+
+    Modify Section 6.1, Function Definitions, p. 63
+
+    (modify description of overloading, beginning at the top of p. 64)
+
+     Function names can be overloaded.  The same function name can be used for
+     multiple functions, as long as the parameter types differ.  If a function
+     name is declared twice with the same parameter types, then the return
+     types and all qualifiers must also match, and it is the same function
+     being declared.  For example,
+
+       vec4 f(in vec4 x, out vec4  y);   // (A)
+       vec4 f(in vec4 x, out uvec4 y);   // (B) okay, different argument type
+       vec4 f(in ivec4 x, out uvec4 y);  // (C) okay, different argument type
+
+       int  f(in vec4 x, out ivec4 y);  // error, only return type differs
+       vec4 f(in vec4 x, in  vec4  y);  // error, only qualifier differs
+       vec4 f(const in vec4 x, out vec4 y);  // error, only qualifier differs
+
+     When function calls are resolved, an exact type match for all the
+     arguments is sought.  If an exact match is found, all other functions are
+     ignored, and the exact match is used.  If no exact match is found, then
+     the implicit conversions in Section 4.1.10 (Implicit Conversions) will be
+     applied to find a match.  Mismatched types on input parameters (in or
+     inout or default) must have a conversion from the calling argument type
+     to the formal parameter type.  Mismatched types on output parameters (out
+     or inout) must have a conversion from the formal parameter type to the
+     calling argument type.
+
+     If implicit conversions can be used to find more than one matching
+     function, a single best-matching function is sought.  To determine a best
+     match, the conversions between calling argument and formal parameter
+     types are compared for each function argument and pair of matching
+     functions.  After these comparisons are performed, each pair of matching
+     functions are compared.  A function definition A is considered a better
+     match than function definition B if:
+
+       * for at least one function argument, the conversion for that argument
+         in A is better than the corresponding conversion in B; and
+
+       * there is no function argument for which the conversion in B is better
+         than the corresponding conversion in A.
+
+     If a single function definition is considered a better match than every
+     other matching function definition, it will be used.  Otherwise, a
+     semantic error occurs and the shader will fail to compile.
+
+     To determine whether the conversion for a single argument in one match is
+     better than that for another match, the following rules are applied, in
+     order:
+
+       1. An exact match is better than a match involving any implicit
+          conversion.
+
+       2. A match involving an implicit conversion from float to double is
+          better than a match involving any other implicit conversion.
+
+       3. A match involving an implicit conversion from either int or uint to
+          float is better than a match involving an implicit conversion from
+          either int or uint to double.
+
+     If none of the rules above apply to a particular pair of conversions,
+     neither conversion is considered better than the other.
+
+     For the function prototypes (A), (B), and (C) above, the following
+     examples show how the rules apply to different sets of calling argument
+     types:
+
+       f(vec4, vec4);        // exact match of vec4 f(in vec4 x, out vec4 y)
+       f(vec4, uvec4);       // exact match of vec4 f(in vec4 x, out ivec4 y)
+       f(vec4, ivec4);       // matched to vec4 f(in vec4 x, out vec4 y)
+                             //   (C) not relevant, can't convert vec4 to 
+                             //   ivec4.  (A) better than (B) for 2nd
+                             //   argument (rule 2), same on first argument.
+       f(ivec4, vec4);       // NOT matched.  All three match by implicit
+                             //   conversion.  (C) is better than (A) and (B)
+                             //   on the first argument.  (A) is better than
+                             //   (B) and (C).
+
+
+    Modify Section 7.1, Vertex And Geometry Shader Special Variables, p. 69
+
+    (add to the list of geometry shader special variables, p. 69)
+
+      in int gl_InvocationID;
+
+    (add to the end of the section, p. 71)
+
+    The input variable gl_InvocationID is available in the geometry language
+    and is filled with an integer holding the invocation number associated
+    with the given shader invocation.  If the program is linked to support
+    multiple geometry shader invocations per input primitive, the invocations
+    are numbered 0, 1, 2, ..., <N>-1.  gl_InvocationID is not available in the
+    vertex or fragment language.
+
+
+    Modify Section 7.2, Fragment Shader Special Variables, p. 72
+
+    (add to the list of built-in variables)
+
+      in int gl_SampleMaskIn[];
+
+    The variable gl_SampleMaskIn is an array of integers, each holding a
+    bitfield indicating the set of samples covered by the primitive generating
+    the fragment during multisample rasterization.  The array has ceil(<s>/32)
+    elements, where <s> is the maximum number of color samples supported by
+    the implementation.  Bit <n> or word <w> in the bitfield is set if and
+    only if the sample numbered <w>*32+<n> is considered covered for this
+    fragment shader invocation.
+
+
+    Modify Section 8.3, Common Functions, p. 84
+
+    (add support for floating-point multiply-add)
+
+    Syntax:
+
+      genType fma(genType a, genType b, genType c);
+
+    The function fma() performs a fused floating-point multiply-add to compute
+    the value a*b+c.  The results of fma() may not be identical to evaluating
+    the expression (a*b)+c, because the computation may be performed in a
+    single operation with intermediate precision different from that used to
+    compute a non-fma() expression.
+
+    The results of fma() are guaranteed to be invariant given fixed inputs
+    <a>, <b>, and <c>, as though the result were taken from a variable
+    declared as "precise".
+
+
+    (add support for single-precision frexp and ldexp functions)
+
+    Syntax:
+
+      genType frexp(genType x, out genIType exp);
+      genType ldexp(genType x, in genIType exp);
+
+    The function frexp() splits each single-precision floating-point number in
+    <x> into a binary significand, a floating-point number in the range [0.5,
+    1.0), and an integral exponent of two, such that:
+
+      x = significand * 2 ^ exponent
+
+    The significand is returned by the function; the exponent is returned in
+    the parameter <exp>.  For a floating-point value of zero, the significant
+    and exponent are both zero.  For a floating-point value that is an
+    infinity or is not a number, the results of frexp() are undefined.  
+
+    If the input <x> is a vector, this operation is performed in a
+    component-wise manner; the value returned by the function and the value
+    written to <exp> are vectors with the same number of components as <x>.
+
+    The function ldexp() builds a single-precision floating-point number from
+    each significand component in <x> and the corresponding integral exponent
+    of two in <exp>, returning:
+
+      significand * 2 ^ exponent
+
+    If this product is too large to be represented as a single-precision
+    floating-point value, the result is considered undefined.
+
+    If the input <x> is a vector, this operation is performed in a
+    component-wise manner; the value passed in <exp> and returned by the
+    function are vectors with the same number of components as <x>.
+
+
+    (add support for new integer built-in functions)
+
+    Syntax:
+
+      genIType bitfieldExtract(genIType value, int offset, int bits);
+      genUType bitfieldExtract(genUType value, int offset, int bits);
+
+      genIType bitfieldInsert(genIType base, genIType insert, int offset, 
+                              int bits);
+      genUType bitfieldInsert(genUType base, genUType insert, int offset, 
+                              int bits);
+
+      genIType bitfieldReverse(genIType value);
+      genUType bitfieldReverse(genUType value);
+
+      genIType bitCount(genIType value);
+      genIType bitCount(genUType value);
+
+      genIType findLSB(genIType value);
+      genIType findLSB(genUType value);
+
+      genIType findMSB(genIType value);
+      genIType findMSB(genUType value);
+
+    The function bitfieldExtract() extracts bits <offset> through
+    <offset>+<bits>-1 from each component in <value>, returning them in the
+    least significant bits of corresponding component of the result.  For
+    unsigned data types, the most significant bits of the result will be set
+    to zero.  For signed data types, the most significant bits will be set to
+    the value of bit <offset>+<base>-1.  If <bits> is zero, the result will be
+    zero.  The result will be undefined if <offset> or <bits> is negative, or
+    if the sum of <offset> and <bits> is greater than the number of bits used
+    to store the operand.  Note that for vector versions of bitfieldExtract(),
+    a single pair of <offset> and <bits> values is shared for all components.
+
+    The function bitfieldInsert() inserts the <bits> least significant bits of
+    each component of <insert> into the corresponding component of <base>.
+    The result will have bits numbered <offset> through <offset>+<bits>-1
+    taken from bits 0 through <bits>-1 of <insert>, and all other bits taken
+    directly from the corresponding bits of <base>.  If <bits> is zero, the
+    result will simply be <base>.  The result will be undefined if <offset> or
+    <bits> is negative, or if the sum of <offset> and <bits> is greater than
+    the number of bits used to store the operand.  Note that for vector
+    versions of bitfieldInsert(), a single pair of <offset> and <bits> values
+    is shared for all components.
+
+    The function bitfieldReverse() reverses the bits of <value>.  The bit
+    numbered <n> of the result will be taken from bit (<bits>-1)-<n> of
+    <value>, where <bits> is the total number of bits used to represent
+    <value>.
+
+    The function bitCount() returns the number of one bits in the binary
+    representation of <value>.
+
+    The function findLSB() returns the bit number of the least significant one
+    bit in the binary representation of <value>.  If <value> is zero, -1 will
+    be returned.
+
+    The function findMSB() returns the bit number of the most significant bit
+    in the binary representation of <value>.  For positive integers, the
+    result will be the bit number of the most significant one bit.  For
+    negative integers, the result will be the bit number of the most
+    significant zero bit.  For a <value> of zero or negative one, -1 will be
+    returned.
+
+
+    (add support for general packing functions)
+
+    Syntax:
+
+      uint      packUnorm2x16(vec2 v);
+      uint      packUnorm4x8(vec4 v);
+      uint      packSnorm4x8(vec4 v);
+
+      vec2      unpackUnorm2x16(uint v);
+      vec4      unpackUnorm4x8(uint v);
+      vec4      unpackSnorm4x8(uint v);
+
+    The functions packUnorm2x16(), packUnorm4x8(), and packSnorm4x8() first
+    convert each component of a two- or four-component vector of normalized
+    floating-point values into 8- or 16-bit integer values.  Then, the results
+    are packed into a 32-bit unsigned integer.  The first component of the
+    vector will be written to the least significant bits of the output; the
+    last component will be written to the most significant bits.
+
+    The functions unpackUnorm2x16(), unpackUnorm4x8(), and unpackSnorm4x8()
+    first unpacks a single 32-bit unsigned integer into a pair of 16-bit
+    unsigned integers, four 8-bit unsigned integers, or four 8-bit signed
+    integers.  The, each component is converted to a normalized floating-point
+    value to generate a two- or four-component vector.  The first component of
+    the vector will be extracted from the least significant bits of the input;
+    the last component will be extracted from the most significant bits.
+
+    The conversion between fixed- and normalized floating-point values will be
+    performed as below.
+
+      function          conversion
+      ---------------   -----------------------------------------------------
+      packUnorm2x16     fixed_val = round(clamp(float_val, 0, +1) * 65535.0);
+      packUnorm4x8      fixed_val = round(clamp(float_val, 0, +1) * 255.0);
+      packSnorm4x8      fixed_val = round(clamp(float_val, -1, +1) * 127.0);
+      unpackUnorm2x16   float_val = fixed_val / 65535.0;
+      unpackUnorm4x8    float_val = fixed_val / 255.0;
+      unpackSnorm4x8    float_val = clamp(fixed_val / 127.0, -1, +1);
+
+
+    (add functions to get/set the bit encoding for floating-point values)
+
+    32-bit floating-point data types in the OpenGL shading language are
+    specified to be encoded according to the IEEE 754 specification for
+    single-precision floating-point values.  The functions below allow shaders
+    to convert floating-point values to and from signed or unsigned integers
+    representing their encoding.
+
+    To obtain signed or unsigned integer values holding the encoding of a
+    floating-point value, use:
+
+      genIType floatBitsToInt(genType value);
+      genUType floatBitsToUint(genType value);
+
+    Conversions are done on a component-by-component basis.
+
+    To obtain a floating-point value corresponding to a signed or unsigned
+    integer encoding, use:
+
+      genType intBitsToFloat(genIType value);
+      genType uintBitsToFloat(genUType value);
+
+
+    (support for unsigned integer add/subtract with carry-out)
+
+    Syntax:
+
+      genUType uaddCarry(genUType x, genUType y, out genUType carry);
+      genUType usubBorrow(genUType x, genUType y, out genUType borrow);
+
+    The function uaddCarry() adds 32-bit unsigned integers or vectors <x> and
+    <y>, returning the sum modulo 2^32.  The value <carry> is set to zero if
+    the sum was less than 2^32, or one otherwise.
+
+    The function usubBorrow() subtracts the 32-bit unsigned integer or vector
+    <y> from <x>, returning the difference if non-negative or 2^32 plus the
+    difference, otherwise.  The value <borrow> is set to zero if x >= y, or
+    one otherwise.
+
+
+    (support for signed and unsigned multiplies, with 32-bit inputs and a
+     64-bit result spanning two 32-bit outputs)
+
+    Syntax:
+
+      void umulExtended(genUType x, genUType y, out genUType msb, 
+                        out genUType lsb);
+      void imulExtended(genIType x, genIType y, out genIType msb,
+                        out genIType lsb);
+
+    The functions umulExtended() and imulExtended() multiply 32-bit unsigned
+    or signed integers or vectors <x> and <y>, producing a 64-bit result.  The
+    32 least significant bits are returned in <lsb>; the 32 most significant
+    bits are returned in <msb>.
+
+
+    Modify Section 8.7, Texture Lookup Functions, p. 91
+
+    (extend the basic versions of textureGather from ARB_texture_gather,
+     allowing for optional component selection in a multi-component texture
+     and for shadow mapping)
+
+    Syntax:
+      gvec4 textureGather(gsampler2D sampler, vec2 coord[, int comp]);
+      gvec4 textureGather(gsampler2DArray sampler, vec3 coord[, int comp]);
+      gvec4 textureGather(gsamplerCube sampler, vec3 coord[, int comp]);
+      gvec4 textureGather(gsamplerCubeArray sampler, vec4 coord[, int comp]);
+      gvec4 textureGather(gsampler2DRect sampler, vec2 coord[, int comp]);
+
+      vec4 textureGather(sampler2DShadow sampler, vec2 coord, float refZ);
+      vec4 textureGather(sampler2DArrayShadow sampler, vec3 coord, float refZ);
+      vec4 textureGather(samplerCubeShadow sampler, vec3 coord, float refZ);
+      vec4 textureGather(samplerCubeArrayShadow sampler, vec4 coord, 
+                         float refZ);
+      vec4 textureGather(sampler2DRectShadow sampler, vec2 coord, float refZ);
+
+    The textureGather() functions use the texture coordinates given by <coord>
+    to determine a set of four texels to sample from the texture identified by
+    <sampler>.  These functions return a four-component vector consisting of
+    one component from each texel.  If specified, the value of <comp> must be
+    a constant integer expression with a value of zero, one, two, or three,
+    identifying the <x>, <y>, <z>, or <w> component of the four-component
+    vector lookup result for each texel, respectively.  If <comp> is not
+    specified, the <x> component of each texel will be used to generate the
+    result vector.  As described in the OpenGL Specification, the vector
+    selects the post-swizzle component corresponding to <comp> from each of
+    the four texels, returning:
+
+      vec4(T_i0_j1(coord, base).<comp>,
+           T_i1_j1(coord, base).<comp>,
+           T_i1_j0(coord, base).<comp>,
+           T_i0_j0(coord, base).<comp>)
+
+    For textureGather() functions using a shadow sampler type, each of the
+    four texel lookups performs a depth comparison against the depth reference
+    value passed in <refZ>, and returns the result of that comparison in the
+    appropriate component of the result vector.  The parameter <comp> used for
+    component selection is not supported for textureGather() functions with
+    shader sampler types.
+
+    As with other texture lookup functions, the results of textureGather() are
+    undefined for shadow samplers if the texture referenced is not a depth
+    texture or has depth comparisons disabled; or for non-shadow samplers if
+    the texture referenced is a depth texture with depth comparisons enabled.
+
+
+    (extend the "Offset" versions of textureGather from ARB_texture_gather,
+     allowing for optional component selection in a multi-component texture,
+     non-constant offsets, and shadow mapping)
+
+    Syntax:
+      gvec4 textureGatherOffset(gsampler2D sampler, vec2 coord, 
+                                ivec2 offset[, int comp]);
+      gvec4 textureGatherOffset(gsampler2DArray sampler, vec3 coord, 
+                                ivec2 offset[, int comp]);
+      gvec4 textureGatherOffset(gsampler2DRect sampler, vec2 coord, 
+                                ivec2 offset[, int comp]);
+
+      vec4 textureGatherOffset(sampler2DShadow sampler, vec2 coord, 
+                               float refZ, ivec2 offset);
+      vec4 textureGatherOffset(sampler2DArrayShadow sampler, vec3 coord, 
+                               float refZ, ivec2 offset);
+      vec4 textureGatherOffset(sampler2DRectShadow sampler, vec2 coord, 
+                               float refZ, ivec2 offset);
+
+    The textureGatherOffset() functions operate identically to
+    textureGather(), except that the 2-component integer texel offset vector
+    <offset> is applied as a (u,v) offset to determine the four texels to
+    sample.  The value <offset> need not be constant; however, a limited range
+    of offset values are supported.  If any component of <offset> is less than
+    MIN_PROGRAM_TEXTURE_GATHER_OFFSET_ARB or greater than
+    MAX_PROGRAM_TEXTURE_GATHER_OFFSET_ARB, the offset applied to the texture
+    coordinates is undefined.  Note that <offset> does not apply to the layer
+    coordinate for array textures.
+
+    
+    (add new "Offsets" versions of textureGather from ARB_texture_gather,
+     allowing for optional component selection in a multi-component texture,
+     separate non-constant offsets for each texel in the footprint, and shadow
+     mapping)
+
+    Syntax:
+      gvec4 textureGatherOffsets(gsampler2D sampler, vec2 coord,
+                                 ivec2 offsets[4][, int comp]);
+      gvec4 textureGatherOffsets(gsampler2DArray sampler, vec3 coord,
+                                 ivec2 offsets[4][, int comp]);
+      gvec4 textureGatherOffsets(gsampler2DRect sampler, vec2 coord,
+                                 ivec2 offsets[4][, int comp]);
+
+      vec4 textureGatherOffsets(sampler2DShadow sampler, vec2 coord, 
+                                float refZ, ivec2 offsets[4]);
+      vec4 textureGatherOffsets(sampler2DArrayShadow sampler, vec3 coord,
+                                float refZ, ivec2 offsets[4]);
+      vec4 textureGatherOffsets(sampler2DRectShadow sampler, vec2 coord, 
+                                float refZ, ivec2 offsets[4]);
+
+    The textureGatherOffsets() functions operate identically to
+    textureGather(), except that the array of two-component integer vectors
+    <offsets> is used to determine the location of the four texels to sample.
+    Each of the four texels is obtained by applying the corresponding offset
+    in the four-element array <offsets> as a (u,v) coordinate offset to the
+    coordinates <coord>, identifying the four-texel LINEAR footprint, and then
+    selecting the texel T_i0_j0 of that footprint.  The specified values in
+    <offsets> must be constant.  A limited range of offset values are
+    supported; the minimum and maximum offset values are
+    implementation-dependent and given by
+    MIN_PROGRAM_TEXTURE_GATHER_OFFSET_ARB and
+    MAX_PROGRAM_TEXTURE_GATHER_OFFSET_ARB, respectively.  Note that <offset>
+    does not apply to the layer coordinate for array textures.
+
+    
+    Modify Section 8.8, Fragment Processing Functions, p. 101
+
+    (add new functions to the end of section, p. 102)
+
+    Built-in interpolation functions are available to compute an interpolated
+    value of a fragment shader input variable at a shader-specified (x,y)
+    location.  A separate (x,y) location may be used for each invocation of
+    the built-in function, and those locations may differ from the default
+    (x,y) location used to produce the default value of the input.
+
+      float interpolateAtCentroid(float interpolant);
+      vec2 interpolateAtCentroid(vec2 interpolant);
+      vec3 interpolateAtCentroid(vec3 interpolant);
+      vec4 interpolateAtCentroid(vec4 interpolant);
+
+      float interpolateAtSample(float interpolant, int sample);
+      vec2 interpolateAtSample(vec2 interpolant, int sample);
+      vec3 interpolateAtSample(vec3 interpolant, int sample);
+      vec4 interpolateAtSample(vec4 interpolant, int sample);
+
+      float interpolateAtOffset(float interpolant, vec2 offset);
+      vec2 interpolateAtOffset(vec2 interpolant, vec2 offset);
+      vec3 interpolateAtOffset(vec3 interpolant, vec2 offset);
+      vec4 interpolateAtOffset(vec4 interpolant, vec2 offset);
+
+    The function interpolateAtCentroid() will return the value of the input
+    varying <interpolant> sampled at a location inside the both the pixel and
+    the primitive being processed.  The value obtained would be the same value
+    assigned to the input variable if declared with the "centroid" qualifier.
+
+    The function interpolateAtSample() will return the value of the input
+    varying <interpolant> at the location of the sample numbered <sample>.  If
+    multisample buffers are not available, the input varying will be evaluated
+    at the center of the pixel.  If the sample number given by <sample> does
+    not exist, the position used to interpolate the input varying is
+    undefined.
+
+    The function interpolateAtOffset() will return the value of the input
+    varying <interpolant> sampled at an offset from the center of the pixel
+    specified by <offset>.  The two floating-point components of <offset>
+    give the offset in pixels in the x and y directions, respectively.  
+    An offset of (0,0) identifies the center of the pixel.  The range and
+    granularity of offsets supported by this function is
+    implementation-dependent.  
+
+    For all of the interpolation functions, <interpolant> must be an input
+    variable or an element of an input variable declared as an array.
+    Component selection operators (e.g., ".xy") may not be used when
+    specifying <interpolant>.  If <interpolant> is declared with a "flat" or
+    "centroid" qualifier, the qualifier will have no effect on the
+    interpolated value.  If <interpolant> is declared with the "noperspective"
+    qualifier, the interpolated value will be computed without perspective
+    correction.
+
+
+    Modify Section 8.10, Geometry Shader Functions, p. 104
+
+    (replace the section, using the following more general formulation)
+
+    These functions are only available in geometry shaders.
+
+    Syntax:
+
+        void EmitStreamVertex(int stream);      // Geometry-only
+        void EndStreamPrimitive(int stream);    // Geometry-only
+
+        void EmitVertex();                      // Geometry-only
+        void EndPrimitive();                    // Geometry-only
+
+    Description:
+
+    The function EmitStreamVertex() specifies that the vertex being generated
+    by the geometry shader is completed.  A vertex is added to the current
+    output primitive in the vertex stream numbered <stream> using the current
+    values of all output variables associated with <stream>.  The values of
+    any unwritten output variables associated with <stream> are undefined.
+    The argument <stream> must be a constant integral expression.  The values
+    of all output variables (for all output streams) are undefined after
+    calling EmitStreamVertex().  If a geometry shader invocation has emitted
+    more vertices than permitted by the output layout qualifier
+    "max_vertices", the results of calling EmitStreamVertex() are undefined.
+
+    The function EmitVertex() is equivalent to calling EmitStreamVertex() with
+    <stream> set to zero.
+
+    The function EndStreamPrimitive() specifies that the current output
+    primitive for the vertex stream numbered <stream> is completed and that a
+    new empty output primitive of the same type should be started.  The
+    argument <stream> must be a constant integral expression.  This function
+    does not emit a vertex.  If the output layout is declared to be "points",
+    calling EndPrimitive() is optional.
+
+    The function EndPrimitive() is equivalent to calling EndStreamPrimitive()
+    with <stream> set to zero.
+
+    A geometry shader starts with an output primitive containing no vertices
+    for each stream.  When a geometry shader terminates, the current output
+    primitive for each vertex stream is automatically completed.  It is not
+    necessary to call EndPrimitive() or EndStreamPrimitive() for any stream
+    where the geometry shader writes only a single primitive.
+
+    Multiple vertex streams are supported only if the output primitive type is
+    declared to be "points".  A program will fail to link if it contains a
+    geometry shader calling EmitStreamVertex() or EndStreamPrimitive() if its
+    output primitive type is not "points".
+
+
+    Modify Section 9, Shading Language Grammar, p. 92
+
+    !!! TBD !!!
+
+
+GLX Protocol
+
+    None.
+
+Dependencies on ARB_gpu_shader_fp64
+
+    This extension, ARB_gpu_shader_fp64, and NV_gpu_shader5 all modify the set
+    of implicit conversions supported in the OpenGL Shading Language.  If more
+    than one of these extensions is supported, an expression of one type may
+    be converted to another type if that conversion is allowed by any of these
+    specifications.
+
+    If ARB_gpu_shader_fp64 or a similar extension introducing new data types
+    is not supported, the function overloading rule in the GLSL specification
+    preferring promotion an input parameters to smaller type to a larger type
+    is never applicable, as all data types are of the same size.  That rule
+    and the example referring to "double" should be removed.
+
+
+Dependencies on NV_gpu_shader5
+
+    This extension, ARB_gpu_shader_fp64, and NV_gpu_shader5 all modify the set
+    of implicit conversions supported in the OpenGL Shading Language.  If more
+    than one of these extensions is supported, an expression of one type may
+    be converted to another type if that conversion is allowed by any of these
+    specifications.
+
+    This specification and NV_gpu_shader5 both lift the restriction in GLSL
+    1.50 requiring that indexing in arrays of samplers must be done with
+    constant expressions.  However, this extension specifies that results are
+    undefined if the indices would diverge if multiple shader invocations are
+    run in lockstep.  NV_gpu_shader5 does not impose the non-divergent
+    indexing requirement.
+
+    If NV_gpu_shader5 is supported, integer data types are supported with four
+    different precisions (8-, 16, 32-, and 64-bit) and floating-point data
+    types are supported with three different precisions (16-, 32-, and
+    64-bit).  The extension adds the following rule for output parameters,
+    which is similar to the one present in this extension for input
+    parameters:
+
+       5. If the formal parameters in both matches are output parameters, a
+          conversion from a type with a larger number of bits per component is
+          better than a conversion from a type with a smaller number of bits
+          per component.  For example, a conversion from an "int16_t" formal
+          parameter type to "int"  is better than one from an "int8_t" formal
+          parameter type to "int".
+
+    Such a rule is not provided in this extension because there is no
+    combination of types in this extension and ARB_gpu_shader_fp64 where this
+    rule has any effect.
+
+
+Dependencies on ARB_sample_shading
+
+    This extension builds upon the per-sample shading support provided by
+    ARB_sample_shading to provide several new capabilities, including:
+
+      * the built-in variable gl_SampleMaskIn[] indicates the set of samples
+        covered by the input primitive corresponding to the fragment shader
+        invocation; and
+
+      * use of the "sample" qualifier on a fragment shader input forces
+        per-sample shading, and specifies that the value of the input be
+        evaluated per-sample.
+
+    There is no interaction between the extensions, except that shaders using
+    the features of this extension seem likely to use features from
+    ARB_sample_shading as well.
+
+
+Dependencies on ARB_texture_gather
+
+    This extension builds upon the textureGather() built-ins provided by
+    ARB_texture_gather to provide several new capabilities, including:
+
+      * allowing shaders to select any single component of a multi-component
+        texture to produce the gathered 2x2 footprint;
+
+      * allowing shaders to perform a per-sample depth comparison when
+        gathering the 2x2 footprint using for shadow sampler types;
+
+      * allowing shaders to use arbitrary offsets computed at run-time to
+        select a 2x2 footprint to gather from; and
+
+      * allowing shaders to use separate independent offsets for each of the
+        four texels returned, instead of requiring a fixed 2x2 footprint.
+
+    Other than the fact that they provide similar functionality, there is no
+    interaction between the extensions.
+
+    Since this extension requires support for gathering from multi-component
+    textures, the minimum value of MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB
+    is increased to 4.
+
+
+Errors
+
+    INVALID_OPERATION is generated by GetProgram if <pname> is
+    GEOMETRY_SHADER_INVOCATIONS and the program which has not been linked
+    successfully, or does not contain objects to form a geometry shader.
+
+
+New State
+
+    Add the following state to Table 6.40, Program Object State, p. 378
+
+                                                    Initial
+    Get Value                 Type   Get Command     Value     Description                  Sec.  Attribute
+    ------------------------- ----  ------------    -------    -------------------------   ------  -------
+    GEOMETRY_SHADER_           Z+    GetProgramiv      1       number of times a geometry  6.1.16    -
+      INVOCATIONS                                              shader should be executed
+                                                               for each input primitive
+
+New Implementation Dependent State
+
+                                               Min.
+    Get Value               Type  Get Command  Value  Description                  Sec.      Attrib
+    ----------------------  ----  -----------  -----  --------------------------   --------  ------
+    MAX_GEOMETRY_SHADER_     Z+   GetIntegerv   32    maximum supported geometry   2.16.4      - 
+      INVOCATIONS                                     shader invocation count
+    MIN_FRAGMENT_INTERP-     R    GetFloatv    -0.5   furthest negative offset     3.12.1      -
+      OLATION_OFFSET                                   for interpolateAtOffset()
+    MAX_FRAGMENT_INTERP-     R    GetFloatv    +0.5   furthest positive offset     3.12.1      -
+      OLATION_OFFSET                                   for interpolateAtOffset()
+    FRAGMENT_INTERPOLATION_  Z+   GetIntegerv    4    supixel bits for             3.12.1      -
+      OFFSET_BITS                                      interpolateAtOffset()
+    MAX_VERTEX_STREAMS       Z+   GetInteger     4    total number of vertex       2.16.4      -
+                                                       streams
+
+    (Note:  The minimum value for MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB,
+     added by ARB_texture_gather, is increased to 4.)
+
+Issues
+
+    (1) This extension builds on the capability provided by
+        ARB_sample_shading, adding a new built-in variable for the input
+        sample mask.  It seems likely that a shader using this mask might also
+        want to use one or more ARB_sample_shading built-ins.  Are such
+        shaders required to include #extension lines for both extensions?
+
+      UNRESOLVED:  It would be nice if it wasn't required.
+
+    (2) How do the per-sample shading features of this extension interact with
+        non-multisample rendering?
+
+      RESOLVED:  Non-multisample rendering (due to no multisample buffer or
+      MULTISAMPLE disabled) is treated as single-sample rendering.
+
+    (3) This extension lifts the restriction requiring that indices into
+        samplers be constant expressions, but makes the results undefined if
+        the indices used would diverge in lockstep execution.  What is this
+        good for?
+
+      RESOLVED:  This allows shaders to index into samplers using integer
+      uniforms, or with non-divergent values computed at run-time (e.g., loop
+      counters).  Many implementations of this extension will be SIMD, running
+      multiple shader invocations at once, and some implementations may have
+      difficulty with accessing multiple textures in a single SIMD
+      instruction.
+
+      Note that the NV_gpu_shader5 extension similarly lifts the restriction
+      but does not require non-divergent indexing.
+
+    (4) What sort of implicit conversions should we support in this and
+        related extensions?
+
+      RESOLVED:  In GLSL 1.50, we have implicit conversion from "int" and
+      "uint" to "float", as well as equivalent conversions for vector type.
+      One of the primary motivations of this feature is to allow constants
+      that are nominally integer values to be used in floating-point contexts
+      without requiring special suffixes.  The following code compiles
+      successfully in GLSL 1.50.
+
+        float square(float x) {
+          return x * x; 
+        }
+        float f = 0;
+        float g = f * 2;       
+        float h = square(3); 
+
+      The same code would fail on GLSL 1.1, because "0", "2", and "3" would
+      need to be written as "0.0", "2.0", and "3.0", respectively.
+
+      This extension adds implicit conversions from "int" to "uint" to allow
+      for cases like:
+
+        uint square(uint x) {
+          return x * x;
+        }
+        uint v = square(2);
+
+      This code is legal with this extension, but not in GLSL 1.50 ("2" would
+      need to be replaced with "2U" or "uint(2)").
+
+      ARB_gpu_shader_fp64 adds a new type "double", and we extend existing
+      implicit conversions to allow for promotion of "int", "uint", and
+      "float" to "double".
+
+      Unlike C/C++, the general rule for implicit conversions in GLSL is that
+      conversions are unidirectional.  If type A can be implicitly converted
+      to type B, type B can not be converted to type A.
+
+    (5) Increasing the number of available implicit conversions means that
+        there is the possibility of ambiguities in various operators?  How do
+        we deal with these cases?
+
+      RESOLVED:  For binary operators, the new implicit conversions mean that
+      there may be multiple ways to resolve an expression.  For example, in
+      the following declaration
+
+        int i;
+        uint u;
+
+      the expression "i+u" could be resolved either by implicitly converting
+      "i" to "uint", or by implicitly converting both values to either "float"
+      or "double".  To resolve, we define a set of preferences for a common
+      data type based on the types of the operands:
+
+        - use a floating-point type if either operand is floating-point
+        - use an unsigned integer type if either operand is unsigned
+        - use a signed integer type otherwise
+
+      If conversions to multiple precisions are supported, the
+      lowest-precision available data type is preferred (e.g., int*float will
+      be converted to float*float and not double*double).
+
+      These rules should extend naturally if new basic data types are added.
+
+    (6) Increasing the number of available implicit conversions means that
+        there is an increased possibility of ambiguity when function
+        overloading is involved?  Additionally, this and related extensions
+        add new function overloads?  How do we deal with these cases?
+
+      RESOLVED:  The general rule for function overloading in GLSL 1.50 is
+      that we first check for a function prototype that exactly matches the
+      parameters passed to a function call.  If no match exists, we check for
+      prototypes that can be matched by implicit conversions.  If more than
+      one matching prototype can be matched by conversion, the function call
+      is considered ambiguous and results in a complication error.
+
+      Unfortunately, when adding new implicit conversions, it is possible for
+      cases that were formally unambiguous to become ambiguous.  For backward
+      compatibility purposes, it would be desirable to ensure that shaders
+      that succeeded in old language versions should still compile if
+      "upgraded" to more recent versions/extensions.  However, the new
+      conversions and overloads might make this more difficult without
+      modifying other language rules.  For example, the following prototypes
+      are available for the standard built-in function min() on scalar values
+      when this extension and ARB_gpu_shader_fp64 are supported:
+
+        int     min(int a, int b);
+        uint    min(uint a, uint b);
+        float   min(float a, float b);
+        double  min(double a, double b);
+
+      In GLSL 1.50, a function call such as:
+
+        float f;
+        min(f, 1);
+
+      would be considered unambiguous because the double-precision version of
+      min() didn't exist and the call matched only the single-precision
+      version.  However, with double-precision, implicit conversions can be
+      used to resolve to either the single- or double-precision versions.
+
+      To resolve this issue, we provide a set of rules that can be used to
+      resolve multiple candidates to a "best match".  The rules for
+      determining a best match are similar to those for C++ function
+      overloading, but not exactly the same.  Like C++, these rules compare
+      the conversions required on an argument-by-argument basis.  A function
+      prototype A is better than function prototype B if:
+
+        - A is better than B for one or more arguments
+        - B is better than A for no arguments
+
+      If a single function prototype is better than all others, that one is
+      used.  Otherwise, we get the same ambiguity error as on previous GLSL
+      versions.
+
+      As far as argument-by-argument comparisons go, the order of preference
+      is:
+
+        - favor exact matches
+        - prefer "promotions" (float->double) to other conversions
+        - prefer conversions from int/uint to float over similar conversion to
+          double 
+
+      If none of the rules apply, one match is considered neither better nor
+      worse than the other.
+
+      With these rules, the "min(f,1)" example above resolves to the "float"
+      version, as is the case in GLSL 1.50.  However, there are other cases
+      where ambiguity remains.  For example, consider the prototypes:
+
+        int f(uint x);
+        int f(float x);
+
+      With GLSL 1.50 rules, "f(3)" would match the floating-point version, as
+      no implicit conversions existed from "int" to "uint".  With the new
+      implicit conversions, both prototypes match and neither is preferred.
+      Because of the ambiguity, "f(3)" would fail to compile with this
+      extension enabled, but should still compile on implementations
+      supporting this extension if the extension is not enabled in GLSL source
+      code.
+
+    (7) The function overloading rules described in this extension describe
+        conversions between data types with different sizes, however all
+        existing data types allowing implicit conversion (int, uint, float)
+        are the same size?  Why do we specify these rules?
+
+      RESOLVED:  This extension is specified at the same time as the related
+      ARB_gpu_shader_fp64 and NV_gpu_shader5 extensions, which do provide such
+      types.  The rules are specified all in one place here so we don't have
+      to replicate and extend the rules in the other extensions.  It also
+      provides the ability to automatically convert from signed to unsigned
+      integer types, as in the C programming language.
+
+    (8) Should we support textureGather() for rectangle textures
+        (sampler2DRect)?  They aren't in ARB_texture_gather.
+
+      RESOLVED:  Yes.
+
+    (9) How does the input sample mask interact with the fixed-function
+        SampleCoverage and SampleMask state?  Will samples be removed from the
+        input mask if they would be eliminated by these masks in the
+        per-fragment operations?
+
+      UNRESOLVED.
+
+    (10) Should we support reading patches as geometry shader inputs, and if
+    so, where?
+
+      RESOLVED:  Not in this extension.  This capability will be provided in
+      NV_gpu_shader5.
+
+    (11) Should we support per-sample interpolation of attributes?  If so,
+         how?
+
+      RESOLVED.  Yes.  When multisample rasterization is enabled, qualifying
+      one or more fragment shader inputs with "sample" will force per-sample
+      interpolation of those attributes.  If the same shader includes other
+      fragment inputs not qualified with sample, those attributes may be
+      interpolated per-pixel (i.e., all samples get the same values, likely
+      evaluated at the pixel center).
+
+    (12) Should we reserve "sample" as a keyword for per-sample interpolation
+    qualifiers, or use something more obscure, such as "per_sample"?
+
+      RESOLVED:  This extension uses "sample".
+
+    (13) What should be the base data type for the bitCount(), findLSB(), and
+         findMSB() functions -- signed or unsigned integers?
+
+      RESOLVED:  These functions will return signed values, with -1 returned
+      by findLSB/findMSB if no bit is found.  Note that the shading language
+      supports implicit conversions of signed integers to unsigned, which
+      makes it easy enough if an unsigned result is desired.
+
+    (14) Why do EmitVertex() and EndPrimitive() begin with capitalized words
+         while most of the other built-ins start with a lower-case (e.g.,
+         emitVertex)?  Which precedent should the new per-vertex stream emit
+         and end primitive functions follow?
+
+      RESOLVED:  The inconsistency began with the original functions in
+      EXT_geometry_shader4; the spec author can't recall the original reasons
+      (if any).  Regardless, we decided to match the existing functions as
+      closely as possible and use EmitStreamVertex() and EndStreamPrimitive().
+
+    (15) How do the textureGather functions work with sRGB textures?
+
+      RESOLVED:  Gamma-correction is applied to the texture source color
+      before "gathering" and hence applies to all four components, unless the
+      texture swizzle of the selected component is ALPHA in which case no
+      gamma-correction is applied.
+
+    (16) How should we support arrays of uniform blocks (i.e., multiple blocks
+         in a group, each backed by a separate buffer object)?
+
+      RESOLVED:  We will use instance names in the block definitions, which
+      can be declared as regular arrays:
+
+        uniform UniformData {
+          vec4 stuff;
+        } blocks[4];
+
+      These four blocks used will be referred to as "block[0]" through
+      "block[3]" in shader code, and "UniformData[0]" through "UniformData[3]"
+      in the OpenGL API code.  The block member in this example will be
+      referred to as "UniformData.stuff" in the API.  A similar approach was
+      already adopted in GLSL 1.50, where geometry shaders supported arrays of
+      input blocks that were treated similarly.  Since this spec depends on
+      GLSL 1.50, little new spec language is required here.
+
+    (17) What are instanced geometry shaders useful for?
+
+      RESOLVED:  Instanced geometry shaders allow geometry programs that
+      perform regular operations to run more efficiently.
+
+      Consider a simple example of an algorithm that uses geometry shaders to
+      render primitives to a cube map in a single pass.  Without instanced
+      geometry shaders, the geometry shader to render triangles to the cube
+      map would do something like:
+
+        for (face = 0; face < 6; face++) {
+          for (vertex = 0; vertex < 3; vertex++) {
+            project vertex <vertex> onto face <face>, output position
+            compute/copy attributes of emitted <vertex> to outputs
+            output <face> to result.layer
+            emit the projected vertex
+          }
+          end the primitive (next triangle)
+        }
+
+      This algorithm would output 18 vertices per input triangle, three for
+      each cube face.  The six triangles emitted would be rasterized, one per
+      face.  Geometry shaders that emit a large number of attributes have
+      often posed performance challenges, since all the attributes must be
+      stored somewhere until the emitted primitives.  Large storage
+      requirements may limit the number of threads that can be run in parallel
+      and reduce overall performance.
+
+      Instanced geometry shaders allow this example to be restructured to run
+      with six separate invocations, one per face.  Each invocation projects
+      the triangle to only a single face (identified by the invocation number)
+      and emits only 3 vertices.  The reduced storage requirements allow more
+      geometry shader invocations to be run in parallel, with greater overall
+      efficiency.
+
+      Additionally, the total number of attributes that can be emitted by a
+      single geometry shader invocation is limited.  However, for instanced
+      geometry shaders, that limit applies to each of <N> invocations which
+      allows for a larger total output.  For example, if the GL implementation
+      supports only 1024 components of output per invocation, the 18-vertex
+      algorithm above could emit no more than 56 components per vertex.  The
+      same algorithm implemented as a 3-vertex 6-invocation geometry program
+      could theoretically allow for 341 components per vertex.
+
+    (18) Should EmitStreamVertex() and EndStreamPrimitive() accept a
+         non-constant stream number?
+
+      RESOLVED:  Not in this extension.  Requiring a constant stream number
+      for each call simplifies code generation for the compiler.
+
+    (19) Are there any restrictions on geometry shaders with multiple output
+         streams?
+
+      RESOLVED:  Yes, such geometry shaders are required to generate points;
+      line strip and triangle strip outputs are not supported.
+
+    (20) Since multi-stream geometry shaders only support points, why does
+         EndStreamPrimitive() exist?  Neither it nor EndStream() does anything
+         useful when emitting points.
+
+      RESOLVED:  This function was added for completeness, and would be useful
+      if the requirement for emitting points were lifted by a future
+      extension.
+
+    (21) Should we provide mechanisms allowing shaders to examine or set the
+         bit representation of floating-point numbers?
+
+      RESOLVED:  Yes, we will provide functions to convert single-precision
+      floats to/from signed and unsigned 32-bit integers.  The
+      ARB_gpu_shader_fp64 extension will provide similar functionality for
+      double-precision floats.  We chose to adopt the Java naming convention
+      here -- converting a single-precision float to/from a signed integer is
+      accomplished by the functions floatBitsToInt() and intBitsToFloat().
+
+      Note that this functionality has also been forked off into a separate
+      extension (ARB_shader_bit_encoding) that can be exported on
+      implementations capable of performing such conversions but not capable
+      of the full feature set of this extension and/or OpenGL 4.0.
+
+    (22) What is the "precise" qualifier good for?
+
+      RESOLVED:  Like "invariant", "precise" provides some invariance
+      guarantees is useful for certain algorithms.
+
+      With an output position qualified as "invariant", we ensure that if the
+      same geometry is processed by multiple shaders using the exact same
+      code, it will be transformed in exactly the same way to ensure that we
+      have no cracking or flickering in multi-pass algorithms using different
+      shaders.
+
+      With "precise", we ensure that an algorithm can be written to produce
+      identical results on subtly different inputs.  For example, the order of
+      vertices visible to a geometry or tessellation shader used to subdivide
+      primitive edges might present an edge shared between two primitives in
+      one direction for one primitive and the other direction for the adjacent
+      primitive.  Even if the weights are identical in the two cases, there
+      may be cracking if the computations are being done in an order-dependent
+      manner.  If the position of a new vertex were provided by evaluation the
+      function f() below with limited-precision floating-point math, it's not
+      necessarily the case that f(a,b,c) == f(c,b,a) in the following code:
+
+          float f(float x, float y, float z) 
+          {
+            return (x + y) + z;
+          }
+
+      This function f() can be rewritten as follows with "precise" and a
+      symmetric evaluation order to ensure that f(a,b,c) == f(c,b,a).
+
+          float f(float x, float y, float z)
+          {
+            // Note that we intentionally compute "(x+z)" instead of "(x+y)"
+            // here, because that value will be the same when <x> and <z> 
+            // are reversed.
+            precise float result = (x + z) + y;
+            return result;
+          }
+      
+          (a + b) + c == (c + b) + a
+
+      The "precise" qualifier will disable certain optimization and thus
+      carries a performance cost.  The cost may be higher than "invariant",
+      because "invariant" permits optimizations disallowed by "precise" as
+      long as the compiler ensures that it always optimizes in the exact same
+      manner.
+
+    (23) What computations will be affected by the "precise" qualifier, and
+         what computations aren't?
+
+      RESOLVED:  We will ensure precise computation of any expressions within
+      a single function used directly or indirectly to produce the value of a
+      variable qualified as "precise".
+
+      We chose not to provide this guarantee across function boundaries, even
+      if the results of a function are used in the computation of an output
+      qualified as "precise".  Algorithms requiring the use of "precise" may
+      have a mix of computations, some required to be precise, some not.  This
+      function boundary rule may serve to limit the amount of computation
+      indirectly forced to be precise.
+
+      Additionally, the subroutine rule permits non-precise sub-operations in
+      a computation required to be precise.  For example, a shader might need
+      to compute a "precise" position by taking a weighted average as in the
+      following code:
+
+        precise vec3 pos = (p[0]*w[0] + p[1]*w[1]) + (p[2]*w[2] + p[3]*w[3]);
+
+      However, if the main precision requirement is that the same result be
+      generated when <p> and <w> are reversed, the following code also gets
+      the job done, even if posmad() is implemented with multiply-add
+      operations.
+
+        vec3 posmad(vec3 p0, float w0, vec3 p1w1) { return p0*w0+p1w1; }
+        precise vec3 pos = (posmad(p[0], w[0], p[1]*w[1]) +
+                            posmad(p[3], w[3], p[2]*w[2]));
+
+      To generate precise results within a function, the function arguments
+      and/or temporaries within the function body should be qualified as
+      "precise" as needed.
+
+      Note that when applying "precise" rules to assignments, indirect
+      application of this rule applies on an assignment-by-assignment basis.
+      In the following perverse example:
+
+        float a,b,c,d,e,f;
+        precise float g;
+        f = a + b + c;
+        ...
+        f = c + d + e;
+        g = f * 2.0;
+
+      The first assignment to <f> need not be treated as "precise", since the
+      value assigned will have no effect on the final value of the
+      precise-qualified <g>.  The second assignment to <f> must be evaluated
+      precisely.  The fact that one assignment to a variable needs to be
+      treated as precise does not mean that the variable itself is implicitly
+      treated as "precise".
+
+    (24) Are "precise" qualifiers allowed on function arguments?  If so, what
+         do they mean?  Can a return value for a function be declared as
+         precise?
+
+      RESOLVED:  Yes; the rules permit the use of "precise" on any variable
+      declaration, including function arguments.  The code
+
+        float f(precise in vec4 arg1, precise out vec4 arg2) { ... }
+
+      specifies that any expressions used to assign values to <arg1> or <arg2>
+      within f() will be evaluated as a precise manner.
+
+      Expressions used to derive the value passed to the function f() as
+      <arg1> will be treated as precise according to the normal rules.  The
+      expression for <arg1> is treated as precise if and only if the function
+      call is on the right-hand side of an assignment to a variable qualified
+      as "precise" or is indirectly used in an assignment to such a variable.
+      It is not automatically treated as precise just because the formal
+      parameter <arg1> is qualified with "precise".  
+
+      For the purposes of this rule, variables passed as "out" parameters do
+      not count as assignments.  Values assigned to an output parameter will
+      not be evaluated precisely just because the caller provides a variable
+      qualified as "precise".  When the output parameter itself is qualified
+      as "precise", precise evaluation of that output is required within the
+      callee.
+
+      We chose not to permit function return values to be qualified as
+      "precise", though we could have hypothetically allowed code such as:
+
+        precise float f(float a, float b, float c) { return (a+b)+c; }
+
+      To obtain a precise return value in such a case, use code such as:
+
+        float f(float a, float b, float c) 
+        {
+          precise float result = (a+b) + c;
+          return result;
+        }
+
+    (25) How does texture gather interact with incomplete textures?
+
+      RESOLVED:  For regular texture lookups, incomplete textures are
+      considered to return a texel value with RGBA components of (0,0,0,1).
+      For texture gather operations, each texel in the sampled footprint is
+      considered to have RGBA components of (0,0,0,1).  When using the
+      textureGather() function to select the R, G, or B component of an
+      incomplete texture, (0,0,0,0) will be returned.  When selecting the A
+      component, (1,1,1,1) will be returned.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    16    03/30/12  pbrown    Fix typo in language restricting the use of
+                              EmitStreamVertex()/EndStreamPrimitive() to 
+                              programs with an output primitive type of 
+                              points, not an input type of points (bug 8371).
+
+    15    10/17/11  pbrown    Fix prototypes for textureGather and
+                              textureGatherOffset to use vec2 coordinates for
+                              "2DRect" sampler versions (bug 7964).
+
+    14    01/27/11  pbrown    Add further clarification on the interaction
+                              of texture gather and incomplete textures (bug
+                              7289).
+
+    13    09/24/10  pbrown    Clarify the interaction of texture gather
+                              with swizzle (bug 5910), fixing conflicts
+                              between API and GLSL spec language.
+                              Consolidate into one copy in the API 
+                              spec.
+
+    12    03/23/10  pbrown    Update issues section, both fixing/numbering
+                              existing issues and including other issues 
+                              that were left behind in NV_gpu_shader5 when the
+                              specs were refactored.
+
+    11    03/23/10  Jon Leech Describe <offset> to interpolateAtOffset
+                              without implying it is a constant expression
+                              (Bug 6026).
+
+    10    03/07/10  pbrown    Fix typo in an output stream qualifier example.
+
+     9    03/05/10  pbrown    Modify function overloading rules to remove
+                              most preferences when converting between
+                              two different types.  The only preferences
+                              that remain are promoting "float" to "double"
+                              over other conversions, and preferring 
+                              conversion of integers to "float" to converting
+                              to "double" (bug 5938).
+                              
+     8    01/29/10  pbrown    Update the spec to require that the minimum
+                              value for MAX_PROGRAM_TEXTURE_GATHER_-
+                              COMPONENTS is 4 (bug 5919).
+
+     7    01/21/10  pbrown    Clarify the rules for determining a best match
+                              if implicit conversions can result in multiple
+                              matching function prototypes.  Modify the rules
+                              to pick a best match by comparing pairs of
+                              functions, and using any function deemed better
+                              than any other choice.  Modify the argument
+                              conversion preference rules for overloading to
+                              disfavor "int" to "uint" conversions, for
+                              backward compatibility with previous GLSL
+                              versions.  Add some new discussion of the
+                              choices involved to the issues section (bug 
+                              5938).
+
+     6    01/14/10  pbrown    Minor wording updates from spec reviews.
+
+     5    12/10/09  pbrown    Functionality updates from spec review:
+                              Rename fmad to fma.  Fix error in spec
+                              language for negative diffs in usubBorrow.
+
+     4    12/10/09  pbrown    Convert from EXT to ARB.
+
+     3    12/08/09  pbrown    Miscellaneous fixes from spec review:  Added
+                              missing implementation constants for
+                              interpolation offset range and granularity;
+                              added explicit section to OpenGL spec describing
+                              shader requested interpolation modifiers and
+                              functions.  Clean up more dangling "ThreadID"
+                              references.  General typo fixes and language
+                              clarifications.
+
+     2    10/01/09  pbrown    Renamed gl_ThreadID to gl_InvocationID.
+
+     1              pbrown    Internal revisions.

@@ -28,64 +28,107 @@
 #ifndef SRC_DAWN_COMMON_ITYP_VECTOR_H_
 #define SRC_DAWN_COMMON_ITYP_VECTOR_H_
 
+#include <cstddef>
 #include <limits>
 #include <vector>
 
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/UnderlyingType.h"
+#include "src/utils/numeric.h"
+#include "src/utils/underlying_type.h"
 
 namespace dawn::ityp {
 
 // ityp::vector is a helper class that wraps std::vector with the restriction that
 // indices must be a particular type |Index|.
 template <typename Index, typename Value>
-class vector : public std::vector<Value> {
+class vector : private std::vector<Value> {
     using I = UnderlyingType<Index>;
     using Base = std::vector<Value>;
 
-  private:
-    // Disallow access to base constructors and untyped index/size-related operators.
-    using Base::Base;
-    using Base::operator=;
-    using Base::operator[];
-    using Base::at;
-    using Base::reserve;
-    using Base::resize;
-    using Base::size;
+    static_assert(HasUnsignedUnderlyingType<Index>, "Index type must be unsigned");
 
   public:
-    vector() : Base() {}
-    explicit vector(Index size) : Base(static_cast<I>(size)) {}
-    vector(Index size, const Value& init) : Base(static_cast<I>(size), init) {}
-    vector(const vector& rhs) : Base(static_cast<const Base&>(rhs)) {}
-    vector(vector&& rhs) : Base(static_cast<Base&&>(rhs)) {}
-    vector(std::initializer_list<Value> init) : Base(init) {}
+    constexpr vector() : Base() {}
+    constexpr explicit vector(Index size) : Base(checked_cast<size_t>(size)) {}
+    constexpr vector(Index size, const Value& init) : Base(checked_cast<size_t>(size), init) {}
+    constexpr vector(const vector& rhs) : Base(static_cast<const Base&>(rhs)) {}
+    constexpr vector(vector&& rhs) : Base(static_cast<Base&&>(rhs)) {}
+    constexpr vector(std::initializer_list<Value> init) : Base(init) {}
 
-    vector& operator=(const vector& rhs) {
+    constexpr vector& operator=(const vector& rhs) {
         Base::operator=(static_cast<const Base&>(rhs));
         return *this;
     }
-    vector& operator=(vector&& rhs) noexcept {
+    constexpr vector& operator=(vector&& rhs) noexcept {
         Base::operator=(static_cast<Base&&>(rhs));
         return *this;
     }
 
-    Value& operator[](Index i) { return Base::operator[](static_cast<I>(i)); }
-    constexpr const Value& operator[](Index i) const { return Base::operator[](static_cast<I>(i)); }
+    using Base::begin, Base::end;
+    using Base::cbegin, Base::cend;
+    using Base::crbegin, Base::crend;
+    using Base::front, Base::back;
+    using Base::rbegin, Base::rend;
 
-    Value& at(Index i) { return Base::at(static_cast<I>(i)); }
-    constexpr const Value& at(Index i) const { return Base::at(static_cast<I>(i)); }
+    using Base::clear;
+    using Base::emplace;
+    using Base::emplace_back;
+    using Base::empty;
+    using Base::erase;
+    using Base::insert;
+    using Base::push_back, Base::pop_back;
 
-    constexpr Index size() const {
-        DAWN_ASSERT(std::numeric_limits<I>::max() >= Base::size());
-        return Index(static_cast<I>(Base::size()));
+    // Manually forward data() - can't use `using` because it needs to be skipped for vector<bool>.
+    constexpr auto data()
+        requires(!std::is_same_v<Value, bool>)
+    {
+        return Base::data();
+    }
+    constexpr auto data() const
+        requires(!std::is_same_v<Value, bool>)
+    {
+        return Base::data();
     }
 
-    void resize(Index size) { Base::resize(static_cast<I>(size)); }
+    constexpr Base::reference operator[](Index i) {
+        return Base::operator[](checked_cast<size_t>(i));
+    }
+    constexpr Base::const_reference operator[](Index i) const {
+        return Base::operator[](checked_cast<size_t>(i));
+    }
 
-    void resize(Index size, const Value& value) { Base::resize(static_cast<I>(size), value); }
+    constexpr Base::reference at(Index i) { return Base::at(checked_cast<size_t>(i)); }
+    constexpr Base::const_reference at(Index i) const { return Base::at(checked_cast<size_t>(i)); }
 
-    void reserve(Index size) { Base::reserve(static_cast<I>(size)); }
+    constexpr Index size() const { return Index(static_cast<I>(Base::size())); }
+
+    constexpr void resize(Index size) { Base::resize(checked_cast<size_t>(size)); }
+
+    constexpr void resize(Index size, const Value& value) {
+        Base::resize(checked_cast<size_t>(size), value);
+    }
+
+    constexpr void reserve(Index size) { Base::reserve(checked_cast<size_t>(size)); }
+
+    constexpr void assign(Index count, const Value& value) {
+        Base::assign(checked_cast<size_t>(count), value);
+    }
+
+    template <class InputIt>
+    constexpr void assign(InputIt first, InputIt last) {
+        Base::assign(first, last);
+        if constexpr (sizeof(size_t) > sizeof(Index)) {
+            DAWN_CHECK(Base::size() <=
+                       size_t{UnderlyingType<Index>{std::numeric_limits<Index>::max()}});
+        }
+    }
+
+    void assign(std::initializer_list<Value> ilist) {
+        Base::assign(ilist);
+        if constexpr (sizeof(size_t) > sizeof(Index)) {
+            DAWN_CHECK(Base::size() <=
+                       size_t{UnderlyingType<Index>{std::numeric_limits<Index>::max()}});
+        }
+    }
 };
 
 }  // namespace dawn::ityp

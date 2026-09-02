@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_COMMON_REFCOUNTEDWITHEXTERNALCOUNT_H_
 #define SRC_DAWN_COMMON_REFCOUNTEDWITHEXTERNALCOUNT_H_
 
-#include "dawn/common/RefCounted.h"
+#include "src/dawn/common/RefCounted.h"
 
 namespace dawn {
 
@@ -49,11 +49,19 @@ class RefCountedWithExternalCount : public T {
 
     using T::T;
 
+    // Hot path and intended to be shadowed.
+    // TODO(crbug.com/501491694): Find if there is a neat way to keep only one copy of
+    // APIAddRef/APIRelease in each class.
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     void APIAddRef() {
         IncrementExternalRefCount();
         T::APIAddRef();
     }
 
+    // Hot path and intended to be shadowed.
+    // TODO(crbug.com/501491694): Find if there is a neat way to keep only one copy of
+    // APIAddRef/APIRelease in each class.
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     void APIRelease() {
         if (mExternalRefCount.Decrement()) {
             WillDropLastExternalRef();
@@ -69,6 +77,13 @@ class RefCountedWithExternalCount : public T {
 
     uint64_t GetExternalRefCountForTesting() const {
         return mExternalRefCount.GetValueForTesting();
+    }
+
+  protected:
+    bool HasExternalRef() const {
+        // Note that we call the "ForTesting" function here but this is a use case where it is not
+        // for testing, and we are allowing it as a special case for external reference counting.
+        return mExternalRefCount.GetValueForTesting() > 0;
     }
 
   private:

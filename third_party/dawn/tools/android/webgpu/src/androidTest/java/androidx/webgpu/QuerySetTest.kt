@@ -20,11 +20,17 @@ import androidx.webgpu.helper.WebGpu
 import androidx.webgpu.helper.createWebGpu
 import java.nio.ByteOrder
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import junit.framework.TestCase
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Rule
@@ -33,15 +39,21 @@ import org.junit.Test
 @Suppress("UNUSED_VARIABLE")
 @SmallTest
 class QuerySetTest {
-  private lateinit var webGpu: WebGpu
+
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
   private lateinit var device: GPUDevice
+  private lateinit var webGpu: WebGpu
 
   @get:Rule
   val apiSkipRule = ApiLevelSkipRule()
 
   @Before
-  fun setup() = runBlocking {
+  fun setup(): Unit = runBlocking {
     val gpu = createWebGpu(
+      dispatcher,
       deviceDescriptor = GPUDeviceDescriptor(
         requiredFeatures = intArrayOf(FeatureName.TimestampQuery),
         deviceLostCallbackExecutor = Executor(Runnable::run),
@@ -52,12 +64,18 @@ class QuerySetTest {
     )  // Request timestamp feature if available.
     webGpu = gpu
     device = gpu.device
+    testScope.launch {
+      webGpu.processEventsLoop()
+    }
   }
 
   @After
   fun teardown() {
-    runCatching { device.destroy() }
-    webGpu.close()
+    if (::webGpu.isInitialized) {
+      webGpu.close()
+    }
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
   }
 
   companion object {
@@ -77,165 +95,215 @@ class QuerySetTest {
 
   @Test
   fun testCreateOcclusionQuerySet() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
-    TestCase.assertNotNull(querySet)
-    assertEquals(QueryType.Occlusion, querySet.type)
-    assertEquals(QUERY_COUNT, querySet.count)
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
+        TestCase.assertNotNull(querySet)
+        assertEquals(QueryType.Occlusion, querySet.type)
+        assertEquals(QUERY_COUNT, querySet.count)
+        querySet.destroy()
+      }
+    }
   }
 
   @Test
   fun testCreateTimestampQuerySet() {
-    // Timestamp query requires a specific feature.
-    if (!device.hasFeature(FeatureName.TimestampQuery)) {
-      Assume.assumeTrue("testCreateTimestampQuerySet: TimestampQuery feature not supported.", true)
-      return  // Skip test if feature not available.
-    }
+    runBlocking {
+      val unused = webGpu.execute {
+        // Timestamp query requires a specific feature.
+        Assume.assumeTrue(
+          "testCreateTimestampQuerySet: TimestampQuery feature not supported.",
+          device.hasFeature(FeatureName.TimestampQuery)
+        )
 
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Timestamp, count = QUERY_COUNT)
-    )
-    TestCase.assertNotNull(querySet)
-    assertEquals(QueryType.Timestamp, querySet.type)
-    assertEquals(QUERY_COUNT, querySet.count)
-    querySet.destroy()
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Timestamp, count = QUERY_COUNT)
+        )
+        TestCase.assertNotNull(querySet)
+        assertEquals(QueryType.Timestamp, querySet.type)
+        assertEquals(QUERY_COUNT, querySet.count)
+        querySet.destroy()
+      }
+    }
   }
 
   @Test
   fun testCreateQuerySetWithNegativeCountFails() {
-    // Attempting to create a QuerySet with count -1 should fail validation.
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedQuerySet =
-      device.createQuerySet(GPUQuerySetDescriptor(type = QueryType.Occlusion, count = -1))
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+    runBlocking {
+      val unused = webGpu.execute {
+        // Attempting to create a QuerySet with count -1 should fail validation.
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedQuerySet =
+          device.createQuerySet(GPUQuerySetDescriptor(type = QueryType.Occlusion, count = -1))
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+      }
     }
   }
 
   @Test
   fun testGetCount() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
 
-    assertEquals(QUERY_COUNT, querySet.count)
+        assertEquals(QUERY_COUNT, querySet.count)
+      }
+    }
   }
 
   @Test
   fun testGetType() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
-    assertEquals(QueryType.Occlusion, querySet.type)
-    querySet.destroy()
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
+        assertEquals(QueryType.Occlusion, querySet.type)
+        querySet.destroy()
 
-    if (!device.hasFeature(FeatureName.TimestampQuery)) {
-      Assume.assumeTrue("testGetType: TimestampQuery feature not supported.", true)
-      return  // Skip test if feature not available.
+        Assume.assumeTrue(
+          "testGetType: TimestampQuery feature not supported.",
+          device.hasFeature(FeatureName.TimestampQuery)
+        )
+        val tsQuerySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Timestamp, count = QUERY_COUNT)
+        )
+        assertEquals(QueryType.Timestamp, tsQuerySet.type)
+        tsQuerySet.destroy()
+      }
     }
-    val tsQuerySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Timestamp, count = QUERY_COUNT)
-    )
-    assertEquals(QueryType.Timestamp, tsQuerySet.type)
   }
 
 
   @Test
   fun testResolveQuerySetValid() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
-    // Each individual query result is stored as a 64-bit unsigned integer.
-    val destinationBuffer = createResolveBuffer((QUERY_COUNT * Long.SIZE_BYTES).toLong())
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
+        // Each individual query result is stored as a 64-bit unsigned integer.
+        val destinationBuffer = createResolveBuffer((QUERY_COUNT * Long.SIZE_BYTES).toLong())
 
-    val encoder = device.createCommandEncoder()
-    encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, destinationBuffer, 0)
+        val encoder = device.createCommandEncoder()
+        encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, destinationBuffer, 0)
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val error = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val error = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, error)
+        assertEquals(ErrorType.NoError, error)
 
-    querySet.destroy()
-    destinationBuffer.destroy()
+        querySet.destroy()
+        destinationBuffer.destroy()
+      }
+    }
   }
 
   @Test
   fun testResolveQuerySetInvalidDestinationUsage() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
-    // Create buffer *without* QueryResolve usage.
-    val invalidBuffer = device.createBuffer(
-      GPUBufferDescriptor(size = 8, usage = BufferUsage.CopySrc)
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
+        // Create buffer *without* QueryResolve usage.
+        val invalidBuffer = device.createBuffer(
+          GPUBufferDescriptor(size = 8, usage = BufferUsage.CopySrc)
+        )
 
-    val encoder = device.createCommandEncoder()
-    encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, invalidBuffer, 0)  // Invalid usage.
+        val encoder = device.createCommandEncoder()
+        encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, invalidBuffer, 0)  // Invalid usage.
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        invalidBuffer.destroy()
+        querySet.destroy()
+      }
     }
   }
 
   @Test
   fun testResolveQuerySetDestinationTooSmall() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
-    // GPUBuffer only has space for 1 result (8 bytes), but we try to resolve 2.
-    val smallBuffer = createResolveBuffer((1 * Long.SIZE_BYTES).toLong())
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
+        // GPUBuffer only has space for 1 result (8 bytes), but we try to resolve 2.
+        val smallBuffer = createResolveBuffer((1 * Long.SIZE_BYTES).toLong())
 
-    val encoder = device.createCommandEncoder()
-    encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, smallBuffer, 0)  // Invalid size.
+        val encoder = device.createCommandEncoder()
+        encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, smallBuffer, 0)  // Invalid size.
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        smallBuffer.destroy()
+        querySet.destroy()
+      }
     }
   }
 
   @Test
   fun testResolveQuerySetIndexOutOfBounds() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
-    // Each individual query result is stored as a 64-bit unsigned integer.
-    val destinationBuffer = createResolveBuffer(QUERY_COUNT * 8L)
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
+        // Each individual query result is stored as a 64-bit unsigned integer.
+        val destinationBuffer = createResolveBuffer(QUERY_COUNT * 8L)
 
-    val encoder = device.createCommandEncoder()
-    // Try to resolve starting at index 1, count 2 (goes past end).
-    encoder.resolveQuerySet(querySet, 1, QUERY_COUNT, destinationBuffer, 0)  // Invalid range.
+        val encoder = device.createCommandEncoder()
+        // Try to resolve starting at index 1, count 2 (goes past end).
+        encoder.resolveQuerySet(querySet, 1, QUERY_COUNT, destinationBuffer, 0)  // Invalid range.
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        destinationBuffer.destroy()
+        querySet.destroy()
+      }
     }
   }
 
   @Test
   fun testResolveQuerySetOffsetAlignment() {
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = QUERY_COUNT)
+        )
 
-    // Each individual query result is stored as a 64-bit unsigned integer.
-    val destinationBuffer = createResolveBuffer(QUERY_COUNT * 8L + 8L)
+        // Each individual query result is stored as a 64-bit unsigned integer.
+        val destinationBuffer = createResolveBuffer(QUERY_COUNT * 8L + 8L)
 
-    val encoder = device.createCommandEncoder()
-    // Try to resolve starting at offset 4 (invalid alignment).
-    encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, destinationBuffer, 4)  // Invalid offset.
+        val encoder = device.createCommandEncoder()
+        // Try to resolve starting at offset 4 (invalid alignment).
+        encoder.resolveQuerySet(querySet, 0, QUERY_COUNT, destinationBuffer, 4)  // Invalid offset.
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        destinationBuffer.destroy()
+        querySet.destroy()
+      }
     }
   }
 
@@ -246,11 +314,11 @@ class QuerySetTest {
    * @param drawAction A lambda to execute drawing commands within the render pass.
    * @param expectedResult The expected long value (sample count) after resolving the query.
    */
-  private fun executeQueryResolveTest(
+  private suspend fun executeQueryResolveTest(
     drawAction: (GPURenderPassEncoder) -> Unit,
     expectedResult: Long,
   ) {
-    // Create a 1x1 render target texture for the render pass.
+    // 1. Create resources: textures, render pipelines.
     val renderTarget = device.createTexture(
       GPUTextureDescriptor(
         size = GPUExtent3D(1, 1, 1),
@@ -258,9 +326,8 @@ class QuerySetTest {
         usage = TextureUsage.RenderAttachment or TextureUsage.CopySrc
       )
     )
-    val renderTargetView = renderTarget.createView()
+    val colorView = renderTarget.createView()
 
-    // Create a depth texture, required for the depth/stencil part of the render pass.
     val depthTexture = device.createTexture(
       GPUTextureDescriptor(
         size = GPUExtent3D(1, 1, 1),
@@ -270,29 +337,6 @@ class QuerySetTest {
     )
     val depthView = depthTexture.createView()
 
-    val queryCount = 1
-    // Create the occlusion QuerySet used in the render pass.
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = queryCount)
-    )
-
-    val resolveBufferSize = queryCount * Long.SIZE_BYTES.toLong()
-    // Create a buffer for resolveQuerySet to write the 64-bit query result into.
-    val resolveBuffer = device.createBuffer(
-      GPUBufferDescriptor(
-        size = resolveBufferSize,
-        usage = BufferUsage.QueryResolve or BufferUsage.CopySrc
-      )
-    )
-    // Create a staging buffer for CPU readback (CopyDst for GPU copy, MapRead for CPU mapping).
-    val readbackBuffer = device.createBuffer(
-      GPUBufferDescriptor(
-        size = resolveBufferSize,
-        usage = BufferUsage.CopyDst or BufferUsage.MapRead
-      )
-    )
-
-    // Simple vertex shader to draw a full-screen triangle.
     val vertexShaderCode = """
         @vertex
         fn main(@builtin(vertex_index) VertexIndex : u32)
@@ -307,7 +351,6 @@ class QuerySetTest {
         }
     """.trimIndent()
 
-    // Simple fragment shader to output red color.
     val fragmentShaderCode = """
         @fragment
         fn main() -> @location(0) vec4<f32> {
@@ -322,7 +365,6 @@ class QuerySetTest {
       GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(fragmentShaderCode))
     )
 
-    // Create a basic rendering pipeline.
     val pipeline = device.createRenderPipeline(
       GPURenderPipelineDescriptor(
         vertex = GPUVertexState(module = shaderModuleVert, entryPoint = "main"),
@@ -340,14 +382,29 @@ class QuerySetTest {
       )
     )
 
-    val encoder = device.createCommandEncoder()
+    // 2. Create buffers: one for query results resolving, and a map-read buffer to read back.
+    val queryCount = 1
+    val resolveBufferSize = queryCount * Long.SIZE_BYTES.toLong()
+    val resolveBuffer = createResolveBuffer(resolveBufferSize)
 
-    // Begin render pass with the occlusion query set attached.
+    val readbackBuffer = device.createBuffer(
+      GPUBufferDescriptor(
+        size = resolveBufferSize,
+        usage = BufferUsage.MapRead or BufferUsage.CopyDst
+      )
+    )
+
+    val querySet = device.createQuerySet(
+      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = queryCount)
+    )
+
+    // 3. Record rendering commands, resolving query results.
+    val encoder = device.createCommandEncoder()
     val passEncoder = encoder.beginRenderPass(
       GPURenderPassDescriptor(
         colorAttachments = arrayOf(
           GPURenderPassColorAttachment(
-            view = renderTargetView,
+            view = colorView,
             loadOp = LoadOp.Clear,
             storeOp = StoreOp.Store,
             clearValue = GPUColor(0.0, 0.0, 0.0, 1.0)
@@ -371,17 +428,15 @@ class QuerySetTest {
     passEncoder.end()
 
     // Resolve the query result from the QuerySet into the resolveBuffer.
-    encoder.resolveQuerySet(querySet, firstQuery = 0, queryCount, resolveBuffer, 0)
+    encoder.resolveQuerySet(querySet, firstQuery = 0, queryCount = queryCount, resolveBuffer, 0)
     // Copy the resolved data into the readbackBuffer for CPU access.
     encoder.copyBufferToBuffer(resolveBuffer, 0, readbackBuffer, 0, resolveBufferSize)
 
     val commandBuffer = encoder.finish()
     device.queue.submit(arrayOf(commandBuffer))
 
-    runBlocking {
-      device.queue.onSubmittedWorkDone()
-      readbackBuffer.mapAndAwait(MapMode.Read, 0, resolveBufferSize)
-    }
+    device.queue.onSubmittedWorkDone()
+    readbackBuffer.mapAndAwait(MapMode.Read, 0, resolveBufferSize)
 
     val mappedBuffer = readbackBuffer.getConstMappedRange(size = resolveBufferSize)
     // WebGPU resolves query data as a little-endian unsigned 64-bit integer.
@@ -405,10 +460,14 @@ class QuerySetTest {
   @Test
   @ApiRequirement(minApi = 35, onlySkipOnEmulator = true)
   fun testResolveQuerySetAndReadback() {
-    executeQueryResolveTest(
-      drawAction = { passEncoder -> passEncoder.draw(3) },
-      expectedResult = 1L
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        executeQueryResolveTest(
+          drawAction = { passEncoder -> passEncoder.draw(3) },
+          expectedResult = 1L
+        )
+      }
+    }
   }
 
   /**
@@ -417,9 +476,13 @@ class QuerySetTest {
   @Test
   @ApiRequirement(minApi = 35, onlySkipOnEmulator = true)
   fun testResolveQuerySetWithZeroResult() {
-    executeQueryResolveTest(
-      drawAction = { },
-      expectedResult = 0L
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        executeQueryResolveTest(
+          drawAction = { },
+          expectedResult = 0L
+        )
+      }
+    }
   }
 }

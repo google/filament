@@ -27,7 +27,10 @@
 
 #include "src/tint/utils/text/base64.h"
 
+#include <array>
 #include <string>
+
+#include "src/tint/utils/result.h"
 
 namespace tint {
 
@@ -64,6 +67,25 @@ Vector<std::byte, 0> DecodeBase64FromComments(std::string_view wgsl) {
                 out.Push(std::byte{*v});
             }
         }
+    }
+    return out;
+}
+
+Result<std::string> EncodeBase64(std::span<const std::byte> data) {
+    constexpr std::array kMap{
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+        'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+        'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/',
+    };
+    std::string out;
+    out.reserve(data.size());
+    for (std::byte b : data) {
+        const auto val = static_cast<uint8_t>(b);
+        if (val >= kMap.size()) {
+            return Failure{"byte value " + std::to_string(val) + " is out of range [0, 63]"};
+        }
+        out.push_back(kMap[val]);
     }
     return out;
 }

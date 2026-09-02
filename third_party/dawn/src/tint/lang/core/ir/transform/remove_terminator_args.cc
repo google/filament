@@ -163,8 +163,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> RemoveTerminatorArgs(Module& ir) {
-    core::ir::AssertValid(ir, kRemoveTerminatorArgsCapabilities,
-                          "before core.RemoveTerminatorArgs");
+    core::ir::AssertValid(ir, "before core.RemoveTerminatorArgs");
 
     State{ir}.Process();
 

@@ -1,0 +1,341 @@
+XXX - Incomplete
+
+Name
+
+    EXT_multiple_textures
+
+Name Strings
+
+    GL_EXT_multiple_textures
+
+Number
+
+    ???
+
+Basic approach:
+
+Initially I started out adding enumerants and functions everywhere to
+add the concept of multiple current textures to the OpenGL API.  This
+quickly became unwieldy because the number of functions affected is very
+large and the number of enumerants needed for texture control, queries,
+texgen, evaluators, vertex arrays, etc. soared into the hundreds.
+
+Rather than try to change a fundamental assumption of the API, I decided
+to keep the notion of a current texture but add a function to allow
+setting that current texture to any of a number of textures kept current
+in the implementation.  The API changes are thus much smaller.  The
+internal changes are still substantial but smaller than in the previous
+approach because of the lack of new parameters to verify and new
+functions to implement.
+
+New enumerants:
+
+GL_MAX_CURRENT_TEXTURES
+
+Specifies the maximum number of textures which may simultaneously be
+current.  This number must be at least two and can be no more than
+sixteen.
+
+GL_CURRENT_TEXTURE_INDEX
+
+Retrieves the index of the current texture.
+
+GL_SUB
+GL_COMBINE_COLOR
+GL_TWICE_COMBINE_COLOR
+GL_TEX_COLOR
+GL_TWICE_TEX_COLOR
+GL_ONE_MINUS_COMBINE_COLOR
+GL_ONE_MINUS_TEX_COLOR
+GL_COMBINE_ALPHA
+GL_TWICE_COMBINE_ALPHA
+GL_COMBINE_ALPHA_REPLACES_COLOR
+GL_TEX_ALPHA
+GL_TWICE_TEX_ALPHA
+GL_TEX_ALPHA_REPLACES_COLOR
+GL_ONE_MINUS_COMBINE_ALPHA
+GL_ONE_MINUS_TEX_ALPHA
+
+Add operations allowed for texturing combining.
+
+GL_TEXCOMBINE_CLAMP
+
+Specifies whether intermediate results should be clamped during texture
+combining.  This may result in higher or lower performance depending on
+the implementation.  An application can check whether clamping is
+desirable or not by querying the following enumerant.
+
+GL_TEXCOMBINE_NATURAL_CLAMP
+
+Indicates whether the implementation prefers texcombine clamping or not.
+Querying this enumerant returns GL_TRUE, GL_FALSE or GL_DONTCARE,
+indicating that the implementation prefers clamping, does not prefer
+clamping or is unaffected by the clamping setting.
+
+The following enumerants are numbered consecutively from the 0 entry to
+the 15 entry, where n is replaced by the number of the particular
+instance.  This restricts the possible set of current textures to
+sixteen simultaneously active textures.
+
+GL_TEXCOORDn_BIT
+
+Used to indicate the texture coordinate to affect.  The legal range for
+n for a particular implementation is from 0 to
+GL_MAX_CURRENT_TEXTURES-1.
+
+GL_TEXCOMBINE_COMBINE_COLORn
+GL_TEXCOMBINE_COLOR_OPn
+GL_TEXCOMBINE_TEX_COLORn 
+GL_TEXCOMBINE_COMBINE_ALPHAn
+GL_TEXCOMBINE_ALPHA_OPn
+GL_TEXCOMBINE_TEX_ALPHAn
+
+Used to query the current settings for texture combine functions.  The
+legal range for n for a particular implementation is 0 to
+GL_MAX_CURRENT_TEXTURES-2.
+
+New functions:
+
+void glCurrentTextureIndex(GLuint index);
+
+Sets the current texture index.  index must range from 0 to
+GL_MAX_CURRENT_TEXTURES-1 or GL_INVALID_VALUE is generated.  The current
+texture index is used for every OpenGL API which references texture
+state without explicitly specifying a texture index.
+
+The default index is zero.  The current index can be retrieved with
+glGet for GL_CURRENT_TEXTURE_INDEX.
+
+void glMultiTexCoord{1234}{sifd}{v}(GLbitfield mask, T coords);
+
+Sets the texture coordinate for all textures with a corresponding bit
+set in the given mask.  mask is a bitfield made up of any combination of
+bits taken from the GL_TEXCOORDn_BIT values. Other parameters are as for
+glTexCoord.  glMultiTexCoord(n, ...) can be replaced by the code
+sequence
+	glCurrentTextureIndex(n);
+	glTexCoord(...);
+for each bit n set in the mask.  It is included for performance and
+programming convenience.
+
+There is no corresponding function for retrieval as queries are not
+expected to be common enough to warrant a special query enumerant.  To
+query the n'th texture coordinate, set the texture index to n and do a
+glGet for GL_CURRENT_TEXTURE_COORDS.
+
+void glBindNthTexture(GLuint index, GLenum target, GLuint texture);
+
+Bind the given texture object to the n'th slot for the given target.
+Operates exactly as glBindTexture except for directly acting on the
+indexed texture instead of the current texture index.  The current
+texture index is not changed.
+
+void glNthTexCombineFunc(GLuint index, GLenum combineColorFactor, GLenum
+colorOp, GLenum texColorFactor, GLenum combineAlphaFactor, GLenum
+alphaOp, GLenum texAlphaFactor);
+
+glNthTexCombineFunc is used to control how all of the currently enabled
+textures are combined together before being combined with the fragment.
+The n'th combine function controls how texture values at index n and n+1
+are combined, so there are m-1 combine functions for m enabled textures.
+index selects the function to be set while combineColorFactor, colorOp,
+texColorFactor, combineAlphaFactor, alphaOp and texAlphaFactor control
+how texture values are combined to produce the resulting texture value.
+
+When a fragment is being textured all current textures contribute to a
+final texture value which is combined with the fragment through the
+normal texture environment function.  This texture value is initialized
+from the first enabled texture and then modified by following enabled
+textures using the texture combine functions.
+
+In the following equation:
+	Tc is the current combined texture color.
+	Ta is the current combined texture alpha.
+	texColor(n) is the n'th texture's color.
+	texAlpha(n) is the n'th texture's alpha.  If the texture has no
+alpha the value is one.
+
+	n = 0
+				Tc = texColor(0), Ta = texAlpha(0).
+
+	n > 0
+				Tc = (Tc * combineColorFactor) colorOp
+(texColor(n) * texColorFactor).
+				Ta = (Ta * combineAlphaFactor) alphaOp
+(texAlpha(n) * texAlphaFactor).
+
+combineColorFactor and texColorFactor are one of GL_ZERO, GL_ONE,
+GL_COMBINE_COLOR, GL_TWICE_COMBINE_COLOR, GL_TEX_COLOR,
+GL_TWICE_TEX_COLOR, GL_COMBINE_ALPHA, GL_TWICE_COMBINE_ALPHA,
+GL_COMBINE_ALPHA_REPLACES_COLOR, GL_TEX_ALPHA, GL_TWICE_TEX_ALPHA,
+GL_TEX_ALPHA_REPLACES_COLOR, GL_ONE_MINUS_COMBINE_COLOR,
+GL_ONE_MINUS_TEX_COLOR, GL_ONE_MINUS_COMBINE_ALPHA and
+GL_ONE_MINUS_TEX_ALPHA.  Most of these factors are self-explanatory.
+The ALPHA_REPLACES_COLOR enumerants replicate the requested alpha and
+replace the color rather than doing a multiply.  This allows the alpha
+channel to contain a monochrome color for specular highlights or other
+effects.
+
+combineAlphaFactor and texAlphaFactor are one of GL_ZERO, GL_ONE,
+GL_COMBINE_ALPHA, GL_TWICE_COMBINE_ALPHA, GL_TEX_ALPHA,
+GL_TWICE_TEX_ALPHA, GL_ONE_MINUS_COMBINE_ALPHA and
+GL_ONE_MINUS_TEX_ALPHA.
+
+colorOp and alphaOp are one of GL_ADD or GL_SUB.
+
+If GL_TEXCOMBINE_CLAMP is enabled then the results produced at each
+stage are clamped to the range (0.0, 1.0).  If it isn't enabled, results
+are only clamped after the final computation.  Since results are always
+clamped after the final texcombine stage, GL_TEXCOMBINE_CLAMP only has
+an effect if more than two textures are enabled.
+
+Texture combine functions can be set for any index regardless of the
+texture enable state.  The functions may not be used but it is legal to
+set them.  Texture values are treated in a generic way during texture
+combining so there are no inherent restrictions on the formats of the
+textures in the current texture vector.  Implementations are encouraged
+to support arbitrary mixtures of texture size, format and
+dimensionality.  Applications can determine if an implementation cannot
+support a particular mix of textures through the proxy mechanism.
+
+The default functions are (GL_ONE, GL_ADD, GL_ONE, GL_ONE, GL_ADD,
+GL_ONE).
+
+New capabilities for existing functions:
+
+glGet{*}v
+
+GL_MAX_CURRENT_TEXTURES and GL_CURRENT_TEXTURE_INDEX can be retrieved
+through glGet.  The enable state of GL_TEXCOMBINE_CLAMP can be retrieved
+with glGet.  GL_TEXCOMBINE_NATURAL_CLAMP's setting can be retrieved with
+glGet.
+
+The current texture combine functions can be retrieved through glGet
+using the GL_TEXCOMBINE_COMBINE_COLORn, GL_TEXCOMBINE_COLOR_OPn,
+GL_TEXCOMBINE_TEX_COLORn, GL_TEXCOMBINE_COMBINE_ALPHAn,
+GL_TEXCOMBINE_ALPHA_OPn and GL_TECOMBINE_TEX_ALPHAn enumerants.
+
+glEnable, glDisable, glIsEnabled
+
+GL_TEXCOMBINE_CLAMP can be enabled, disabled and checked using the
+standard enable functions.
+
+Impact of texture index on existing functions:
+
+glMatrixMode
+
+Each texture coordinate has its own texture matrix so N texture matrices
+must be kept instead of one.
+
+glEnable
+glDisable
+glIsEnabled
+glGet{*}v
+
+All of the textures supported by an implementation can be enabled and
+disabled using the GL_TEXTURE_1D and GL_TEXTURE_2D enumerants.  As with
+single texture implementations, if both textures for a particular n are
+enabled then the 2D texture takes precedence.  Enabling texture n
+enables all textures between zero and n.  Disabling texture n disables
+all textures from n to GL_MAX_CURRENT_TEXTURES-1.  This behavior allows
+quick enabling and disabling of multiple textures while preventing
+sparse enable states.
+
+Each enabled texture must be consistent according to the OpenGL rules or
+it is as if texturing is disabled.
+
+glTexImage{12}D
+glCopyTexImage{12}D
+glTexSubImage{12}D
+glCopyTexSubImage{12}D
+glTexParam{if}{v}
+glBindTexture
+glGetTexGen{if}v
+glGetTexParameter{if}v
+glGetTexLevelParameter{if}v
+glGetTexImage
+
+All of the texture control functions must now cope with N times as many
+textures.
+
+Proxies become even more important with multiple texture support as some
+implementations may have restrictions on what kinds of textures can be
+used simultaneously.  The proxy mechanism can be used to determine if a
+particular mix of textures is supported or not.
+
+glPushAttrib
+glPopAttrib
+
+All current texture state is pushed and popped.
+
+glMatrixMode
+glPushMatrix
+glPopMatrix
+
+Each texture coordinate has its own transform and texture stack.
+
+Texture Coordinate Generation and Evaluators
+
+Automatically generated texture coordinates affect the n'th texture
+coordinate, where n is the current texture index.  N times as many
+texture coordinate generators or texture-coordinate-affecting evaluators
+can now be active.  It is invalid to specify evaluator targets other
+than the texture coordinates for non-zero current texture indices.
+
+Other State Queries
+
+All state queries for texture-related information must now return
+information for the currently selected texture.
+
+Change History
+
+04/15/97
+				Changed 'left' to 'combine' and 'right'
+to 'tex' to try and make names more descriptive.
+				Changed all enumerants ending in _n to
+just n to match existing style for consecutive enumerants.
+				Changed TEXCOORD_BIT_n to TEXCOORDn_BIT
+for consistency.
+
+02/06/97
+				Changed glNthTexCoord to glMultiTexCoord
+to allow multiple texture coordinates to be set with a single call.  It
+is expected that texture coordinates will commonly be the same for
+multiple textures and there is some hardware that supports texture
+coordinate broadcasting so this is an important programming and
+performance issue.
+
+02/04/97	
+				Added GL_TEXCOMBINE_NATURAL_CLAMP to
+give applications a way to determine whether texcombine clamping should
+be enabled or not for maximum performance.
+
+01/27/97
+				Added GL_*_ALPHA_REPLACES_COLOR so that
+alpha values can override color values when doing texture combining.
+
+01/21/97
+				Chose sixteen as the maximum number of
+current textures possibly supported.
+				glBindNthTexture added.
+				glNthTexBlendFunc changed to
+glNthTexCombineFunc.
+				Scaling factors split into separate
+color and alpha factors in glNthTexCombineFunc.  New scaling factors
+added and all scaling factors explicitly specified.
+				Combine function query enumerants
+changed and extended to match glNthTexCombineFunc.
+				GL_MULT deleted as an allowed operator
+in glNthTexCombineFunc.
+				GL_TEXCOMBINE_CLAMP added.
+				Changed texture enabled/disable to be
+bulk operations rather than affecting a single texture.
+				Specified that multiple texture
+transforms and stacks must be kept.
+				Encouraged implementations to support
+mixing texture types in the current texture vector.
+				Deleted Questions section as all
+previously open issues have been closed.
+
+01/16/97
+				Initial release.

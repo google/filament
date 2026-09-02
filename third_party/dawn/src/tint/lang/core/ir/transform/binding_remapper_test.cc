@@ -37,10 +37,7 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-class IR_BindingRemapperTest : public TransformTest {
-  public:
-    IR_BindingRemapperTest() { capabilities = kBindingRemapperCapabilities; }
-};
+using IR_BindingRemapperTest = TransformTest;
 
 TEST_F(IR_BindingRemapperTest, NoModify_NoRemappings) {
     auto* buffer = b.Var("buffer", ty.ptr<uniform, i32>());
@@ -200,8 +197,6 @@ $B1: {  # root
 }
 
 TEST_F(IR_BindingRemapperTest, BindingPointCollisionSameEntryPoint) {
-    capabilities.Add(Capability::kAllowDuplicateBindings);
-
     auto* buffer_a = b.Var("buffer_a", ty.ptr<uniform, i32>());
     buffer_a->SetBindingPoint(1, 2);
     mod.root_block->Append(buffer_a);

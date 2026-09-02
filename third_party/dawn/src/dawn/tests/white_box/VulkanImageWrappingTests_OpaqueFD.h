@@ -30,7 +30,7 @@
 
 #include <memory>
 
-#include "dawn/tests/white_box/VulkanImageWrappingTests.h"
+#include "src/dawn/tests/white_box/VulkanImageWrappingTests.h"
 
 namespace dawn::native::vulkan {
 

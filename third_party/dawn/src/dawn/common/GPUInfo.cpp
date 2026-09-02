@@ -25,20 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/common/GPUInfo.h"
+#include "src/dawn/common/GPUInfo.h"
 
 #include <algorithm>
 #include <array>
 #include <iterator>
 #include <sstream>
 
-#include "dawn/common/Assert.h"
 #include "dawn/common/GPUInfo_autogen.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::gpu_info {
 namespace {
@@ -56,7 +52,7 @@ const PCIDeviceID kMaliG68 = 0x92041010;
 DriverVersion::DriverVersion() = default;
 
 DriverVersion::DriverVersion(const std::initializer_list<uint16_t>& version) {
-    DAWN_ASSERT(version.size() <= kMaxVersionFields);
+    DAWN_CHECK(version.size() <= kMaxVersionFields);
     mDriverVersion.assign(version.begin(), version.end());
 }
 
@@ -68,7 +64,7 @@ const uint16_t& DriverVersion::operator[](size_t i) const {
     return mDriverVersion.operator[](i);
 }
 
-uint32_t DriverVersion::size() const {
+size_t DriverVersion::size() const {
     return mDriverVersion.size();
 }
 
@@ -76,7 +72,7 @@ std::string DriverVersion::ToString() const {
     std::ostringstream oss;
     if (!mDriverVersion.empty()) {
         // Convert all but the last element to avoid a trailing "."
-        std::copy(mDriverVersion.begin(), mDriverVersion.end() - 1,
+        std::copy(mDriverVersion.begin(), DAWN_UNSAFE_TODO(mDriverVersion.end() - 1),
                   std::ostream_iterator<uint16_t>(oss, "."));
         // Add the last element
         oss << mDriverVersion.back();
@@ -97,7 +93,7 @@ std::strong_ordering DriverVersion::operator<=>(const DriverVersion& other) cons
 // more details.
 IntelWindowsDriverVersion::IntelWindowsDriverVersion(const DriverVersion& driverVersion) {
     size_t size = driverVersion.size();
-    DAWN_ASSERT(size >= 2);
+    DAWN_CHECK(size >= 2);
     mBuildNumber = driverVersion[size - 2] * 10000 + driverVersion[size - 1];
 }
 
@@ -156,6 +152,11 @@ QualcommACPIGen GetQualcommACPIGen(PCIVendorID venderId, PCIDeviceID deviceId) {
 // ARM GPUs
 bool IsMaliG68(PCIDeviceID deviceId) {
     return deviceId == kMaliG68;
+}
+
+bool IsTileBasedRenderer(PCIVendorID vendorId, PCIDeviceID /*deviceId*/) {
+    return IsARM(vendorId) || IsImgTec(vendorId) || IsQualcommPCI(vendorId) ||
+           IsQualcommACPI(vendorId) || IsApple(vendorId);
 }
 
 }  // namespace dawn::gpu_info

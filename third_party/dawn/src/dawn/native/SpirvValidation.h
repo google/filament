@@ -28,8 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_SPIRVVALIDATION_H_
 #define SRC_DAWN_NATIVE_SPIRVVALIDATION_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/LogEmitter.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/LogEmitter.h"
+#include "src/utils/span.h"
 
 namespace spvtools {
 class SpirvTools;
@@ -37,14 +38,10 @@ class SpirvTools;
 
 namespace dawn::native {
 
-MaybeError ValidateSpirv(LogEmitter* logEmitter,
-                         const uint32_t* spirv,
-                         size_t wordCount,
-                         bool spv14);
+MaybeError ValidateSpirv(LogEmitter* logEmitter, Span<const uint32_t> spirv, bool spv14);
 
 void DumpSpirv(LogEmitter* logEmitter,
-               const uint32_t* spirv,
-               size_t wordCount,
+               Span<const uint32_t> spirv,
                spvtools::SpirvTools* spirvTools = nullptr);
 
 }  // namespace dawn::native

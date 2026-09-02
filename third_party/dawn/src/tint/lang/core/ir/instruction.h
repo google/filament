@@ -193,6 +193,12 @@ class Instruction : public Castable<Instruction> {
         return res[0];
     }
 
+    /// Returns the alignment for this instruction.
+    std::optional<uint32_t> Alignment() const { return alignment_; }
+
+    /// Sets the alignment of this instruction.
+    void SetAlignment(uint32_t align) { alignment_ = align; }
+
     /// Pointer to the next instruction in the list
     Instruction* next = nullptr;
     /// Pointer to the previous instruction in the list
@@ -218,6 +224,10 @@ class Instruction : public Castable<Instruction> {
 
     /// Bitset of instruction flags
     tint::EnumSet<Flag> flags_;
+
+    /// Alignment
+    /// @note this is not cloned by default.
+    std::optional<uint32_t> alignment_;
 };
 
 }  // namespace tint::core::ir

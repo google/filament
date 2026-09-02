@@ -25,16 +25,17 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <numeric>
 #include <string>
 #include <vector>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 // The motivation behind these tests is to investigate the failures in
 // webgpu:shader,execution,expression,call,builtin,atomics,atomic* CTS for mobile gpus.
@@ -108,10 +109,10 @@ class ShaderAtomicVec2Tests : public DawnTestWithParams<ShaderAtomicVec2TestsPar
     using DawnTestWithParams<ShaderAtomicVec2TestsParams>::GetParam;
     using DawnTestWithParams<ShaderAtomicVec2TestsParams>::SupportsFeatures;
 
-    wgpu::Buffer CreateBuffer(const std::vector<std::array<uint32_t, 2>>& data,
+    wgpu::Buffer CreateBuffer(const std::vector<uint32_t>& data,
                               wgpu::BufferUsage usage = wgpu::BufferUsage::Storage |
                                                         wgpu::BufferUsage::CopySrc) {
-        uint64_t bufferSize = static_cast<uint64_t>(data.size() * sizeof(uint32_t) * 2);
+        uint64_t bufferSize = static_cast<uint64_t>(data.size() * sizeof(uint32_t));
         return utils::CreateBufferFromData(device, data.data(), bufferSize, usage);
     }
 
@@ -142,7 +143,7 @@ class ShaderAtomicVec2Tests : public DawnTestWithParams<ShaderAtomicVec2TestsPar
     }
 };
 
-TEST_P(ShaderAtomicVec2Tests, StorageBufferAtomicVec2Max) {
+TEST_P(ShaderAtomicVec2Tests, StorageBufferAtomicVec2MinMax) {
     DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures({wgpu::FeatureName::AtomicVec2uMinMax}));
 
     const unsigned int workgroupSize = GetParam().mWorkgroupSizeParameter;
@@ -175,8 +176,8 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     wgpu::ComputePipeline pipeline = CreateComputePipeline(code.str());
 
     wgpu::Buffer atomicBufferMax = CreateBuffer({{0, 0}});
-    wgpu::Buffer atomicBufferMin = CreateBuffer({{0xFFFFFFFF, 0xFFFFFFFF}});
 
+    wgpu::Buffer atomicBufferMin = CreateBuffer({{0xFFFFFFFF, 0xFFFFFFFF}});
     wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
                                                      {{0, atomicBufferMax}, {1, atomicBufferMin}});
 
@@ -197,6 +198,215 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     EXPECT_BUFFER_U32_RANGE_EQ(expectedMax.data(), atomicBufferMax, 0, 2);
     std::array<uint32_t, 2> expectedMin = {numInvocations, 0};
     EXPECT_BUFFER_U32_RANGE_EQ(expectedMin.data(), atomicBufferMin, 0, 2);
+}
+
+TEST_P(ShaderAtomicVec2Tests, StorageBufferAtomicVec2Simple) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures({wgpu::FeatureName::AtomicVec2uMinMax}));
+
+    const unsigned int workgroupSize = GetParam().mWorkgroupSizeParameter;
+    const unsigned int dispatchSize = GetParam().mDispatchSizeParameter;
+    const unsigned int numInvocations = workgroupSize * dispatchSize;
+
+    std::stringstream code;
+    code << R"(
+
+    enable atomic_vec2u_min_max;
+
+
+@binding(0) @group(0) var<storage, read_write> atomic_storage_buffer_max : atomic<vec2<u32>>;
+@binding(1) @group(0) var<storage, read_write> atomic_storage_buffer_min : atomic<vec2<u32>>;
+
+@compute @workgroup_size()"
+         << workgroupSize << R"()
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+    let i = global_id.x;
+    let num_invocations = )"
+         << numInvocations << R"(u;
+    let val = vec2<u32>(0x12345678, 0x9ABCDEF0);
+    atomicStoreMax(&atomic_storage_buffer_max, val);
+    atomicStoreMin(&atomic_storage_buffer_min, val);
+}
+)";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(code.str());
+
+    wgpu::Buffer atomicBufferMax = CreateBuffer({0x0, 0x0, 0x12345ABC, 0x12345ABC});
+    wgpu::Buffer atomicBufferMin = CreateBuffer({0xFFFFFFFF, 0xFFFFFFFF, 0x12345ABC, 0x12345ABC});
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {{0, atomicBufferMax}, {1, atomicBufferMin}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(dispatchSize);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    std::array<uint32_t, 4> expectedMax = {0x12345678, 0x9ABCDEF0, 0x12345ABC, 0x12345ABC};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMax.data(), atomicBufferMax, 0, 4);
+    std::array<uint32_t, 4> expectedMin = {0x12345678, 0x9ABCDEF0, 0x12345ABC, 0x12345ABC};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMin.data(), atomicBufferMin, 0, 4);
+}
+
+TEST_P(ShaderAtomicVec2Tests, StorageBufferAtomicVec2Conditional) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures({wgpu::FeatureName::AtomicVec2uMinMax}));
+
+    const unsigned int workgroupSize = GetParam().mWorkgroupSizeParameter;
+    const unsigned int dispatchSize = GetParam().mDispatchSizeParameter;
+    const unsigned int numInvocations = workgroupSize * dispatchSize;
+
+    std::stringstream code;
+    code << R"(
+enable atomic_vec2u_min_max;
+
+@binding(0) @group(0) var<storage, read_write> atomic_storage_buffer_max : atomic<vec2<u32>>;
+@binding(1) @group(0) var<storage, read_write> atomic_storage_buffer_min : atomic<vec2<u32>>;
+
+@compute @workgroup_size()"
+         << workgroupSize << R"()
+fn main(@builtin(local_invocation_index) local_idx : u32, @builtin(workgroup_id) wg_id : vec3<u32>) {
+    let i = local_idx;
+    let num_invocations = )"
+         << numInvocations << R"(u;
+    let val = vec2<u32>(wg_id.x, local_idx);
+    let test_val = local_idx * wg_id.x;
+    if( (test_val) % 7  == 0)
+    {
+        atomicStoreMax(&atomic_storage_buffer_max, val);
+        atomicStoreMin(&atomic_storage_buffer_min, val);
+    }
+}
+)";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(code.str());
+
+    wgpu::Buffer atomicBufferMax = CreateBuffer({0x0, 0x0, 0x12345ABC, 0x12345ABC});
+    wgpu::Buffer atomicBufferMin = CreateBuffer({0xFFFFFFFF, 0xFFFFFFFF, 0x12345ABC, 0x12345ABC});
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {{0, atomicBufferMax}, {1, atomicBufferMin}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(dispatchSize);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    // Simulation of shader including our conditional.
+    uint64_t max_expected = 0;
+    uint64_t min_expected = 0xFFFFFFFFFFFFFFFFull;
+    for (uint32_t i = 0; i < workgroupSize; i++) {
+        for (uint32_t j = 0; j < dispatchSize; j++) {
+            uint32_t local_idx = i;
+            uint32_t wg_id_x = j;
+            if ((local_idx * wg_id_x) % 7 == 0) {
+                uint64_t composite =
+                    (static_cast<uint64_t>(local_idx) << static_cast<uint64_t>(32)) |
+                    (static_cast<uint64_t>(wg_id_x));
+                max_expected = std::max(max_expected, composite);
+                min_expected = std::min(min_expected, composite);
+            }
+        }
+    }
+
+    std::array<uint32_t, 4> expectedMax = {static_cast<uint32_t>(max_expected & 0xFFFFFFFF),
+                                           static_cast<uint32_t>(max_expected >> 32), 0x12345ABC,
+                                           0x12345ABC};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMax.data(), atomicBufferMax, 0, 4);
+    std::array<uint32_t, 4> expectedMin = {static_cast<uint32_t>(min_expected & 0xFFFFFFFF),
+                                           static_cast<uint32_t>(min_expected >> 32), 0x12345ABC,
+                                           0x12345ABC};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMin.data(), atomicBufferMin, 0, 4);
+}
+
+// Same as Simple but just making sure offset (array) access is end2end tested.
+TEST_P(ShaderAtomicVec2Tests, StorageBufferAtomicVec2Array) {
+    DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures({wgpu::FeatureName::AtomicVec2uMinMax}));
+
+    const unsigned int workgroupSize = GetParam().mWorkgroupSizeParameter;
+    const unsigned int dispatchSize = GetParam().mDispatchSizeParameter;
+    const unsigned int numInvocations = workgroupSize * dispatchSize;
+
+    std::stringstream code;
+    code << R"(
+
+    enable atomic_vec2u_min_max;
+
+
+@binding(0) @group(0) var<storage, read_write> atomic_storage_buffer_max : array<atomic<vec2<u32>>>;
+@binding(1) @group(0) var<storage, read_write> atomic_storage_buffer_min : array<atomic<vec2<u32>>>;
+
+@compute @workgroup_size()"
+         << workgroupSize << R"()
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+    let i = global_id.x;
+    let num_invocations = )"
+         << numInvocations << R"(u;
+    let val = vec2<u32>(0x12345678, 0x9ABCDEF0);
+    atomicStoreMax(&atomic_storage_buffer_max[1], val);
+    atomicStoreMin(&atomic_storage_buffer_min[1], val);
+}
+)";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(code.str());
+
+    wgpu::Buffer atomicBufferMax = CreateBuffer({
+        0x12345ABC,
+        0x12345ABC,
+        0x0,
+        0x0,
+    });
+    wgpu::Buffer atomicBufferMin = CreateBuffer({
+        0x12345ABC,
+        0x12345ABC,
+        0xFFFFFFFF,
+        0xFFFFFFFF,
+    });
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {{0, atomicBufferMax}, {1, atomicBufferMin}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(dispatchSize);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    std::array<uint32_t, 4> expectedMax = {
+        0x12345ABC,
+        0x12345ABC,
+        0x12345678,
+        0x9ABCDEF0,
+    };
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMax.data(), atomicBufferMax, 0, 4);
+    std::array<uint32_t, 4> expectedMin = {
+        0x12345ABC,
+        0x12345ABC,
+        0x12345678,
+        0x9ABCDEF0,
+    };
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedMin.data(), atomicBufferMin, 0, 4);
 }
 
 TEST_P(ShaderAtomicTests, WorkgroupAtomicArray) {
@@ -298,10 +508,126 @@ DAWN_INSTANTIATE_TEST_P(ShaderAtomicTests,
                         {ShaderAtomicOp::AtomicAdd, ShaderAtomicOp::AtomicCASFakeAdd});
 
 DAWN_INSTANTIATE_TEST_P(ShaderAtomicVec2Tests,
-                        {VulkanBackend(), MetalBackend()},
+                        {VulkanBackend(), MetalBackend(), D3D12Backend()},
                         {1,  2,  3,  4,  5,  6,   7,   8,   9,   13, 15,
                          16, 31, 32, 53, 64, 111, 128, 137, 173, 256}, /* workgroup size*/
                         {1, 2, 7, 15}                                  /*dispatch size */
+);
+
+DAWN_TEST_PARAM_STRUCT(AtomicStoreWorkgroupAdvancedParams, WorkgroupSizeParameter);
+class ShaderAtomicStoreWorkgroupAdvancedTests
+    : public DawnTestWithParams<AtomicStoreWorkgroupAdvancedParams> {
+  protected:
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
+        required.maxComputeWorkgroupSizeX = supported.maxComputeWorkgroupSizeX;
+        required.maxComputeWorkgroupSizeY = supported.maxComputeWorkgroupSizeY;
+        required.maxComputeWorkgroupSizeZ = supported.maxComputeWorkgroupSizeZ;
+        required.maxComputeInvocationsPerWorkgroup = supported.maxComputeInvocationsPerWorkgroup;
+    }
+};
+
+class ExpectLessThan : public detail::Expectation {
+    unsigned int mHigh;
+
+  public:
+    explicit ExpectLessThan(unsigned int high) : mHigh(high) {}
+
+    testing::AssertionResult Check(const void* data, size_t size) override {
+        DAWN_ASSERT(size == sizeof(uint32_t));
+        // SAFETY: Test-only code.
+        uint32_t val = DAWN_UNSAFE_BUFFERS(*static_cast<const uint32_t*>(data));
+        if (val >= mHigh) {
+            return testing::AssertionFailure()
+                   << "Found unexpected value " << val << " (expected between 0 and " << (mHigh - 1)
+                   << ")\n";
+        }
+        return testing::AssertionSuccess();
+    }
+};
+
+// Ported from the atomicStore:store_workgroup_advanced CTS tests for bug crbug.com/487773864.
+TEST_P(ShaderAtomicStoreWorkgroupAdvancedTests, StoreWorkgroupAdvanced) {
+    const unsigned int workgroupSize = GetParam().mWorkgroupSizeParameter;
+    DAWN_TEST_UNSUPPORTED_IF(workgroupSize > GetSupportedLimits().maxComputeWorkgroupSizeX);
+
+    wgpu::ConstantEntry workgroupSizeConstant{
+        .key = "kWorkgroupSize",
+        .value = static_cast<double>(workgroupSize),
+    };
+
+    std::string wgsl = R"(
+override kWorkgroupSize: u32;
+
+var<workgroup> wg: atomic<u32>;
+
+// Result of each workgroup is written to output[workgroup_id.x]
+@group(0) @binding(0)
+var<storage, read_write> output: array<u32, 1>;
+
+@compute @workgroup_size(kWorkgroupSize)
+fn main(
+    @builtin(local_invocation_index) local_invocation_index: u32,
+    @builtin(workgroup_id) workgroup_id : vec3<u32>
+) {
+  let id = u32(local_invocation_index);
+
+  // All invocations of a given dispatch store to the same location.
+  // In the end, the final value should be randomly equal to one of the ids.
+  atomicStore(&wg, id);
+
+  // Once all invocations have completed, the first one copies the result
+  // to output for this dispatch (workgroup_id.x)
+  workgroupBarrier();
+  if (local_invocation_index == 0u) {
+    output[workgroup_id.x] = atomicLoad(&wg);
+  }
+}
+)";
+
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = utils::CreateShaderModule(device, wgsl.c_str());
+    csDesc.compute.entryPoint = "main";
+    csDesc.compute.constants = &workgroupSizeConstant;
+    csDesc.compute.constantCount = 1;
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&csDesc);
+
+    wgpu::BufferDescriptor desc{
+        .usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc,
+        .size = static_cast<uint64_t>(1 * sizeof(uint32_t)),
+    };
+    wgpu::Buffer output = device.CreateBuffer(&desc);
+
+    wgpu::BindGroup bindGroup =
+        utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, output}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(1);
+        pass.End();
+
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER(output, 0, sizeof(uint32_t), new ExpectLessThan(workgroupSize));
+}
+
+DAWN_INSTANTIATE_TEST_P(ShaderAtomicStoreWorkgroupAdvancedTests,
+                        {
+                            D3D12Backend(),
+                            MetalBackend(),
+                            OpenGLESBackend(),
+                            VulkanBackend(),
+                            VulkanBackend({"vulkan_replace_workgroup_atomic_store_with_exchange"}),
+                        },
+                        {1,  2,  3,  4,  5,  6,   7,   8,   9,   13, 15,
+                         16, 31, 32, 53, 64, 111, 128, 137, 173, 256} /* workgroup size*/
 );
 
 }  // anonymous namespace

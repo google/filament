@@ -33,6 +33,7 @@
 #include <string_view>
 #include <thread>
 
+#include "src/tint/cmd/fuzz/common/runner.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/allowed_features.h"
 #include "src/tint/lang/wgsl/ast/alias.h"
@@ -42,6 +43,7 @@
 #include "src/tint/lang/wgsl/ast/struct.h"
 #include "src/tint/lang/wgsl/ast/variable.h"
 #include "src/tint/lang/wgsl/enums.h"
+#include "src/tint/lang/wgsl/program/program.h"
 #include "src/tint/lang/wgsl/reader/options.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
 #include "src/tint/utils/containers/vector.h"
@@ -50,7 +52,6 @@
 #include "src/tint/utils/rtti/switch.h"
 
 #if TINT_BUILD_WGSL_WRITER
-#include "src/tint/lang/wgsl/program/program.h"
 #include "src/tint/lang/wgsl/writer/writer.h"
 #endif
 
@@ -155,8 +156,6 @@ void Run(std::string_view wgsl, const Options& options, std::span<const std::byt
     // Parse the WGSL program.
     tint::wgsl::reader::Options parse_options;
     parse_options.allowed_features = tint::wgsl::AllowedFeatures::Everything();
-    // buffer_view is not ready for fuzzing yet.
-    parse_options.allowed_features.features.erase(tint::wgsl::LanguageFeature::kBufferView);
     auto program = tint::wgsl::reader::Parse(&file, parse_options);
     if (!program.IsValid()) {
         if (options.verbose) {
@@ -169,52 +168,14 @@ void Run(std::string_view wgsl, const Options& options, std::span<const std::byt
     context.options = options;
     context.program_properties = ScanProgramProperties(program);
 
-    bool ran_atleast_once = false;
-
     // Run each of the program fuzzer functions
-    if (options.run_concurrently) {
-        size_t n = Fuzzers().Length();
-        tint::Vector<std::thread, 32> threads;
-        threads.Reserve(n);
-        for (size_t i = 0; i < n; i++) {
-            if (!options.filter.empty() &&
-                Fuzzers()[i].name.find(options.filter) == std::string::npos) {
-                continue;
-            }
-            ran_atleast_once = true;
-
-            threads.Push(std::thread([i, &program, &data, &context] {
-                auto& fuzzer = Fuzzers()[i];
-                currently_running = fuzzer.name;
-                if (context.options.verbose) {
-                    std::cout << " • [" << i << "] Running: " << currently_running << "\n";
-                }
-                fuzzer.fn(program, context, data);
-            }));
+    tint::fuzz::common::RunFuzzers(Fuzzers(), options, [&](const ProgramFuzzer& fuzzer, size_t) {
+        currently_running = fuzzer.name;
+        if (options.verbose) {
+            std::cout << " • Running: " << currently_running << "\n";
         }
-        for (auto& thread : threads) {
-            thread.join();
-        }
-    } else {
-        TINT_DEFER(currently_running = "");
-        for (auto& fuzzer : Fuzzers()) {
-            if (!options.filter.empty() && fuzzer.name.find(options.filter) == std::string::npos) {
-                continue;
-            }
-            ran_atleast_once = true;
-
-            currently_running = fuzzer.name;
-            if (options.verbose) {
-                std::cout << " • Running: " << currently_running << "\n";
-            }
-            fuzzer.fn(program, context, data);
-        }
-    }
-
-    if (!options.filter.empty() && !ran_atleast_once) {
-        std::cerr << "ERROR: --filter=" << options.filter << " did not match any fuzzers\n";
-        exit(EXIT_FAILURE);
-    }
+        fuzzer.fn(program, context, data);
+    });
 }
 
 }  // namespace tint::fuzz::wgsl

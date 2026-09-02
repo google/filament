@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_COMPUTEPIPELINEGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_COMPUTEPIPELINEGL_H_
 
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/opengl/PipelineGL.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/opengl/PipelineGL.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 

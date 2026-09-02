@@ -58,8 +58,21 @@ class Source {
 
         /// The original un-split file content
         const std::string data;
-        /// #data split by lines
-        const std::vector<std::string_view> lines;
+
+        // The range of bytes in #data for a single line
+        struct LineRange {
+            size_t start;
+            size_t length;
+        };
+        /// The range of character for each line in #data
+        const std::vector<LineRange> line_ranges;
+
+        /// Returns a view of a specific line.
+        /// @param n the number of the line to return.
+        std::string_view GetLine(size_t n) const;
+
+        /// Returns the total number of lines.
+        size_t GetLineCount() const;
     };
 
     /// File describes a source file, including path and content.

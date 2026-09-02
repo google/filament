@@ -30,10 +30,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Ref.h"
-#include "dawn/native/WaitAnySystemEvent.h"
-#include "dawn/native/WaitListEvent.h"
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/native/WaitAnySystemEvent.h"
+#include "src/dawn/native/WaitListEvent.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 namespace {
@@ -46,7 +47,7 @@ constexpr uint64_t kMediumDurationNs = 50000000;
 bool WaitOnReceiver(const SystemEventReceiver& receiver, Nanoseconds timeout) {
     bool ready = false;
     std::pair<const SystemEventReceiver&, bool*> event = {receiver, &ready};
-    return WaitAnySystemEvent(&event, &event + 1, timeout);
+    return WaitAnySystemEvent(&event, DAWN_UNSAFE_TODO(&event + 1), timeout);
 }
 
 class WaitListEventTests : public DawnTest {

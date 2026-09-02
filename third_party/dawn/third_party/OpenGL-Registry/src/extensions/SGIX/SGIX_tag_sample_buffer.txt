@@ -1,0 +1,103 @@
+
+Name
+
+    SGIX_tag_sample_buffer
+
+Name Strings
+
+    GL_SGIX_tag_sample_buffer
+
+Version
+
+    $Date: 1995/10/31 00:11:43 $ $Revision: 1.2 $
+
+Number
+
+    58
+
+Dependencies
+
+    SGIS_multisample is required.
+
+Overview
+
+    The extensions defines a special purpose fast multisample clear.
+    This clear can be used with some restrictions as a significantly
+    faster alternative to Clear(DEPTH_BUFFER_BIT).
+     
+    The extension is based on the RealityEngine architecture and will
+    probably never be supported by any other architecture.
+
+New Procedures and Functions
+
+    void TagSampleBufferSGIX(void);
+
+New Tokens
+
+    None.
+    
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    The specification of the sample buffer tagging operation is added
+    to the GL Specification in section 4.2.3 "Clearing the Buffers".
+
+    Each sample in the multisample buffer carries a tag that can be
+    either set or cleared.  When a tag of a sample is set, a depth
+    test against that sample always succeeds.  Note, however, that the
+    stencil test (if enabled) still uses the stencil value that is
+    stored at the sample. When a color is written into a sample, its
+    tag is cleared.  Depth tests against a sample with a cleared tag
+    use the depth value stored at the sample.  Initially the state of
+    the tags of all samples is undefined.  Clearing the main color
+    buffer clears all the tags. For a given pixel, the color values
+    stored in the sample buffer are resolved into the main color
+    buffer only when the tags of all samples of that pixel are
+    cleared.
+
+    The tags of all the samples can be set by calling TagSampleBuffer.
+    
+    When using TagSampleBuffer, it is the responsibility of the
+    application to ensure that the tags of all samples are cleared
+    (i.e., that a color is stored into each sample least once) before
+    the frame is completed, as color values are only resolved for
+    pixels for which all tags are cleared.
+
+    The result of blending a color into a sample whose tag is set is
+    undefined.
+
+    When SAMPLE_BUFFER_SGIS is 0, TagSampleBuffer has no effect.
+    
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated if TagSampleBufferSGIX is called
+    between the execution of Begin and the execution of the
+    corresponding End.
+
+New State
+
+    None.
+    
+New Implementation Dependent State
+
+    None.

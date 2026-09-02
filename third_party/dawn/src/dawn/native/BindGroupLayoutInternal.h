@@ -34,19 +34,19 @@
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/ContentLessObjectCacheable.h"
-#include "dawn/common/Range.h"
-#include "dawn/common/SlabAllocator.h"
-#include "dawn/common/ityp_span.h"
-#include "dawn/common/ityp_vector.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/CachedObject.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/ContentLessObjectCacheable.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/common/SlabAllocator.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/CachedObject.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -180,8 +180,8 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
     bool NeedsCrossBindingValidation() const;
 
     struct BufferBindingData {
-        uint64_t offset;
-        uint64_t size;
+        uint64_t offset = 0;
+        uint64_t size = 0;
     };
 
     struct BindingDataPointers {
@@ -213,9 +213,10 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
     template <typename BindGroup>
     SlabAllocator<BindGroup> MakeFrontendBindGroupAllocator(size_t size) {
         return SlabAllocator<BindGroup>(
-            size,                                                                        // bytes
-            Align(sizeof(BindGroup), GetBindingDataAlignment()) + GetBindingDataSize(),  // size
-            std::max(alignof(BindGroup), GetBindingDataAlignment())  // alignment
+            size,  // bytes
+            static_cast<uint32_t>(Align(sizeof(BindGroup), GetBindingDataAlignment())) +
+                checked_cast<uint32_t>(GetBindingDataSize()),                  // size
+            uint32_t{std::max(alignof(BindGroup), GetBindingDataAlignment())}  // alignment
         );
     }
 
@@ -230,7 +231,7 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
     // "end" of the last binding type)
     BindingIndex GetBindingTypeStart(BindingTypeOrder type) const;
     BindingIndex GetBindingTypeEnd(BindingTypeOrder type) const;
-    std::array<BindingIndex, BindingTypeOrder_Count + 1> mBindingTypeStart;
+    std::array<BindingIndex, BindingTypeOrder_Count + 1> mBindingTypeStart = {};
 
     // Additional counts for types of bindings.
     uint32_t mUnverifiedBufferCount = 0;

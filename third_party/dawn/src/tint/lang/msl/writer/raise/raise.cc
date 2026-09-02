@@ -32,19 +32,20 @@
 
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/lang/core/ir/module.h"
-#include "src/tint/lang/core/ir/transform/array_length_from_immediate.h"
-#include "src/tint/lang/core/ir/transform/array_length_from_uniform.h"
+#include "src/tint/lang/core/ir/transform/array_length_from.h"
 #include "src/tint/lang/core/ir/transform/binary_polyfill.h"
 #include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/core/ir/transform/builtin_polyfill.h"
 #include "src/tint/lang/core/ir/transform/builtin_scalarize.h"
 #include "src/tint/lang/core/ir/transform/change_immediate_to_uniform.h"
+#include "src/tint/lang/core/ir/transform/collapse_subgroup_min_max.h"
 #include "src/tint/lang/core/ir/transform/conversion_polyfill.h"
 #include "src/tint/lang/core/ir/transform/demote_to_helper.h"
 #include "src/tint/lang/core/ir/transform/multiplanar_external_texture.h"
 #include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
 #include "src/tint/lang/core/ir/transform/preserve_padding.h"
 #include "src/tint/lang/core/ir/transform/prevent_infinite_loops.h"
+#include "src/tint/lang/core/ir/transform/propagate_buffer_sizes.h"
 #include "src/tint/lang/core/ir/transform/remove_continue_in_switch.h"
 #include "src/tint/lang/core/ir/transform/remove_terminator_args.h"
 #include "src/tint/lang/core/ir/transform/rename_conflicts.h"
@@ -65,11 +66,15 @@
 #include "src/tint/lang/msl/writer/raise/binary_polyfill.h"
 #include "src/tint/lang/msl/writer/raise/builtin_polyfill.h"
 #include "src/tint/lang/msl/writer/raise/convert_print_to_log.h"
+#include "src/tint/lang/msl/writer/raise/decompose_buffer.h"
 #include "src/tint/lang/msl/writer/raise/fix_type_layout.h"
+#include "src/tint/lang/msl/writer/raise/fix_u32_div_mod.h"
 #include "src/tint/lang/msl/writer/raise/module_constant.h"
 #include "src/tint/lang/msl/writer/raise/module_scope_vars.h"
+#include "src/tint/lang/msl/writer/raise/polyfill_bool_vector_dynamic_stores.h"
 #include "src/tint/lang/msl/writer/raise/shader_io.h"
 #include "src/tint/lang/msl/writer/raise/simd_ballot.h"
+#include "src/tint/lang/msl/writer/raise/switch_return.h"
 #include "src/tint/lang/msl/writer/raise/validate_subgroup_matrix.h"
 
 namespace tint::msl::writer {
@@ -81,6 +86,10 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
         core::ir::transform::SubstituteOverrides(module, options.substitute_overrides_config));
 
     TINT_CHECK_RESULT(raise::ValidateSubgroupMatrix(module));
+
+    if (options.workarounds.collapse_subgroup_min_max) {
+        TINT_CHECK_RESULT(core::ir::transform::CollapseSubgroupMinMax(module));
+    }
 
     RaiseResult raise_result;
 
@@ -98,27 +107,21 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
     PopulateBindingRelatedOptions(options, remapper_data, multiplanar_map,
                                   array_length_from_constants);
 
-    // The number of vec4s used to store buffer sizes that will be set into the immediate block.
     uint32_t buffer_sizes_array_elements_num = 0;
 
     // PrepareImmediateData must come before any transform that needs internal immediates.
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     if (array_length_from_constants.buffer_sizes_offset) {
-        // Find the largest index declared in the map, in order to determine the number of
-        // elements needed in the array of buffer sizes. The buffer sizes will be packed into
-        // vec4s to satisfy the 16-byte alignment requirement for array elements in uniform
-        // buffers.
         uint32_t max_index = 0;
         for (auto& entry : array_length_from_constants.bindpoint_to_size_index) {
             max_index = std::max(max_index, entry.second);
         }
-        buffer_sizes_array_elements_num = (max_index / 4) + 1;
+        buffer_sizes_array_elements_num = max_index + 1;
 
         TINT_CHECK_RESULT(immediate_data_config.AddInternalImmediateData(
             array_length_from_constants.buffer_sizes_offset.value(),
             module.symbols.New("tint_storage_buffer_sizes"),
-            module.Types().array(module.Types().vec4<core::u32>(),
-                                 buffer_sizes_array_elements_num)));
+            module.Types().array(module.Types().u32(), buffer_sizes_array_elements_num)));
     }
     if (options.depth_range_offsets) {
         TINT_CHECK_RESULT(immediate_data_config.AddInternalImmediateData(
@@ -128,10 +131,16 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
             options.depth_range_offsets.value().max, module.symbols.New("tint_frag_depth_max"),
             module.Types().f32()));
     }
+    TINT_CHECK_RESULT(immediate_data_config.AddInternalImmediateData(
+        options.non_constant_zero_offset, module.symbols.New("tint_non_constant_zero"),
+        module.Types().u32()));
 
     TINT_CHECK_RESULT_UNWRAP(immediate_data_layout, core::ir::transform::PrepareImmediateData(
                                                         module, immediate_data_config));
     TINT_CHECK_RESULT(core::ir::transform::BindingRemapper(module, remapper_data));
+
+    // Must come before robustness.
+    TINT_CHECK_RESULT(core::ir::transform::PropagateBufferSizes(module));
 
     if (!options.disable_robustness) {
         core::ir::transform::RobustnessConfig config{};
@@ -155,8 +164,6 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
             .abs_signed_int = true,
             .degrees = true,
             .extract_bits = core::ir::transform::BuiltinPolyfillLevel::kClampOrRangeCheck,
-            .first_leading_bit = true,
-            .first_trailing_bit = true,
             .fwidth_fine = true,
             .insert_bits = core::ir::transform::BuiltinPolyfillLevel::kClampOrRangeCheck,
             .radians = true,
@@ -200,6 +207,8 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
             array_length_from_immediate_result.needs_storage_buffer_sizes;
     }
 
+    TINT_CHECK_RESULT(raise::DecomposeBuffer(module));
+
     if (!options.disable_workgroup_init) {
         TINT_CHECK_RESULT(core::ir::transform::ZeroInitWorkgroupMemory(module));
     }
@@ -220,7 +229,7 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
         module, raise::ShaderIOConfig{immediate_data_layout, options.emit_vertex_point_size,
                                       options.fixed_sample_mask, options.depth_range_offsets}));
 
-    raise::FixTypeLayoutOptions fix_type_layout_options{
+    raise::FixTypeLayoutConfig fix_type_layout_options{
         .replace_bool_with_u32 = options.workarounds.replace_workgroup_bool_with_u32,
     };
     TINT_CHECK_RESULT(raise::FixTypeLayout(module, fix_type_layout_options));
@@ -256,6 +265,15 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
         TINT_CHECK_RESULT(raise::ArgumentBuffers(module, cfg));
     }
 
+    if (options.workarounds.fix_u32_div_mod) {
+        raise::FixU32DivModConfig config{
+            .immediate_var = immediate_data_layout.var,
+            .non_constant_zero_index =
+                immediate_data_layout.IndexOf(options.non_constant_zero_offset),
+        };
+        TINT_CHECK_RESULT(raise::FixU32DivMod(module, config));
+    }
+
     // ChangeImmediateToUniform must come before ModuleScopeVars
     {
         core::ir::transform::ChangeImmediateToUniformConfig config = {
@@ -267,6 +285,7 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
     TINT_CHECK_RESULT(raise::ModuleScopeVars(module));
 
     TINT_CHECK_RESULT(raise::BinaryPolyfill(module));
+
     TINT_CHECK_RESULT(raise::BuiltinPolyfill(
         module, {
                     .polyfill_unpack_2x16_snorm = options.workarounds.polyfill_unpack_2x16_snorm,
@@ -279,15 +298,19 @@ Result<RaiseResult> Raise(core::ir::Module& module, const Options& options) {
     TINT_CHECK_RESULT(core::ir::transform::SignedIntegerPolyfill(module, signed_integer_cfg));
 
     core::ir::transform::BuiltinScalarizeConfig scalarize_config{
-        .scalarize_clamp = options.workarounds.scalarize_max_min_clamp,
-        .scalarize_max = options.workarounds.scalarize_max_min_clamp,
-        .scalarize_min = options.workarounds.scalarize_max_min_clamp,
+        .scalarize_min_max_clamp = options.workarounds.scalarize_max_min_clamp,
     };
     TINT_CHECK_RESULT(core::ir::transform::BuiltinScalarize(module, scalarize_config));
 
     raise::ModuleConstantConfig module_const_config{
         options.workarounds.disable_module_constant_f16};
     TINT_CHECK_RESULT(raise::ModuleConstant(module, module_const_config));
+
+    TINT_CHECK_RESULT(raise::SwitchReturn(module));
+
+    if (options.workarounds.polyfill_bool_vec_dynamic_store) {
+        TINT_CHECK_RESULT(raise::PolyfillBoolVectorDynamicStores(module));
+    }
 
     // These transforms need to be run last as various transforms introduce terminator arguments,
     // naming conflicts, and expressions that need to be explicitly not inlined.

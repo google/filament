@@ -4,13 +4,16 @@
 
 // This file is a copy of Chromium's /src/base/containers/linked_list_unittest.cc
 
+#include <array>
 #include <list>
 #include <mutex>
 #include <utility>
 
-#include "dawn/common/LinkedList.h"
-#include "dawn/utils/TestUtils.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/LinkedList.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/utils/compiler.h"
+#include "src/utils/span.h"
 
 namespace dawn {
 namespace {
@@ -56,7 +59,7 @@ class MovableNode : public LinkNode<MovableNode> {
 // which is an array of size |num_nodes|.
 void ExpectListContentsForDirection(const LinkedList<Node>& list,
                                     int num_nodes,
-                                    const int* node_ids,
+                                    dawn::Span<const int> node_ids,
                                     bool forward) {
     int i = 0;
     for (const LinkNode<Node>* node = (forward ? list.head() : list.tail()); node != list.end();
@@ -69,7 +72,9 @@ void ExpectListContentsForDirection(const LinkedList<Node>& list,
     EXPECT_EQ(num_nodes, i);
 }
 
-void ExpectListContents(const LinkedList<Node>& list, int num_nodes, const int* node_ids) {
+void ExpectListContents(const LinkedList<Node>& list,
+                        int num_nodes,
+                        dawn::Span<const int> node_ids) {
     {
         SCOPED_TRACE("Iterating forward (from head to tail)");
         ExpectListContentsForDirection(list, num_nodes, node_ids, true);
@@ -84,12 +89,12 @@ TEST(LinkedList, Empty) {
     LinkedList<Node> list;
     EXPECT_EQ(list.end(), list.head());
     EXPECT_EQ(list.end(), list.tail());
-    ExpectListContents(list, 0, nullptr);
+    ExpectListContents(list, 0, {});
 }
 
 TEST(LinkedList, Append) {
     LinkedList<Node> list;
-    ExpectListContents(list, 0, nullptr);
+    ExpectListContents(list, 0, {});
 
     Node n1(1);
     list.Append(&n1);
@@ -97,7 +102,7 @@ TEST(LinkedList, Append) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n1, list.tail());
     {
-        const int expected[] = {1};
+        auto expected = std::to_array<int>({1});
         ExpectListContents(list, 1, expected);
     }
 
@@ -107,7 +112,7 @@ TEST(LinkedList, Append) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n2, list.tail());
     {
-        const int expected[] = {1, 2};
+        auto expected = std::to_array<int>({1, 2});
         ExpectListContents(list, 2, expected);
     }
 
@@ -117,14 +122,14 @@ TEST(LinkedList, Append) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n3, list.tail());
     {
-        const int expected[] = {1, 2, 3};
+        auto expected = std::to_array<int>({1, 2, 3});
         ExpectListContents(list, 3, expected);
     }
 }
 
 TEST(LinkedList, Prepend) {
     LinkedList<Node> list;
-    ExpectListContents(list, 0, nullptr);
+    ExpectListContents(list, 0, {});
 
     Node n1(1);
     list.Prepend(&n1);
@@ -132,7 +137,7 @@ TEST(LinkedList, Prepend) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n1, list.tail());
     {
-        const int expected[] = {1};
+        auto expected = std::to_array<int>({1});
         ExpectListContents(list, 1, expected);
     }
 
@@ -142,7 +147,7 @@ TEST(LinkedList, Prepend) {
     EXPECT_EQ(&n2, list.head());
     EXPECT_EQ(&n1, list.tail());
     {
-        const int expected[] = {2, 1};
+        auto expected = std::to_array<int>({2, 1});
         ExpectListContents(list, 2, expected);
     }
 
@@ -152,7 +157,7 @@ TEST(LinkedList, Prepend) {
     EXPECT_EQ(&n3, list.head());
     EXPECT_EQ(&n1, list.tail());
     {
-        const int expected[] = {3, 2, 1};
+        auto expected = std::to_array<int>({3, 2, 1});
         ExpectListContents(list, 3, expected);
     }
 }
@@ -175,7 +180,7 @@ TEST(LinkedList, RemoveFromList) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n5, list.tail());
     {
-        const int expected[] = {1, 2, 3, 4, 5};
+        auto expected = std::to_array<int>({1, 2, 3, 4, 5});
         ExpectListContents(list, 5, expected);
     }
 
@@ -185,7 +190,7 @@ TEST(LinkedList, RemoveFromList) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n5, list.tail());
     {
-        const int expected[] = {1, 2, 4, 5};
+        auto expected = std::to_array<int>({1, 2, 4, 5});
         ExpectListContents(list, 4, expected);
     }
 
@@ -195,7 +200,7 @@ TEST(LinkedList, RemoveFromList) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n4, list.tail());
     {
-        const int expected[] = {1, 2, 4};
+        auto expected = std::to_array<int>({1, 2, 4});
         ExpectListContents(list, 3, expected);
     }
 
@@ -205,7 +210,7 @@ TEST(LinkedList, RemoveFromList) {
     EXPECT_EQ(&n2, list.head());
     EXPECT_EQ(&n4, list.tail());
     {
-        const int expected[] = {2, 4};
+        auto expected = std::to_array<int>({2, 4});
         ExpectListContents(list, 2, expected);
     }
 
@@ -213,7 +218,7 @@ TEST(LinkedList, RemoveFromList) {
     n2.RemoveFromList();
     n4.RemoveFromList();
 
-    ExpectListContents(list, 0, nullptr);
+    ExpectListContents(list, 0, {});
     EXPECT_EQ(list.end(), list.head());
     EXPECT_EQ(list.end(), list.tail());
 
@@ -227,7 +232,7 @@ TEST(LinkedList, RemoveFromList) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n5, list.tail());
     {
-        const int expected[] = {1, 2, 3, 4, 5};
+        auto expected = std::to_array<int>({1, 2, 3, 4, 5});
         ExpectListContents(list, 5, expected);
     }
 }
@@ -246,7 +251,7 @@ TEST(LinkedList, InsertBefore) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n2, list.tail());
     {
-        const int expected[] = {1, 2};
+        auto expected = std::to_array<int>({1, 2});
         ExpectListContents(list, 2, expected);
     }
 
@@ -255,7 +260,7 @@ TEST(LinkedList, InsertBefore) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n2, list.tail());
     {
-        const int expected[] = {1, 3, 2};
+        auto expected = std::to_array<int>({1, 3, 2});
         ExpectListContents(list, 3, expected);
     }
 
@@ -264,7 +269,7 @@ TEST(LinkedList, InsertBefore) {
     EXPECT_EQ(&n4, list.head());
     EXPECT_EQ(&n2, list.tail());
     {
-        const int expected[] = {4, 1, 3, 2};
+        auto expected = std::to_array<int>({4, 1, 3, 2});
         ExpectListContents(list, 4, expected);
     }
 }
@@ -283,7 +288,7 @@ TEST(LinkedList, InsertAfter) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n2, list.tail());
     {
-        const int expected[] = {1, 2};
+        auto expected = std::to_array<int>({1, 2});
         ExpectListContents(list, 2, expected);
     }
 
@@ -292,7 +297,7 @@ TEST(LinkedList, InsertAfter) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n3, list.tail());
     {
-        const int expected[] = {1, 2, 3};
+        auto expected = std::to_array<int>({1, 2, 3});
         ExpectListContents(list, 3, expected);
     }
 
@@ -301,7 +306,7 @@ TEST(LinkedList, InsertAfter) {
     EXPECT_EQ(&n1, list.head());
     EXPECT_EQ(&n3, list.tail());
     {
-        const int expected[] = {1, 4, 2, 3};
+        auto expected = std::to_array<int>({1, 4, 2, 3});
         ExpectListContents(list, 4, expected);
     }
 }
@@ -407,7 +412,7 @@ TEST(LinkedList, MoveInto) {
     l2.Append(&n2);
 
     l2.MoveInto(&l1);
-    const int expected[] = {1, 2};
+    auto expected = std::to_array<int>({1, 2});
     ExpectListContents(l1, 2, expected);
     EXPECT_TRUE(l2.empty());
 }
@@ -422,7 +427,7 @@ TEST(LinkedList, MoveEmptyListInto) {
     l1.Append(&n2);
 
     l2.MoveInto(&l1);
-    const int expected[] = {1, 2};
+    auto expected = std::to_array<int>({1, 2});
     ExpectListContents(l1, 2, expected);
     EXPECT_TRUE(l2.empty());
 }
@@ -437,7 +442,7 @@ TEST(LinkedList, MoveIntoEmpty) {
     l2.Append(&n2);
 
     l2.MoveInto(&l1);
-    const int expected[] = {1, 2};
+    auto expected = std::to_array<int>({1, 2});
     ExpectListContents(l1, 2, expected);
     EXPECT_TRUE(l2.empty());
 }
@@ -453,7 +458,7 @@ TEST(LinkedList, RangeBasedModify) {
     for (LinkNode<Node>* node : list) {
         node->value()->set_id(node->value()->id() + 1);
     }
-    const int expected[] = {2, 3};
+    auto expected = std::to_array<int>({2, 3});
     ExpectListContents(list, 2, expected);
 }
 

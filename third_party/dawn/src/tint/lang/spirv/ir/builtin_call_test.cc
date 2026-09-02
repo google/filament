@@ -62,7 +62,7 @@ TEST_F(IR_SpirvBuiltinCallTest, Clone) {
 TEST_F(IR_SpirvBuiltinCallTest, CloneWithExplicitParams) {
     auto* builtin = b.Call<BuiltinCall>(mod.Types().f32(), BuiltinFn::kArrayLength, 1_u, 2_u);
     builtin->SetExplicitTemplateParams(
-        Vector<const core::type::Type*, 2>{mod.Types().f32(), mod.Types().i32()});
+        Vector<core::ir::TemplateParameter, 2>{mod.Types().f32(), mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
 
@@ -84,8 +84,8 @@ TEST_F(IR_SpirvBuiltinCallTest, CloneWithExplicitParams) {
     auto new_explicit = new_b->ExplicitTemplateParams();
     ASSERT_EQ(2u, new_explicit.Length());
 
-    EXPECT_EQ(mod.Types().f32(), new_explicit[0]);
-    EXPECT_EQ(mod.Types().i32(), new_explicit[1]);
+    EXPECT_EQ(mod.Types().f32(), std::get<const core::type::Type*>(new_explicit[0]));
+    EXPECT_EQ(mod.Types().i32(), std::get<const core::type::Type*>(new_explicit[1]));
 }
 
 TEST_F(IR_SpirvBuiltinCallTest, CloneNoArgs) {

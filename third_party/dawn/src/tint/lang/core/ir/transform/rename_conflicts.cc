@@ -47,6 +47,7 @@
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/vector.h"
 #include "src/tint/utils/containers/hashmap.h"
+#include "src/tint/utils/containers/hashset.h"
 #include "src/tint/utils/containers/reverse.h"
 #include "src/tint/utils/macros/defer.h"
 #include "src/tint/utils/rtti/switch.h"
@@ -242,6 +243,16 @@ struct State {
                     auto name = s->Name().NameView();
                     if (IsBuiltinStruct(s)) {
                         EnsureResolvesToBuiltin(name);
+                    } else {
+                        Hashset<std::string_view, 8> member_names;
+                        for (auto* mem : s->Members()) {
+                            auto mem_name = mem->Name().NameView();
+                            if (!member_names.Add(mem_name)) {
+                                auto new_name = ir.symbols.New(mem_name);
+                                const_cast<core::type::StructMember*>(mem)->SetName(new_name);
+                                member_names.Add(new_name.NameView());
+                            }
+                        }
                     }
                     return nullptr;
                 });
@@ -301,7 +312,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> RenameConflicts(core::ir::Module& ir) {
-    core::ir::AssertValid(ir, kRenameConflictsCapabilities, "before core.RenameConflicts");
+    core::ir::AssertValid(ir, "before core.RenameConflicts");
 
     State{ir}.Process();
 

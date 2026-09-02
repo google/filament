@@ -397,6 +397,7 @@ struct State {
                               {sym.Register("samplePlane1RectMax"), ty.vec2f()},
                               {sym.Register("apparentSize"), ty.vec2u()},
                               {sym.Register("plane1CoordFactor"), ty.vec2f()},
+                              {sym.Register("ootfParam"), ty.vec4f()},
                           });
         }
         return external_texture_params_struct;
@@ -664,6 +665,64 @@ struct State {
     // The destination transfer is always gamma
     Function* ApplyDstTransferFunction() { return ApplyGammaTransferFunction(); }
 
+    // if ((params.doYuvToRgbConversionOnly == 0)) {
+    //     color = applyTransferFunction(color.rgb, params.srcTransferFunction);
+    //     color = (params.gamutConversionMatrix * color.rgb);
+    //     color = applyTransferFunction(color.rgb, params.dstTransferFunction);
+    //     if (ootf.w != 0) {
+    //       let y: f32 = dot(ootf.rgb, decoded);
+    //       let a: f32 = abs(y);
+    //       let p: f32 = pow(a, ootf.w);
+    //       let s: f32 = sign(y);
+    //       let exp: f32 = s * p;
+    //       color *= s;
+    //     }
+    // }
+    ir::Value* ApplyGammaCorrect(ir::Value* params, ir::Value* rgb_result) {
+        auto* yuv_to_rgb_conversion_only = b.Access(ty.u32(), params, 1_u);
+
+        auto* final_result = b.InstructionResult(ty.vec3f());
+        auto* if_gamma_correct = b.If(b.Equal(yuv_to_rgb_conversion_only, 0_u));
+        if_gamma_correct->SetResult(final_result);
+        b.Append(if_gamma_correct->True(), [&] {
+            auto* src_transfer_function = b.Access(TransferFunctionParams(), params, 3_u);
+            auto* dst_transfer_function = b.Access(TransferFunctionParams(), params, 4_u);
+            auto* gamut_conversion_matrix = b.Access(ty.mat3x3<f32>(), params, 5_u);
+            auto* ootf = b.Access(ty.vec4f(), params, 14_u);
+
+            auto* decoded =
+                b.Call(ty.vec3f(), ApplySrcTransferFunction(), rgb_result, src_transfer_function);
+
+            auto* ootf_arg_w = b.Swizzle(ty.f32(), ootf, {3_u});
+            auto* cmp = b.NotEqual(ootf_arg_w, 0_f);
+
+            auto* ootf_res = b.InstructionResult(ty.vec3f());
+            auto* apply_ootf = b.If(cmp);
+            apply_ootf->SetResult(ootf_res);
+
+            b.Append(apply_ootf->True(), [&] {
+                auto* rgb = b.Swizzle(ty.vec3f(), ootf, {0_u, 1_u, 2_u});
+                auto* y = b.Call(ty.f32(), BuiltinFn::kDot, rgb, decoded);
+                auto* a = b.Call(ty.f32(), BuiltinFn::kAbs, y);
+                auto* p = b.Call(ty.f32(), BuiltinFn::kPow, a, ootf_arg_w);
+                auto* s = b.Call(ty.f32(), BuiltinFn::kSign, y);
+                auto* exp = b.Multiply(s, p);
+                auto* res = b.Multiply(decoded, exp);
+                b.ExitIf(apply_ootf, res);
+            });
+            b.Append(apply_ootf->False(), [&] { b.ExitIf(apply_ootf, decoded); });
+
+            auto* converted = b.Multiply(gamut_conversion_matrix, ootf_res);
+            auto* encoded =
+                b.Call(ty.vec3f(), ApplyDstTransferFunction(), converted, dst_transfer_function);
+            b.ExitIf(if_gamma_correct, encoded);
+        });
+        b.Append(if_gamma_correct->False(), [&] {  //
+            b.ExitIf(if_gamma_correct, rgb_result);
+        });
+        return final_result;
+    }
+
     /// Gets or creates the multiplanar texture load helper function.
     /// @returns the function
     Function* TextureLoadMultiplanarExternal() {
@@ -694,11 +753,9 @@ struct State {
         //                            params.yuvToRgbConversionMatrix));
         //         alpha = 1.f;
         //     }
-        //     if ((params.doYuvToRgbConversionOnly == 0)) {
-        //         color = applyTransferFunction(color, params.srcTransferFunction);
-        //         color = params.gamutConversionMatrix * color;
-        //         color = applyTransferFunction(color, params.dstTransferFunction);
-        //     }
+        //
+        //     color = ApplyGammaCorrect(params, color)
+        //
         //     return vec4f<f32>(color, alpha);
         // }
         texture_load_multiplanar_external =
@@ -710,7 +767,6 @@ struct State {
         texture_load_multiplanar_external->SetParams({plane_0, plane_1, params, coords});
 
         b.Append(texture_load_multiplanar_external->Block(), [&] {
-            auto* yuv_to_rgb_conversion_only = b.Access(ty.u32(), params, 1_u);
             auto* yuv_to_rgb_conversion = b.Access(ty.mat3x4<f32>(), params, 2_u);
             auto* load_transform_matrix = b.Access(ty.mat3x2<f32>(), params, 7_u);
             auto* apparent_size = b.Access(ty.vec2u(), params, 12_u);
@@ -759,24 +815,7 @@ struct State {
             });
 
             // Apply gamma correction if needed.
-            auto* final_result = b.InstructionResult(ty.vec3f());
-            auto* if_gamma_correct = b.If(b.Equal(yuv_to_rgb_conversion_only, 0_u));
-            if_gamma_correct->SetResult(final_result);
-            b.Append(if_gamma_correct->True(), [&] {
-                auto* src_transfer_function = b.Access(TransferFunctionParams(), params, 3_u);
-                auto* dst_transfer_function = b.Access(TransferFunctionParams(), params, 4_u);
-                auto* gamut_conversion_matrix = b.Access(ty.mat3x3<f32>(), params, 5_u);
-                auto* decoded = b.Call(ty.vec3f(), ApplySrcTransferFunction(), rgb_result,
-                                       src_transfer_function);
-                auto* converted = b.Multiply(gamut_conversion_matrix, decoded);
-                auto* encoded = b.Call(ty.vec3f(), ApplyDstTransferFunction(), converted,
-                                       dst_transfer_function);
-                b.ExitIf(if_gamma_correct, encoded);
-            });
-            b.Append(if_gamma_correct->False(), [&] {  //
-                b.ExitIf(if_gamma_correct, rgb_result);
-            });
-
+            auto* final_result = ApplyGammaCorrect(params, rgb_result);
             b.Return(texture_load_multiplanar_external,
                      b.Construct(ty.vec4f(), final_result, alpha_result));
         });
@@ -800,11 +839,9 @@ struct State {
         //       round(params.loadTransform * vec3<f32>(vec2<f32>(clampedCoords), 1)));
         //   var color = textureLoad(texture, loadCoords, 0).rgb, 1) *
         //                   params.yuvToRgbConversionMatrix;
-        //   if ((params.doYuvToRgbConversionOnly == 0)) {
-        //       color = applyTransferFunction(color.rgb, params.srcTransferFunction);
-        //       color = (params.gamutConversionMatrix * color.rgb);
-        //       color = applyTransferFunction(color.rgb, params.dstTransferFunction);
-        //   }
+        //
+        //   color = ApplyGammaCorrect(params, color)
+        //
         //   return vec4f(color, 1);
         // }
         texture_load_ycbcr_external = b.Function("tint_TextureLoadYcbcrExternal", ty.vec4f());
@@ -814,7 +851,6 @@ struct State {
         texture_load_ycbcr_external->SetParams({texture, params, coords});
 
         b.Append(texture_load_ycbcr_external->Block(), [&] {
-            auto* yuv_to_rgb_conversion_only = b.Access(ty.u32(), params, 1_u);
             auto* yuv_to_rgb_conversion = b.Access(ty.mat3x4<f32>(), params, 2_u);
             auto* load_transform_matrix = b.Access(ty.mat3x2<f32>(), params, 7_u);
             auto* apparent_size = b.Access(ty.vec2u(), params, 12_u);
@@ -835,24 +871,7 @@ struct State {
             auto* rgb_result = b.Multiply(extract_rgb, yuv_to_rgb_conversion);
 
             // Apply gamma correction if needed.
-            auto* final_result = b.InstructionResult(ty.vec3f());
-            auto* if_gamma_correct = b.If(b.Equal(yuv_to_rgb_conversion_only, 0_u));
-            if_gamma_correct->SetResult(final_result);
-            b.Append(if_gamma_correct->True(), [&] {
-                auto* src_transfer_function = b.Access(TransferFunctionParams(), params, 3_u);
-                auto* dst_transfer_function = b.Access(TransferFunctionParams(), params, 4_u);
-                auto* gamut_conversion_matrix = b.Access(ty.mat3x3<f32>(), params, 5_u);
-                auto* decoded = b.Call(ty.vec3f(), ApplySrcTransferFunction(), rgb_result,
-                                       src_transfer_function);
-                auto* converted = b.Multiply(gamut_conversion_matrix, decoded);
-                auto* encoded = b.Call(ty.vec3f(), ApplyDstTransferFunction(), converted,
-                                       dst_transfer_function);
-                b.ExitIf(if_gamma_correct, encoded);
-            });
-            b.Append(if_gamma_correct->False(), [&] {  //
-                b.ExitIf(if_gamma_correct, rgb_result);
-            });
-
+            auto* final_result = ApplyGammaCorrect(params, rgb_result->Result());
             b.Return(texture_load_ycbcr_external, b.Construct(ty.vec4f(), final_result, 1_f));
         });
 
@@ -894,11 +913,7 @@ struct State {
         //        alpha = 1.f;
         //     }
         //
-        //     if ((params.doYuvToRgbConversionOnly == 0)) {
-        //         color = applyTransferFunction(color.rgb, params.srcTransferFunction);
-        //         color = (params.gamutConversionMatrix * color.rgb);
-        //         color = applyTransferFunction(color.rgb, params.dstTransferFunction);
-        //     }
+        //     color = ApplyGammaCorrect(params, color)
         //
         //     return vec4f(color, a);
         // }
@@ -912,7 +927,6 @@ struct State {
         texture_sample_clamp_to_edge_multiplanar_external->SetParams(
             {plane_0, plane_1, params, sampler, coords});
         b.Append(texture_sample_clamp_to_edge_multiplanar_external->Block(), [&] {
-            auto* yuv_to_rgb_conversion_only = b.Access(ty.u32(), params, 1_u);
             auto* yuv_to_rgb_conversion = b.Access(ty.mat3x4<f32>(), params, 2_u);
             auto* transformation_matrix = b.Access(ty.mat3x2<f32>(), params, 6_u);
             auto* sample_plane0_rect_min = b.Access(ty.vec2f(), params, 8_u);
@@ -960,24 +974,7 @@ struct State {
             });
 
             // Apply gamma correction if needed.
-            auto* final_result = b.InstructionResult(ty.vec3f());
-            auto* if_gamma_correct = b.If(b.Equal(yuv_to_rgb_conversion_only, 0_u));
-            if_gamma_correct->SetResult(final_result);
-            b.Append(if_gamma_correct->True(), [&] {
-                auto* src_transfer_function = b.Access(TransferFunctionParams(), params, 3_u);
-                auto* dst_transfer_function = b.Access(TransferFunctionParams(), params, 4_u);
-                auto* gamut_conversion_matrix = b.Access(ty.mat3x3<f32>(), params, 5_u);
-                auto* decoded = b.Call(ty.vec3f(), ApplySrcTransferFunction(), rgb_result,
-                                       src_transfer_function);
-                auto* converted = b.Multiply(gamut_conversion_matrix, decoded);
-                auto* encoded = b.Call(ty.vec3f(), ApplyDstTransferFunction(), converted,
-                                       dst_transfer_function);
-                b.ExitIf(if_gamma_correct, encoded);
-            });
-            b.Append(if_gamma_correct->False(), [&] {  //
-                b.ExitIf(if_gamma_correct, rgb_result);
-            });
-
+            auto* final_result = ApplyGammaCorrect(params, rgb_result);
             b.Return(texture_sample_clamp_to_edge_multiplanar_external,
                      b.Construct(ty.vec4f(), final_result, alpha_result));
         });
@@ -1004,11 +1001,8 @@ struct State {
         //     let val = textureSampleLevel(texture, ycbcr_sampler, loadCoords, 0);
         //     var color = val.rgb * params.yuvToRgbConversionMatrix
         //     let a = val.a;
-        //     if ((params.doYuvToRgbConversionOnly == 0)) {
-        //         color = applyTransferFunction(color.rgb, params.srcTransferFunction);
-        //         color = (params.gamutConversionMatrix * color.rgb);
-        //         color = applyTransferFunction(color.rgb, params.dstTransferFunction);
-        //     }
+        //
+        //     color = ApplyGammaCorrect(params, color)
         //
         //     return vec4f(color, a);
         // }
@@ -1022,7 +1016,6 @@ struct State {
             {texture, ycbcr_sampler, params, coords});
 
         b.Append(texture_sample_clamp_to_edge_ycbcr_external->Block(), [&] {
-            auto* yuv_to_rgb_conversion_only = b.Access(ty.u32(), params, 1_u);
             auto* yuv_to_rgb_conversion = b.Access(ty.mat3x4<f32>(), params, 2_u);
             auto* transformation_matrix = b.Access(ty.mat3x2<f32>(), params, 6_u);
             auto* sample_rect_min = b.Access(ty.vec2f(), params, 8_u);
@@ -1040,24 +1033,7 @@ struct State {
             auto* alpha = b.Swizzle(ty.f32(), texel, {3u});
 
             // Apply gamma correction if needed.
-            auto* final_result = b.InstructionResult(ty.vec3f());
-            auto* do_yuv_to_rgb = b.If(b.Equal(yuv_to_rgb_conversion_only, 0_u));
-            do_yuv_to_rgb->SetResult(final_result);
-            b.Append(do_yuv_to_rgb->True(), [&] {
-                auto* src_transfer_function = b.Access(TransferFunctionParams(), params, 3_u);
-                auto* dst_transfer_function = b.Access(TransferFunctionParams(), params, 4_u);
-                auto* gamut_conversion_matrix = b.Access(ty.mat3x3<f32>(), params, 5_u);
-                auto* decoded =
-                    b.Call(ty.vec3f(), ApplySrcTransferFunction(), colour, src_transfer_function);
-                auto* converted = b.Multiply(gamut_conversion_matrix, decoded);
-                auto* encoded = b.Call(ty.vec3f(), ApplyDstTransferFunction(), converted,
-                                       dst_transfer_function);
-                b.ExitIf(do_yuv_to_rgb, encoded);
-            });
-            b.Append(do_yuv_to_rgb->False(), [&] {  //
-                b.ExitIf(do_yuv_to_rgb, colour);
-            });
-
+            auto* final_result = ApplyGammaCorrect(params, colour->Result());
             b.Return(texture_sample_clamp_to_edge_ycbcr_external,
                      b.Construct(ty.vec4f(), final_result, alpha));
         });
@@ -1071,8 +1047,7 @@ struct State {
 Result<SuccessType> MultiplanarExternalTexture(
     Module& ir,
     const tint::transform::multiplanar::BindingsMap& multiplanar_map) {
-    core::ir::AssertValid(ir, kMultiplanarExternalTextureCapabilities,
-                          "before core.MultiplanarExternalTexture");
+    core::ir::AssertValid(ir, "before core.MultiplanarExternalTexture");
 
     return State{multiplanar_map, ir}.Process();
 }

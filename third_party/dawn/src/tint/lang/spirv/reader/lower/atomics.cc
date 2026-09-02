@@ -34,6 +34,8 @@
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/type/builtin_structs.h"
+#include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/lang/core/type/vector.h"
 #include "src/tint/lang/spirv/ir/builtin_call.h"
 #include "src/tint/utils/containers/hashmap.h"
 #include "src/tint/utils/containers/hashset.h"
@@ -343,11 +345,145 @@ struct State {
                     }
 
                     auto* call = usage->instruction->As<core::ir::Call>();
-                    TINT_ASSERT(call);
+                    TINT_IR_ASSERT(ir, call);
                     values_to_convert_.Push(call->Args()[param->Index()]);
                 }
             },
             TINT_ICE_ON_NO_MATCH);
+    }
+
+    void DecomposeStructLoad(core::ir::Load* ld) {
+        auto* base_ptr = ld->From();
+        auto* ptr_ty = base_ptr->Type()->As<core::type::Pointer>();
+        auto* dst_str = ptr_ty->StoreType()->As<core::type::Struct>();
+        auto* src_str = ld->Result()->Type()->As<core::type::Struct>();
+        TINT_IR_ASSERT(ir, dst_str && src_str);
+
+        Vector<core::ir::Value*, 8> member_values;
+        b.InsertBefore(ld, [&] {
+            for (uint32_t i = 0; i < dst_str->Members().Length(); ++i) {
+                auto* member = dst_str->Members()[i];
+                auto* member_ptr_ty =
+                    ty.ptr(ptr_ty->AddressSpace(), member->Type(), ptr_ty->Access());
+                auto* member_ptr = b.Access(member_ptr_ty, base_ptr, u32(i))->Result();
+
+                auto* member_ld = b.Load(member_ptr);
+                member_values.Push(member_ld->Result());
+
+                // If the member type does not match between the source and
+                // destination type, then the member has been modified to
+                // contain an atomic. Queue the member access instruction to
+                // be fixed up (so its load usages are converted to atomic).
+                auto* src_member_ty = src_str->Members()[i]->Type();
+                if (src_member_ty != member->Type()) {
+                    member_ld->Result()->SetType(src_member_ty);
+                    values_to_fix_usages_.Push(member_ptr);
+                }
+            }
+
+            b.ConstructWithResult(ld->DetachResult(), std::move(member_values));
+        });
+        ld->Destroy();
+    }
+
+    void DecomposeStructStore(core::ir::Store* st) {
+        auto* base_ptr = st->To();
+        auto* src_val = st->From();
+        auto* ptr_ty = base_ptr->Type()->As<core::type::Pointer>();
+        auto* dst_str = ptr_ty->StoreType()->As<core::type::Struct>();
+        auto* src_str = src_val->Type()->As<core::type::Struct>();
+        TINT_IR_ASSERT(ir, dst_str && src_str);
+
+        b.InsertBefore(st, [&] {
+            for (uint32_t i = 0; i < dst_str->Members().Length(); ++i) {
+                auto* member = dst_str->Members()[i];
+                auto* member_ptr_ty =
+                    ty.ptr(ptr_ty->AddressSpace(), member->Type(), ptr_ty->Access());
+                auto* member_ptr = b.Access(member_ptr_ty, base_ptr, u32(i))->Result();
+
+                auto* src_member_ty = src_str->Members()[i]->Type();
+                auto* member_val = b.Access(src_member_ty, src_val, u32(i))->Result();
+
+                b.Store(member_ptr, member_val);
+
+                // If the member type does not match between the source and
+                // destination type, then the member has been modified to
+                // contain an atomic. Queue the member access instruction to
+                // be fixed up (so its store usages are converted to atomic).
+                if (src_member_ty != member_ptr_ty->UnwrapPtr()) {
+                    values_to_fix_usages_.Push(member_ptr);
+                }
+            }
+        });
+        st->Destroy();
+    }
+
+    void DecomposeArrayLoad(core::ir::Load* ld) {
+        auto* base_ptr = ld->From();
+        auto* ptr_ty = base_ptr->Type()->As<core::type::Pointer>();
+        auto* dst_arr = ptr_ty->StoreType()->As<core::type::Array>();
+        auto* src_arr = ld->Result()->Type()->As<core::type::Array>();
+        TINT_IR_ASSERT(ir, dst_arr && src_arr);
+
+        Vector<core::ir::Value*, 8> elem_values;
+        b.InsertBefore(ld, [&] {
+            auto count = dst_arr->ConstantCount();
+            TINT_IR_ASSERT(ir, count);
+            for (uint32_t i = 0; i < *count; ++i) {
+                auto* elem_ptr_ty =
+                    ty.ptr(ptr_ty->AddressSpace(), dst_arr->ElemType(), ptr_ty->Access());
+                auto* elem_ptr = b.Access(elem_ptr_ty, base_ptr, u32(i))->Result();
+
+                auto* elem_ld = b.Load(elem_ptr);
+                // If the element type does not match between the source and
+                // destination type, then the element has been modified to
+                // contain an atomic. Leave the element load's type as the
+                // source type and queue the element access instruction to be
+                // fixed up (so its load usages are converted to atomic).
+                auto* src_elem_ty = src_arr->ElemType();
+                if (src_elem_ty != elem_ptr_ty->UnwrapPtr()) {
+                    elem_ld->Result()->SetType(src_elem_ty);
+                    values_to_fix_usages_.Push(elem_ptr);
+                }
+
+                elem_values.Push(elem_ld->Result());
+            }
+
+            b.ConstructWithResult(ld->DetachResult(), std::move(elem_values));
+        });
+        ld->Destroy();
+    }
+
+    void DecomposeArrayStore(core::ir::Store* st) {
+        auto* base_ptr = st->To();
+        auto* src_val = st->From();
+        auto* ptr_ty = base_ptr->Type()->As<core::type::Pointer>();
+        auto* dst_arr = ptr_ty->StoreType()->As<core::type::Array>();
+        auto* src_arr = src_val->Type()->As<core::type::Array>();
+        TINT_IR_ASSERT(ir, dst_arr && src_arr);
+
+        b.InsertBefore(st, [&] {
+            auto count = dst_arr->ConstantCount();
+            TINT_IR_ASSERT(ir, count);
+            for (uint32_t i = 0; i < *count; ++i) {
+                auto* elem_ptr_ty =
+                    ty.ptr(ptr_ty->AddressSpace(), dst_arr->ElemType(), ptr_ty->Access());
+                auto* elem_ptr = b.Access(elem_ptr_ty, base_ptr, u32(i))->Result();
+
+                auto* elem_val = b.Access(src_arr->ElemType(), src_val, u32(i))->Result();
+
+                b.Store(elem_ptr, elem_val);
+
+                // If the element type does not match between the source and
+                // destination type, then the element has been modified to
+                // contain an atomic. Queue the element access instruction to
+                // be fixed up (so its store usages are converted to atomic).
+                if (src_arr->ElemType() != elem_ptr_ty->UnwrapPtr()) {
+                    values_to_fix_usages_.Push(elem_ptr);
+                }
+            }
+        });
+        st->Destroy();
     }
 
     void ConvertUsagesToAtomic(core::ir::Value* val) {
@@ -357,21 +493,35 @@ struct State {
             tint::Switch(  //
                 inst,
                 [&](core::ir::Load* ld) {
-                    TINT_ASSERT(ld->From()->Type()->UnwrapPtr()->Is<core::type::Atomic>());
+                    auto* el_ty = ld->From()->Type()->UnwrapPtr();
+                    if (el_ty->Is<core::type::Struct>()) {
+                        DecomposeStructLoad(ld);
+                    } else if (el_ty->Is<core::type::Array>()) {
+                        DecomposeArrayLoad(ld);
+                    } else {
+                        TINT_IR_ASSERT(ir, el_ty->Is<core::type::Atomic>());
 
-                    b.InsertBefore(ld, [&] {
-                        b.CallWithResult(ld->DetachResult(), core::BuiltinFn::kAtomicLoad,
-                                         ld->From());
-                    });
-                    ld->Destroy();
+                        b.InsertBefore(ld, [&] {
+                            b.CallWithResult(ld->DetachResult(), core::BuiltinFn::kAtomicLoad,
+                                             ld->From());
+                        });
+                        ld->Destroy();
+                    }
                 },
                 [&](core::ir::Store* st) {
-                    TINT_ASSERT(st->To()->Type()->UnwrapPtr()->Is<core::type::Atomic>());
+                    auto* el_ty = st->To()->Type()->UnwrapPtr();
+                    if (el_ty->Is<core::type::Struct>()) {
+                        DecomposeStructStore(st);
+                    } else if (el_ty->Is<core::type::Array>()) {
+                        DecomposeArrayStore(st);
+                    } else {
+                        TINT_IR_ASSERT(ir, el_ty->Is<core::type::Atomic>());
 
-                    b.InsertBefore(st, [&] {
-                        b.Call(ty.void_(), core::BuiltinFn::kAtomicStore, st->To(), st->From());
-                    });
-                    st->Destroy();
+                        b.InsertBefore(st, [&] {
+                            b.Call(ty.void_(), core::BuiltinFn::kAtomicStore, st->To(), st->From());
+                        });
+                        st->Destroy();
+                    }
                 },
                 [&](core::ir::Access* access) {
                     auto* res = access->Result();
@@ -407,8 +557,9 @@ struct State {
                     }
 
                     // This was converted when we switched from a SPIR-V intrinsic to core
-                    TINT_ASSERT(core::IsAtomic(bc->Func()));
-                    TINT_ASSERT(bc->Args()[0]->Type()->UnwrapPtr()->Is<core::type::Atomic>());
+                    TINT_IR_ASSERT(ir, core::IsAtomic(bc->Func()));
+                    TINT_IR_ASSERT(ir,
+                                   bc->Args()[0]->Type()->UnwrapPtr()->Is<core::type::Atomic>());
                 },
                 TINT_ICE_ON_NO_MATCH);
         });
@@ -456,7 +607,7 @@ struct State {
 
     const core::type::Type* TypeForAccess(core::ir::Access* access) {
         auto* ptr = access->Object()->Type()->As<core::type::Pointer>();
-        TINT_ASSERT(ptr);
+        TINT_IR_ASSERT(ir, ptr);
 
         auto* cur_ty = ptr->UnwrapPtr();
         for (auto& idx : access->Indices()) {
@@ -468,12 +619,15 @@ struct State {
                     }
 
                     auto* const_val = idx->As<core::ir::Constant>();
-                    TINT_ASSERT(const_val);
+                    TINT_IR_ASSERT(ir, const_val);
 
                     auto const_idx = const_val->Value()->ValueAs<uint32_t>();
                     cur_ty = str->Members()[const_idx]->Type();
                 },
-                [&](const core::type::Array* arr) { cur_ty = arr->ElemType(); });
+                [&](const core::type::Array* arr) { cur_ty = arr->ElemType(); },
+                [&](const core::type::Matrix* mat) { cur_ty = mat->ColumnType(); },
+                [&](const core::type::Vector* vec) { cur_ty = vec->Type(); },  //
+                TINT_ICE_ON_NO_MATCH);
         }
         return ty.ptr(ptr->AddressSpace(), cur_ty, ptr->Access());
     }
@@ -487,7 +641,7 @@ struct State {
                     auto& forked = Fork(str);
 
                     auto* const_val = idx->As<core::ir::Constant>();
-                    TINT_ASSERT(const_val);
+                    TINT_IR_ASSERT(ir, const_val);
 
                     auto const_idx = const_val->Value()->ValueAs<uint32_t>();
                     forked.atomic_members.Add(const_idx);
@@ -495,6 +649,8 @@ struct State {
                     cur_ty = str->Members()[const_idx]->Type();
                 },                                                                //
                 [&](const core::type::Array* ary) { cur_ty = ary->ElemType(); },  //
+                [&](const core::type::Matrix* mat) { cur_ty = mat->ColumnType(); },
+                [&](const core::type::Vector* vec) { cur_ty = vec->Type(); },  //
                 TINT_ICE_ON_NO_MATCH);
         }
     }
@@ -516,7 +672,7 @@ struct State {
                 // which members are atomics and can create the forked strut.
                 if (val) {
                     auto* res = val->As<core::ir::InstructionResult>();
-                    TINT_ASSERT(res);
+                    TINT_IR_ASSERT(ir, res);
 
                     values_needing_struct_update_.Add(res);
                     Fork(str);
@@ -530,7 +686,7 @@ struct State {
                     return ty.runtime_array(AtomicTypeFor(val, arr->ElemType()));
                 }
                 auto count = arr->ConstantCount();
-                TINT_ASSERT(count);
+                TINT_IR_ASSERT(ir, count);
 
                 return ty.array(AtomicTypeFor(val, arr->ElemType()), u32(count.value()));
             },
@@ -554,14 +710,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> Atomics(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllowMultipleEntryPoints,
-                    core::ir::Capability::kAllowOverrides,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                    core::ir::Capability::kAllowPointerToHandle,
-                },
-                "before spirv.Atomics");
+    AssertValid(ir, "before spirv.Atomics");
 
     State{ir}.Process();
 

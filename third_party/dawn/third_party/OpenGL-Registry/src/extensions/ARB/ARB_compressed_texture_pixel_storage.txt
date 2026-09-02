@@ -1,0 +1,369 @@
+Name
+
+    ARB_compressed_texture_pixel_storage
+
+Name Strings
+
+    GL_ARB_compressed_texture_pixel_storage
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Bruce Merry, ARM
+    Daniel Koch, TransGaming
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Patrick Doane, Blizzard
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on 2011/06/20.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date:         April 26, 2011
+    Revision:                   8
+
+Number
+
+    ARB Extension #110
+
+Dependencies
+
+    OpenGL 1.2 is required.
+
+    This extension is written against The OpenGL 4.1 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension expands the functionality of the PixelStore modes
+    to allow UNPACK_ROW_LENGTH, UNPACK_SKIP_ROWS, UNPACK_SKIP_PIXELS,
+    UNPACK_IMAGE_HEIGHT and UNPACK_SKIP_IMAGES to affect the operation of
+    CompressedTexImage*D and CompressedTexSubImage*D. Similarly, it 
+    also allows PACK_ROW_LENGTH, PACK_SKIP_ROWS, PACK_SKIP_PIXELS, 
+    PACK_IMAGE_HEIGHT and PACK_SKIP_IMAGES to affect the operation of 
+    GetCompressedTexImage*D. This allows data to be transferred
+    to or from a specified sub-rectangle of a larger compressed image.
+
+    This extension is designed primarily to support compressed image
+    formats with fixed-size blocks. To use this new mechanism, an 
+    application should program new parameters UNPACK_COMPRESSED_BLOCK_
+    {WIDTH,HEIGHT,DEPTH,SIZE} to indicate the number of texels in each
+    dimension of the fixed-size block as well as the number of bytes
+    consumed by each block. These parameters, in addition to the 
+    existing PixelStore parameters, are used to identify a collection 
+    of bytes in client memory or a buffer object's data store to use
+    as compressed texture data. This operation is unlikely to have 
+    the desired results if the client programs a block size inconsistent
+    with the underlying compressed image format, or if the compressed
+    image format has variable-sized blocks.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of PixelStore[fi], GetBooleanv,
+    GetIntegerv, GetInteger64v, GetFloatv, and GetDoublev:
+    
+        UNPACK_COMPRESSED_BLOCK_WIDTH                    0x9127
+        UNPACK_COMPRESSED_BLOCK_HEIGHT                   0x9128
+        UNPACK_COMPRESSED_BLOCK_DEPTH                    0x9129
+        UNPACK_COMPRESSED_BLOCK_SIZE                     0x912A
+        PACK_COMPRESSED_BLOCK_WIDTH                      0x912B
+        PACK_COMPRESSED_BLOCK_HEIGHT                     0x912C
+        PACK_COMPRESSED_BLOCK_DEPTH                      0x912D
+        PACK_COMPRESSED_BLOCK_SIZE                       0x912E
+
+Changes to Section 3.7.4 (Pixel Storage Modes and Pixel Buffer Objects),
+page 229
+
+    Replace the section in the first paragraph, page 229 that states:
+    
+    "Pixel storage modes affect the operation of TexImage*D, TexSubImage*D,
+    DrawPixels, and ReadPixels (as well as other commands; see sections 3.6.2
+    and 3.8) when one of these commands is issued."
+    
+    With the following:
+    
+    "Pixel storage modes affect the operation of TexImage*D, TexSubImage*D,
+    CompressedTexImage*D, CompressedTexSubImage*d, DrawPixels, and ReadPixels
+    (as well as other commands; see sections 3.6.2 and 3.8) when one of these
+    commands is issued."
+    
+    Modify Table 3.1 description to:
+    
+    "Table 3.1: PixelStore parameters pertaining to one or more of
+    DrawPixels, ColorTable, ColorSubTable, ConvolutionFilter1D,
+    ConvolutionFilter2D, SeparableFilter2D, PolygonStipple, TexImage1D,
+    TexImage2D, TexImage3D, TexSubImage1D, TexSubImage2D, TexSubImage3D,
+    CompressedTexImage1D, CompressedTexImage2D, CompressedTexImage3D,
+    CompressedTexSubImage1D, CompressedTexSubImage2D and
+    CompressedTexSubImage3D."
+    
+    Add to Table 3.1 contents with the following new entries:
+    
+    Parameter Name                   Type   Initial Value  Valid Range
+    ------------------------------------------------------------------------- 
+    UNPACK_COMPRESSED_BLOCK_WIDTH   integer       0         [0,inf)
+    UNPACK_COMPRESSED_BLOCK_HEIGHT  integer       0         [0,inf)
+    UNPACK_COMPRESSED_BLOCK_DEPTH   integer       0         [0,inf)
+    UNPACK_COMPRESSED_BLOCK_SIZE    integer       0         [0,inf)
+    
+Changes to Section 3.9.5 (Compressed Texture Images), page 297
+
+    In the paragraph that starts "For all other compressed internal
+    formats..." remove the following sentence:
+    
+    "All pixel storage and pixel transfer modes are ignored when decoding a
+    compressed texture image."
+    
+    Add a new paragraph which states:
+    
+    "If the compressed data are arranged into fixed-size blocks of texels the
+    pixel storage modes can be used to select a sub-rectangle from a larger
+    containing rectangle. These pixel storage modes operate in the same
+    way as they do for TexImage*D and as described in section 3.7.4. By
+    default the pixel storage modes UNPACK_ROW_LENGTH, UNPACK_SKIP_ROWS,
+    UNPACK_SKIP_PIXELS, UNPACK_IMAGE_HEIGHT and UNPACK_SKIP_IMAGES are
+    ignored for compressed images. To enable UNPACK_SKIP_PIXELS and
+    UNPACK_ROW_LENGTH both UNPACK_COMPRESSED_BLOCK_SIZE and
+    UNPACK_COMPRESSED_BLOCK_WIDTH must be non-zero. To also enable
+    UNPACK_SKIP_ROWS and UNPACK_IMAGE_HEIGHT, UNPACK_COMPRESSED_BLOCK_HEIGHT
+    must be non-zero. And to also enable UNPACK_SKIP_IMAGES,
+    UNPACK_COMPRESSED_BLOCK_DEPTH must be non-zero. Use
+    UNPACK_COMPRESSED_BLOCK_WIDTH to specify the block width in pixels,
+    UNPACK_COMPRESSED_BLOCK_HEIGHT to specify the block height in pixels,
+    UNPACK_COMPRESSED_BLOCK_DEPTH to specify the block depth in pixels and
+    UNPACK_COMPRESSED_BLOCK_SIZE to specify the block size in bytes. All
+    parameters need to be consistent with the compressed format to produce
+    the desired results.
+
+    When selecting a sub-rectangle from a compressed image:
+
+    * the UNPACK_SKIP_PIXELS parameter must be a multiple of the 
+      UNPACK_COMPRESSED_BLOCK_WIDTH parameter;
+    * the UNPACK_SKIP_ROWS parameter must be a multiple of the 
+      UNPACK_COMPRESSED_BLOCK_HEIGHT parameter for CompressedTexImage2D
+      and CompressedTexImage3D;
+    * the UNPACK_SKIP_IMAGES parameter must be a multiple of the 
+      UNPACK_COMPRESSED_BLOCK_DEPTH parameter for CompressedTexImage3D.
+      
+    The error INVALID_OPERATION will be generated if any of the previous
+    conditions are violated.
+
+    For CompressedTexImage1D the <imageSize> parameter must be equal to:
+        UNPACK_COMPRESSED_BLOCK_SIZE * ceil(<width> / UNPACK_COMPRESSED_BLOCK_WIDTH)
+    For CompressedTexImage2D the <imageSize> parameter must be equal to:
+        UNPACK_COMPRESSED_BLOCK_SIZE * ceil(<width> / UNPACK_COMPRESSED_BLOCK_WIDTH) * ceil(<height> / UNPACK_COMPRESSED_BLOCK_HEIGHT)
+    For CompressedTexImage3D the <imageSize> parameter must be equal to:
+        UNPACK_COMPRESSED_BLOCK_SIZE * ceil(<width> / UNPACK_COMPRESSED_BLOCK_WIDTH) * ceil(<height> / UNPACK_COMPRESSED_BLOCK_HEIGHT) * ceil(<depth> / UNPACK_COMPRESSED_BLOCK_DEPTH)
+        
+    The error INVALID_VALUE will be generated if <imageSize> does not match
+    this requirement when pixel storage modes are active.
+
+    Based on the definition of Unpacking from Section 3.7.4 for uncompressed
+    images, unpacking compressed images can be defined where:
+
+    * "n", the number of elements in a group, is 1
+    * "s", the size of an element, is UNPACK_COMPRESSED_BLOCK_SIZE
+    * "l", the number of groups in a row, is ceil(UNPACK_ROW_LENGTH /
+      UNPACK_COMPRESSED_BLOCK_WIDTH), where UNPACK_ROW_LENGTH is positive
+      otherwise it's ceil(<length> / UNPACK_COMPRESSED_BLOCK_WIDTH)
+    * "a", the value of UNPACK_ALIGNMENT is ignored and
+    * "k=nl" as is defined for uncompressed images.
+    
+    Before obtaining the first compressed image block from memory, the <data>
+    pointer is advanced by (UNPACK_SKIP_PIXELS /
+    UNPACK_COMPRESSED_BLOCK_WIDTH) * "n" + (UNPACK_SKIP_ROWS /
+    UNPACK_COMPRESSED_BLOCK_HEIGHT) * "k" elements. Then ceil(<width> /
+    UNPACK_COMPRESSED_BLOCK_WIDTH) blocks are obtained from contiguous blocks
+    in memory (without advancing the pointer), after which the pointer is
+    advanced by "k" elements. ceil(<height> / UNPACK_COMPRESSED_BLOCK_HEIGHT)
+    sets of ceil(<width> / UNPACK_COMPRESSED_BLOCK_WIDTH) blocks are obtained
+    this way. For three-dimensional compressed images the pointer is advanced
+    by (UNPACK_SKIP_IMAGES / UNPACK_COMPRESSED_BLOCK_DEPTH) times the number
+    of elements in one two-dimensional image before obtaining the first group
+    from memory. Then after <height> rows are obtained the pointer skips over
+    the remaining ceil(UNPACK_IMAGE_HEIGHT / UNPACK_COMPRESSED_BLOCK_HEIGHT)
+    rows, if UNPACK_IMAGE_HEIGHT is positive before starting the next two-
+    dimensional image."
+   
+Changes to Section 4.3.2 (Reading Pixels), page 380
+
+    Modify Table 4.7, page 382, description to:
+    
+    "Table 4.7: PixelStore parameters pertaining to ReadPixels,
+    GetColorTable, GetConvolutionFilter, GetSeparableFilter, GetHistogram,
+    GetMinmax, GetPolygonStipple, GetTexImage, and GetCompressedTexImage."
+    
+    Add to Table 4.7 contents with the following new entries:
+    
+    Parameter Name                Type    Initial Value  Valid Range
+    ------------------------------------------------------------------------- 
+    PACK_COMPRESSED_BLOCK_WIDTH   integer       0         [0,inf)
+    PACK_COMPRESSED_BLOCK_HEIGHT  integer       0         [0,inf)
+    PACK_COMPRESSED_BLOCK_DEPTH   integer       0         [0,inf)
+    PACK_COMPRESSED_BLOCK_SIZE    integer       0         [0,inf)
+    
+Changes to Section 6.1.4 (Texture Queries), page 446
+
+    In the paragraph that talks about GetCompressedTexImage remove the
+    following sentence:
+    
+    "All pixel storage and pixel transfer modes are ignored when returning a
+    compressed texture image."
+    
+    Add a new paragraph at this point with the following contents:
+    
+    "By default the pixel storage modes PACK_ROW_LENGTH, PACK_SKIP_ROWS,
+    PACK_SKIP_PIXELS, PACK_IMAGE_HEIGHT and PACK_SKIP_IMAGES are ignored for
+    compressed images. To enable PACK_SKIP_PIXELS and PACK_ROW_LENGTH both
+    PACK_COMPRESSED_BLOCK_SIZE and PACK_COMPRESSED_BLOCK_WIDTH must be non-
+    zero. To also enable PACK_SKIP_ROWS and PACK_IMAGE_HEIGHT,
+    PACK_COMPRESSED_BLOCK_HEIGHT must be non-zero. And to also enable
+    PACK_SKIP_IMAGES, PACK_COMPRESSED_BLOCK_DEPTH must be non-zero. All
+    parameters need to be consistent with the compressed format to produce
+    the desired results. When the pixel storage modes are active, the
+    correspondence of texels to memory locations is as defined for
+    CompressedTexImage3D in section 3.9.5."
+    
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    (Table 6.37, Pixels) add the following:
+
+    Get Value                       Type  Get Command      Initial Value  Description                             Section
+    -------------                   ----  -----------      -------------  -----------                             -------
+    UNPACK_COMPRESSED_BLOCK_WIDTH   Z+    GetIntegerv      0              Value of UNPACK_COMPRESSED_BLOCK_WIDTH  3.7.4
+    UNPACK_COMPRESSED_BLOCK_HEIGHT  Z+    GetIntegerv      0              Value of UNPACK_COMPRESSED_BLOCK_HEIGHT 3.7.4
+    UNPACK_COMPRESSED_BLOCK_DEPTH   Z+    GetIntegerv      0              Value of UNPACK_COMPRESSED_BLOCK_DEPTH  3.7.4
+    UNPACK_COMPRESSED_BLOCK_SIZE    Z+    GetIntegerv      0              Value of UNPACK_COMPRESSED_BLOCK_SIZE   3.7.4
+    PACK_COMPRESSED_BLOCK_WIDTH     Z+    GetIntegerv      0              Value of PACK_COMPRESSED_BLOCK_WIDTH    4.3.2
+    PACK_COMPRESSED_BLOCK_HEIGHT    Z+    GetIntegerv      0              Value of PACK_COMPRESSED_BLOCK_HEIGHT   4.3.2
+    PACK_COMPRESSED_BLOCK_DEPTH     Z+    GetIntegerv      0              Value of PACK_COMPRESSED_BLOCK_DEPTH    4.3.2
+    PACK_COMPRESSED_BLOCK_SIZE      Z+    GetIntegerv      0              Value of PACK_COMPRESSED_BLOCK_SIZE     4.3.2
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1) How do indirect rendering implementations deal with this? They don't
+       know what compressed format is used.
+    
+       RESOLVED: By specifying the BLOCK sizes in the PixelStore parameters
+       the client side implementation has enough information to transfer the
+       minimal amount of data to satisfy the API request without needing
+       detailed knowledge of the compression format. So from the client
+       to server data transfer point of view, it's still just a memcpy of
+       the client data without interpretation based on the compression
+       format.
+
+    2) Do we enforce that the block size parameters match those of the format
+       being manipulated?
+       
+       RESOLVED: No. They are only used for this memcpy operation. The
+       issue is that PixelStore is client state, while the actual format of
+       the texture is server state that may not even be knowable by the
+       client. If the user indicates that he is dealing in 8x2 64-bit blocks,
+       the client may not be able to figure out that it doesn't accurately
+       describe the actual format (e.g., DXT1 using 4x4 64-bit blocks).  
+
+       However, we don't really care. These parameters are used (along with
+       the API call parameters) to indicate a collection of bytes to read.
+       The client extracts those bytes and transfers them to the server for
+       further processing. If the byte count isn't consistent with the
+       width/height/internalformat parameters, the server complains. If the
+       byte count is consistent, the server just accepts the data extracted
+       by the client as-is.
+
+       For example, let's say we specified a 16x16 DXT1 image. That would
+       have the server looking for a 4x4 array of blocks (128B total). If
+       the user said the blocks were 8x2 and 64-bit, the client would
+       transmit a 2x8 array of blocks (still 128B). We'd get no error.
+       However, if the image were 12x12, the server would want a 3x3 array
+       of blocks, while the client would want to transmit a 2x6 array of
+       blocks because the rightmost "8x2" blocks are partial and would be
+       padded out as though the image were 16x12. In that case, the byte
+       counts wouldn't be consistent.
+       
+    3) Do we need to specify what happens with a hypothetical variable-size
+       block format?
+       
+       RESOLVED: These new "block size" parameters are used to collect
+       scattered bytes from user memory into a single block of "sub image"
+       memory, and they don't care what the format is.
+       
+    4) Do these new parameters affect TexImage* calls with compressed internal 
+       formats?
+
+       RESOLVED:  No, they only affect CompressedTexImage*,
+       CompressedTexSubImage* and GetCompressedTexImage* APIs, where the
+       texels specified or queried are specified or returned in compressed
+       form. In desktop OpenGL, it is possible to specify or query texels for
+       textures with compressed internal formats using APIs like TexImage*,
+       using non-compressed <format> and <type> arguments. In these cases,
+       previously existing PixelStore parameters already applied to the
+       specified image.
+       
+    5) Should {UN}PACK_ROW_LENGTH and {UN}PACK_IMAGE_HEIGHT be required to be
+       in multiples of the block size?
+       
+       RESOLVED: It's not necessary since the rounding in the specified
+       compressed image unpacking will round up to the next block size and
+       produce a valid result.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    8     04/26/11  pdaniell  Fix language which specifies what parameters
+                              need to be non-zero for {UN}PACK_IMAGE_HEIGHT
+                              to be used.
+
+    7     04/21/11  pdaniell  Add final enum values.
+
+    6     12/15/10  pdaniell  Resolve issues 2 and 5.
+
+    5     11/29/10  pdaniell  Fix typo.
+
+    4     11/10/10  pdaniell  Fixes based on feedback from Bruce and Pat in
+                              bug 7016.
+    
+    3     11/05/10  pdaniell  Resolve issue (2).
+
+    2     11/04/10  pdaniell  Fixed typos and feedback from bug 6998.
+                              Moved edits from Core to Compatibility profile.
+                              Further clarifications from internal review.
+
+    1     10/19/10  pdaniell  Initial version.

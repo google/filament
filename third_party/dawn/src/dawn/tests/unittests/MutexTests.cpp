@@ -28,8 +28,8 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Mutex.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Mutex.h"
 
 namespace dawn {
 namespace {

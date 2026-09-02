@@ -23,7 +23,7 @@ jobs:
         os: [ ubuntu-latest, macos-latest ]
         cmake-version: [ '3.22.1', 'latest']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -41,7 +41,7 @@ jobs:
       matrix:
         cmake-version: [ '3.22.1', 'latest']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -59,7 +59,7 @@ jobs:
       matrix:
           compiler: [ clang, clang-cl ]
     steps:
-        - uses: actions/checkout@v6
+        - uses: actions/checkout@v7
         - uses: ilammy/msvc-dev-cmd@v1
         - run: |
             cmake -S . -B build `
@@ -82,7 +82,7 @@ jobs:
         cmake-version: [ 'latest' ]
         compiler: [ clang++-18 ]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -105,7 +105,7 @@ jobs:
         os: [ windows-latest ]
         cmake-version: [ 'latest' ]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
@@ -123,6 +123,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: REUSE Compliance Check
       uses: fsfe/reuse-action@v6

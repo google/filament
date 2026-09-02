@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)
 ################################################################################
 # Target:    tint_lang_wgsl_inspector
 # Kind:      lib
+# Condition: TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER
 ################################################################################
 tint_add_target(tint_lang_wgsl_inspector lib
   lang/wgsl/inspector/entry_point.cc
@@ -66,6 +68,7 @@ tint_target_add_dependencies(tint_lang_wgsl_inspector lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -75,6 +78,7 @@ tint_target_add_external_dependencies(tint_lang_wgsl_inspector lib
   "src_utils"
 )
 
+endif(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)
 if(TINT_BUILD_WGSL_READER)
 ################################################################################
 # Target:    tint_lang_wgsl_inspector_test
@@ -95,6 +99,7 @@ tint_target_add_dependencies(tint_lang_wgsl_inspector_test test
   tint_lang_wgsl_ast
   tint_lang_wgsl_inspector
   tint_lang_wgsl_program
+  tint_lang_wgsl_reader
   tint_lang_wgsl_sem
   tint_utils
   tint_utils_containers
@@ -103,6 +108,7 @@ tint_target_add_dependencies(tint_lang_wgsl_inspector_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -112,11 +118,5 @@ tint_target_add_external_dependencies(tint_lang_wgsl_inspector_test test
   "gtest"
   "src_utils"
 )
-
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_dependencies(tint_lang_wgsl_inspector_test test
-    tint_lang_wgsl_reader
-  )
-endif(TINT_BUILD_WGSL_READER)
 
 endif(TINT_BUILD_WGSL_READER)

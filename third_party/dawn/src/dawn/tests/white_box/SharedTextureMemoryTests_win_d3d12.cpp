@@ -38,8 +38,8 @@
 
 #include "dawn/native/D3D12Backend.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/tests/white_box/SharedTextureMemoryTests.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/tests/white_box/SharedTextureMemoryTests.h"
 
 namespace dawn {
 namespace {
@@ -276,7 +276,7 @@ TEST_P(SharedTextureMemoryNoFeatureTests, SharedFenceImportWithoutFeatureD3D12) 
     ASSERT_EQ(hr, S_OK);
 
     // Create a shared handle for the fence.
-    utils::SystemHandle fenceSharedHandle;
+    SystemHandle fenceSharedHandle;
     hr = d3d12Device->CreateSharedHandle(d3d12Fence.Get(), nullptr, GENERIC_ALL, nullptr,
                                          fenceSharedHandle.GetMut());
     ASSERT_EQ(hr, S_OK);
@@ -304,7 +304,7 @@ TEST_P(SharedTextureMemoryTests, SharedFenceSuccessfulImportExportD3D12) {
     ASSERT_EQ(hr, S_OK);
 
     // Export a shared handle for the fence.
-    utils::SystemHandle fenceSharedHandle;
+    SystemHandle fenceSharedHandle;
     hr = d3d12Device->CreateSharedHandle(d3d12Fence.Get(), nullptr, GENERIC_ALL, nullptr,
                                          fenceSharedHandle.GetMut());
     ASSERT_EQ(hr, S_OK);
@@ -351,8 +351,8 @@ TEST_P(SharedTextureMemoryTests, SharedFenceSuccessfulImportExportD3D12) {
     ASSERT_EQ(hr, S_OK);
 
     // Wait on the fence via event.
-    utils::SystemHandle ev = utils::SystemHandle::Acquire(
-        ::CreateEvent(nullptr, TRUE, FALSE, TEXT("FenceCompleteD3D12")));
+    SystemHandle ev =
+        SystemHandle::Acquire(::CreateEvent(nullptr, TRUE, FALSE, TEXT("FenceCompleteD3D12")));
     ASSERT_TRUE(ev.IsValid());
     hr = d3d12Fence->SetEventOnCompletion(fenceValue + 1, ev.Get());
     ASSERT_EQ(hr, S_OK);
@@ -376,7 +376,7 @@ TEST_P(SharedTextureMemoryTests, SharedFenceExportInfoNoChainedStructD3D12) {
     ASSERT_EQ(hr, S_OK);
 
     // Create a shared handle for the fence.
-    utils::SystemHandle fenceSharedHandle;
+    SystemHandle fenceSharedHandle;
     hr = d3d12Device->CreateSharedHandle(d3d12Fence.Get(), nullptr, GENERIC_ALL, nullptr,
                                          fenceSharedHandle.GetMut());
     ASSERT_EQ(hr, S_OK);
@@ -411,7 +411,7 @@ TEST_P(SharedTextureMemoryTests, SharedFenceExportInfoInvalidChainedStructD3D12)
     ASSERT_EQ(hr, S_OK);
 
     // Create a shared handle for the fence.
-    utils::SystemHandle fenceSharedHandle;
+    SystemHandle fenceSharedHandle;
     hr = d3d12Device->CreateSharedHandle(d3d12Fence.Get(), nullptr, GENERIC_ALL, nullptr,
                                          fenceSharedHandle.GetMut());
     ASSERT_EQ(hr, S_OK);

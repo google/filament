@@ -40,6 +40,7 @@
 #include "src/dawn/node/binding/GPUTexture.h"
 #include "src/dawn/node/binding/GPUTextureView.h"
 #include "src/dawn/node/utils/Debug.h"
+#include "src/utils/compiler.h"
 
 namespace wgpu::binding {
 
@@ -178,7 +179,7 @@ bool Converter::Convert(BufferSource& out, interop::BufferSource in) {
         std::visit(
             [&](auto&& v) {
                 auto arr = v.ArrayBuffer();
-                out.data = static_cast<uint8_t*>(arr.Data()) + v.ByteOffset();
+                out.data = DAWN_UNSAFE_TODO(static_cast<uint8_t*>(arr.Data()) + v.ByteOffset());
                 out.size = v.ByteLength();
                 out.bytesPerElement = v.ElementSize();
             },
@@ -1202,7 +1203,7 @@ bool Converter::Convert(wgpu::VertexState& out, const interop::GPUVertexState& i
     out.buffers = outBuffers;
     for (size_t i = 0; i < in.buffers.size(); i++) {
         if (!in.buffers[i].has_value()) {
-            outBuffers[i].stepMode = wgpu::VertexStepMode::Undefined;
+            DAWN_UNSAFE_TODO(outBuffers[i].stepMode = wgpu::VertexStepMode::Undefined);
         }
     }
 
@@ -1351,6 +1352,9 @@ bool Converter::Convert(wgpu::VertexFormat& out, const interop::GPUVertexFormat&
         case interop::GPUVertexFormat::kUnorm1010102:
             out = wgpu::VertexFormat::Unorm10_10_10_2;
             return true;
+        case interop::GPUVertexFormat::kSnorm1010102:
+            out = wgpu::VertexFormat::Snorm10_10_10_2;
+            return true;
         case interop::GPUVertexFormat::kUnorm8X4Bgra:
             out = wgpu::VertexFormat::Unorm8x4BGRA;
             return true;
@@ -1487,6 +1491,38 @@ bool Converter::Convert(wgpu::BindGroupEntry& out, const interop::GPUBindGroupEn
             std::get_if<interop::Interface<interop::GPUExternalTexture>>(&in.resource)) {
         // TODO(crbug.com/dawn/1129): External textures
         UNIMPLEMENTED(env, {});
+    }
+    return Throw("invalid value for GPUBindGroupEntry.resource");
+}
+
+bool Converter::Convert(wgpu::BindingResource& out, const interop::GPUBindingResource& in) {
+    out = {};
+
+    if (auto* res = std::get_if<interop::Interface<interop::GPUSampler>>(&in)) {
+        return Convert(out.sampler, *res);
+    }
+    if (auto* res = std::get_if<interop::Interface<interop::GPUTexture>>(&in)) {
+        wgpu::Texture texture;
+        if (!Convert(texture, *res)) {
+            return false;
+        }
+        out.textureView = texture.CreateView();
+        return true;
+    }
+    if (auto* res = std::get_if<interop::Interface<interop::GPUTextureView>>(&in)) {
+        return Convert(out.textureView, *res);
+    }
+    if (auto* res = std::get_if<interop::Interface<interop::GPUBuffer>>(&in)) {
+        return Convert(out.buffer, *res);
+    }
+    if (auto* res = std::get_if<interop::GPUBufferBinding>(&in)) {
+        auto buffer = res->buffer.As<GPUBuffer>();
+        out.size = wgpu::kWholeSize;
+        if (!buffer || !Convert(out.offset, res->offset) || !Convert(out.size, res->size)) {
+            return false;
+        }
+        out.buffer = *buffer;
+        return true;
     }
     return Throw("invalid value for GPUBindGroupEntry.resource");
 }
@@ -1690,6 +1726,18 @@ bool Converter::Convert(wgpu::FeatureName& out, interop::GPUFeatureName in) {
         case interop::GPUFeatureName::kPrimitiveIndex:
             out = wgpu::FeatureName::PrimitiveIndex;
             return true;
+        case interop::GPUFeatureName::kChromiumExperimentalSamplingResourceTable:
+            out = wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable;
+            return true;
+        case interop::GPUFeatureName::kAtomicVec2UMinMax:
+            out = wgpu::FeatureName::AtomicVec2uMinMax;
+            return true;
+        case interop::GPUFeatureName::kSubgroupSizeControl:
+            out = wgpu::FeatureName::SubgroupSizeControl;
+            return true;
+        case interop::GPUFeatureName::kTextureCompressionUnaligned:
+            out = wgpu::FeatureName::TextureCompressionUnaligned;
+            return true;
     }
     return false;
 }
@@ -1721,10 +1769,14 @@ bool Converter::Convert(interop::GPUFeatureName& out, wgpu::FeatureName in) {
         CASE(DualSourceBlending, kDualSourceBlending);
         CASE(ClipDistances, kClipDistances);
         CASE(ChromiumExperimentalSubgroupMatrix, kChromiumExperimentalSubgroupMatrix);
+        CASE(SubgroupSizeControl, kSubgroupSizeControl);
         CASE(TextureFormatsTier1, kTextureFormatsTier1);
         CASE(TextureFormatsTier2, kTextureFormatsTier2);
         CASE(TextureComponentSwizzle, kTextureComponentSwizzle);
         CASE(PrimitiveIndex, kPrimitiveIndex);
+        CASE(ChromiumExperimentalSamplingResourceTable, kChromiumExperimentalSamplingResourceTable);
+        CASE(AtomicVec2uMinMax, kAtomicVec2UMinMax);
+        CASE(TextureCompressionUnaligned, kTextureCompressionUnaligned);
 
 #undef CASE
 
@@ -1734,6 +1786,7 @@ bool Converter::Convert(interop::GPUFeatureName& out, wgpu::FeatureName in) {
         case wgpu::FeatureName::AdapterPropertiesDrm:
         case wgpu::FeatureName::ANGLETextureSharing:
         case wgpu::FeatureName::BufferMapExtendedUsages:
+        case wgpu::FeatureName::BufferMapWriteExtendedUsages:
         case wgpu::FeatureName::ChromiumExperimentalTimestampQueryInsidePasses:
         case wgpu::FeatureName::D3D11MultithreadProtected:
         case wgpu::FeatureName::DawnDeviceAllocatorControl:
@@ -1782,16 +1835,13 @@ bool Converter::Convert(interop::GPUFeatureName& out, wgpu::FeatureName in) {
         case wgpu::FeatureName::DawnTexelCopyBufferRowAlignment:
         case wgpu::FeatureName::FlexibleTextureViews:
         case wgpu::FeatureName::AdapterPropertiesWGPU:
-        case wgpu::FeatureName::SharedBufferMemoryD3D12SharedMemoryFileMappingHandle:
+        case wgpu::FeatureName::SharedBufferMemoryFromWindowsHandle:
         case wgpu::FeatureName::SharedTextureMemoryD3D12Resource:
-        case wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable:
-        case wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl:
-        case wgpu::FeatureName::AtomicVec2uMinMax:
         case wgpu::FeatureName::Unorm16FormatsForExternalTexture:
         case wgpu::FeatureName::OpaqueYCbCrAndroidForExternalTexture:
         case wgpu::FeatureName::Unorm16Filterable:
         case wgpu::FeatureName::RenderPassRenderArea:
-        case wgpu::FeatureName::DawnNativeSpontaneousQueueEvents:
+        case wgpu::FeatureName::DawnAllowUndefinedLoadStoreOp:
             return false;
     }
     return false;
@@ -1840,9 +1890,6 @@ bool Converter::Convert(wgpu::WGSLLanguageFeatureName& out, interop::WGSLLanguag
             return true;
         case interop::WGSLLanguageFeatureName::kBufferView:
             out = wgpu::WGSLLanguageFeatureName::BufferView;
-            return true;
-        case interop::WGSLLanguageFeatureName::kFilteringParameters:
-            out = wgpu::WGSLLanguageFeatureName::FilteringParameters;
             return true;
         case interop::WGSLLanguageFeatureName::kSwizzleAssignment:
             out = wgpu::WGSLLanguageFeatureName::SwizzleAssignment;
@@ -1900,9 +1947,6 @@ bool Converter::Convert(interop::WGSLLanguageFeatureName& out, wgpu::WGSLLanguag
             return true;
         case wgpu::WGSLLanguageFeatureName::BufferView:
             out = interop::WGSLLanguageFeatureName::kBufferView;
-            return true;
-        case wgpu::WGSLLanguageFeatureName::FilteringParameters:
-            out = interop::WGSLLanguageFeatureName::kFilteringParameters;
             return true;
         case wgpu::WGSLLanguageFeatureName::SwizzleAssignment:
             out = interop::WGSLLanguageFeatureName::kSwizzleAssignment;
@@ -2027,13 +2071,13 @@ bool Converter::Convert(wgpu::OptionalBool& out, const std::optional<bool>& in) 
 
 char* Converter::ConvertStringReplacingNull(std::string_view in) {
     char* out = Allocate<char>(in.size() + 1);
-    out[in.size()] = '\0';
+    DAWN_UNSAFE_TODO(out[in.size()] = '\0');
 
     for (size_t i = 0; i < in.size(); i++) {
         if (in[i] == '\0') {
-            out[i] = '#';
+            DAWN_UNSAFE_TODO(out[i] = '#');
         } else {
-            out[i] = in[i];
+            DAWN_UNSAFE_TODO(out[i] = in[i]);
         }
     }
 
@@ -2069,18 +2113,18 @@ bool ConvertDataElementsToSpan(Napi::Env env,
     }
 
     // The offset is in elements.
-    if (data_offset_elements > uint64_t(src.size / src.bytesPerElement)) {
+    if (data_offset_elements > uint64_t{src.size / src.bytesPerElement}) {
         binding::Errors::OperationError(env, "dataOffset is larger than data's size.")
             .ThrowAsJavaScriptException();
         return false;
     }
     uint64_t data_offset = data_offset_elements * src.bytesPerElement;
-    src.data = reinterpret_cast<uint8_t*>(src.data) + data_offset;
+    src.data = DAWN_UNSAFE_TODO(reinterpret_cast<uint8_t*>(src.data) + data_offset);
     src.size -= data_offset;
 
     // Size defaults to dataSize - dataOffset. Instead of computing in elements, we directly
     // use it in bytes, and convert the provided value, if any, in bytes.
-    uint64_t size64 = uint64_t(src.size);
+    uint64_t size64 = uint64_t{src.size};
     if (size_elements.has_value()) {
         if (size_elements.value() > std::numeric_limits<uint64_t>::max() / src.bytesPerElement) {
             binding::Errors::OperationError(env, "size overflows.").ThrowAsJavaScriptException();
@@ -2089,14 +2133,15 @@ bool ConvertDataElementsToSpan(Napi::Env env,
         size64 = size_elements.value() * src.bytesPerElement;
     }
 
-    if (size64 > uint64_t(src.size)) {
+    if (size64 > uint64_t{src.size}) {
         binding::Errors::OperationError(env, "size + dataOffset is larger than data's size.")
             .ThrowAsJavaScriptException();
         return false;
     }
 
     assert(size64 <= std::numeric_limits<size_t>::max());
-    *out = {reinterpret_cast<const uint8_t*>(src.data), static_cast<size_t>(size64)};
+    *out = DAWN_UNSAFE_TODO(std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(src.data),
+                                                     static_cast<size_t>(size64)));
 
     return true;
 }

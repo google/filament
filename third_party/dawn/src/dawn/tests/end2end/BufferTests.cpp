@@ -25,6 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -34,12 +39,12 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -280,6 +285,15 @@ TEST_P(BufferMappingTests, MapWrite_Basic) {
                   static_cast<wgpu::Status>(buffer.WriteMappedRange(0, &myData2, sizeof(myData2))));
         buffer.Unmap();
         EXPECT_BUFFER_U32_EQ(myData2, buffer, 0);
+    }
+    {
+        // ReadMappedRange and WriteMappedRange of 0 size.
+        MapAsyncAndWait(buffer, wgpu::MapMode::Write, 0, 4);
+        ASSERT_EQ(wgpu::Status::Success,
+                  static_cast<wgpu::Status>(buffer.ReadMappedRange(0, nullptr, 0)));
+        ASSERT_EQ(wgpu::Status::Success,
+                  static_cast<wgpu::Status>(buffer.WriteMappedRange(0, nullptr, 0)));
+        buffer.Unmap();
     }
 }
 
@@ -639,6 +653,8 @@ TEST_P(BufferMappingTests, RegressChromium1421170) {
 TEST_P(BufferMappingTests, WaitForOnSubmittedWorkDoneThenMap) {
     // WaitAnyOnly is not supported in wire.
     DAWN_TEST_UNSUPPORTED_IF(UsesWire());
+    /// Fail on Xclipse with ANGLE Vulkan.
+    DAWN_SUPPRESS_TEST_IF(IsSamsung() && IsOpenGLES() && IsANGLE());
 
     const uint32_t kExpectedValue = 42;
     constexpr size_t kSize = sizeof(kExpectedValue);
@@ -981,7 +997,7 @@ TEST_P(BufferMappedAtCreationTests, NonMappableUsageSmall) {
 
 // Test mappedAtCreation for a large MapWrite buffer
 TEST_P(BufferMappedAtCreationTests, MapWriteUsageLarge) {
-    constexpr uint64_t kDataSize = 1000 * 1000;
+    constexpr uint64_t kDataSize = 1000ULL * 1000;
     std::vector<uint32_t> myData;
     for (uint32_t i = 0; i < kDataSize; ++i) {
         myData.push_back(i);
@@ -999,7 +1015,7 @@ TEST_P(BufferMappedAtCreationTests, MapReadUsageLarge) {
     // TODO(crbug.com/473894293): [Capture] buffer mapping: investigate.
     DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
-    constexpr uint64_t kDataSize = 1000 * 1000;
+    constexpr uint64_t kDataSize = 1000ULL * 1000;
     std::vector<uint32_t> myData;
     for (uint32_t i = 0; i < kDataSize; ++i) {
         myData.push_back(i);
@@ -1016,7 +1032,7 @@ TEST_P(BufferMappedAtCreationTests, MapReadUsageLarge) {
 
 // Test mappedAtCreation for a large non-mappable buffer
 TEST_P(BufferMappedAtCreationTests, NonMappableUsageLarge) {
-    constexpr uint64_t kDataSize = 1000 * 1000;
+    constexpr uint64_t kDataSize = 1000ULL * 1000;
     std::vector<uint32_t> myData;
     for (uint32_t i = 0; i < kDataSize; ++i) {
         myData.push_back(i);
@@ -1182,6 +1198,8 @@ TEST_P(BufferTests, ZeroSizedBuffer) {
 
 // Test that creating a very large buffers fails gracefully.
 TEST_P(BufferTests, CreateBufferOOM) {
+    DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
+
     // TODO(http://crbug.com/dawn/749): Missing support.
     DAWN_TEST_UNSUPPORTED_IF(IsOpenGL());
     DAWN_TEST_UNSUPPORTED_IF(IsAsan());
@@ -1224,6 +1242,8 @@ TEST_P(BufferTests, CreateBufferOOMWithValidationError) {
 
 // Test that a very large buffer mappedAtCreation fails gracefully.
 TEST_P(BufferTests, BufferMappedAtCreationOOM) {
+    DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
+
     // TODO(http://crbug.com/dawn/749): Missing support.
     DAWN_TEST_UNSUPPORTED_IF(IsOpenGL());
     DAWN_TEST_UNSUPPORTED_IF(IsAsan());
@@ -1379,6 +1399,8 @@ TEST_P(BufferTests, CreateErrorBuffer) {
 
 // Test that mapping an OOM buffer fails gracefully
 TEST_P(BufferTests, CreateBufferOOMMapAsync) {
+    DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
+
     // TODO(http://crbug.com/dawn/749): Missing support.
     DAWN_TEST_UNSUPPORTED_IF(IsOpenGL());
     DAWN_TEST_UNSUPPORTED_IF(IsAsan());
@@ -1495,19 +1517,6 @@ class BufferMapExtendedUsagesTests : public DawnTest {
             requiredFeatures.push_back(wgpu::FeatureName::BufferMapExtendedUsages);
         }
         return requiredFeatures;
-    }
-
-    void MapAsyncAndWait(const wgpu::Buffer& buffer,
-                         wgpu::MapMode mode,
-                         size_t offset,
-                         size_t size) {
-        wgpu::Future future = buffer.MapAsync(mode, offset, size, wgpu::CallbackMode::WaitAnyOnly,
-                                              [](wgpu::MapAsyncStatus status, wgpu::StringView) {
-                                                  ASSERT_EQ(wgpu::MapAsyncStatus::Success, status);
-                                              });
-        wgpu::FutureWaitInfo waitInfo = {future};
-        GetInstance().WaitAny(1, &waitInfo, UINT64_MAX);
-        ASSERT_TRUE(waitInfo.completed);
     }
 
     wgpu::Buffer CreateBufferFromData(const void* data, uint64_t size, wgpu::BufferUsage usage) {

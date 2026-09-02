@@ -34,9 +34,10 @@
 
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/api/common/bindings.h"
+#include "src/tint/api/common/resource_table_config.h"
 #include "src/tint/api/common/substitute_overrides_config.h"
 #include "src/tint/api/common/vertex_pulling_config.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint::msl::writer {
 
@@ -64,7 +65,7 @@ struct ArrayLengthOptions {
 /// Information to configure an argument buffer
 struct ArgumentBufferInfo {
     /// The buffer ID to use for this argument buffer
-    uint32_t id;
+    uint32_t id = 0;
 
     /// The buffer ID to use for the dynamic buffer if needed
     std::optional<uint32_t> dynamic_buffer_id{};
@@ -124,6 +125,16 @@ struct Options {
         /// Set to `true` to replace bool types in workgroup storage with u32.
         bool replace_workgroup_bool_with_u32 = false;
 
+        /// Set to `true` to collapse nested subgroupMin and subgroupMax operations.
+        bool collapse_subgroup_min_max = false;
+
+        /// Set to `true` to work around a driver bug with u32 divide and modulo operations.
+        bool fix_u32_div_mod = false;
+
+        /// Set to `true` to polyfill dynamic component stores on boolean vectors with a branchless
+        /// select-based whole vector write operation.
+        bool polyfill_bool_vec_dynamic_store = false;
+
         TINT_REFLECT(Workarounds,
                      scalarize_max_min_clamp,
                      disable_module_constant_f16,
@@ -132,7 +143,10 @@ struct Options {
                      polyfill_unpack_2x16_snorm,
                      polyfill_unpack_2x16_unorm,
                      polyfill_tanh_f16,
-                     replace_workgroup_bool_with_u32);
+                     replace_workgroup_bool_with_u32,
+                     collapse_subgroup_min_max,
+                     fix_u32_div_mod,
+                     polyfill_bool_vec_dynamic_store);
         TINT_REFLECT_HASH_CODE(Workarounds);
 
         bool operator==(const Workarounds&) const = default;
@@ -226,8 +240,14 @@ struct Options {
     /// Offsets of the minDepth and maxDepth push constants.
     std::optional<RangeOffsets> depth_range_offsets = std::nullopt;
 
+    /// Offset of the non-constant zero immediate.
+    uint32_t non_constant_zero_offset = 0;
+
     /// The bindings.
     Bindings bindings;
+
+    /// Resource table information
+    std::optional<ResourceTableConfig> resource_table = std::nullopt;
 
     // Substitute Overrides
     SubstituteOverridesConfig substitute_overrides_config = {};
@@ -252,7 +272,9 @@ struct Options {
                  immediate_binding_point,
                  group_to_argument_buffer_info,
                  depth_range_offsets,
+                 non_constant_zero_offset,
                  bindings,
+                 resource_table,
                  substitute_overrides_config);
     TINT_REFLECT_HASH_CODE(Options);
 

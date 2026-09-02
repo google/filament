@@ -393,3 +393,13 @@ targets.tests.isolated_script_test(
     ],
     binary = "fuzzer_corpus_tests",
 )
+
+targets.tests.isolated_script_test(
+    name = "litert_lm_benchmark",
+    mixins = [
+        "result_adapter_single",
+        "litert_lm_benchmark_merge",
+        "ci_only",
+    ],
+    binary = "litert_lm_advanced_main",
+)

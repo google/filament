@@ -1,0 +1,136 @@
+Name
+
+    IBM_cull_vertex
+
+Name Strings
+
+    GL_IBM_cull_vertex
+
+Version
+
+    IBM Id: cull_vertex.spec,v 1.4 2000/02/11 15:11:46 brokensh Exp 
+
+Number
+
+    199
+
+Dependencies
+
+    EXT_cull_vertex affects the definition of this extension
+
+Overview
+
+    IBM_cull_vertex provides a subset of the vertex culling functionality
+    found in EXT_cull_vertex without providing a guarantee that faces will
+    be culled because of it.  EXT_cull_vertex is a technically superior
+    solution, but the vertex culling aspect of IBM_cull_vertex provides
+    generally useful function cheaply (without imposing the mandated
+    culling found in EXT_cull_vertex).
+
+Issues
+
+  * Should the application be allowed to specify eye direction explicitly,
+    as is the case in EXT_cull_vertex?  Not in this specification;
+    addressed by the full EXT_cull_vertex extension.
+
+  * Should a control be provided to reverse the eye direction, which would
+    be necessary to cull correctly if DepthRange is specified with near >
+    far?  Or if the normals specified were reversed?  FrontFace could be
+    used in combination with two sided lighting to produce realistic
+    lighting effects if the normals were consistenly reversed.  Neither is
+    addressed in the current specification.  Both are addressed by
+    EXT_cull_vertex. 
+
+  * Should a control be provided to perform vertex culling with a local eye
+    position?  Not in this specification; addressed by EXT_cull_vertex.
+
+  * Should forward compatibility between IBM_cull_vertex and
+    EXT_cull_vertex be provided (i.e., applications must change if/when we
+    fully implement EXT_cull_vertex)?  Probably not.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+      CULL_VERTEX_IBM                           103050
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    Before the discussion of Clipping, add a description of vertex culling
+    similar to that found in the EXT_cull_vertex extension:
+
+    Vertex Culling
+
+    When vertex culling is enabled, vertices are classified as front or
+    back facing according to the sign of the dot product between the normal
+    at the vertex and an eye direction vector from the vertex toward the
+    eye position.  When (normal dot eye_direction) <= 0 the vertex is
+    classified as back facing.  When (normal dot eye_direction) > 0 the
+    vertex is classified as front facing.  Vertices are culled when the
+    face orientation determined by the dot product is the same as the face
+    specified by CullFace.  When all of the vertices of a polygon are
+    culled, then the polygon may be culled.  Unlike EXT_cull_vertex, vertex
+    culling using IBM_cull_vertex does not necessarily result in polygons
+    being culled even if all of the vertices of the polygon are culled.
+
+    The eye direction is determined by transforming the column vector (0,
+    0, 1) by the upper leftmost 3x3 matrix taken from the inverse of the
+    modelview matrix.  The eye direction is undefined if the modelview
+    matrix is singular or nearly singular.  This operation in effect
+    projects the z axis in eye coordinates back into object space.  If the
+    projection matrix or DepthRange settings cause the z axis in window
+    coordinates to be misaligned with the z axis in eye coordinates, this
+    extension should not be used.
+
+    Vertex culling is performed independently of face culling.  Polygons on
+    the silhouettes of objects may have both front and back facing
+    vertices.  Since polygons are culled only if all of their vertices are
+    culled and are not necessarily culled by IBM_cull_vertex even in that
+    case, face culling may have to be used in addition to vertex culling in
+    order to correctly cull silhouette polygons.
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None
+
+New State
+
+    Get Value			  Type Get Command  Value Sec	Attrib
+    ----------------------------- ---- -----------  ----- ----	-------
+    CULL_VERTEX_IBM               B    IsEnabled    FALSE --    transform/
+                                                                enable
+
+New Implementation Dependent State
+
+    None

@@ -53,13 +53,13 @@ template <typename T>
 using ConstEvalTestWithParam = resolver::ResolverTestWithParam<T>;
 
 template <typename T>
-inline const auto kPiOver2 = T(UnwrapNumber<T>(1.57079632679489661923));
+inline const auto kPiOver2 = T{static_cast<UnwrapNumber<T>>(1.57079632679489661923)};
 
 template <typename T>
-inline const auto kPiOver4 = T(UnwrapNumber<T>(0.785398163397448309616));
+inline const auto kPiOver4 = T{static_cast<UnwrapNumber<T>>(0.785398163397448309616)};
 
 template <typename T>
-inline const auto k3PiOver4 = T(UnwrapNumber<T>(2.356194490192344928846));
+inline const auto k3PiOver4 = T{static_cast<UnwrapNumber<T>>(2.356194490192344928846)};
 
 /// Walks the constant::Value @p c, accumulating all the inner-most scalar values into @p args
 template <size_t N>
@@ -141,10 +141,13 @@ inline void CheckConstant(const constant::Value* got_constant,
                         }
                         if (flags.float_compare) {
                             if (flags.float_compare_epsilon) {
-                                EXPECT_NEAR(got, expected, *flags.float_compare_epsilon)
+                                EXPECT_NEAR(static_cast<double>(got), static_cast<double>(expected),
+                                            static_cast<double>(*flags.float_compare_epsilon))
                                     << "index: " << i;
                             } else {
-                                EXPECT_FLOAT_EQ(got, expected) << "index: " << i;
+                                EXPECT_FLOAT_EQ(static_cast<float>(got),
+                                                static_cast<float>(expected))
+                                    << "index: " << i;
                             }
                         } else {
                             EXPECT_EQ(got, expected) << "index: " << i;

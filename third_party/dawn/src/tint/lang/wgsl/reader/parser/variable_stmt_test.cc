@@ -218,5 +218,61 @@ TEST_F(WGSLParserTest, VariableStmt_Let_InvalidInitializer) {
     EXPECT_EQ(p->error(), "1:15: missing initializer for 'let' declaration");
 }
 
+TEST_F(WGSLParserTest, VariableStmt_Const_ComplexExpression) {
+    auto p = parser("const x = collide + collide_1;");
+    // Parse as `statement` to validate the `;` at the end so we know we parsed the whole expression
+    auto e = p->statement();
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+    ASSERT_TRUE(e->Is<ast::VariableDeclStatement>());
+
+    auto* decl = e->As<ast::VariableDeclStatement>();
+    ASSERT_NE(decl->variable->initializer, nullptr);
+
+    ASSERT_TRUE(decl->variable->initializer->Is<ast::BinaryExpression>());
+    auto* expr = decl->variable->initializer->As<ast::BinaryExpression>();
+    EXPECT_EQ(expr->op, core::BinaryOp::kAdd);
+
+    ASSERT_TRUE(expr->lhs->Is<ast::IdentifierExpression>());
+    auto* ident_expr = expr->lhs->As<ast::IdentifierExpression>();
+    ast::CheckIdentifier(ident_expr->identifier, "collide");
+
+    ASSERT_TRUE(expr->rhs->Is<ast::IdentifierExpression>());
+    ident_expr = expr->rhs->As<ast::IdentifierExpression>();
+    ast::CheckIdentifier(ident_expr->identifier, "collide_1");
+}
+
+TEST_F(WGSLParserTest, VariableStmt_Const_MissingEqual) {
+    auto p = parser("const a : i32 1");
+    auto e = p->variable_statement();
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_EQ(e.value, nullptr);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_EQ(p->error(), "1:15: expected '=' for 'const' declaration");
+}
+
+TEST_F(WGSLParserTest, VariableStmt_Const_MissingInitializer) {
+    auto p = parser("const a : i32 =");
+    auto e = p->variable_statement();
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_EQ(e.value, nullptr);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_EQ(p->error(), "1:16: missing initializer for 'const' declaration");
+}
+
+TEST_F(WGSLParserTest, VariableStmt_Const_InvalidInitializer) {
+    auto p = parser("const a : i32 = if (a) {}");
+    auto e = p->variable_statement();
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_EQ(e.value, nullptr);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_EQ(p->error(), "1:17: missing initializer for 'const' declaration");
+}
+
 }  // namespace
 }  // namespace tint::wgsl::reader

@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
 namespace dawn {
 namespace {
 
@@ -55,6 +55,9 @@ TEST_P(GLExplicitExtensionsTests, Features) {
 TEST_P(GLExplicitExtensionsTests, Toggles) {
     // TODO(crbug.com/444741058): Fails on Intel-based brya devices running Android Desktop.
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsIntel() && IsAndroid());
+
+    // Fails on Xclipse with ANGLE Vulkan.
+    DAWN_SUPPRESS_TEST_IF(IsSamsung() && IsOpenGLES() && IsANGLE());
 
     // Make sure this toggle is inherited correctly during re-initialization
     EXPECT_EQ(HasToggleEnabled("gl_force_es_31_and_no_extensions"), true);

@@ -337,34 +337,6 @@ TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_F32) {
     EXPECT_EQ(out.str(), std::string(param.name) + "<f32>");
 }
 
-TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_F32_Filterable) {
-    auto param = GetParam();
-
-    auto t = ty.sampled_texture(param.dim, ty.f32(), core::TextureFilterable::kFilterable);
-    auto type = Alias("make_type_reachable", t)->type;
-
-    ASTPrinter& gen = Build();
-
-    StringStream out;
-    gen.EmitExpression(out, type);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(out.str(), std::string(param.name) + "<f32, filterable>");
-}
-
-TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_F32_Unfilterable) {
-    auto param = GetParam();
-
-    auto t = ty.sampled_texture(param.dim, ty.f32(), core::TextureFilterable::kUnfilterable);
-    auto type = Alias("make_type_reachable", t)->type;
-
-    ASTPrinter& gen = Build();
-
-    StringStream out;
-    gen.EmitExpression(out, type);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(out.str(), std::string(param.name) + "<f32, unfilterable>");
-}
-
 TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_I32) {
     auto param = GetParam();
 
@@ -536,30 +508,6 @@ TEST_F(WgslASTPrinterTest, EmitType_Sampler) {
     gen.EmitExpression(out, type);
     EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
     EXPECT_EQ(out.str(), "sampler");
-}
-
-TEST_F(WgslASTPrinterTest, EmitType_SamplerFiltering) {
-    auto sampler = ty.sampler(core::SamplerFiltering::kFiltering);
-    auto type = Alias("make_type_reachable", sampler)->type;
-
-    ASTPrinter& gen = Build();
-
-    StringStream out;
-    gen.EmitExpression(out, type);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(out.str(), "sampler<filtering>");
-}
-
-TEST_F(WgslASTPrinterTest, EmitType_SamplerNonFiltering) {
-    auto sampler = ty.sampler(core::SamplerFiltering::kNonFiltering);
-    auto type = Alias("make_type_reachable", sampler)->type;
-
-    ASTPrinter& gen = Build();
-
-    StringStream out;
-    gen.EmitExpression(out, type);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(out.str(), "sampler<non_filtering>");
 }
 
 TEST_F(WgslASTPrinterTest, EmitType_SamplerComparison) {

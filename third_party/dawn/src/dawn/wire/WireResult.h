@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_WIRE_WIRERESULT_H_
 #define SRC_DAWN_WIRE_WIRERESULT_H_
 
-#include "dawn/common/Compiler.h"
+#include "src/dawn/common/Compiler.h"
 
 namespace dawn::wire {
 

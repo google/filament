@@ -1,0 +1,306 @@
+Name
+
+    ARB_shadow
+
+Name Strings
+
+    GL_ARB_shadow
+
+Contact
+
+    Brian Paul (brian_e_paul 'at' yahoo.com)
+
+Notice
+
+    Copyright (c) 2002-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on February 14, 2002.
+
+Version
+
+    Last Modified Date: 21 January 2002
+
+Number
+
+    ARB Extension #23
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    ARB_depth_texture is required.
+    This extension is written against the OpenGL 1.3 Specification.
+
+Overview
+
+    This extension clarifies the GL_SGIX_shadow extension.
+
+    This extension supports comparing the texture R coordinate to a depth
+    texture value in order to produce a boolean texture value.  This can
+    be used to implement shadow maps.
+
+    The extension is written in generic terms such that other texture
+    comparison modes can be accommodated in the future.
+
+IP Status
+
+    XXX None?
+
+Issues
+
+    (1) How is this extension different from GL_SGIX_shadow?
+
+      - It defines GL behaviour when the currently bound texture is not
+        a depth texture.
+      - It specifies that R is clamped to [0,1].
+      - We use the standard GL_LEQUAL and GL_GEQUAL tokens instead of
+        defining new ones.
+      - The result may be ALPHA, LUMINANCE or INTENSITY.
+      - A bit more is said about how depth textures are sampled.
+      - The extension is generalized for comparison modes.
+
+    (2) Should we use GL_LEQUAL and GL_EQUAL instead of
+      GL_TEXTURE_LEQUAL_R_SGIX and GL_TEXTURE_GEQUAL_R_SGIX?
+
+      RESOLUTION: Yes.  The old tokens are misleading.  For example,
+      the GL_TEXTURE_LEQUAL_R_SGIX token should really have been named
+      GL_R_LEQUAL_TEXTURE_SGIX since we're comparing R <= TEXTURE.
+      This extension uses the standard GL_LEQUAL and GL_GEQUAL tokens.
+      Also, the original shadow spec seems to be inconsistant with
+      what was really implemented in hardware.
+
+    (3) Use TEXTURE_COMPARE_OPERATOR_ARB or TEXTURE_COMPARE_FUNC_ARB?
+
+      RESOLVED: Use TEXTURE_COMPARE_FUNC_ARB to be more consistant with
+      the conventions of glDepthFunc(), glStencilFunc(), etc which use
+      the GL_LEQUAL, GL_GEQUAL, etc tokens.
+
+    (4) Should the result of the texture comparison be a LUMINANCE,
+      INTENSITY or ALPHA texel?
+
+      RESOLVED: Allow any of them. This is controlled by
+      DEPTH_TEXTURE_MODE_ARB defined in ARB_depth_texture extension.
+
+    (5) What if TEXTURE_COMPARE_MODE_ARB is set to COMPARE_R_TO_TEXTURE
+      but the the currently bound texture is not a depth texture?
+
+      RESOLVED: If the currently bound texture is a color (or paletted
+      or color index) texture then the texture unit treats it in the
+      usual manner and all texture comparison logic is bypassed.
+
+    (6) Should the R value be clamped to [0,1] before the comparison?
+
+      RESOLUTION: Yes, that makes sense since the depth texels are in
+      the range [0,1].  Note that clamping R to [0,1] really only matters
+      at the values 0 and 1.
+
+    (7) How is bilinear or trilinear filtering implemented?
+
+      RESOLUTION: We suggest an implementation behaviour but leave the
+      details up to the implementation.  Differences here amount to the
+      quality and softness of shadow edges.  Specific filtering
+      algorithms could be expressed via layered extensions.  We're
+      intentionally vague here to avoid IP and patent issues.
+
+    (8) Is GL_ARB_shadow the right name for this extension?
+
+      RESOLVED: Probably.  While this extension is expressed in rather
+      generic terms which may be used by future extensions, it implements
+      a rather specific operation at this time.
+
+    (9) What about GL_SGIX_shadow_ambient?
+
+      RESOLUTION: Omit that functionality.  It can be accomplished with
+      advanced texture extensions such as GL_NV_register_combiners.
+      GL_SGIX_shadow_ambient usually can't be implemented with existing
+      hardware so it'll be offered as GL_ARB_shadow_ambient, rather than
+      burdon this extension with it.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameterf, TexParameteri,
+    TexParameterfv, TexParameteriv, GetTexParameterfv, and GetTexParameteriv:
+
+    TEXTURE_COMPARE_MODE_ARB    0x884C
+    TEXTURE_COMPARE_FUNC_ARB    0x884D
+
+    Accepted by the <param> parameter of TexParameterf, TexParameteri,
+    TexParameterfv, and TexParameteriv when the <pname> parameter is
+    TEXTURE_COMPARE_MODE_ARB:
+
+    COMPARE_R_TO_TEXTURE_ARB    0x884E
+
+Additions to Chapter 2 of the 1.3 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.3 Specification (Rasterization)
+
+    Section 3.8.4, Texture Parameters, p. 133, append table 3.19 with the
+    following:
+
+        Name                        Type  Legal Values
+        --------------------------  ----  -------------------------------
+        TEXTURE_COMPARE_MODE_ARB    enum  NONE, COMPARE_R_TO_TEXTURE
+        TEXTURE_COMPARE_FUNC_ARB    enum  LEQUAL, GEQUAL
+
+    After section 3.8.12, Texture Environments and Texture Functions,
+    p. 149, insert the following new sections (and renumber subsequent
+    sections):
+
+        "3.8.13 Texture Comparison Modes
+
+        TEXTURE_COMPARE_MODE_ARB can be used to compute the texture value
+        according to a comparison function.  TEXTURE_COMPARE_MODE_ARB
+        specifies the comparison operands, and TEXTURE_COMPARE_FUNC_ARB
+        specifies the comparison function.  The format of the resulting
+        texture sample is specified by the DEPTH_TEXTURE_MODE_ARB.
+
+        3.8.13.1 Depth Texture Comparison Mode
+
+        If the currently bound texture's format is DEPTH_COMPONENT then
+        TEXTURE_COMPARE_MODE_ARB, TEXTURE_COMPARE_FUNC_ARB and
+        DEPTH_TEXTURE_MODE_ARB control the output of the texture unit
+        as described below.  However, if the currently bound texture is
+        not DEPTH_COMPONENT then the texture unit operates in the normal
+        manner and texture comparison is bypassed.
+
+        Let Dt (D subscript t) be the depth texture value, in the range
+        [0, 1].  Let R be the interpolated texture coordinate clamped to
+        the range [0, 1].  Then the effective texture value Lt, It, or At
+        is computed by
+
+        if TEXTURE_COMPARE_MODE_ARB = NONE
+
+            r = Dt
+
+        else if TEXTURE_COMPARE_MODE_ARB = COMPARE_R_TO_TEXTURE_ARB
+
+            if TEXTURE_COMPARE_FUNC_ARB = LEQUAL
+
+                 { 1.0,  if R <= Dt
+             r = {
+                 { 0.0,  if R > Dt
+
+            else if TEXTURE_COMPARE_FUNC_ARB = GEQUAL
+
+                 { 1.0,  if R >= Dt
+             r = {
+                 { 0.0,  if R < Dt
+
+            endif
+
+            if DEPTH_TEXTURE_MODE_ARB = LUMINANCE
+
+                Lt = r
+
+            else if DEPTH_TEXTURE_MODE_ARB = INTENSITY
+
+                It = r
+
+            else if DEPTH_TEXTURE_MODE_ARB = ALPHA
+
+                At = r
+
+            endif
+
+        endif
+
+        If TEXTURE_MAG_FILTER is not NEAREST or TEXTURE_MIN_FILTER is
+        not NEAREST or NEAREST_MIPMAP_NEAREST then r may be computed by
+        comparing more than one depth texture value to the texture R
+        coordinate.  The details of this are implementation-dependent
+        but r should be a value in the range [0, 1] which is proportional
+        to the number of comparison passes or failures.
+
+Additions to Chapter 4 of the 1.3 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.3 Specification (State and State Requests)
+
+    In section 6.1.3, p. 200, insert the following after the fourth
+    paragraph:
+
+    "The texture compare mode and texture compare function may be queried
+    by calling GetTexParameteriv or GetTexParameterfv with <pname> set to
+    TEXTURE_COMPARE_MODE_ARB, or TEXTURE_COMPARE_FUNC_ARB, respectively."
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if TexParameter[if] parameter <pname>
+    is TEXTURE_COMPARE_MODE_ARB and parameter <param> is not NONE or
+    COMPARE_R_TO_TEXTURE.
+
+    INVALID_ENUM is generated if TexParameter[if] parameter <pname>
+    is TEXTURE_COMPARE_FUNC_ARB and parameter <param> is not LEQUAL or
+    GEQUAL.
+
+New State
+
+    In table 6.16, Texture Objects, p. 224, add the following:
+
+    Get Value                   Type  Get Command           Initial Value  Description     Sec.   Attribute
+    --------------------------  ----  --------------------  -------------  --------------  -----  ---------
+    TEXTURE_COMPARE_MODE_ARB    Z_2   GetTexParameter[if]v  NONE           compare mode    3.8.13 texture
+    TEXTURE_COMPARE_FUNC_ARB    Z_2   GetTexParameter[if]v  LEQUAL         compare func    3.8.13 texture
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    19 March 2001
+        - initial revision
+    20 March 2001
+        - use GL_LEQUAL, GL_GEQUAL tokens
+        - removed TEXTURE_COMPARE_FAIL_VALUE_ARB
+    16 April 2001
+        - renamed TEXTURE_COMPARE_OPERATOR_ARB to TEXTURE_COMPARE_FUNC_ARB
+        - replace TEXTURE_COMPARE_ARB with TEXTURE_COMPARE_MODE_ARB
+    22 April 2001
+        - added TEXTURE_COMPARE_RESULT
+    23 April 2001
+        - minor tweaks
+    22 June 2001
+        - fixed grammatical errors
+    16 November 2001
+        - Change default value of TEXTURE_COMPARE_MODE_ARB to LUMINANCE.
+    17 November 2001
+        - Resolved issue 5
+        - cleaned up new section 3.8.7.1 yet again
+    12 December 2001
+        - rewritten against the OpenGL 1.3 spec
+    3 January 2002
+        - fixed a typo found by Bimal
+    18 January 2002
+        - Since depth textures can now allow ALPHA, INTENSITY, LUMINANCE mode,
+          there was no need for TEXTURE_COMPARE_RESULT_ARB.
+    21 January 2002
+        - Fixed error to be INVALID_ENUM instead of INVALID_OPERATION.

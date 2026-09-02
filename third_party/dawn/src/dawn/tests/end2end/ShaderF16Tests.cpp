@@ -27,9 +27,10 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -66,7 +67,7 @@ class ShaderF16Tests : public DawnTestWithParams<ShaderF16TestsParams> {
             mUseDxcEnabledOrNonD3D12 = true;
         } else {
             for (auto* enabledToggle : GetParam().forceEnabledWorkarounds) {
-                if (strncmp(enabledToggle, "use_dxc", 7) == 0) {
+                if (DAWN_UNSAFE_TODO(strncmp(enabledToggle, "use_dxc", 7)) == 0) {
                     mUseDxcEnabledOrNonD3D12 = true;
                     break;
                 }
@@ -150,6 +151,9 @@ TEST_P(ShaderF16Tests, BasicShaderF16FeaturesTest) {
 
 // Test that fragment shader use f16 vector type as render target output.
 TEST_P(ShaderF16Tests, RenderPipelineIOF16_RenderTarget) {
+    // TODO(crbug.com/523211962): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // Skip if device don't support f16 extension.
     DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::ShaderF16));
 
@@ -215,6 +219,9 @@ fn FSMain() -> @location(0) vec4<f16> {
 // Test using f16 types as vertex shader (user-defined) output and fragment shader
 // (user-defined) input.
 TEST_P(ShaderF16Tests, RenderPipelineIOF16_InterstageVariable) {
+    // TODO(crbug.com/523211962): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // Skip if device don't support f16 extension.
     DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::ShaderF16));
 
@@ -369,10 +376,10 @@ fn FSMain(@location(0) color : vec4f) -> @location(0) vec4f {
     // corresponding WGSL type vec2<f16> and vec4<f16> by driver.
     // Buffer for pos_half
     wgpu::Buffer vertexBufferPos = utils::CreateBufferFromData(
-        device, positionData.data(), 2 * kPointCount * sizeof(float), wgpu::BufferUsage::Vertex);
+        device, positionData.data(), 2ULL * kPointCount * sizeof(float), wgpu::BufferUsage::Vertex);
     // Buffer for color_quarter
     wgpu::Buffer vertexBufferColor = utils::CreateBufferFromData(
-        device, colorData.data(), 4 * kPointCount * sizeof(float), wgpu::BufferUsage::Vertex);
+        device, colorData.data(), 4ULL * kPointCount * sizeof(float), wgpu::BufferUsage::Vertex);
 
     // Create render pipeline.
     wgpu::RenderPipeline pipeline;

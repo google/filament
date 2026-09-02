@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/ContextEGL.h"
+#include "src/dawn/native/opengl/ContextEGL.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "dawn/native/opengl/DisplayEGL.h"
-#include "dawn/native/opengl/UtilsEGL.h"
+#include "src/dawn/native/opengl/DisplayEGL.h"
+#include "src/dawn/native/opengl/UtilsEGL.h"
 
 #ifndef EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE
 #define EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE 0x33AF
@@ -50,8 +50,13 @@
 #endif
 
 // https://chromium.googlesource.com/angle/angle/+/main/extensions/EGL_ANGLE_context_virtualization.txt
-#ifndef EGL_ANGLE_context_virtualization
+#ifndef EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE
 #define EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE 0x3481
+#endif
+
+// https://chromium.googlesource.com/angle/angle/+/main/extensions/EGL_ANGLE_create_context_webgl_compatibility.txt
+#ifndef EGL_CONTEXT_HARDENED_ANGLE
+#define EGL_CONTEXT_HARDENED_ANGLE 0x34F8
 #endif
 
 namespace dawn::native::opengl {
@@ -87,9 +92,10 @@ ResultOrError<std::unique_ptr<ContextEGL>> ContextEGL::Create(Ref<DisplayEGL> di
                                                               EGLint angleVirtualizationGroup) {
     auto context =
         std::unique_ptr<ContextEGL>(new ContextEGL(std::move(display), bindContextOnlyDuringUse));
-    DAWN_TRY(context->Initialize(backend, useRobustness, disableEGL15Robustness,
-                                 useANGLETextureSharing, forceES31AndMinExtensions,
-                                 angleVirtualizationGroup));
+    DAWN_TRY(context->Initialize(
+        backend, /*useRobustness=*/useRobustness, /*disableEGL15Robustness=*/disableEGL15Robustness,
+        /*useANGLETextureSharing=*/useANGLETextureSharing,
+        /*forceES31AndMinExtensions=*/forceES31AndMinExtensions, angleVirtualizationGroup));
     return std::move(context);
 }
 
@@ -191,6 +197,10 @@ MaybeError ContextEGL::Initialize(wgpu::BackendType backend,
         AddAttrib(EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE, angleVirtualizationGroup);
     }
 
+    if (egl.HasExt(EGLExt::ANGLECreateContextWebGLCompatibility)) {
+        AddAttrib(EGL_CONTEXT_HARDENED_ANGLE, EGL_TRUE);
+    }
+
     // The attrib list is finished with an EGL_NONE tag.
     attribs.push_back(EGL_NONE);
 
@@ -252,6 +262,7 @@ void ContextEGL::RequestRequiredExtensionsExplicitly() {
     glRequestExtension("GL_APPLE_texture_format_BGRA8888");
     glRequestExtension("GL_EXT_color_buffer_float");
     glRequestExtension("GL_EXT_color_buffer_half_float");
+    glRequestExtension("GL_EXT_multisampled_render_to_texture");
 }
 
 bool ContextEGL::IsInScopedMakeCurrent() const {

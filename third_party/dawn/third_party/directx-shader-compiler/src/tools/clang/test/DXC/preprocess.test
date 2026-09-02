@@ -1,0 +1,15 @@
+
+
+// Preprocess with /P
+// The default /P output filename (<input>.i) is verified by unit tests.
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /P /Fi %t.p_output.hlsl
+// RUN: FileCheck --input-file=%t.p_output.hlsl %s --check-prefix=PREPROCESSED
+
+// Legacy FXC-style support (always warns)
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Po %t.po_positional.hlsl 2>&1 | FileCheck %s --check-prefix=DEPRECATED
+// RUN: FileCheck --input-file=%t.po_positional.hlsl %s --check-prefix=PREPROCESSED
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Po /Fi %t.po_fi.hlsl 2>&1 | FileCheck %s --check-prefix=DEPRECATED
+// RUN: FileCheck --input-file=%t.po_fi.hlsl %s --check-prefix=PREPROCESSED
+
+// PREPROCESSED:float4 main
+// DEPRECATED: /Po is deprecated

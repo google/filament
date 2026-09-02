@@ -1,0 +1,225 @@
+Name 
+
+    NV_render_texture_rectangle
+
+Name Strings 
+
+    WGL_NV_render_texture_rectangle
+
+Contact 
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001, 2002.
+
+Status 
+
+    Shipping, March 2002.
+
+Version 
+
+    Last Modified Date:  2003/01/08
+    NVIDIA Revision:     7
+
+Number 
+
+    264
+
+Dependencies 
+
+    OpenGL 1.1 is required. 
+
+    WGL_ARB_render_texture is required.
+
+    GL_NV_texture_rectangle is required.
+
+    The extension is written against the OpenGL 1.2.1 Specification. 
+
+Overview 
+
+    This extension allows a color buffer with non-power-of-two dimensions to
+    be used for both rendering and texturing.  It is built upon the
+    ARB_render_texture extension; the only addition in this extension is the
+    ability to bind a texture to a texture rectangle target, as provided
+    through the NV_texture_rectangle extension.
+
+Issues 
+
+    What is the interaction of this spec and the WGL_MIPMAP_TEXTURE_ARB
+    attribute?
+
+      RESOLVED:  NV_texture_rectangle doesn't support mipmaps, so it's kind of
+      stupid to allocate them.  Trying will result in an error.
+
+    Should there be separate pixel format attributes for
+    BIND_TO_TEXTURE_RECTANGLE_RGB and RGBA?  Or is a simple
+    BIND_TO_TEXTURE_RECTANGLE attribute sufficient?
+
+      RESOLVED:  Separate capabilities.  There may be pixel formats where
+      rendered texture rectangles are supported, but conventional textures are
+      not.  If a single BIND_TO_TEXTURE_RECTANGLE attribute were used, there
+      would be no cue for RGB/RGBA binding support, and the existing
+      attributes would signal the ability to render to conventional textures.
+
+      Alternately, pixel formats could be constrained so that the only
+      render-texture capable formats are those that support all allowable
+      targets.
+
+Implementation Notes
+
+    None.
+
+New Procedures and Functions 
+
+    None.
+
+New Tokens 
+
+    Accepted by the <piAttributes> parameter of wglGetPixelFormatAttribivARB,
+    wglGetPixelFormatAttribfvARB, and the <piAttribIList> and <pfAttribIList>
+    parameters of wglChoosePixelFormatARB:
+
+        WGL_BIND_TO_TEXTURE_RECTANGLE_RGB_NV           0x20A0
+        WGL_BIND_TO_TEXTURE_RECTANGLE_RGBA_NV          0x20A1
+
+    Accepted as a value in the <piAttribList> parameter of wglCreatePbufferARB
+    and returned in the value parameter of wglQueryPbufferARB when
+    <iAttribute> is WGL_TEXTURE_TARGET_ARB:
+
+        WGL_TEXTURE_RECTANGLE_NV                       0x20A2
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation) 
+
+    None. 
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization) 
+
+    None. 
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment 
+Operations and the Frame Buffer) 
+
+    None. 
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions) 
+
+    None. 
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State 
+Requests) 
+
+    None. 
+
+Additions to the WGL Specification 
+
+    First, close your eyes and pretend that a WGL specification actually
+    existed.  Maybe if we all concentrate hard enough, one will magically
+    appear.
+
+    These modifications are relative to the ARB_render_texture spec.
+
+    Add to the description of <piAttributes> in wglGetPixelFormatAttribivARB 
+    and <pfAttributes> in wglGetPixelFormatfv: 
+
+        WGL_BIND_TO_TEXTURE_RECTANGLE_RGB_NV
+        WGL_BIND_TO_TEXTURE_RECTANGLE_RGBA_NV
+
+        True if the color buffers can be bound as RGB/RGBA textures using the
+        texture rectangle target.  Currently only pbuffers can be bound as
+        textures so this attribute will only be TRUE if WGL_DRAW_TO_PBUFFER is
+        also TRUE. It is possible to bind a RGBA visual to a RGB texture in
+        which case the values in the alpha component of the visual are ignored
+        when the color buffer is used as a RGB texture.
+
+    Add new table entries to match criteria in description of 
+    wglChoosePixelFormatARB: 
+
+        Attribute                               Type        Match Criteria 
+
+        WGL_BIND_TO_TEXTURE_RECTANGLE_RGB_NV    boolean         exact
+        WGL_BIND_TO_TEXTURE_RECTANGLE_RGBA_NV   boolean         exact
+
+    Modify wglCreatePbufferARB: 
+
+        The following attributes are supported by wglCreatePbufferARB: 
+
+        ...
+
+        WGL_TEXTURE_TARGET_ARB 
+
+        This attribute indicates the target for the texture that will be
+        created when the pbuffer is created with a texture format other than
+        WGL_NO_TEXTURE_ARB.  This attribute can be set to WGL_NO_TEXTURE_ARB,
+        WGL_TEXTURE_1D_ARB, WGL_TEXTURE_2D_ARB, WGL_TEXTURE_CUBE_MAP_ARB, or
+        WGL_TEXTURE_RECTANGLE_NV. The default value is WGL_NO_TEXTURE_ARB.
+
+    (Modify power-of-two error for wglCreatePbufferARB)
+
+        ERROR_INVALID_DATA     The pixel format attribute 
+                               WGL_TEXTURE_TARGET_ARB is WGL_TEXTURE_1D_ARB,
+                               WGL_TEXTURE_2D_ARB, or
+                               WGL_TEXTURE_CUBE_MAP_ARB, and WGL_PBUFFER_WIDTH
+                               and/or WGL_PBUFFER_HEIGHT is not a power of
+                               two.
+
+    (Add new wglCreatePbufferARB error)
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV
+                               and WGL_MIPMAP_TEXTURE_ARB is non-zero.
+
+    (Add wglCreatePbufferARB errors missing from the ARB_render_texture spec)
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_RGB_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_RGB_NV attribute
+                               is not set in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_RGB_NV,
+                               WGL_TEXTURE_TARGET_ARB is not
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RGB_NV attribute is not set
+                               in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_RGBA_NV,
+                               WGL_TEXTURE_TARGET_ARB is
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RECTANGLE_RGBA_NV attribute
+                               is not set in the pixel format.
+
+        ERROR_INVALID_DATA     WGL_TEXTURE_FORMAT_ARB is WGL_TEXTURE_RGBA_NV,
+                               WGL_TEXTURE_TARGET_ARB is not
+                               WGL_TEXTURE_RECTANGLE_NV, and the
+                               WGL_BIND_TO_TEXTURE_RGBA_NV attribute is not
+                               set in the pixel format.
+
+    Modify wglBindTexImageARB (only adding verbiage for supporting texture
+    rectangles):
+
+        The command 
+
+        BOOL wglBindTexImageARB (HPBUFFERARB hPbuffer, int iBuffer)
+
+        defines a one-dimensional texture image, a two-dimensional 
+        texture image, a two-dimensional texture rectangle image, or a set of
+        two-dimensional cube map texture images...
+
+        The texture targets are derived...  If the texture target is
+        WGL_TEXTURE_2D_ARB, then <iBuffer> defines a 2D texture for the
+        current 2D texture object.  If the texture target is
+        WGL_TEXTURE_RECTANGLE_NV, then <iBuffer> defines a texture rectangle
+        for the current texture rectangle object.  If the texture target is
+        WGL_TEXTURE_1D_ARB, then <iBuffer> defines a 1D texture for the
+        current 1D texture object.
+
+
+New State 
+
+    None 
+
+Revision History 
+
+    None

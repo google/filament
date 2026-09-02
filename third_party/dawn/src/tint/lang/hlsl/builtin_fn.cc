@@ -106,6 +106,20 @@ const char* str(BuiltinFn i) {
             return "modf";
         case BuiltinFn::kFrexp:
             return "frexp";
+        case BuiltinFn::kSelect:
+            return "select";
+        case BuiltinFn::kMultiply:
+            return "Multiply";
+        case BuiltinFn::kMultiplyAccumulate:
+            return "MultiplyAccumulate";
+        case BuiltinFn::kGet:
+            return "Get";
+        case BuiltinFn::kSet:
+            return "Set";
+        case BuiltinFn::kLength:
+            return "Length";
+        case BuiltinFn::kCast:
+            return "Cast";
         case BuiltinFn::kLoad:
             return "Load";
         case BuiltinFn::kLoad2:
@@ -168,6 +182,10 @@ const char* str(BuiltinFn i) {
             return "GatherRed";
         case BuiltinFn::kGetDimensions:
             return "GetDimensions";
+        case BuiltinFn::kInterlockedMax64:
+            return "InterlockedMax64";
+        case BuiltinFn::kInterlockedMin64:
+            return "InterlockedMin64";
         case BuiltinFn::kSample:
             return "Sample";
         case BuiltinFn::kSampleBias:
@@ -180,6 +198,8 @@ const char* str(BuiltinFn i) {
             return "SampleGrad";
         case BuiltinFn::kSampleLevel:
             return "SampleLevel";
+        case BuiltinFn::kSplat:
+            return "Splat";
     }
     return "<unknown>";
 }
@@ -195,6 +215,9 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kInterlockedOr:
         case BuiltinFn::kInterlockedXor:
         case BuiltinFn::kWaveReadLaneAt:
+        case BuiltinFn::kInterlockedMax64:
+        case BuiltinFn::kInterlockedMin64:
+        case BuiltinFn::kMultiplyAccumulate:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kTextureStore:
@@ -210,6 +233,7 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kStore2U16:
         case BuiltinFn::kStore3U16:
         case BuiltinFn::kStore4U16:
+        case BuiltinFn::kSet:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kLoad:
@@ -236,6 +260,8 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kSampleCmpLevelZero:
         case BuiltinFn::kSampleGrad:
         case BuiltinFn::kSampleLevel:
+        case BuiltinFn::kGet:
+        case BuiltinFn::kCast:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
 
         case BuiltinFn::kAsint:
@@ -248,18 +274,22 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kF32Tof16:
         case BuiltinFn::kF16Tof32:
         case BuiltinFn::kFrexp:
+        case BuiltinFn::kSelect:
         case BuiltinFn::kGetDimensions:
         case BuiltinFn::kModf:
         case BuiltinFn::kMul:
+        case BuiltinFn::kMultiply:
         case BuiltinFn::kPackU8:
         case BuiltinFn::kPackS8:
         case BuiltinFn::kPackClampS8:
         case BuiltinFn::kConvert:
         case BuiltinFn::kSign:
+        case BuiltinFn::kSplat:
         case BuiltinFn::kUnpackS8S32:
         case BuiltinFn::kUnpackU8U32:
         case BuiltinFn::kWaveGetLaneIndex:
         case BuiltinFn::kWaveGetLaneCount:
+        case BuiltinFn::kLength:
         case BuiltinFn::kNone:
             break;
     }

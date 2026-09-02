@@ -310,6 +310,9 @@ class Resolver {
     /// Register a bufferView or bufferArrayView call to track size compatibility.
     void RegisterBufferView(const sem::Call* call, wgsl::BuiltinFn fn);
 
+    /// Register a subgroupMatrixLoad or subgroupMatrixStore to call binding size.
+    void RegisterSubgroupMatrixAccess(const sem::Call* call, wgsl::BuiltinFn fn);
+
     /// Perform pointer alias analysis for `call`.
     /// @returns true is the call arguments are free from aliasing issues, false otherwise.
     bool AliasAnalysis(const sem::Call* call);
@@ -317,6 +320,9 @@ class Resolver {
     /// Perform an analysis of buffer sizes for `call`.
     /// @returns true if the call arguments are all appropriately sized.
     bool CheckBufferViews(const sem::Call* call);
+
+    /// Propagate subgroup matrix required sizes to global variables.
+    void PropagateSubgroupMatrixAccesses(const sem::Call* call);
 
     /// If `expr` is of a reference type, then Load will create and return a sem::Load node wrapping
     /// `expr`. If `expr` is not of a reference type, then Load will just return `expr`.
@@ -575,10 +581,6 @@ class Resolver {
     /// @returns true on success, false on error
     bool AllocateOverridableConstantIds();
 
-    /// Set the shadowing information on variable declarations.
-    /// @note this method must only be called after all semantic nodes are built.
-    void SetShadows();
-
     /// StatementScope() does the following:
     /// * Creates the AST -> SEM mapping.
     /// * Assigns `sem` to #current_statement_
@@ -614,13 +616,14 @@ class Resolver {
     void ErrorInvalidAttribute(const ast::Attribute* attr, StyledText use);
 
     /// @returns a new error message added to the program's diagnostics
+    diag::Diagnostic& AddError(const ast::Node* node) const;
     diag::Diagnostic& AddError(const Source& source) const;
 
     /// @returns a new warning message added to the program's diagnostics
-    diag::Diagnostic& AddWarning(const Source& source) const;
+    diag::Diagnostic& AddWarning(const ast::Node* node) const;
 
     /// @returns a new note message added to the program's diagnostics
-    diag::Diagnostic& AddNote(const Source& source) const;
+    diag::Diagnostic& AddNote(const ast::Node* node) const;
 
     /// @returns the core::type::Type for the builtin type @p builtin_ty with the identifier @p
     /// ident
@@ -630,6 +633,10 @@ class Resolver {
     /// @returns the nesting depth of @ty as defined in
     /// https://gpuweb.github.io/gpuweb/wgsl/#composite-types
     size_t NestDepth(const core::type::Type* ty) const;
+
+    /// @returns The offset of the runtime array pointed to by `pointer` that is used with a
+    /// subgroup matrix load/store.
+    uint64_t FindSubgroupMatrixStructOffset(const sem::ValueExpression* pointer) const;
 
     // ArrayConstructorSig represents a unique array constructor signature.
     // It is a tuple of the array type, number of arguments provided and earliest evaluation stage.
@@ -671,8 +678,11 @@ class Resolver {
 
     // BufferViewInfo tracks info for invalid buffer sizes.
     struct BufferViewInfo {
-        uint64_t size = 0;
-        const Source* source = nullptr;
+        /// The minimum type size. This is propagated out through the inspector.
+        uint64_t min_type_size = 0;
+        /// The total view size used for validation.
+        uint64_t total_size = 0;
+        const ast::Node* node = nullptr;
     };
 
     ProgramBuilder& b;
@@ -695,6 +705,7 @@ class Resolver {
     Hashmap<StructConstructorSig, sem::CallTarget*, 8> struct_ctors_;
     Hashmap<SubgroupMatrixConstructorSig, sem::CallTarget*, 8> subgroup_matrix_ctors_;
     Hashmap<const sem::Variable*, BufferViewInfo, 8> buffer_view_sizes_;
+    Hashmap<const sem::Variable*, uint64_t, 8> subgroup_matrix_sizes_;
     sem::Function* current_function_ = nullptr;
     sem::Statement* current_statement_ = nullptr;
     sem::CompoundStatement* current_compound_statement_ = nullptr;

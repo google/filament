@@ -27,7 +27,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dawn/common/Strings.h"
+#include "src/dawn/common/Strings.h"
 
 #define STATIC_EXPECT_STREQ(x, y) static_assert(std::string_view(x) == std::string_view(y))
 

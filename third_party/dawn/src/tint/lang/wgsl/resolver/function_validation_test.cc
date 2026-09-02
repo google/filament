@@ -1062,10 +1062,44 @@ TEST_F(ResolverFunctionValidationTest, ParameterMatrixNoType) {
     EXPECT_EQ(r()->error(), R"(12:34 error: expected '<' for 'mat3x3')");
 }
 
+TEST_F(ResolverFunctionValidationTest, Parameter_PointerImmediate_Array) {
+    EXPECT_ERROR(R"(
+fn foo(p : ptr<immediate, array<f32, 2>>) { }
+)",
+                 R"(input.wgsl:2:27 error: arrays cannot be used in the <immediate> address space
+fn foo(p : ptr<immediate, array<f32, 2>>) { }
+                          ^^^^^^^^^^^^^
+
+input.wgsl:2:12 note: while instantiating ptr<immediate, array<f32, 2>, read>
+fn foo(p : ptr<immediate, array<f32, 2>>) { }
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+)");
+}
+
+TEST_F(ResolverFunctionValidationTest, Parameter_PointerImmediate_ArrayInStruct) {
+    EXPECT_ERROR(R"(
+struct S {
+  a : array<f32, 2>,
+}
+fn foo(p : ptr<immediate, S>) { }
+)",
+                 R"(input.wgsl:3:7 error: arrays cannot be used in the <immediate> address space
+  a : array<f32, 2>,
+      ^^^^^^^^^^^^^
+
+input.wgsl:3:3 note: while analyzing structure member S.a
+  a : array<f32, 2>,
+  ^
+
+input.wgsl:5:12 note: while instantiating ptr<immediate, S, read>
+fn foo(p : ptr<immediate, S>) { }
+           ^^^^^^^^^^^^^^^^^
+)");
+}
+
 enum class Expectation {
-    kAlwaysPass,
-    kPassWithUnrestrictedPointerParameters,
-    kAlwaysFail,
+    kPass,
+    kFail,
     kInvalid,
 };
 struct TestParams {
@@ -1076,11 +1110,7 @@ struct TestParams {
 struct TestWithParams : ResolverTestWithParam<TestParams> {};
 
 using ResolverFunctionParameterValidationTest = TestWithParams;
-TEST_P(ResolverFunctionParameterValidationTest, AddressSpaceWithoutUnrestrictedPointerParameters) {
-    auto features = wgsl::AllowedFeatures::Everything();
-    features.features.erase(wgsl::LanguageFeature::kUnrestrictedPointerParameters);
-    Resolver r(this, features);
-
+TEST_P(ResolverFunctionParameterValidationTest, PointerAddressSpace) {
     auto& param = GetParam();
     Structure("S", Vector{Member("a", ty.i32())});
     auto ptr_type = ty.AsType("ptr", Ident(Source{{12, 34}}, param.address_space), ty.AsType("S"));
@@ -1091,36 +1121,7 @@ TEST_P(ResolverFunctionParameterValidationTest, AddressSpaceWithoutUnrestrictedP
         Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
     }
 
-    if (param.expectation == Expectation::kAlwaysPass) {
-        ASSERT_TRUE(r.Resolve()) << r.error();
-    } else {
-        StringStream ss;
-        ss << param.address_space;
-        EXPECT_FALSE(r.Resolve());
-        if (param.expectation == Expectation::kInvalid) {
-            std::string err = R"(12:34 error: unresolved address space ')" +
-                              tint::ToString(param.address_space) + R"('
-12:34 note: Possible values: 'function', 'immediate', 'pixel_local', 'private', 'storage', 'uniform', 'workgroup')";
-            EXPECT_EQ(r.error(), err);
-        } else {
-            EXPECT_EQ(r.error(), "12:34 error: function parameter of pointer type cannot be in '" +
-                                     tint::ToString(param.address_space) + "' address space");
-        }
-    }
-}
-TEST_P(ResolverFunctionParameterValidationTest, AddressSpaceWithUnrestrictedPointerParameters) {
-    auto& param = GetParam();
-    Structure("S", Vector{Member("a", ty.i32())});
-    auto ptr_type = ty.AsType("ptr", Ident(Source{{12, 34}}, param.address_space), ty.AsType("S"));
-    auto* arg = Param(Source{{12, 34}}, "p", ptr_type);
-    Func("f", Vector{arg}, ty.void_(), tint::Empty);
-
-    if (param.address_space == core::AddressSpace::kPixelLocal) {
-        Enable(wgsl::Extension::kChromiumExperimentalPixelLocal);
-    }
-
-    if (param.expectation == Expectation::kAlwaysPass ||
-        param.expectation == Expectation::kPassWithUnrestrictedPointerParameters) {
+    if (param.expectation == Expectation::kPass) {
         ASSERT_TRUE(r()->Resolve()) << r()->error();
     } else {
         EXPECT_FALSE(r()->Resolve());
@@ -1142,18 +1143,14 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(TestParams{core::AddressSpace::kUndefined, Expectation::kInvalid},
                     TestParams{core::AddressSpace::kIn, Expectation::kInvalid},
                     TestParams{core::AddressSpace::kOut, Expectation::kInvalid},
-                    TestParams{core::AddressSpace::kUniform,
-                               Expectation::kPassWithUnrestrictedPointerParameters},
-                    TestParams{core::AddressSpace::kWorkgroup,
-                               Expectation::kPassWithUnrestrictedPointerParameters},
+                    TestParams{core::AddressSpace::kUniform, Expectation::kPass},
+                    TestParams{core::AddressSpace::kWorkgroup, Expectation::kPass},
                     TestParams{core::AddressSpace::kHandle, Expectation::kInvalid},
-                    TestParams{core::AddressSpace::kStorage,
-                               Expectation::kPassWithUnrestrictedPointerParameters},
-                    TestParams{core::AddressSpace::kImmediate,
-                               Expectation::kPassWithUnrestrictedPointerParameters},
-                    TestParams{core::AddressSpace::kPixelLocal, Expectation::kAlwaysFail},
-                    TestParams{core::AddressSpace::kPrivate, Expectation::kAlwaysPass},
-                    TestParams{core::AddressSpace::kFunction, Expectation::kAlwaysPass}));
+                    TestParams{core::AddressSpace::kStorage, Expectation::kPass},
+                    TestParams{core::AddressSpace::kImmediate, Expectation::kPass},
+                    TestParams{core::AddressSpace::kPixelLocal, Expectation::kFail},
+                    TestParams{core::AddressSpace::kPrivate, Expectation::kPass},
+                    TestParams{core::AddressSpace::kFunction, Expectation::kPass}));
 
 }  // namespace
 }  // namespace tint::resolver

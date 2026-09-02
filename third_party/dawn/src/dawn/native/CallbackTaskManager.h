@@ -33,9 +33,9 @@
 #include <mutex>
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/TypeTraits.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/TypeTraits.h"
 
 namespace dawn::native {
 

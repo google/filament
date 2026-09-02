@@ -6,7 +6,7 @@ on:
     - cron: '50 5 * * 2-6'  # 05:50 UTC, Tue-Sat morning (21:50 PST / 22:50 PDT Mon-Fri night)
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-wasm:
@@ -15,13 +15,15 @@ jobs:
     outputs:
       PKG_VERSION: ${{ steps.build.outputs.PKG_VERSION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - name: Build Emscripten Package
         id: build
         run: |
-          GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" .github/workflows/package-emdawnwebgpu.sh
+          GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${GITHUB_REF_NAME}" .github/workflows/package-emdawnwebgpu.sh
       - name: Upload WASM Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: emdawnwebgpu
           path: |
@@ -31,14 +33,15 @@ jobs:
 
   build-native:
     uses: ./.github/workflows/ci.yml
-    secrets: inherit
 
   publish:
     needs: [build-wasm, build-native]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download All Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts
 
@@ -48,14 +51,28 @@ jobs:
           ls -R artifacts
 
       - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.build-wasm.outputs.PKG_VERSION }}
-          name: ${{ needs.build-wasm.outputs.PKG_VERSION }}
-          body_path: RELEASE_INFO.md
-          files: |
-            artifacts/**/Dawn-*.tar.gz
-            artifacts/**/dawn-android-*.tar.gz
-            artifacts/**/dawn-apple-*.xcframework.tar.gz
-            artifacts/**/dawn-headers-*.tar.gz
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.build-wasm.outputs.PKG_VERSION }}
+        run: |
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
+            --repo ${{ github.repository }} \
+            --notes-file RELEASE_INFO.md \
+            artifacts/Dawn-*/Dawn-*.tar.gz \
+            artifacts/dawn-android-*/dawn-android-*.tar.gz \
+            artifacts/dawn-apple-*/dawn-apple-*.xcframework.tar.gz \
+            artifacts/dawn-headers-*/dawn-headers-*.tar.gz \
             artifacts/emdawnwebgpu/*
+
+  alert-on-failure:
+    needs: publish
+    runs-on: ubuntu-latest
+    if: ${{ failure() }}
+    steps:
+      - name: Alert on failure
+        run: |
+          curl -X POST \
+            -H 'Content-Type: application/json; charset=UTF-8' \
+            -d '{"text": "Release failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            '${{secrets.GARDENING_CHAT_WEBHOOK_URL}}'

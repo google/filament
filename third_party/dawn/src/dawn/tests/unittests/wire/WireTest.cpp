@@ -25,20 +25,17 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/wire/WireTest.h"
+#include "src/dawn/tests/unittests/wire/WireTest.h"
 
-#include "dawn/common/StringViewUtils.h"
 #include "dawn/dawn_proc.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/utils/TerribleCommandBuffer.h"
 #include "dawn/wire/WireClient.h"
 #include "dawn/wire/WireServer.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/utils/TerribleCommandBuffer.h"
 
 using testing::_;
-using testing::AnyNumber;
-using testing::AtLeast;
 using testing::AtMost;
-using testing::Exactly;
 using testing::Mock;
 using testing::MockCallback;
 using testing::NotNull;
@@ -60,9 +57,7 @@ uint32_t sWireProcTableRefCount = 0;
 WireTest::WireTest() {
     // Set up default expectation for Device.Destroy to ensure we can track that every device on the
     // server has Destroy called.
-    ON_CALL(api, DeviceDestroy).WillByDefault([this](WGPUDevice device) {
-        mDeviceDestroyed[device] = true;
-    });
+    ON_CALL(api, DeviceDestroy).WillByDefault([this](WGPUDevice d) { mDeviceDestroyed[d] = true; });
 }
 
 WireTest::~WireTest() {
@@ -78,6 +73,10 @@ wire::client::MemoryTransferService* WireTest::GetClientMemoryTransferService() 
 
 wire::server::MemoryTransferService* WireTest::GetServerMemoryTransferService() {
     return nullptr;
+}
+
+utils::TerribleCommandBuffer* WireTest::GetC2SCommandBuffer() {
+    return mC2sBuf.get();
 }
 
 void WireTest::SetUp() {
@@ -223,9 +222,9 @@ void WireTest::TearDown() {
 }
 
 WGPUDevice WireTest::GetNewDevice() {
-    auto device = api.GetNewDevice();
-    mDeviceDestroyed[device] = false;
-    return device;
+    auto d = api.GetNewDevice();
+    mDeviceDestroyed[d] = false;
+    return d;
 }
 
 void WireTest::FlushClient(bool success) {

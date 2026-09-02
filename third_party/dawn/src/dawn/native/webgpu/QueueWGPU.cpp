@@ -25,22 +25,24 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/QueueWGPU.h"
+#include "src/dawn/native/webgpu/QueueWGPU.h"
 
 #include <limits>
 #include <vector>
 
-#include "dawn/native/EventManager.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/CommandBufferWGPU.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/SharedFenceWGPU.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
-#include "dawn/native/webgpu/WebGPUError.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/native/EventManager.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/CommandBufferWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/SharedFenceWGPU.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/native/webgpu/WebGPUError.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::webgpu {
 
@@ -64,18 +66,18 @@ ResultOrError<Ref<SharedFence>> Queue::GetOrCreateSharedFence(WGPUSharedFence in
     return mSharedFence;
 }
 
-MaybeError Queue::SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) {
-    if (commandCount == 0 || commands == nullptr) {
+MaybeError Queue::SubmitImpl(Span<CommandBufferBase* const> commands) {
+    if (commands.empty()) {
         return {};
     }
 
     if (IsCapturing()) {
         std::vector<schema::ObjectId> commandBufferIds;
-        commandBufferIds.reserve(commandCount);
+        commandBufferIds.reserve(commands.size());
 
-        for (uint32_t i = 0; i < commandCount; ++i) {
+        for (CommandBufferBase* commandBuffer : commands) {
             schema::ObjectId id;
-            DAWN_TRY_ASSIGN(id, mCaptureContext->AddResourceAndGetId(ToBackend(commands[i])));
+            DAWN_TRY_ASSIGN(id, mCaptureContext->AddResourceAndGetId(ToBackend(commandBuffer)));
             commandBufferIds.emplace_back(id);
         }
 
@@ -87,16 +89,16 @@ MaybeError Queue::SubmitImpl(uint32_t commandCount, CommandBufferBase* const* co
         Serialize(*mCaptureContext, cmd);
     }
 
-    std::vector<WGPUCommandBuffer> innerCommandBuffers(commandCount);
-    for (uint32_t i = 0; i < commandCount; ++i) {
-        DAWN_TRY_ASSIGN(innerCommandBuffers[i], ToBackend(commands[i])->Encode());
+    std::vector<WGPUCommandBuffer> innerCommandBuffers(commands.size());
+    for (auto [i, commandBuffer] : Enumerate(commands)) {
+        DAWN_TRY_ASSIGN(innerCommandBuffers[i], ToBackend(commandBuffer)->Encode());
     }
 
     auto& wgpu = ToBackend(GetDevice())->wgpu.get();
-    wgpu.queueSubmit(mInnerHandle, commandCount, innerCommandBuffers.data());
+    wgpu.queueSubmit(mInnerHandle, innerCommandBuffers.size(), innerCommandBuffers.data());
 
-    for (uint32_t i = 0; i < commandCount; ++i) {
-        wgpu.commandBufferRelease(innerCommandBuffers[i]);
+    for (WGPUCommandBuffer commandBuffer : innerCommandBuffers) {
+        wgpu.commandBufferRelease(commandBuffer);
     }
 
     DAWN_TRY(SubmitFutureSync());
@@ -109,28 +111,25 @@ CaptureContext* Queue::GetCaptureContext() const {
 
 MaybeError Queue::WriteBufferImpl(BufferBase* buffer,
                                   uint64_t bufferOffset,
-                                  const void* data,
-                                  size_t size) {
+                                  Span<const std::byte> data) {
     if (IsCapturing()) {
-        DAWN_TRY(
-            mCaptureContext->CaptureQueueWriteBuffer(ToBackend(buffer), bufferOffset, data, size));
+        DAWN_TRY(mCaptureContext->CaptureQueueWriteBuffer(ToBackend(buffer), bufferOffset, data));
     }
 
     auto innerBuffer = ToBackend(buffer)->GetInnerHandle();
     ToBackend(GetDevice())
-        ->wgpu->queueWriteBuffer(mInnerHandle, innerBuffer, bufferOffset, data, size);
+        ->wgpu->queueWriteBuffer(mInnerHandle, innerBuffer, bufferOffset, data.data(), data.size());
     buffer->MarkUsedInPendingCommands();
 
     return {};
 }
 
 MaybeError Queue::WriteTextureImpl(const TexelCopyTextureInfo& destination,
-                                   const void* data,
-                                   size_t dataSize,
+                                   Span<const std::byte> data,
                                    const TexelCopyBufferLayout& dataLayout,
                                    const Extent3D& writeSizePixel) {
     if (IsCapturing()) {
-        DAWN_TRY(mCaptureContext->CaptureQueueWriteTexture(destination, data, dataSize, dataLayout,
+        DAWN_TRY(mCaptureContext->CaptureQueueWriteTexture(destination, data, dataLayout,
                                                            writeSizePixel));
     }
 
@@ -149,7 +148,8 @@ MaybeError Queue::WriteTextureImpl(const TexelCopyTextureInfo& destination,
     WGPUExtent3D writeSize = ToWGPU(writeSizePixel);
     ToBackend(destination.texture)->SynchronizeTextureBeforeUse();
     ToBackend(GetDevice())
-        ->wgpu->queueWriteTexture(mInnerHandle, &dest, data, dataSize, &layout, &writeSize);
+        ->wgpu->queueWriteTexture(mInnerHandle, &dest, data.data(), data.size(), &layout,
+                                  &writeSize);
     destination.texture->SetIsSubresourceContentInitialized(
         true, GetSubresourcesAffectedByCopy(copy, writeSizePixel));
 

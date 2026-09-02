@@ -1,0 +1,13 @@
+# proto-file: https://source.chromium.org/chromium/chromium/tools/depot_tools/+/main:metadata/restrictive_license_approval.proto
+# proto-message: RestrictiveLicenseApproval
+
+license_approval {
+ license_path: "LICENSE"
+ id: "Microsoft-DirectX"
+ bug: 524606347
+ note: "Approved by johirsch@google.com. For Chrome's WebGPU implementation, "
+       "we need to use Microsoft's Agility SDK to access their latest "
+       "features. Our test bots need to use the very latest versions, which "
+       "Microsoft officially releases as NuGet packages. This license is for "
+       "their NuGet package of the Agility SDK."
+}

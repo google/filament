@@ -28,12 +28,14 @@
 #ifndef SRC_DAWN_NATIVE_RENDERENCODERBASE_H_
 #define SRC_DAWN_NATIVE_RENDERENCODERBASE_H_
 
-#include "dawn/native/AttachmentState.h"
-#include "dawn/native/CommandBufferStateTracker.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IndirectDrawMetadata.h"
-#include "dawn/native/PassResourceUsageTracker.h"
-#include "dawn/native/ProgrammableEncoder.h"
+#include "src/dawn/native/AttachmentState.h"
+#include "src/dawn/native/CommandBufferStateTracker.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IndirectDrawMetadata.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PassResourceUsageTracker.h"
+#include "src/dawn/native/ProgrammableEncoder.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -50,7 +52,7 @@ class RenderEncoderBase : public ProgrammableEncoder {
                  uint32_t instanceCount = 1,
                  uint32_t firstVertex = 0,
                  uint32_t firstInstance = 0);
-    void APIDrawIndexed(uint32_t vertexCount,
+    void APIDrawIndexed(uint32_t indexCount,
                         uint32_t instanceCount,
                         uint32_t firstIndex,
                         int32_t baseVertex,
@@ -72,7 +74,6 @@ class RenderEncoderBase : public ProgrammableEncoder {
                                      uint64_t drawCountBufferOffset = 0);
 
     void APISetPipeline(RenderPipelineBase* pipeline);
-    void APISetResourceTable(ResourceTableBase* table);
 
     void APISetVertexBuffer(uint32_t slot, BufferBase* buffer, uint64_t offset, uint64_t size);
     void APISetIndexBuffer(BufferBase* buffer,
@@ -82,10 +83,9 @@ class RenderEncoderBase : public ProgrammableEncoder {
 
     void APISetBindGroup(uint32_t groupIndex,
                          BindGroupBase* group,
-                         uint32_t dynamicOffsetCount = 0,
-                         const uint32_t* dynamicOffsets = nullptr);
+                         ityp::span<BindingIndex, const uint32_t> dynamicOffsets = {});
 
-    void APISetImmediates(uint32_t offset, const void* data, size_t size);
+    void APISetImmediates(uint32_t offset, Span<const std::byte> data);
 
     const AttachmentState* GetAttachmentState() const;
     bool IsDepthReadOnly() const;

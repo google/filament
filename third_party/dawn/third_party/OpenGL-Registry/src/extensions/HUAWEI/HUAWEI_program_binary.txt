@@ -1,0 +1,87 @@
+Name
+
+    HUAWEI_program_binary
+
+Name Strings
+
+    GL_HUAWEI_program_binary
+
+Contributors
+
+    Peng Li, HUAWEI Technologies
+
+Contact
+
+    Pan Gao (gaopan24 'at' hisilicon 'dot' com)
+
+Version
+
+    Last Modified Date: Jan 12, 2026
+    Revision: 2
+
+Number
+
+    OpenGL ES Extension #349
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+    OES_get_program_binary is required.
+
+    This extension is written based on the wording of the OpenGL ES 2.0.25
+    specification and the OES_get_program_binary extension.
+
+Overview
+
+    The OES_get_program_binary extension enables applications to retrieve program
+    binaries using GetProgramBinaryOES and reload them using ProgramBinaryOES.
+
+    The mechanism for retrieval and reloading of program binaries is vendor
+    neutral, but the binary format itself is vendor specific.
+
+    This extension adds a token to identify program binaries that are
+    compatible with HUAWEI GPUs.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <binaryFormat> parameter of ProgramBinaryOES:
+
+        PROGRAM_BINARY_HUAWEI              0x9771
+
+Additions to Chapter 2 of the OpenGL ES 2.0 Specification (OpenGL ES Operation)
+
+    At the end of the section 2.15.4, Program Binaries from OES_get_program_binary:
+
+    "When querying PROGRAM_BINARY_FORMATS_OES, the format PROGRAM_BINARY_HUAWEI will be
+    present in the list of returned program binary formats and the format could be used as
+    <binaryFormat> in GetProgramBinaryOES or ProgramBinaryOES.
+
+    An implementation may reject a PROGRAM_BINARY_HUAWEI binary if it determines
+    the program binary was produced by an incompatible or outdated version of the compiler.
+    In this case the application should fall back to providing the original OpenGL Shading
+    Language source shaders, and perhaps again retrieve the program binary for future use."
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    #2  Jan 12, 2026  Pan Gao           Fix enum definition to align with naming conventions
+    #1  Aug 21, 2025  Peng Li           First draft

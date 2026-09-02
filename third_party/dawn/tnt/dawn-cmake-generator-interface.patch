@@ -1,0 +1,66 @@
+diff --git a/third_party/dawn/generator/CMakeLists.txt b/third_party/dawn/generator/CMakeLists.txt
+index bcdb3514df1..c4443caf112 100644
+--- a/third_party/dawn/generator/CMakeLists.txt
++++ b/third_party/dawn/generator/CMakeLists.txt
+@@ -109,6 +109,7 @@ function(DawnGenerator)
+         OUTPUT ${OUTPUTS}
+         COMMENT "Dawn: Generating files for ${arg_PRINT_NAME}."
+     )
++    set_source_files_properties(${OUTPUTS} PROPERTIES GENERATED TRUE)
+ 
+     # Populate the list of outputs.
+     set(headers)
+@@ -156,26 +157,6 @@ function(DawnGenerator)
+     set(${arg_OUTPUT_HEADERS} ${headers} PARENT_SCOPE)
+     set(${arg_OUTPUT_JSONS} ${jsons} PARENT_SCOPE)
+     set(${arg_OUTPUT_JS} ${js} PARENT_SCOPE)
+-
+-    # Prior to CMake 3.20 the GENERATED property is local to a directory which means that putting
+-    # generated headers in INTERFACE properties causes dependent targets to complain that they
+-    # cannot find the file. (because they don't see it as generated and want to check is is
+-    # actually on the filesystem).
+-    # Work around this by generating the files once if they aren't present at configuration time.
+-    set(needToGenerate OFF)
+-    foreach(path ${OUTPUTS})
+-        if (NOT EXISTS ${path})
+-            set(needToGenerate ON)
+-        endif()
+-    endforeach()
+-
+-    if (${needToGenerate})
+-        message(STATUS "Dawn: Generating initial versions of files for ${arg_PRINT_NAME}.")
+-        execute_process(COMMAND ${BASE_ARGS} RESULT_VARIABLE RET)
+-        if (NOT RET EQUAL 0)
+-            message(FATAL_ERROR "Dawn: Failed to generate the initial version of files for ${arg_PRINT_NAME}. Base args are '${BASE_ARGS}'.")
+-        endif()
+-    endif()
+ endfunction()
+ 
+ # Helper function to call dawn_generator.py:
+@@ -199,6 +180,8 @@ function(DawnJSONGenerator)
+              "${Dawn_SOURCE_DIR}/src/dawn/dawn.json"
+              --wire-json
+              "${Dawn_SOURCE_DIR}/src/dawn/dawn_wire.json"
++             --native-json
++             "${Dawn_SOURCE_DIR}/src/dawn/dawn_native.json"
+              --kotlin-json
+              "${Dawn_SOURCE_DIR}/src/dawn/dawn_kotlin.json"
+              --targets
+diff --git a/third_party/dawn/src/cmake/DawnLibrary.cmake b/third_party/dawn/src/cmake/DawnLibrary.cmake
+index f80426804ab..8992967d51b 100644
+--- a/third_party/dawn/src/cmake/DawnLibrary.cmake
++++ b/third_party/dawn/src/cmake/DawnLibrary.cmake
+@@ -124,9 +124,10 @@ function(dawn_add_library name)
+     target_link_libraries("${name}"
+       INTERFACE
+         ${arg_DEPENDS})
+-    target_sources("${name}"
+-      PUBLIC
+-        ${arg_HEADERS})
++    if (arg_HEADERS)
++      add_custom_target("${name}_gen_headers" DEPENDS ${arg_HEADERS})
++      add_dependencies("${name}" "${name}_gen_headers")
++    endif ()
+   else ()
+     add_library("${name}" ${library_type})
+     if (arg_HEADERS)

@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/PhysicalDeviceGL.h"
+#include "src/dawn/native/opengl/PhysicalDeviceGL.h"
 
 #include <algorithm>
 #include <memory>
@@ -33,15 +33,16 @@
 #include <string_view>
 #include <utility>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/opengl/ContextEGL.h"
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/native/opengl/DisplayEGL.h"
-#include "dawn/native/opengl/SwapChainEGL.h"
-#include "dawn/native/opengl/UtilsGL.h"
 #include "dawn/platform/DawnPlatform.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/opengl/ContextEGL.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/opengl/DisplayEGL.h"
+#include "src/dawn/native/opengl/SwapChainEGL.h"
+#include "src/dawn/native/opengl/UtilsGL.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::opengl {
 
@@ -57,13 +58,14 @@ const Vendor kVendors[] = {{"ATI", gpu_info::kVendorID_AMD},
                            {"Imagination", gpu_info::kVendorID_ImgTec},
                            {"Intel", gpu_info::kVendorID_Intel},
                            {"NVIDIA", gpu_info::kVendorID_Nvidia},
-                           {"Qualcomm", gpu_info::kVendorID_QualcommPCI}};
+                           {"Qualcomm", gpu_info::kVendorID_QualcommPCI},
+                           {"Samsung", gpu_info::kVendorID_Samsung}};
 
 uint32_t GetVendorIdFromVendors(const char* vendor) {
     uint32_t vendorId = 0;
     for (const auto& it : kVendors) {
         // Matching vendor name with vendor string
-        if (strstr(vendor, it.vendorName) != nullptr) {
+        if (DAWN_UNSAFE_TODO(strstr(vendor, it.vendorName)) != nullptr) {
             vendorId = it.vendorId;
             break;
         }
@@ -157,6 +159,9 @@ MaybeError PhysicalDevice::InitializeImpl() {
     switch (GetBackendType()) {
         case wgpu::BackendType::OpenGLES:
             DAWN_INVALID_IF(!mFunctions.IsAtLeastGLES(3, 1), "OpenGL ES 3.1 is required.");
+            DAWN_INVALID_IF(!mFunctions.IsAtLeastGLES(3, 2) &&
+                                !mFunctions.IsGLExtensionSupported("GL_EXT_color_buffer_float"),
+                            "GL_EXT_color_buffer_float is required for OpenGL ES 3.1.");
             break;
         case wgpu::BackendType::OpenGL:
             DAWN_INVALID_IF(!mFunctions.IsAtLeastGL(4, 4), "Desktop OpenGL 4.4 is required.");
@@ -278,7 +283,9 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
     }
 
     // ShaderF16
-    if (mFunctions.IsGLExtensionSupported("GL_AMD_gpu_shader_half_float")) {
+    // Int16 required to support buffer_view conversions
+    if (mFunctions.IsGLExtensionSupported("GL_AMD_gpu_shader_half_float") &&
+        mFunctions.IsGLExtensionSupported("GL_AMD_gpu_shader_int16")) {
         EnableFeature(Feature::ShaderF16);
     }
 
@@ -303,6 +310,11 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
     // TextureComponentSwizzle
     if (SupportTextureComponentSwizzle()) {
         EnableFeature(Feature::TextureComponentSwizzle);
+    }
+
+    EnableFeature(Feature::TransientAttachments);
+    if (mFunctions.IsGLExtensionSupported("GL_EXT_multisampled_render_to_texture")) {
+        EnableFeature(Feature::MSAARenderToSingleSampled);
     }
 }
 
@@ -440,11 +452,11 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
     bool supportsStencilWriteTexture =
         gl.GetVersion().IsDesktop() || gl.IsGLExtensionSupported("GL_OES_texture_stencil8");
 
-    bool isFloat32Renderable = gl.GetVersion().IsDesktop() || gl.IsAtLeastGLES(3, 2) ||
-                               gl.IsGLExtensionSupported("GL_EXT_color_buffer_float");
-    bool isFloat16Renderable =
-        isFloat32Renderable || gl.IsGLExtensionSupported("GL_EXT_color_buffer_half_float");
-    bool isRG11B10UfloatRenderable = isFloat32Renderable;
+    DAWN_ASSERT(gl.GetVersion().IsDesktop() || gl.IsAtLeastGLES(3, 2) ||
+                gl.IsGLExtensionSupported("GL_EXT_color_buffer_float"));
+    bool isFloat32Renderable = true;
+    bool isFloat16Renderable = true;
+    bool isRG11B10UfloatRenderable = true;
 
     // TODO(crbug.com/dawn/343): Investigate emulation.
     deviceToggles->Default(Toggle::DisableIndexedDrawBuffers, !supportsIndexedDrawBuffers);
@@ -519,8 +531,8 @@ ResultOrError<Ref<DeviceBase>> PhysicalDevice::CreateDeviceImpl(
     const TogglesState& deviceToggles,
     Ref<DeviceBase::DeviceLostEvent>&& lostEvent) {
     bool useANGLETextureSharing = false;
-    for (size_t i = 0; i < descriptor->requiredFeatureCount; ++i) {
-        if (descriptor->requiredFeatures[i] == wgpu::FeatureName::ANGLETextureSharing) {
+    for (wgpu::FeatureName feature : descriptor->requiredFeatures) {
+        if (feature == wgpu::FeatureName::ANGLETextureSharing) {
             useANGLETextureSharing = true;
         }
     }

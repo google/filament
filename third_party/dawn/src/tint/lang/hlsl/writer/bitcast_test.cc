@@ -147,26 +147,29 @@ TEST_F(HlslWriterTest, BitcastFromVec2F16) {
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 uint tint_bitcast_from_f16_2(vector<float16_t, 2> src) {
-  uint2 r = f32tof16(float2(src));
-  return ((r.x & 65535u) | ((r.y & 65535u) << 16u));
+  uint2 v = (uint2(asuint16(src)) & (65535u).xx);
+  uint2 v_1 = (v << uint2(0u, 16u));
+  return (v_1.x | v_1.y);
 }
 
 float tint_bitcast_from_f16_1(vector<float16_t, 2> src) {
-  uint2 r = f32tof16(float2(src));
-  return asfloat(((r.x & 65535u) | ((r.y & 65535u) << 16u)));
+  uint2 v_2 = (uint2(asuint16(src)) & (65535u).xx);
+  uint2 v_3 = (v_2 << uint2(0u, 16u));
+  return asfloat((v_3.x | v_3.y));
 }
 
 int tint_bitcast_from_f16(vector<float16_t, 2> src) {
-  uint2 r = f32tof16(float2(src));
-  return asint(((r.x & 65535u) | ((r.y & 65535u) << 16u)));
+  uint2 v_4 = (uint2(asuint16(src)) & (65535u).xx);
+  uint2 v_5 = (v_4 << uint2(0u, 16u));
+  return asint((v_5.x | v_5.y));
 }
 
 void main() {
   vector<float16_t, 2> a = vector<float16_t, 2>(float16_t(1.0h), float16_t(2.0h));
-  vector<float16_t, 2> v = a;
-  int b = tint_bitcast_from_f16(v);
-  float c = tint_bitcast_from_f16_1(v);
-  uint d = tint_bitcast_from_f16_2(v);
+  vector<float16_t, 2> v_6 = a;
+  int b = tint_bitcast_from_f16(v_6);
+  float c = tint_bitcast_from_f16_1(v_6);
+  uint d = tint_bitcast_from_f16_2(v_6);
 }
 
 )");
@@ -191,26 +194,23 @@ TEST_F(HlslWriterTest, BitcastToVec2F16) {
     EXPECT_EQ(output_.hlsl, R"(
 vector<float16_t, 2> tint_bitcast_to_f16_2(uint src) {
   uint v = src;
-  float t_low = f16tof32((v & 65535u));
-  float t_high = f16tof32(((v >> 16u) & 65535u));
-  float16_t v_1 = float16_t(t_low);
-  return vector<float16_t, 2>(v_1, float16_t(t_high));
+  uint2 v_1 = uint2(v, v);
+  vector<uint16_t, 2> v16 = vector<uint16_t, 2>(((v_1 >> uint2(0u, 16u)) & (65535u).xx));
+  return asfloat16(v16);
 }
 
 vector<float16_t, 2> tint_bitcast_to_f16_1(float src) {
   uint v = asuint(src);
-  float t_low = f16tof32((v & 65535u));
-  float t_high = f16tof32(((v >> 16u) & 65535u));
-  float16_t v_2 = float16_t(t_low);
-  return vector<float16_t, 2>(v_2, float16_t(t_high));
+  uint2 v_2 = uint2(v, v);
+  vector<uint16_t, 2> v16 = vector<uint16_t, 2>(((v_2 >> uint2(0u, 16u)) & (65535u).xx));
+  return asfloat16(v16);
 }
 
 vector<float16_t, 2> tint_bitcast_to_f16(int src) {
   uint v = asuint(src);
-  float t_low = f16tof32((v & 65535u));
-  float t_high = f16tof32(((v >> 16u) & 65535u));
-  float16_t v_3 = float16_t(t_low);
-  return vector<float16_t, 2>(v_3, float16_t(t_high));
+  uint2 v_3 = uint2(v, v);
+  vector<uint16_t, 2> v16 = vector<uint16_t, 2>(((v_3 >> uint2(0u, 16u)) & (65535u).xx));
+  return asfloat16(v16);
 }
 
 void main() {
@@ -240,26 +240,29 @@ TEST_F(HlslWriterTest, BitcastFromVec4F16) {
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 uint2 tint_bitcast_from_f16_2(vector<float16_t, 4> src) {
-  uint4 r = f32tof16(float4(src));
-  return uint2(((r.x & 65535u) | ((r.y & 65535u) << 16u)), ((r.z & 65535u) | ((r.w & 65535u) << 16u)));
+  uint4 v = (uint4(asuint16(src)) & (65535u).xxxx);
+  uint4 v_1 = (v << uint4(0u, 16u, 0u, 16u));
+  return uint2((v_1.x | v_1.y), (v_1.z | v_1.w));
 }
 
 float2 tint_bitcast_from_f16_1(vector<float16_t, 4> src) {
-  uint4 r = f32tof16(float4(src));
-  return asfloat(uint2(((r.x & 65535u) | ((r.y & 65535u) << 16u)), ((r.z & 65535u) | ((r.w & 65535u) << 16u))));
+  uint4 v_2 = (uint4(asuint16(src)) & (65535u).xxxx);
+  uint4 v_3 = (v_2 << uint4(0u, 16u, 0u, 16u));
+  return asfloat(uint2((v_3.x | v_3.y), (v_3.z | v_3.w)));
 }
 
 int2 tint_bitcast_from_f16(vector<float16_t, 4> src) {
-  uint4 r = f32tof16(float4(src));
-  return asint(uint2(((r.x & 65535u) | ((r.y & 65535u) << 16u)), ((r.z & 65535u) | ((r.w & 65535u) << 16u))));
+  uint4 v_4 = (uint4(asuint16(src)) & (65535u).xxxx);
+  uint4 v_5 = (v_4 << uint4(0u, 16u, 0u, 16u));
+  return asint(uint2((v_5.x | v_5.y), (v_5.z | v_5.w)));
 }
 
 void main() {
   vector<float16_t, 4> a = vector<float16_t, 4>(float16_t(1.0h), float16_t(2.0h), float16_t(3.0h), float16_t(4.0h));
-  vector<float16_t, 4> v = a;
-  int2 b = tint_bitcast_from_f16(v);
-  float2 c = tint_bitcast_from_f16_1(v);
-  uint2 d = tint_bitcast_from_f16_2(v);
+  vector<float16_t, 4> v_6 = a;
+  int2 b = tint_bitcast_from_f16(v_6);
+  float2 c = tint_bitcast_from_f16_1(v_6);
+  uint2 d = tint_bitcast_from_f16_2(v_6);
 }
 
 )");
@@ -284,38 +287,20 @@ TEST_F(HlslWriterTest, BitcastToVec4F16) {
     EXPECT_EQ(output_.hlsl, R"(
 vector<float16_t, 4> tint_bitcast_to_f16_2(uint2 src) {
   uint2 v = src;
-  uint2 mask = (65535u).xx;
-  uint2 shift = (16u).xx;
-  float2 t_low = f16tof32((v & mask));
-  float2 t_high = f16tof32(((v >> shift) & mask));
-  float16_t v_1 = float16_t(t_low.x);
-  float16_t v_2 = float16_t(t_high.x);
-  float16_t v_3 = float16_t(t_low.y);
-  return vector<float16_t, 4>(v_1, v_2, v_3, float16_t(t_high.y));
+  vector<uint16_t, 4> v16 = vector<uint16_t, 4>(((v.xxyy >> uint4(0u, 16u, 0u, 16u)) & (65535u).xxxx));
+  return asfloat16(v16);
 }
 
 vector<float16_t, 4> tint_bitcast_to_f16_1(float2 src) {
   uint2 v = asuint(src);
-  uint2 mask = (65535u).xx;
-  uint2 shift = (16u).xx;
-  float2 t_low = f16tof32((v & mask));
-  float2 t_high = f16tof32(((v >> shift) & mask));
-  float16_t v_4 = float16_t(t_low.x);
-  float16_t v_5 = float16_t(t_high.x);
-  float16_t v_6 = float16_t(t_low.y);
-  return vector<float16_t, 4>(v_4, v_5, v_6, float16_t(t_high.y));
+  vector<uint16_t, 4> v16 = vector<uint16_t, 4>(((v.xxyy >> uint4(0u, 16u, 0u, 16u)) & (65535u).xxxx));
+  return asfloat16(v16);
 }
 
 vector<float16_t, 4> tint_bitcast_to_f16(int2 src) {
   uint2 v = asuint(src);
-  uint2 mask = (65535u).xx;
-  uint2 shift = (16u).xx;
-  float2 t_low = f16tof32((v & mask));
-  float2 t_high = f16tof32(((v >> shift) & mask));
-  float16_t v_7 = float16_t(t_low.x);
-  float16_t v_8 = float16_t(t_high.x);
-  float16_t v_9 = float16_t(t_low.y);
-  return vector<float16_t, 4>(v_7, v_8, v_9, float16_t(t_high.y));
+  vector<uint16_t, 4> v16 = vector<uint16_t, 4>(((v.xxyy >> uint4(0u, 16u, 0u, 16u)) & (65535u).xxxx));
+  return asfloat16(v16);
 }
 
 void main() {

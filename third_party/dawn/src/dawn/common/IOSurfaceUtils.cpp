@@ -25,13 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/IOSurfaceUtils.h"
+#include "src/dawn/common/IOSurfaceUtils.h"
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreVideo/CVPixelBuffer.h>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/CoreFoundationRef.h"
+#include "src/dawn/common/CoreFoundationRef.h"
+#include "src/utils/assert.h"
+#include "src/utils/numeric.h"
 
 namespace dawn {
 
@@ -123,14 +124,14 @@ IOSurfaceRef CreateMultiPlanarIOSurface(wgpu::TextureFormat format,
                                         uint32_t height) {
     CFRef<CFMutableDictionaryRef> dict = AcquireCFRef(CFDictionaryCreateMutable(
         kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
-    AddIntegerValue(dict.Get(), kIOSurfaceWidth, width);
-    AddIntegerValue(dict.Get(), kIOSurfaceHeight, height);
-    AddIntegerValue(dict.Get(), kIOSurfacePixelFormat, ToCVFormat(format));
+    AddIntegerValue(dict.Get(), kIOSurfaceWidth, sign_cast(width));
+    AddIntegerValue(dict.Get(), kIOSurfaceHeight, sign_cast(height));
+    AddIntegerValue(dict.Get(), kIOSurfacePixelFormat, sign_cast(ToCVFormat(format)));
 
     size_t numPlanes = NumPlanes(format);
 
-    CFRef<CFMutableArrayRef> planes =
-        AcquireCFRef(CFArrayCreateMutable(kCFAllocatorDefault, numPlanes, &kCFTypeArrayCallBacks));
+    CFRef<CFMutableArrayRef> planes = AcquireCFRef(
+        CFArrayCreateMutable(kCFAllocatorDefault, sign_cast(numPlanes), &kCFTypeArrayCallBacks));
     size_t totalBytesAlloc = 0;
     for (size_t plane = 0; plane < numPlanes; ++plane) {
         const size_t planeWidth =
@@ -148,19 +149,22 @@ IOSurfaceRef CreateMultiPlanarIOSurface(wgpu::TextureFormat format,
             CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,
                                       &kCFTypeDictionaryValueCallBacks));
 
-        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneWidth, planeWidth);
-        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneHeight, planeHeight);
-        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneBytesPerElement, planeBytesPerElement);
-        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneBytesPerRow, planeBytesPerRow);
-        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneSize, planeBytesAlloc);
-        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneOffset, planeOffset);
+        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneWidth, checked_cast<int32_t>(planeWidth));
+        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneHeight, checked_cast<int32_t>(planeHeight));
+        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneBytesPerElement,
+                        checked_cast<int32_t>(planeBytesPerElement));
+        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneBytesPerRow,
+                        checked_cast<int32_t>(planeBytesPerRow));
+        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneSize,
+                        checked_cast<int32_t>(planeBytesAlloc));
+        AddIntegerValue(planeInfo.Get(), kIOSurfacePlaneOffset, checked_cast<int32_t>(planeOffset));
         CFArrayAppendValue(planes.Get(), planeInfo.Get());
         totalBytesAlloc = planeOffset + planeBytesAlloc;
     }
     CFDictionaryAddValue(dict.Get(), kIOSurfacePlaneInfo, planes.Get());
 
     totalBytesAlloc = IOSurfaceAlignProperty(kIOSurfaceAllocSize, totalBytesAlloc);
-    AddIntegerValue(dict.Get(), kIOSurfaceAllocSize, totalBytesAlloc);
+    AddIntegerValue(dict.Get(), kIOSurfaceAllocSize, checked_cast<int32_t>(totalBytesAlloc));
 
     IOSurfaceRef surface = IOSurfaceCreate(dict.Get());
 

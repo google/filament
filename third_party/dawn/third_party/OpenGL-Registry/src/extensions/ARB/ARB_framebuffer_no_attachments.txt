@@ -1,0 +1,511 @@
+Name
+
+    ARB_framebuffer_no_attachments
+
+Name Strings
+
+    GL_ARB_framebuffer_no_attachments
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Members of the Khronos OpenGL ARB TSG
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:         May 7, 2015
+    Revision:                   5
+
+Number
+
+    ARB Extension #130
+
+Dependencies
+
+    OpenGL 3.0 or ARB_framebuffer_object is required.
+
+    This extension is written against the OpenGL 4.2 (Compatibility Profile)
+    Specification (January 19, 2012).
+
+    This extension interacts with OpenGL 3.0 and EXT_texture_array.
+
+    This extension interacts with EXT_direct_state_access.
+
+Overview
+
+    Framebuffer objects as introduced by ARB_framebuffer_object and OpenGL 3.0
+    provide a generalized mechanism for rendering to off-screen surfaces.
+    Each framebuffer object may have depth, stencil and zero or more color
+    attachments that can be written to by the GL.  The size of the framebuffer
+    (width, height, layer count, sample count) is derived from the attachments
+    of that framebuffer.  In unextended OpenGL 4.2, it is not legal to render
+    into a framebuffer object that has no attachments.  Such a framebuffer
+    would be considered incomplete with the
+    FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT status.
+
+    With OpenGL 4.2 and ARB_shader_image_load_store, fragment shaders are
+    capable of doing random access writes to buffer and texture memory via
+    image loads, stores, and atomics.  This ability enables algorithms using
+    the conventional rasterizer to generate a collection of fragments, where
+    each fragment shader invocation will write its outputs to buffer or
+    texture memory using image stores or atomics.  Such algorithms may have no
+    need to write color or depth values to a conventional framebuffer.
+    However, a framebuffer with no attachments will be considered incomplete
+    and no rasterization or fragment shader exectuion will occur.  To avoid
+    such errors, an application may be required to create an otherwise
+    unnecessary "dummy" texture and attach it to the framebuffer (possibly
+    with color writes masked off).  If the algorithm requires the rasterizer
+    to operate over a large number of pixels, this dummy texture will
+    needlessly consume a significant amount of memory.
+
+    This extension enables the algorithms described above to work even with a
+    framebuffer with no attachments.  Applications can specify default width,
+    height, layer count, and sample count parameters for a framebuffer object.
+    When a framebuffer with no attachments is bound, it will be considered
+    complete as long as the application has specified non-zero default width
+    and height parameters.  For the purposes of rasterization, the framebuffer
+    will be considered to have a width, height, layer count, and sample count
+    derived from its default parameters.  Framebuffers with one or more
+    attachments are not affected by these default parameters; the size of the
+    framebuffer will still be derived from the sizes of the attachments in
+    that case.
+
+    Additionally, this extension provides queryable implementation-dependent
+    maximums for framebuffer width, height, layer count, and sample count,
+    which may differ from similar limits on textures and renderbuffers.  These
+    maximums will be used to error-check the default framebuffer parameters
+    and also permit implementations to expose the ability to rasterize to an
+    attachment-less framebuffer larger than the maximum supported texture
+    size.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void FramebufferParameteri(enum target, enum pname, int param);
+    void GetFramebufferParameteriv(enum target, enum pname, int *params);
+
+    (the following two commands are supported only if EXT_direct_state_access
+    is supported)
+
+    void NamedFramebufferParameteriEXT(uint framebuffer, enum pname,
+                                       int param);
+    void GetNamedFramebufferParameterivEXT(uint framebuffer, enum pname,
+                                       int *params);
+
+New Tokens
+
+    Accepted by the <pname> parameter of FramebufferParameteri,
+    GetFramebufferParameteriv, NamedFramebufferParameteriEXT, and
+    GetNamedFramebufferParameterivEXT:
+
+        FRAMEBUFFER_DEFAULT_WIDTH                       0x9310
+        FRAMEBUFFER_DEFAULT_HEIGHT                      0x9311
+        FRAMEBUFFER_DEFAULT_LAYERS                      0x9312
+        FRAMEBUFFER_DEFAULT_SAMPLES                     0x9313
+        FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS      0x9314
+
+    Accepted by the <pname> parameter of GetIntegerv, GetBooleanv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        MAX_FRAMEBUFFER_WIDTH                           0x9315
+        MAX_FRAMEBUFFER_HEIGHT                          0x9316
+        MAX_FRAMEBUFFER_LAYERS                          0x9317
+        MAX_FRAMEBUFFER_SAMPLES                         0x9318
+
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    Modify Section 4.4.1, Binding and Managing Framebuffer Objects, p. 425
+
+    (add to third-to-last bullet, p. 427)
+
+    * If the attachment sizes are not identical, ...  for each attachment).
+      if there are no attachments, rendering will be limited to a rectangle
+      having a lower left of (0,0) and an upper right of (width, height),
+      where <width> and <height> are the framebuffer object's default width
+      and height.
+
+    (add to next-to-last bullet, p. 427)
+
+    * If the number of layers of each attachment are not identical, ... of any
+      attachment.  If there are no attachments, the number of layers will be
+      taken from the framebuffer object's default layer count.
+
+    (insert before the last paragraph of the section , p. 428)
+
+    Parameters of a framebuffer object are set using the command
+
+      void FramebufferParameteri(enum target, enum pname, int param);
+
+    <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+    FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. <pname> specifies the
+    parameter of the framebuffer object bound to target to set. An
+    INVALID_OPERATION error is generated if the default (zero) framebuffer
+    object is bound to <target>.
+
+    When a framebuffer has one or more attachments, the width, height, layer
+    count (section 4.4.7), sample count, and sample location pattern of the
+    framebuffer are derived from the properties of the framebuffer
+    attachments.  When the framebuffer has no attachments, these properties
+    are taken from framebuffer parameters.  When <pname> is
+    FRAMEBUFFER_DEFAULT_WIDTH, FRAMEBUFFER_DEFAULT_HEIGHT,
+    FRAMEBUFFER_DEFAULT_LAYERS, FRAMEBUFFER_DEFAULT_SAMPLES, or
+    FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS, the value in <param> specifies
+    the width, height, layer count, sample count, or sample location pattern,
+    repsectively, used when the framebuffer has no attachments.  The error
+    INVALID_VALUE will be generated if <param> is less than zero or greater
+    the implementation-dependent limits MAX_FRAMEBUFFER_WIDTH,
+    MAX_FRAMEBUFFER_HEIGHT, MAX_FRAMEBUFFER_LAYERS, MAX_FRAMEBUFFER_SAMPLES if
+    <pname> is FRAMEBUFFER_DEFAULT_WIDTH, FRAMEBUFFER_DEFAULT_HEIGHT,
+    FRAMEBUFFER_DEFAULT_LAYERS, or FRAMEBUFFER_DEFAULT_SAMPLES, respectively.
+
+    When a framebuffer has no attachments, it is considered layered (section
+    4.4.7) if and only if the value of FRAMEBUFFER_DEFAULT_LAYERS is non-zero.
+    It is considered to have sample buffers if and only if the value of
+    FRAMEBUFFER_DEFAULT_SAMPLES is non-zero.  The number of samples in the
+    framebuffer is derived from the value of FRAMEBUFFER_DEFAULT_SAMPLES in an
+    implementation-dependent manner similar to that described for the command
+    RenderbufferStorageMultisample (section 4.4.2).  If the framebuffer has
+    sample buffers, if the value of FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS
+    is non-zero, it is considered to have a fixed sample location pattern as
+    described for TexImage2DMultisample (section 3.10.6).
+
+    The command
+
+      void NamedFramebufferParameteriEXT(uint framebuffer, enum pname,
+                                         int param);
+
+    operates exactly like FramebufferParameteri, except that it modifies
+    parameters of the framebuffer object named by <framebuffer> instead of a
+    specified bound framebuffer object.  The error INVALID_VALUE is generated
+    if <framebuffer> is not a name returned by GenFramebuffers.  If a
+    framebuffer object named <framebuffer> does not yet exist, it will be
+    created.
+
+
+    Modify Section 4.4.4, Framebuffer Completeness, p. 439
+
+    (modify second bullet in the list of required conditions for attachment
+    completeness in "Framebuffer Attachment Completeness", p. 440)
+
+    * The width and height of <image> are greater than zero and are less than
+      or equal to the implementation-dependent limits MAX_FRAMEBUFFER_WIDTH
+      and MAX_FRAMEBUFFER_HEIGHT, respectively.
+
+    (delete the third and fourth bullets in the list, replacing with new
+    bullets at the end of the list)
+
+    (add new bullets to the end of the list, p. 441)
+
+    * If <image> is a three-dimensional, one- or two-dimensional array, or
+      cube map array texture and the attachment is not layered, the selected
+      layer is less than the depth or layer count of the texture.
+
+    * If <image> is a three-dimensional, one- or two-dimensional array, or
+      cube map array texture and the attachment is layered, the depth or
+      layer count of the texture is less than or equal to the
+      implementation-dependent limit MAX_FRAMEBUFFER_LAYERS.
+
+    * If <image> has multiple samples, its sample count is less than or equal
+      to the implementation-dependent limit MAX_FRAMEBUFFER_SAMPLES.
+
+    (modify third bullet of "Whole Framebuffer Completeness", p. 441)
+
+    * There is at least one image attached to the framebuffer, or the
+      framebuffer's FRAMEBUFFER_DEFAULT_WIDTH and FRAMEBUFFER_DEFAULT_HEIGHT
+      parameters are both non-zero.
+
+      { FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT }
+
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+    (NOTE:  GetFramebufferParameteriv is not compiled in a display list, but
+    no spec language is required due to the blanket language covering all Get*
+    commands.)
+
+Additions to Chapter 6 of the OpenGL 4.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    Modify Section 6.1.19, Framebuffer Object Queries, p. 501
+
+    (add to end of the section, p. 504)
+
+    The command
+
+      void GetFramebufferParameteriv(enum target, enum pname, int *params)
+
+    returns the values of the framebuffer parameter <pname> of the framebuffer
+    object bound to <target>.
+
+    <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+    FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. <pname> specifies the
+    parameter of the framebuffer object bound to target to return. An
+    INVALID_OPERATION error is generated if the default (zero) framebuffer
+    object is bound to <target>.
+
+    The command
+
+      void GetNamedFramebufferParameterivEXT(uint framebuffer, enum pname,
+                                             int *params);
+
+    operates exactly like GetFramebufferParameteriv, except that it queries
+    parameters of the framebuffer object named by <framebuffer> instead of a
+    specified bound framebuffer object.  The error INVALID_VALUE is generated
+    if <framebuffer> is not a name returned by GenFramebuffers.  If a
+    framebuffer object named <framebuffer> does not yet exist, it will be
+    created.
+
+
+Additions to Appendix A of the OpenGL 4.2 (Compatibility Profile) Specification
+(Invariance)
+
+    None.
+
+Additions to Appendix D of the OpenGL 4.2 (Compatibility Profile) Specification
+(Shared Objects and Multiple Contexts)
+
+    None.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+   TBD
+
+Dependencies on OpenGL 3.0 and EXT_texture_array
+
+    If OpenGL 3.0 and EXT_texture_array are not supported, references to the
+    framebuffer parameter FRAMEBUFFER_DEFAULT_LAYERS should be removed.
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, the commands
+    NamedFramebufferParameteriEXT and GetNamedFramebufferParameterivEXT are
+    not supported.
+
+Errors
+
+    The error INVALID_ENUM is generated by FramebufferParameteri and
+    GetFramebufferParameteriv if <target> is not DRAW_FRAMEBUFFER,
+    READ_FRAMEBUFFER, or FRAMEBUFFER.
+
+    The error INVALID_OPERATION is generated by FramebufferParameteri and
+    GetFramebufferParameteriv if the default (zero) framebuffer is bound to
+    target.
+
+    The error INVALID_VALUE is generated by FramebufferParameteri and
+    NamedFramebufferParameteriEXT if <param> is less than zero or greater the
+    implementation-dependent limits MAX_FRAMEBUFFER_WIDTH,
+    MAX_FRAMEBUFFER_HEIGHT, MAX_FRAMEBUFFER_LAYERS, MAX_FRAMEBUFFER_SAMPLES if
+    <pname> is FRAMEBUFFER_DEFAULT_WIDTH, FRAMEBUFFER_DEFAULT_HEIGHT,
+    FRAMEBUFFER_DEFAULT_LAYERS, or FRAMEBUFFER_DEFAULT_SAMPLES, respectively.
+
+    The error INVALID_VALUE is generated by NamedFramebufferParameteriEXT and
+    GetNamedFramebufferParameterivEXT if <framebuffer> is not a name returned
+    by GenFramebuffers.
+
+New State
+
+    Add to Table 6.33, Framebuffer (state per framebuffer object), p. 537
+
+                                                        Initial
+    Get Value                    Type  Get Command      Value   Description               Sec.   Attrib.
+    ---------------------------- ----  ---------------  ------- ------------------------  -----  ---------
+    FRAMEBUFFER_DEFAULT_WIDTH     Z+   GetFramebuffer-    0     default width of frame-   4.4.1     -
+                                       Parameteriv              buffer w/o attachments
+    FRAMEBUFFER_DEFAULT_HEIGHT    Z+   GetFramebuffer-    0     default height of frame-  4.4.1     -
+                                       Parameteriv              buffer w/o attachments
+    FRAMEBUFFER_DEFAULT_LAYERS    Z+   GetFramebuffer-    0     default layer count of    4.4.1     -
+                                       Parameteriv              framebuffer w/o
+                                                                attachments
+    FRAMEBUFFER_DEFAULT_SAMPLES   Z+   GetFramebuffer-    0     default sample count of   4.4.1     -
+                                       Parameteriv              framebuffer w/o
+                                                                attachments
+    FRAMEBUFFER_DEFAULT_FIXED_    B    GetFramebuffer-  FALSE   default sample location   4.4.1     -
+      SAMPLE_LOCATIONS                 Parameteriv              pattern of framebuffer
+                                                                w/o attachments
+
+
+New Implementation Dependent State
+
+    Get Value                         Type  Get Command    Minimum Value  Description                Sec.
+    -----------------------           ----  -----------    -------------  -------------------------  -----
+    MAX_FRAMEBUFFER_WIDTH             Z+    GetIntegerv    16384 (*)      maximum width for          4.4.1
+                                                                          framebuffer object
+    MAX_FRAMEBUFFER_HEIGHT            Z+    GetIntegerv    16384 (*)      maximum height for         4.4.1
+                                                                          framebuffer object
+    MAX_FRAMEBUFFER_LAYERS            Z+    GetIntegerv    2048 (*)       maximum layer count for    4.4.1
+                                                                          layered framebuffer object
+    MAX_FRAMEBUFFER_SAMPLES           Z+    GetIntegerv    4 (*)          maximum sample count for   4.4.1
+                                                                          framebuffer object
+
+    (*) Note:  These minimum values are the ones applicable to this extension
+    on top of OpenGL 4.2 and higher.  The minimum values may be lower on
+    implementations supporting only older versions of OpenGL.  For
+    implementations supporting this extension on older versions, the minimums
+    can be determined from the table below.
+
+      the minimum for           is the minimum defined for
+      -----------------------   --------------------------
+      MAX_FRAMEBUFFER_WIDTH     MAX_TEXTURE_SIZE
+      MAX_FRAMEBUFFER_HEIGHT    MAX_TEXTURE_SIZE
+      MAX_FRAMEBUFFER_LAYERS    MAX_ARRAY_TEXTURE_LAYERS
+      MAX_FRAMEBUFFER_SAMPLES   MAX_SAMPLES
+
+Issues
+
+    (1) Should we specify the default framebuffer parameters in one command or
+        via separate FramebufferParameter* commands?
+
+      RESOLVED:  Separate parameters provide for a more future-proof API, in
+      case we need new defaults in the future.
+
+    (2) Should the default framebuffer parameters affect only framebuffers
+        with no attachments?
+
+      RESOLVED:  As specified, they affect only framebuffers with no
+      attachments.
+
+      Alternately, one could have treated these default parameters as
+      specifying an extra unusable attachment whose values would be used in
+      various intersection/consistency tests.  In that approach, if a
+      framebuffer had a single attachment and default parameters were also
+      specified:
+
+        * the renderable area would be the intersection of the rectangle/layer
+          count derived from the attachment and the rectangle/layer count from
+          the framebuffer defaults;
+
+        * the sample count and fixed sample location state would have to match
+          between the attachment and framebuffer default.
+
+      This specification is not using such an "intersection" approach, which
+      doesn't seem to introduce significant value.
+
+    (3) Should we check the default framebuffer parameters against
+        implementation-dependent limits when they are specified, when testing
+        for completeness, or both?
+
+      RESOLVED:  We will expose implementation-dependent limits on the maximum
+      framebuffer width, height, layer count, and sample count, and check the
+      values passed the FramebufferParameteri against them.
+
+      As specified, implementations are required to support all legal
+      combinations of default framebuffer width, height, sample count, and
+      layer count as long as they are under their respective implementation
+      limits.  This requirement could be a problem if a hypothetical
+      implementation could support larger values for one default parameter as
+      long as others stayed small.  For example, if an implementation could
+      support a 64Kx64K single-sample framebuffer, but could only support a
+      16Kx16K framebuffer with 8 samples, this extension would only permit
+      them to expose a maximum width/height of 16K.  The most obvious way to
+      support this would be to add a feature allowing larger default sizes,
+      but treating a framebuffer with an unsupported combination (e.g.,
+      64Kx64K at 8xAA) as incomplete.  Such a capability will not be
+      incorporated into this extension, however.
+
+    (4) How do the new implementation-dependent limits for maximum framebuffer
+        width, height, layer count, and sample count affect framebuffers with
+        attachments?
+
+      RESOLVED:  If implementation limits permit the creation of attachable
+      surfaces larger than the maximum framebuffer size, such images will be
+      considered not to be framebuffer attachment complete.  We don't expect
+      this to be a common case, as the minimum maximums for framebuffer sizes
+      equals the minimum maximums for texture sizes.
+
+    (5) The ClampColor setting FIXED_ONLY depends on the framebuffer.  How is
+        this value intepreted in a framebuffer with no attachments?
+
+      RESOLVED:  Given current spec language, clamping should be enabled in
+      this case, as there are no enabled color buffers with non-fixed-point
+      components:
+
+        If clamp is FIXED_ONLY, fragment color clamping is enabled if
+        all enabled color buffers have fixed-point components.
+
+      This isn't really a new issue in this extension; it could also arise
+      when using a complete framebuffer with no color attachments.
+
+      Note that this issue has no effect on the core profile of OpenGL.
+      CLAMP_VERTEX_COLOR and CLAMP_FRAGMENT_COLOR are compatibility-only.
+      CLAMP_READ_COLOR has no effect as ReadPixels will always generate an
+      error due to the lack of framebuffer attachments.
+
+    (6) What should be returned on the compatibility profile queries of
+        RED_BITS, GREEN_BITS, BLUE_BITS, and ALPHA_BITS on a framebuffer with
+        no attachments?
+
+      RESOLVED:  Zero should be returned, which is also the case for
+      DEPTH_BITS and STENCIL_BITS.  As in issue (5), this isn't a new issue in
+      this spec.
+
+Revision History
+
+    Revision 5, May 7, 2015 (Jon Leech)
+      - Restore missing cube map arrays to new framebuffer attachment
+        completeness conditions (Bug 11201).
+
+    Revision 4, September 12, 2012 (Jon Leech)
+      - Clarify legal <target> values (Bug 9344).
+
+    Revision 3, June 4, 2012 (pbrown)
+      - Mark issues (4) through (6) as resolved.
+
+    Revision 2, June 1, 2012 (pbrown)
+      - Add new implementation-dependent limits on framebuffer width, height,
+        layer count, and sample count.
+      - Assign enumerant values for all the new tokens.
+      - Specify that the default framebuffer parameters are error-checked
+        against the new implementation limits.
+      - Add new checks treating framebuffer attachments as incomplete in the
+        unlikely event that they exceed the new implementation limits.
+      - Mark issues (1) through (3) as resolved.
+      - Add new issues (4) through (6).
+      - Add overview text.
+
+    Revision 1, May 14, 2012 (pbrown)
+      - Initial revision, for discussion purposes.

@@ -982,53 +982,22 @@ class AtomicPointers
   protected:
     static constexpr std::string_view kPass = "<PASS>";
 
-    bool IsAtomicStoreMinMax(wgsl::BuiltinFn fn) {
-        return fn == wgsl::BuiltinFn::kAtomicStoreMax || fn == wgsl::BuiltinFn::kAtomicStoreMin;
-    }
-
     ast::Type Ptr() {
         auto address_space = std::get<2>(GetParam());
         if (address_space == storage) {
-            auto fn1 = std::get<0>(GetParam());
-            if (IsAtomicStoreMinMax(fn1)) {
-                return ty.ptr<storage, atomic<vec2u>, read_write>();
-            }
             return ty.ptr<storage, atomic<i32>, read_write>();
-        } else {
-            return ty.ptr<atomic<i32>>(address_space);
         }
+        return ty.ptr<atomic<i32>>(address_space);
     }
 
     void SetUp() override {
-        auto fn1 = std::get<0>(GetParam());
-        auto fn2 = std::get<1>(GetParam());
-        if (IsAtomicStoreMinMax(fn1) && IsAtomicStoreMinMax(fn2)) {
-            Enable(wgsl::Extension::kAtomicVec2UMinMax);
-        }
-        if (IsAtomicStoreMinMax(fn1) != IsAtomicStoreMinMax(fn2)) {
-            // AtomicStoreMin/Max requires the same type (vec2u)
-            GTEST_SKIP();
-        }
-
         auto address_space = std::get<2>(GetParam());
         if (address_space == storage) {
-            {
-                auto type_of_atomic =
-                    IsAtomicStoreMinMax(fn1) ? ty.Of<atomic<vec2u>>() : ty.Of<atomic<i32>>();
-                GlobalVar("v1", address_space, read_write, type_of_atomic,  //
-                          Binding(0_a), Group(0_a));
-            }
-            {
-                auto type_of_atomic =
-                    IsAtomicStoreMinMax(fn1) ? ty.Of<atomic<vec2u>>() : ty.Of<atomic<i32>>();
-                GlobalVar("v2", address_space, read_write, type_of_atomic,  //
-                          Binding(1_a), Group(0_a));
-            }
+            GlobalVar("v1", address_space, read_write, ty.Of<atomic<i32>>(),  //
+                      Binding(0_a), Group(0_a));
+            GlobalVar("v2", address_space, read_write, ty.Of<atomic<i32>>(),  //
+                      Binding(1_a), Group(0_a));
         } else {
-            // Workgroup memory is not supported by vec2u atomic operations
-            if (IsAtomicStoreMinMax(fn1)) {
-                GTEST_SKIP();
-            }
             GlobalVar("v1", address_space, ty.Of<atomic<i32>>());
             GlobalVar("v2", address_space, ty.Of<atomic<i32>>());
         }
@@ -1046,8 +1015,6 @@ class AtomicPointers
             case wgsl::BuiltinFn::kAtomicXor:
             case wgsl::BuiltinFn::kAtomicExchange:
             case wgsl::BuiltinFn::kAtomicCompareExchangeWeak:
-            case wgsl::BuiltinFn::kAtomicStoreMin:
-            case wgsl::BuiltinFn::kAtomicStoreMax:
                 return true;
             default:
                 return false;
@@ -1074,9 +1041,6 @@ class AtomicPointers
             case wgsl::BuiltinFn::kAtomicXor:
             case wgsl::BuiltinFn::kAtomicExchange:
                 return CallStmt(Call(fn, ptr, 42_a));
-            case wgsl::BuiltinFn::kAtomicStoreMin:
-            case wgsl::BuiltinFn::kAtomicStoreMax:
-                return CallStmt(Call(fn, ptr, Call<vec2<u32>>(1_u, 1_u)));
             case wgsl::BuiltinFn::kAtomicCompareExchangeWeak:
                 return CallStmt(Call(fn, ptr, 10_a, 42_a));
             default:
@@ -1084,7 +1048,7 @@ class AtomicPointers
         }
     }
 
-    std::string Run() {
+    std::string RunAnalysis() {
         if (r()->Resolve()) {
             return std::string(kPass);
         }
@@ -1119,7 +1083,7 @@ TEST_P(AtomicPointers, CallDirect) {
              CallBuiltin(builtin_b, "p2"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1168,7 +1132,7 @@ TEST_P(AtomicPointers, CallThroughChain) {
              CallBuiltin(builtin_b, "p2"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1217,7 +1181,7 @@ TEST_P(AtomicPointers, ReadWriteAcrossDifferentFunctions) {
              CallBuiltin(builtin_b, "p"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1233,8 +1197,6 @@ std::array kAtomicFns{
     wgsl::BuiltinFn::kAtomicXor,
     wgsl::BuiltinFn::kAtomicExchange,
     wgsl::BuiltinFn::kAtomicCompareExchangeWeak,
-    wgsl::BuiltinFn::kAtomicStoreMin,
-    wgsl::BuiltinFn::kAtomicStoreMax,
 };
 
 INSTANTIATE_TEST_SUITE_P(ResolverAliasAnalysisTest,
@@ -1243,6 +1205,177 @@ INSTANTIATE_TEST_SUITE_P(ResolverAliasAnalysisTest,
                                             ::testing::ValuesIn(kAtomicFns),
                                             ::testing::Values(core::AddressSpace::kWorkgroup,
                                                               core::AddressSpace::kStorage),
+                                            ::testing::Values(true, false)));
+
+////////////////////////////////////////////////////////////////////////////////
+// Atomics Min/Max
+////////////////////////////////////////////////////////////////////////////////
+class AtomicMinMax : public ResolverTestWithParam<
+                         std::tuple<wgsl::BuiltinFn, wgsl::BuiltinFn, bool /* aliased */>> {
+  protected:
+    static constexpr std::string_view kPass = "<PASS>";
+
+    ast::Type Ptr() { return ty.ptr<storage, atomic<vec2u>, read_write>(); }
+
+    void SetUp() override {
+        Enable(wgsl::Extension::kAtomicVec2UMinMax);
+
+        GlobalVar("v1", core::AddressSpace::kStorage, read_write, ty.Of<atomic<vec2u>>(),
+                  Binding(0_a), Group(0_a));
+        GlobalVar("v2", core::AddressSpace::kStorage, read_write, ty.Of<atomic<vec2u>>(),
+                  Binding(1_a), Group(0_a));
+    }
+
+    const ast::Statement* CallBuiltin(wgsl::BuiltinFn fn, std::string_view ptr) {
+        return CallStmt(Call(fn, ptr, Call<vec2<u32>>(1_u, 1_u)));
+    }
+
+    std::string RunAnalysis() {
+        if (r()->Resolve()) {
+            return std::string(kPass);
+        }
+        return r()->error();
+    }
+};
+
+TEST_P(AtomicMinMax, CallDirect) {
+    // var<storage> v1 : atomic<i32>;
+    // var<storage> v2 : atomic<i32>;
+    //
+    // fn caller() {
+    //    callee(&v1, aliased ? &v1 : &v2);
+    // }
+    //
+    // fn callee(p1 : PTR, p2 : PTR) {
+    //   <builtin-a>(p1);
+    //   <builtin-b>(p2);
+    // }
+    auto [builtin_a, builtin_b, aliased] = GetParam();
+
+    Func("caller", tint::Empty, ty.void_(),
+         Vector{
+             CallStmt(Call("callee",  //
+                           AddressOf(Source{{12, 34}}, "v1"),
+                           AddressOf(Source{{56, 78}}, aliased ? "v1" : "v2"))),
+         });
+
+    Func("callee", Vector{Param("p1", Ptr()), Param("p2", Ptr())}, ty.void_(),
+         Vector{
+             CallBuiltin(builtin_a, "p1"),
+             CallBuiltin(builtin_b, "p2"),
+         });
+
+    EXPECT_EQ(RunAnalysis(), !aliased ? kPass : R"(56:78 error: invalid aliased pointer argument
+12:34 note: aliases with another argument passed here)");
+}
+
+TEST_P(AtomicMinMax, CallThroughChain) {
+    // var<storage> v1 : atomic<i32>;
+    // var<storage> v2 : atomic<i32>;
+    //
+    // fn caller() {
+    //    callee(&v1, aliased ? &v1 : &v2);
+    // }
+    //
+    // fn f2(p1 : PTR, p2 : PTR) {
+    //    f1(p1, p2);
+    // }
+    //
+    // fn f1(p1 : PTR, p2 : PTR) {
+    //    callee(p1, p2);
+    // }
+    //
+    // fn callee(p1 : PTR, p2 : PTR) {
+    //   <builtin-a>(p1);
+    //   <builtin-b>(p2);
+    // }
+    auto [builtin_a, builtin_b, aliased] = GetParam();
+
+    Func("caller", tint::Empty, ty.void_(),
+         Vector{
+             CallStmt(Call("callee",  //
+                           AddressOf(Source{{12, 34}}, "v1"),
+                           AddressOf(Source{{56, 78}}, aliased ? "v1" : "v2"))),
+         });
+
+    Func("f2", Vector{Param("p1", Ptr()), Param("p2", Ptr())}, ty.void_(),
+         Vector{
+             CallStmt(Call("f1", "p1", "p2")),
+         });
+
+    Func("f1", Vector{Param("p1", Ptr()), Param("p2", Ptr())}, ty.void_(),
+         Vector{
+             CallStmt(Call("callee", "p1", "p2")),
+         });
+
+    Func("callee", Vector{Param("p1", Ptr()), Param("p2", Ptr())}, ty.void_(),
+         Vector{
+             CallBuiltin(builtin_a, "p1"),
+             CallBuiltin(builtin_b, "p2"),
+         });
+
+    EXPECT_EQ(RunAnalysis(), !aliased ? kPass : R"(56:78 error: invalid aliased pointer argument
+12:34 note: aliases with another argument passed here)");
+}
+
+TEST_P(AtomicMinMax, ReadWriteAcrossDifferentFunctions) {
+    // var<storage> v1 : atomic<i32>;
+    // var<storage> v2 : atomic<i32>;
+    //
+    // fn caller() {
+    //   f(&v1, aliased ? &v1 : &v2);
+    // }
+    //
+    // fn f(p1 : PTR, p2 : PTR) {
+    //    f1(p1);
+    //    f2(p2);
+    // }
+    //
+    // fn f1(p : PTR) {
+    //   <builtin-a>(p);
+    // }
+    //
+    // fn f2(p : PTR) {
+    //   <builtin-b>(p);
+    // }
+    auto [builtin_a, builtin_b, aliased] = GetParam();
+
+    Func("caller", tint::Empty, ty.void_(),
+         Vector{
+             CallStmt(Call("f",  //
+                           AddressOf(Source{{12, 34}}, "v1"),
+                           AddressOf(Source{{56, 78}}, aliased ? "v1" : "v2"))),
+         });
+
+    Func("f", Vector{Param("p1", Ptr()), Param("p2", Ptr())}, ty.void_(),
+         Vector{
+             CallStmt(Call("f1", "p1")),
+             CallStmt(Call("f2", "p2")),
+         });
+
+    Func("f1", Vector{Param("p", Ptr())}, ty.void_(),
+         Vector{
+             CallBuiltin(builtin_a, "p"),
+         });
+
+    Func("f2", Vector{Param("p", Ptr())}, ty.void_(),
+         Vector{
+             CallBuiltin(builtin_b, "p"),
+         });
+
+    EXPECT_EQ(RunAnalysis(), !aliased ? kPass : R"(56:78 error: invalid aliased pointer argument
+12:34 note: aliases with another argument passed here)");
+}
+
+std::array kAtomicMinMaxFns{
+    wgsl::BuiltinFn::kAtomicStoreMin,
+    wgsl::BuiltinFn::kAtomicStoreMax,
+};
+
+INSTANTIATE_TEST_SUITE_P(ResolverAliasAnalysisTest,
+                         AtomicMinMax,
+                         ::testing::Combine(::testing::ValuesIn(kAtomicMinMaxFns),
+                                            ::testing::ValuesIn(kAtomicMinMaxFns),
                                             ::testing::Values(true, false)));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1293,7 +1426,7 @@ class WorkgroupUniformLoad
         return !fail;
     }
 
-    std::string Run() {
+    std::string RunAnalysis() {
         if (r()->Resolve()) {
             return std::string(kPass);
         }
@@ -1330,7 +1463,7 @@ TEST_P(WorkgroupUniformLoad, CallDirect) {
              Do(action_b, "p2"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1383,7 +1516,7 @@ TEST_P(WorkgroupUniformLoad, CallThroughChain) {
              Do(action_b, "p2"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1427,7 +1560,7 @@ TEST_P(WorkgroupUniformLoad, ReadWriteAcrossDifferentFunctions) {
 
     Func("f2", Vector{Param("p", ty.ptr<workgroup, i32>())}, ty.void_(), Vector{Do(action_b, "p")});
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1486,13 +1619,15 @@ class SubgroupMatrixTest : public ResolverTestWithParam<std::tuple<SubgroupMatri
                 return Assign(Phony(),
                               Call(Ident(wgsl::BuiltinFn::kSubgroupMatrixLoad,
                                          ty.subgroup_matrix(core::SubgroupMatrixKind::kResult,
-                                                            ty.f32(), 8, 8)),
-                                   ptr, 0_u, false, 8_u));
+                                                            ty.f32(), 8, 8),
+                                         core::Majorness::kRowMajor),
+                                   ptr, 0_u, 8_u));
             case SubgroupMatrixAction::kStore:
                 return CallStmt(Call(
-                    wgsl::BuiltinFn::kSubgroupMatrixStore, ptr, 0_u,
+                    Ident(wgsl::BuiltinFn::kSubgroupMatrixStore, core::Majorness::kRowMajor), ptr,
+                    0_u,
                     Call(ty.subgroup_matrix(core::SubgroupMatrixKind::kResult, ty.f32(), 8, 8)),
-                    false, 8_u));
+                    8_u));
         }
         return nullptr;
     }
@@ -1507,7 +1642,7 @@ class SubgroupMatrixTest : public ResolverTestWithParam<std::tuple<SubgroupMatri
         return !fail;
     }
 
-    std::string Run() {
+    std::string RunAnalysis() {
         if (r()->Resolve()) {
             return std::string(kPass);
         }
@@ -1542,7 +1677,7 @@ TEST_P(SubgroupMatrixTest, CallDirect) {
              Do(action_b, "p2"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1591,7 +1726,7 @@ TEST_P(SubgroupMatrixTest, CallThroughChain) {
              Do(action_b, "p2"),
          });
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 
@@ -1634,7 +1769,7 @@ TEST_P(SubgroupMatrixTest, ReadWriteAcrossDifferentFunctions) {
 
     Func("f2", Vector{Param("p", Ptr())}, ty.void_(), Vector{Do(action_b, "p")});
 
-    EXPECT_EQ(Run(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
+    EXPECT_EQ(RunAnalysis(), ShouldPass() ? kPass : R"(56:78 error: invalid aliased pointer argument
 12:34 note: aliases with another argument passed here)");
 }
 

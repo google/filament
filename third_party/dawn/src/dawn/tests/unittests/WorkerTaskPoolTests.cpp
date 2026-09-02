@@ -28,8 +28,8 @@
 #include <memory>
 
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/tests/MockCallback.h"
 #include "gtest/gtest.h"
+#include "src/dawn/tests/MockCallback.h"
 
 namespace dawn {
 namespace {
@@ -46,6 +46,11 @@ class WorkerTaskPoolTests : public testing::Test {
     platform::Platform platform;
     std::unique_ptr<platform::WorkerTaskPool> pool;
 };
+
+// Verifies that clients can create Dawn's default worker task pool with a custom thread count.
+TEST(WorkerTaskPoolFactoryTests, CreateDawnDefault) {
+    EXPECT_THAT(platform::WorkerTaskPool::CreateDawnDefault(1), NotNull());
+}
 
 // Verifies that a task does work on another thread and we can wait on it.
 TEST_F(WorkerTaskPoolTests, PostTask) {

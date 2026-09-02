@@ -34,12 +34,12 @@
 #include <string>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/LinkedList.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/LinkedList.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 

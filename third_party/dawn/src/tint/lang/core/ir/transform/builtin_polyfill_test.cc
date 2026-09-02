@@ -40,6 +40,8 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 class IR_BuiltinPolyfillTest : public TransformTest {
   protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
+
     /// Helper to build a function that calls a builtin with the given result and argument types.
     /// @param builtin the builtin to call
     /// @param result_ty the result type of the builtin call
@@ -1245,6 +1247,80 @@ TEST_F(IR_BuiltinPolyfillTest, Degrees_Vec4F16) {
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(IR_BuiltinPolyfillTest, Distance_Scalar_F16) {
+    auto* arg1 = b.FunctionParam("arg1", ty.f16());
+    auto* arg2 = b.FunctionParam("arg2", ty.f16());
+    auto* func = b.Function("foo", ty.f16());
+    func->SetParams({arg1, arg2});
+
+    b.Append(func->Block(), [&] {
+        auto* result = b.Call(ty.f16(), core::BuiltinFn::kDistance, arg1, arg2);
+        b.Return(func, result);
+    });
+
+    auto* src = R"(
+%foo = func(%arg1:f16, %arg2:f16):f16 {
+  $B1: {
+    %4:f16 = distance %arg1, %arg2
+    ret %4
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%arg1:f16, %arg2:f16):f16 {
+  $B1: {
+    %4:f16 = sub %arg1, %arg2
+    %5:f16 = abs %4
+    ret %5
+  }
+}
+)";
+
+    BuiltinPolyfillConfig config;
+    config.distance_scalar_float = true;
+    Run(BuiltinPolyfill, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_BuiltinPolyfillTest, Length_Scalar_F16) {
+    auto* arg = b.FunctionParam("arg", ty.f16());
+    auto* func = b.Function("foo", ty.f16());
+    func->SetParams({arg});
+
+    b.Append(func->Block(), [&] {
+        auto* result = b.Call(ty.f16(), core::BuiltinFn::kLength, arg);
+        b.Return(func, result);
+    });
+
+    auto* src = R"(
+%foo = func(%arg:f16):f16 {
+  $B1: {
+    %3:f16 = length %arg
+    ret %3
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%arg:f16):f16 {
+  $B1: {
+    %3:f16 = abs %arg
+    ret %3
+  }
+}
+)";
+
+    BuiltinPolyfillConfig config;
+    config.length_scalar_float = true;
+    Run(BuiltinPolyfill, config);
+
+    EXPECT_EQ(expect, str());
+}
+
 TEST_F(IR_BuiltinPolyfillTest, Distance_Scalar_F32) {
     Build(core::BuiltinFn::kDistance, ty.f32(), Vector{ty.f32(), ty.f32()});
     auto* src = R"(
@@ -1268,7 +1344,7 @@ TEST_F(IR_BuiltinPolyfillTest, Distance_Scalar_F32) {
     EXPECT_EQ(src, str());
 
     BuiltinPolyfillConfig config;
-    config.distance_scalar_f32 = true;
+    config.distance_scalar_float = true;
     Run(BuiltinPolyfill, config);
     EXPECT_EQ(expect, str());
 }
@@ -1288,7 +1364,7 @@ TEST_F(IR_BuiltinPolyfillTest, Distance_Vec2F32_NoPolyfill) {
     EXPECT_EQ(src, str());
 
     BuiltinPolyfillConfig config;
-    config.distance_scalar_f32 = true;
+    config.distance_scalar_float = true;
     Run(BuiltinPolyfill, config);
     EXPECT_EQ(expect, str());
 }
@@ -1315,7 +1391,7 @@ TEST_F(IR_BuiltinPolyfillTest, Length_Scalar_F32) {
     EXPECT_EQ(src, str());
 
     BuiltinPolyfillConfig config;
-    config.length_scalar_f32 = true;
+    config.length_scalar_float = true;
     Run(BuiltinPolyfill, config);
     EXPECT_EQ(expect, str());
 }
@@ -1335,7 +1411,7 @@ TEST_F(IR_BuiltinPolyfillTest, Length_Vec2F32_NoPolyfill) {
     EXPECT_EQ(src, str());
 
     BuiltinPolyfillConfig config;
-    config.length_scalar_f32 = true;
+    config.length_scalar_float = true;
     Run(BuiltinPolyfill, config);
     EXPECT_EQ(expect, str());
 }
@@ -3063,6 +3139,9 @@ TEST_F(IR_BuiltinPolyfillTest, Dot4U8Packed) {
 }
 
 class IR_SubgroupBroadcastPolyfillTest : public TransformTest {
+  public:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
+
   protected:
     /// Helper to build a function that calls subgroupBroadcast with the given type.
     /// @param type the type

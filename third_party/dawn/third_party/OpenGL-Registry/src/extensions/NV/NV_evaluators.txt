@@ -1,0 +1,924 @@
+Name
+
+    NV_evaluators
+
+Name Strings
+
+    GL_NV_evaluators
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2000, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Discontinued.
+
+    NVIDIA no longer supports this extension in driver updates after
+    November 2002.  Instead, use conventional OpenGL evaluators or
+    tessellate surfaces within your application.
+
+Version
+
+    NVIDIA Date: January 3, 2003
+    $Date$ $Revision$
+    $Id: //sw/main/docs/OpenGL/specs/old/GL_NV_evaluators.txt#2 $
+
+Number
+
+    225
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+    Assumes support for the ARB_multitexture extension.
+
+    NV_vertex_program affects the definition of this extension.
+
+Overview
+
+    OpenGL evaluators provide applications with the capability to
+    specify polynomial or rational curves and surfaces using control
+    points relative to the Bezier basis.  The curves and surfaces are
+    then drawn by evaluating the polynomials provided at various values
+    for the u parameter of a curve or the (u,v) parameters of a surface.
+    A tensor product formulation is used for the surfaces.
+
+    For various historical reasons, evaluators have not been
+    particularly popular as an interface for drawing curves and surfaces.
+    This extension proposes a new interface for surfaces that provides a
+    number of significant enhancements to the functionality provided by
+    the original OpenGL evaluators.
+
+    Many implementations never optimized evaluators, so applications
+    often implemented their own algorithms instead.  This extension
+    relaxes some restrictions that make it difficult to optimize
+    evaluators.
+
+    Also, new vertex attributes have been added to OpenGL through
+    extensions, including multiple sets of texture coordinates, a
+    secondary color, a fog coordinate, a vertex weight, and others.
+    The extensions which added these vertex attributes never bothered
+    to update the functionality of evaluators, since they were used so
+    little in the first place.  In turn, evaluators have become more and
+    more out of date, making it even less likely that developers will
+    want to use them.  Most of the attributes are not a big loss, but
+    support for multiple sets of texture coordinates would be absolutely
+    essential to developers considering the use of evaluators.
+
+    OpenGL evaluators only support rectangular patches, not triangular
+    patches.  Although triangular patches can be converted into
+    rectangular patches, direct support for triangular patches is likely
+    to be more efficient.
+
+    The tessellation algorithm used is too inflexible for most purposes;
+    only the number of rows and columns can be specified.  Adjacent
+    patches must then have identical numbers of rows and columns, or
+    severe cracking will occur.  Ideally, a number of subdivisions could
+    be specified for all four sides of a rectangular patch and for all
+    three of a triangular patch.  This extension goes one step further
+    and allows those numbers to be specified in floating-point, providing
+    a mechanism for smoothly changing the level of detail of the surface.
+
+    Meshes evaluated with EvalMesh are required to match up exactly
+    with equivalent meshes evaluated with EvalCoord or EvalPoint.
+    This makes it difficult or impossible to use optimizations such as
+    forward differencing.
+
+    Finally, little attention is given to some of the difficult problems
+    that can arise when multiple patches are drawn.  Depending on the
+    way evaluators are implemented, and depending on the orientation of
+    edges, numerical accuracy problems can cause cracks to appear between
+    patches with the same boundary control points.  This extension makes
+    guarantees that an edge shared between two patches will match up
+    exactly under certain conditions.
+
+Issues
+
+    *   Should one-dimensional evaluators be supported?
+
+        RESOLVED: No.  This extension is intended for surfaces only.
+
+    *   Should we support triangular patches?
+
+        RESOLVED: Yes.  Otherwise, applications will have to convert
+        them to rectangular patches themselves.  We can do this more
+        efficiently.
+
+    *   What domain should triangular patches be defined on?
+
+        RESOLVED: (0,0),(1,0),(0,1).
+
+    *   What memory layout should we use for triangular patch control
+        points?
+
+        RESOLVED: Both a[i][j], where i+j <= n, and a packed format are
+        supported.
+
+    *   Is it worth it to have "evaluator objects"?
+
+        RESOLVED: No.  We will leave these out for now.
+
+    *   Should we support the original evaluators' ability to specify
+        a map from an arbitrary (u1,v1) to an arbitrary (u2,v2)?
+
+        RESOLVED: No.  Maps will always extend from (0,0) to (1,1)
+        and will always be evaluated from (0,0) to (1,1).
+
+    *   Should the new interface support an EvalCoord-like syntax?
+
+        RESOLVED: No.  We are only interested in evaluating an entire
+        mesh at once.
+
+    *   Should we support the "mode" parameter to the existing EvalMesh2,
+        which allows the mesh to be tessellated in wireframe or as points?
+
+        RESOLVED: No.  We will leave in the parameter and require that
+        it be FILL, though, to leave room for a future extension.
+
+    *   Should there be a new interface to specify control points or should
+        Map2{fd} be reused?
+
+        RESOLVED: A new interface.  There are enough changes compared to
+        the original evaluators that we can't reuse the old interface
+        without causing more problems.  For example, the target
+        parameter of Map2{fd} is really a cross of target and index
+        in MapControlPointsNV, and so it ends up creating an excessive
+        number of enumerants.
+
+    *   How should grids be specified?
+
+        RESOLVED: A MapParameter command.  This is better than a new
+        MapGrid- style command because it can be extended to include
+        new parameter types.
+
+    *   Should there be any rules about the order of generation of
+        primitives within a single patch?
+
+        RESOLVED: No.  The tessellation algorithm itself is not even
+        specified, so it makes no sense to do this.  Applications must
+        not depend on the order in which the primitives are drawn.
+
+    *   Should the stride for MapControlPointsNV be specified in basic
+        machine units (i.e. unsigned bytes) or in floats/doubles?
+
+        RESOLVED: ubytes.  Most of the rest of OpenGL (vertex arrays,
+        pixel path, etc.) uses ubytes; evaluators are actually
+        inconsistent.
+
+    *   How much leeway should implementations be given to choose their own
+        algorithm for tessellation?
+
+        RESOLVED: The integral tessellation scheme will require a
+        specific tessellation of the boundary edges of the patch, but the
+        interior tessellation is implementation-specific.  The fractional
+        tessellation scheme will only require a minimum number of segments
+        along each edge.  In either case, a minimum number of triangles
+        for the entire patch is specified.
+
+    *   Should there be rules to ensure that the triangles will be
+        oriented in a consistent fashion?
+
+        RESOLVED: Yes.  This is essential for features such as backface
+        culling to work properly.  The rule given ensures that the
+        orientation will be identical to the orientation used for the
+        original evaluators.
+
+    *   Should there be a separate MAX_EVAL_ORDER for rational surfaces?
+
+        RESOLVED: Yes.  Rational surfaces require additional calculation to
+        be done by the implementation, especially if AUTO_NORMAL is
+        enabled.  Furthermore, the most useful rational surfaces are of low
+        order.  For example, all the conic sections are quadratic rational
+        surfaces.
+
+    *   Should there be enables similar to AUTO_NORMAL that generate
+        partials of U (tangents), partials of V, and/or binormals?
+
+        RESOLVED:  No.  The application is responsible for configuring
+        the evaluators appropriately.
+
+        The auto normal functionality is supported because it is fairly
+        complicated and was already a core part of OpenGL for evaluators.
+        Plus there is already a "normal" vertex attribute for it to
+        automatically generate.
+
+        The partials of U and partials of V are fairly straightforward
+        to evaluate (just take the derivative of the bivariate polynomial
+        in terms of either U or V) plus there is not a particular vertex
+        attribute associated with each of these.
+
+New Procedures and Functions
+
+    void MapControlPointsNV(enum target, uint index, enum type,
+                            sizei ustride, sizei vstride,
+                            int uorder, int vorder,
+                            boolean packed,
+                            const void *points)
+
+    void MapParameterivNV(enum target, enum pname, const int *params)
+    void MapParameterfvNV(enum target, enum pname, const float *params)
+
+    void GetMapControlPointsNV(enum target, uint index, enum type,
+                               sizei ustride, sizei vstride,
+                               boolean packed, void *points)
+
+    void GetMapParameterivNV(enum target, enum pname, int *params)
+    void GetMapParameterfvNV(enum target, enum pname, float *params)
+    void GetMapAttribParameterivNV(enum target, uint index, enum pname,
+                                   int *params)
+    void GetMapAttribParameterfvNV(enum target, uint index, enum pname,
+                                   float *params)
+
+    void EvalMapsNV(enum target, enum mode)
+
+New Tokens
+
+    Accepted by the <target> parameter of MapControlPointsNV,
+    MapParameter[if]vNV, GetMapControlPointsNV, GetMapParameter[if]vNV,
+    GetMapAttribParameter[if]vNV, and EvalMapsNV:
+
+        EVAL_2D_NV                            0x86C0
+        EVAL_TRIANGULAR_2D_NV                 0x86C1
+
+    Accepted by the <pname> parameter of MapParameter[if]vNV and
+    GetMapParameter[if]vNV:
+
+        MAP_TESSELLATION_NV                   0x86C2
+
+    Accepted by the <pname> parameter of GetMapAttribParameter[if]vNV:
+
+        MAP_ATTRIB_U_ORDER_NV                 0x86C3
+        MAP_ATTRIB_V_ORDER_NV                 0x86C4
+
+    Accepted by the <cap> parameter of Disable, Enable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        EVAL_FRACTIONAL_TESSELLATION_NV       0x86C5
+
+        EVAL_VERTEX_ATTRIB0_NV                0x86C6
+        EVAL_VERTEX_ATTRIB1_NV                0x86C7
+        EVAL_VERTEX_ATTRIB2_NV                0x86C8
+        EVAL_VERTEX_ATTRIB3_NV                0x86C9
+        EVAL_VERTEX_ATTRIB4_NV                0x86CA
+        EVAL_VERTEX_ATTRIB5_NV                0x86CB
+        EVAL_VERTEX_ATTRIB6_NV                0x86CC
+        EVAL_VERTEX_ATTRIB7_NV                0x86CD
+        EVAL_VERTEX_ATTRIB8_NV                0x86CE
+        EVAL_VERTEX_ATTRIB9_NV                0x86CF
+        EVAL_VERTEX_ATTRIB10_NV               0x86D0
+        EVAL_VERTEX_ATTRIB11_NV               0x86D1
+        EVAL_VERTEX_ATTRIB12_NV               0x86D2
+        EVAL_VERTEX_ATTRIB13_NV               0x86D3
+        EVAL_VERTEX_ATTRIB14_NV               0x86D4
+        EVAL_VERTEX_ATTRIB15_NV               0x86D5
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_MAP_TESSELLATION_NV               0x86D6
+        MAX_RATIONAL_EVAL_ORDER_NV            0x86D7
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+ --  NEW Section 5.7 "General Evaluators"
+
+    "General evaluators are similar to evaluators in that they can
+    be used to evaluate polynomial and rational mappings, but general
+    evaluators have several new features that the original evaluators
+    do not.  First, they support triangular surfaces in addition to
+    (quadrilateral) tensor product surfaces.  Second, the tessellation
+    can be varied continuously as well as in integral steps.  Finally,
+    general evaluators can evaluate all vertex attributes, not just the
+    vertex, color, normal, and texture coordinates.
+
+    Several elements of the original evaluators have been removed in
+    the general evaluators interface.  The general evaluators always
+    evaluate four components in parallel, whereas the original evaluators
+    might evaluate between 1 and 4 (see the "k" column in Table 5.1 on
+    page 165).  The original evaluators can map on an arbitrary domain
+    and can map grids on an arbitrary region, whereas the general
+    evaluators only use the [0,1] range.  Support for 1D evaluators,
+    an EvalCoord-style interface, and the "mode" parameter of EvalMesh*
+    has also been removed from the general evaluators.
+
+    The command
+
+      void MapControlPointsNV(enum target, uint index, enum type,
+                              sizei ustride, sizei vstride,
+                              int uorder, int vorder, boolean packed,
+                              const void *points);
+
+    specifies control points for a general evaluator map.  target
+    is the type of evaluator map and can be either EVAL_2D_NV or
+    EVAL_TRIANGULAR_2D_NV.  index is the number of the vertex attribute
+    register the map will be used to evaluate for; these are the same
+    indices used in the GL_NV_vertex_program extension.  Table X.1
+    shows the relationship between these indices and the conventional
+    per-vertex attributes for implementations that do not support
+    GL_NV_vertex_program.
+
+Vertex
+Attribute  Conventional                                              Conventional
+Register   Per-vertex        Conventional                            Component
+Number     Parameter         Per-vertex Parameter Command            Mapping
+---------  ---------------   --------------------------------------  ------------
+ 0         vertex position   Vertex                                  x,y,z,w
+ 1         vertex weights    VertexWeightEXT                         w,0,0,1
+ 2         normal            Normal                                  x,y,z,1
+ 3         primary color     Color                                   r,g,b,a
+ 4         secondary color   SecondaryColorEXT                       r,g,b,1
+ 5         fog coordinate    FogCoordEXT                             fc,0,0,1
+ 6         -                 -                                       -
+ 7         -                 -                                       -
+ 8         texture coord 0   MultiTexCoordARB(GL_TEXTURE0_ARB, ...)  s,t,r,q
+ 9         texture coord 1   MultiTexCoordARB(GL_TEXTURE1_ARB, ...)  s,t,r,q
+ 10        texture coord 2   MultiTexCoordARB(GL_TEXTURE2_ARB, ...)  s,t,r,q
+ 11        texture coord 3   MultiTexCoordARB(GL_TEXTURE3_ARB, ...)  s,t,r,q
+ 12        texture coord 4   MultiTexCoordARB(GL_TEXTURE4_ARB, ...)  s,t,r,q
+ 13        texture coord 5   MultiTexCoordARB(GL_TEXTURE5_ARB, ...)  s,t,r,q
+ 14        texture coord 6   MultiTexCoordARB(GL_TEXTURE6_ARB, ...)  s,t,r,q
+ 15        texture coord 7   MultiTexCoordARB(GL_TEXTURE7_ARB, ...)  s,t,r,q
+
+Table X.1:  Aliasing of vertex attributes with conventional per-vertex
+parameters.
+
+    type is either FLOAT or DOUBLE.  ustride and vstride are the numbers
+    of basic machine units (typically unsigned bytes) between control
+    points in the u and v directions.  uorder and vorder have the same
+    meaning they do in the Map2{fd} command.  The error INVALID_VALUE
+    is generated if either uorder or vorder is less than one or greater
+    than MAX_EVAL_ORDER.  The error INVALID_OPERATION is generated if
+    target is EVAL_TRIANGULAR_2D_NV and uorder is not equal to vorder.
+
+    points is a pointer to an array of control points.  If target is
+    EVAL_2D_NV, there are uorder*vorder control points in the array,
+    and if it is EVAL_TRIANGULAR_2D_NV, there are uorder*(uorder+1)/2
+    points in the array.  If packed is FALSE, control point i,j is
+    located
+
+        (ustride)i + (vstride)j
+
+    basic machine units from points.  If target is EVAL_2D_NV, i ranges
+    from 0 to uorder-1, and j ranges from 0 to vorder-1.  If target is
+    EVAL_TRIANGULAR_2D_NV, i and j range from 0 to uorder-1, and i+j
+    must be less than or equal to uorder-1.
+
+    If packed is TRUE and target is EVAL_2D_NV, control point i,j is
+    located
+
+        (ustride)(j*uorder + i)
+
+    basic machine units from points.  If packed is TRUE and target is
+    EVAL_TRIANGULAR_2D_NV, control point i,j is located
+
+        (ustride)(j*uorder + i - j*(j-1)/2)
+
+    basic machine units from points.
+
+    The error INVALID_OPERATION is generated if index is 0, one of the
+    control points' fourth components is not equal to 1, and either uorder
+    of vorder is greater than MAX_RATIONAL_EVAL_ORDER_NV.
+
+    The evaluation of a 2D tensor product map is performed in the same
+    way as for the original evaluators.  The exact coordinates produced
+    by the original evaluators may differ from those produced by the
+    general evaluators, since different algorithms may be used.
+
+    A triangular map may be evaluated as follows.  Let Ri,j be the
+    4-component vector for control point i,j and n be the degree of the
+    patch (i.e.  uorder-1).  Then:
+
+                   ---
+                   \  (n) (n-i)  i  j        n-i-j
+        p_t(u,v) = /  (i) ( j ) u  v  (1-u-v)      Ri,j
+                   ---
+                i,j >= 0
+                i+j <= n
+
+    evaluates the point p_t(u,v) on the triangular patch at parameter
+    values (u,v).  (The notation on the left indicates "n choose i" and
+    "n minus i choose j", i.e., binomial coefficients.)
+
+    The evaluation of any particular attribute can be enabled or disabled
+    with Enable and Disable using one of the EVAL_VERTEX_ATTRIBi_NV
+    constants.
+
+    If AUTO_NORMAL is enabled (see section 5.1), analytically computed
+    normals are evaluated as well.  The formula for the normal is the same
+    as the one in section 5.1, except that the magnitude of the normals is
+    undefined.  These normals should be renormalized by enabling NORMALIZE,
+    or by normalizing them in a vertex program.  The w of the normal
+    vertex attribute will always be 1.
+
+    The commands
+
+      void MapParameter{if}vNV(enum target, enum pname, T params);
+
+    can be used to specify the level of tessellation to evaluate,
+    where target is EVAL_2D_NV or EVAL_TRIANGULAR_2D_NV and pname is
+    MAP_TESSELLATION_NV.  If target is EVAL_2D_NV, params contains the
+    four values [nu0,nu1,nv0,nv1], and if it is EVAL_TRIANGULAR_2D_NV,
+    params contains the three values [n1,n2,n3].  The state for each
+    target is independent of the other.  These values are clamped to
+    the range [1.0, MAX_MAP_TESSELLATION_NV].
+
+    The use of a fractional tessellation algorithm can be
+    enabled or disabled with Enable and Disable using the
+    EVAL_FRACTIONAL_TESSELLATION_NV constant.  The fractional tessellation
+    algorithm allows the tessellation to smoothly morph without popping
+    as the tessellation parameters are varied by small amounts.
+
+    The command
+
+      void EvalMapsNV(enum target, enum mode);
+
+    evaluates the currently enabled maps.  target is either EVAL_2D_NV
+    or EVAL_TRIANGULAR_2D and specifies which set of maps to evaluate.
+    mode must be FILL.  If EVAL_VERTEX_ATTRIB0_NV is not enabled, the
+    error INVALID_OPERATION results.
+
+    If EVAL_FRACTIONAL_TESSELLATION_NV is disabled, tensor product maps
+    are evaluated such that the boundaries of the mesh are divided into
+    ceil(nu0) segments on the edge from (0,0) to (1,0), ceil(nu1) segments
+    on the edge from (0,1) to (1,1), ceil(nv0) segments on the edge from
+    (0,0) to (0,1), and ceil(nv1) segments on the edge from (1,0) to
+    (1,1).  These segments must be evaluated at equal spacings in (u,v)
+    parameter space.
+
+    Triangular maps are evaluated such that the boundary of the mesh from
+    (0,0) to (1,0) has ceil(n1) equally-spaced segments, the boundary
+    from (1,0) to (0,1) has ceil(n2) equally-spaced segments, and the
+    boundary from (0,1) to (0,0) has ceil(n3) equally-spaced segments.
+
+    If EVAL_FRACTIONAL_TESSELLATION_NV is enabled, each edge must be
+    tessellated with no fewer the number of segments that would be used in
+    the non- fractional case for any values of the tessellation parameters.
+    Furthermore, the tessellation of each edge must vary smoothly with the
+    parameters; that is, a small change in any or all of the parameters
+    must cause a small change in the tessellation.  Whenever a new vertex
+    is introduced into the tessellation, it must be coincident with another
+    vertex, and whenever a vertex is removed, it must have been coincident
+    with a different vertex.  The parameter-space position of any vertex
+    must be a continuous function of the tessellation parameters.
+
+    The same minimum triangle requirements apply to fractional
+    tessellations as to integral tessellations.
+
+    A tensor product patch must always be tessellated with no fewer than
+
+        2 * ceil((nu0+nu1)/2) * ceil((nv0+nv1)/2)
+
+    triangles in total.
+
+    A triangular patch must always be tessellated with no fewer than
+
+        ceil((n1+n2+n3)/3)^2
+
+    triangles in total.
+
+    If a triangle is formed by evaluating the maps at the three
+    coordinates (u1,v1), (u2,v2), and (u3,v3), it must be true that
+
+        (u3-u1)*(v2-v1) - (u2-u1)*(v3-v1) >= 0
+
+    to ensure that all triangles in a patch have a consistent
+    orientation.
+
+    The current value of any vertex attribute for which the evaluation
+    of a map is enabled becomes undefined after an EvalMapsNV command.
+    If AUTO_NORMAL is enabled, the current normal becomes undefined as
+    well.
+
+    If AUTO_NORMAL is enabled, the analytically computed normals take
+    precedence over the currently enabled map for vertex attribute 2
+    (the normal).
+
+    To prevent cracks, certain rules must be established for performing
+    the evaluations.  The goal of these rules is to ensure that no
+    matter what order control points are specified in and what the
+    tessellation parameters are, so long as the control points on any edge
+    exactly match the control points of an adjacent edge, and so long as
+    the subdivision parameter for that edge is the same for the adjacent
+    patch, there will be no cracking artifacts between the two patches.
+    These requirements are completely independent of numerical precision.
+    In particular, we will require that these shared vertices' positions
+    be equal.  Furthermore, there must be no cracking inside the geometry
+    of any patch, and normals must not change in a discontinuous fashion
+    so that there are no discontinuities in lighting or other effects
+    that use the normal.
+
+    Let two patches share an edge of equal order (the order of an edge is
+    the order of the patch in that direction for a tensor product patch,
+    or the order of the patch for a triangular patch).  Then this edge is
+    said to be consistent if all the vertex control points (vertex
+    attribute 0) are identical on each edge (although they may be specified
+    in the opposite direction, or even in a different coordinate; one may
+    an edge in the u direction, and one may be an edge in the v direction).
+
+    If an edge is consistent, and if each of the two patches are
+    tessellated with identical tessellation parameters for that edge,
+    then the vertex coordinates given to vertex processing must be
+    exactly equal for each of the vertices.
+
+    The vertex coordinates given to vertex processing for the corner
+    vertices of any patch must be exactly equal to the values of the
+    corner control points of that patch, regardless of the patch's
+    order, type, tessellation parameters, the state of the AUTO_NORMAL or
+    EVAL_FRACTIONAL_TESSELLATION_NV enables, the control points, order,
+    or enable of any other associated map, or any other OpenGL state.
+
+    The vertex coordinates and normals given to vertex processing for
+    any vertex of a patch must be exactly equal each time that vertex
+    is evaluated during the tessellation of a patch.  Since each vertex
+    is shared between several triangles in the patch, any variation in
+    these coordinates and normals would result in cracks or lighting
+    discontinuities.
+
+    The state required for the general evaluators consists of a bit
+    indicating whether fractional tessellation is enabled or disabled, 16
+    bits indicating whether the evaluation of each vertex attribute is
+    enabled or disabled, four floating-point map tessellation values for
+    tensor product patches, three floating-point map tessellation values
+    for triangular patches, and a map specification for a tensor product
+    patch and a triangular patch for each vertex attribute.  A map
+    specification consists of two integers indicating the order of the
+    map in u and v and a two-dimensional array of vectors of four
+    floating-point values containing the control points for that map.
+    The initial state of fractional tessellation is disabled.  The initial
+    state of evaluation of vertex attribute 0 is enabled, and the initial
+    state of evaluation for any other vertex attribute is disabled.  The
+    initial value of the tessellation parameters is 1.0.  The initial order
+    of each map specification is an order of 1 in both u and v and a
+    single control point of [0,0,0,1]."
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+ --  NEW Section 6.1.13 "General Evaluator Queries"
+
+    "The commands
+
+      void GetMapParameterivNV(enum target, enum pname, int *params);
+      void GetMapParameterfvNV(enum target, enum pname, float *params);
+
+    obtain the parameters for a map target.  target may be one of
+    EVAL_2D_NV or EVAL_TRIANGULAR_2D_NV.  pname must be MAP_TESSELLATION_NV.
+    The map tessellation is placed in params.
+
+    The commands
+
+      void GetMapAttribParameterivNV(enum target, uint index, enum pname,
+                                     int *params);
+      void GetMapAttribParameterfvNV(enum target, uint index, enum pname,
+                                     float *params);
+
+    obtain parameters for a single map.  target may be one of EVAL_2D_NV
+    or EVAL_TRIANGULAR_2D_NV.  index is the number of the vertex attribute
+    register the map is used for evaluating.  If pname is
+    MAP_ATTRIB_U_ORDER_NV, the u order of the map is placed in params.  If
+    pname is MAP_ATTRIB_V_ORDER_NV, the v order of the map is placed in
+    params.
+
+    The command
+
+      void GetMapControlPointsNV(enum target, uint index, enum type,
+                                 sizei ustride, sizei vstride, boolean packed,
+                                 void *points);
+
+    obtains the control points of a map.  target may be one of EVAL_2D_NV
+    or EVAL_TRIANGULAR_2D_NV.  index is the number of the vertex attribute
+    register the map is used for evaluating.  type is either FLOAT or
+    DOUBLE.  ustride and vstride are the numbers of basic machine units
+    (typically unsigned bytes) between control points in the u and v
+    directions.  points is a pointer to an array where the control points
+    are to be written.  If target is EVAL_2D_NV, there are uorder*vorder
+    control points in the array, and if it is EVAL_TRIANGULAR_2D_NV, there
+    are uorder*(uorder+1)/2 points in the array.  If packed is FALSE,
+    control point i,j is located
+
+        (ustride)i + (vstride)j
+
+    basic machine units from points. If packed is TRUE and target is
+    EVAL_2D_NV, control point i,j is located
+
+        (ustride)(j*uorder + i)
+
+    basic machine units from points.  If packed is TRUE and target is
+    EVAL_TRIANGULAR_2D_NV, control point i,j is located
+
+        (ustride)(j*uorder + i - j*(j-1)/2)
+
+    basic machine units from points.  If target is EVAL_2D_NV, i ranges
+    from 0 to uorder-1, and j ranges from 0 to vorder-1.  If target is
+    EVAL_TRIANGULAR_2D_NV, i and j range from 0 to uorder-1, and i+j
+    must be less than or equal to uorder-1."
+
+Additions to the GLX Specification
+
+    Nine new GL commands are added.
+
+    The following three rendering commands are sent to the sever
+    as part of a glXRender request:
+
+      MapParameterivNV
+            2           12+4*n               rendering command length
+            2           ????                 rendering command opcode
+            4           ENUM                 target
+            4           ENUM                 pname
+                        0x86C2               GL_MAP_TESSELLATION_NV
+                                       n=3   if (target == GL_EVAL_TRIANGULAR_2D_NV)
+                                       n=4   if (target == GL_EVAL_2D_NV)
+                        else           n=0   command is erroneous
+            4*n         LISTofINT32          params
+
+
+      MapParameterfvNV
+            2           12+4*n               rendering command length
+            2           ????                 rendering command opcode
+            4           ENUM                 target
+            4           ENUM                 pname
+                        0x86C2               GL_MAP_TESSELLATION_NV
+                                       n=3   if (target == GL_EVAL_TRIANGULAR_2D_NV)
+                                       n=4   if (target == GL_EVAL_2D_NV)
+                        else           n=0   command is erroneous
+            4*n         LISTofFLOAT32        params
+
+
+      EvalMapsNV
+            2           12                   rendering command length
+            2           ????                 rendering command opcode
+            4           ENUM                 target
+            4           ENUM                 mode 
+
+    The following rendering command is potentially large and can be sent
+    in a glXRender or glXRenderLarge request:
+
+      MapControlPointsNV
+            2           24+m               rendering command length
+            2           ????               rendering command opcode
+            4           ENUM               target
+            4           CARD32             index
+            4           CARD32             type
+            4           INT32              uorder
+            4           INT32              vorder
+            m           (see below)        points
+
+        Determine m from the table below; n depends on the target.  If the
+        target is GL_EVAL_2D_NV, then n = uorder*vorder.  If the target
+        is GL_EVAL_TRIANGULAR_2D_NV, then n = uorder * (uorder+1)/2.
+        The points data is packed such that when unpacked by the server,
+        the value of ustride is 16 for GL_FLOAT typed data and 32 for
+        GL_DOUBLE typed data.
+
+         type       encoding of type  type of lists  m (bytes)
+         ---------  ----------------  -------------  ---------
+         GL_FLOAT   0x1406            LISTofFLOAT32  n*4
+         GL_DOUBLE  0x140A            LISTofFLOAT64  n*8
+
+        If the command is encoded in a glXRenderLarge request, the command
+        opcode and command length fields above are expanded to 4 bytes each:
+
+            4           28+m               rendering command length
+            4           ????               rendering command opcode
+
+    The remaining five commands are non-rendering commands.  These commands
+    are sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+        GetMapParameterivNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           ????            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        GetMapParameterfvNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           ????            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        GetMapAttribParameterivNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           6               request length
+            4           ????            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           CARD32          index
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        GetMapAttribParameterfvNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           6               request length
+            4           ????            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           CARD32          index
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        GetMapControlPointsNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           6               request length
+            4           ????            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           CARD32          index
+            4           ENUM            type
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m
+            4                           unused
+            4           CARD32          uorder
+            4           CARD32          vorder
+            12                          unused
+
+            if type == 0x1406 (GL_FLOAT) and target == 0x86C0
+            (GL_EVAL_2D_NV), m = 4*uorder*vorder and the packed control
+            points follow assuming ustride = 16
+
+            m*4         LISTofFLOAT32   params
+
+            if type == 0x140A (GL_DOUBLE) and target == 0x86C0
+            (GL_EVAL_2D_NV), m = 4*uorder*vorder and the packed control
+            points follow asssuming ustride = 32
+
+            m*8         LISTofFLOAT64   params
+
+            if type == 0x1406 (GL_FLOAT) and target == 0x86C1
+            (GL_EVAL_TRIANGULAR_2D_NV), m = 4*uorder*(uorder+1)/2 and
+            the packed control points follow assuming ustride = 16
+
+            m*4         LISTofFLOAT32   params
+
+            if type == 0x140A (GL_DOUBLE) and target == 0x86C1
+            (GL_EVAL_TRIANGULAR_2D_NV), m = 4*uorder*(uorder+1)/2 and
+            the packed control points follow asssuming ustride = 32
+
+            m*8         LISTofFLOAT64   params
+
+            otherwise m = 0 and nothing else follows.
+
+Errors
+
+    The error INVALID_VALUE is generated if MapControlPointsNV,
+    GetMapControlPointsNV, or GetMapAttribParameter{if}v is called where
+    index is greater than 15.
+
+    The error INVALID_VALUE is generated if MapControlPointsNV
+    or GetMapControlPointsNV is called where ustride or vstride is
+    negative.  
+
+    The error INVALID_VALUE is generated if MapControlPointsNV is
+    called where uorder or vorder is less than one or greater than
+    MAX_EVAL_ORDER.
+
+    The error INVALID_OPERATION is generated if MapControlPointsNV is
+    called where target is EVAL_TRIANGULAR_2D_NV and uorder is not equal
+    to vorder.
+
+    The error INVALID_OPERATION is generated if MapControlPointsNV is
+    called where index is 0, one of the control points' fourth
+    components is not equal to 1, and either uorder of vorder is greater
+    than MAX_RATIONAL_EVAL_ORDER_NV.
+
+    The error INVALID_OPERATION is generated if EvalMapsNV is called
+    where EVAL_VERTEX_ATTRIB0_NV is disabled.
+
+New State
+
+(add to table 6.22, page 212)
+
+Get Value                        Type         Get Command               Initial Value     Description     Sec    Attribute
+-------------------------------  -----------  ------------------------  ----------------  --------------  -----  ---------
+EVAL_FRACTIONAL_TESSELLATION_NV  B            IsEnabled                 False             fractional      5.7    eval/enable
+                                                                                          tess. enable
+EVAL_VERTEX_ATTRIBi_NV           Bx16         IsEnabled                 True if i=0,      attrib eval     5.7    eval/enable
+                                                                        false otherwise   enable
+
+EVAL_2D_NV                       R4x16x8*x8*  GetMapControlPointsNV     [0,0,0,1]         control points  5.7    -
+EVAL_TRIANGULAR_2D_NV            R4x16x8*x8*  GetMapControlPoints       [0,0,0,1]         control points  5.7    -
+
+MAP_TESSELLATION_NV              R4,R3        GetMapParameter*NV        all 1.0           level of        5.7    eval
+                                                                                          tessellation
+
+MAP_ATTRIB_U_ORDER_NV            Z8*x16x2     GetMapAttribParameter*NV  1                 map order in    5.7    -
+                                                                                          U direction
+MAP_ATTRIB_V_ORDER_NV            Z8*x16x2     GetMapAttribParameter*NV  1                 map order in    5.7    -
+                                                                                          V direction
+New Implementation Dependent State
+
+(add to table 6.24/6.25, page 214)
+
+Get Value                   Type   Get Command    Minimum Value   Description     Sec    Attribute
+------------------------    ----   ------------   -------------   -----------     -----  ---------
+MAX_MAP_TESSELLATION_NV     Z+     GetIntegerv    256             maximum level   5.7    -
+                                                                  of tessellation
+MAX_RATIONAL_EVAL_ORDER_NV  Z+     GetIntegerv    4               maximum order   5.7    -
+                                                                  of rational
+                                                                  surfaces
+
+Revision History
+
+    1/3/2003 changed status to "discontinued"

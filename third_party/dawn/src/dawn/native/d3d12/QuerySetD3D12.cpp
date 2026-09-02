@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/QuerySetD3D12.h"
+#include "src/dawn/native/d3d12/QuerySetD3D12.h"
 
 #include <algorithm>
 
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
 
 namespace dawn::native::d3d12 {
 
@@ -59,7 +59,7 @@ ResultOrError<Ref<QuerySet>> QuerySet::Create(Device* device,
 MaybeError QuerySet::Initialize() {
     D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
     queryHeapDesc.Type = D3D12QueryHeapType(GetQueryType());
-    queryHeapDesc.Count = std::max(GetQueryCount(), uint32_t(1u));
+    queryHeapDesc.Count = std::max(uint32_t{GetQueryCount()}, 1u);
 
     ID3D12Device* d3d12Device = ToBackend(GetDevice())->GetD3D12Device();
     DAWN_TRY(CheckOutOfMemoryHRESULT(

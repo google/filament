@@ -29,21 +29,26 @@
 #define SRC_DAWN_WIRE_BUFFERCONSUMER_H_
 
 #include <cstddef>
+#include <new>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/wire/WireResult.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/wire/WireResult.h"
+#include "src/utils/compiler.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire {
 
 // Wire specific alignment helpers.
 template <typename T>
 constexpr size_t WireAlignSizeof() {
+    static_assert(alignof(T) <= kWireBufferAlignment, "T must be 8-byte alignable for the wire");
     return AlignSizeof<T, kWireBufferAlignment>();
 }
 template <typename T>
 std::optional<size_t> WireAlignSizeofN(size_t n) {
+    static_assert(alignof(T) <= kWireBufferAlignment, "T must be 8-byte alignable for the wire");
     return AlignSizeofN<T, kWireBufferAlignment>(n);
 }
 
@@ -54,45 +59,81 @@ std::optional<size_t> WireAlignSizeofN(size_t n) {
 // BufferConsumer also contains bounds checks to prevent reading out-of-bounds.
 template <typename BufferT>
 class BufferConsumer {
-    static_assert(sizeof(BufferT) == 1,
-                  "BufferT must be 1-byte, but may have const/volatile qualifiers.");
+    static_assert(std::is_same_v<std::remove_cv_t<BufferT>, std::byte>,
+                  "BufferT must be std::byte, but may have const/volatile qualifiers.");
 
   public:
-    BufferConsumer(BufferT* buffer, size_t size) : mBuffer(buffer), mSize(size) {}
+    explicit BufferConsumer(Span<BufferT> data) : mData(data) {}
 
-    BufferT* Buffer() const { return mBuffer; }
-    size_t AvailableSize() const { return mSize; }
+    bool Empty() const { return mData.empty(); }
 
   protected:
-    template <typename T, typename N>
-    WireResult NextN(N count, T** data);
+    template <typename T>
+    WireResult NextN(size_t count, Span<T>* out) {
+        size_t byteCount = 0;
+        WIRE_TRY(PeekN(count, out, &byteCount));
+        mData = mData.subspan(byteCount);
+        return WireResult::Success;
+    }
 
     template <typename T>
-    WireResult Next(T** data);
+    WireResult Next(T** data) {
+        Span<T> out;
+        WIRE_TRY(NextN(1u, &out));
+        *data = out.data();
+        return WireResult::Success;
+    }
 
+    // Reads `count` objects of type T from the buffer and returns a span to them. The number of
+    // bytes that would be read is also optionally returned in |byteCount|.
     template <typename T>
-    WireResult Peek(T** data);
+    WireResult PeekN(size_t count, Span<T>* out, size_t* byteCount = nullptr) const {
+        // If size is nullopt then it indicates an overflow.
+        auto size = WireAlignSizeofN<T>(count);
+        if (!size || *size > mData.size()) {
+            return WireResult::FatalError;
+        }
+        DAWN_CHECK(*size >= sizeof(T) * count);
+        if (byteCount) {
+            *byteCount = *size;
+        }
 
-  private:
-    raw_ptr<BufferT, AllowPtrArithmetic> mBuffer;
-    size_t mSize;
+        // TODO(https://crbug.com/528027992): Use ReinterpretSpan once we fix alignment check that
+        // currently fails on Android AMD. This should be solvable by ensuring that
+        // dawn::wire::CommandSerializer::GetCmdSpace returns std::max_align_t aligned memory
+        // address.
+        *out = DAWN_UNSAFE_TODO(
+            Span<T>(reinterpret_cast<T*>(mData.first(sizeof(T) * count).data()), count));
+        return WireResult::Success;
+    }
+
+    // TODO(https://crbug.com/526537224): Use RawSpan instead of Span.
+    Span<BufferT> mData = {};
 };
 
-class SerializeBuffer : public BufferConsumer<char> {
+class SerializeBuffer : public BufferConsumer<volatile std::byte> {
   public:
     using BufferConsumer::BufferConsumer;
+
     using BufferConsumer::Next;
     using BufferConsumer::NextN;
 };
 
-class DeserializeBuffer : public BufferConsumer<const volatile char> {
+class DeserializeBuffer : public BufferConsumer<const volatile std::byte> {
   public:
     using BufferConsumer::BufferConsumer;
-    using BufferConsumer::Peek;
 
-    template <typename T, typename N>
-    WireResult ReadN(N count, const volatile T** data) {
-        return NextN(count, data);
+    template <typename T>
+    WireResult Peek(const volatile T** data) const {
+        Span<const volatile T> out;
+        WIRE_TRY(PeekN(1u, &out));
+        *data = out.data();
+        return WireResult::Success;
+    }
+
+    template <typename T>
+    WireResult ReadN(size_t count, Span<const volatile T>* out) {
+        return NextN(count, out);
     }
 
     template <typename T>

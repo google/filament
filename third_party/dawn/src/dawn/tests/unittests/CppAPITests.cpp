@@ -28,7 +28,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 namespace {

@@ -1,0 +1,281 @@
+Name
+
+    SGI_texture_color_table
+
+Name Strings
+
+    GL_SGI_texture_color_table
+
+Contact
+
+    Silicon Graphics, Inc.
+    Brian Paul (brian_e_paul 'at' yahoo.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    $Date: 1998/03/14 07:42:15 $ $Revision: 1.1 $
+
+Number
+
+    17
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+    EXT_copy_texture affects the definition of this extension
+    ARB_multitexture affects the definition of this extension
+    The extension is written against the OpenGL 1.0 Specification
+
+Overview
+
+    This extension adds a color lookup table to the texture mechanism.
+    The table is applied to the filtered result of a texture lookup,
+    before that result is used in the texture environment equations.
+
+    The definition and application of the texture color table are
+    similar to those of the color tables defined in SGI_color_table,
+    though it is not necessary for that extension to be implemented.
+
+    Texture color tables can be used to expand luminance or intensity
+    textures to full RGBA, and also to linearize the results of color
+    space conversions implemented by multidimensional texture table
+    lookup.
+
+    This specification has been updated to define its interaction with
+    multitexture.
+
+Issues
+
+    1.	Should the scale, bias, and clamp that is applied to texels
+	be moved to a separate SGIX extension?
+
+	Done.  See GL_SGIX_texture_scale_bias.
+
+    2.  It should be clarified that this state is NOT part of
+	EXT_texture_object.  The color table state is per texture unit.
+
+    3. 	Can the texture format change while passing thru the texture
+	color table?
+
+	This possibility is mentioned in the overview.  An example of
+	when this is useful is an RGBA table applied to a LUMINANCE
+	texture.  This expands LUMINANCE to full RGBA.  The table
+	defined below does not account for this.
+
+	The specification has been changed to map all texture components
+	to Rt, Gt, Bt, At and now the table is always applied to all 4
+	components.
+
+    4. 	Do we want to query MAX_TEXTURE_COLOR_TABLE_WIDTH_SGI in
+	addition to PROXY method?
+
+	No, this should be done with PROXY.
+
+    5.  Is one texture color table shared by all texture units or is
+	there a separate color table for each texture unit?
+
+	Vendors shipping both ARB_multitexture and SGI_texture_color_table
+	report that they've implemented per-texture unit tables.
+
+	The texure color table enable flag is also per-texture unit.
+
+    6.	Is the proxy texture color table per context or per texture unit
+	state?
+
+	After talking to IBM and 3Dlabs, the consensus is that there is a
+	separate proxy texture color table for each texture unit.
+
+    7.	Is the texture color table scale and bias values per context or
+	per texture unit?
+
+	Consensus is that there is one set of scale and bias values shared
+	for all texture units.  It's part of the pixel state group.
+
+    8.  What if there is a different number of texture image units and
+	texture coordinate units (ala NV_fragment_program)?
+
+	The number of texture image units determines the number of texture
+	color tables.  All occurances of "texture unit" should be read as
+	"texture image unit".
+
+    9.  Has this extension specification changed recently?
+
+	It's been updated to clarify how it interacts with multitexture.
+	Also, various cosmetic clean-ups have been made.
+
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev, and by the <target> parameter of ColorTableSGI,
+    CopyColorTableSGI, GetColorTableSGI, ColorTableParameterfvSGI,
+    ColorTableParameterivSGI, GetColorTableParameterfvSGI,
+    GetColorTableParameterivSGI:
+
+	TEXTURE_COLOR_TABLE_SGI		0x80BC
+
+    Accepted by the <target> parameter of ColorTableSGI,
+    GetColorTableParameterivSGI, and GetColorTableParameterfvSGI:
+
+	PROXY_TEXTURE_COLOR_TABLE_SGI	0x80BD
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    If TEXTURE_COLOR_TABLE is enabled, the post-filtered texture color
+    is used to index into the texture color table to produce a new color.
+    The new color is passed along to the texture application step.
+
+    The texture color table is specified in exactly the manner
+    described for the color tables in SGI_color_table, using
+    TEXTURE_COLOR_TABLE_SGI as the value for the <target> parameters
+    of the various commands.
+
+    The table size, specified by the <width> parameter of
+    ColorTableSGI is limited to powers-of-two.  Additionally, an
+    implementation must support a maximum table size of at least 256
+    entries.
+
+    The PROXY_TEXTURE_COLOR_TABLE_SGI target is available for
+    configuration queries in exactly the manner described for the
+    other tables in SGI_color_table.
+
+    The contents of the table are used to replace a subset of the
+    components of each texel group, based on the base internal format
+    of the table.
+
+    If the table size is zero, the texture color table
+    is effectively disabled.  The texture color table is applied to
+    the texture components denoted in the the EXT_texture extension as
+    Rt, Gt, Bt, and At according to the following table:
+
+
+				Modification of Texture Components
+				----------------------------------
+	Base Table		
+	Internal Format		Rt	Gt	Bt	At
+	---------------		--	--	--	--
+
+	ALPHA			Rt	Gt	Bt	A(At)
+
+	LUMINANCE		L(Rt)	L(Gt)	L(Bt)	At
+
+	LUMINANCE_ALPHA		L(Rt)	L(Gt)	L(Bt)	A(At)
+
+	INTENSITY		I(Rt)	I(Gt)	I(Bt)	I(At)
+
+	RGB			R(Rt)	G(Gt)	B(Bt)	At
+
+	RGBA			R(Rt)	G(Gt)	B(Bt)	A(At)
+
+
+    If multiple texture units are supported, there is a texture color
+    table, proxy texture color table and enable/disable flag for each
+    texture unit.  ACTIVE_TEXTURE determines the texture unit for
+    texture color table state changes and queries.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment
+    Operations and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_abgr
+
+    EXT_abgr affects this extension in exactly the manner that it
+    affects SGI_color_table.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of
+    internal image format, which is defined by EXT_texture.
+
+Dependencies on EXT_copy_texture
+
+    EXT_copy_texture affects this extension in exactly the manner that
+    it affects SGI_color_table.
+
+Dependencies on SGI_color_table
+
+    The specification depends heavily on the SGI_color_table
+    specification, but it is not necessary that SGI_color_table be
+    implemented for this extension to be implemented.
+
+Dependencies on ARB_multitexture
+
+    In the presense of ARB_multitxture, the texture color table state
+    is replicated for each texture unit.  Otherwise, the texture color
+    table state is per-context state.
+
+Errors
+
+    TEXTURE_COLOR_TABLE_SGI and PROXY_TEXTURE_COLOR_TABLE_SGI are
+    added to the list of <target> parameters that are accepted by
+    color table commands.  
+
+New State
+
+    Get Value				Get Command			Type		Initial Value	Attribute
+    ---------				-----------			----		-------------	---------
+    TEXTURE_COLOR_TABLE_SGI		IsEnabled			1* x B		False		texture/enable
+    TEXTURE_COLOR_TABLE_SGI		GetColorTableSGI		1* x I		empty		texture*
+    COLOR_TABLE_FORMAT_SGI		GetColorTableParameterivSGI	2 x 1* x Z38	RGBA		texture*
+    COLOR_TABLE_WIDTH_SGI		GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_RED_SIZE_SGI		GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_GREEN_SIZE_SGI		GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_BLUE_SIZE_SGI		GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_ALPHA_SIZE_SGI		GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_LUMINANCE_SIZE_SGI	GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_INTENSITY_SIZE_SGI	GetColorTableParameterivSGI	2 x 1* x Z+	0		texture*
+    COLOR_TABLE_SCALE_SGI		GetColorTableParameterfvSGI	R4		(1,1,1,1)	pixel
+    COLOR_TABLE_BIAS_SGI		GetColorTableParameterfvSGI	R4		(0,0,0,0)	pixel
+
+    *Note: if ARB_multitexture is supported, the state is per-texture unit,
+    else the state is per-context.
+
+    Note: "1*" denotes one or more texture units.
+
+    Note: "2 x 1* x _" denotes real and proxy state for one or more texture units.
+
+    Note: The state shown here only represents the NEW state added by this
+    extension.  There may be additional color table state from ARB_imaging
+    or EXT_paletted_texture, for example.
+
+New Implementation Dependent State
+
+    None.
+
+Revision History
+
+    1998
+        Original specification by SGI
+
+    2003 Feb 5
+        Updated to specify interaction with ARB_multitexture (Brian Paul)
+
+       

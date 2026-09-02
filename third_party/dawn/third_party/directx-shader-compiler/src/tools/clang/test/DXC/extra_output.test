@@ -1,0 +1,10 @@
+// Test extra DXC outputs together
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /DDX12 /Dcheck_warning /Fh %t.h /Vn g_myvar /Fc %t.ll /Fo %t.cso /Fre %t.reflection /Frs %t.rootsig /Fe %t.err
+// RUN: FileCheck --input-file=%t.h %s --check-prefix=HEADER
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=IR
+
+// HEADER:define void @main()
+// HEADER:g_myvar
+// HEADER:0x44, 0x58
+
+// IR:define void @main()

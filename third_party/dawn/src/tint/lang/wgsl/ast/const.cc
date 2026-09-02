@@ -35,13 +35,8 @@ TINT_INSTANTIATE_TYPEINFO(tint::ast::Const);
 
 namespace tint::ast {
 
-Const::Const(NodeID nid,
-             const Source& src,
-             const Identifier* n,
-             Type ty,
-             const Expression* init,
-             VectorRef<const Attribute*> attrs)
-    : Base(nid, src, n, ty, init, std::move(attrs)) {
+Const::Const(NodeID nid, const Source& src, const Identifier* n, Type ty, const Expression* init)
+    : Base(nid, src, n, ty, init, Vector<const ast::Attribute*, 0>{}) {
     TINT_ASSERT(init != nullptr);
 }
 

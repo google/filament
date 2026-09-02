@@ -25,37 +25,39 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/TextureD3D12.h"
+#include "src/dawn/native/d3d12/TextureD3D12.h"
 
 #include <algorithm>
 #include <bit>
 #include <iterator>
 #include <utility>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/ResourceMemoryAllocation.h"
-#include "dawn/native/ToBackend.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/KeyedMutex.h"
-#include "dawn/native/d3d12/BufferD3D12.h"
-#include "dawn/native/d3d12/CommandRecordingContext.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/Forward.h"
-#include "dawn/native/d3d12/HeapD3D12.h"
-#include "dawn/native/d3d12/QueueD3D12.h"
-#include "dawn/native/d3d12/ResourceAllocatorManagerD3D12.h"
-#include "dawn/native/d3d12/SharedFenceD3D12.h"
-#include "dawn/native/d3d12/SharedTextureMemoryD3D12.h"
-#include "dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
-#include "dawn/native/d3d12/TextureCopySplitter.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
-#include "dawn/native/utils/RenderDoc.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ResourceMemoryAllocation.h"
+#include "src/dawn/native/ToBackend.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/KeyedMutex.h"
+#include "src/dawn/native/d3d12/BufferD3D12.h"
+#include "src/dawn/native/d3d12/CommandRecordingContext.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/Forward.h"
+#include "src/dawn/native/d3d12/HeapD3D12.h"
+#include "src/dawn/native/d3d12/QueueD3D12.h"
+#include "src/dawn/native/d3d12/ResourceAllocatorManagerD3D12.h"
+#include "src/dawn/native/d3d12/SharedFenceD3D12.h"
+#include "src/dawn/native/d3d12/SharedTextureMemoryD3D12.h"
+#include "src/dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/TextureCopySplitter.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/native/utils/RenderDoc.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::d3d12 {
 
@@ -156,7 +158,7 @@ ResourceHeapKind GetResourceHeapKind(D3D12_RESOURCE_FLAGS flags, uint32_t resour
     return ResourceHeapKind::Default_OnlyNonRenderableOrDepthTextures;
 }
 
-D3D12_SHADER_COMPONENT_MAPPING D3D12ComponentSwizzle(wgpu::ComponentSwizzle swizzle) {
+UINT D3D12ComponentSwizzle(wgpu::ComponentSwizzle swizzle) {
     switch (swizzle) {
         case wgpu::ComponentSwizzle::Zero:
             return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0;
@@ -249,7 +251,7 @@ MaybeError Texture::InitializeAsInternalTexture() {
     const Extent3D& size = GetBaseSize();
     resourceDescriptor.Width = size.width;
     resourceDescriptor.Height = size.height;
-    resourceDescriptor.DepthOrArraySize = size.depthOrArrayLayers;
+    resourceDescriptor.DepthOrArraySize = checked_cast<UINT16>(size.depthOrArrayLayers);
 
     Device* device = ToBackend(GetDevice());
     // When the depth stencil texture is created on a not-zeroed heap, its first usage will also be
@@ -354,30 +356,7 @@ void Texture::DestroyImpl(DestroyReason reason) {
     mIsExternalSwapChainTexture = false;
 }
 
-MaybeError Texture::PinImpl(wgpu::TextureUsage usage) {
-    DAWN_ASSERT(!HasPinnedUsage());
-    SubresourceRange pinnedSubresources = GetAllSubresources();
 
-    CommandRecordingContext* commandContext =
-        ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext(Queue::SubmitMode::Passive);
-    DAWN_TRY(EnsureSubresourceContentInitialized(commandContext, pinnedSubresources));
-
-    // TODO(crbug.com/482008255): Handle residency of pinned resources
-    TrackUsageAndTransitionNow(commandContext, usage, pinnedSubresources);
-
-    // TODO(https://issues.chromium.org/473444516): Investigate what to do for imported textures.
-    // Should we consider a pin/unpin pair similar to an access on a queue such that we need to
-    // wait on fences or export them?
-    return {};
-}
-
-void Texture::UnpinImpl() {
-    DAWN_ASSERT(HasPinnedUsage());
-
-    // TODO(https://issues.chromium.org/473444516): Investigate what to do for imported textures.
-    // Should we consider a pin/unpin pair similar to an access on a queue such that we need to
-    // wait on fences or export them?
-}
 
 DXGI_FORMAT Texture::GetD3D12Format() const {
     return d3d::DXGITextureFormat(GetDevice(), GetFormat().format);
@@ -469,7 +448,7 @@ void Texture::NotifySwapChainPresent() {
     // For PIX, call ID3D12SharingContract::Present
     ID3D12SharingContract* d3dSharingContract = ToBackend(device->GetQueue())->GetSharingContract();
     if (d3dSharingContract != nullptr) {
-        d3dSharingContract->Present(mResourceAllocation.GetD3D12Resource(), 0, 0);
+        d3dSharingContract->Present(mResourceAllocation.GetD3D12Resource(), 0, nullptr);
     }
 
 #if defined(DAWN_ENABLE_RENDERDOC)
@@ -479,8 +458,8 @@ void Texture::NotifySwapChainPresent() {
     if (auto renderDocApi = dawn::native::utils::GetRenderDocApi(device)) {
         // We signal the end of the current frame and the start of the next.
         // This means we miss capturing the very first frame.
-        renderDocApi->EndFrameCapture(device->GetD3D12Device(), NULL);
-        renderDocApi->StartFrameCapture(device->GetD3D12Device(), NULL);
+        renderDocApi->EndFrameCapture(device->GetD3D12Device(), nullptr);
+        renderDocApi->StartFrameCapture(device->GetD3D12Device(), nullptr);
     }
 #endif
 }
@@ -506,8 +485,8 @@ void Texture::TrackUsageAndTransitionNow(CommandRecordingContext* commandContext
 
     std::vector<D3D12_RESOURCE_BARRIER> barriers;
 
-    int32_t aspectCount = std::popcount(static_cast<uint8_t>(range.aspects));
-    barriers.reserve(range.levelCount * range.layerCount * aspectCount);
+    uint32_t aspectCount = sign_dcast(std::popcount(static_cast<uint8_t>(range.aspects)));
+    barriers.reserve(size_t{range.levelCount} * range.layerCount * aspectCount);
 
     TransitionUsageAndGetResourceBarrier(commandContext, &barriers, newState, range);
     if (barriers.size()) {
@@ -520,7 +499,7 @@ void Texture::TransitionSubresourceRange(std::vector<D3D12_RESOURCE_BARRIER>* ba
                                          const SubresourceRange& range,
                                          StateAndDecay* state,
                                          D3D12_RESOURCE_STATES newState,
-                                         ExecutionSerial pendingCommandSerial) const {
+                                         ExecutionSerial pendingCommandSerial) {
     D3D12_RESOURCE_STATES lastState = state->lastState;
 
     // If the transition is from-UAV-to-UAV, then a UAV barrier is needed.
@@ -553,6 +532,7 @@ void Texture::TransitionSubresourceRange(std::vector<D3D12_RESOURCE_BARRIER>* ba
 
     // Update the tracked state.
     state->lastState = newState;
+    MarkDirtyInResourceTables();
 
     // The COMMON state represents a state where no write operations can be pending, and
     // where all pixels are uncompressed. This makes it possible to transition to and
@@ -910,7 +890,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
 
             DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
                 uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
-                    memset(reservation.mappedPointer, clearColor, uploadSize);
+                    std::ranges::fill(reservation.mappedData, std::byte(clearColor));
 
                     for (uint32_t level = range.baseMipLevel;
                          level < range.baseMipLevel + range.levelCount; ++level) {
@@ -932,7 +912,8 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
 
                             TextureCopy textureCopy;
                             textureCopy.texture = this;
-                            textureCopy.origin = {TexelCount{0}, TexelCount{0}, TexelCount{layer}};
+                            textureCopy.origin = {TexelCount{0u}, TexelCount{0u},
+                                                  TexelCount{layer}};
                             textureCopy.mipLevel = level;
                             textureCopy.aspect = aspect;
                             RecordBufferTextureCopyWithBufferHandle(

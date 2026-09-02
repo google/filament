@@ -31,9 +31,9 @@
 #include <deque>
 #include <utility>
 
-#include "dawn/native/Queue.h"
-#include "dawn/native/opengl/UtilsEGL.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/opengl/UtilsEGL.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 
@@ -55,14 +55,12 @@ class Queue final : public QueueBase {
   private:
     Queue(Device* device, const QueueDescriptor* descriptor);
 
-    MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
+    MaybeError SubmitImpl(Span<CommandBufferBase* const> commands) override;
     MaybeError WriteBufferImpl(BufferBase* buffer,
                                uint64_t bufferOffset,
-                               const void* data,
-                               size_t size) override;
+                               Span<const std::byte> data) override;
     MaybeError WriteTextureImpl(const TexelCopyTextureInfo& destination,
-                                const void* data,
-                                size_t dataSize,
+                                Span<const std::byte> data,
                                 const TexelCopyBufferLayout& dataLayout,
                                 const Extent3D& writeSizePixel) override;
 

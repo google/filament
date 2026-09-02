@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -33,24 +33,28 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/GPUInfo.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/Limits.h"
-#include "dawn/native/vulkan/BackendVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
-#include "dawn/native/vulkan/SwapChainVk.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
 #include "dawn/platform/DawnPlatform.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/Limits.h"
+#include "src/dawn/native/vulkan/BackendVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FramebufferFetchHelper.h"
+#include "src/dawn/native/vulkan/ImmediatesLayoutVk.h"
+#include "src/dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "src/dawn/native/vulkan/SwapChainVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 #if DAWN_PLATFORM_IS(ANDROID)
-#include "dawn/native/AHBFunctions.h"
+#include "src/dawn/native/AHBFunctions.h"
 #endif  // DAWN_PLATFORM_IS(ANDROID)
 
 namespace dawn::native::vulkan {
@@ -67,13 +71,14 @@ gpu_info::DriverVersion DecodeVulkanDriverVersion(uint32_t vendorID, uint32_t ve
                              static_cast<uint16_t>(versionRaw & 0x003F)};
             break;
         case gpu_info::kVendorID_Intel:
-#if DAWN_PLATFORM_IS(WINDOWS)
-            // Windows Vulkan driver releases together with D3D driver, so they share the same
-            // version. But only CCC.DDDD is encoded in 32-bit driverVersion.
-            driverVersion = {static_cast<uint16_t>(versionRaw >> 14),
-                             static_cast<uint16_t>(versionRaw & 0x3FFF)};
-            break;
-#endif
+            if (PhysicalDevice::IsWindows()) {
+                // Windows Vulkan driver releases together with D3D driver, so they share the same
+                // version. But only CCC.DDDD is encoded in 32-bit driverVersion.
+                driverVersion = {static_cast<uint16_t>(versionRaw >> 14),
+                                 static_cast<uint16_t>(versionRaw & 0x3FFF)};
+                break;
+            }
+            [[fallthrough]];
         default:
             // Use Vulkan driver conversions for other vendors
             driverVersion = {static_cast<uint16_t>(versionRaw >> 22),
@@ -112,6 +117,21 @@ bool VKComponentTypeToWGPUSubgroupMatrixComponentType(
         default:
             return false;
     }
+}
+
+template <std::integral T, std::integral U>
+constexpr bool SafeLessThan(T a, U b) {
+    return std::cmp_less(a, b);
+}
+
+template <std::integral T>
+constexpr bool SafeLessThan(float a, T b) {
+    return static_cast<double>(a) < static_cast<double>(b);
+}
+
+template <std::integral T, std::integral U>
+constexpr bool SafeGreaterThan(T a, U b) {
+    return std::cmp_greater(a, b);
 }
 
 }  // anonymous namespace
@@ -161,18 +181,16 @@ MaybeError PhysicalDevice::InitializeImpl() {
                                                mDeviceInfo.properties.driverVersion);
     const std::string driverVersionStr = mDriverVersion.ToString();
 
-#if DAWN_PLATFORM_IS(WINDOWS)
     // Disable Vulkan adapter on Windows Intel driver < 30.0.101.2111 due to flaky
     // issues.
     const gpu_info::IntelWindowsDriverVersion kDriverVersion({30, 0, 101, 2111});
-    if (gpu_info::IsIntel(mDeviceInfo.properties.vendorID) &&
+    if (IsWindows() && gpu_info::IsIntel(mDeviceInfo.properties.vendorID) &&
         gpu_info::IntelWindowsDriverVersion(mDriverVersion) < kDriverVersion) {
         return DAWN_FORMAT_INTERNAL_ERROR(
             "Disable Intel Vulkan adapter on Windows driver version %s. See "
             "https://crbug.com/1338622.",
             driverVersionStr);
     }
-#endif
 
     if (mDeviceInfo.HasExt(DeviceExt::DriverProperties)) {
         mDriverDescription = mDeviceInfo.driverProperties.driverName;
@@ -208,11 +226,6 @@ MaybeError PhysicalDevice::InitializeImpl() {
 
     mSubgroupMinSize = mDeviceInfo.subgroupSizeControlProperties.minSubgroupSize;
     mSubgroupMaxSize = mDeviceInfo.subgroupSizeControlProperties.maxSubgroupSize;
-
-    mMinExplicitComputeSubgroupSize = mDeviceInfo.subgroupSizeControlProperties.minSubgroupSize;
-    mMaxExplicitComputeSubgroupSize = mDeviceInfo.subgroupSizeControlProperties.maxSubgroupSize;
-    mMaxComputeWorkgroupSubgroups =
-        mDeviceInfo.subgroupSizeControlProperties.maxComputeWorkgroupSubgroups;
 
     // Check for essential Vulkan extensions and features
 
@@ -270,6 +283,7 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
     EnableFeature(Feature::StaticSamplers);
     EnableFeature(Feature::FlexibleTextureViews);
     EnableFeature(Feature::DawnDeviceAllocatorControl);
+    EnableFeature(Feature::TextureCompressionUnaligned);
 
     // Initialize supported extensions
     if (mDeviceInfo.features.textureCompressionBC == VK_TRUE) {
@@ -325,6 +339,23 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
         EnableFeature(Feature::DualSourceBlending);
     }
 
+    if ((mDeviceInfo.HasExt(DeviceExt::RasterizationOrderAttachmentAccess) &&
+         mDeviceInfo.rasterizationOrderAttachmentAccessFeatures
+                 .rasterizationOrderColorAttachmentAccess == VK_TRUE) ||
+        FramebufferFetchHelper::SupportsCoherentRasterization(GetVendorId())) {
+        // There are four possible ways FramebufferFetch can be supported. Currently only #1 and #2
+        // are implemented.
+        //
+        // 1. Coherent with rasterization order extension.
+        // 2. Coherent without rasterization order extension but when GPU architecture supports
+        //    coherent input attachment reads. This needs a subpass self dependency to be added.
+        // 3. Non-coherent. This needs both a subpass self dependency and barriers to be
+        //    inserted before draws that use FramebufferFetch.
+        // 4. When dynamic rendering is used FramebufferFetch requires the dynamic rendering local
+        //    storage extension and barriers to be inserted before draws that use FramebufferFetch.
+        EnableFeature(Feature::FramebufferFetch);
+    }
+
     if (mDeviceInfo.features.shaderClipDistance == VK_TRUE) {
         EnableFeature(Feature::ClipDistances);
     }
@@ -335,10 +366,16 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
         EnableFeature(Feature::PrimitiveIndex);
     }
 
+    // buffer_view decompositions may use u16 if the smallest access is 16-bit, so require
+    // shaderInt16 as well.
     bool shaderF16Enabled = false;
+    // crbug.com/519984285: Huawei Maleoon GPUs mis-compile 16-bit values in the
+    // private/function storage classes.
+    const bool isHuaweiMaleoon = gpu_info::IsHuaweiMaleoon(GetVendorId(), GetDeviceId());
     if (mDeviceInfo.HasExt(DeviceExt::ShaderFloat16Int8) &&
         mDeviceInfo.shaderFloat16Int8Features.shaderFloat16 == VK_TRUE &&
-        mDeviceInfo._16BitStorageFeatures.storageBuffer16BitAccess == VK_TRUE) {
+        mDeviceInfo.features.shaderInt16 == VK_TRUE &&
+        mDeviceInfo._16BitStorageFeatures.storageBuffer16BitAccess == VK_TRUE && !isHuaweiMaleoon) {
         EnableFeature(Feature::ShaderF16);
         shaderF16Enabled = true;
     }
@@ -524,7 +561,8 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
         mDeviceInfo.HasExt(DeviceExt::SubgroupSizeControl) &&
         (mDeviceInfo.subgroupSizeControlFeatures.subgroupSizeControl == VK_TRUE) &&
         (mDeviceInfo.subgroupSizeControlFeatures.computeFullSubgroups == VK_TRUE);
-    if (hasCooperativeMatrix && hasVulkanMemoryModel && hasComputeFullSubgroups) {
+    if (supportsSubgroupsFeature && hasCooperativeMatrix && hasVulkanMemoryModel &&
+        hasComputeFullSubgroups) {
         // crbug.com/415828149: Older Mesa drivers have bugs around subgroup matrix initialization,
         // so we blocklist SubgroupMatrix for Mesa drivers older than 25.2.
         const gpu_info::DriverVersion kGoodMesaDriver = {25, 2, 0, 0};
@@ -535,10 +573,10 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
     }
 
     if (supportsSubgroupsFeature && hasComputeFullSubgroups) {
-        EnableFeature(Feature::ChromiumExperimentalSubgroupSizeControl);
+        EnableFeature(Feature::SubgroupSizeControl);
     }
 
-    // HostMappedPointer is currently disabled on AMD due to a driver bug: crbug.com/494566064
+    // HostMappedPointer is not supported on AMD (see: crbug.com/494566064)
     if (!gpu_info::IsAMD(GetVendorId()) && mDeviceInfo.HasExt(DeviceExt::ExternalMemoryHost) &&
         mDeviceInfo.externalMemoryHostProperties.minImportedHostPointerAlignment <=
             kMinimumHostMappedPointerAlignment) {
@@ -707,39 +745,46 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsInternal(wgpu::FeatureLevel 
 
     const VkPhysicalDeviceLimits& vkLimits = mDeviceInfo.properties.limits;
 
-#define CHECK_AND_SET_V1_LIMIT_IMPL(vulkanName, webgpuName, compareOp, msgSegment)   \
+#define CHECK_V1_LIMIT_IMPL(vulkanName, webgpuName, compareOp, msgSegment)           \
     do {                                                                             \
-        if (vkLimits.vulkanName compareOp baseLimits.v1.webgpuName) {                \
+        if (Safe##compareOp(vkLimits.vulkanName, baseLimits.v1.webgpuName)) {        \
             return DAWN_INTERNAL_ERROR("Insufficient Vulkan limits for " #webgpuName \
                                        "."                                           \
                                        " VkPhysicalDeviceLimits::" #vulkanName       \
                                        " must be at " msgSegment " " +               \
                                        std::to_string(baseLimits.v1.webgpuName));    \
         }                                                                            \
-        limits->v1.webgpuName = vkLimits.vulkanName;                                 \
     } while (false)
 
+#define CHECK_AND_SET_V1_LIMIT_IMPL(vulkanName, webgpuName, compareOp, msgSegment) \
+    do {                                                                           \
+        CHECK_V1_LIMIT_IMPL(vulkanName, webgpuName, compareOp, msgSegment);        \
+        limits->v1.webgpuName = dchecked_cast<uint32_t>(vkLimits.vulkanName);      \
+    } while (false)
+
+#define CHECK_V1_MAX_LIMIT(vulkanName, webgpuName) \
+    CHECK_V1_LIMIT_IMPL(vulkanName, webgpuName, LessThan, "least")
 #define CHECK_AND_SET_V1_MAX_LIMIT(vulkanName, webgpuName) \
-    CHECK_AND_SET_V1_LIMIT_IMPL(vulkanName, webgpuName, <, "least")
+    CHECK_AND_SET_V1_LIMIT_IMPL(vulkanName, webgpuName, LessThan, "least")
 #define CHECK_AND_SET_V1_MIN_LIMIT(vulkanName, webgpuName) \
-    CHECK_AND_SET_V1_LIMIT_IMPL(vulkanName, webgpuName, >, "most")
+    CHECK_AND_SET_V1_LIMIT_IMPL(vulkanName, webgpuName, GreaterThan, "most")
 
     CHECK_AND_SET_V1_MAX_LIMIT(maxImageDimension1D, maxTextureDimension1D);
 
-    CHECK_AND_SET_V1_MAX_LIMIT(maxImageDimension2D, maxTextureDimension2D);
-    CHECK_AND_SET_V1_MAX_LIMIT(maxImageDimensionCube, maxTextureDimension2D);
-    CHECK_AND_SET_V1_MAX_LIMIT(maxFramebufferWidth, maxTextureDimension2D);
-    CHECK_AND_SET_V1_MAX_LIMIT(maxFramebufferHeight, maxTextureDimension2D);
-    CHECK_AND_SET_V1_MAX_LIMIT(maxViewportDimensions[0], maxTextureDimension2D);
-    CHECK_AND_SET_V1_MAX_LIMIT(maxViewportDimensions[1], maxTextureDimension2D);
-    CHECK_AND_SET_V1_MAX_LIMIT(viewportBoundsRange[1], maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(maxImageDimension2D, maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(maxImageDimensionCube, maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(maxFramebufferWidth, maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(maxFramebufferHeight, maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(maxViewportDimensions[0], maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(maxViewportDimensions[1], maxTextureDimension2D);
+    CHECK_V1_MAX_LIMIT(viewportBoundsRange[1], maxTextureDimension2D);
     limits->v1.maxTextureDimension2D = std::min({
-        static_cast<uint32_t>(vkLimits.maxImageDimension2D),
-        static_cast<uint32_t>(vkLimits.maxImageDimensionCube),
-        static_cast<uint32_t>(vkLimits.maxFramebufferWidth),
-        static_cast<uint32_t>(vkLimits.maxFramebufferHeight),
-        static_cast<uint32_t>(vkLimits.maxViewportDimensions[0]),
-        static_cast<uint32_t>(vkLimits.maxViewportDimensions[1]),
+        vkLimits.maxImageDimension2D,
+        vkLimits.maxImageDimensionCube,
+        vkLimits.maxFramebufferWidth,
+        vkLimits.maxFramebufferHeight,
+        vkLimits.maxViewportDimensions[0],
+        vkLimits.maxViewportDimensions[1],
         static_cast<uint32_t>(vkLimits.viewportBoundsRange[1]),
     });
 
@@ -788,7 +833,7 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsInternal(wgpu::FeatureLevel 
     // incorrect values on desktop drivers.
     bool readjustFragmentCombinedOutputResources =
         vkLimits.maxFragmentCombinedOutputResources > minFragmentCombinedOutputResources &&
-        uint64_t(vkLimits.maxFragmentCombinedOutputResources) < maxFragmentCombinedOutputResources;
+        uint64_t{vkLimits.maxFragmentCombinedOutputResources} < maxFragmentCombinedOutputResources;
     if (readjustFragmentCombinedOutputResources) {
         // Split extra resources across the three other limits instead of using the default values
         // since it would overflow.
@@ -859,11 +904,11 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsInternal(wgpu::FeatureLevel 
         vkLimits.maxComputeWorkGroupCount[2],
     });
 
-    if (!IsSubset(VkSampleCountFlags(VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_4_BIT),
+    if (!IsSubset(VkSampleCountFlags{VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_4_BIT},
                   vkLimits.framebufferColorSampleCounts)) {
         return DAWN_INTERNAL_ERROR("Insufficient Vulkan limits for framebufferColorSampleCounts");
     }
-    if (!IsSubset(VkSampleCountFlags(VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_4_BIT),
+    if (!IsSubset(VkSampleCountFlags{VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_4_BIT},
                   vkLimits.framebufferDepthSampleCounts)) {
         return DAWN_INTERNAL_ERROR("Insufficient Vulkan limits for framebufferDepthSampleCounts");
     }
@@ -904,9 +949,7 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsInternal(wgpu::FeatureLevel 
     // Vulkan needs to have enough push constant range size for all
     // internal and external immediate data usages.
     constexpr uint32_t kVkGuaranteedMaxPushConstantsSize = 128;  // from Vulkan spec
-    constexpr uint32_t kMaxInternalConstants =
-        std::max(sizeof(RenderImmediateConstants) - sizeof(UserImmediateConstants),
-                 sizeof(ComputeImmediateConstants) - sizeof(UserImmediateConstants));
+    constexpr uint32_t kMaxInternalConstants = sizeof(RenderImmediates) - sizeof(UserImmediates);
     static_assert(kVkGuaranteedMaxPushConstantsSize >=
                   kMaxImmediateDataBytes + kMaxInternalConstants);
     DAWN_ASSERT(vkLimits.maxPushConstantsSize >= kVkGuaranteedMaxPushConstantsSize);
@@ -963,13 +1006,14 @@ void PhysicalDevice::SetupBackendAdapterToggles(dawn::platform::Platform* platfo
     // because they affect whether or not the MSAARenderToSingleSampled feature is available.
 
     // Use dynamic rendering by default if the corresponding extension is available.
-    // Also disable on older Intel devices and ARM Mali-G68 devices which have been observed to have
-    // driver issues with the dynamic rendering path.
+    // Also disable on older Intel devices, ARM Mali-G68 devices, and PowerVR devices, all of which
+    // have been observed to have driver issues with the dynamic rendering path.
     if (!GetDeviceInfo().HasExt(DeviceExt::DynamicRendering) ||
         GetDeviceInfo().dynamicRenderingFeatures.dynamicRendering == VK_FALSE ||
         (gpu_info::IsIntel(GetVendorId()) &&
          gpu_info::GetIntelGen(GetVendorId(), GetDeviceId()) <= gpu_info::IntelGen::Gen9) ||
-        (gpu_info::IsARM(GetVendorId()) && gpu_info::IsMaliG68(GetDeviceId()))) {
+        (gpu_info::IsARM(GetVendorId()) && gpu_info::IsMaliG68(GetDeviceId())) ||
+        gpu_info::IsImgTec(GetVendorId())) {
         adapterToggles->ForceSet(Toggle::VulkanUseDynamicRendering, false);
     } else {
         adapterToggles->Default(Toggle::VulkanUseDynamicRendering, true);
@@ -989,7 +1033,7 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
     // Vulkan SPEC and drivers.
     deviceToggles->Default(Toggle::UseTemporaryBufferInCompressedTextureToTextureCopy, true);
 
-    if (IsAndroidQualcomm()) {
+    if (MayBeQualcommProprietary()) {
         // dawn:1564, dawn:1897: Recording a compute pass after a render pass in the same command
         // buffer frequently causes a crash on Qualcomm GPUs. To work around that bug, split the
         // command buffer any time we are about to record a compute pass when a render pass has
@@ -1019,11 +1063,8 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
 #if DAWN_PLATFORM_IS(32_BIT)
         deviceToggles->Default(Toggle::VulkanSampleCompareDepthCubeArrayWorkaround, true);
 #endif
-    }
-
-    if (IsIntelMesa()) {
-        // chromium:448873316: Non-scalar (vector) saturate from uniform fails.
-        deviceToggles->Default(Toggle::SaturateAsMinMaxF16, true);
+        // crbug.com/469328925
+        deviceToggles->Default(Toggle::VulkanSampleCompare2DWorkaround, true);
     }
 
     if (IsPixel10() || IsAndroidSamsung()) {
@@ -1034,24 +1075,28 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
         deviceToggles->Default(Toggle::VulkanIncompletePipelineCacheWorkaround, true);
     }
 
-    if (gpu_info::IsImgTec(GetVendorId())) {
-        // crbug.com/443906252: Polyfill for case switch with large ranges.
+    if (MayBeImaginationProprietary()) {
+        // crbug.com/443906252 - Polyfill for case switch with large ranges.
         deviceToggles->Default(Toggle::VulkanPolyfillSwitchWithIf, true);
+
+        // crbug.com/540087398 - Driver bug miscomputes mip sizes for NPOT depth/stencil textures.
+        // TODO(https://crbug.com/540087398): Limit this to old drivers once there's a driver fix.
+        deviceToggles->Default(Toggle::VulkanDisallowNPOTDepthStencilMipmaps, true);
     }
 
     // AMD Mesa front end optimizer bug for unary negation and abs.
-    // Fixed in 25.3 - See crbug.com/448294721
+    // Fixed in 25.3 - See crbug.com/448294721 and crbug.com/500099471
     // See crbug.com/93692702 for variations of this bug.
     if (IsAmdMesa()) {
         const gpu_info::DriverVersion kGoodMesaDriver = {25, 3, 0, 0};
         const bool badDriver = GetDriverVersion() < kGoodMesaDriver;
         if (badDriver) {
-            deviceToggles->Default(Toggle::VulkanPolyfillF32Abs, true);
-            deviceToggles->Default(Toggle::VulkanPolyfillF32Negation, true);
+            deviceToggles->Default(Toggle::VulkanPolyfillFloatAbs, true);
+            deviceToggles->Default(Toggle::VulkanPolyfillFloatNegation, true);
         }
     }
 
-    if (IsAndroidARM()) {
+    if (MayBeArmProprietary()) {
         // dawn:1550: Resolving multiple color targets in a single pass fails on ARM GPUs. To
         // work around the issue, passes that resolve to multiple color targets will instead be
         // forced to store the multisampled targets and do the resolves as separate passes injected
@@ -1062,9 +1107,7 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
         // `unpack4x8unorm` methods can have issues on ARM. To work around the issue we re-write the
         // pack/unpack calls and do the packing manually.
         deviceToggles->Default(Toggle::PolyfillPackUnpack4x8Norm, true);
-    }
 
-    if (gpu_info::IsARM(GetVendorId())) {
         // chromium:387000529: Arm devices have issues passing texture handles as parameters to
         // functions for accesses without a sampler (TextureLoad).
         deviceToggles->Default(Toggle::VulkanDirectVariableAccessTransformHandle, true);
@@ -1073,10 +1116,46 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
         // instructions as matrix elements instead of a source/dest pointee elements.
         // See crbug.com/460209126
         deviceToggles->Default(Toggle::VulkanCooperativeMatrixStrideIsMatrixElements, true);
+
+        // TODO(https://crbug.com/500417361): Add details once available.
+        deviceToggles->Default(Toggle::VulkanSleepAfterLostDeviceWait, true);
     }
 
     if (IsAndroidSamsung() || IsAndroidQualcomm() || IsAndroidHuawei()) {
         deviceToggles->Default(Toggle::IgnoreImportedAHardwareBufferVulkanImageSize, true);
+    }
+
+    if (gpu_info::IsHuaweiMaleoon(GetVendorId(), GetDeviceId())) {
+        // crbug.com/520126486: Huawei Maleoon drivers mis-stride multi-layer
+        // buffer<->image copies: only the first array layer / depth slice lands at
+        // the correct buffer offset when a copy region has layerCount > 1.
+        // Split such copies into one region per layer.
+        deviceToggles->Default(Toggle::VulkanSplitBufferTextureCopyForArrayLayers, true);
+    }
+
+    // Collapse redundant subgroup min and max operations to workaround a driver crash on some AMD
+    // GPUs.  Should only affect AMD Windows Driver versions < 31.0.22000.0, but because this is a
+    // harmless "optimizing" workaround go ahead enable for all versions. See:
+    // https://crbug.com/508265321.
+    if (IsWindowsAMD()) {
+        deviceToggles->Default(Toggle::CollapseSubgroupMinMax, true);
+    }
+
+    if (IsAndroidSamsung()) {
+        // Samsung Xclipse GPUs implement workgroup atomicStore incorrectly.
+        // TODO(crbug.com/487773864): If newer driver version without bug is released then we can
+        // gate this on driver version.
+        // https://crbug.com/487773864
+        deviceToggles->Default(Toggle::VulkanReplaceWorkgroupAtomicStoreWithExchange, true);
+
+        // Samsung Xclipse GPUs produce incorrect results from certain combinations of bitwise
+        // operations and select instructions when comparing unsigned values with zero.
+        // Fixed in driver versions >= 25.x.
+        // https://crbug.com/543420711
+        const gpu_info::DriverVersion kFixedDriverVersion = {25, 0, 0, 0};
+        if (GetDriverVersion() < kFixedDriverVersion) {
+            deviceToggles->Default(Toggle::VulkanReplaceUnsignedCompareZero, true);
+        }
     }
 
     if (IsSwiftshader()) {
@@ -1087,44 +1166,52 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
 
         // Disable use of ExtendedDynamicState on SwitfShader. It doesn't appear to be handling all
         // dynamic states properly, specifically some stencil ops.
-        deviceToggles->ForceSet(Toggle::VulkanUseExtendedDynamicState, false);
+        //
+        // Only force-disable when the extension is actually advertised. When it isn't, the generic
+        // availability check below already force-disables the toggle, and force-setting the same
+        // toggle twice trips the DAWN_CHECK(!mForcedToggles.Has(toggle)) in TogglesState::ForceSet.
+        if (GetDeviceInfo().HasExt(DeviceExt::ExtendedDynamicState) &&
+            GetDeviceInfo().extendedDynamicStateFeatures.extendedDynamicState == VK_TRUE) {
+            deviceToggles->ForceSet(Toggle::VulkanUseExtendedDynamicState, false);
+        }
     }
 
     if (IsIntelMesa()) {
-        // Polyfill a clamp of `id` param in subgroupShuffle to follow spec limitations.
-        // See crbug.com/435246627
-        deviceToggles->Default(Toggle::SubgroupShuffleClamped, true);
-    }
+        // chromium:448873316: Non-scalar (vector) saturate from uniform fails.
+        deviceToggles->Default(Toggle::SaturateAsMinMaxF16, true);
 
-    if (IsIntelMesa() && gpu_info::IsIntelGen12LP(GetVendorId(), GetDeviceId())) {
-        // dawn:1688: Intel Mesa driver has a bug about reusing the VkDeviceMemory that was
-        // previously bound to a 2D VkImage. To work around that bug we have to disable the resource
-        // sub-allocation for 2D textures with CopyDst or RenderAttachment usage.
-        const gpu_info::DriverVersion kBuggyDriverVersion = {21, 3, 6, 0};
-        if (GetDriverVersion() >= kBuggyDriverVersion) {
-            deviceToggles->Default(
-                Toggle::DisableSubAllocationFor2DTextureWithCopyDstOrRenderAttachment, true);
+        if (gpu_info::IsIntelGen12LP(GetVendorId(), GetDeviceId())) {
+            // dawn:1688: Intel Mesa driver has a bug about reusing the VkDeviceMemory that was
+            // previously bound to a 2D VkImage. To work around that bug we have to disable the
+            // resource sub-allocation for 2D textures with CopyDst or RenderAttachment usage.
+            const gpu_info::DriverVersion kBuggyDriverVersion = {21, 3, 6, 0};
+            if (GetDriverVersion() >= kBuggyDriverVersion) {
+                deviceToggles->Default(
+                    Toggle::DisableSubAllocationFor2DTextureWithCopyDstOrRenderAttachment, true);
+            }
+
+            // chromium:1361662: Mesa driver has a bug clearing R8 mip-leveled textures on Intel
+            // Gen12 GPUs. Work around it by clearing the whole texture as soon as they are created.
+            const gpu_info::DriverVersion kFixedDriverVersion = {23, 1, 0, 0};
+            if (GetDriverVersion() < kFixedDriverVersion) {
+                deviceToggles->Default(Toggle::VulkanClearGen12TextureWithCCSAmbiguateOnCreation,
+                                       true);
+            }
         }
 
-        // chromium:1361662: Mesa driver has a bug clearing R8 mip-leveled textures on Intel Gen12
-        // GPUs. Work around it by clearing the whole texture as soon as they are created.
-        const gpu_info::DriverVersion kFixedDriverVersion = {23, 1, 0, 0};
-        if (GetDriverVersion() < kFixedDriverVersion) {
-            deviceToggles->Default(Toggle::VulkanClearGen12TextureWithCCSAmbiguateOnCreation, true);
-        }
-    }
-
-    if (IsIntelMesa() && (gpu_info::IsIntelGen12LP(GetVendorId(), GetDeviceId()) ||
-                          gpu_info::IsIntelGen12HP(GetVendorId(), GetDeviceId()))) {
-        // Intel Mesa driver has a bug where vkCmdCopyQueryPoolResults fails to write overlapping
-        // queries to a same buffer after the buffer is accessed by a compute shader with correct
-        // resource barriers, which may caused by flush and memory coherency issue on Intel Gen12
-        // GPUs. Workaround for it to clear the buffer before vkCmdCopyQueryPoolResults on Mesa
-        // driver version < 23.1.3.
-        const gpu_info::DriverVersion kBuggyDriverVersion = {21, 2, 0, 0};
-        const gpu_info::DriverVersion kFixedDriverVersion = {23, 1, 3, 0};
-        if (GetDriverVersion() >= kBuggyDriverVersion && GetDriverVersion() < kFixedDriverVersion) {
-            deviceToggles->Default(Toggle::ClearBufferBeforeResolveQueries, true);
+        if (gpu_info::IsIntelGen12LP(GetVendorId(), GetDeviceId()) ||
+            gpu_info::IsIntelGen12HP(GetVendorId(), GetDeviceId())) {
+            // Intel Mesa driver has a bug where vkCmdCopyQueryPoolResults fails to write
+            // overlapping queries to a same buffer after the buffer is accessed by a compute shader
+            // with correct resource barriers, which may caused by flush and memory coherency issue
+            // on Intel Gen12 GPUs. Workaround for it to clear the buffer before
+            // vkCmdCopyQueryPoolResults on Mesa driver version < 23.1.3.
+            const gpu_info::DriverVersion kBuggyDriverVersion = {21, 2, 0, 0};
+            const gpu_info::DriverVersion kFixedDriverVersion = {23, 1, 3, 0};
+            if (GetDriverVersion() >= kBuggyDriverVersion &&
+                GetDriverVersion() < kFixedDriverVersion) {
+                deviceToggles->Default(Toggle::ClearBufferBeforeResolveQueries, true);
+            }
         }
     }
 
@@ -1160,7 +1247,7 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
     if (!GetDeviceInfo().HasExt(DeviceExt::ZeroInitializeWorkgroupMemory) ||
         GetDeviceInfo().zeroInitializeWorkgroupMemoryFeatures.shaderZeroInitializeWorkgroupMemory ==
             VK_FALSE ||
-        IsAndroidARM() || gpu_info::IsImgTec(GetVendorId())) {
+        gpu_info::IsARM(GetVendorId()) || gpu_info::IsImgTec(GetVendorId())) {
         deviceToggles->ForceSet(Toggle::VulkanUseZeroInitializeWorkgroupMemoryExtension, false);
     }
     // By default try to initialize workgroup memory with OpConstantNull according to the Vulkan
@@ -1231,11 +1318,34 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
         Toggle::EnableIntegerRangeAnalysisInRobustness,
         platform->IsFeatureEnabled(platform::Features::kWebGPUEnableRangeAnalysisForRobustness));
 
+    // TODO(https://issues.chromium.org/498659375): Re-enable on Android ARM.
     if (GetDeviceInfo().HasExt(DeviceExt::Spirv14)) {
-        deviceToggles->Default(Toggle::UseSpirv14,
-                               platform->IsFeatureEnabled(platform::Features::kWebGPUUseSpirv14));
+        deviceToggles->Default(
+            Toggle::UseSpirv14,
+            platform->IsFeatureEnabled(platform::Features::kWebGPUUseSpirv14) && !IsAndroidARM());
     } else {
         deviceToggles->ForceSet(Toggle::UseSpirv14, false);
+    }
+
+    // TODO(b/379673383): Disabled on Pixel10 devices.
+    if (GetDeviceInfo().HasExt(DeviceExt::MaximalReconvergence) &&
+        GetDeviceInfo().shaderMaximalReconvergenceFeatures.shaderMaximalReconvergence == VK_TRUE &&
+        !IsAndroidImgTec()) {
+        deviceToggles->Default(
+            Toggle::UseSpirvReconvergenceMode,
+            platform->IsFeatureEnabled(platform::Features::kWebGPUUseSpirvReconvergenceMode));
+    } else if (GetDeviceInfo().HasExt(DeviceExt::SubgroupUniformControlFlow) &&
+               GetDeviceInfo()
+                       .shaderSubgroupUniformControlFlowFeatures.shaderSubgroupUniformControlFlow ==
+                   VK_TRUE &&
+               (mDeviceInfo.subgroupProperties.supportedStages & VK_SHADER_STAGE_COMPUTE_BIT) &&
+               (mDeviceInfo.subgroupProperties.supportedStages & VK_SHADER_STAGE_FRAGMENT_BIT) &&
+               !IsAndroidImgTec()) {
+        deviceToggles->Default(
+            Toggle::UseSpirvReconvergenceMode,
+            platform->IsFeatureEnabled(platform::Features::kWebGPUUseSpirvReconvergenceMode));
+    } else {
+        deviceToggles->ForceSet(Toggle::UseSpirvReconvergenceMode, false);
     }
 
     // Vulkan waiting is already thread safe.
@@ -1251,6 +1361,15 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
         deviceToggles->ForceSet(Toggle::VulkanUseExtendedDynamicState, false);
     } else {
         deviceToggles->Default(Toggle::VulkanUseExtendedDynamicState, false);
+    }
+
+    if (!GetDeviceInfo().HasExt(DeviceExt::RasterizationOrderAttachmentAccess) ||
+        GetDeviceInfo()
+                .rasterizationOrderAttachmentAccessFeatures
+                .rasterizationOrderColorAttachmentAccess == VK_FALSE) {
+        deviceToggles->ForceSet(Toggle::VulkanUseRasterizationOrderAttachmentAccess, false);
+    } else {
+        deviceToggles->Default(Toggle::VulkanUseRasterizationOrderAttachmentAccess, true);
     }
 }
 
@@ -1278,6 +1397,7 @@ FeatureValidationResult PhysicalDevice::ValidateFeatureSupportedWithTogglesImpl(
         // See crbug.com/391680973. We disable subgroups on this device unless the user has
         // explicitly enabled the 'enable_subgroups_intel_gen9' toggle.
         case wgpu::FeatureName::Subgroups:
+        case wgpu::FeatureName::SubgroupSizeControl:
             if (gpu_info::IsIntelGen9(GetVendorId(), GetDeviceId()) &&
                 !toggles.IsEnabled(Toggle::EnableSubgroupsIntelGen9)) {
                 return FeatureValidationResult(
@@ -1315,7 +1435,7 @@ FeatureValidationResult PhysicalDevice::ValidateFeatureSupportedWithTogglesImpl(
             }
             break;
 
-        // HostMappedPointer is currently disabled on AMD due to a driver bug: crbug.com/494566064
+        // HostMappedPointer is not supported on AMD (see: crbug.com/494566064)
         case wgpu::FeatureName::HostMappedPointer:
             if (gpu_info::IsAMD(GetVendorId())) {
                 return FeatureValidationResult(
@@ -1330,46 +1450,34 @@ FeatureValidationResult PhysicalDevice::ValidateFeatureSupportedWithTogglesImpl(
     return {};
 }
 
-// Android devices with Qualcomm GPUs have a myriad of known issues. (dawn:1549)
-bool PhysicalDevice::IsAndroidQualcomm() const {
+bool PhysicalDevice::IsAndroid() {
 #if DAWN_PLATFORM_IS(ANDROID)
-    return gpu_info::IsQualcommPCI(GetVendorId());
+    return true;
 #else
     return false;
 #endif
+}
+
+// Android devices with Qualcomm GPUs have a myriad of known issues. (dawn:1549)
+bool PhysicalDevice::IsAndroidQualcomm() const {
+    return IsAndroid() && gpu_info::IsQualcommPCI(GetVendorId());
 }
 
 // Android devices with ARM GPUs have known issues. (dawn:1550)
 bool PhysicalDevice::IsAndroidARM() const {
-#if DAWN_PLATFORM_IS(ANDROID)
-    return gpu_info::IsARM(GetVendorId());
-#else
-    return false;
-#endif
+    return IsAndroid() && gpu_info::IsARM(GetVendorId());
 }
 
 bool PhysicalDevice::IsAndroidSamsung() const {
-#if DAWN_PLATFORM_IS(ANDROID)
-    return gpu_info::IsSamsung(GetVendorId());
-#else
-    return false;
-#endif
+    return IsAndroid() && gpu_info::IsSamsung(GetVendorId());
 }
 
 bool PhysicalDevice::IsAndroidHuawei() const {
-#if DAWN_PLATFORM_IS(ANDROID)
-    return gpu_info::IsHuawei(GetVendorId());
-#else
-    return false;
-#endif
+    return IsAndroid() && gpu_info::IsHuawei(GetVendorId());
 }
 
 bool PhysicalDevice::IsAndroidImgTec() const {
-#if DAWN_PLATFORM_IS(ANDROID)
-    return gpu_info::IsImgTec(GetVendorId());
-#else
-    return false;
-#endif
+    return IsAndroid() && gpu_info::IsImgTec(GetVendorId());
 }
 
 bool PhysicalDevice::IsPixel10() const {
@@ -1393,6 +1501,45 @@ bool PhysicalDevice::IsAmdMesa() const {
 
 bool PhysicalDevice::IsSwiftshader() const {
     return gpu_info::IsGoogleSwiftshader(GetVendorId(), GetDeviceId());
+}
+
+bool PhysicalDevice::IsWindows() {
+#if DAWN_PLATFORM_IS(WINDOWS)
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool PhysicalDevice::IsWindowsAMD() const {
+    return IsWindows() && gpu_info::IsAMD(GetVendorId());
+}
+
+bool PhysicalDevice::MayBeArmProprietary() const {
+    if (!gpu_info::IsARM(GetVendorId())) {
+        return false;
+    }
+
+    return !mDeviceInfo.HasExt(DeviceExt::DriverProperties) ||
+           mDeviceInfo.driverProperties.driverID == VK_DRIVER_ID_ARM_PROPRIETARY;
+}
+
+bool PhysicalDevice::MayBeQualcommProprietary() const {
+    if (!gpu_info::IsQualcommPCI(GetVendorId())) {
+        return false;
+    }
+
+    return !mDeviceInfo.HasExt(DeviceExt::DriverProperties) ||
+           mDeviceInfo.driverProperties.driverID == VK_DRIVER_ID_QUALCOMM_PROPRIETARY;
+}
+
+bool PhysicalDevice::MayBeImaginationProprietary() const {
+    if (!gpu_info::IsImgTec(GetVendorId())) {
+        return false;
+    }
+
+    return !mDeviceInfo.HasExt(DeviceExt::DriverProperties) ||
+           mDeviceInfo.driverProperties.driverID == VK_DRIVER_ID_IMAGINATION_PROPRIETARY;
 }
 
 std::optional<uint32_t> PhysicalDevice::FindDefaultComputeSubgroupSize() const {
@@ -1569,16 +1716,13 @@ const AHBFunctions* PhysicalDevice::GetOrLoadAHBFunctions() {
 void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
                                                const TogglesState& toggles) const {
     if (auto* memoryHeapProperties = info.Get<AdapterPropertiesMemoryHeaps>()) {
-        size_t count = mDeviceInfo.memoryHeaps.size();
-        auto* heapInfo = new MemoryHeapInfo[count];
-        memoryHeapProperties->heapCount = count;
-        memoryHeapProperties->heapInfo = heapInfo;
+        auto heapInfo = HeapArray<MemoryHeapInfo>(mDeviceInfo.memoryHeaps.size());
 
-        for (size_t i = 0; i < count; ++i) {
-            heapInfo[i].size = mDeviceInfo.memoryHeaps[i].size;
-            heapInfo[i].properties = {};
+        for (auto [i, heap] : Enumerate(heapInfo)) {
+            heap.size = mDeviceInfo.memoryHeaps[i].size;
+            heap.properties = {};
             if (mDeviceInfo.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
-                heapInfo[i].properties |= wgpu::HeapProperty::DeviceLocal;
+                heap.properties |= wgpu::HeapProperty::DeviceLocal;
             }
         }
         for (const auto& memoryType : mDeviceInfo.memoryTypes) {
@@ -1594,6 +1738,8 @@ void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
                 heapInfo[memoryType.heapIndex].properties |= wgpu::HeapProperty::HostUncached;
             }
         }
+
+        memoryHeapProperties->heapInfo = std::move(heapInfo).MoveToSpan();
     }
     if (auto* vkProperties = info.Get<AdapterPropertiesVk>()) {
         vkProperties->driverVersion = mDeviceInfo.properties.driverVersion;
@@ -1601,28 +1747,17 @@ void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
     if (auto* drmProperties = info.Get<AdapterPropertiesDrm>()) {
         drmProperties->hasPrimary = mDeviceInfo.drmProperties.hasPrimary;
         drmProperties->hasRender = mDeviceInfo.drmProperties.hasRender;
-        drmProperties->primaryMajor = mDeviceInfo.drmProperties.primaryMajor;
-        drmProperties->primaryMinor = mDeviceInfo.drmProperties.primaryMinor;
-        drmProperties->renderMajor = mDeviceInfo.drmProperties.renderMajor;
-        drmProperties->renderMinor = mDeviceInfo.drmProperties.renderMinor;
+        // TODO(crbug.com/42240462): Ideally these would be declared as int64_t in dawn.json to
+        // match the Vulkan structs, but at the time of this comment that wasn't supported yet.
+        drmProperties->primaryMajor = sign_dcast(mDeviceInfo.drmProperties.primaryMajor);
+        drmProperties->primaryMinor = sign_dcast(mDeviceInfo.drmProperties.primaryMinor);
+        drmProperties->renderMajor = sign_dcast(mDeviceInfo.drmProperties.renderMajor);
+        drmProperties->renderMinor = sign_dcast(mDeviceInfo.drmProperties.renderMinor);
     }
     if (auto* subgroupMatrixConfigs = info.Get<AdapterPropertiesSubgroupMatrixConfigs>()) {
         std::vector<SubgroupMatrixConfig> supportedConfigs =
             EnumerateSubgroupMatrixConfigs(toggles);
-        size_t count = supportedConfigs.size();
-        SubgroupMatrixConfig* configs = new SubgroupMatrixConfig[count];
-        subgroupMatrixConfigs->configs = configs;
-        subgroupMatrixConfigs->configCount = supportedConfigs.size();
-        memcpy(configs, supportedConfigs.data(), count * sizeof(SubgroupMatrixConfig));
-    }
-    if (auto* explicitComputeSubgroupSizeConfigs =
-            info.Get<AdapterPropertiesExplicitComputeSubgroupSizeConfigs>()) {
-        explicitComputeSubgroupSizeConfigs->minExplicitComputeSubgroupSize =
-            GetMinExplicitComputeSubgroupSize();
-        explicitComputeSubgroupSizeConfigs->maxExplicitComputeSubgroupSize =
-            GetMaxExplicitComputeSubgroupSize();
-        explicitComputeSubgroupSizeConfigs->maxComputeWorkgroupSubgroups =
-            GetMaxComputeWorkgroupSubgroups();
+        subgroupMatrixConfigs->configs = HeapArrayFrom(supportedConfigs).MoveToSpan();
     }
 }
 
@@ -1632,22 +1767,19 @@ void PhysicalDevice::PopulateBackendFormatCapabilities(
     if (auto* drmCapabilities = capabilities.Get<DawnDrmFormatCapabilities>()) {
         auto vk_format = ColorVulkanImageFormat(format);
         if (vk_format == VK_FORMAT_UNDEFINED) {
-            drmCapabilities->properties = nullptr;
-            drmCapabilities->propertiesCount = 0;
+            drmCapabilities->properties = {};
         }
         auto drmFormatModifiers =
             GetFormatModifierProps(mVulkanInstance->GetFunctions(), mVkPhysicalDevice, vk_format);
         if (!drmFormatModifiers.empty()) {
-            size_t count = drmFormatModifiers.size();
-            auto* properties = new DawnDrmFormatProperties[count];
-            drmCapabilities->properties = properties;
-            drmCapabilities->propertiesCount = count;
+            auto properties = HeapArray<DawnDrmFormatProperties>(drmFormatModifiers.size());
 
-            for (size_t i = 0; i < count; i++) {
-                properties[i].modifier = drmFormatModifiers[i].drmFormatModifier;
-                properties[i].modifierPlaneCount =
-                    drmFormatModifiers[i].drmFormatModifierPlaneCount;
+            for (auto [i, property] : Enumerate(properties)) {
+                property.modifier = drmFormatModifiers[i].drmFormatModifier;
+                property.modifierPlaneCount = drmFormatModifiers[i].drmFormatModifierPlaneCount;
             }
+
+            drmCapabilities->properties = std::move(properties).MoveToSpan();
         }
     }
 }

@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -31,8 +31,8 @@ package gitiles
 import (
 	"context"
 	"fmt"
-	"net/http"
 
+	"go.chromium.org/luci/auth"
 	"go.chromium.org/luci/common/api/gitiles"
 	gpb "go.chromium.org/luci/common/proto/gitiles"
 )
@@ -45,8 +45,12 @@ type Gitiles struct {
 
 // New creates a client to communicate with Gitiles, for the given host and
 // project.
-func New(ctx context.Context, host, project string) (*Gitiles, error) {
-	client, err := gitiles.NewRESTClient(http.DefaultClient, host, false)
+func New(ctx context.Context, opts auth.Options, host, project string) (*Gitiles, error) {
+	httpClient, err := auth.NewAuthenticator(ctx, auth.InteractiveLogin, opts).Client()
+	if err != nil {
+		return nil, err
+	}
+	client, err := gitiles.NewRESTClient(httpClient, host, true)
 	if err != nil {
 		return nil, err
 	}

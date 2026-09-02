@@ -91,8 +91,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -139,8 +137,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -189,8 +185,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -242,8 +236,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -294,8 +286,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -344,8 +334,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -398,8 +386,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -449,8 +435,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -503,8 +487,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -554,8 +536,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -609,8 +589,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -663,8 +641,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -714,8 +690,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -767,8 +741,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -822,8 +794,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -873,8 +843,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -926,8 +894,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -977,8 +943,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -1031,8 +995,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -1081,8 +1043,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
@@ -1135,8 +1095,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     Run(TexturePolyfill, cfg);
     EXPECT_EQ(expect, str());
@@ -1184,8 +1142,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1251,8 +1207,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -1317,8 +1271,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1386,8 +1338,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1457,8 +1407,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -1523,8 +1471,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -1588,8 +1534,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1657,8 +1601,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1729,8 +1671,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -1793,8 +1733,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -1856,8 +1794,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1923,8 +1859,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -1993,8 +1927,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2056,8 +1988,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2122,8 +2052,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2187,8 +2115,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2255,8 +2181,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2326,8 +2250,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2390,8 +2312,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2457,8 +2377,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2521,8 +2439,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2590,8 +2506,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2654,8 +2568,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2721,8 +2633,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2787,8 +2697,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -2858,8 +2766,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2925,8 +2831,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -2989,8 +2893,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3056,8 +2958,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3125,8 +3025,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3196,8 +3094,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -3260,8 +3156,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3328,8 +3222,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -3392,8 +3284,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3462,8 +3352,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -3525,8 +3413,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3590,8 +3476,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3657,8 +3541,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3726,8 +3608,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3797,8 +3677,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -3861,8 +3739,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -3929,8 +3805,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -3993,8 +3867,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4063,8 +3935,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -4128,8 +3998,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4196,8 +4064,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -4263,8 +4129,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4334,8 +4198,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -4401,8 +4263,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4472,8 +4332,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4545,8 +4403,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4620,8 +4476,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4697,8 +4551,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -4767,8 +4619,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4841,8 +4691,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -4911,8 +4759,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -4987,8 +4833,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -5051,8 +4895,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5117,8 +4959,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5185,8 +5025,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5257,8 +5095,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -5321,8 +5157,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5390,8 +5224,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -5454,8 +5286,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5522,8 +5352,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -5589,8 +5417,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5659,8 +5485,6 @@ $B1: {  # root
 }
 )";
 
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
-
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
     Run(TexturePolyfill, cfg);
@@ -5723,8 +5547,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -5791,8 +5613,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {2, 2};
@@ -6002,8 +5822,6 @@ $B1: {  # root
   }
 }
 )";
-
-    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings};
 
     TexturePolyfillConfig cfg;
     cfg.placeholder_sampler_bind_point = {4, 0};

@@ -1,0 +1,1347 @@
+Name
+
+    ARB_shader_atomic_counters
+
+Name Strings
+
+    GL_ARB_shader_atomic_counters
+
+Contact
+
+    Bill Licea-Kane ( bill.licea-kane 'at' amd.com )
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Chris Dodd, NVIDIA
+    Eric Werness, NVIDIA
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Nick Haemel, AMD
+    Pat Brown, NVIDIA
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on 2011/06/20.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date: July 30, 2012
+    Author Revision: 31
+
+Number
+
+    ARB Extension #114
+
+Dependencies
+
+    This extension is written against the OpenGL 4.1 (core) specification
+    and the GLSL 4.10.6 specification.
+
+    OpenGL 3.0 is required.
+
+
+Overview
+
+    This extension provides a set of atomic counters.
+
+    This extension provides GLSL built-in functions to
+    query and increment/decrement these atomic counters.
+
+    This enables a shader to write to unique offsets
+    (append to a buffer object) or read from unique offsets
+    (consume from a buffer object).
+
+    Opaque handles to atomic counters are declared
+    at global scope and are qualified with the uniform qualifier.
+
+    Unlike other user-defined uniforms declared at global scope,
+    they take NO storage from the default partition, they have
+    NO location, and they may NOT be set with the Uniform* commands.
+    Atomic counters may also NOT be grouped into uniform blocks.
+
+    Active atomic counters can be discovered by the commands
+    GetUniformIndices, GetActiveUniformName, GetActiveUniform
+    and GetActiveUniformsiv.
+
+    Like samplers, the opaque handles of the atomic counters
+    and are ONLY used in some GLSL built-in functions.
+
+    The atomic counters pointed to by the opaque handles
+    are bound to buffer binding points and buffer offsets
+    through the layout qualifiers in the shading language,
+    or they are implicitly assigned by the compiler.
+
+    Through the OpenGL API, buffer objects may be
+    bound to these binding points with BindBufferBase
+    or BindBufferRange.
+
+    The contents of the atomic counters are stored
+    in the buffer objects.  The contents of atomic
+    counters may be set and queried with buffer object
+    manipulation functions (e.g. BufferData,
+    BufferSubData, MapBuffer or MapBufferRange).
+
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void GetActiveAtomicCounterBufferiv 
+      (uint program, uint bufferIndex, enum pname, int *params);
+
+New Types
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameter of BindBufferBase and BindBufferRange:
+
+        ATOMIC_COUNTER_BUFFER                           0x92C0
+
+    Accepted by the <pname> parameter of GetBooleani_v, GetIntegeri_v,
+    GetFloati_v, GetDoublei_v, GetInteger64i_v, GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, GetDoublev, and GetActiveAtomicCounterBufferiv:
+
+       ATOMIC_COUNTER_BUFFER_BINDING                    0x92C1
+
+    Accepted by the <pname> parameter of GetIntegeri_64v:
+
+       ATOMIC_COUNTER_BUFFER_START                      0x92C2
+       ATOMIC_COUNTER_BUFFER_SIZE                       0x92C3
+
+    Accepted by the <pname> parameter of GetActiveAtomicCounterBufferiv:
+
+       ATOMIC_COUNTER_BUFFER_DATA_SIZE                  0x92C4
+       ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTERS     0x92C5
+       ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTER_INDICES        0x92C6
+       ATOMIC_COUNTER_BUFFER_REFERENCED_BY_VERTEX_SHADER          0x92C7
+       ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_CONTROL_SHADER    0x92C8
+       ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_EVALUATION_SHADER 0x92C9
+       ATOMIC_COUNTER_BUFFER_REFERENCED_BY_GEOMETRY_SHADER        0x92CA
+       ATOMIC_COUNTER_BUFFER_REFERENCED_BY_FRAGMENT_SHADER        0x92CB
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+       MAX_VERTEX_ATOMIC_COUNTER_BUFFERS                0x92CC
+       MAX_TESS_CONTROL_ATOMIC_COUNTER_BUFFERS          0x92CD
+       MAX_TESS_EVALUATION_ATOMIC_COUNTER_BUFFERS       0x92CE
+       MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS              0x92CF
+       MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS              0x92D0
+       MAX_COMBINED_ATOMIC_COUNTER_BUFFERS              0x92D1
+
+       MAX_VERTEX_ATOMIC_COUNTERS                       0x92D2
+       MAX_TESS_CONTROL_ATOMIC_COUNTERS                 0x92D3
+       MAX_TESS_EVALUATION_ATOMIC_COUNTERS              0x92D4
+       MAX_GEOMETRY_ATOMIC_COUNTERS                     0x92D5
+       MAX_FRAGMENT_ATOMIC_COUNTERS                     0x92D6
+       MAX_COMBINED_ATOMIC_COUNTERS                     0x92D7
+
+       MAX_ATOMIC_COUNTER_BUFFER_SIZE                   0x92D8
+       MAX_ATOMIC_COUNTER_BUFFER_BINDINGS               0x92DC
+
+    Accepted by the <pname> parameter of GetProgramiv:
+
+       ACTIVE_ATOMIC_COUNTER_BUFFERS                    0x92D9
+
+    Accepted by the <pname> parameter of GetActiveUniformsiv:
+
+       UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX              0x92DA
+
+    Returned in <params> by GetActiveUniform and GetActiveUniformsiv:
+
+       UNSIGNED_INT_ATOMIC_COUNTER                      0x92DB
+
+
+Additions to Chapter 2 of the OpenGL 4.1 (Core Profile) Specification
+(OpenGL Operation)
+
+Changes to Section 2.9 Buffer Objects
+
+Add to table 2.8 (p. 41)
+
+    Target Name                Purpose              Described in section(s)
+    ---------------------  ----------------------   -----------------------
+    ATOMIC_COUNTER_BUFFER  Atomic counter storage          2.11.8
+
+Changes to Section Binding Buffer Objects to Indexed Targets
+
+Change end of first sentence in section, p. 42
+
+    ...target must be ATOMIC_COUNTER_BUFFER, TRANSFORM_FEEDBACK_BUFFER
+    or UNIFORM_BUFFER.
+
+2.11.7 Uniform Variables
+
+Replace third sentence of paragraph one in the section, p. 72
+beginning with "Uniforms are program..."
+
+    Uniforms, except for subroutine uniforms, are program...
+
+Replace first sentence of paragraph two in the section, p. 72
+beginning with "Sets of uniforms can be..."
+
+    Sets of uniforms, except for samplers, subroutine uniforms and
+    atomic counters, can be grouped into <uniform blocks>.
+
+Modify first sentence of first paragraph, p. 73
+beginning with "The amount of storage..."
+
+    The amount of storage available for uniform variables,
+    except for subroutine uniforms and atomic counters,
+    in the default uniform block...
+
+Modify first sentence of second paragraph, p. 73
+beginning with "When a program..."
+
+    When a program is successfully linked, all active
+    uniforms, except for atomic counters, ...
+
+Insert a pragraph prior to third paragraph, p. 73
+beginning with "Similary, when a program..."
+
+    Similarly, when a program is successfully linked,
+    all active atomic counters are assigned bindings,
+    offsets (and strides for arrays of atomic counters)
+    according to layout rules described below.  Atomic
+    counter uniform buffer objects provide the storage for
+    atomic counters, so the values of atomic counters
+    may be changed by modifying the contents of the
+    buffer object using commands such as BufferData,
+    BufferSubData, MapBuffer, and UnmapBuffer.  Atomic
+    counters are not assigned a location and may not be
+    modified using the Uniform* commands.  The bindings,
+    offsets, and strides belonging to atomic counters
+    of a program object are invalidated and new ones
+    assigned after each successful re-link.
+
+
+Modify the final line on paragraph continuing on p. 74
+ending "or if <name> is associated with a named uniform block."
+
+    ... if <name> is associated with an atomic counter,
+    or if <name> is associated with a named uniform block.
+
+Insert section prior to the last paragraph on p. 76,
+begining with "Each active uniform, whether in a named..."
+
+    In programs with active atomic counter uniforms, each buffer object
+    binding point associated with one or more active atomic counters is
+    considered an active atomic counter buffer.  Information about the set of
+    active atomic counter buffers for a program can be obtained by calling
+
+      void GetActiveAtomicCounterBufferiv 
+        ( uint program, uint bufferIndex, enum pname, int *params );
+
+    <program> is the name of a program object for which the
+    command LinkProgram has been issued in the past. It is
+    not necessary for <program> to have been linked successfully.
+    The link could have failed because the number of active
+    active atomic counters exceeded implementation-dependent limits.
+
+    <bufferIndex> specifies the index of an active atomic counter buffer and
+    must be in the range zero to the value of ACTIVE_ATOMIC_COUNTER_BUFFERS-1.
+    The value of ACTIVE_ATOMIC_COUNTER_BUFFERS for <program> indicates the
+    number of active atomic counter buffers and can be queried with
+    GetProgramiv (see section 6.1.12).  If <bufferIndex> is greater than or
+    equal to the value of ACTIVE_ATOMIC_COUNTER_BUFFERS, the error
+    INVALID_VALUE is generated.
+
+    If no error occurs, the parameter(s) specified by <pname> are
+    returned in <params>. Otherwise, nothing will be written to
+    <params>.
+
+    If <pname> is ATOMIC_COUNTER_BUFFER_BINDING, then the index of the atomic
+    counter buffer binding point associated with the active atomic counter
+    buffer <bufferIndex> for <program> is returned.
+
+    If <pname> is ATOMIC_COUNTER_BUFFER_DATA_SIZE, then the
+    implementation-dependent minimum total buffer object size, in
+    basic machine units, required to hold all active atomic counters
+    in the atomic counter buffer identified by
+    <bufferIndex> is returned.
+
+    The total amount of buffer object storage accessible in any 
+    given atomic counter buffer is subject to an implementation-dependent 
+    limit. The maximum amount of storage accessible to atomic counters,
+    in basic machine units, can be queried by calling GetIntegerv with the constant 
+    MAX_ATOMIC_COUNTER_BUFFER_SIZE. If the amount of storage required for a
+    atomic counter buffer exceeds this limit, a program may fail 
+    to link.
+
+    If <pname> is ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTERS, then the
+    number of active atomic counter variables associated with the atomic
+    counter buffer identified by <bufferIndex> is returned.
+
+    If <pname> is ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTER_INDICES,
+    then a list of the active atomic counter indices for the atomic counter
+    buffer identified by <bufferIndex> is returned. The number of
+    elements that will be written to <params> is the value of
+    ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTERS for <bufferIndex>.
+
+    If <pname> is ATOMIC_COUNTER_BUFFER_REFERENCED_BY_VERTEX_SHADER,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_CONTROL_SHADER,
+    UNIFORM_BLOCK_REFERENCED_BY_TESS_EVALUATION_SHADER,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_GEOMETRY_SHADER, or
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_FRAGMENT_SHADER, then a boolean
+    value indicating whether the atomic counter buffer identified by
+    <bufferIndex> is referenced by the vertex, tessellation control,
+    tessellation evaluation, geometry, or fragment programming stages of
+    <program>, respectively, is returned."
+
+Modify first sentence of last paragraph on p. 76,
+beginning with "Each active uniform, whether in a named..."
+
+    Each active uniform, except for subroutine uniforms,
+    whether in a the default block, in a named uniform block, or
+    an atomic counter...
+
+Modify first sentence of the fourth paragraph on p. 77
+beginning with "The name of an active..."
+
+    The name of an active uniform, except for subroutine
+    uniforms, may be querried...
+
+
+Replace the last paragraph on p. 77
+beginning with "Each uniform variable..."
+
+    Each active uniform variable, except subroutine uniforms, 
+    is broken down into one or more strings using the "." (dot) 
+    and "[]" operators, if necessary, to the point that it is 
+    legal to pass each string back into GetUniformIndices.
+
+Modify first sentence of first paragraph on p. 78
+beginning with "Information about active uniforms..."
+
+    Information about active uniforms, except for
+    subroutine uniforms, can be...
+
+Replace the fourth paragraph on p. 78
+beginning with "Each uniform variable..."
+
+    Each active uniform variable, except subroutine uniforms, 
+    is broken down into one or more strings using the "." (dot) 
+    and "[]" operators, if necessary, to the point that it is 
+    legal to pass each string back into GetUniformIndices.
+
+Modify the last paragraph 
+
+Add to Table 2.13, p. 81
+
+    Type Name Token              Keyword      Attrib  Xfb
+    ---------------------------  -----------  ------  ---
+    UNSIGNED_INT_ATOMIC_COUNTER  atomic_uint         
+
+Modify description of UNIFORM_OFFSET query in GetActiveUniformsiv, p. 82
+
+    If <pname> is UNIFORM_OFFSET, then an array of buffer offsets is returned.
+    For uniforms in a named uniform block, the returned value will be its
+    offset, in basic machine units, relative to the beginning of the uniform
+    block in the buffer object data store.  For atomic counter uniforms, the
+    returned value will be its offset relative to the beginning of its active
+    atomic counter buffer.  For all other uniforms, an offset of -1 will be
+    returned.
+
+    If <pname> is UNIFORM_ARRAY_STRIDE, then an array of strides between array
+    elements in buffer object storage is returned.  For uniforms in named
+    uniform blocks and for uniforms declared as atomic counters, the stride is
+    the difference, in basic machine units, of the offsets of consecutive
+    elements in an array, or zero for uniforms not declared as an array.  For
+    all other uniforms, a stride of -1 will be returned.
+
+Add prior to "Loading Uniform Values In The Default Uniform Block", p. 83
+
+    If <pname> is UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX, then an array
+    identifying the active atomic counter buffer index of each of the uniforms
+    specified by the corresponding array of <uniformIndices> is returned.  For
+    uniforms other than atomic counters, the returned buffer index is -1.  The
+    returned indices can be passed to GetActiveAtomicCounterBufferiv to query
+    properties of the associated buffer, and not necessarily the binding point
+    specified in the uniform declaration.
+
+Modify first sentence of first new paragraph on p. 83
+beginning with "To load values into the uniform variables..."
+
+    To load values into the uniform variables of the default uniform block
+    of the active program object, except for subroutine uniforms and atomic
+    counters, ..."
+ 
+Modify first sentence of the fifth paragraph on p. 84
+beginning with "For all other uniform types..."
+
+    For all other uniform types, except for subroutine
+    uniforms and atomic counters, ...
+
+
+Add new unnumbered subsections at the end of the section, p. 90
+
+    Atomic Counter Buffers
+
+    The values of atomic counters are backed by buffer object storage.
+    The mechanisms for accessing individual atomic counters in a buffer object
+    and connecting to an atomic counter are described in this section.
+
+    There is a set of implementation-dependent maximums for the number
+    of active atomic counter buffers referenced by each shader. If the
+    number of atomic counter buffers referenced by any shader in the program
+    exceeds its corresponding limit, the program will fail to link. The limits
+    for vertex, tessellation control, tessellation evaluation, geometry, and
+    fragment shaders can be obtained by calling GetIntegerv with pname values
+    of MAX_VERTEX_ATOMIC_COUNTER_BUFFERS, MAX_TESS_CONTROL_ATOMIC_COUNTER_BUFFERS,
+    MAX_TESS_EVALUATION_ATOMIC_COUNTER_BUFFERS, MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS,
+    or MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, respectively.
+
+    Additionally, there is an implementation-dependent limit on the sum of the
+    number of active atomic counter buffers used by each shader of a
+    program. If an atomic counter buffer is used by multiple shaders,
+    each such use counts separately against this combined limit. The combined 
+    atomic counter buffer use limit can be obtained by calling
+    GetIntegerv with a <pname> of MAX_COMBINED_ATOMIC_COUNTER_BUFFERS.
+    
+    Atomic Counter Buffer Object Storage
+
+    Atomic counters stored in buffer objects are represented in memory
+    as follows:
+
+    * Members of type atomic_uint are extracted from a buffer object by
+    reading a single uint-typed value at the specified offset.
+
+    * Arrays of type atomic_uint are stored in memory by element order,
+    with array element member zero at the lowest offset.  The difference
+    in offsets between each pair of elements in the array in basic machine
+    units is referred to as the array stride, and is constant across the
+    entire array.  The stride can be queried by calling GetIntegerv with
+    a <pname> of UNIFORM_ARRAY_STRIDE after a program is linked.
+
+    Atomic Counter Buffer Bindings
+
+    The value of an active atomic counter is extracted from or written to the
+    data store of a buffer object bound to one of an array of atomic counter
+    buffer binding points. The number of binding points can be queried by
+    calling GetIntegerv with a <pname> of MAX_ATOMIC_COUNTER_BUFFER_BINDINGS.
+
+    Regions of buffer objects are bound as storage for atomic counters by calling
+    one of the commands BindBufferRange or BindBufferBase (see section 2.9.1)
+    with <target> set to ATOMIC_COUNTER_BUFFER. In addition to the general errors 
+    described in section 2.9.1, BindBufferBase and BindBufferRange will generate an INVALID_VALUE
+    error if <index> is greater than or equal to the value of MAX_ATOMIC_COUNTER_BUFFER_BINDINGS,
+    and BindBufferRange will generate an INVALID_VALUE error if <offset> is
+    not a multiple of four.
+
+    Each of a program's active atomic counter buffer bindings has a corresponding 
+    atomic counter buffer binding point. This binding point is established
+    with the layout qualifier in the shader text, either explicitly or implicitly,
+    as described in the Shading Language specification.
+
+    When executing shaders that access atomic counters, each active atomic
+    counter buffer must be populated with a buffer object with a size no
+    smaller than the minimum required size for that buffer (the value of
+    ATOMIC_COUNTER_BUFFER_DATA_SIZE).  For binding points populated by
+    BindBufferRange, the size in question is the value of the <size>
+    parameter.  If any active atomic counter buffer is not backed by a
+    sufficiently large buffer object, the results of shader execution are
+    undefined, and may result in GL interruption or termination.
+
+
+Add to Section 2.11.11 Shader Execution, p. 102, inserting before Shader Inputs
+
+Atomic Counter Access
+
+    Shaders have the ability to set and get atomic counters.  The maximum number
+    of atomic counters available to shaders are the values of the implementation
+    dependent constants
+
+    * MAX_VERTEX_ATOMIC_COUNTERS (for vertex shaders),
+    * MAX_TESS_CONTROL_ATOMIC_COUNTERS (for tessellation control shaders),
+    * MAX_TESS_EVALUATION_ATOMIC_COUNTERS (for tessellation evaluation shaders),
+    * MAX_GEOMETRY_ATOMIC_COUNTERS (for geometry shaders), and
+    * MAX_FRAGMENT_ATOMIC_COUNTERS (for fragment shaders).
+
+   All active shaders combined cannot use more than the value of
+   MAX_COMBINED_ATOMIC_COUNTERS atomic counters. If more than one
+   pipeline stage accesses the same atomic counter, each such
+   access counts separately against the MAX_COMBINED_ATOMIC_COUNTERS limit.
+
+    
+Additions to Chapter 6 of the OpenGL 4.1 (Core Profile) Specification
+(State and State Requests)
+
+Add to the end of section 6.1.8 (Buffer Object Queries) 
+
+    To query which buffer objects are bound to the array of transform
+    feedback binding points and will be used when transform feedback is
+    active, call GetIntegeri\_v with <param> set to
+    TRANSFORM_FEEDBACK_BUFFER_BINDING. <index> must be in the range zero to
+    the value of MAX_TRANSFORM_FEEDBACK_BUFFERS minus one. The name of the
+    buffer object bound to <index> is returned in <values>. If no buffer
+    object is bound for <index>, zero is returned in <values>. The error
+    INVALID_VALUE is generated if <index> is greater than or equal to the
+    value of MAX_TRANSFORM_FEEDBACK_BUFFERS.
+    
+    To query the starting offset or size of the range of each buffer object
+    binding used for transform feedback, call GetInteger64i_v with <param>
+    set to TRANSFORM_FEEDBACK_BUFFER_START or TRANSFORM_FEEDBACK_BUFFER_SIZE
+    respectively. <index> must be in the range 0 to the value of
+    MAX_TRANSFORM_FEEDBACK_BUFFERS minus one. If the parameter (starting
+    offset or size) was not specified when the buffer object was bound (e.g.
+    if bound with BindBufferBase), or if no buffer object is bound to
+    <index>, zero is returned. The error INVALID_VALUE is generated if
+    <index> is greater than or equal to the value of
+    MAX_TRANSFORM_FEEDBACK_BUFFERS}.
+
+Add to Section 6.1.12, immediately before the description of IsProgramPipeline
+(p. 335)
+
+    If <pname> is ACTIVE_ATOMIC_COUNTER_BUFFERS, the number of active atomic
+    counter buffers used by <program> is returned.
+
+Additions to Appendix A (Invariance)
+
+Add additional sentence to A.3 Invariance Rules, Rule 4 (p. 399)
+
+    Invariance is relaxed for shaders with side effects (such
+    as accessing atomic counters), see A.5, Atomic Counter Invariance.
+
+Add A.5 Atomic Counter Invariance
+
+    When using a program containing atomic counters, the following
+    invariance rules are intended to provide repeatability guarantees
+    but within certain constraints.
+
+    Rule 1  When a single shader type within a program accesses
+    an atomic counter with only atomicCounterIncrement, any individual
+    shader invocation is guaranteed to get a unique value returned.
+
+    Corollary 1 - Also holds true with atomicCounterDecrement.
+
+    Corollary 2 - This does not hold true for atomicCounter
+
+    Corollary 3 - Repeatability is relaxed.  While a unique
+    value is returned to the shader, even given the same
+    initial state vector and buffer contents, it is not guaranteed
+    that the *SAME* unique value will be returned for each individual
+    invocation of a shader (For example, on any single vertex, or
+    any single fragment).  It is wholly the shader writer's
+    responsibility to respect this constraint.
+
+    Rule 2  When two or more shader types within a program
+    access an atomic counter with only atomicCounterIncrement,
+    there is no repeatability of the ordering of operations between
+    stages.  For example, some number of vertices may be processed,
+    then some number of fragments may be processed.
+
+    Corollary 4 - This also holds true with atomicCounterDecrement
+    and atomicCounter.
+
+Additions to Appendix D (Shared Objects and Multiple Contexts)
+
+Modify D.3 (Propagating State Changes)
+
+    (add to list of bullets at the end of the section, p. 467)
+
+    * Rendering commands that trigger shader invocations, where
+      the shader performs built-in atomic counter functions.
+
+New State
+
+Add new table, labeled "Program Object State (cont.)" after Table 6.36, p. 377
+
+                                                             Initial
+    Get Value                         Type  Get Command      Value    Description                Sec.
+    -----------------------           ----  -----------      -------  ------------------------   -----
+    ACTIVE_ATOMIC_COUNTER_BUFFERS     Z+    GetProgramiv     0        Number of active atomic    2.11.7
+                                                                      counter buffers used
+                                                                      by a program
+    ATOMIC_COUNTER_BUFFER_BINDING     nxZ+  GetActiveAtomic- -        Binding point associated   2.11.7
+                                            CounterBufferiv           with an active atomic
+                                                                      counter buffer
+    ATOMIC_COUNTER_BUFFER_DATA_SIZE   nxZ+  GetActiveAtomic- -        Minimum size required by   2.11.7
+                                            CounterBufferiv           an active atomic counter
+                                                                      buffer
+    ATOMIC_COUNTER_BUFFER_ACTIVE_     nxZ+  GetActiveAtomic- -        Number of active atomic    2.11.7
+      ATOMIC_COUNTERS                       CounterBufferiv           counters in an active
+                                                                      atomic counter buffer
+    ATOMIC_COUNTER_BUFFER_ACTIVE_    mxnxZ+ GetActiveAtomic- -        List of active atomic      2.11.7
+      ATOMIC_COUNTER_INDICES                CounterBufferiv           counters in an active
+                                                                      atomic counter buffer
+    ATOMIC_COUNTER_BUFFER_            nxB   GetActiveAtomic- FALSE    Active atomic counter      2.11.7
+      REFERENCED_BY_VERTEX                  CounterBufferiv           buffer has a counter used
+      SHADER                                                          by vertex shaders
+    ATOMIC_COUNTER_BUFFER_            nxB   GetActiveAtomic- FALSE    Active atomic counter      2.11.7
+      REFERENCED_BY_TESS_CONTROL            CounterBufferiv           buffer has a counter used
+      SHADER                                                          by tess. control shaders
+    ATOMIC_COUNTER_BUFFER_            nxB   GetActiveAtomic- FALSE    Active atomic counter      2.11.7
+      REFERENCED_BY_TESS_EVALUTION          CounterBufferiv           buffer has a counter used
+      SHADER                                                          by tess. evaluation shaders
+    ATOMIC_COUNTER_BUFFER_            nxB   GetActiveAtomic- FALSE    Active atomic counter      2.11.7
+      REFERENCED_BY_GEOMETRY                CounterBufferiv           buffer has a counter used
+      SHADER                                                          by geometry shaders
+    ATOMIC_COUNTER_BUFFER_            nxB   GetActiveAtomic- FALSE    Active atomic counter      2.11.7
+      REFERENCED_BY_FRAGMENT                CounterBufferiv           buffer has a counter used
+      SHADER                                                          by fragment shaders
+    UNIFORM_ATOMIC_COUNTER_BUFFER_    nxZ+  GetActive-       -        Active atomic counter      2.11.7
+      INDEX                                 Uniformsiv                buffer associated with an
+                                                                      active uniform
+
+Add new table, labeled "Atomic Counter State", after Table 6.39, p. 380
+
+                                                             Initial
+    Get Value                         Type  Get Command      Value    Description                Sec.
+    -----------------------           ----  -----------      -------  ------------------------   -----
+    ATOMIC_COUNTER_BUFFER_BINDING     Z+    GetIntegerv      0        Current value of generic   2.9.9
+                                                                      atomic counter buffer
+                                                                      binding
+    ATOMIC_COUNTER_BUFFER_BINDING     n*Z+  GetIntegeri_v    0        Buffer object bound        2.9.9
+                                                                      to each atomic counter
+                                                                      buffer binding point
+    ATOMIC_COUNTER_BUFFER_START       n*Z+  GetInteger64i_v  0        Start offset of            2.9.9
+                                                                      binding range for each
+                                                                      atomic counter buffer
+    ATOMIC_COUNTER_BUFFER_SIZE        n*Z+  GetInteger64i_v  0        Size of binding range for  2.9.9 
+                                                                      each atomic counter buffer
+
+New Implementation Dependent State
+
+
+Add to Table 6.46, Implementation Dependent Vertex Shader Limits, p. 387:
+
+    Get Value                                  Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------                    ----  -----------    -------------  -------------------------  -----
+    MAX_VERTEX_ATOMIC_COUNTER_BUFFERS          Z+    GetIntegerv    0              Number of atomic counter   2.11.7
+                                                                                   buffers accessed by a
+                                                                                   vertex shader
+    MAX_VERTEX_ATOMIC_COUNTERS                 Z+    GetIntegerv    0              Number of atomic counters  2.11.11
+                                                                                   accessed by a vertex 
+                                                                                   shader
+Add to Table 6.47, Implementation Dependent Tesselation Shader Limits, p. 388:
+
+    Get Value                                  Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------                    ----  -----------    -------------  -------------------------  -----
+    MAX_TESS_CONTROL_ATOMIC_COUNTER_BUFFERS    Z+    GetIntegerv    0              Number of atomic counter   2.11.7
+                                                                                   buffers accessed by a 
+                                                                                   tesselation control shader
+    MAX_TESS_EVALUATION_ATOMIC_COUNTER_BUFFERS Z+    GetIntegerv    0              Number of atomic counter   2.11.7
+                                                                                   buffers accessed by a
+                                                                                   tesselation evaluation shader
+    MAX_TESS_CONTROL_ATOMIC_COUNTERS           Z+    GetIntegerv    0              Number of atomic counters  2.11.11
+                                                                                   accessed by a tesselation
+                                                                                   control shader
+    MAX_TESS_EVALUATION_ATOMIC_COUNTERS        Z+    GetIntegerv    0              Number of atomic counters  2.11.11
+                                                                                   accessed by a tesselation 
+                                                                                   evaluation shader
+Add to Table 6.48, Implementation Dependent Geometry Shader Limits, p. 389:
+
+    Get Value                                  Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------                    ----  -----------    -------------  -------------------------  -----
+    MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS        Z+    GetIntegerv    0              Number of atomic counter   2.11.7
+                                                                                   buffers accessed by a 
+                                                                                   geometry shader
+    MAX_GEOMETRY_ATOMIC_COUNTERS               Z+    GetIntegerv    0              Number of atomic counters  2.11.11
+                                                                                   accessed by a geometry
+                                                                                   shader
+Add to Table 6.49, Implementation Dependent Fragment Shader Limits, p. 390:
+
+    Get Value                                  Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------                    ----  -----------    -------------  -------------------------  -----
+    MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS        Z+    GetIntegerv    1              Number of atomic counter   2.11.7
+                                                                                   buffers accessed by a
+                                                                                   fragment shader 
+    MAX_FRAGMENT_ATOMIC_COUNTERS               Z+    GetIntegerv    8              Number of atomic counters  2.11.11
+                                                                                   accessed by a fragment
+                                                                                   shader
+Add to Table 6.50 Implementation Dependent Aggregate Shader Limits, p. 391:
+
+    Get Value                                  Type  Get Command    Minimum Value  Description                Sec. 
+    -----------------------                    ----  -----------    -------------  -------------------------  -----
+    MAX_ATOMIC_COUNTER_BUFFER_BINDINGS         Z+    GetIntegerv    1              Max. number of atomic      2.9.9
+                                                                                   counter buffer bindings
+    MAX_ATOMIC_COUNTER_BUFFER_SIZE             Z+    GetIntegerv    32
+                                                                                   machine units of an
+                                                                                   atomic counter buffer
+    MAX_COMBINED_ATOMIC_COUNTER_BUFFERS        Z+    GetIntegerv    1              Max. number of atomic      2.11.7
+                                                                                   counter buffers per 
+                                                                                   program
+    MAX_COMBINED_ATOMIC_COUNTERS               Z+    GetIntegerv    8              Max. number of atomic      2.11.11
+                                                                                   counter uniforms per
+                                                                                   program
+
+
+
+Additions to the OpenGL Shading Langauge 4.10.6 Specification
+
+    Including the following line in a shader can be used to control the
+    language features described in the extension:
+
+      #extension GL_ARB_shader_atomic_counters : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_atomic_counters 1
+
+Additions to Chapter 3 of the OpenGL Shading Language 4.10.6 Specification
+
+Add to 3.6 Keywords (pp. 13-15)
+
+    atomic_uint
+
+Additions to Chapter 4 of the OpenGL Shading Language 4.10.6 Specification
+
+Add to Section 4.1 Basic Types
+
+    Unsigned Integer Counter Types (opaque)
+
+    Type         Meaning
+    atomic_uint  a handle for accessing an unsigned integer atomic counter
+
+Insert Section 4.1.8 Atomic Counters (existing 4.1.8 becomes 4.1.9, and so on)
+
+    4.1.8 Atomic Counters
+
+    Atomic Counter types (e.g. atomic_uint) are effectively opaque handles to counters.
+    They are used with the built-in atomic counter functions (described in section 8.10
+    "Atomic Counter Functions") to specify which counter to access.  They can only be
+    declared as function parameters or uniform-qualified global variables.
+
+    Except for array indexing, structure field selection, and parenthesis,
+    counters are not allowed to be operands in expressions.  Counters aggregated into
+    arrays within a shader (using square brackets []) can only be indexed with dynamically
+    uniform integral expressions, otherwise results are undefined.  Counters cannot be
+    treated as l-values; hence cannot be used as out or inout function parameters, nor
+    can they be assigned into.
+
+
+Modify last sentence of first paragraph of section 4.3.5, p. 36
+beginning with "Sampler types cannot..."
+
+    Sampler types and atomic counter types cannot..."
+
+Insert Section 4.3.6 Atomic Counters.  (Existing 4.3.6 becomes 4.3.7, and so on)
+
+    4.3.6  Uniform
+
+    The uniform qualifier is used to declare global opaque handles (to counters)
+    where the handles are the same across the entire primitive being processed.
+    All uniform variables are read-only and are initialized at link time.
+
+    It is an error to write to a uniform-qualified variable.
+
+    For example,
+
+        layout( binding=2, offset=0 ) uniform atomic_uint a;
+
+    will establish that the opaque handle to the atomic counter "a" 
+    will be bound to atomic counter buffer binding 2 at offset 0.
+
+    There is an implementation dependent limit to the number of uniforms that
+    can be used for each type of shader and if this is exceeded it will cause a 
+    compile-time or link-time error.  Uniform variables that are declared but 
+    not used may or may not count against this limit.
+
+    If multiple shaders are linked together, then they will share a single
+    global uniform name space, including within the language as well as across
+    languages.  Hence, the type of uniform variables with the
+    same name must match across all shaders that are linked into a single program.
+
+    It is legal for some shaders to provide a layout qualifier for a uniform
+    variable of the same name, while another shader does not provide
+    a layout qualifier for a uniform variable of the same name, but if provided,
+    all provided layout qualifiers must be equal for a uniform variable of the
+    same name, and if not provided, all implicitly provided layout qualifiers must
+    be equal for a uniform variable of the same name.
+
+
+Add Section 4.3.8.4 Uniform Layout Qualifiers
+
+    Layout qualifiers can be used on uniform declarations.  The uniform qualifier
+    identifiers for uniforms are
+
+    layout-qualifier-id
+        binding = integer-constant
+        offset = integer-constant
+
+    For example, 
+
+        layout(binding = 2, offset = 4) uniform atomic_uint foo;
+
+    will establish that the atomic counter foo has a binding to
+    buffer binding point 2 and an offset of 4 basic machine units
+    in that buffer.  The offset will be post-incremented by the
+    size of the uniform (for atomic_uint, 4 basic machine units).
+
+    A subsequent uniform declaration will inherit the binding,
+    and offset (perhaps post-incremented).  For example, a
+    subsequent declaration of,
+
+         uniform atomic_uint bar;
+
+    will establish that the atomic counter bar has a binding to
+    buffer binding point 2 and an offset of 8 basic machine units
+    in that buffer.  The offset will be post-incremented by
+    the size of the uniform (again, for atomic_uint, 4 basic
+    machine units).
+
+    If the limit on the maximum number of bindings is exceeded,
+    or if the limit of the maximum number of counters (either
+    per shader type or combined) is exceeded, it will be a link
+    error.
+
+    It is a compile error to bind an atomic counter with
+    a value greater than or equal to gl_MaxAtomicCounterBindings.
+
+Add Section 4.3.8.3 Uniform Layout Qualifiers prior to
+existing 4.3.8.3 Uniform Block Layout Qualifiers, and renumber
+subsequent sections
+
+    Layout qualifiers can be used on uniform declarations.  The layout
+    qualifiers identifiers for uniforms are
+
+    layout-qualifier-id
+        binding = integer-constant
+        offset = integer-constant
+
+    Uniform layout qualifiers can be declared for global scope or on a single
+    uniform declaration.
+
+    Default layouts are established at global scope for uniforms as
+
+        layout (layout-qualifier-id-list) uniform;
+
+    When this is done, the previous default qualification is first inherited and
+    then overridden as per the override rules listed below.  The result becomes
+    the new default qualification scoped to subsequent uniform block definitions.
+
+    The initial state of compiliation is as if the following were declared:
+
+        layout(binding=0, offset=0) uniform;
+
+    Explicitly declaring this in a shader will return defaults back to their
+    initial state.
+
+    Uniforms can be declared with optional layout qualifiers.  As with global
+    layout declarations, uniform layout qualification first inherits from the
+    current default qualification and then overrides it.
+
+    When multiple arguments are listed in a layout declaration, the affect will
+    be the same as if they were declared one at a time, in order from left to
+    right, each in turn inheriting from and overriding the result from the
+    previous qualification.
+
+    For each uniform element, the then current default layout qualifiers will
+    be applied, together with any prior post-increments of offset, if applicable,
+    then the offset will be post-incremented by the size of the uniform, in
+    basic machine units.
+
+    Uniforms may share the same binding, but if a binding is shared, each
+    offset must be explicitly or implicitly unique.
+
+    For example a valid uniform declarations:
+
+    layout(binding=3, offset=4) uniform;
+
+    uniform atomic_uint                   thunderhead; // offset = 4
+    uniform atomic_uint                   stratogirl;  // offset = 8
+    layout(binding=3) uniform atomic_uint metalman;    // binding matches,
+                                                       // offset = 12
+    layout(offset=20) uniform atomic_uint dynaguy;     // offset = 20
+    uniform atomic_uint                   splashdown;  // offset = 24
+
+
+    Example of an invalid uniform declarations;
+
+    layout(binding=1, offset=0) batman;        // OK
+    layout(binding=2, offset=0) robin;         // OK
+    layout(binding=1, offset=0) catwoman;      // error, offsets
+                                               // must not be shared
+                                               // between batman and
+                                               // catwoman
+
+Additions to Chapter 7 of the OpenGL Shading Language 4.10.6 Specification
+(Built-in Variables)
+
+Add to Section 7.4, Built-In Constants
+
+const int gl_MaxVertexAtomicCounters = 0;          // minimum maximum
+const int gl_MaxTessControlAtomicCounters = 0;     // minimum maximum
+const int gl_MaxTessEvaluationAtomicCounters = 0;  // minimum maximum
+const int gl_MaxGeometryAtomicCounters = 0;        // minimum maximum
+const int gl_MaxFragmentAtomicCounters = 8;        // minimum maximum
+const int gl_MaxCombinedAtomicCounters = 8;        // minimum maximum
+const int gl_MaxAtomicCounterBindings = 1;         // minimum maximum
+
+Additions to Chapter 8 of the OpenGL Shading Language 1.50 Specification
+(Built-in Functions)
+
+Add Section 8.10  Atomic Counter Functions (existing 8.10 becomes 8.11, and so on)
+
+    8.10  Atomic Counter Functions
+
+    Atomic counter functions have exclusive access to any single counter, perform
+    an atomic operation, then release exclusive access to that counter, 
+    as-if a single step.
+    Any other atomic counter function may access that single counter only after any
+    earlier atomic operation is completed.
+
+    The value returned by an atomic counter function is the value of
+    an atomic counter, which may be:
+    returned and incremented in an atomic operation,
+    or decremented and returned in an atomic operation,
+    or simply returned.
+
+    The underlying counter is a 32-bit unsigned integer.  Increments and decrements 
+    at the limit of the range will wrap to [0, 2^32-1].
+
+
+    Syntax                        Description
+    uint atomicCounterIncrement   Increments <counter> atomically, returning
+      ( atomic_uint counter );    the value prior to the increment operation.
+
+    uint atomicCounterDecrement   Decrements <counter> atomically, returning
+      ( atomic_uint counter );    the value after the decrement operation.
+
+    uint atomicCounter            Returns the value of <counter>.
+      ( atomic_uint counter );
+
+
+Sample Code
+
+    layout( binding=2)            uniform atomic_uint a;
+    layout( binding=2, offset=4 ) uniform atomic_uint b;
+    layout( binding=5, offset=0 ) uniform atomic_uint c;
+
+    // ...
+
+    uint foo = atomicCounterIncrement( a ); // get the counter value, then increment the counter
+                                            // atomic operation
+    uint bar = atomicCounterDecrement( b ); // decrement the counter value, then get the counter
+                                            // atomic operation
+    uint baz = atomicCounter( c );          // get the counter value
+                                            // atomic operation
+
+Issues
+
+1 -  Do we need an indirection table between the counters and the shaders?
+     (Similar to Samplers?  VertexAttribBinding?  Uniform blocks?)
+
+     Yes.  This draft introduces opaque counters similar to samplers.
+     However, there is no Uniform-like API means of setting them to a
+     texture unit or attribute-like API of binding them to a location.
+     Instead, we have uniforms, which are a storage qualifier at
+     global scope, and which use layout qualifiers to bind them
+     to buffer binding points.  A GetActiveUniforms API is
+     used to retrieve the names of the counters, and their
+     bindings, and other useful information.
+
+2 -  What shader stages are these available in?
+
+     Resolved.  All stages.
+
+3 -  Can the counters be operated on in the shading language?
+
+     Resolved:  Not directly.  But indirectly, probably not in
+     any meaningful way.  But there are no restrictions placed on the
+     values once they are returned to the shader.
+
+4 -  Where's issue 4?
+
+     Resolved.  It's here.
+
+5 - Can a single shader both increment and decrement an individual atomic
+    counter?
+
+     Resolved:  Yes, with caveats.  In order to provide a global unique
+     offset, a counter must *either* be incremented or decremented by a
+     shader.  The best way to think of this is that these are UNORDERED
+     increments and decrements.  However, there may be uses for these
+     atomic counters other than providing unique offsets.
+
+     We provide mechanism, not policy.  Shader coding conventions can
+     provide policy - there's little reason for the compiler to be involved
+     in enforcing.
+
+6 - Can multiple shaders in a program both increment and decrement an
+    individual atomic counter?
+
+     Resolved.  Yes, with the same caveats as above.
+
+7 -  Is there a maximum maximum number of counters?
+
+     Resolved.  No, implementations are free to support arbitrarily many
+     counters.  Implementations may set their own limits, though there are
+     specified minimum limits.
+
+8 -  Can a counter be queried, but not incremented/decremented in the shader?
+
+     Resolved:  Yes.  (It's an increment of zero.  Or a decrement of zero.)
+     Note that using a get without an increment or decrement will return
+     a value that is *not* unique.
+
+     Again, we provide mechanism, not policy.
+
+9 -  Can a counter be incremented/decremented by an arbitrary amount?
+
+     Resolved:  No.  Only by 1.  (Or 0.)
+
+10 - Should append counters wrap on zero and overflow?
+
+     Resolved:  Wrap.  [0,2^32-1]
+
+11 - What piece of state owns the atomic counters?
+
+     Resolved:  There is no context state, they must be backed
+     by buffer objects.
+
+12 - Can the atomic counters be shared between contexts?
+
+     Resolved:  Not directly, but they may be shared indirectly by sharing the
+     buffer objects that back them.
+
+13 - Should we be able to write atomic counters to a buffer object?
+
+     Resolved.  Yes.  (Note that buffer objects can be shared.
+     The result of updating atomic counters in multiple contexts
+     backed with the same buffer object is undefined.)
+
+14 - If indexing an array of atomic_uints, can the index used diverge
+     in a SIMD implementation?
+
+     Resolved.  No.  They must be dynamically uniform, similar
+     to samplers.
+
+15 - Should we provide "append buffer" functionality?
+
+     Resolved:  Yes, but by providing access to atomic counters.
+     This provides the mechanism to do "append buffer" functionality,
+     and more.
+
+16 - What should this extension be called?
+
+     Resolved:  ARB_shader_atomic_counters.  It's primarily a shader
+     extension, and it provides atomic_counters.
+    
+17 - What happens to shared buffer objects that are updated in
+     more than one context by data-setting commands, including
+     the built-in atomic counter functions?
+
+     Resolved:  They should follow the same rules as other shared
+     buffer objects.  (That is, care must be taken when updating
+     atomic counters in one context and using them in another
+     context.)  Further, the atomic built-in functions are
+     atomic in a single context, but there is no guarantee that
+     they are atomic across contexts.
+
+18 - Should there be one buffer binding for all counters, or a
+     buffer binding per counter.
+
+     Resolved.  There should be a buffer binding (and offset)
+     per counter.  Shaders may store multiple atomic counters in
+     a single buffer binding.
+
+19 - What about simultaneous use of buffer object at two 
+     binding points, where one is an atomic counter binding point?
+
+     Resolved.  We are going to be conservative and make
+     such use undefined.
+
+20 - Does atomic_uint type add any value?
+
+     Resolved.  Yes.  For a single program text, the opaque
+     atomic_uint is just syntactic sugar.
+     However, for multiple shaders bound to a shader target,
+     only one shader must contain the locations.  This would
+     permit an implementation to do fast relinking if
+     a single shader is attached to an existing shader.
+     (And display lists are just fine for optimizing
+     texture loads.  [insert silly smiley face])
+
+     Also, when we do add api (not yet added) to query active
+     atomic_uints in a shader, this provides additional benefits.
+
+21 - Do we need api to query the atomic counter?
+
+     Resolved.  Earlier drafts had a traditional indexed get,
+     which would be useful for debugging but not high performance.
+     An alternative would be to add a query object to do asynchronos
+     queries.  But note, that when these counters are backed by
+     buffer objects, all the GetBufferSubData and/or MapBuffer
+     just works.
+
+     This draft simply nukes the get.  (It is trivial to put it
+     back in with a caveat.)  The existing buffer api should
+     be used for high performance client side (cpu) access
+     to atomic counters.
+
+22 - Does AtomicCounter reset to zero:
+     The context default counter state?
+     The value in a buffer object bound to a counter?
+     Both?
+
+     Resolved.  THERE IS NO DEFAULT CONTEXT STATE, only the
+     buffer object bound, if any, is set.
+
+23 - Does a BufferData to a buffer bound to counter set the value of:
+     The buffer object?  (Obviously)
+     The context default counter state bound that that buffer?
+
+     Resolved.  THERE IS NO DEFAULT CONTEXT STATE.
+
+24 - Do we want an error (or undefined behavior) that says you
+     can't draw while a mapped buffer is bound to one of these
+     counters?
+
+     Resolved.  Undefined.
+
+25 - Is a atomic_uint an "in" or a "uniform"?
+
+     Resolved.  "atomic_uint" variables are declared as uniforms at global
+     scope.
+
+26 - Can the active atomic counters for one program be stored in more than one
+     buffer object?
+
+     Resolved.  Yes.
+
+27 - Can atomic counters be grouped into blocks similar to uniform blocks?
+
+     Resolved.  No.  However, layout qualifiers can be used in individual
+     declarations to identify a specific buffer binding point and offset to
+     use for the counter.
+
+28 - What API should be used to query information about atomic counters?
+
+     Resolved.  GetActiveUniformsiv.  Apart from the common type and count
+     queries, UNIFORM_OFFSET can be used to query the offset of an atomic
+     counter, UNIFORM_ARRAY_STRIDE can be used to query the stride in memory
+     of an array of atomic counters (even though it's always four bytes), and
+     UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX can be used to query the index of the
+     active atomic counter buffer associated with the uniform.  
+
+     No GetActiveUniformsiv query is provided to retrieve the binding point
+     associated with an atomic counter uniform.  It may be obtained indirectly
+     by UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX and then using
+     GetAtomicCounterBufferiv to query the ATOMIC_COUNTER_BUFFER_BINDING for
+     the returned index.
+
+29 - What API should we provide to query information about buffer object
+     storage needed to back atomic counters?
+
+     Unresolved.  We will provide an API for querying information about
+     "active atomic counter buffers" similar to the API we provide for
+     querying active uniform blocks.  Each set of active atomic counter
+     uniforms sharing a single binding point corresponds to an active atomic
+     counter buffer.  An application can query the number of active atomic
+     counter buffers via GetProgram.  If there are <N> active atomic counter
+     buffers, it can pass the values 0..<N>-1 to the command
+     GetAtomicCounterBufferiv to query properties of each buffer.
+
+     Consider the following set of active atomic counter uniform declarations
+     in three different shader types in a program:
+
+       [in vertex]
+       layout(binding = 0, offset = 0) uniform atomic_uint batman;
+       layout(binding = 3, offset = 4) uniform atomic_uint robin;
+       [in geometry]
+       layout(binding = 0, offset = 4) uniform atomic_uint joker;
+       layout(binding = 6, offset = 124) uniform atomic_uint riddler;
+       [in fragment]
+       layout(binding = 7, offset = 0) uniform atomic_uint penguin;
+
+     In this example, there are four active atomic counter buffers.  For the
+     purposes of the GetActiveAtomicCounterBufferiv query, these will be
+     assigned indices 0, 1, 2, 3.  If the active atomic counter buffers are
+     sorted by binding point, the atomic counter buffer binding point numbers
+     returned by calling GetActiveAtomicCounterBufferiv with a <pname> of
+     ATOMIC_COUNTER_BUFFER_BINDING, will be 0, 3, 6, and 7, respectively.
+
+30 - The function atomicCounterIncrement() returns the value of the counter
+     prior to incrementing while atomicCounterDecrement() returns the value
+     of the counter *after* decrementing.  Is this intentional?
+
+     Resolved.  Yes.  One of the intended uses of this programming model is to
+     be able to atomically add or remove records to an array stored in a
+     buffer (via ARB_shader_image_load_store).  In this model, we use the
+     atomic counter to indicate the number of records stored in the buffer and
+     expect the value to be initialized to zero.  When the first record is
+     added, it gets an index of zero and increments the counter to one.  If a
+     later operation wants to remove a record from the end of a buffer with an
+     associated counter value <N>, we would want to decrement to counter to
+     <N>-1, but also return the decremented index of <N>-1, which was the
+     index of the last record in the buffer prior to the decrement.
+
+31 - What alignment requirements apply to the <offset> and <size> parameters
+     of BindBufferRange when binding atomic counter buffers?
+
+     Resolved.  <offset> must be a multiple of four.  <size> has no required
+     alignment.  However, if <size> is not four-byte aligned, it will not
+     possible to store an atomic counter in the last few bytes of the bound
+     range since the offset of all atomic counters must also be a multiple of
+     four.
+
+Revision History
+
+    Revision 1, wwlk, 2009-09-08
+      - Working Draft
+    Revision 2, wwlk, 2009-09-08
+      - updates from feedback
+    Revision 3, wwlk, 2009-09-09
+      - (9/9/9, yeah yeah yeah)
+      - updates from feedback
+    Revision 4, wwlk, 2009-09-15
+      - updates from walkthrough
+      - minor typo update (2.9.10 should be 2.9.9)
+      - add extension enables and defines to shader spec
+      - correct function names (add EXT suffix)
+      - rename extension
+    Revision 5, wwlk, 2009-09-15
+      - Clarify buffer objects
+      - Clarify undersized buffer objects
+    Revision 6, wwlk, 2009-09-16
+      - Clarify alignment restrictions for buffer object
+      - Update built-in function names and descriptions
+      - Add issue about number of binding points
+    Revision 7, wwlk, 2010-10-17
+      - Add opaque ucounter
+      - add buffer binding and offset per counter
+    Revision 8, wwlk, 2010-10-28
+      - make it clear that these use the indexed binding api
+        (ala transform feedback)
+      - remove get
+        (bug 5839, issue 2 in bug, issue 21 in this extension)
+      - remove fragment restriction
+        (bug 5839, issue 5 in bug, issue 2 in this extension)
+      - add issue 4
+      - add other issues from bug 5839
+      - Some clarifications from bug 6975
+   Revision 9, wwlk, 2010-11-30
+      - added new global qualifier, uniform
+      - clarified no default context state
+      - clarified the action of BindBufferRange
+      - corrected alignment and sizing restrictions
+      - Still to be done - GetActiveUniforms API!
+   Revision 10, wwlk, 2010-12-02
+      - GetActiveUniforms API
+      - change ucounter -> atomic_uint
+   Revision 11, wwlk, 2010-12-02
+      - Removed unnecessary AtomicCounterEXT API.
+        (use buffer API)
+   Revision 12, wwlk, 2010-12-03
+      - Trivial typos
+   Revision 13, wwlk, 2010-12-03
+      - More trivial typos
+   Revision 14, wwlk, 2010-12-03
+      - Still more trivial typos
+   Revision 15, wwlk, 2010-12-09
+      - Still more trivial typos
+      - Clarifications
+      - Additional uniform API - next revision
+        (the obvious additions, but unfortunately
+         extensive.  Proofing now.)
+   Revision 16, johnk, 2010-12-17
+      - Change MAX_ATOMIC_COUNTERS to gl_MaxAtomicCounterBindingsEXT (is that correct?)
+      - Move that statement from the uniform section to the qualifier section.
+      - added integer constants to the layout qualifier grammar
+      - minor grammar and consistency changes going into 4.2 core.
+    Revision 17, Jon Leech, 2010-12-19
+      - Change extension name to ARB instead of EXT. Remove _EXT
+        suffixes on API since this extension is backwards-compatibility
+        for a core GL 4.2 feature. Probably should remove suffixes on
+        GLSL interface as well.
+      - Fix version number for API spec in section headings.
+    Revision 18, Jon Leech, 2011-01-05
+      - Fix typos from Bug 7202
+    Revision 19, wwlk, 2011-04-05
+      - Uniform API - large rework
+      - Clarify limits
+      - Clarify layouts, binding rules, offset rules
+      - Clarify named uniform blocks
+      - Clarify unnamed uniform blocks
+    Revision 20, wwlk, 2011-04-08
+      - Clarify named uniform blocks with examples
+      - Make explicit the matching rules for layout (explicit or implicit layout must match)
+      - Added issue 29, do we need both un-named uniform blocks and uniform blocks?
+      - Added issue 30, should the un-named uniform blocks be un-named "", or should
+        they be implicitly named (example, uniform3 for binding to 3)
+    Revision 21, wwlk, 2011-04-08
+      - Minor change to invalid uniform block example
+    Revision 22, wwlk, 2011-05-05
+      - Major change
+        uniforms (immutable)
+    Revision 23, wwlk, 2011-05-05
+      - Fixed hellacious paragraph, related to bug 7458
+        "Each active uniform variable ... "." (dot) and "[]" ..."
+    Revision 24, Jon Leech, 2011-05-08
+      - Minor formatting/typo cleanup. Fix name of query in state tables.
+        Remove EXT suffixes from shader constant and function names.
+    Revision 25, pbrown, 2011-06-18
+      - Add missing entries in the lists of new functions and tokens.
+      - Assigned enumerant values for new tokens.
+      - Minor language clarifications and typo fixes.
+      - Clarify the two different numbering spaces for buffers used for atomic
+        counters.  The set of binding points actively referenced by a
+        particular program are called "active atomic counter buffers"; the set
+        of binding points in the context to which buffers are attached query
+        are called "atomic counter bindings" or "binding points".  Related
+        APIs and tokens use "buffer" for the former and "binding" for the
+        latter (bug 7723).
+      - Add GetActiveUniformsiv support for atomic counters, allowing the use
+        of UNIFORM_OFFSET and UNIFORM_ARRAY_STRIDE, and adding the query
+        UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX to query the associated active
+        atomic counter buffer.
+      - Restructure the atomic counter buffer binding section to more closely
+        match existing uniform block language; clarify alignment and buffer
+        size requirements (bug 7722).
+      - Remove explicit language about a minimum of 8 atomic counter buffers;
+        already covered by existing queries and state table entries (bug 7722).
+      - Add GetProgram language for ACTIVE_ATOMIC_COUNTER_BUFFERS.
+      - Add missing state table entries for program object state and
+        implementation limits on atomic counter buffer sizes and the combined
+        active buffer count (bug 7722).
+      - Clarify that we intended the non-orthogonality where the increment
+        function returns a value prior to incrementing while the decrement
+        function returns a value after decrementing (bug 7722).
+      - Add a few issues and clarify/update some existing ones.
+    Revision 26, pbrown, 2011-06-20
+      - Add missing enum assignment for MAX_ATOMIC_COUNTER_BUFFER_BINDINGS.
+    Revision 27, pbrown, 2011-06-23
+      - Set a minimum value for MAX_ATOMIC_COUNTER_BUFFER_SIZE (bug 7743).
+      - Fix typo in state table.
+    Revision 28, pbrown, 2011-07-27
+      - Clarify that ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTERS queries the
+        number of atomic counter variables (bug 7834).
+      - Fix tokens MAX_*_ATOMIC_COUNTER_BUFFERS in the state table (bug 7834).
+      - Fix a couple typos.
+    Revision 29, Jon Leech, 2011-08-05
+      - Change minimum MAX_ATOMIC_COUNTER_BUFFER_SIZE value to 32 (bug
+        7855).
+    Revision 30, Jon Leech, 2012-04-12
+      - Add description of atomic buffer object binding queries in section
+        6.1.8. Correct typo for GetAtomicCounterBufferiv in state table
+        entries.
+    Revision 31, Jon Leech, 2012-07-30
+      - Correct typo ATOMIC_COUNTER_ARRAY_STRIDE -> UNIFORM_ARRAY_STRIDE
+        (bug 9346).

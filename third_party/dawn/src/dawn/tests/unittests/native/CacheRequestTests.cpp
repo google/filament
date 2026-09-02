@@ -25,21 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "dawn/native/Blob.h"
-#include "dawn/native/CacheRequest.h"
-#include "dawn/tests/DawnNativeTest.h"
-#include "dawn/tests/mocks/platform/CachingInterfaceMock.h"
 #include "dawn/webgpu_cpp_print.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/CacheRequest.h"
+#include "src/dawn/tests/DawnNativeTest.h"
+#include "src/dawn/tests/mocks/platform/CachingInterfaceMock.h"
 
 namespace dawn::native {
 namespace {
 
 using ::testing::_;
-using ::testing::ByMove;
 using ::testing::MockFunction;
 using ::testing::Return;
 using ::testing::StrictMock;
@@ -96,7 +100,7 @@ DAWN_MAKE_CACHE_REQUEST(CacheRequestForTesting, REQUEST_MEMBERS);
 // static_assert the expected types for various return types from the cache hit handler and cache
 // miss handler.
 TEST_P(CacheRequestTests, CacheResultTypes) {
-    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillRepeatedly(Return(0));
+    EXPECT_CALL(mMockCache, FindKey(_)).WillRepeatedly(Return(0));
 
     // (int, ResultOrError<int>), should be ResultOrError<CacheResult<int>>.
     auto v1 = LoadOrRun(
@@ -127,10 +131,11 @@ TEST_P(CacheRequestTests, MakesCacheKey) {
     StreamIn(&expectedKey, GetDevice()->GetCacheKey(), "CacheRequestForTesting", req.a, req.b,
              req.c);
 
-    // Expect a call to LoadData with the expected key.
-    EXPECT_CALL(mMockCache, LoadData(_, expectedKey.size(), nullptr, 0))
-        .WillOnce(WithArg<0>([&](const void* actualKeyData) {
-            EXPECT_EQ(memcmp(actualKeyData, expectedKey.data(), expectedKey.size()), 0);
+    // Expect a call to FindKey with the expected key.
+    EXPECT_CALL(mMockCache, FindKey(_))
+        .WillOnce(WithArg<0>([&](std::span<const std::byte> actualKey) {
+            EXPECT_EQ(actualKey.size(), expectedKey.size());
+            EXPECT_EQ(memcmp(actualKey.data(), expectedKey.data(), expectedKey.size()), 0);
             return 0;
         }));
 
@@ -158,7 +163,7 @@ TEST_P(CacheRequestTests, CacheKeyIgnoresUnsafeIgnoredValue) {
     req2.d = UnsafeUnserializedValue(&v2);
     req2.e = UnsafeUnserializedValue(Foo{24});
 
-    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(0)).WillOnce(Return(0));
+    EXPECT_CALL(mMockCache, FindKey(_)).WillOnce(Return(0)).WillOnce(Return(0));
 
     static StrictMock<MockFunction<int(CacheRequestForTesting)>> cacheMissFn;
 
@@ -207,7 +212,7 @@ TEST_P(CacheRequestTests, CacheMiss) {
     static StrictMock<MockFunction<int(CacheRequestForTesting)>> cacheMissFn;
 
     // Mock a cache miss.
-    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(0));
+    EXPECT_CALL(mMockCache, FindKey(_)).WillOnce(Return(0));
 
     // Expect the cache miss, and return some value.
     int rv = 42;
@@ -248,13 +253,13 @@ TEST_P(CacheRequestTests, CacheHit) {
     static constexpr char kCachedData[] = "hello world!";
     // Bytes actually stored into and loaded from Blob cache might be different from raw given data.
     Blob actualStoredData = GetDevice()->GetBlobCache()->GenerateActualStoredBlobForTesting(
-        sizeof(kCachedData), kCachedData);
+        std::as_bytes(std::span(kCachedData)));
 
     // Mock a cache hit, and load the cached data.
-    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(actualStoredData.Size()));
-    EXPECT_CALL(mMockCache, LoadData(_, _, _, actualStoredData.Size()))
-        .WillOnce(WithArg<2>([&actualStoredData](void* dataOut) {
-            memcpy(dataOut, actualStoredData.Data(), actualStoredData.Size());
+    EXPECT_CALL(mMockCache, FindKey(_)).WillOnce(Return(actualStoredData.Size()));
+    EXPECT_CALL(mMockCache, LoadData(_, _))
+        .WillOnce(WithArg<1>([&actualStoredData](std::span<std::byte> dest) {
+            memcpy(dest.data(), actualStoredData.DataPtr(), actualStoredData.Size());
             return actualStoredData.Size();
         }));
 
@@ -263,7 +268,7 @@ TEST_P(CacheRequestTests, CacheHit) {
     EXPECT_CALL(cacheHitFn, Call(_)).WillOnce(WithArg<0>([=](Blob blob) {
         // Expect the cached blob contents to match the cached data.
         EXPECT_EQ(blob.Size(), sizeof(kCachedData));
-        EXPECT_EQ(memcmp(blob.Data(), kCachedData, sizeof(kCachedData)), 0);
+        EXPECT_EQ(memcmp(blob.DataPtr(), kCachedData, sizeof(kCachedData)), 0);
 
         return rv;
     }));
@@ -298,13 +303,13 @@ TEST_P(CacheRequestTests, CacheHitError) {
     static constexpr char kCachedData[] = "hello world!";
     // Bytes actually stored into and loaded from Blob cache might be different from raw given data.
     Blob actualStoredData = GetDevice()->GetBlobCache()->GenerateActualStoredBlobForTesting(
-        sizeof(kCachedData), kCachedData);
+        std::as_bytes(std::span(kCachedData)));
 
     // Mock a cache hit, and load the cached data.
-    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(actualStoredData.Size()));
-    EXPECT_CALL(mMockCache, LoadData(_, _, _, actualStoredData.Size()))
-        .WillOnce(WithArg<2>([&actualStoredData](void* dataOut) {
-            memcpy(dataOut, actualStoredData.Data(), actualStoredData.Size());
+    EXPECT_CALL(mMockCache, FindKey(_)).WillOnce(Return(actualStoredData.Size()));
+    EXPECT_CALL(mMockCache, LoadData(_, _))
+        .WillOnce(WithArg<1>([&actualStoredData](std::span<std::byte> dest) {
+            memcpy(dest.data(), actualStoredData.DataPtr(), actualStoredData.Size());
             return actualStoredData.Size();
         }));
 
@@ -312,7 +317,7 @@ TEST_P(CacheRequestTests, CacheHitError) {
     EXPECT_CALL(cacheHitFn, Call(_)).WillOnce(WithArg<0>([=](Blob blob) {
         // Expect the cached blob contents to match the cached data.
         EXPECT_EQ(blob.Size(), sizeof(kCachedData));
-        EXPECT_EQ(memcmp(blob.Data(), kCachedData, sizeof(kCachedData)), 0);
+        EXPECT_EQ(memcmp(blob.DataPtr(), kCachedData, sizeof(kCachedData)), 0);
 
         // Return an error.
         return DAWN_VALIDATION_ERROR("fake test error");
@@ -357,11 +362,11 @@ TEST_P(CacheRequestTests, CacheHitDifferentLoadSizes) {
     static StrictMock<MockFunction<int(Blob)>> cacheHitFn;
     static StrictMock<MockFunction<int(CacheRequestForTesting)>> cacheMissFn;
 
-    // Mock a cache hit, but with different sizes returned from LoadData.
+    // Mock a cache hit, but with different sizes returned from FindKey and LoadData.
     const size_t kExpectedSize = 10;
     const size_t kActualSize = 5;
-    EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(kExpectedSize));
-    EXPECT_CALL(mMockCache, LoadData(_, _, _, kExpectedSize)).WillOnce(Return(kActualSize));
+    EXPECT_CALL(mMockCache, FindKey(_)).WillOnce(Return(kExpectedSize));
+    EXPECT_CALL(mMockCache, LoadData(_, _)).WillOnce(Return(kActualSize));
 
     // Expect the cache miss handler since the load sizes were different.
     int rv = 79;
@@ -401,7 +406,7 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
     static constexpr size_t kCachedDataSize = sizeof(kCachedData);
     // Bytes actually stored into and loaded from Blob cache might be different from raw given data.
     Blob actualStoredData = GetDevice()->GetBlobCache()->GenerateActualStoredBlobForTesting(
-        kCachedDataSize, kCachedData);
+        std::as_bytes(std::span(kCachedData)));
     const size_t sizeWithHash = actualStoredData.Size();
     // With hash validation enabled, the actual stored data size is larger than kCachedData.
     ASSERT_GT(sizeWithHash, kCachedDataSize);
@@ -427,12 +432,11 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
         unsigned int* cPtr = req.c.data();
 
         // Mock a cache hit with given data buffer.
-        EXPECT_CALL(mMockCache, LoadData(_, _, nullptr, 0)).WillOnce(Return(loadSize));
-        EXPECT_CALL(mMockCache, LoadData(_, _, _, loadSize))
-            .WillOnce(WithArg<2>([&](void* dataOut) {
-                memcpy(dataOut, loadBuffer, loadSize);
-                return loadSize;
-            }));
+        EXPECT_CALL(mMockCache, FindKey(_)).WillOnce(Return(loadSize));
+        EXPECT_CALL(mMockCache, LoadData(_, _)).WillOnce(WithArg<1>([&](std::span<std::byte> dest) {
+            memcpy(dest.data(), loadBuffer, loadSize);
+            return loadSize;
+        }));
 
         // Construct mock functions for current test.
         ASSERT_FALSE(cacheHitFn);
@@ -445,7 +449,7 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
             EXPECT_CALL(*cacheHitFn, Call(_)).WillOnce(WithArg<0>([=](Blob blob) {
                 // Expect the loaded blob contents to match the cached data.
                 EXPECT_EQ(blob.Size(), sizeof(kCachedData));
-                EXPECT_EQ(memcmp(blob.Data(), kCachedData, sizeof(kCachedData)), 0);
+                EXPECT_EQ(memcmp(blob.DataPtr(), kCachedData, sizeof(kCachedData)), 0);
 
                 return rvCacheHit;
             }));
@@ -488,7 +492,7 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
 
     // Control case: hash validation success.
     {
-        DoTest(actualStoredData.Data(), sizeWithHash, true);
+        DoTest(actualStoredData.DataPtr(), sizeWithHash, true);
     }
 
     // Hash validation failure case 1: loaded blob size too small.
@@ -502,12 +506,13 @@ TEST_P(CacheRequestTests, CacheHitHashValidationFailed) {
 
     // Hash validation failure case 2: loaded blob hash mismatched.
     {
-        Blob modifiedStoredData = CreateBlob(sizeWithHash);
-        memcpy(modifiedStoredData.Data(), actualStoredData.Data(), sizeWithHash);
+        Blob modifiedStoredData = Blob::Create(sizeWithHash);
+        memcpy(modifiedStoredData.DataPtr(), actualStoredData.DataPtr(), sizeWithHash);
         // Modify the last byte to make the hash mismatch.
-        modifiedStoredData.Data()[sizeWithHash - 1] = ~modifiedStoredData.Data()[sizeWithHash - 1];
+        modifiedStoredData.DataPtr()[sizeWithHash - 1] =
+            ~modifiedStoredData.DataPtr()[sizeWithHash - 1];
 
-        DoTest(modifiedStoredData.Data(), sizeWithHash, false);
+        DoTest(modifiedStoredData.DataPtr(), sizeWithHash, false);
     }
 }
 

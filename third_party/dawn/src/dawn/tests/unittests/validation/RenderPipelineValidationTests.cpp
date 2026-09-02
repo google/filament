@@ -30,10 +30,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -84,6 +84,23 @@ TEST_F(RenderPipelineValidationTest, CreationSuccess) {
 
         device.CreateRenderPipeline(&descriptor);
     }
+}
+
+// Test that CreateErrorRenderPipeline creates an invalid render pipeline but doesn't produce an
+// error right at creation.
+TEST_F(RenderPipelineValidationTest, CreateErrorRenderPipeline) {
+    utils::ComboRenderPipelineDescriptor descriptor;
+    descriptor.vertex.module = vsModule;
+    descriptor.cFragment.module = fsModule;
+
+    // Check that the descriptor is valid.
+    device.CreateRenderPipeline(&descriptor);
+
+    // Creating the error render pipeline doesn't produce a validation error at creation time.
+    wgpu::RenderPipeline pipeline = device.CreateErrorRenderPipeline("my_error_pipeline");
+
+    // Using the error render pipeline, for example to get a bind group layout, is an error.
+    ASSERT_DEVICE_ERROR(pipeline.GetBindGroupLayout(0));
 }
 
 // Tests that depth bias parameters must not be NaN.

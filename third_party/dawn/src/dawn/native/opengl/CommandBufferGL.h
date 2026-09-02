@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_COMMANDBUFFERGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_COMMANDBUFFERGL_H_
 
-#include "dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandBuffer.h"
 
 namespace dawn::native {
 struct BeginRenderPassCmd;
@@ -47,7 +47,9 @@ class CommandBuffer final : public CommandBufferBase {
 
   private:
     MaybeError ExecuteComputePass(const OpenGLFunctions& gl);
-    MaybeError ExecuteRenderPass(BeginRenderPassCmd* renderPass, const OpenGLFunctions& gl);
+    MaybeError ExecuteRenderPass(BeginRenderPassCmd* renderPass,
+                                 const OpenGLFunctions& gl,
+                                 PassIndex renderPassIndex);
 };
 
 // Like glTexSubImage*, the "data" argument is either a pointer to image data or

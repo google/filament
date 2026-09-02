@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/ExternalTextureWGPU.h"
+#include "src/dawn/native/webgpu/ExternalTextureWGPU.h"
 
 #include <string>
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
 namespace dawn::native::webgpu {
 
 ExternalTexture::CreationParams::CreationParams(const ExternalTextureDescriptor* descriptor) {
@@ -46,12 +46,10 @@ ExternalTexture::CreationParams::CreationParams(const ExternalTextureDescriptor*
 
     hasPlane1 = descriptor->plane1 != nullptr;
 
-    std::copy_n(descriptor->yuvToRgbConversionMatrix, 12, yuvToRgbConversionMatrix.begin());
-    std::copy_n(descriptor->srcTransferFunctionParameters, 7,
-                srcTransferFunctionParameters.begin());
-    std::copy_n(descriptor->dstTransferFunctionParameters, 7,
-                dstTransferFunctionParameters.begin());
-    std::copy_n(descriptor->gamutConversionMatrix, 9, gamutConversionMatrix.begin());
+    Span<float>(yuvToRgbConversionMatrix).CopyFrom(descriptor->yuvToRgbConversionMatrix);
+    Span<float>(srcTransferFunctionParameters).CopyFrom(descriptor->srcTransferFunctionParameters);
+    Span<float>(dstTransferFunctionParameters).CopyFrom(descriptor->dstTransferFunctionParameters);
+    Span<float>(gamutConversionMatrix).CopyFrom(descriptor->gamutConversionMatrix);
 }
 
 // static
@@ -78,10 +76,10 @@ ExternalTexture::ExternalTexture(Device* device, const ExternalTextureDescriptor
         .cropSize = ToWGPU(descriptor->cropSize),
         .apparentSize = ToWGPU(descriptor->apparentSize),
         .doYuvToRgbConversionOnly = descriptor->doYuvToRgbConversionOnly,
-        .yuvToRgbConversionMatrix = descriptor->yuvToRgbConversionMatrix,
-        .srcTransferFunctionParameters = descriptor->srcTransferFunctionParameters,
-        .dstTransferFunctionParameters = descriptor->dstTransferFunctionParameters,
-        .gamutConversionMatrix = descriptor->gamutConversionMatrix,
+        .yuvToRgbConversionMatrix = descriptor->yuvToRgbConversionMatrix.data(),
+        .srcTransferFunctionParameters = descriptor->srcTransferFunctionParameters.data(),
+        .dstTransferFunctionParameters = descriptor->dstTransferFunctionParameters.data(),
+        .gamutConversionMatrix = descriptor->gamutConversionMatrix.data(),
         .mirrored = descriptor->mirrored,
         .rotation = ToAPI(descriptor->rotation),
     };

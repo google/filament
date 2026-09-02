@@ -1,0 +1,99 @@
+Name
+
+    EXT_bgra
+
+Name Strings
+
+    GL_EXT_bgra
+
+Version
+
+    Microsoft revision 1.0, May 19, 1997 (drewb)
+    $Date: 1999/04/03 08:40:34 $ $Revision: 1.4 $
+
+Number
+
+    129
+
+Dependencies
+
+    None
+
+Overview
+
+    EXT_bgra extends the list of host-memory color formats.
+    Specifically, it provides formats which match the memory layout of
+    Windows DIBs so that applications can use the same data in both
+    Windows API calls and OpenGL pixel API calls.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, GetTexImage,
+    ReadPixels, TexImage1D, and TexImage2D:
+
+        BGR_EXT                 0x80E0
+        BGRA_EXT                0x80E1
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    One entry is added to table 3.5 (DrawPixels and ReadPixels formats).
+    The new table is:
+
+        Name                    Type            Elements                Target Buffer
+        ----                    ----            --------                ------
+        COLOR_INDEX             Index           Color Index             Color
+        STENCIL_INDEX           Index           Stencil value           Stencil
+        DEPTH_COMPONENT         Component       Depth value             Depth
+        RED                     Component       R                       Color
+        GREEN                   Component       G                       Color
+        BLUE                    Component       B                       Color
+        ALPHA                   Component       A                       Color
+        RGB                     Component       R, G, B                 Color
+        RGBA                    Component       R, G, B, A              Color
+        LUMINANCE               Component       Luminance value         Color
+        LUMINANCE_ALPHA         Component       Luminance value, A      Color
+        BGR_EXT                 Component       B, G, R                 Color
+        BGRA_EXT                Component       B, G, R, A              Color
+
+        Table 3.5: DrawPixels and ReadPixels formats.  The third column
+        gives a description of and the number and order of elements in a
+        group.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The new format is added to the discussion of Obtaining Pixels from
+    the Framebuffer. It should read " If the <format> is one of RED,
+    GREEN, BLUE, ALPHA, RGB, RGBA, BGR_EXT, BGRA_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA, and the GL is in color index mode, then the color
+    index is obtained."
+
+    The new format is added to the discussion of Index Lookup. It should
+    read "If <format> is one of RED, GREEN, BLUE, ALPHA, RGB, RGBA,
+    BGR_EXT, BGRA_EXT, LUMINANCE, or LUMINANCE_ALPHA, then the index is
+    used to reference 4 tables of color components: PIXEL_MAP_I_TO_R,
+    PIXEL_MAP_I_TO_G, PIXEL_MAP_I_TO_B, and PIXEL_MAP_I_TO_A."
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State
+Requests)
+
+    None
+
+Revision History
+
+    Original draft, revision 0.9, October 13, 1995 (drewb)
+        Created
+    Minor revision, revision 1.0, May 19, 1997 (drewb)
+        Removed Microsoft Confidential.

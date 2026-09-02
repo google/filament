@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/BlitTextureToBuffer.h"
+#include "src/dawn/native/BlitTextureToBuffer.h"
 
 #include <algorithm>
 #include <array>
@@ -33,21 +33,23 @@
 #include <string_view>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Strings.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/ComputePassEncoder.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/InternalPipelineStore.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/Sampler.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/common/Algebra.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/ComputePassEncoder.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
@@ -185,27 +187,50 @@ constexpr std::string_view kEncodeRG16FloatInU32 = DAWN_MULTILINE(
     }
 );
 
+// Keep in sync with the WGSL struct below.
+struct Params {
+    // copyExtent
+    math::Vec3u srcOrigin;
+    // Implicit padding of 4 bytes.
+    // How many texel values one thread needs to pack (1, 2, or 4)
+    uint32_t packTexelCount;
+    math::Vec3u srcExtent;
+    // Implicit padding of 4 bytes.
+    uint32_t mipLevel;
+    // GPUImageDataLayout
+    uint32_t bytesPerRow;
+    uint32_t rowsPerImage;
+    uint32_t offset;
+    uint32_t shift;
+    uint32_t texelSize;
+    uint32_t numU32PerRowNeedsWriting;
+    uint32_t readPreviousRow;
+    uint32_t isCompactImage;
+    // Used for cube sample
+    math::Vec3u levelSize;
+};
+
 // Each thread is responsible for reading (packTexelCount) texel and packing them into a 4-byte u32.
 constexpr std::string_view kCommonHead = DAWN_MULTILINE(  //
+    // Keep in sync with the C++ struct above.
     struct Params {
         // copyExtent
-        srcOrigin: vec3u,
+        @size(16) srcOrigin: vec3u,
         // How many texel values one thread needs to pack (1, 2, or 4)
         packTexelCount: u32,
-        srcExtent: vec3u,
+        @size(16) srcExtent: vec3u,
         mipLevel: u32,
         // GPUImageDataLayout
         bytesPerRow: u32,
         rowsPerImage: u32,
         offset: u32,
         shift: u32,
-        // Used for cube sample
-        levelSize: vec3u,
-        pad0: u32,
         texelSize: u32,
         numU32PerRowNeedsWriting: u32,
         readPreviousRow: u32,
         isCompactImage: u32,
+        // Used for cube sample
+        levelSize: vec3u,
     };
 
     @group(0) @binding(2) var<uniform> params : Params;
@@ -984,12 +1009,11 @@ ResultOrError<Ref<ComputePipelineBase>> GetOrCreateTextureToBufferPipeline(
                                                    },
                                                    /* allowInternalBinding */ true));
 
-        std::array<BindGroupLayoutBase*, 2> bindGroupLayouts = {bindGroupLayout0.Get(),
-                                                                bindGroupLayout1.Get()};
+        ityp::array<BindGroupIndex, BindGroupLayoutBase*, 2u> bindGroupLayouts = {
+            bindGroupLayout0.Get(), bindGroupLayout1.Get()};
 
         PipelineLayoutDescriptor descriptor;
-        descriptor.bindGroupLayoutCount = bindGroupLayouts.size();
-        descriptor.bindGroupLayouts = bindGroupLayouts.data();
+        descriptor.bindGroupLayouts = bindGroupLayouts;
         DAWN_TRY_ASSIGN(pipelineLayout, device->CreatePipelineLayout(&descriptor));
     } else {
         DAWN_TRY_ASSIGN(pipelineLayout, utils::MakeBasicPipelineLayout(device, bindGroupLayout0));
@@ -1011,8 +1035,7 @@ ResultOrError<Ref<ComputePipelineBase>> GetOrCreateTextureToBufferPipeline(
         {nullptr, "workgroupSizeY", static_cast<double>(adjustedWorkGroupSizeY)},
         {nullptr, "gOutputUnitSize", static_cast<double>(outputUnitSize)},
     }};
-    computePipelineDescriptor.compute.constantCount = constants.size();
-    computePipelineDescriptor.compute.constants = constants.data();
+    computePipelineDescriptor.compute.constants = constants;
 
     Ref<ComputePipelineBase> pipeline;
     DAWN_TRY_ASSIGN(pipeline, device->CreateComputePipeline(&computePipelineDescriptor));
@@ -1097,9 +1120,9 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
     // As the texture is uncompressed, texel and block space extents are the same, but we still use
     // texel space here because the compute shader works on texels.
     const TexelExtent3D texCopyExtent = blockInfo.ToTexel(copyExtent);
-    const uint32_t texelCopyWidth = static_cast<uint32_t>(texCopyExtent.width);
-    const uint32_t texelCopyHeight = static_cast<uint32_t>(texCopyExtent.height);
-    const uint32_t texelCopyDepth = static_cast<uint32_t>(texCopyExtent.depthOrArrayLayers);
+    const uint32_t texelCopyWidth = dchecked_cast<uint32_t>(texCopyExtent.width);
+    const uint32_t texelCopyHeight = dchecked_cast<uint32_t>(texCopyExtent.height);
+    const uint32_t texelCopyDepth = dchecked_cast<uint32_t>(texCopyExtent.depthOrArrayLayers);
 
     const uint32_t bytesPerTexel = blockInfo.byteSize;
     uint32_t workgroupCountX = 1;
@@ -1139,13 +1162,13 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
         switch (bytesPerTexel) {
             case 1:
                 // One thread is responsible for writing four texel values (x, y) ~ (x+3, y).
-                workgroupCountX =
-                    Align(texelCopyWidth, 4 * kWorkgroupSizeX) / (4 * kWorkgroupSizeX);
+                workgroupCountX = Align(texelCopyWidth, static_cast<size_t>(4) * kWorkgroupSizeX) /
+                                  (static_cast<size_t>(4) * kWorkgroupSizeX);
                 break;
             case 2:
                 // One thread is responsible for writing two texel values (x, y) and (x+1, y).
-                workgroupCountX =
-                    Align(texelCopyWidth, 2 * kWorkgroupSizeX) / (2 * kWorkgroupSizeX);
+                workgroupCountX = Align(texelCopyWidth, static_cast<size_t>(2) * kWorkgroupSizeX) /
+                                  (static_cast<size_t>(2) * kWorkgroupSizeX);
                 break;
             case 4:
             case 8:
@@ -1205,7 +1228,8 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
             // We only need to initialize the last 4 bytes in the temp buffer.
             std::array<uint8_t, 4> clearData = {};
             commandEncoder->APIWriteBuffer(destinationBuffer.Get(),
-                                           destinationBuffer->GetSize() - 4, clearData.data(), 4);
+                                           destinationBuffer->GetSize() - 4,
+                                           SpanAsBytes(Span<const uint8_t>(clearData)));
         }
 
         // Copy the bytes that we won't write in the shader (those before offset, padding bytes,
@@ -1217,23 +1241,23 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
                 // - the last bytes past the desired copy region.
                 if (shaderStartOffset > 0) {
                     commandEncoder->InternalCopyBufferToBufferWithAllocatedSize(
-                        dst.buffer.Get(), /*srcOffset=*/offsetInOriginalBuf,
+                        dst.buffer.Get(), /*sourceOffset=*/offsetInOriginalBuf,
                         destinationBuffer.Get(),
-                        /*dstOffset=*/0, /*size=*/Align(shaderStartOffset, 4));
+                        /*destinationOffset=*/0, /*size=*/Align(shaderStartOffset, 4));
                 }
                 if (shaderEndOffset != shaderBindingSize) {
                     const auto mod = shaderEndOffset % 4;
                     const auto lastShaderU32Offset = shaderEndOffset - mod;
                     commandEncoder->InternalCopyBufferToBufferWithAllocatedSize(
                         dst.buffer.Get(),
-                        /*srcOffset=*/offsetInOriginalBuf + lastShaderU32Offset,
-                        destinationBuffer.Get(), /*dstOffset=*/lastShaderU32Offset,
+                        /*sourceOffset=*/offsetInOriginalBuf + lastShaderU32Offset,
+                        destinationBuffer.Get(), /*destinationOffset=*/lastShaderU32Offset,
                         /*size=*/shaderBindingSize - lastShaderU32Offset);
                 }
             } else {
                 commandEncoder->InternalCopyBufferToBufferWithAllocatedSize(
-                    dst.buffer.Get(), /*srcOffset=*/offsetInOriginalBuf, destinationBuffer.Get(),
-                    /*dstOffset=*/0, shaderBindingSize);
+                    dst.buffer.Get(), /*sourceOffset=*/offsetInOriginalBuf, destinationBuffer.Get(),
+                    /*destinationOffset=*/0, shaderBindingSize);
             }
         }
     }
@@ -1242,7 +1266,7 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
     {
         BufferDescriptor bufferDesc = {};
         // Uniform buffer size needs to be multiple of 16 bytes
-        bufferDesc.size = sizeof(uint32_t) * 20;
+        bufferDesc.size = sizeof(Params);
         bufferDesc.usage = wgpu::BufferUsage::Uniform;
         bufferDesc.mappedAtCreation = true;
 
@@ -1251,42 +1275,41 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
             DAWN_TRY_ASSIGN(uniformBuffer, device->CreateBuffer(&bufferDesc));
         }
 
-        uint32_t* params =
-            static_cast<uint32_t*>(uniformBuffer->GetMappedRange(0, bufferDesc.size));
-        // srcOrigin: vec3u
-        params[0] = static_cast<uint32_t>(src.origin.x);
-        params[1] = static_cast<uint32_t>(src.origin.y);
-        params[2] = static_cast<uint32_t>(src.origin.z);
+        Params* params = uniformBuffer->GetMappedDataAs<Params>();
+        params->srcOrigin = {
+            dchecked_cast<uint32_t>(src.origin.x),
+            dchecked_cast<uint32_t>(src.origin.y),
+            dchecked_cast<uint32_t>(src.origin.z),
+        };
+        params->packTexelCount = std::max(1u, 4 / bytesPerTexel);
+        params->srcExtent = {
+            dchecked_cast<uint32_t>(copyExtent.width),
+            dchecked_cast<uint32_t>(copyExtent.height),
+            dchecked_cast<uint32_t>(copyExtent.depthOrArrayLayers),
+        };
+        params->mipLevel = src.mipLevel;
 
-        // packTexelCount: number of texel values (1, 2, or 4) one thread packs into the dst
-        // buffer
-        params[3] = std::max(1u, 4 / bytesPerTexel);
-        // srcExtent: vec3u
-        params[4] = static_cast<uint32_t>(copyExtent.width);
-        params[5] = static_cast<uint32_t>(copyExtent.height);
-        params[6] = static_cast<uint32_t>(copyExtent.depthOrArrayLayers);
-
-        params[7] = src.mipLevel;
-
-        params[8] = static_cast<uint32_t>(blockInfo.ToBytes(dst.blocksPerRow));
-        params[9] = static_cast<uint32_t>(dst.rowsPerImage);
-        params[10] = static_cast<uint32_t>(shaderStartOffset);
+        params->bytesPerRow = static_cast<uint32_t>(blockInfo.ToBytes(dst.blocksPerRow));
+        params->rowsPerImage = dchecked_cast<uint32_t>(dst.rowsPerImage);
+        params->offset = static_cast<uint32_t>(shaderStartOffset);
 
         // These params are only used for formats smaller than 4 bytes
-        params[11] = (static_cast<uint32_t>(shaderStartOffset) % 4) / bytesPerTexel;  // shift
+        params->shift = (static_cast<uint32_t>(shaderStartOffset) % 4) / bytesPerTexel;
 
-        params[16] = bytesPerTexel;
-        params[17] = numU32PerRowNeedsWriting;
-        params[18] = readPreviousRow ? 1 : 0;
-        params[19] = dst.rowsPerImage == copyExtent.height ? 1 : 0;  // isCompactImage
+        params->texelSize = bytesPerTexel;
+        params->numU32PerRowNeedsWriting = numU32PerRowNeedsWriting;
+        params->readPreviousRow = readPreviousRow ? 1 : 0;
+        params->isCompactImage = dst.rowsPerImage == copyExtent.height ? 1 : 0;
 
         if (textureViewDimension == wgpu::TextureViewDimension::Cube) {
             // cube need texture size to convert texel coord to sample location
             auto levelSize =
                 src.texture->GetMipLevelSingleSubresourceVirtualSize(src.mipLevel, Aspect::Color);
-            params[12] = levelSize.width;
-            params[13] = levelSize.height;
-            params[14] = levelSize.depthOrArrayLayers;
+            params->levelSize = {
+                levelSize.width,
+                levelSize.height,
+                levelSize.depthOrArrayLayers,
+            };
         }
 
         DAWN_TRY(uniformBuffer->Unmap());
@@ -1351,8 +1374,11 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
                                                          UsageValidationMode::Internal));
     }
 
-    // Skip clearing the buffer if this is full size copy.
-    dst.buffer->SetInitialized(fullSizeCopy || dst.buffer->IsInitialized());
+    // TODO(b/513631768): Skip clearing the buffer if this is full size copy.
+    // dst.buffer->SetInitialized(fullSizeCopy || dst.buffer->IsResourceInitialized());
+    //
+    // This optimization is temporarily removed because we cannot mark the buffer as initialized
+    // until the command buffer is submitted.
 
     Ref<ComputePassEncoder> pass = commandEncoder->BeginComputePass();
     pass->APISetPipeline(pipeline.Get());
@@ -1366,8 +1392,8 @@ MaybeError BlitTextureToBuffer(DeviceBase* device,
     if (useIntermediateCopyBuffer) {
         DAWN_ASSERT(destinationBuffer->GetSize() <= dst.buffer->GetAllocatedSize());
         commandEncoder->InternalCopyBufferToBufferWithAllocatedSize(
-            destinationBuffer.Get(), /*srcOffset=*/0, dst.buffer.Get(),
-            /*dstOffset=*/offsetInOriginalBuf, shaderBindingSize);
+            destinationBuffer.Get(), /*sourceOffset=*/0, dst.buffer.Get(),
+            /*destinationOffset=*/offsetInOriginalBuf, shaderBindingSize);
     }
 
     return {};

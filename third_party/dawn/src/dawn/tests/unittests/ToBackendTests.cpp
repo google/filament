@@ -27,10 +27,10 @@
 
 #include <type_traits>
 
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/native/ToBackend.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/ToBackend.h"
 
 // Make our own Base - Backend object pair, reusing the MyObjectBase name
 namespace dawn::native {

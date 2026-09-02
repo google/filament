@@ -1,0 +1,1 @@
+Files in this directory are used by tests implemented ValidationTest.cpp

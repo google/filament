@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_VULKANFUNCTIONS_H_
 #define SRC_DAWN_NATIVE_VULKAN_VULKANFUNCTIONS_H_
 
-#include "dawn/common/Compiler.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn {
 class DynamicLib;
@@ -70,6 +70,10 @@ using VkFn = typename VkFnImpl<F>::type;
 struct VulkanFunctions {
     MaybeError LoadGlobalProcs(const DynamicLib& vulkanLib);
     MaybeError LoadInstanceProcs(VkInstance instance, const VulkanGlobalInfo& globalInfo);
+    // Attempts to load the VK_EXT_debug_utils extension procs. Returns false if any required
+    // entrypoint is missing (workaround for buggy Android Vulkan drivers/loaders that advertise
+    // the extension but fail to expose entrypoints via vkGetInstanceProcAddr).
+    bool TryLoadEXTDebugUtils(VkInstance instance);
     MaybeError LoadDeviceProcs(VkInstance instance,
                                VkDevice device,
                                const VulkanDeviceInfo& deviceInfo);
@@ -164,8 +168,8 @@ struct VulkanFunctions {
 
 #if defined(DAWN_USE_WAYLAND)
     // KHR_wayland_surface
-    PFN_vkCreateWaylandSurfaceKHR CreateWaylandSurfaceKHR = nullptr;
-    PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR
+    VkFn<PFN_vkCreateWaylandSurfaceKHR> CreateWaylandSurfaceKHR = nullptr;
+    VkFn<PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR>
         GetPhysicalDeviceWaylandPresentationSupportKHR = nullptr;
 #endif  // defined(DAWN_USE_WAYLAND)
 
@@ -394,7 +398,7 @@ struct VulkanFunctions {
     VkFn<PFN_vkAcquireNextImageKHR> AcquireNextImageKHR = nullptr;
     VkFn<PFN_vkQueuePresentKHR> QueuePresentKHR = nullptr;
 
-#if VK_USE_PLATFORM_FUCHSIA
+#if defined(VK_USE_PLATFORM_FUCHSIA)
     // VK_FUCHSIA_external_memory
     VkFn<PFN_vkGetMemoryZirconHandleFUCHSIA> GetMemoryZirconHandleFUCHSIA = nullptr;
     VkFn<PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA> GetMemoryZirconHandlePropertiesFUCHSIA =
@@ -414,6 +418,7 @@ class VkResult {
   public:
     constexpr static VkResult WrapUnsafe(::VkResult value) { return VkResult(value); }
 
+    // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr operator ::VkResult() const { return mValue; }
 
   private:

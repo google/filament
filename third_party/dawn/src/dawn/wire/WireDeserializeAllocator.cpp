@@ -25,14 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/wire/WireDeserializeAllocator.h"
+#include "src/dawn/wire/WireDeserializeAllocator.h"
 
 #include <algorithm>
+#include <utility>
+
+#include "src/utils/compiler.h"
 
 namespace dawn::wire {
 WireDeserializeAllocator::WireDeserializeAllocator() {
@@ -43,36 +41,29 @@ WireDeserializeAllocator::~WireDeserializeAllocator() {
     Reset();
 }
 
-void* WireDeserializeAllocator::GetSpace(size_t size) {
+std::optional<Span<std::byte>> WireDeserializeAllocator::TryGetSpace(size_t size) {
     // Return space in the current buffer if possible first.
-    if (mRemainingSize >= size) {
-        char* buffer = mCurrentBuffer;
-        mCurrentBuffer += size;
-        mRemainingSize -= size;
-        return buffer;
+    if (mCurrentBuffer.size() >= size) {
+        return mCurrentBuffer.TakeFirst(size);
     }
 
     // Otherwise allocate a new buffer and try again.
-    size_t allocationSize = std::max(size, size_t(2048));
-    char* allocation = static_cast<char*>(malloc(allocationSize));
-    if (allocation == nullptr) {
-        return nullptr;
+    size_t allocationSize = std::max(size, kDefaultBufferSize);
+    auto allocation =
+        // SAFETY: This is a pool allocation that will be initialized when it's suballocated.
+        DAWN_UNSAFE_BUFFERS(HeapArray<std::byte>::Uninit(allocationSize, std::nothrow));
+    if (!allocation) {
+        return std::nullopt;
     }
 
-    mAllocations.push_back(allocation);
     mCurrentBuffer = allocation;
-    mRemainingSize = allocationSize;
-    return GetSpace(size);
+    mAllocations.push_back(std::move(allocation));
+    return TryGetSpace(size);
 }
 
 void WireDeserializeAllocator::Reset() {
     // The initial buffer is the inline buffer so that some allocations can be skipped
     mCurrentBuffer = mStaticBuffer;
-    mRemainingSize = sizeof(mStaticBuffer);
-
-    for (auto& allocation : mAllocations) {
-        free(allocation.ExtractAsDangling());
-    }
     mAllocations.clear();
 }
 }  // namespace dawn::wire

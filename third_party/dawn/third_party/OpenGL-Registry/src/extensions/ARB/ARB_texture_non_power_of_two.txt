@@ -1,0 +1,652 @@
+Name
+
+    ARB_texture_non_power_of_two
+
+Name Strings
+
+    GL_ARB_texture_non_power_of_two
+
+Contributors
+    Pat Brown
+    Cass Everitt
+    Walt Donovan
+    Ken Dyke
+    Evan Hart
+    Bimal Poddar
+    Phil Rogers
+    Ian Romanick
+    Geoff Stahl
+    Esen Yilmaz
+
+Contact
+
+    Jeremy Sandmel, Apple Computer (jsandmel 'at' apple.com)
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the ARB on June 11, 2003.
+
+Version
+
+    Date: November 4, 2006
+    Revision: 1.0
+
+Number
+
+    ARB Extension #34
+
+Dependencies
+
+    Written based on the OpenGL 1.4 specification.
+
+    ARB_texture_mirrored_repeat (and IBM_texture_mirrored_repeat)
+    affects the definition of this extension.
+
+    ARB_texture_border_clamp affects the definition of this extension.
+
+    EXT_texture_compression_s3tc and NV_texture_compression_vtc affect
+    the definition of this extension.
+
+Overview
+
+    Conventional OpenGL texturing is limited to images with
+    power-of-two dimensions and an optional 1-texel border.
+    ARB_texture_non_power_of_two extension relaxes the size restrictions
+    for the 1D, 2D, cube map, and 3D texture targets.
+
+    There is no additional procedural or enumerant api introduced by this
+    extension except that an implementation which exports the extension
+    string will allow an application to pass in texture dimensions for
+    the 1D, 2D, cube map, and 3D targets that may or may not be a power
+    of two.
+
+    An implementation which supports relaxing traditional GL's
+    power-of-two size restrictions across all texture targets will export
+    the extension string: "ARB_texture_non_power_of_two".
+
+    When this extension is supported, mipmapping, automatic mipmap
+    generation, and all the conventional wrap modes are supported for
+    non-power-of-two textures
+
+Issues
+
+    1. What should this extension be called?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  ARB_texture_non_power_of_two.  Conventional OpenGL
+      textures are restricted to size dimensions that are powers of two.
+
+      The phrases POT (power of two) and NPOT (non-power of two) textures
+      are used in the Overview and Issues section of this specification,
+      but notice these terms are never required in the actual extension
+      language to amend the core specification.
+
+    2. Should any enable or other state change be required to relax
+    the texture dimension restrictions?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  No.  The restrictions on texture dimensions in the
+      core OpenGL specification are enforced by errors.  Extensions are
+      free to make legal and defined the error behavior of extensions.
+      This extension is really no different in that respect.
+
+      The argument for having an enable to "unlock" more generalized
+      texture dimensions is that it avoids developers accidently releasing
+      applications developed on an OpenGL implementation supporting this
+      extension and unintentionally using NPOT textures.  This situation
+      exists in theory with other extensions that do not require new
+      entry points or enumerants to operate (think of NV_blend_square).
+      The real responsibility falls on developers to not use extensions
+      unless the implementation advertises support for the extension
+      and do proper testing to ensure this is really the case.
+
+      An additional issue with not having an enable to "unlock" this
+      feature concerns the cases where existing apps might actually be
+      relying on the current error condition to tell them what to do,
+      but might not be able to handle the "new" success this extension
+      would create.  However, this seems to be limited to apps that
+      are explicitly checking for implementation correctness (like a
+      conformance test) and this does not seem to be a typical problem
+      for "real-world" applications.  The working group members agreed
+      that it is acceptable to require those few apps which fall into
+      this category to be updated in the context of this extension.
+
+    3. Should this extension be limited to a subset of conventional
+    texture targets?
+
+      STATUS: RESOLVED
+
+      SUGGESTION:  No.  This extension should apply to 1D, 2D, 3D, and
+      cube map textures (all supported by OpenGL 1.4) but this extension
+      does NOT extend or otherwise affect the EXT_texture_rectangle
+      extension's TEXTURE_RECTANGLE_EXT target.
+ 
+      One early point of debate was whether we should have a single
+      unified extension which lifted the power of two restrictions from
+      all targets, or whether we should have individual target specific
+      extensions.   For example, one could imagine separate extensions for
+      ARB_texture_non_power_of_two_2d, ARB_texture_non_power_of_two_3d,
+      ARB_texture_non_power_of_two_cube_map.
+
+      The advantages of the separate extension approach are to allow IHV's
+      to choose which pieces of functionality to support independently.
+      The advantages of the single extension approach is to have a
+      simpler and more forward looking extension.
+      
+    4. Are cube map texture images still required to be square when this
+    extension is supported?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  Yes.  But while the width and height of each level
+      must be equal, they can be NPOT.
+
+    5. How is a conventional NPOT target different from the texture
+    rectangle target?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:
+      The biggest practical difference is that coventional targets use
+      normalized texture coordinates (ie, [0..1]) while the texture
+      rectangle target uses unnormalized (ie, [0..w]x[0..h]) texture
+      coordinates.
+
+      Differences include:
+
+      + In ARB_texture_non_power_of_two:
+        * mipmapping is allowed, default filter remains unchanged.
+        * all wrap modes are allowed, default wrap mode remains unchanged.
+        * borders are supported.
+        * paletted textures are not unsupported.
+        * texture coordinates are addressed parametrically [0..1],[0..1]
+      + In EXT_texture_rectangle:
+        * mipmapping is not allowed, default filter is changed to LINEAR.
+        * only CLAMP* wrap modes are allowed, default is CLAMP_TO_EDGE.
+        * borders are not supported.
+        * paletted textures are unsupported.
+        * texture coordinates are addressed non-parametrically [0..w],[0..h].
+
+    6. What is the dimension reduction rule for each successively smaller
+    mipmap level?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  Each successively smaller mipmap level is half the size
+      of the previous level, but if this half value is a fractional value,
+      you should round down to the next largest integer.  Essentially:
+
+        max(1, floor(w_b / 2^i)) x
+           max(1, floor(h_b / 2^i)) x
+              max(1, floor(d_b / 2^i))
+
+      where i is the ith level beyond the 0th level (the base level).
+
+      This is a "floor" convention.  An alternative is a "ceiling"
+      convention.
+
+      The primary reason to favor the floor convention is that Direct3D
+      uses the floor convention.
+
+      Also, the "ceiling" convention potentially implies one more mipmap
+      level than the "floor" convention.
+
+      Some regard the "ceiling" convention to have nicer properties with
+      respect to making sure that each level samples at at least 2x the
+      frequency of the next level.  This can reduce the chances of
+      sampling artifacts.  However, it's probably not worth diverging
+      from the Direct3D convention just for this.  A more sophisticated
+      downsampling algorithm (using a larger kernel perhaps) during
+      mipmap level generation can help reduce artifacts related to using 
+      the "floor" convention.
+
+      The "floor" convention has a relatively straightforward way to
+      evaluate (with integer math) means to determine how many mipmap
+      levels are required for a complete pyramid:
+
+        numLevels = 1 + floor(log2(max(w, h, d)))
+
+      The "floor" convention can be evaluated incrementally with the
+      following recursion:
+
+         nextLODdim = max(1, currentLODdim >> 1)
+
+      where currentLODdim is the dimension of a level N and nextLODdim
+      is the dimension of level N+1.  The recursion stops when level
+      numLevels-1 is reached.
+
+      Other compromise rules exist such as "round" (floor(x+0.5)).
+      Such a hybrid approach make it more difficult to compute how many
+      mipmap levels are required for a complete pyramid.
+
+      Note that this extension is compatible with supporting other rules
+      because it merely relaxes the error and completeness conditions
+      for mipmaps.  At the same time, it makes sense to provide developers
+      a single consistent rule since developers are unlikely to want to
+      generate mipmaps for different rules unnecessarily.  One reasonable
+      rule is sufficient and preferable, and the "floor" convention is
+      the best choice.
+
+    7. Should the LOD for filtering (rho) be computed differently for
+    NPOT textures?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  No (though, ideally, the answer would be "yes slightly
+      somehow").  The core OpenGL specification already allows that
+      the ideal computation of rho (even for POT textures) is "often
+      impractical to implement".  The "ceiling" convention adds one more
+      mipmap level for NPOT textures so at extreme minification, the
+      "ceiling" convention may be somewhat sharper than ideal (whereas
+      "floor" would be blurrier).
+
+      This excess bluriness should only be significant at the smallest
+      (blurriest) mipmap levels where it should be quite difficult to
+      notice for properly downsampled mipmap images.
+
+    8. Should there be any restrictions on the wrap modes supported for
+    NPOT textures?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  No restrictions; all existing wrap modes
+      (GL_REPEAT, GL_CLAMP, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER, and
+      GL_MIRRORED_REPEAT) should "just work" with NPOT textures.
+
+      The difficult part of this requirement is to compute "mod w_i"
+      (or h_i or d_i) rather than simply "mod 2^n" (or 2^m or 2^l) for
+      the GL_REPEAT wrap mode (GL_MIRRORED_REPEAT may also be an issue,
+      but as defined by OpenGL 1.4, no "mod" math is required to implement
+      the mirrored repeat wrap mode).  REPEAT is too commonly used (indeed
+      it is the default wrap mode) to exclude it for NPOT textures.
+
+    9. How does this extension interact with ARB_texture_compression?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  It does not.  ARB_texture_compression doesn't
+      technically require that any compressed formats be supported.
+      Implementations can choose to compress or not compress any
+      particular texture.
+
+      While implementations may choose an internal component resolution
+      and compressed format, the OpenGL 1.4 requires that the choice be
+      a function only of the TexImage parameters.  If an implementation
+      chose not to compress NPOT textures, it might get into a situation
+      where a 7x7 image wasn't compressed but its 4x4, 2x2, and 1x1
+      mipmaps were compressed.  The result would be an inconsistent mipmap
+      chain since the internal format of each level would not the same.
+
+      Therefore, an implementation must be able to handle the case where
+      decisions it makes during image specification can be corrected
+      appropriately at render time.  This may mean that an implementation
+      such as the one described above may need to tempoarily keep
+      compressed and uncompressed images internally until the full
+      mipmap stack can be examined or may need to decompress previously
+      compressed images in order to recover.
+
+    10. How does this extension interact with specific texture compression
+    extensions such as EXT_texture_compression_s3tc?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  It does not.  If both this extension and
+      EXT_texture_compression_s3tc are supported, applications can safely
+      load NPOT S3TC-compressed textures.
+      
+      Textures are still decomposed into an array of 4x4 blocks.
+      The compressed data for any texels outside the specified image
+      dimensions are irrelevant and are effectively ignored, just as they
+      are for the 1x1 and 2x2 mipmaps of a POT S3TC-compressed texture.
+
+    11. How is automatic mipmap generation affected by this extension?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  It is not directly affected.   If an implementation
+      supports automatic mipmap generation, then mipmap generation must
+      be supported even for NPOT textures.  
+
+      Note however, that the OpenGL 1.4 specification recommends a
+      "2x2 box filter" for the default filter.  This is typo since
+      a 2x2 box filter would be incorrect for 1D and 3D textures.
+      With support for NPOT textures, this "2x2 box filter" becomes
+      even more inappropriate.  The wording should be changed to simply
+      recommend a box filter where the dimensionality and filter size is
+      assumed appropriate for the texture image dimensionality and size.
+
+    12. Are any edits required for Section 3.8.10 "Texture Completeness"?
+
+      STATUS: RESOLVED
+
+      RESOLUTION:  No.  This section references Section 3.8.8 for
+      the allowed sequence of dimensions for completeness (rather than
+      stating the requirements explicition in Section 3.8.10).  The only
+      difference between NPOT and POT textures is the allowable sequence
+      of mipmap sizes, and in both cases, a smaller level is half the
+      size of the larger (modulo rounding).
+
+      As with POT textures, a mipmap chain is consistent only if the
+      correct sequence of sizes is found.  As with POT textures, an
+      attempt to load a mipmap that could never be part of a consistent
+      mipmap chain should fail.  For example, if an implementation
+      supports textures with dimensions only up to 1024, an attempt to
+      load level 2 with a 257x114 texture will fail because the smallest
+      possible corresponding level 0 texture would have to be 1028x456.
+
+    13. The WGL_ARB_render_texture extension allows creating a pbuffer
+    with the WGL_PBUFFER_LARGEST_ARB attribute.  If this extension is
+    present, should this attribute potentially return a NPOT pbuffer?
+
+      STATUS: UNRESOLVED
+
+      SUGGESTION:  The WGL_ARB_render_texture specification appears
+      to anticipate NPOT textures with this statement: "e.g. Both the
+      width and height will be a power of 2 if the implementation only
+      supports power of 2 textures." so I think the right thing to do
+      is allow NPOT textures (of the proper aspect ratio) to be returned.
+
+      It is not entirely clear if this behavior is "safe" for preexisting
+      applications that might not be aware of NPOT textures.  The safe
+      thing would be to add a WGL_PBUFFER_LARGEST_NPOT_ARB enumerant
+      that could return NPOT textures and require that the existing
+      WGL_PBUFFER_LARGEST_ARB enumerant always return POT textures.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+ -- Section 3.8.1 "Texture Image Specification"
+
+    Replace the discussion of the border parameter with:
+
+    "The border argument to TexImage3D is a border width.  The
+    significance of borders is described below.  The border width affect
+    the dimensions of the texture image; it must be the case that
+
+      w_s = w_i + 2 b_s             (3.13)
+
+      h_s = h_i + 2 b_s             (3.14)
+
+      d_s = d_i + 2 b_s             (3.15)
+
+    where w_s, h_s, and d_s are the specified image width, height, and
+    depth, and w_i, h_i, and d_i are the dimensions of the texture image
+    internal to the border.  If w_i, h_i, or d_i are less than zero,
+    then the error INVALID_VALUE is generated.
+
+ -- Section 3.8.8 "Texture Minification"
+
+    In the subsection "Scale Factor and Level of Detail"...
+
+    Replace the sentence defining the u, v, and w functions with:
+
+    "Let u(x,y) = w_i * s(x,y), v(x,y) = h_i * t(x,y), and w(x,y) = d_i *
+    r(x,y), where w_i, h_i, and d_i are as defined by equations 3.13,
+    3.14, and 3.15 with w_s, w_s, and d_s equal to the width, height,
+    and depth of the image array whose level is TEXTURE_BASE_LEVEL."
+
+    Replace 2^n, 2^m, and 2^l with w_i, h_i, and d_i in Equations 3.19,
+    3.20, and 3.21.
+
+          { floor(u),   s < 1
+      i = {                              (3.19)
+          { w_i - 1,    s = 1
+
+          { floor(u),   t < 1
+      j = {                              (3.20)
+          { h_i - 1,    t = 1
+
+          { floor(u),   r < 1
+      k = {                              (3.21)
+          { d_i - 1,    r = 1
+
+    Replace 2^n, 2^m, and 2^l with w_i, h_i, and d_i in the equations for
+    computing i_0, j_0, k_0, i_1, j_1, and k_1 used for LINEAR filtering.
+
+            { floor(u - 1/2) mod w_i,   TEXTURE_WRAP_S is REPEAT
+      i_0 = {
+            { floor(u - 1/2),           otherwise
+
+            { floor(v - 1/2) mod h_i,   TEXTURE_WRAP_T is REPEAT
+      j_0 = {
+            { floor(v - 1/2),           otherwise
+
+            { floor(w - 1/2) mod d_i,   TEXTURE_WRAP_R is REPEAT
+      k_0 = {
+            { floor(w - 1/2),           otherwise
+
+            { (i_0 + 1) mod w_i,        TEXTURE_WRAP_S is REPEAT
+      i_1 = {
+            { i_0 + 1,                  otherwise
+
+            { (j_0 + 1) mod h_i,        TEXTURE_WRAP_T is REPEAT
+      j_1 = {
+            { j_0 + 1,                  otherwise
+
+            { (k_0 + 1) mod d_i,        TEXTURE_WRAP_R is REPEAT
+      k_1 = {
+            { k_0 + 1,                  otherwise
+
+    In the subsection "Mipmapping"...
+
+    Replace the last sentence of the first paragraph with:
+
+    "If the image array of level level_base, excluding its border, has
+    dimensions w_b x h_b x d_b, then there are floor(log2(max(w_b, h_b,
+    d_b))) + 1 image arrays in the mipmap.  Numbering the levels such
+    that level level_base is the 0th level, the ith array has dimensions
+
+      max(1, floor(w_b / 2^i)) x
+        max(1, floor(h_b / 2^i)) x
+          max(1, floor(d_b / 2^i))
+
+    until the last array is reached with dimension 1 x 1 x 1."
+
+    Replace the second sentence of the second paragraph with:
+
+    "Level-of-detail numbers proceed from level_base for the original
+    texture array through p = floor(log2(max(w_b, h_b, d_b))) + level_base
+    with each unit increase indicating an array of half the dimensions
+    of the previous one (rounded down to the next integer if fractional)
+    as already described."
+
+    In the subsection "Automatic Mipmap Generation"...
+
+    Replace the second sentence of the third paragraph with:
+
+    "No particular filter algorithm is required, though a box filter is
+    recommended as the default filter."
+
+ -- Section 3.8.10 "Texture Completeness"
+
+    In the subsection "Effects of Completeness on Texture Image
+    Specification"...
+
+    Replace the last sentence with:
+
+    "A mipmap complete set of arrays is equivalent to a complete set
+    of arrays where level_base = 0 and level_max = 1000, and where,
+    excluding borders, the dimensions of the image array being created are
+    understood to be half the corresponding dimensions of the next lower
+    numbered array (rounded down to the next integer if fractional)."
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Additions to the EXT_texture_compression_s3tc and
+NV_texture_compression_vtc Specification
+
+    Add this paragraph:
+
+    "For a compressed texture where w_i != 2^m OR h_i != 2^n OR d_i != 2^l
+    for some integer value of m, n, and l, the 4x4 tiles are assumed to be
+    aligned to u=0, v=0, w=0 origin in texel space.  For such compressed
+    textures, this implies that texels in regions of tiles beyond the
+    edges u=w_i, v=h_i, and w=d_i will not be sampled explicitly."
+
+GLX Protocol
+
+    None
+
+Errors
+
+    Various errors are ELIMINATED when this extension is supported as
+    noted.
+
+    INVALID_VALUE is NO LONGER generated by TexImage1D or glCopyTexImage1D
+    if width is not zero or cannot be represented as 2^n+2(border)
+    for some integer value of n.
+
+    INVALID_VALUE is NO LONGER generated by TexImage2D or glCopyTexImage2D
+    if width or height is not zero or cannot be represented as
+    2^n+2(border) for some integer value of n.
+
+    INVALID_VALUE is NO LONGER generated by TexImage3D if width, height,
+    or depth is not zero or cannot be represented as 2^n+2(border)
+    for some integer value of n.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Date 11/04/2006
+    Revision: 1.0
+       -  Updated contact info after ATI/AMD merger.
+
+    Date 05/14/2004
+    Revision: 1.0
+       -  Formated text for 72 column convention
+       -  Fixed date for last revision
+       -  fix "Image2d" typo
+
+    Date: 03/23/2004
+    Revision: 1.0
+        - Formulas for computing the dimensions of mipmap sizes based
+          on the base level size should involve 2^i (not i^2)
+
+    Date: 09/11/2003
+    Revision: 1.0
+        - allow zero (instead of just positive values before) when
+          specifying the width, height, and depth of texture image
+          dimensions; this is to avoid an inconsistency with the
+          sample implementation
+
+    Date: 05/29/2003
+    Revision: 0.10
+        - removed "@" language for target specific behavior, the spec
+          now treats all targets uniformly
+
+    Date: 05/21/2003
+    Revision: 0.9
+        - fixed typo: ARB/IBM_mirrored_repeat should have been 
+          ARB/IBM_texture_mirrored_repeat
+        - fixed various other minor typos, duplicated words, etc.
+        - added a line to issue #6 regarding suggesting use of a
+          larger kernel when downsampling using the floor convention
+        - coalesced the equations that used 3 2-term max equations into
+          single 3-term max equations for clarity
+        - fixed two more typos where "ceil" should have been "floor"
+        - refer to ARB_texture_rectangle as EXT_texture_rectangle
+          (this may change back when/if back extension becomes ARB'ified)
+
+    Date: 05/10/2003
+    Revision: 0.8
+        - additional additional names to contributors list
+        - clarified language describing resolution of issues #9,10,11
+
+    Date: 05/08/2003
+    Revision: 0.7
+        - very minor language update to overview section regarding
+          exporting of ARB_texture_non_power_of_two string
+        - fixed another two places where it said we should round up
+          instead of down (in section 3.8.10 "Texture Completeness",
+          and in section 3.8.8 "Texture Minification")
+        - mark the regions of the spec affected by the decision to
+          use separate strings per texture target with the "@" symbol.
+          This is temporary until issue #3 is resolved.
+        - resolved issues 9,10,11,12
+
+    Date: 05/08/2003
+    Revision: 0.6
+        - updated revision history and coalesced revision notes from
+          various specs
+        - fixed typo in issue #5 ("2d" --> "non_power_of_two")
+        - clarified the discussion in issue #3 as the langage was a
+          little confusing in parts.
+        - explicitly refer to the cube map targets in section 3.8.1
+          instead of using the "made up" target TEXTURE_CUBE_MAP.
+
+    Date: 05/06/2003
+    Revision: 0.5
+        - changed name of extension from ARB_texture_np2 to
+          ARB_texture_non_power_of_two
+        - added target specific extension strings
+        - added more discussion to several issues based on feedback from
+          the working group meetings
+        - fixed several typos where INVALID_VALUE was INVALID_VALID
+        - addressed typo in issue #6, it said you should round up,
+          but really we agreed to round down when describing the mipmap
+          stack (floor vs ceil convention).
+        - resolved issues 1 - 8.
+
+    Date: 04/24/2003
+    Revision: 0.4 (jsandmel)
+        - numbered issues list
+        - additional discussion of several issues
+        - added more explicit comparison of texture_rectangle and this
+          proposal
+
+    Date: 04/10/2003
+    Revision: 0.3 (mjk)
+        - integrates input from the ARB_texture_2d_np2 proposals.
+
+    Date: 03/25/2003
+    Revision: 0.1 (jsandmel)
+        - draft proposal
+        - deals with 2d targets only
+        - named: ARB_texture_2d_np2

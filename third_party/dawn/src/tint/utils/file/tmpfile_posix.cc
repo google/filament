@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 // GEN_BUILD:CONDITION(tint_build_is_linux || tint_build_is_mac)
 
 #include <unistd.h>
@@ -38,6 +33,7 @@
 
 #include "src/tint/utils/file/tmpfile.h"
 #include "src/tint/utils/ice/ice.h"
+#include "src/utils/compiler.h"
 
 namespace tint {
 
@@ -74,9 +70,11 @@ TmpFile::~TmpFile() {
     }
 }
 
-bool TmpFile::Append(const void* data, size_t size) const {
+bool TmpFile::Append(std::span<const std::byte> data) const {
     if (auto* file = fopen(path_.c_str(), "ab")) {
-        fwrite(data, size, 1, file);
+        // SAFETY: The source buffer is data.data() and its size is data.size() bytes, which is
+        // bounds-safe for this write.
+        DAWN_UNSAFE_BUFFERS(fwrite(data.data(), 1, data.size(), file));
         fclose(file);
         return true;
     }

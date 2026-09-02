@@ -25,26 +25,26 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu_absl_format.h"
+#include "src/dawn/native/webgpu_absl_format.h"
 
 #include <string>
 #include <vector>
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/AttachmentState.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Format.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/PerStage.h"
-#include "dawn/native/ProgrammableEncoder.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/Sampler.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/Subresource.h"
-#include "dawn/native/Surface.h"
-#include "dawn/native/Texture.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/AttachmentState.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/PerStage.h"
+#include "src/dawn/native/ProgrammableEncoder.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/Subresource.h"
+#include "src/dawn/native/Surface.h"
+#include "src/dawn/native/Texture.h"
 
 namespace dawn::native {
 
@@ -97,7 +97,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
     s->Append(absl::StrFormat("{ binding: %u, visibility: %s, ", value.binding, value.visibility));
-    if (value.arraySize != BindingIndex(1)) {
+    if (value.arraySize != BindingIndex(1u)) {
         s->Append(absl::StrFormat("arraySize: %u, indexInArray: %u, ", value.arraySize,
                                   value.indexInArray));
     }
