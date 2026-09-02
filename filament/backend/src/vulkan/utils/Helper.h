@@ -25,8 +25,6 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
-#include <utility>
-
 namespace filament::backend::fvkutils {
 
 inline bool equivalent(const VkRect2D& a, const VkRect2D& b) {
@@ -46,13 +44,19 @@ inline bool equivalent(const VkExtent2D& a, const VkExtent2D& b) {
 // considered, but because the "variadic" part of the vk methods (i.e. the inputs) are before the
 // non-variadic parts, this breaks the template type matching logic. Hence, we use a macro approach
 // here.
-#define EXPAND_ENUM(...)                                                          \
-    uint32_t size = 0;                                                            \
-    VkResult result = func(__VA_ARGS__, nullptr);                                 \
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "enumerate size error"; \
-    utils::FixedCapacityVector<OutType> ret(size);                                \
-    result = func(__VA_ARGS__, ret.data());                                       \
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "enumerate error";      \
+#define EXPAND_ENUM(...)                                                                           \
+    uint32_t size = 0;                                                                             \
+    VkResult result = func(__VA_ARGS__, nullptr);                                                  \
+    if (result != VK_SUCCESS) {                                                                    \
+        FVK_LOGE << "enumerate size error=" << static_cast<int32_t>(result);                       \
+        return {};                                                                                 \
+    }                                                                                              \
+    utils::FixedCapacityVector<OutType> ret(size);                                                 \
+    result = func(__VA_ARGS__, ret.data());                                                        \
+    if (result != VK_SUCCESS) {                                                                    \
+        FVK_LOGE << "enumerate error=" << static_cast<int32_t>(result);                            \
+        return {};                                                                                 \
+    }                                                                                              \
     return std::move(ret);
 
 #define EXPAND_ENUM_NO_ARGS() EXPAND_ENUM(&size)
