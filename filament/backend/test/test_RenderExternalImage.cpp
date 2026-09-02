@@ -150,7 +150,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 TEST_F(BackendTest, RenderExternalImageHandle) {
     SKIP_IF(Backend::VULKAN, "b/453777319");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
-    SKIP_IF(Backend::OPENGL, "b//510158903");
+    SKIP_IF(Backend::OPENGL, "b/510158903");
     SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758594");
     auto& api = getDriverApi();
 
@@ -207,6 +207,7 @@ TEST_F(BackendTest, RenderExternalImageHandle) {
             pix[idx] = (idx + tileSize * (r / tileSize % 2)) / tileSize % 2 == 0 ? blue : black;
         }
     }
+    CVPixelBufferUnlockBaseAddress(pixBuffer, 0);
 
     auto* const platform = static_cast<PlatformMetal*>(getPlatform());
     auto externalImage = platform->createExternalImage(pixBuffer);
