@@ -666,7 +666,15 @@ void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
         backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage,
         Platform::ExternalImageHandleRef image, utils::ImmutableCString&& tag) {
-    // FIXME: implement createTextureExternalImage2R
+    CVPixelBufferRef const pixelBuffer = (CVPixelBufferRef) mPlatform.getExternalImage(image);
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, format, width, height,
+            usage, pixelBuffer);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
+    // This release matches the retain call in setupExternalImage2. The MetalTexture will have
+    // retained the buffer by now.
+    CVPixelBufferRelease(pixelBuffer);
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
@@ -1720,7 +1728,8 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
 }
 
 void MetalDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
-    // FIXME: implement setupExternalImage2
+    CVPixelBufferRef const pixelBuffer = (CVPixelBufferRef) mPlatform.getExternalImage(image);
+    CVPixelBufferRetain(pixelBuffer);
 }
 
 void MetalDriver::setupExternalImage(void* image) {
