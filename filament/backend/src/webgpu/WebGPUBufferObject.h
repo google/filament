@@ -38,7 +38,8 @@ enum class BufferObjectBinding : uint8_t;
   */
 class WebGPUBufferObject final : public HwBufferObject, public WebGPUBufferBase {
 public:
-    WebGPUBufferObject(wgpu::Device const&, BufferObjectBinding, uint32_t byteCount);
+    WebGPUBufferObject(wgpu::Device const&, BufferObjectBinding, uint32_t byteCount,
+            bool asynchronous = false);
 };
 
 } // namespace filament::backend
