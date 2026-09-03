@@ -81,11 +81,17 @@ struct App {
     bool shadowPlane = false;
     bool discoBall = false;
 };
+
+static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 } // namespace
 
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory = utils::CString(IBL_FOLDER);
+    }
     auto app = std::make_shared<App>();
     app->config = config;
 
@@ -144,10 +150,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialLibrary);
         }
-        if (app->filenames.empty()) {
-            app->meshSet->addFromFile(FilamentApp2::getRootAssetsPath() +
-                                              "assets/models/monkey/monkey.obj",
-                    app->materialLibrary);
+        if (app->meshSet->getRenderables().empty()) {
+            app->meshSet->addFromFile(MODEL_FILE, app->materialLibrary);
         }
 
         auto& lcm = engine->getLightManager();
@@ -438,27 +442,26 @@ int main(int argc, char* argv[]) {
     SampleConfig config;
     samples::CommandLineSpecification spec = {
         .sampleDescription = "LIGHTBULB is a point light and shadow testing tool for Filament.",
-        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
+        .positionalArgsDescription = { "[mesh files (.obj, .fbx)]" },
+        .requiredPositionalArgCount = 0,
         .parameters = createAppParameters(),
     };
 
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
     for (const auto& fname : config.positionalArgs) {
         utils::Path filename(fname.c_str_safe());
-        if (!filename.exists()) {
+        if (!loader->exists(filename)) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
     }
 
     config.title = "Lightbulb";
-
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto app = createSampleApp(config, dm.get(), loader);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
-    delete loader;
 
     return 0;
 }

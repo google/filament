@@ -25,7 +25,7 @@
 
 namespace filament::app {
 
-class AssetWriter {
+class UTILS_PUBLIC AssetWriter {
 public:
     virtual ~AssetWriter() = default;
 
@@ -45,6 +45,11 @@ public:
     bool write(utils::Path const& path, std::vector<uint8_t> const& data) const {
         return write(path, data.data(), data.size());
     }
+
+    /**
+     * Resolves a destination path to a platform-native filesystem path if applicable.
+     */
+    virtual utils::Path resolve(utils::Path const& path) const { return path; }
 };
 
 } // namespace filament::app

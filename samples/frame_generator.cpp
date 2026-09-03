@@ -36,6 +36,8 @@
 
 #include "common/arguments.h"
 
+#include "generated/resources/resources.h"
+
 #include <imageio/ImageEncoder.h>
 
 #include <image/ColorTransform.h>
@@ -172,21 +174,27 @@ std::ifstream::pos_type getFileSize(const char* filename) {
 
 // Reads the compiled material file and creates a Filament Material instance.
 void readMaterial(Engine* engine) {
-    long const fileSize = getFileSize(g_materialPath.c_str());
-    if (fileSize <= 0) {
-        return;
-    }
-
-    std::ifstream in(g_materialPath.c_str(), std::ifstream::in | std::ios::binary);
-    if (in.is_open()) {
-        g_materialBuffer.resize(static_cast<unsigned long>(fileSize));
-        if (in.read(g_materialBuffer.data(), fileSize)) {
-            g_material = Material::Builder()
-                    .package(g_materialBuffer.data(), size_t(fileSize))
-                    .build(*engine);
-            g_materialInstance = g_material->createInstance();
+    if (!g_materialPath.isEmpty()) {
+        long const fileSize = getFileSize(g_materialPath.c_str());
+        if (fileSize > 0) {
+            std::ifstream in(g_materialPath.c_str(), std::ifstream::in | std::ios::binary);
+            if (in.is_open()) {
+                g_materialBuffer.resize(static_cast<unsigned long>(fileSize));
+                if (in.read(g_materialBuffer.data(), fileSize)) {
+                    g_material = Material::Builder()
+                                         .package(g_materialBuffer.data(), size_t(fileSize))
+                                         .build(*engine);
+                    g_materialInstance = g_material->createInstance();
+                    return;
+                }
+            }
         }
     }
+
+    g_material = Material::Builder()
+                         .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                         .build(*engine);
+    g_materialInstance = g_material->createInstance();
 }
 
 std::vector<float> parseFloats(std::istream& stream) {
@@ -223,6 +231,14 @@ std::vector<float> parseFloats(std::istream& stream) {
 
 // Reads the parameters file which defines how material properties change over frames.
 void readParameters() {
+    if (g_paramsPath.isEmpty()) {
+        Param param;
+        param.name = "roughness";
+        param.start = { 0.0f };
+        param.end = { 1.0f };
+        g_parameters.push_back(param);
+        return;
+    }
     std::ifstream in(g_paramsPath.c_str(), std::ifstream::in);
     if (in.is_open()) {
         char line[512];
@@ -285,6 +301,10 @@ void setup(Engine* engine, View*, Scene* scene) {
     for (const auto& fname : g_config.positionalArgs) {
         Path filename(fname.c_str_safe());
         g_meshSet->addFromFile(filename, g_meshMaterialInstances);
+    }
+    if (g_meshSet->getRenderables().empty()) {
+        g_meshSet->addFromFile("assets/models/material_sphere/material_sphere.obj",
+                g_meshMaterialInstances);
     }
 
     auto& tcm = engine->getTransformManager();
@@ -428,8 +448,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     }
     g_width = uint32_t(config.getInt("size", 512));
     g_height = g_width;
-    g_materialPath = config.getString("material").c_str();
-    g_paramsPath = config.getString("params").c_str();
+    g_materialPath = config.getString("material").c_str_safe();
+    g_paramsPath = config.getString("params").c_str_safe();
     g_prefix = config.getString("prefix");
     g_lightOn = config.getBool("light-on");
     if (config.getBool("skybox-off")) {
@@ -456,8 +476,8 @@ samples::SampleParameters createAppParameters() {
                 "Clear color for the render target [hex]", ""),
         samples::Parameter::makeInt("size", 'S', "Size of the square render window", 512, 1),
         samples::Parameter::makeString("material", 'm',
-                "Path to a compiled material file (see matc)", "", true),
-        samples::Parameter::makeString("params", 'p', "Path to a parameters file", "", true),
+                "Path to a compiled material file (see matc)", ""),
+        samples::Parameter::makeString("params", 'p', "Path to a parameters file", ""),
         samples::Parameter::makeString("prefix", 'P', "Prefix for the rendered output frames", ""),
         samples::Parameter::makeBool("light-on", 'l', "Turn on the directional light", false),
         samples::Parameter::makeBool("skybox-off", 'Y', "Turn off the skybox", false),
@@ -482,18 +502,19 @@ int main(int const argc, char* argv[]) {
                 "       metallic   1.0\n"
                 "       # interpolated\n"
                 "       roughness  0.0 1.0",
-        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
-        .requiredPositionalArgCount = 1,
+        .positionalArgsDescription = { "[mesh files (.obj, .fbx)]" },
+        .requiredPositionalArgCount = 0,
         .parameters = createAppParameters(),
     };
 
     SampleConfig config;
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
     for (const auto& fname : config.positionalArgs) {
         Path const filename(fname.c_str_safe());
-        if (!filename.exists()) {
+        if (!loader->exists(filename)) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
@@ -501,10 +522,8 @@ int main(int const argc, char* argv[]) {
 
     config.title = "Frame Generator";
     config.headless = true;
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto fApp = createSampleApp(config, dm.get(), loader);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
-    delete loader;
 
     return 0;
 }

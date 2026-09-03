@@ -17,6 +17,8 @@
 #include "arguments.h"
 
 #ifndef __ANDROID__
+#include <filamentapp/DesktopAssetLoader.h>
+#include <filamentapp/DesktopAssetWriter.h>
 #include <filamentapp/HtmlDisplayManager.h>
 #include <filamentapp/SDLDisplayManager.h>
 #endif
@@ -170,6 +172,7 @@ SampleParameters getCommonParameters() {
         samples::Parameter::makeBool("remote", 'x', "Run web server and enable remote control",
                 false),
         samples::Parameter::makeString("screenshot", '\0', "Output screenshot image path", ""),
+        samples::Parameter::makeString("assets-path", '\0', "Path to root assets directory", ""),
         samples::Parameter::makeInt("frames", '\0', "Number of frames before capture / exit", 10,
                 1),
         samples::Parameter::makeFloat("fixed-timestep", '\0',
@@ -268,6 +271,26 @@ std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleCon
     return nullptr;
 #endif
 }
+
+#ifndef __ANDROID__
+utils::Path getDefaultAssetPath() {
+    return utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
+}
+
+std::unique_ptr<filament::app::AssetLoader> getAssetLoader(const SampleConfig& config) {
+    if (!config.assetsPath.empty()) {
+        return std::make_unique<filament::app::DesktopAssetLoader>(utils::Path(config.assetsPath));
+    }
+    return std::make_unique<filament::app::DesktopAssetLoader>(getDefaultAssetPath());
+}
+
+std::unique_ptr<filament::app::AssetWriter> getAssetWriter(const SampleConfig& config) {
+    if (!config.assetsPath.empty()) {
+        return std::make_unique<filament::app::DesktopAssetWriter>(utils::Path(config.assetsPath));
+    }
+    return std::make_unique<filament::app::DesktopAssetWriter>(getDefaultAssetPath());
+}
+#endif
 
 int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
         const CommandLineSpecification& spec) {
@@ -422,6 +445,8 @@ int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
                 if (!arg.empty()) {
                     config->headless = true;
                 }
+            } else if (cp.name == "assets-path") {
+                config->assetsPath = arg;
             } else if (cp.name == "frames") {
                 try {
                     config->warmupFrames = std::stoi(arg.c_str());

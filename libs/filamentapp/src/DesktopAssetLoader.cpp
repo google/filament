@@ -21,10 +21,29 @@
 
 namespace filament::app {
 
+utils::Path DesktopAssetLoader::resolve(utils::Path const& path) const {
+    if (path.isAbsolute() || mRootPath.isEmpty()) {
+        return path;
+    }
+    utils::Path candidate = mRootPath + path;
+    if (candidate.exists()) {
+        return candidate;
+    }
+    return path;
+}
+
+bool DesktopAssetLoader::exists(utils::Path const& path) const { return resolve(path).exists(); }
+
 std::vector<uint8_t> DesktopAssetLoader::load(utils::Path const& path) const {
-    std::ifstream in(path.c_str(), std::ifstream::binary | std::ifstream::ate);
+    utils::Path resolvedPath = resolve(path);
+    std::ifstream in(resolvedPath.c_str(), std::ifstream::binary | std::ifstream::ate);
     if (!in.is_open()) {
-        return {};
+        if (resolvedPath != path) {
+            in.open(path.c_str(), std::ifstream::binary | std::ifstream::ate);
+        }
+        if (!in.is_open()) {
+            return {};
+        }
     }
 
     auto size = in.tellg();

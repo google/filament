@@ -94,8 +94,7 @@ std::ifstream::pos_type getFileSize(const char* filename) {
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
     if (config.iblDirectory.empty()) {
-        config.iblDirectory =
-                utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+        config.iblDirectory = utils::CString(DEFAULT_IBL);
     }
     auto app = std::make_shared<App>();
     app->config = config;
@@ -302,27 +301,26 @@ samples::SampleParameters createAppParameters() {
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "glTF Instancing";
-    config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    config.iblDirectory = utils::CString(DEFAULT_IBL);
 
     samples::CommandLineSpecification spec = {
         .parameters = createAppParameters(),
     };
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
     if (!config.positionalArgs.empty()) {
         utils::Path filename(config.positionalArgs[0].c_str_safe());
-        if (!filename.exists()) {
+        if (!loader->exists(filename)) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
     }
 
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto fApp = createSampleApp(config, dm.get(), loader);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     if (fApp) {
         fApp->run();
     }
-    delete loader;
 
     return 0;
 }

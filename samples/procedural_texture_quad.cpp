@@ -51,7 +51,7 @@ using MagFilter = TextureSampler::MagFilter;
 
 namespace {
 struct App {
-    FilamentApp2* filamentApp;
+    FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
     VertexBuffer* vb = nullptr;
     Material* mat = nullptr;
@@ -68,22 +68,20 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
-        Path path = FilamentApp2::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
-        if (!path.exists()) {
-            std::cerr << "The texture " << path.c_str() << " does not exist" << std::endl;
-            exit(1);
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
+        int w = 0, h = 0, n = 0;
+        unsigned char* data = nullptr;
+        auto buf = loader->load("textures/Moss_01/Moss_01_Color.png");
+        if (!buf.empty()) {
+            data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 4);
         }
-        int w, h, n;
-        unsigned char* data = stbi_load(path.c_str(), &w, &h, &n, 4);
         if (data == nullptr) {
-            std::cerr << "The texture " << path.c_str() << " could not be loaded" << std::endl;
-            exit(1);
+            std::cerr << "The texture could not be loaded" << std::endl;
+            return;
         }
         std::cout << "Loaded texture: " << w << "x" << h << std::endl;
-        Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
-                Texture::Format::RGBA, Texture::Type::UBYTE,
-                (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
+        Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4), Texture::Format::RGBA,
+                Texture::Type::UBYTE, [](void* buffer, size_t, void*) { stbi_image_free(buffer); });
         app->tex = Texture::Builder()
                            .width(uint32_t(w))
                            .height(uint32_t(h))
@@ -97,6 +95,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                            .package(RESOURCES_PROCEDURALTEXTUREQUAD_DATA,
                                    RESOURCES_PROCEDURALTEXTUREQUAD_SIZE)
                            .build(*engine);
+        if (!app->mat) {
+            return;
+        }
         TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
         app->matInstance = app->mat->createInstance();
         app->matInstance->setParameter("albedo", app->tex, sampler);
@@ -128,14 +129,37 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->skybox);
-        engine->destroy(app->renderable);
-        engine->destroy(app->matInstance);
-        engine->destroy(app->mat);
-        engine->destroy(app->tex);
-        engine->destroy(app->vb);
-        engine->destroyCameraComponent(app->camera);
-        EntityManager::get().destroy(app->camera);
+        if (app->skybox) {
+            engine->destroy(app->skybox);
+            app->skybox = nullptr;
+        }
+        if (app->renderable) {
+            engine->destroy(app->renderable);
+            EntityManager::get().destroy(app->renderable);
+            app->renderable = Entity{};
+        }
+        if (app->matInstance) {
+            engine->destroy(app->matInstance);
+            app->matInstance = nullptr;
+        }
+        if (app->mat) {
+            engine->destroy(app->mat);
+            app->mat = nullptr;
+        }
+        if (app->tex) {
+            engine->destroy(app->tex);
+            app->tex = nullptr;
+        }
+        if (app->vb) {
+            engine->destroy(app->vb);
+            app->vb = nullptr;
+        }
+        if (app->camera) {
+            engine->destroyCameraComponent(app->camera);
+            EntityManager::get().destroy(app->camera);
+            app->camera = Entity{};
+            app->cam = nullptr;
+        }
     };
 
 
@@ -143,6 +167,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine*, View* view, double) {
+                            if (!app->cam) {
+                                return;
+                            }
                             const uint32_t w = view->getViewport().width;
                             const uint32_t h = view->getViewport().height;
                             const float aspect = float(w) / float(h);
@@ -163,8 +190,9 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
     return 0;
 }

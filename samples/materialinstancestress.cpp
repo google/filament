@@ -157,8 +157,7 @@ void createSceneObjects(Engine* engine, Scene* scene, App& app) {
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     if (config.iblDirectory.empty()) {
-        config.iblDirectory = utils::CString(
-                (FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b").c_str());
+        config.iblDirectory = utils::CString("assets/ibl/lightroom_14b");
     }
     auto app = std::make_shared<App>();
     app->config = config;
@@ -277,13 +276,13 @@ samples::SampleParameters createAppParameters() { return {}; }
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Material Instances Stress Test";
-    config.iblDirectory = utils::CString(
-            (FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b").c_str());
+    config.iblDirectory = utils::CString("assets/ibl/lightroom_14b");
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
     return 0;
 }

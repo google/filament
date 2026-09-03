@@ -26,11 +26,21 @@
 
 namespace filament::app {
 
-class DesktopAssetWriter : public AssetWriter {
+class UTILS_PUBLIC DesktopAssetWriter : public AssetWriter {
 public:
+    DesktopAssetWriter()
+            : mRootPath() {}
+    explicit DesktopAssetWriter(utils::Path rootPath)
+            : mRootPath(std::move(rootPath)) {}
     ~DesktopAssetWriter() override = default;
 
     bool write(utils::Path const& path, uint8_t const* data, size_t size) const override;
+    utils::Path resolve(utils::Path const& path) const override;
+
+    utils::Path const& getRootPath() const noexcept { return mRootPath; }
+
+private:
+    const utils::Path mRootPath;
 };
 
 } // namespace filament::app
