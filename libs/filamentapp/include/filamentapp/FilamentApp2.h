@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
 
 #include "AppEvent.h"
-#include "Config.h"
 #include "Cube.h"
 #include "Grid.h"
 #include "IBL.h"
@@ -31,9 +30,11 @@
 #include <utils/Entity.h>
 #include <utils/Path.h>
 
+#include <atomic>
+#include <cstdint>
 #include <functional>
+#include <limits>
 #include <memory>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -64,6 +65,7 @@ class WebGPUPlatform;
 namespace filament::app {
 class DisplayManager;
 class AssetLoader;
+class AssetWriter;
 } // namespace filament::app
 
 class UTILS_PUBLIC FilamentApp2 {
@@ -85,6 +87,10 @@ public:
     using SurfaceCreatedCallback = std::function<void(filament::Engine*)>;
     using SurfaceDestroyedCallback = std::function<void(filament::Engine*)>;
 
+private:
+    static constexpr uint32_t MAX_WARMUP_FRAMES = std::numeric_limits<uint32_t>::max();
+
+public:
     class Builder {
     public:
         Builder() = default;
@@ -158,6 +164,18 @@ public:
             mAsynchronousMode = asynchronousMode;
             return *this;
         }
+        Builder& screenshotPath(utils::CString const& screenshotPath) {
+            mScreenshotPath = screenshotPath;
+            return *this;
+        }
+        Builder& warmupFrames(int warmupFrames) {
+            mWarmupFrames = warmupFrames;
+            return *this;
+        }
+        Builder& fixedTimeStep(float fixedTimeStep) {
+            mFixedTimeStep = fixedTimeStep;
+            return *this;
+        }
         /**
          * Sets a custom AssetLoader for the application.
          *
@@ -166,6 +184,17 @@ public:
          */
         Builder& assetLoader(filament::app::AssetLoader* assetLoader) {
             mAssetLoader = assetLoader;
+            return *this;
+        }
+
+        /**
+         * Sets a custom AssetWriter for the application.
+         *
+         * @param assetWriter Pointer to an AssetWriter implementation.
+         *                    If nullptr or not set, the app will use a default DesktopAssetWriter.
+         */
+        Builder& assetWriter(filament::app::AssetWriter* assetWriter) {
+            mAssetWriter = assetWriter;
             return *this;
         }
 
@@ -313,8 +342,12 @@ public:
         WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
         DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
         filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
+        utils::CString mScreenshotPath;
+        uint32_t mWarmupFrames = MAX_WARMUP_FRAMES;
+        float mFixedTimeStep = 0.0f;
         filament::app::DisplayManager* mDisplayManager = nullptr;
         filament::app::AssetLoader* mAssetLoader = nullptr;
+        filament::app::AssetWriter* mAssetWriter = nullptr;
         SetupCallback mSetup;
         CleanupCallback mCleanup;
         PreRenderCallback mPreRender;
@@ -354,6 +387,7 @@ public:
 
     filament::app::DisplayManager* getDisplayManager() const noexcept { return mDisplayManager; }
     filament::app::AssetLoader* getAssetLoader() const noexcept { return mAssetLoader; }
+    filament::app::AssetWriter* getAssetWriter() const noexcept { return mAssetWriter; }
 
     void setSidebarWidth(int width) {
         mCameraParams.sidebarWidth = width;
@@ -477,12 +511,16 @@ private:
     void configureCamerasForWindow(WindowCameraParams const& camera);
     void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
 
+    void captureScreenshot(utils::CString const& filepath);
+
     bool mInitialized = false;
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
     filament::Texture* mDirt = nullptr;
-    bool mClosed = false;
+    // Atomic because close() can be called from asynchronous driver/readback callbacks while
+    // the main loop reads mClosed in doFrame().
+    std::atomic<bool> mClosed{ false };
     double mTime = 0;
 
     filament::Material const* mDefaultMaterial = nullptr;
@@ -508,6 +546,8 @@ private:
     filament::app::DisplayManager* const mDisplayManager;
     std::unique_ptr<filament::app::AssetLoader> mDefaultAssetLoader;
     filament::app::AssetLoader* const mAssetLoader;
+    std::unique_ptr<filament::app::AssetWriter> mDefaultAssetWriter;
+    filament::app::AssetWriter* const mAssetWriter;
 
     filament::backend::Platform* mVulkanPlatform = nullptr;
     filament::backend::Platform* mWebGPUPlatform = nullptr;
@@ -562,6 +602,13 @@ private:
     PostRenderCallback const mPostRender{};
     bool mMousePressed[3] = { false };
     bool mIsSplitView = false;
+
+    utils::CString const mScreenshotPath;
+    uint32_t mWarmupFrames = MAX_WARMUP_FRAMES;
+    float const mFixedTimeStep = 0.0f;
+    uint32_t mCurrentFrame = 0;
+    double mVirtualTime = 0.0;
+    double mLastVirtualTime = 0.0;
 
     std::unique_ptr<Cube> mCameraCube;
     std::unique_ptr<Grid> mCameraGrid;
