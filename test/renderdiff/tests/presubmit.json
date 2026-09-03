@@ -84,8 +84,6 @@
             "name": "Bloom",
             "description": "Bloom",
             "apply_presets": ["base", "bloom_models"],
-            // Do not include "desktop-webgpu" in the following backend since it is flaky (b/454921221)
-            "renderers": ["desktop-opengl", "desktop-vulkan"],
             "rendering": {
                 "view.bloom.enabled": true
             }
@@ -101,8 +99,6 @@
         {
             "name": "Transimssion",
             "description": "transmission",
-            // Disable transmission for desktop-webgpu because it seems flaky (b/488070152)
-            "renderers": ["desktop-opengl", "desktop-vulkan"],
             "apply_presets": ["base", "transmission_models"],
             "rendering": {
                 "camera.focalLength": 52.0
