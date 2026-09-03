@@ -27,6 +27,19 @@ using namespace utils;
 
 JobQueue::JobQueue(PassKey) {}
 
+JobQueue::~JobQueue() {
+#ifndef NDEBUG
+    // Nothing can consume an id anymore, so a placeholder that is still empty is an id that
+    // `issueJobId()` handed out and that was never pushed nor canceled -- typically an
+    // `...AsyncS()` whose `...AsyncR()` doesn't push the job with the id it was given. It has been
+    // sitting in `mJobsMap` for the whole life of the queue.
+    for (auto const& entry : mJobsMap) {
+        assert_invariant(static_cast<bool>(entry.second)
+                && "a job id was issued but its job was never pushed nor canceled");
+    }
+#endif
+}
+
 JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
     JobId jobId = preIssuedJobId;
     {
