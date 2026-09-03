@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include <filameshio/MeshReader.h>
 
@@ -43,6 +42,7 @@
 #include <math/mat4.h>
 #include <math/vec4.h>
 
+#include <samples/SampleConfig.h>
 #include <stb_image.h>
 
 #include <iostream>

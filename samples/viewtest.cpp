@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
@@ -30,6 +29,8 @@
 
 #include <utils/EntityManager.h>
 #include <utils/getopt.h>
+
+#include <samples/SampleConfig.h>
 
 #include <iostream>
 

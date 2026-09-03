@@ -16,8 +16,10 @@
 
 #include "arguments.h"
 
+#ifndef __ANDROID__
 #include <filamentapp/HtmlDisplayManager.h>
 #include <filamentapp/SDLDisplayManager.h>
+#endif
 
 #include <filament/Engine.h>
 
@@ -69,33 +71,6 @@ filament::Engine::Backend resolveBackend(filament::Engine::Backend backend) {
     return backend;
 }
 
-samples::SampleParameters getCommonParameters() {
-    return {
-        samples::Parameter::makeEnum("api", 'a', "Specify the backend API", "default",
-                { "opengl", "vulkan", "metal", "webgpu" }),
-        samples::Parameter::makeInt("feature-level", 'f', "Specify feature level", 3, 1, 3, 1),
-        samples::Parameter::makeBool("headless", 'e', "Run in headless mode", false),
-        samples::Parameter::makeString("ibl", 'i', "Path to directory containing IBL", ""),
-        samples::Parameter::makeEnum("camera", 'c', "Specify camera mode", "orbit",
-                { "orbit", "flight" }),
-        samples::Parameter::makeInt("eyes", 'y', "Stereoscopic eye count", 2, 1, 4, 1),
-        samples::Parameter::makeBool("split-view", 'v', "Enable split-view", false),
-        samples::Parameter::makeString("vulkan-gpu-hint", 'g',
-                "Vulkan physical device selection hint", ""),
-        samples::Parameter::makeEnum("webgpu-backend", 'w', "Forced WebGPU backend", "default",
-                { "opengl", "vulkan", "metal", "webgpu" }),
-        samples::Parameter::makeBool("remote", 'x', "Run web server and enable remote control",
-                false),
-        samples::Parameter::makeString("screenshot", '\0', "Output screenshot image path", ""),
-        samples::Parameter::makeInt("frames", '\0', "Number of frames before capture / exit", 10,
-                1),
-        samples::Parameter::makeFloat("fixed-timestep", '\0',
-                "Fixed animation timestep in seconds (<=0 for wallclock)", 0.0f, 0.0f),
-        samples::Parameter::makeString("window-size", '\0', "Window size in WIDTHxHEIGHT format",
-                ""),
-    };
-}
-
 void printParameterHelp(const samples::Parameter& param) {
     std::cout << "   --" << param.name.c_str();
     if (param.shorthand != '\0') {
@@ -144,7 +119,7 @@ void printParameterHelp(const samples::Parameter& param) {
 }
 
 void validateSpecification(const samples::CommandLineSpecification& spec) {
-    auto commonParams = getCommonParameters();
+    auto commonParams = samples::getCommonParameters();
 
     for (size_t i = 0; i < spec.parameters.size(); ++i) {
         const auto& param = spec.parameters[i];
@@ -176,6 +151,33 @@ void validateSpecification(const samples::CommandLineSpecification& spec) {
 } // namespace
 
 namespace samples {
+
+SampleParameters getCommonParameters() {
+    return {
+        samples::Parameter::makeEnum("api", 'a', "Specify the backend API", "default",
+                { "opengl", "vulkan", "metal", "webgpu" }),
+        samples::Parameter::makeInt("feature-level", 'f', "Specify feature level", 3, 1, 3, 1),
+        samples::Parameter::makeBool("headless", 'e', "Run in headless mode", false),
+        samples::Parameter::makeString("ibl", 'i', "Path to directory containing IBL", ""),
+        samples::Parameter::makeEnum("camera", 'c', "Specify camera mode", "orbit",
+                { "orbit", "flight" }),
+        samples::Parameter::makeInt("eyes", 'y', "Stereoscopic eye count", 2, 1, 4, 1),
+        samples::Parameter::makeBool("split-view", 'v', "Enable split-view", false),
+        samples::Parameter::makeString("vulkan-gpu-hint", 'g',
+                "Vulkan physical device selection hint", ""),
+        samples::Parameter::makeEnum("webgpu-backend", 'w', "Forced WebGPU backend", "default",
+                { "opengl", "vulkan", "metal", "webgpu" }),
+        samples::Parameter::makeBool("remote", 'x', "Run web server and enable remote control",
+                false),
+        samples::Parameter::makeString("screenshot", '\0', "Output screenshot image path", ""),
+        samples::Parameter::makeInt("frames", '\0', "Number of frames before capture / exit", 10,
+                1),
+        samples::Parameter::makeFloat("fixed-timestep", '\0',
+                "Fixed animation timestep in seconds (<=0 for wallclock)", 0.0f, 0.0f),
+        samples::Parameter::makeString("window-size", '\0', "Window size in WIDTHxHEIGHT format",
+                ""),
+    };
+}
 
 void printUsage(const char* name, const CommandLineSpecification& spec) {
     validateSpecification(spec);
@@ -257,10 +259,14 @@ FilamentApp2::Builder getBuilder(const SampleConfig& config, filament::app::Disp
 }
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config) {
+#ifndef __ANDROID__
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();
     }
     return std::make_unique<filament::app::SDLDisplayManager>(config.backend);
+#else
+    return nullptr;
+#endif
 }
 
 int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,

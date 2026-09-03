@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/gltf_demo.h"
 
@@ -65,6 +64,7 @@
 
 #include <cgltf.h>
 #include <imgui.h>
+#include <samples/SampleConfig.h>
 
 #include <algorithm>
 #include <array>

@@ -35,7 +35,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include <imageio/ImageEncoder.h>
 
@@ -70,6 +69,8 @@
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+
+#include <samples/SampleConfig.h>
 
 #include <algorithm>
 #include <atomic>

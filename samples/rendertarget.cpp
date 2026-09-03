@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/monkey.h"
 #include "generated/resources/resources.h"
@@ -41,6 +40,8 @@
 
 #include <utils/EntityManager.h>
 #include <utils/getopt.h>
+
+#include <samples/SampleConfig.h>
 
 #include <iostream>
 

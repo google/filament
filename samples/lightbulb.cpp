@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/resources.h"
 
@@ -44,6 +43,8 @@
 #include <utils/Path.h>
 
 #include <math/norm.h>
+
+#include <samples/SampleConfig.h>
 
 #include <iostream>
 #include <map>
