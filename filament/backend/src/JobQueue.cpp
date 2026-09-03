@@ -18,7 +18,6 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Logger.h>
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
 
