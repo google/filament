@@ -37,7 +37,6 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
             if (jobId != InvalidJobId) {
                 mJobsMap.erase(jobId);
             }
-            LOG(WARNING) << "JobQueue::push() called after stop(), the job is dropped";
             return InvalidJobId;
         }
 
