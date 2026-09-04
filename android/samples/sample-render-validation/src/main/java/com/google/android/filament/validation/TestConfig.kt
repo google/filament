@@ -54,11 +54,11 @@ class ConfigParser {
 
         private fun parseRenderTestConfig(json: JSONObject, baseDir: File?): RenderTestConfig {
             val name = json.getString("name")
-            val backends = json.getJSONArray("backends").toList<String>()
-            
+            val backends = (json.optJSONArray("renderers") ?: json.getJSONArray("backends")).toList<String>()
+
             val modelSearchPaths = json.optJSONArray("model_search_paths")?.toList<String>() ?: emptyList()
             val models = mutableMapOf<String, String>()
-            
+
             baseDir?.let { dir ->
                 modelSearchPaths.forEach { searchPath ->
                     val searchDir = File(dir, searchPath)
@@ -75,20 +75,19 @@ class ConfigParser {
             if (modelsJson != null) {
                 val keys = modelsJson.keys()
                 while (keys.hasNext()) {
-                    val name = keys.next()
-                    val path = modelsJson.getString(name)
+                    val mName = keys.next()
+                    val path = modelsJson.getString(mName)
                     // Resolve path relative to baseDir if not absolute
                     val file = File(path)
                     if (file.isAbsolute) {
-                        models[name] = path
+                        models[mName] = path
                     } else if (baseDir != null) {
-                        models[name] = File(baseDir, path).absolutePath
+                        models[mName] = File(baseDir, path).absolutePath
                     } else {
-                        models[name] = path
+                        models[mName] = path
                     }
                 }
             }
-
 
             val presetsJson = json.optJSONArray("presets")
             val presets = mutableMapOf<String, PresetConfig>()
@@ -110,28 +109,60 @@ class ConfigParser {
 
         private fun parsePreset(json: JSONObject, existingModels: Set<String>): PresetConfig {
             val name = json.getString("name")
-            val rendering = json.getJSONObject("rendering")
-            val models = json.optJSONArray("models")?.toList<String>() ?: emptyList()
-            
-            // Validate models
-            models.forEach { if (!existingModels.contains(it)) throw IllegalArgumentException("Model $it not found") }
-
             val tolerance = json.optJSONObject("tolerance")
+
+            // Strict schema: reject legacy flat fields
+            if (json.has("rendering") || json.has("models") || json.has("model_search_paths") || json.has("model_list_file")) {
+                throw IllegalArgumentException("Preset '$name' contains legacy root fields; must use 'gltf_test' or 'sample_test'")
+            }
+            if (json.has("gltf_test") && json.has("sample_test")) {
+                throw IllegalArgumentException("Preset '$name' cannot define both 'gltf_test' and 'sample_test'")
+            }
+
+            // Parse gltf_test block if present
+            val gltfJson = json.optJSONObject("gltf_test")
+            val rendering = gltfJson?.optJSONObject("rendering") ?: JSONObject()
+            val models = gltfJson?.optJSONArray("models")?.toList<String>() ?: emptyList()
+
+            // Validate models if present
+            if (existingModels.isNotEmpty()) {
+                models.forEach { if (!existingModels.contains(it)) throw IllegalArgumentException("Model $it not found") }
+            }
+
             return PresetConfig(name, rendering, models, tolerance)
         }
 
         private fun parseTestConfig(
-            json: JSONObject, 
-            existingModels: Set<String>, 
-            presets: Map<String, PresetConfig>, 
+            json: JSONObject,
+            existingModels: Set<String>,
+            presets: Map<String, PresetConfig>,
             defaultBackends: List<String>
         ): List<TestConfig> {
             val name = json.getString("name")
             val description = json.optString("description")
-            val backends = json.optJSONArray("backends")?.toList<String>() ?: defaultBackends
-            
+            val backends = (json.optJSONArray("renderers") ?: json.optJSONArray("backends"))?.toList<String>() ?: defaultBackends
+
             val applyPresets = json.optJSONArray("apply_presets")?.toList<String>() ?: emptyList()
-            
+
+            // Strict schema: reject legacy flat fields
+            if (json.has("rendering") || json.has("models") || json.has("model_search_paths") || json.has("model_list_file")) {
+                throw IllegalArgumentException("Test '$name' contains legacy root fields; must use 'gltf_test' or 'sample_test'")
+            }
+
+            val hasGltf = json.has("gltf_test")
+            val hasSample = json.has("sample_test")
+            if (!hasGltf && !hasSample) {
+                throw IllegalArgumentException("Test '$name' must define exactly one of 'gltf_test' or 'sample_test'")
+            }
+            if (hasGltf && hasSample) {
+                throw IllegalArgumentException("Test '$name' cannot define both 'gltf_test' and 'sample_test'")
+            }
+
+            if (hasSample) {
+                // Standalone sample tests are desktop binaries, skip for on-device glTF validation
+                return emptyList()
+            }
+
             val rendering = JSONObject()
             val combinedModels = mutableSetOf<String>()
             var lastTolerance: JSONObject? = null
@@ -140,7 +171,7 @@ class ConfigParser {
                 val preset = presets[presetName] ?: throw IllegalArgumentException("Unknown preset $presetName")
                 // Merge rendering (flat copy)
                 val keys = preset.rendering.keys()
-                while(keys.hasNext()) {
+                while (keys.hasNext()) {
                     val k = keys.next()
                     rendering.put(k, preset.rendering.get(k))
                 }
@@ -148,20 +179,23 @@ class ConfigParser {
                 if (preset.tolerance != null) lastTolerance = preset.tolerance
             }
 
-            val testRendering = json.optJSONObject("rendering")
+            val gltfJson = json.getJSONObject("gltf_test")
+            val testRendering = gltfJson.optJSONObject("rendering")
             if (testRendering != null) {
                 val keys = testRendering.keys()
-                while(keys.hasNext()) {
+                while (keys.hasNext()) {
                     val k = keys.next()
                     rendering.put(k, testRendering.get(k))
                 }
             }
 
-            val testModels = json.optJSONArray("models")?.toList<String>() ?: emptyList()
+            val testModels = gltfJson.optJSONArray("models")?.toList<String>() ?: emptyList()
             combinedModels.addAll(testModels)
-            
-             // Validate models
-            combinedModels.forEach { if (!existingModels.contains(it)) throw IllegalArgumentException("Model $it not found") }
+
+            // Validate models
+            if (existingModels.isNotEmpty()) {
+                combinedModels.forEach { if (!existingModels.contains(it)) throw IllegalArgumentException("Model $it not found") }
+            }
 
             val tolerance = json.optJSONObject("tolerance") ?: lastTolerance
 
