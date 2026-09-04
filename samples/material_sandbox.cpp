@@ -17,7 +17,6 @@
 #include "material_sandbox.h"
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
 #include <filamentapp/DesktopAssetLoader.h>
@@ -52,6 +51,7 @@
 #include <math/vec4.h>
 
 #include <imgui.h>
+#include <samples/SampleConfig.h>
 
 #include <iostream>
 #include <map>

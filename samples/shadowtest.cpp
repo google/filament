@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/resources.h"
 
@@ -37,6 +36,8 @@
 #include <filament/View.h>
 
 #include <math/norm.h>
+
+#include <samples/SampleConfig.h>
 
 using namespace filament;
 using namespace filament::math;

@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/gltf_demo.h"
 
@@ -45,6 +44,8 @@
 #include <utils/NameComponentManager.h>
 
 #include <math/mat4.h>
+
+#include <samples/SampleConfig.h>
 
 #include <fstream>
 #include <iostream>
