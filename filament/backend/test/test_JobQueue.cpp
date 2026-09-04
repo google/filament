@@ -33,9 +33,22 @@ namespace {
 // code that calls back into the queue (e.g. a BufferDescriptor whose release callback chains the
 // next asynchronous call). Destroying the job while the queue's lock is held deadlocks.
 struct ReentrantOnDestroy {
+    ReentrantOnDestroy(JobQueue::Ptr queue, std::atomic<JobQueue::JobId>* reentrantJobId)
+        : queue(std::move(queue)), reentrantJobId(reentrantJobId) {}
+
+    ReentrantOnDestroy(ReentrantOnDestroy&& rhs) noexcept
+        : queue(std::move(rhs.queue)), reentrantJobId(rhs.reentrantJobId) {
+        rhs.reentrantJobId = nullptr;
+    }
+
+    ~ReentrantOnDestroy() {
+        if (reentrantJobId) {
+            reentrantJobId->store(queue->issueJobId());
+        }
+    }
+
     JobQueue::Ptr queue;
     std::atomic<JobQueue::JobId>* reentrantJobId;
-    ~ReentrantOnDestroy() { reentrantJobId->store(queue->issueJobId()); }
 };
 
 } // namespace
@@ -141,6 +154,9 @@ TEST(JobQueue, CancelDestroysJobWithoutHoldingLock) {
 
     // The job's destructor must have been able to use the queue.
     EXPECT_NE(JobQueue::InvalidJobId, reentrantJobId.load());
+
+    // The id it issued is a reservation, so release it.
+    EXPECT_TRUE(queue->cancel(reentrantJobId.load()));
 }
 
 TEST(JobQueue, Stop) {
@@ -205,6 +221,38 @@ TEST(JobQueue, PreIssuedJobId) {
     JobQueue::JobId preIssuedId = queue->issueJobId();
     JobQueue::JobId id = queue->push([]() {}, preIssuedId);
     EXPECT_EQ(id, preIssuedId);
+}
+
+TEST(JobQueue, IssuedJobIdsAreReleasedByPushAndCancel) {
+    JobQueue::Ptr queue = JobQueue::create();
+    JobQueue::JobId const pushedId = queue->issueJobId();
+    JobQueue::JobId const canceledId = queue->issueJobId();
+
+    EXPECT_EQ(pushedId, queue->push([]() {}, pushedId));
+    EXPECT_TRUE(queue->cancel(canceledId));
+
+    // Both reservations are released. One holds a job now, the other is gone. So destroying the
+    // queue here must not abort.
+}
+
+// An id handed out by `issueJobId()` reserves a slot that only `push()` or `cancel()` releases.
+// When neither happens (i.e., an `...AsyncS()` whose `...AsyncR()` never pushes), the slot is never
+// reclaimed, and debug builds catch that when the queue is destroyed.
+TEST(JobQueueDeathTest, DestroyWithReservedJobIdAborts) {
+#ifdef NDEBUG
+    GTEST_SKIP() << "assert_invariant is compiled out of release builds";
+#else
+    // See ThreadWorkerDeathTest.DestroyWithoutTerminateAborts for why the style is changed.
+    std::string const previousStyle = GTEST_FLAG_GET(death_test_style);
+    GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+    EXPECT_DEATH({
+        JobQueue::Ptr queue = JobQueue::create();
+        (void) queue->issueJobId();
+    }, "failed assertion");
+
+    GTEST_FLAG_SET(death_test_style, previousStyle);
+#endif
 }
 
 TEST(JobQueue, MultipleProducersConsumers) {
