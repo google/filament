@@ -8,6 +8,9 @@ on:
         required: true
         default: 'v1.42.2'
 
+permissions:
+  contents: read
+
 jobs:
   npm-deploy:
     name: npm-deploy
@@ -16,6 +19,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.inputs.release_tag }}
+          persist-credentials: false
       # Setup .npmrc file to publish to npm
       - uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
         with:
