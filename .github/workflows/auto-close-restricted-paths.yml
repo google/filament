@@ -10,6 +10,7 @@ name: 'Auto-close restricted path edits'
 # repository, granting it the necessary permissions to close PRs from forks.
 
 on:
+  # zizmor: ignore[dangerous-triggers] - pull_request_target is safe here: no code checkout or execution, only API calls to validate PR paths
   pull_request_target:
     types: [opened, synchronize, reopened]
 
