@@ -205,6 +205,13 @@ jobs:
           else
             echo "accept=false" >> "$GITHUB_OUTPUT"
           fi
+      - uses: ./.github/actions/get-gltf-assets
+      - name: Validate renderdiff test schemas
+        run: |
+          python3 test/renderdiff/src/test_schema.py \
+              test/renderdiff/tests/presubmit.json \
+              test/renderdiff/tests/sample.json \
+              android/samples/sample-render-validation/src/main/assets/default_test.json
         shell: bash
       - name: Renderdiff generate
         if: steps.check_accept.outputs.accept != 'true'

@@ -1,50 +1,58 @@
 {
     "name": "presubmit",
     "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
-    "model_search_paths": ["third_party/models", "gltf"],
     "presets": [
         {
             "name": "base",
-            "models": ["Box", "BoxTextured", "FlightHelmet", "lucy"],
-            "rendering": {
-                "camera.focalLength": 35.0,
-                "view.postProcessingEnabled": true,
-                "view.dithering": "NONE"
-            },
             "tolerance": {                            // [optional] Simple tolerance - single criteria
                 "maxAbsDiff": 0.0196,                 // Max absolute difference per channel (5/255)
                 "maxFailingPixelsFraction": 0.001     // Percentage of pixels allowed to exceed (0.1%)
+            },
+            "gltf_test": {
+                "model_search_paths": ["third_party/models", "gltf"],
+                "models": ["Box", "BoxTextured", "FlightHelmet", "lucy"],
+                "rendering": {
+                    "camera.focalLength": 35.0,
+                    "view.postProcessingEnabled": true,
+                    "view.dithering": "NONE"
+                }
             }
         },
         {
             "name": "bloom_models",
-            "models": ["DamagedHelmet"],
-            "rendering": {}
+            "gltf_test": {
+                "models": ["DamagedHelmet"]
+            }
         },
         {
             "name": "ssao_models",
-            "models": ["Duck", "lucy"],
-            "rendering": {}
+            "gltf_test": {
+                "models": ["Duck", "lucy"]
+            }
         },
         {
             "name": "transmission_models",
-            "models": ["TransmissionRoughnessTest", "IridescentDishWithOlives"],
-            "rendering": {}
+            "gltf_test": {
+                "models": ["TransmissionRoughnessTest", "IridescentDishWithOlives"]
+            }
         },
         {
             "name": "animation_models",
-            "models": ["Fox"],
-            "rendering": {}
+            "gltf_test": {
+                "models": ["Fox"]
+            }
         },
         {
             "name": "ssr_models",
-            "models": ["DamagedHelmet"],
-            "rendering": {}
+            "gltf_test": {
+                "models": ["DamagedHelmet"]
+            }
         },
         {
             "name": "point_light_models",
-            "models": ["lucy"],
-            "rendering": {}
+            "gltf_test": {
+                "models": ["lucy"]
+            }
         }
     ],
     "tests": [
@@ -52,74 +60,86 @@
             "name": "PointLights",
             "description": "Point lights test",
             "apply_presets": ["base", "point_light_models"],
-            "rendering": {
-                "lighting.iblIntensity": 0.0,
-                "lighting.enableSunlight": false,
-                "lighting.lights": [
-                    {
-                        "type": "POINT",
-                        "position": [4.0, 0.0, 0.0],
-                        "color": [1.0, 0.1, 0.1],
-                        "intensity": 100000000.0,
-                        "falloff": 10.0
-                    },
-                    {
-                        "type": "POINT",
-                        "position": [-4.0, 0.0, 0.0],
-                        "color": [0.1, 0.1, 1.0],
-                        "intensity": 100000000.0,
-                        "falloff": 10.0
-                    },
-                    {
-                        "type": "POINT",
-                        "position": [0.0, 0.0, 4.0],
-                        "color": [0.1, 1.0, 0.1],
-                        "intensity": 100000000.0,
-                        "falloff": 10.0
-                    }
-                ]
+            "gltf_test": {
+                "rendering": {
+                    "lighting.iblIntensity": 0.0,
+                    "lighting.enableSunlight": false,
+                    "lighting.lights": [
+                        {
+                            "type": "POINT",
+                            "position": [4.0, 0.0, 0.0],
+                            "color": [1.0, 0.1, 0.1],
+                            "intensity": 100000000.0,
+                            "falloff": 10.0
+                        },
+                        {
+                            "type": "POINT",
+                            "position": [-4.0, 0.0, 0.0],
+                            "color": [0.1, 0.1, 1.0],
+                            "intensity": 100000000.0,
+                            "falloff": 10.0
+                        },
+                        {
+                            "type": "POINT",
+                            "position": [0.0, 0.0, 4.0],
+                            "color": [0.1, 1.0, 0.1],
+                            "intensity": 100000000.0,
+                            "falloff": 10.0
+                        }
+                    ]
+                }
             }
         },
         {
             "name": "Bloom",
             "description": "Bloom",
             "apply_presets": ["base", "bloom_models"],
-            "rendering": {
-                "view.bloom.enabled": true
+            "gltf_test": {
+                "rendering": {
+                    "view.bloom.enabled": true
+                }
             }
         },
         {
             "name": "MSAA",
             "description": "Multisampling anti-aliasing",
             "apply_presets": ["base"],
-            "rendering": {
-                "view.msaa.enabled": true
+            "gltf_test": {
+                "rendering": {
+                    "view.msaa.enabled": true
+                }
             }
         },
         {
             "name": "Transimssion",
             "description": "transmission",
             "apply_presets": ["base", "transmission_models"],
-            "rendering": {
-                "camera.focalLength": 52.0
+            "gltf_test": {
+                "rendering": {
+                    "camera.focalLength": 52.0
+                }
             }
         },
         {
             "name": "SSAO",
             "description": "Screen space ambient occulsion",
             "apply_presets": ["base", "ssao_models"],
-            "rendering": {
-                "view.ssao.enabled": true
+            "gltf_test": {
+                "rendering": {
+                    "view.ssao.enabled": true
+                }
             }
         },
         {
             "name": "Skinning",
             "description": "Bone skinning animation test",
             "apply_presets": ["base", "animation_models"],
-            "rendering": {
-                "animation": {
-                    "enabled": true,
-                    "time": 0.5
+            "gltf_test": {
+                "rendering": {
+                    "animation": {
+                        "enabled": true,
+                        "time": 0.5
+                    }
                 }
             }
         },
@@ -127,8 +147,10 @@
             "name": "SSR",
             "description": "Screen space reflections",
             "apply_presets": ["base", "ssr_models"],
-            "rendering": {
-                "view.screenSpaceReflections.enabled": true
+            "gltf_test": {
+                "rendering": {
+                    "view.screenSpaceReflections.enabled": true
+                }
             }
         }
     ]
