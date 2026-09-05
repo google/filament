@@ -75,12 +75,18 @@ public class SwapChain {
 
     public enum FrameRateCompatibility {
         DEFAULT,
-        FIXED_SOURCE
+        FIXED_SOURCE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum ChangeFrameRateStrategy {
         ONLY_IF_SEAMLESS,
-        ALWAYS
+        ALWAYS;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
 

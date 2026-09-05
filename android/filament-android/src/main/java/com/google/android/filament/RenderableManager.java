@@ -102,7 +102,9 @@ public class RenderableManager {
 
         private final int mType;
         PrimitiveType(int value) { mType = value; }
-        int getValue() { return mType; }
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return mType; }
     }
 
     /**
@@ -147,7 +149,7 @@ public class RenderableManager {
                 @NonNull VertexBuffer vertices, @NonNull IndexBuffer indices,
                 @IntRange(from = 0) int offset, @IntRange(from = 0) int minIndex,
                 @IntRange(from = 0) int maxIndex, @IntRange(from = 0) int count) {
-            nBuilderGeometry(mNativeBuilder, index, type.getValue(), vertices.getNativeObject(),
+            nBuilderGeometry(mNativeBuilder, index, type.toFilamentNative(), vertices.getNativeObject(),
                     indices.getNativeObject(), offset, minIndex, maxIndex, count);
             return this;
         }
@@ -159,7 +161,7 @@ public class RenderableManager {
         public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
                 @NonNull VertexBuffer vertices, @NonNull IndexBuffer indices,
                 @IntRange(from = 0) int offset, @IntRange(from = 0) int count) {
-            nBuilderGeometry(mNativeBuilder, index, type.getValue(), vertices.getNativeObject(),
+            nBuilderGeometry(mNativeBuilder, index, type.toFilamentNative(), vertices.getNativeObject(),
                     indices.getNativeObject(), offset, count);
             return this;
         }
@@ -170,7 +172,7 @@ public class RenderableManager {
         @NonNull
         public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
                 @NonNull VertexBuffer vertices, @NonNull IndexBuffer indices) {
-            nBuilderGeometry(mNativeBuilder, index, type.getValue(),
+            nBuilderGeometry(mNativeBuilder, index, type.toFilamentNative(),
                     vertices.getNativeObject(), indices.getNativeObject());
             return this;
         }
@@ -181,7 +183,7 @@ public class RenderableManager {
         @NonNull
         public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
                 @NonNull VertexBuffer vertices, @IntRange(from = 0) int offset, @IntRange(from = 0) int count) {
-            nBuilderGeometry(mNativeBuilder, index, type.getValue(), vertices.getNativeObject(), offset, count);
+            nBuilderGeometry(mNativeBuilder, index, type.toFilamentNative(), vertices.getNativeObject(), offset, count);
             return this;
         }
 
@@ -191,7 +193,7 @@ public class RenderableManager {
         @NonNull
         public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
                 @NonNull VertexBuffer vertices) {
-            nBuilderGeometry(mNativeBuilder, index, type.getValue(), vertices.getNativeObject());
+            nBuilderGeometry(mNativeBuilder, index, type.toFilamentNative(), vertices.getNativeObject());
             return this;
         }
 
@@ -204,7 +206,10 @@ public class RenderableManager {
             /** bounds and world space transform are immutable */
             STATIC_BOUNDS,
             /** skinning/morphing not allowed and Vertex/IndexBuffer immutables */
-            STATIC
+            STATIC;
+
+            /** @return the value of this enum constant as used by the native Filament engine. */
+            public int toFilamentNative() { return ordinal(); }
         }
 
         /**
@@ -939,7 +944,7 @@ public class RenderableManager {
             @NonNull PrimitiveType type, @NonNull VertexBuffer vertices,
             @NonNull IndexBuffer indices, @IntRange(from = 0) int offset,
             @IntRange(from = 0) int count) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), vertices.getNativeObject(), indices.getNativeObject(), offset, count);
+        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.toFilamentNative(), vertices.getNativeObject(), indices.getNativeObject(), offset, count);
     }
 
     /**
@@ -950,7 +955,7 @@ public class RenderableManager {
     public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
             @NonNull PrimitiveType type, @NonNull VertexBuffer vertices,
             @NonNull IndexBuffer indices) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), vertices.getNativeObject(), indices.getNativeObject(),
+        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.toFilamentNative(), vertices.getNativeObject(), indices.getNativeObject(),
                 0, indices.getIndexCount());
     }
 
@@ -962,7 +967,7 @@ public class RenderableManager {
     public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
             @NonNull PrimitiveType type, @NonNull VertexBuffer vertices, @IntRange(from = 0) int offset,
             @IntRange(from = 0) int count) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), vertices.getNativeObject(), offset, count);
+        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.toFilamentNative(), vertices.getNativeObject(), offset, count);
     }
 
     /**
@@ -972,7 +977,7 @@ public class RenderableManager {
      */
     public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
             @NonNull PrimitiveType type, @NonNull VertexBuffer vertices) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), vertices.getNativeObject(),
+        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.toFilamentNative(), vertices.getNativeObject(),
                 0, vertices.getVertexCount());
     }
 

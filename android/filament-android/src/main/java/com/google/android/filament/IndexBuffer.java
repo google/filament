@@ -55,7 +55,10 @@ public class IndexBuffer {
             USHORT,
 
             /** 32-bit indices */
-            UINT,
+            UINT;
+
+            /** @return the value of this enum constant as used by the native Filament engine. */
+            public int toFilamentNative() { return ordinal(); }
         }
 
         public Builder() {

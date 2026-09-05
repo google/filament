@@ -107,7 +107,10 @@ public class Material {
          * <a href="https://google.github.io/filament/Materials.html#materialmodels/specularglossiness">
          * Specular glossiness</a>
          */
-        SPECULAR_GLOSSINESS
+        SPECULAR_GLOSSINESS;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -122,7 +125,10 @@ public class Material {
         SMOOTH,
 
         /** Flat interpolation */
-        FLAT
+        FLAT;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -158,7 +164,10 @@ public class Material {
         MULTIPLY,
 
         /** Material brightens what's behind it. */
-        SCREEN,
+        SCREEN;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -183,7 +192,10 @@ public class Material {
          * first with back faces only, then with front faces; the culling
          * mode is ignored. Can be combined with two-sided lighting.
          */
-        TWO_PASSES_TWO_SIDES
+        TWO_PASSES_TWO_SIDES;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -196,7 +208,10 @@ public class Material {
     public enum RefractionMode {
         NONE,
         CUBEMAP,
-        SCREEN_SPACE
+        SCREEN_SPACE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -208,7 +223,10 @@ public class Material {
      */
     public enum RefractionType {
         SOLID,
-        THIN
+        THIN;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -220,7 +238,10 @@ public class Material {
      */
     public enum ReflectionMode {
         DEFAULT,
-        SCREEN_SPACE
+        SCREEN_SPACE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -241,7 +262,10 @@ public class Material {
         VIEW,
 
         /** Vertices are in normalized device space. */
-        DEVICE
+        DEVICE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -262,7 +286,10 @@ public class Material {
         BACK,
 
         /** Front and back culling. Geometry is not visible. */
-        FRONT_AND_BACK
+        FRONT_AND_BACK;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -284,7 +311,10 @@ public class Material {
         /** We will need this program soon. */
         HIGH,
         /** We will need this program eventually. */
-        LOW
+        LOW;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -298,7 +328,10 @@ public class Material {
         */
         DEFAULT,
         /** Disable the Ubo Batching for this material */
-        DISABLED
+        DISABLED;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public static class UserVariantFilterBit {
@@ -411,7 +444,10 @@ public class Material {
             /** 2x2 PCF */
             HARD,
             /** 3x3 gaussian filter */
-            LOW,
+            LOW;
+
+            /** @return the value of this enum constant as used by the native Filament engine. */
+            public int toFilamentNative() { return ordinal(); }
         }
 
         private Buffer mBuffer;

@@ -185,8 +185,10 @@ public class LightManager {
         FOCUSED_SPOT,
 
         /** Spotlight with coupling of outer cone and illumination disabled. */
-        SPOT
+        SPOT;
 
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**

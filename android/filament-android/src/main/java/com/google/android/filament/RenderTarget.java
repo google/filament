@@ -61,7 +61,10 @@ public class RenderTarget {
         COLOR5,
         COLOR6,
         COLOR7,
-        DEPTH
+        DEPTH;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
