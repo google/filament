@@ -8,3 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 - filament: fix GCC compilation of the NEON color grading path
 - materials: add `iridescence`, `iridescenceIor` and `iridescenceThickness` to the lit shading models
+- web: expand JS bindings coverage for View and Material getters, TextureSampler accessors, the ToneMapper hierarchy, integer material parameters, and other previously unbound APIs

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<!--
+ Copyright (C) 2026 The Android Open Source Project
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filament JS bindings: GPU tests</title>
+<!--
+ GPU counterpart to test-runtime.js.
+
+ test-runtime.js covers the bindings that run on the NOOP backend under Node. What is left over
+ needs a real backend: creating an engine on a canvas' WebGL context, reading pixels back out of a
+ rendered frame, picking, and decoding images into mipmapped textures. Those live here.
+
+ The page builds its own test images with a 2D canvas, so it needs no assets beyond the module.
+
+ Usage:
+   cp web/filament-js/test-browser.html out/cmake-wasm-release/web/filament-js/
+   cd out/cmake-wasm-release/web/filament-js && python3 -m http.server 8080
+   open http://localhost:8080/test-browser.html
+
+ Results are printed to the page and to the console, and are left in window.filamentTestResults
+ as { passed, failed, results } for a headless runner to pick up.
+-->
+<style>
+body { font-family: ui-monospace, monospace; margin: 2rem; background: #fff; color: #111; }
+#results { list-style: none; padding: 0; }
+#results li { padding: 0.15rem 0; white-space: pre-wrap; }
+.ok::before { content: "ok   "; color: #0a0; }
+.fail::before { content: "FAIL "; color: #c00; }
+.fail { color: #c00; }
+#summary { margin-top: 1rem; font-weight: bold; }
+canvas { display: none; }
+</style>
+</head>
+<body>
+<h1>Filament JS bindings: GPU tests</h1>
+<ul id="results"></ul>
+<div id="summary">running…</div>
+<script src="filament.js"></script>
+<script>
+'use strict';
+
+const TESTS = [];
+function test(name, fn) {
+    TESTS.push([name, fn]);
+}
+
+function assert(condition, message) {
+    if (!condition) {
+        throw new Error(message || 'assertion failed');
+    }
+}
+
+function assertEqual(actual, expected, message) {
+    if (actual !== expected) {
+        throw new Error(`${message || 'assertion failed'}: ${actual} !== ${expected}`);
+    }
+}
+
+// Renderer.render opens and closes a frame of its own, so anything that has to happen inside the
+// frame — readPixels among them — goes through beginFrame/renderView/endFrame instead.
+function renderFrame(engine, renderer, swapChain, view, insideFrame) {
+    if (renderer.beginFrame(swapChain)) {
+        renderer.renderView(view);
+        if (insideFrame) {
+            insideFrame();
+        }
+        renderer.endFrame();
+    }
+    engine.flushAndWait();
+    engine.execute();
+}
+
+// Keeps rendering frames, yielding to the event loop between them, until `isDone` says the driver
+// has answered. Pixel readback and picking are both resolved a few frames after they are asked
+// for, and only while the command buffer keeps being pumped.
+async function renderUntil(engine, renderer, swapChain, view, isDone, what) {
+    for (let frame = 0; frame < 60; frame++) {
+        if (isDone()) {
+            return;
+        }
+        renderFrame(engine, renderer, swapChain, view);
+        // A timer rather than requestAnimationFrame: headless runs throttle animation frames, and
+        // the driver only needs the event loop to turn over, not a real display refresh.
+        await new Promise((resolve) => setTimeout(resolve, 16));
+    }
+    if (!isDone()) {
+        throw new Error(`the ${what} callback never fired`);
+    }
+}
+
+// Renders until readPixels hands back the pixels it was asked for.
+async function renderAndReadPixels(engine, renderer, swapChain, view, readFrom) {
+    let pixels = null;
+    // The Uint8Array handed to the callback is only valid for the duration of the call, so it has
+    // to be copied before it can be asserted on.
+    const done = (result) => { pixels = result.slice(); };
+    renderFrame(engine, renderer, swapChain, view, () => {
+        if (readFrom) {
+            renderer.readPixels(readFrom, 0, 0, 1, 1, Filament.PixelDataFormat.RGBA,
+                    Filament.PixelDataType.UBYTE, done);
+        } else {
+            renderer.readPixels(0, 0, 1, 1, Filament.PixelDataFormat.RGBA,
+                    Filament.PixelDataType.UBYTE, done);
+        }
+    });
+    await renderUntil(engine, renderer, swapChain, view, () => pixels !== null, 'readPixels');
+    return pixels;
+}
+
+// A solid-colour image, encoded by the browser, so the decoding tests need no assets on disk.
+function encodeImage(mimeType, r, g, b) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 8;
+    const context = canvas.getContext('2d');
+    context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    context.fillRect(0, 0, 8, 8);
+    const dataUrl = canvas.toDataURL(mimeType);
+    const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function textureUsage(...names) {
+    return names.reduce((bits, name) => bits | Filament.Texture$Usage[name].value, 0);
+}
+
+// A canvas hands out one WebGL context for its lifetime, and destroying the engine that owns it
+// does not hand it back, so every engine gets a canvas of its own.
+let canvasCount = 0;
+function newCanvas() {
+    const canvas = document.createElement('canvas');
+    canvas.id = `test-canvas-${canvasCount++}`;
+    canvas.width = canvas.height = 64;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+// Each test gets an engine on a real canvas, and the engine owns that canvas' GL context.
+function withEngine(fn) {
+    const engine = Filament.Engine.create(newCanvas());
+    return Promise.resolve(fn(engine)).finally(() => Filament.Engine.destroy(engine));
+}
+
+function simpleView(engine, clearColor) {
+    const view = engine.createView();
+    view.setScene(engine.createScene());
+    view.setCamera(engine.createCamera(Filament.EntityManager.get().create()));
+    view.setViewport([0, 0, 64, 64]);
+    // Post-processing would resolve through a tone mapper and change the pixels being asserted on.
+    view.setPostProcessingEnabled(false);
+    if (clearColor) {
+        view.setBlendMode(Filament.View$BlendMode.OPAQUE);
+    }
+    return view;
+}
+
+// ---------------------------------------------------------------------------
+// Engine.create over a WebGL context
+// ---------------------------------------------------------------------------
+
+test('Engine.create takes over the canvas WebGL context', () => {
+    const canvas = newCanvas();
+    const engine = Filament.Engine.create(canvas);
+
+    assertEqual(engine.getBackend(), Filament.Backend.OPENGL, 'backend');
+    assertEqual(engine.canvasId, '#' + canvas.id, 'canvasId');
+    assert(engine.context, 'the engine kept no GL context');
+    assert(engine.handle !== undefined, 'the engine kept no emscripten context handle');
+
+    // Engine.create has to clean up after itself: the context is handed to the backend through
+    // globals on window, which must not outlive the call.
+    assertEqual(window.filament_glOptions, undefined, 'window.filament_glOptions leaked');
+    assertEqual(window.filament_glContext, undefined, 'window.filament_glContext leaked');
+    assertEqual(window.filament_contextHandle, undefined, 'window.filament_contextHandle leaked');
+
+    Filament.Engine.destroy(engine);
+});
+
+test('Engine.create honours WebGL context attributes', () => {
+    const engine = Filament.Engine.create(newCanvas(), {
+        antialias: false,
+        alpha: false,
+    });
+    const attributes = engine.context.getContextAttributes();
+    assertEqual(attributes.antialias, false, 'antialias');
+    assertEqual(attributes.alpha, false, 'alpha');
+    Filament.Engine.destroy(engine);
+});
+
+test('A second engine gets its own context', () => {
+    const first = Filament.Engine.create(newCanvas());
+    const second = Filament.Engine.create(newCanvas());
+    assert(first.context !== second.context, 'both engines share one GL context');
+    assert(first.handle !== second.handle, 'both engines share one context handle');
+    Filament.Engine.destroy(second);
+    Filament.Engine.destroy(first);
+});
+
+// ---------------------------------------------------------------------------
+// Rendering and pixel readback
+// ---------------------------------------------------------------------------
+
+test('readPixels returns the colour the frame was cleared to', () => withEngine(async (engine) => {
+    const renderer = engine.createRenderer();
+    const swapChain = engine.createSwapChain();
+    const view = simpleView(engine, true);
+    renderer.setClearOptions({ clearColor: [1, 0, 0, 1], clear: true, discard: false });
+
+    const pixels = await renderAndReadPixels(engine, renderer, swapChain, view);
+    assert(pixels, 'the readPixels callback never fired');
+    assertEqual(pixels.length, 4, 'one RGBA pixel');
+    assertEqual(pixels[0], 255, 'red channel');
+    assertEqual(pixels[1], 0, 'green channel');
+    assertEqual(pixels[2], 0, 'blue channel');
+    assertEqual(pixels[3], 255, 'alpha channel');
+}));
+
+// NoopDriver never dispatches, so only a real backend can prove the callback fires.
+test('the frame-scheduled callback fires once per frame', () => withEngine(async (engine) => {
+    const renderer = engine.createRenderer();
+    const swapChain = engine.createSwapChain();
+    const view = simpleView(engine, true);
+
+    let calls = 0;
+    swapChain.setFrameScheduledCallback(() => { calls++; });
+    assert(swapChain.isFrameScheduledCallbackSet(), 'the callback did not take');
+
+    await renderUntil(engine, renderer, swapChain, view, () => calls > 0, 'frame-scheduled');
+
+    // It is not one-shot: it stays latched and fires again on the next frame.
+    const afterFirst = calls;
+    await renderUntil(engine, renderer, swapChain, view, () => calls > afterFirst,
+            'second frame-scheduled');
+
+    // Clearing stops it. Render a few more frames and the count must not move.
+    swapChain.setFrameScheduledCallback();
+    assert(!swapChain.isFrameScheduledCallbackSet(), 'the callback did not clear');
+    const afterClear = calls;
+    for (let frame = 0; frame < 3; frame++) {
+        renderFrame(engine, renderer, swapChain, view);
+        await new Promise((resolve) => setTimeout(resolve, 16));
+    }
+    assertEqual(calls, afterClear, 'the cleared callback still fired');
+}));
+
+test('readPixels reads back a RenderTarget', () => withEngine(async (engine) => {
+    const color = Filament.Texture.Builder()
+        .width(64).height(64).levels(1)
+        .sampler(Filament.Texture$Sampler.SAMPLER_2D)
+        .format(Filament.Texture$InternalFormat.RGBA8)
+        .usage(textureUsage('COLOR_ATTACHMENT', 'SAMPLEABLE'))
+        .build(engine);
+    const renderTarget = Filament.RenderTarget.Builder()
+        .texture(Filament.RenderTarget$AttachmentPoint.COLOR, color)
+        .build(engine);
+
+    const renderer = engine.createRenderer();
+    const swapChain = engine.createSwapChain();
+    const view = simpleView(engine, true);
+    view.setRenderTarget(renderTarget);
+    renderer.setClearOptions({ clearColor: [0, 0, 1, 1], clear: true, discard: false });
+
+    const pixels = await renderAndReadPixels(engine, renderer, swapChain, view, renderTarget);
+    assert(pixels, 'the readPixels callback never fired');
+    assertEqual(pixels[0], 0, 'red channel');
+    assertEqual(pixels[2], 255, 'blue channel');
+}));
+
+test('Renderer draws a renderable and reports it as visible', () =>
+        withEngine(async (engine) => {
+    const renderer = engine.createRenderer();
+    const swapChain = engine.createSwapChain();
+    const view = simpleView(engine, true);
+    const scene = view.getScene();
+
+    // A full-screen triangle in front of an orthographic camera.
+    const vertexBuffer = Filament.VertexBuffer.Builder()
+        .vertexCount(3)
+        .bufferCount(1)
+        .attribute(Filament.VertexAttribute.POSITION, 0,
+                Filament.VertexBuffer$AttributeType.FLOAT3, 0, 12)
+        .build(engine);
+    vertexBuffer.setBufferAt(engine, 0,
+            new Float32Array([-3, -3, -1, 3, -3, -1, 0, 3, -1]));
+    const indexBuffer = Filament.IndexBuffer.Builder()
+        .indexCount(3)
+        .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+        .build(engine);
+    indexBuffer.setBuffer(engine, new Uint16Array([0, 1, 2]));
+
+    const entity = Filament.EntityManager.get().create();
+    Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [0, 0, 0], halfExtent: [10, 10, 10] })
+        .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, vertexBuffer, indexBuffer)
+        .culling(false)
+        .build(engine, entity);
+    scene.addEntity(entity);
+
+    const camera = view.getCamera();
+    camera.setProjection(Filament.Camera$Projection.ORTHO, -1, 1, -1, 1, 0.1, 10);
+    camera.lookAt([0, 0, 0], [0, 0, -1], [0, 1, 0]);
+
+    renderer.setClearOptions({ clearColor: [0, 0, 0, 1], clear: true, discard: false });
+    renderFrame(engine, renderer, swapChain, view);
+
+    assertEqual(view.getVisibleRenderableCount(), 1, 'visible renderable count');
+
+    // The triangle covers the whole viewport, so the frame is no longer the clear colour.
+    const pixels = await renderAndReadPixels(engine, renderer, swapChain, view);
+    assert(pixels[0] !== 0 || pixels[1] !== 0 || pixels[2] !== 0,
+            `nothing was drawn, the frame is still ${Array.from(pixels)}`);
+}));
+
+test('View.pick returns the renderable under the cursor', () => withEngine(async (engine) => {
+    const renderer = engine.createRenderer();
+    const swapChain = engine.createSwapChain();
+    const view = simpleView(engine, true);
+    const scene = view.getScene();
+
+    const vertexBuffer = Filament.VertexBuffer.Builder()
+        .vertexCount(3)
+        .bufferCount(1)
+        .attribute(Filament.VertexAttribute.POSITION, 0,
+                Filament.VertexBuffer$AttributeType.FLOAT3, 0, 12)
+        .build(engine);
+    vertexBuffer.setBufferAt(engine, 0,
+            new Float32Array([-3, -3, -1, 3, -3, -1, 0, 3, -1]));
+    const indexBuffer = Filament.IndexBuffer.Builder()
+        .indexCount(3)
+        .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+        .build(engine);
+    indexBuffer.setBuffer(engine, new Uint16Array([0, 1, 2]));
+
+    const entity = Filament.EntityManager.get().create();
+    Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [0, 0, 0], halfExtent: [10, 10, 10] })
+        .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, vertexBuffer, indexBuffer)
+        .culling(false)
+        .build(engine, entity);
+    scene.addEntity(entity);
+
+    const camera = view.getCamera();
+    camera.setProjection(Filament.Camera$Projection.ORTHO, -1, 1, -1, 1, 0.1, 10);
+    camera.lookAt([0, 0, 0], [0, 0, -1], [0, 1, 0]);
+
+    // The pick query is issued inside a frame and answered a frame or two later.
+    let picked = null;
+    renderFrame(engine, renderer, swapChain, view,
+            () => view.pick(32, 32, (result) => { picked = result; }));
+    await renderUntil(engine, renderer, swapChain, view, () => picked !== null, 'pick');
+
+    assert(picked, 'the pick callback never fired');
+    assertEqual(picked.renderable.getId(), entity.getId(), 'picked entity');
+    assertEqual(picked.fragCoords.length, 3, 'fragCoords');
+}));
+
+// ---------------------------------------------------------------------------
+// Image decoding and mipmap generation
+// ---------------------------------------------------------------------------
+
+test('createTextureFromPng decodes and mipmaps an image', () => withEngine((engine) => {
+    const texture = engine.createTextureFromPng(encodeImage('image/png', 255, 0, 0));
+    assertEqual(texture.getWidth(engine), 8, 'width');
+    assertEqual(texture.getHeight(engine), 8, 'height');
+    // levels(0xff) asks for a full mip chain, which an 8x8 image caps at four levels.
+    assertEqual(texture.getLevels(engine), 4, 'levels');
+    assert(engine.isValidTexture(texture), 'texture is not valid');
+}));
+
+test('createTextureFromJpeg decodes an image', () => withEngine((engine) => {
+    const texture = engine.createTextureFromJpeg(encodeImage('image/jpeg', 0, 255, 0),
+            { srgb: true });
+    assertEqual(texture.getWidth(engine), 8, 'width');
+    assertEqual(texture.getFormat(), Filament.Texture$InternalFormat.SRGB8_A8, 'format');
+}));
+
+test('generateMipmaps fills the mip chain', () => withEngine((engine) => {
+    const texture = Filament.Texture.Builder()
+        .width(8).height(8).levels(4)
+        .sampler(Filament.Texture$Sampler.SAMPLER_2D)
+        .format(Filament.Texture$InternalFormat.RGBA8)
+        .usage(textureUsage('UPLOADABLE', 'SAMPLEABLE', 'GEN_MIPMAPPABLE'))
+        .build(engine);
+    texture.setImage(engine, 0, Filament.PixelBuffer(new Uint8Array(8 * 8 * 4),
+            Filament.PixelDataFormat.RGBA, Filament.PixelDataType.UBYTE));
+    texture.generateMipmaps(engine);
+    assertEqual(texture.getWidth(engine, 3), 1, 'the smallest mip is one texel');
+    assert(Filament.Texture.isTextureFormatMipmappable(engine,
+            Filament.Texture$InternalFormat.RGBA8), 'RGBA8 should be mipmappable on WebGL');
+}));
+
+// ---------------------------------------------------------------------------
+// Capabilities WebGL does not have
+// ---------------------------------------------------------------------------
+
+test('Texture swizzling is rejected on WebGL', () => withEngine((engine) => {
+    assertEqual(Filament.Texture.isTextureSwizzleSupported(engine), false,
+            'WebGL 2.0 has no texture swizzle');
+    let threw = false;
+    try {
+        Filament.Texture.Builder()
+            .width(8).height(8)
+            .sampler(Filament.Texture$Sampler.SAMPLER_2D)
+            .format(Filament.Texture$InternalFormat.RGBA8)
+            .swizzle(Filament.Texture$Swizzle.CHANNEL_0, Filament.Texture$Swizzle.CHANNEL_1,
+                    Filament.Texture$Swizzle.CHANNEL_2, Filament.Texture$Swizzle.SUBSTITUTE_ONE)
+            .build(engine);
+    } catch (e) {
+        threw = true;
+    }
+    assert(threw, 'building a swizzled texture should have thrown');
+}));
+
+test('SwapChain reports whether sRGB is available', () => withEngine((engine) => {
+    assertEqual(typeof Filament.SwapChain.isSRGBSwapChainSupported(engine), 'boolean', 'type');
+}));
+
+test('getSupportedFormats queries the compressed texture extensions', () => {
+    const formats = Filament.getSupportedFormats();
+    for (const key of ['s3tc', 's3tc_srgb', 'astc', 'etc']) {
+        assertEqual(typeof formats[key], 'boolean', key);
+    }
+    assertEqual(typeof Filament.getSupportedFormatSuffix('etc s3tc'), 'string', 'suffix');
+});
+
+// ---------------------------------------------------------------------------
+
+Filament.init([], async () => {
+    const list = document.getElementById('results');
+    const results = [];
+    let failed = 0;
+
+    for (const [name, fn] of TESTS) {
+        let error = null;
+        try {
+            await fn();
+        } catch (e) {
+            error = (e && e.message) ? e.message : String(e);
+            failed++;
+        }
+        const item = document.createElement('li');
+        item.className = error ? 'fail' : 'ok';
+        item.textContent = error ? `${name}\n       ${error}` : name;
+        list.appendChild(item);
+        results.push({ name, error });
+        console.log(`${error ? 'FAIL' : 'ok  '} ${name}${error ? ': ' + error : ''}`);
+    }
+
+    const summary = `${TESTS.length - failed}/${TESTS.length} passed`;
+    document.getElementById('summary').textContent = summary;
+    console.log(summary);
+    window.filamentTestResults = { passed: TESTS.length - failed, failed, results };
+});
+</script>
+</body>
+</html>
