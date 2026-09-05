@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/transform/single_entry_point.h"
-#include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {
 namespace {
@@ -41,5 +40,4 @@ Result<SuccessType> SingleEntryPointFuzzer(Module& module,
 }  // namespace
 }  // namespace tint::core::ir::transform
 
-TINT_IR_MODULE_FUZZER(tint::core::ir::transform::SingleEntryPointFuzzer,
-                      tint::core::ir::transform::kSingleEntryPointCapabilities);
+TINT_IR_MODULE_FUZZER(tint::core::ir::transform::SingleEntryPointFuzzer);

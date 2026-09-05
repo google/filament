@@ -28,11 +28,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/Device.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
 
 namespace dawn {
 namespace {
@@ -309,6 +309,24 @@ TEST_F(RequestDeviceValidationTest, TextureFormatsTier2ImpliesTextureFormatsTier
                 Call(wgpu::RequestDeviceStatus::Success, NotNull(), EmptySizedString()))
         .WillOnce(WithArgs<1>([](wgpu::Device device) {
             EXPECT_TRUE(device.HasFeature(wgpu::FeatureName::TextureFormatsTier1));
+        }));
+    adapter.RequestDevice(&descriptor, wgpu::CallbackMode::AllowSpontaneous,
+                          mRequestDeviceCallback.Callback());
+}
+
+// Test that BufferMapWriteExtendedUsages is implicitly enabled when BufferMapExtendedUsages is
+// active.
+TEST_F(RequestDeviceValidationTest, BufferMapExtendedUsagesImpliesBufferMapWriteExtendedUsages) {
+    wgpu::DeviceDescriptor descriptor = {};
+    std::vector<wgpu::FeatureName> features = {wgpu::FeatureName::BufferMapExtendedUsages};
+    descriptor.requiredFeatures = features.data();
+    descriptor.requiredFeatureCount = features.size();
+
+    EXPECT_CALL(mRequestDeviceCallback,
+                Call(wgpu::RequestDeviceStatus::Success, NotNull(), EmptySizedString()))
+        .WillOnce(WithArgs<1>([](wgpu::Device device) {
+            EXPECT_TRUE(device.HasFeature(wgpu::FeatureName::BufferMapExtendedUsages));
+            EXPECT_TRUE(device.HasFeature(wgpu::FeatureName::BufferMapWriteExtendedUsages));
         }));
     adapter.RequestDevice(&descriptor, wgpu::CallbackMode::AllowSpontaneous,
                           mRequestDeviceCallback.Callback());

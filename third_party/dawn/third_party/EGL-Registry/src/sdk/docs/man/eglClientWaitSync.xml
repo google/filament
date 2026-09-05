@@ -1,0 +1,161 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglClientWaitSync">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglClientWaitSync</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglClientWaitSync</refname>
+        <refpurpose>
+            Wait in the client for a sync object to be signalled
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+            <funcdef>EGLint <function>eglClientWaitSync</function></funcdef>
+            <paramdef>(EGLDisplay <parameter>display</parameter></paramdef>
+            <paramdef>EGLSync <parameter>sync</parameter></paramdef>
+            <paramdef>EGLint <parameter>flags</parameter></paramdef>
+            <paramdef>EGLTime <parameter>timeout</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>sync</parameter></term>
+                <listitem><para>
+                    Specifies the sync object to wait on.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>flags</parameter></term>
+                <listitem><para>
+                    Specifies flags controlling wait behavior.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>timeout</parameter></term>
+                <listitem><para>
+                    Specifies wait timeout interval.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglClientWaitSync</function> blocks the calling thread
+            until the specified sync object <parameter>sync</parameter> is
+            signaled, or until <parameter>timeout</parameter> nanoseconds
+            have passed.
+        </para>
+        <para>
+            More than one <function>eglClientWaitSync</function> may be
+            outstanding on the same <parameter>sync</parameter> at any given
+            time. When there are multiple threads blocked on the same
+            <parameter>sync</parameter> and the sync object is signaled, all
+            such threads are released, but the order in which they are
+            released is not defined.
+        </para>
+        <para>
+            If the value of <parameter>timeout</parameter> is zero, then
+            <function>eglClientWaitSync</function> simply tests the current
+            status of <parameter>sync</parameter>. If the value of
+            <parameter>timeout</parameter> is the special value
+            <constant>EGL_FOREVER</constant>, then
+            <function>eglClientWaitSync</function> does not time out. For
+            all other values, <parameter>timeout</parameter> is adjusted to
+            the closest value allowed by the implementation-dependent
+            timeout accuracy, which may be substantially longer than one
+            nanosecond.
+        </para>
+        <para>
+            <function>eglClientWaitSync</function> returns one of three
+            status values describing the reason for returning. A return
+            value of <constant>EGL_TIMEOUT_EXPIRED</constant> indicates that
+            the specified timeout period expired before
+            <parameter>sync</parameter> was signaled, or if
+            <parameter>timeout</parameter> is zero, indicates that
+            <parameter>sync</parameter> is not signaled. A return value of
+            <constant>EGL_CONDITION_SATISFIED</constant> indicates that
+            <parameter>sync</parameter> was signaled before the timeout
+            expired, which includes the case when
+            <parameter>sync</parameter> was already signaled when
+            <function>eglClientWaitSync</function> was called. If an error
+            occurs then an error is generated and
+            <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            If the sync object being blocked upon will not be signaled in
+            finite time (for example, by an associated fence command issued
+            previously, but not yet flushed to the graphics pipeline), then
+            <function>eglClientWaitSync</function> may wait forever. To help
+            prevent this behavior, if the
+            <constant>EGL_SYNC_FLUSH_COMMANDS_BIT</constant> bit is set in
+            <parameter>flags</parameter>, and <parameter>sync</parameter> is
+            unsignaled when <function>eglClientWaitSync</function> is
+            called, then the equivalent of Flush() will be performed for the
+            current API context (i.e., the context returned by
+            <function>eglGetCurrentContext</function>) before blocking on
+            <parameter>sync</parameter>. If no context is current for the
+            bound API, the <constant>EGL_SYNC_FLUSH_COMMANDS_BIT</constant>
+            bit is ignored.
+        </para>
+        <para>
+            Note: the simple Flush behavior defined by
+            <constant>EGL_SYNC_FLUSH_COMMANDS_BIT</constant> will not help
+            when waiting for a fence command issued in a different context's
+            command stream. Applications which block on a fence sync object
+            must take additional steps to ensure that the context from which
+            the associated fence command was issued has flushed that command
+            to the graphics pipeline.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <function>eglClientWaitSync</function> returns
+            <constant>EGL_FALSE</constant> on failure.
+        </para>
+        <para>
+            If <parameter>sync</parameter> is not a valid sync object for
+            <parameter>display</parameter>, an
+            <constant>EGL_BAD_PARAMETER</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>display</parameter> does not match the
+            <type>EGLDisplay</type> passed to
+            <function>eglCreateSync</function> when
+            <parameter>sync</parameter> was created, the behaviour is
+            undefined.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglClientWaitSync</function> is available only if the
+            EGL version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitSync</refentrytitle></citerefentry>,
+            <function>glFinish</function>,
+            <function>vgFinish</function>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

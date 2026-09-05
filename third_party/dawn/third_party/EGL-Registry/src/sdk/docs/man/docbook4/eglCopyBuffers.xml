@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglCopyBuffers">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglCopyBuffers</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCopyBuffers</refname>
+        <refpurpose>
+            copy <acronym>EGL</acronym> surface color buffer to a native pixmap
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglCopyBuffers</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+                <paramdef>NativePixmapType <parameter>native_pixmap</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface whose color buffer is to be copied.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>native_pixmap</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the native pixmap as target of the copy.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglCopyBuffers</function> copies the color buffer of
+            <parameter>surface</parameter> to <parameter>native_pixmap</parameter>.
+        </para>
+        <para>
+            <function>eglCopyBuffers</function> performs an implicit
+            <citerefentry><refentrytitle>glFlush</refentrytitle></citerefentry>
+            before it returns. Subsequent
+            GL commands may be issued immediately after calling
+            <function>eglCopyBuffers</function>,
+            but are not executed until copying of the color buffer is completed.
+        </para>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            The color buffer of <parameter>surface</parameter> is left unchanged
+            after calling <function>eglCopyBuffers</function>.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if swapping of the
+            surface buffers fails, <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL drawing surface.
+        </para>
+        <para>
+            <constant>EGL_BAD_NATIVE_PIXMAP</constant> is generated if
+            the implementation does not support native pixmaps.
+        </para>
+        <para>
+            <constant>EGL_BAD_NATIVE_PIXMAP</constant> may be generated if
+            <parameter>native_pixmap</parameter> is not a valid native pixmap.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            the format of <parameter>native_pixmap</parameter> is not compatible
+            with the color buffer of <parameter>surface</parameter>.
+        </para>
+        <para>
+            <constant>EGL_CONTEXT_LOST</constant> is generated if a power management
+            event has occurred. The application must destroy all contexts and
+            reinitialise OpenGL ES state and objects to continue rendering.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>glFlush</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

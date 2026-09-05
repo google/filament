@@ -30,11 +30,11 @@
 
 #include <unordered_set>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Features.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Features.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 namespace detail {

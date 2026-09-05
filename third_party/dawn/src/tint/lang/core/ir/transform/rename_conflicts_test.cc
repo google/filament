@@ -1094,5 +1094,45 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(IRToProgramRenameConflictsTest, DuplicateStructMembers) {
+    auto* s = ty.Struct(b.ir.symbols.New("s"), {
+                                                   {b.ir.symbols.Register("f"), ty.f32()},
+                                                   {b.ir.symbols.Register("f"), ty.i32()},
+                                               });
+
+    b.Append(mod.root_block, [&] {  //
+        b.Var(ty.ptr<private_>(s));
+    });
+
+    auto* src = R"(
+s = struct @align(4) {
+  f:f32 @offset(0)
+  f:i32 @offset(4)
+}
+
+$B1: {  # root
+  %1:ptr<private, s, read_write> = var undef
+}
+
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+s = struct @align(4) {
+  f:f32 @offset(0)
+  f_1:i32 @offset(4)
+}
+
+$B1: {  # root
+  %1:ptr<private, s, read_write> = var undef
+}
+
+)";
+
+    Run(RenameConflicts);
+
+    EXPECT_EQ(expect, str());
+}
+
 }  // namespace
 }  // namespace tint::core::ir::transform

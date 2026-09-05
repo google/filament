@@ -25,15 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
+#include <array>
 #include <tuple>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -232,22 +238,22 @@ class DrawCallPerf : public DawnPerfTestWithParams<DrawCallParamForTest> {
     void SetUpPerfTest() override;
 
     template <typename Encoder>
-    void RecordRenderCommands(Encoder encoder);
+    void RecordRenderCommands(Encoder pass);
 
   private:
     void Step() override;
 
     // One large dynamic vertex buffer, or multiple separate vertex buffers.
-    wgpu::Buffer mVertexBuffers[kNumDraws];
+    std::array<wgpu::Buffer, kNumDraws> mVertexBuffers;
     size_t mAlignedVertexDataSize;
 
     std::vector<float> mUniformBufferData;
     // One large dynamic uniform buffer, or multiple separate uniform buffers.
-    wgpu::Buffer mUniformBuffers[kNumDraws];
+    std::array<wgpu::Buffer, kNumDraws> mUniformBuffers;
 
     wgpu::BindGroupLayout mUniformBindGroupLayout;
     // One dynamic bind group or multiple bind groups.
-    wgpu::BindGroup mUniformBindGroups[kNumDraws];
+    std::array<wgpu::BindGroup, kNumDraws> mUniformBindGroups;
     size_t mAlignedUniformSize;
     size_t mNumUniformFloats;
 
@@ -256,7 +262,7 @@ class DrawCallPerf : public DawnPerfTestWithParams<DrawCallParamForTest> {
 
     // If the pipeline is static, only the first is used.
     // Otherwise, the test alternates between two pipelines for each draw.
-    wgpu::RenderPipeline mPipelines[2];
+    std::array<wgpu::RenderPipeline, 2> mPipelines;
 
     wgpu::TextureView mColorAttachment;
     wgpu::TextureView mDepthStencilAttachment;
@@ -381,7 +387,7 @@ void DrawCallPerf::SetUpPerfTest() {
             mConstantBindGroupLayout,
             mUniformBindGroupLayout,
         };
-        pipelineLayoutDesc.bindGroupLayouts = bindGroupLayouts,
+        pipelineLayoutDesc.bindGroupLayouts = bindGroupLayouts;
         pipelineLayoutDesc.bindGroupLayoutCount = 2;
         pipelineLayout = device.CreatePipelineLayout(&pipelineLayoutDesc);
 

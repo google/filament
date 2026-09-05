@@ -11,53 +11,10 @@
 /bazel-*
 /build
 /buildtools
+/src/cmake/HermeticXcode/ranlib
 /testing
-/third_party/abseil-cpp/
-/third_party/angle
-/third_party/binutils
-/third_party/catapult
-/third_party/clang-format
-/third_party/cpplint
-/third_party/depot_tools
-/third_party/dxc
-/third_party/directx-shader-compiler/src
-/third_party/dxheaders
-/third_party/directx-headers/src
-/third_party/glfw3/src
-/third_party/glslang/src/
-/third_party/google_benchmark/src
-/third_party/googletest
-/third_party/gpuweb
-/third_party/jinja2
-/third_party/jsoncpp
-/third_party/EGL-Registry/src
-/third_party/OpenGL-Registry/src
-/third_party/libc++/src
-/third_party/libc++abi/src
-/third_party/libprotobuf-mutator/src
-/third_party/llvm-build
-/third_party/markupsafe
-/third_party/mesa/src
-/third_party/meson/src
-/third_party/ninja
-/third_party/node
-/third_party/node-addon-api
-/third_party/node-api-headers
-/third_party/partition_alloc
-/third_party/protobuf
-/third_party/siso/cipd/
-/third_party/spirv-headers/src/
-/third_party/spirv-tools/src/
-/third_party/swiftshader
-/third_party/vulkan-deps
-/third_party/vulkan-headers/src/
-/third_party/vulkan-loader/src/
-/third_party/vulkan-tools/src/
-/third_party/vulkan-utility-libraries/src/
-/third_party/vulkan-validation-layers/src/
-/third_party/vulkan_memory_allocator
-/third_party/webgpu-cts
-/third_party/zlib
+
+/tools/bazelisk
 /tools/bin
 /tools/clang
 /tools/cmake*
@@ -158,6 +115,9 @@ tint.dot
 ### pyenv files
 /.python-version
 
+### Clangd config file is reserved for local use because it contains
+### OS-specific fragments and user-specific out/* paths.
+/.clangd
 ### Clangd cached index files
 /.cache
 
@@ -166,3 +126,16 @@ compile_commands.json
 
 ### Root user file for gemini cli
 GEMINI.md
+
+### Default when following coverage instructions
+/coverage_report
+
+### Jetski
+.jetskicli
+
+### run-tricium-clang-tidy.py outputs
+/clang-tidy-*-findings.json
+/clang-tidy-*-summary.txt
+
+### fuzz --triage outputs
+clusterfuzz-testcase-minimized-*

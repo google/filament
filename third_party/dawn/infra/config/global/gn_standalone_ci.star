@@ -70,6 +70,7 @@ targets.builder_defaults.set(
 def dawn_linux_parent_builder(**kwargs):
     kwargs.setdefault("cores", 8)
     kwargs.setdefault("os", os.LINUX_DEFAULT)
+    kwargs.setdefault("ssd", None)
     ci.builder(**kwargs)
 
 def dawn_mac_parent_builder(**kwargs):
@@ -82,6 +83,86 @@ def dawn_win_parent_builder(**kwargs):
     kwargs.setdefault("os", os.WINDOWS_DEFAULT)
     kwargs.setdefault("ssd", None)
     ci.builder(**kwargs)
+
+dawn_linux_parent_builder(
+    name = "dawn-android-arm-builder-rel",
+    description_html = "Compiles release Dawn test binaries for Android/arm",
+    schedule = "triggered",
+    builder_spec = builder_config.builder_spec(
+        gclient_config = builder_config.gclient_config(
+            config = "dawn",
+            apply_configs = [
+                "dawn_android",
+                "dawn_node",
+                "dawn_wasm",
+            ],
+        ),
+        chromium_config = builder_config.chromium_config(
+            config = "dawn_base",
+            build_config = builder_config.build_config.RELEASE,
+            target_arch = builder_config.target_arch.ARM,
+            target_bits = 32,
+            target_platform = builder_config.target_platform.ANDROID,
+        ),
+    ),
+    gn_args = gn_args.config(
+        configs = [
+            "android_clang",
+            "arm",
+            "dawn_node_bindings",
+            "release_with_dchecks",
+        ],
+    ),
+    targets = targets.bundle(
+        additional_compile_targets = [
+            "default",
+        ],
+    ),
+    console_view_entry = consoles.console_view_entry(
+        category = "android|build|clang|rel",
+        short_name = "arm",
+    ),
+)
+
+dawn_linux_parent_builder(
+    name = "dawn-android-arm64-builder-rel",
+    description_html = "Compiles release Dawn test binaries for Android/arm64",
+    schedule = "triggered",
+    builder_spec = builder_config.builder_spec(
+        gclient_config = builder_config.gclient_config(
+            config = "dawn",
+            apply_configs = [
+                "dawn_android",
+                "dawn_node",
+                "dawn_wasm",
+            ],
+        ),
+        chromium_config = builder_config.chromium_config(
+            config = "dawn_base",
+            build_config = builder_config.build_config.RELEASE,
+            target_arch = builder_config.target_arch.ARM,
+            target_bits = 64,
+            target_platform = builder_config.target_platform.ANDROID,
+        ),
+    ),
+    gn_args = gn_args.config(
+        configs = [
+            "android_clang",
+            "arm64",
+            "dawn_node_bindings",
+            "release_with_dchecks",
+        ],
+    ),
+    targets = targets.bundle(
+        additional_compile_targets = [
+            "default",
+        ],
+    ),
+    console_view_entry = consoles.console_view_entry(
+        category = "android|build|clang|rel",
+        short_name = "arm64",
+    ),
+)
 
 dawn_linux_parent_builder(
     name = "dawn-linux-x64-builder-dbg",
@@ -134,6 +215,7 @@ dawn_linux_parent_builder(
             apply_configs = [
                 "dawn_node",
                 "dawn_wasm",
+                "checkout_litert_lm",
             ],
         ),
         chromium_config = builder_config.chromium_config(
@@ -295,6 +377,7 @@ dawn_mac_parent_builder(
             apply_configs = [
                 "dawn_node",
                 "dawn_wasm",
+                "checkout_litert_lm",
             ],
         ),
         chromium_config = builder_config.chromium_config(
@@ -925,6 +1008,7 @@ dawn_linux_parent_builder(
         configs = [
             "component",
             "dawn_swiftshader",
+            "libfuzzer",
             "linux_clang",
             "release_with_dchecks",
             "tint_build_ir_binary",
@@ -1047,6 +1131,7 @@ ci.thin_tester(
     targets = targets.bundle(
         targets = [
             "real_hardware_common_gtests",
+            "litert_lm_benchmark",
         ],
         mixins = [
             "linux_nvidia_gtx_1660_stable",
@@ -1245,6 +1330,43 @@ ci.thin_tester(
 )
 
 ci.thin_tester(
+    name = "dawn-mac-arm64-apple-m2-exp-rel",
+    description_html = "Tests release Dawn on Mac/arm64 on Apple M2 devices w/ experimental OS configs",
+    parent = "dawn-mac-arm64-builder-rel",
+    builder_spec = builder_config.builder_spec(
+        execution_mode = builder_config.execution_mode.TEST,
+        gclient_config = builder_config.gclient_config(
+            config = "dawn",
+        ),
+        chromium_config = builder_config.chromium_config(
+            config = "dawn_base",
+            build_config = builder_config.build_config.RELEASE,
+            target_arch = builder_config.target_arch.ARM,
+            target_bits = 64,
+            target_platform = builder_config.target_platform.MAC,
+        ),
+        run_tests_serially = True,
+    ),
+    targets = targets.bundle(
+        targets = [
+        ],
+        mixins = [
+            "mac_arm64_apple_m2_retina_gpu_experimental",
+        ],
+    ),
+    targets_settings = targets.settings(
+        browser_config = targets.browser_config.RELEASE,
+        os_type = targets.os_type.MAC,
+    ),
+    # Uncomment this entry when this experimental tester is actually in use.
+    # console_view_entry = consoles.console_view_entry(
+    #     category = "mac|test|clang|exp|arm64",
+    #     short_name = "m2",
+    # ),
+    list_view = "exp",
+)
+
+ci.thin_tester(
     name = "dawn-mac-arm64-apple-m2-rel",
     description_html = "Tests release Dawn on Mac/arm64 on Apple M2 devices",
     parent = "dawn-mac-arm64-builder-rel",
@@ -1382,10 +1504,12 @@ ci.thin_tester(
         browser_config = targets.browser_config.RELEASE,
         os_type = targets.os_type.MAC,
     ),
+    # Uncomment this entry when this experimental tester is actually in use.
     console_view_entry = consoles.console_view_entry(
         category = "mac|test|clang|exp|x64",
         short_name = "630",
     ),
+    list_view = "exp",
 )
 
 ci.thin_tester(
@@ -1754,10 +1878,12 @@ ci.thin_tester(
         browser_config = targets.browser_config.RELEASE,
         os_type = targets.os_type.WINDOWS,
     ),
+    # Uncomment this entry when this experimental tester is actually in use.
     console_view_entry = consoles.console_view_entry(
         category = "win|test|clang|exp|x64",
         short_name = "1660",
     ),
+    list_view = "exp",
 )
 
 ci.thin_tester(

@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglGetConfigAttrib">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglGetConfigAttrib</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetConfigAttrib</refname>
+        <refpurpose>
+            return information about an <acronym>EGL</acronym> frame buffer
+            configuration
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglGetConfigAttrib</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLConfig <parameter>config</parameter></paramdef>
+                <paramdef>EGLint <parameter>attribute</parameter></paramdef>
+                <paramdef>EGLint * <parameter>value</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config</parameter></term>
+                <listitem><para>Specifies the EGL frame buffer configuration to be
+                    queried.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attribute</parameter></term>
+                <listitem><para>Specifies the EGL rendering context attribute to be
+                returned.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>value</parameter></term>
+                <listitem><para>Returns the requested value.</para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglGetConfigAttrib</function> returns in
+            <parameter>value</parameter> the value of
+            <parameter>attribute</parameter> for
+            <parameter>config</parameter>
+            (config attributes are described in more detail in the
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>
+            reference page).
+            <parameter>attribute</parameter> can be one of the following:
+        </para>
+        <variablelist>
+            <varlistentry>
+            <term><constant>EGL_ALPHA_SIZE</constant></term>
+            <listitem><para>Returns the number of bits of alpha stored in the
+            color buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_ALPHA_MASK_SIZE</constant></term>
+                <listitem><para>
+                    Returns the number of bits in the alpha mask buffer.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BIND_TO_TEXTURE_RGB</constant></term>
+            <listitem><para>Returns <constant>EGL_TRUE</constant> if color buffers can be
+            bound to an RGB texture,
+            <constant>EGL_FALSE</constant> otherwise.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BIND_TO_TEXTURE_RGBA</constant></term>
+            <listitem><para>Returns <constant>EGL_TRUE</constant> if color buffers can be
+            bound to an RGBA texture,
+            <constant>EGL_FALSE</constant> otherwise.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BLUE_SIZE</constant></term>
+            <listitem><para>Returns the number of bits of blue stored in the
+            color buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BUFFER_SIZE</constant></term>
+            <listitem><para>Returns the depth of the color buffer.
+                It is the sum of
+                <constant>EGL_RED_SIZE</constant>,
+                <constant>EGL_GREEN_SIZE</constant>,
+                <constant>EGL_BLUE_SIZE</constant>, and
+                <constant>EGL_ALPHA_SIZE</constant>.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_COLOR_BUFFER_TYPE</constant></term>
+                <listitem><para>
+                    Returns the color buffer type. Possible types are
+                    <constant>EGL_RGB_BUFFER</constant> and
+                    <constant>EGL_LUMINANCE_BUFFER</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_CONFIG_CAVEAT</constant></term>
+            <listitem><para>Returns the caveats for the frame buffer configuration.
+                Possible caveat values are
+                <constant>EGL_NONE</constant>,
+                <constant>EGL_SLOW_CONFIG</constant>, and
+                <constant>EGL_NON_CONFORMANT</constant>.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_CONFIG_ID</constant></term>
+            <listitem><para>Returns the ID of the frame buffer configuration.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_CONFORMANT</constant></term>
+            <listitem><para>
+                Returns a bitmask indicating which client API contexts
+                created with respect to this config are conformant.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_DEPTH_SIZE</constant></term>
+            <listitem><para>Returns the number of bits in the depth buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_GREEN_SIZE</constant></term>
+            <listitem><para>Returns the number of bits of green stored in the
+            color buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_LEVEL</constant></term>
+            <listitem><para>Returns the frame buffer level.
+                Level zero is the default frame buffer.
+                Positive levels correspond to frame buffers that overlay the default
+                buffer and negative levels correspond to frame buffers that underlay
+                the default buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_LUMINANCE_SIZE</constant></term>
+                <listitem>
+                <para>
+                    Returns the number of bits of luminance stored in the luminance buffer.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_MAX_PBUFFER_WIDTH</constant></term>
+            <listitem><para>Returns the maximum width of a pixel buffer surface in pixels.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_MAX_PBUFFER_HEIGHT</constant></term>
+            <listitem><para>Returns the maximum height of a pixel buffer surface in pixels.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_MAX_PBUFFER_PIXELS</constant></term>
+            <listitem><para>Returns the maximum size of a pixel buffer surface in pixels.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MAX_SWAP_INTERVAL</constant></term>
+                <listitem><para>Returns the maximum value that can be passed to eglSwapInterval.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MIN_SWAP_INTERVAL</constant></term>
+                <listitem><para>Returns the minimum value that can be passed to eglSwapInterval.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_NATIVE_RENDERABLE</constant></term>
+            <listitem><para>Returns <constant>EGL_TRUE</constant> if native rendering
+                APIs can render into the surface,
+                <constant>EGL_FALSE</constant> otherwise.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_NATIVE_VISUAL_ID</constant></term>
+            <listitem><para>Returns the ID of the associated native visual.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_NATIVE_VISUAL_TYPE</constant></term>
+            <listitem><para>Returns the type of the associated native visual.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_RED_SIZE</constant></term>
+            <listitem><para>Returns the number of bits of red stored in the
+            color buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_RENDERABLE_TYPE</constant></term>
+                <listitem>
+                <para>
+                    Returns a bitmask indicating the types of supported
+                    client API contexts.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_SAMPLE_BUFFERS</constant></term>
+            <listitem><para>Returns the number of multisample buffers.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_SAMPLES</constant></term>
+            <listitem><para>Returns the number of samples per pixel.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_STENCIL_SIZE</constant></term>
+            <listitem><para>Returns the number of bits in the stencil buffer.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_SURFACE_TYPE</constant></term>
+            <listitem><para>
+                Returns a bitmask indicating the types of supported EGL
+                surfaces.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_TRANSPARENT_TYPE</constant></term>
+            <listitem><para>Returns the type of supported transparency.
+                Possible transparency values are:
+                <constant>EGL_NONE</constant>, and
+                <constant>EGL_TRANSPARENT_RGB</constant>.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_TRANSPARENT_RED_VALUE</constant></term>
+            <listitem><para>Returns the transparent red value.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_TRANSPARENT_GREEN_VALUE</constant></term>
+            <listitem><para>Returns the transparent green value.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_TRANSPARENT_BLUE_VALUE</constant></term>
+            <listitem><para>Returns the transparent blue value.</para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            <constant>EGL_CONFORMANT</constant> is supported only if the
+            EGL version is 1.3 or greater.
+        </para>
+        <para>
+            <constant>EGL_ALPHA_MASK_SIZE</constant>,
+            <constant>EGL_COLOR_BUFFER_TYPE</constant>,
+            <constant>EGL_LUMINANCE_SIZE</constant>, and
+            <constant>EGL_RENDERABLE_TYPE</constant> are supported only
+            if the EGL version is 1.2 or greater.
+        </para>
+        <para>
+            While <constant>EGL_MATCH_NATIVE_PIXMAP</constant> can be
+            specified in the attribute list passed to
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            it is not an attribute of the resulting config and cannot be
+            queried using <function>eglGetConfigAttrib</function>.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise.
+            <parameter>value</parameter> is not modified when
+            <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONFIG</constant> is generated if
+            <parameter>config</parameter> is not an EGL frame buffer configuration.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attribute</parameter> is not a valid frame buffer
+            configuration attribute.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

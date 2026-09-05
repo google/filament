@@ -1,0 +1,215 @@
+Name
+
+    AMD_vertex_shader_viewport_index
+
+Name Strings
+
+    GL_AMD_vertex_shader_viewport_index
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date: March 15, 2012
+    Revision: 2
+
+Number
+
+    416
+
+Dependencies
+
+    OpenGL 4.1 or ARB_viewport_array is required.
+
+    The extension is written against the OpenGL 4.2 Specification, Core Profile,
+    January 19, 2011 and the OpenGL Shading Language Specification,
+    version 4.20.11.
+
+Overview
+
+    The gl_ViewportIndex built-in variable was introduced by the
+    ARB_viewport_array extension and OpenGL 4.1. This variable is available
+    in un-extended OpenGL only to the geometry shader. When written in the
+    geometry shader, it causes geometry to be directed to one of an array
+    of several independent viewport rectangles.
+
+    In order to use any viewport other than zero, a geometry shader must be
+    present. Geometry shaders introduce processing overhead and potential
+    performance issues. This extension exposes the gl_ViewportIndex built-in
+    variable to the vertex shader, allowing the functionality introduced by
+    ARB_viewport_array to be accessed without requiring a geometry shader to
+    be present.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core) Specification (OpenGL Operation)
+
+    Add the following paragraph to the "Output Variables" subsection of
+    section 2.11, "Vertex Shaders" on p. 106.
+
+        The built-in special variable gl_ViewportIndex, if written, is used to
+    direct rendering to one of several viewports and is discussed further in
+    the next section.
+
+    Insert the following subsection after the "Shader Outputs" subsection on
+    p.106.
+
+    "Viewport Selection"
+
+        Vertex shaders can be used to render to one of several different
+    viewport rectangles. The destination viewport rectangle for a primitive
+    may be specified by writing to the built-in output variable
+    gl_ViewportIndex in the vertex shader. This functionality allows a vertex
+    shader to direct rendering to one of several viewport rectangles. The
+    specific vertex of a primitive from which gl_ViewportIndex is taken
+    is implementation defined and may be determined by calling GetIntegerv with
+    the symbolic constant VIEWPORT_INDEX_PROVOKING_VERTEX.
+
+    If the value returned is PROVOKING_VERTEX then vertex selection follows the
+    convention specified to ProvokingVertex (see Section 2.19). If the value
+    returned is FIRST_VERTEX_CONVENTION, selection is always taken from the
+    first vertex of the primitive. If the value returned is
+    LAST_VERTEX_CONVENTION, the selection is always taken from the last vertex
+    of the primitive. If the value returned is UNDEFINED_VERTEX, the selection
+    is not guaranteed to be taken from any specific vertex. The vertex
+    considered the provoking vertex for particular primitive types is given
+    in table 2.15.
+
+    Replace the second paragraph of the "Layer and Viewport Selection" subsection
+    of section 2.13, "Geometry Shaders", p.135 (which describes
+    gl_ViewportIndex) with:
+
+        The special built-in variable gl_ViewportIndex is available to geometry
+    shaders to direct rendering to a specific viewport in an array of
+    viewports and has the same effect as the similarly named variable in the
+    vertex shader.
+
+    Modify section 2.14.1 "Controling the Viewport" as follows:
+
+        Multiple viewports are available and are numbered zero through the value
+    of MAX_VIEWPORTS minus one. If a vertex or geometry shader is active and
+    writes to gl_ViewportIndex, the viewport transformation uses the viewport
+    corresponding to the value assigned to gl_ViewportIndex taken from an
+    implementation-dependent primitive vertex. If the value of the viewport
+    index is outside the range zero to the value of MAX_VIEWPORTS minus one,
+    the results of the viewport transformation are undefined. If the active
+    vertex shaders or geometry shaders (if present) do not write to
+    gl_ViewportIndex, the viewport numbered zero is used by the viewport
+    transformation.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core) Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core) Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core) Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core) Specification (State and
+State Requests)
+
+    None.
+
+Additions to Chapter 7 of the OpenGL Shading Language Specification, Version 4.20
+
+    Add to the list of vertex shader built-in variables, Section 7.1, p. 97:
+
+        out int gl_ViewportIndex;
+
+    Modify the first paragraph on p.101, describing gl_ViewpotIndex as follows:
+
+        The output variable gl_ViewportIndex is available only in the vertex and
+    geometry languages and provides the index of the viewport to which the next
+    primitive assembled from the resulting vertices or emitted from the
+    geometry shader (if present) should be drawn. Primitives generated during
+    primitive assembly will undergo viewport transformation and scissor testing
+    using the viewport transformation and scissor rectangle selected by the
+    value of gl_ViewportIndex. The viewport index used will come from one of
+    the vertices in the primitive being processed. However, which vertex the
+    viewport index comes from is implementation-dependent, so it is best to use
+    the same viewport index for all vertices of the primitive. If a vertex or
+    geometry shader (if present) does not assign a value to gl_ViewportIndex,
+    viewport transform and scissor rectangle zero will be used.  If a vertex
+    or geometry shader statically assigns a value to gl_ViewportIndex and there
+    is a path through the shader that does not assign a value to
+    gl_ViewportIndex, the value of gl_ViewportIndex is undefined for executions
+    of the shader that take that path. See section 2.11.11, under "Output
+    Variables" of the OpenGL Graphics System Specification (Core Profile) for
+    more information.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1) What happens when there is a tessellation shader in the pipe?
+
+    RESOVED: gl_ViewportIndex is not exposed to tessellation shaders. The
+    primary motivation for this extension is to allow simple applications using
+    only vertex and fragment shaders to take advantage of multiple viewports.
+    To use vertex-shader specified viewport indices in a program that uses
+    tessellation, the viewport index can be passed from vertex to control to
+    evaluation shader and then a geometry shader can be used to initialize
+    gl_ViewportIndex as would be the case in the absence of this extension.
+
+    2) What happens if gl_ViewportIndex is written in the vertex shader and
+    a geometry shader is present?
+
+    RESOLVED: The value written in the VS is lost. If the GS writes
+    gl_ViewportIndex, that value is used, otherwise the zeroth viewport
+    is used.
+
+    3) Are provoking vertex semantics honored for the purposes of writes to
+    gl_ViewportIndex in the VS?
+
+    RESOLVED: Yes, they are. Query VIEWPORT_INDEX_PROVOKING_VERTEX to determine
+    the 'provokingness' of gl_ViewportIndex. In general, though, it's best
+    practice to ensure that all vertices of a single primitive (including
+    strips, fans and loops) have the same value for gl_ViewportIndex.
+
+Revision History
+
+    Rev.   Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     2    03/15/2012  gsellers  Finalize for posting in public repository
+     1    04/05/2011  gsellers  Initial draft

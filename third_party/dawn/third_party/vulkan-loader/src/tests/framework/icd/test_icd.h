@@ -28,10 +28,12 @@
 #pragma once
 
 #include <array>
+#include <algorithm>
 #include <filesystem>
 #include <mutex>
 #include <ostream>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "util/dispatchable_handle.h"
 #include "util/platform_wsi.h"
@@ -81,6 +83,8 @@ inline std::ostream& operator<<(std::ostream& os, const InterfaceVersionCheck& r
 
 using VulkanUUID = std::array<uint8_t, VK_UUID_SIZE>;
 
+using PFN_test_icd_internal_function = VKAPI_ATTR VkResult (VKAPI_CALL *)(VkPhysicalDevice physicalDevice, uint32_t a, uint32_t b, float c);
+#define TEST_ICD_INTERNAL_FUNCTION_NAME_STRING "TEST_ICD_INTERNAL_FUNCTION_NAME"
 // clang-format on
 
 // Move only type because it holds a DispatchableHandle<VkPhysicalDevice>
@@ -89,7 +93,6 @@ struct PhysicalDevice {
     PhysicalDevice(std::string name) : deviceName(name) {}
     PhysicalDevice(const char* name) : deviceName(name) {}
 
-    DispatchableHandle<VkPhysicalDevice> vk_physical_device;
     BUILDER_VALUE(std::string, deviceName)
     BUILDER_VALUE(VulkanUUID, deviceUUID)
     BUILDER_VALUE(VulkanUUID, driverUUID)
@@ -110,6 +113,7 @@ struct PhysicalDevice {
     BUILDER_VECTOR(Extension, extensions, extension)
 
     BUILDER_VALUE(VkSurfaceCapabilitiesKHR, surface_capabilities)
+    BUILDER_VALUE_WITH_DEFAULT(VkResult, surface_capabilities_result, VK_SUCCESS)
     BUILDER_VECTOR(VkSurfaceFormatKHR, surface_formats, surface_format)
     BUILDER_VECTOR(VkPresentModeKHR, surface_present_modes, surface_present_mode)
     BUILDER_VALUE(VkSurfacePresentScalingCapabilitiesEXT, surface_present_scaling_capabilities)
@@ -132,15 +136,7 @@ struct PhysicalDevice {
         return *this;
     }
 
-    PhysicalDevice&& finish() { return std::move(*this); }
-
-    // Defines the order this physical device appears in vkEnumeratePhysicalDevices
-    uint32_t iteration_order = 0;
-
-    // Objects created from this physical device
-    std::vector<VkDevice> device_handles;
-    std::vector<DeviceCreateInfo> device_create_infos;
-    std::vector<DispatchableHandle<VkQueue>> queue_handles;
+    PhysicalDevice& finish() { return *this; }
 
     // Unknown physical device functions. Add a `VulkanFunction` to this list which will be searched in
     // vkGetInstanceProcAddr for custom_instance_functions and vk_icdGetPhysicalDeviceProcAddr for custom_physical_device_functions.
@@ -155,24 +151,57 @@ struct PhysicalDevice {
 
 struct PhysicalDeviceGroup {
     PhysicalDeviceGroup() {}
-    PhysicalDeviceGroup(PhysicalDevice const& physical_device) { physical_device_handles.push_back(&physical_device); }
-    PhysicalDeviceGroup(PhysicalDevice const* physical_device) { physical_device_handles.push_back(physical_device); }
-    PhysicalDeviceGroup(std::vector<PhysicalDevice*> const& physical_devices) {
-        physical_device_handles.insert(physical_device_handles.end(), physical_devices.begin(), physical_devices.end());
+    PhysicalDeviceGroup(size_t physical_device_index) { physical_device_indexes.push_back(physical_device_index); }
+    PhysicalDeviceGroup(std::vector<size_t> const& in_physical_device_indexes) {
+        physical_device_indexes.insert(physical_device_indexes.end(), in_physical_device_indexes.begin(),
+                                       in_physical_device_indexes.end());
     }
-    PhysicalDeviceGroup& use_physical_device(PhysicalDevice const* physical_device) {
-        physical_device_handles.push_back(physical_device);
+    PhysicalDeviceGroup& use_physical_device(size_t physical_device_index) {
+        physical_device_indexes.push_back(physical_device_index);
         return *this;
     }
-    PhysicalDeviceGroup& use_physical_device(PhysicalDevice const& physical_device) {
-        physical_device_handles.push_back(&physical_device);
+    PhysicalDeviceGroup& use_physical_devices(std::vector<size_t> const& in_physical_device_indexes) {
+        physical_device_indexes.insert(physical_device_indexes.begin(), in_physical_device_indexes.begin(),
+                                       in_physical_device_indexes.end());
         return *this;
     }
 
-    std::vector<PhysicalDevice const*> physical_device_handles;
+    std::vector<size_t> physical_device_indexes;
     VkBool32 subset_allocation = false;
 };
 
+struct CreatedDeviceDetails {
+    DispatchableHandle<VkDevice> device;
+    VkPhysicalDevice physical_device_created_from;
+    VkInstance instance_created_from;
+
+    std::vector<Extension> enabled_device_extensions;
+    std::vector<DispatchableHandle<VkQueue>> queue_handles;
+
+    std::vector<DispatchableHandle<VkCommandBuffer>> allocated_command_buffers;
+
+    std::vector<uint64_t> swapchain_handles;
+};
+
+struct CreatedPhysicalDeviceDetails {
+    DispatchableHandle<VkPhysicalDevice> vk_physical_device;
+    VkInstance instance_created_from{};
+
+    size_t index_physical_device{};  // index into the TestICD::physical_devices array this object represents
+};
+
+struct CreatedInstanceDetails {
+    DispatchableHandle<VkInstance> instance;
+    VkInstanceCreateFlags passed_in_instance_create_flags{};
+    std::vector<Extension> enabled_instance_extensions;
+
+    std::vector<uint64_t> surface_handles;
+    std::vector<uint64_t> messenger_handles;
+    std::vector<uint64_t> callback_handles;
+
+    // Store the handles here in order for EnumeratePhysicalDevices
+    std::vector<VkPhysicalDevice> physical_devices;
+};
 struct TestICD {
     std::recursive_mutex mutex;
     std::filesystem::path manifest_file_path;
@@ -208,42 +237,50 @@ struct TestICD {
     BUILDER_VALUE_WITH_DEFAULT(uint32_t, icd_api_version, VK_API_VERSION_1_0)
     BUILDER_VECTOR(LayerDefinition, instance_layers, instance_layer)
     BUILDER_VECTOR(Extension, instance_extensions, instance_extension)
-    std::vector<Extension> enabled_instance_extensions;
 
-    std::unordered_map<VkPhysicalDevice, PhysicalDevice> physical_devices;
-    TestICD& add_physical_device(PhysicalDevice&& physical_device) {
-        physical_device.iteration_order = physical_devices.size();
-        physical_devices.emplace(physical_device.vk_physical_device.handle, std::move(physical_device));
+    std::vector<PhysicalDevice> physical_devices;
+
+    TestICD& add_physical_device(PhysicalDevice const& physical_device) {
+        physical_devices.push_back(physical_device);
         return *this;
     }
 
-    PhysicalDevice& add_and_get_physical_device(PhysicalDevice&& physical_device) {
-        VkPhysicalDevice pd = physical_device.vk_physical_device.handle;
-        physical_device.iteration_order = physical_devices.size();
-        physical_devices.emplace(physical_device.vk_physical_device.handle, std::move(physical_device));
-        return physical_devices.at(pd);
+    PhysicalDevice& add_and_get_physical_device(PhysicalDevice const& physical_device) {
+        physical_devices.push_back(physical_device);
+        return physical_devices.back();
     }
 
-    PhysicalDevice& add_physical_device_at_index(size_t index, PhysicalDevice&& physical_device) {
-        VkPhysicalDevice pd = physical_device.vk_physical_device.handle;
-        physical_device.iteration_order = index;
-        for (auto& [handle, phys_dev] : physical_devices) {
-            if (phys_dev.iteration_order >= index) {
-                phys_dev.iteration_order++;
+    PhysicalDevice& add_physical_device_at_index(size_t index, PhysicalDevice const& physical_device) {
+        physical_devices.insert(physical_devices.begin() + index, physical_device);
+        return physical_devices.at(index);
+    }
+
+    void remove_physical_device(size_t index) {
+        // Remove all created physical devices which use this index.
+        // Because we are modifying the map as we iterate, we need to use iterators rather than range-for
+        for (auto iter = created_physical_device_details.begin(), end_iter = created_physical_device_details.end();
+             iter != end_iter;) {
+            if (iter->second.index_physical_device == index) {
+                // Clean up the instance's cache of physical devices
+                auto& ipd = created_instance_details.at(iter->second.instance_created_from).physical_devices;
+                ipd.erase(std::remove(ipd.begin(), ipd.end(), iter->second.vk_physical_device.handle), ipd.end());
+
+                iter = created_physical_device_details.erase(iter);
+            } else
+                ++iter;
+        }
+
+        physical_devices.erase(physical_devices.begin() + index);
+
+        // Update all other detail structs to refer to their intended PhysicalDevice (accounting for the removed index)
+        for (auto& [vk_physical_device, details] : created_physical_device_details) {
+            if (details.index_physical_device > index) {
+                details.index_physical_device--;
             }
         }
-        physical_devices.emplace(physical_device.vk_physical_device.handle, std::move(physical_device));
-        return physical_devices.at(pd);
     }
 
     BUILDER_VECTOR(PhysicalDeviceGroup, physical_device_groups, physical_device_group);
-
-    DispatchableHandle<VkInstance> instance_handle;
-    std::vector<DispatchableHandle<VkDevice>> device_handles;
-    std::vector<uint64_t> surface_handles;
-    std::vector<uint64_t> messenger_handles;
-    std::vector<uint64_t> callback_handles;
-    std::vector<uint64_t> swapchain_handles;
 
     BUILDER_VALUE_WITH_DEFAULT(bool, can_query_vkEnumerateInstanceVersion, true);
     BUILDER_VALUE_WITH_DEFAULT(bool, can_query_GetPhysicalDeviceFuncs, true);
@@ -254,15 +291,15 @@ struct TestICD {
     // known_device_functions member)
     BUILDER_VECTOR(VulkanFunction, custom_instance_functions, custom_instance_function)
 
+    // When true, this ICD returns function pointers when TEST_ICD_INTERNAL_FUNCTION_NAME is queried.
+    BUILDER_VALUE(bool, supports_internal_function)
+
     // Must explicitely state support for the tooling info extension, that way we can control if vkGetInstanceProcAddr returns a
     // function pointer for vkGetPhysicalDeviceToolPropertiesEXT or vkGetPhysicalDeviceToolProperties (core version)
     BUILDER_VALUE(bool, supports_tooling_info_ext);
     BUILDER_VALUE(bool, supports_tooling_info_core);
     // List of tooling properties that this driver 'supports'
     BUILDER_VECTOR(VkPhysicalDeviceToolPropertiesEXT, tooling_properties, tooling_property)
-    std::vector<DispatchableHandle<VkCommandBuffer>> allocated_command_buffers;
-
-    VkInstanceCreateFlags passed_in_instance_create_flags{};
 
     BUILDER_VALUE_WITH_DEFAULT(VkResult, enum_physical_devices_return_code, VK_SUCCESS);
     BUILDER_VALUE_WITH_DEFAULT(VkResult, enum_adapter_physical_devices_return_code, VK_SUCCESS);
@@ -274,13 +311,16 @@ struct TestICD {
         return info;
     }
 
-    // Speedup looking for physical devices by not having to iterate through the entire physical_device map to find a particular
-    // physical device
-    std::unordered_map<VkDevice, VkPhysicalDevice> device_to_physical_device_map;
-
 #if defined(WIN32)
     BUILDER_VALUE(LUID, adapterLUID)
 #endif  // defined(WIN32)
+
+    // Store all of the 'live' object details.
+    std::unordered_map<VkInstance, CreatedInstanceDetails> created_instance_details;
+    std::unordered_map<VkPhysicalDevice, CreatedPhysicalDeviceDetails> created_physical_device_details;
+    std::unordered_map<VkDevice, CreatedDeviceDetails> created_device_details;
+    std::unordered_set<VkQueue> created_queues;
+    std::unordered_set<VkCommandBuffer> created_command_buffers;
 };
 
 using GetTestICDFunc = TestICD* (*)();

@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -191,7 +191,53 @@ func (w FSTestFilesystemReaderWriter) CleanPath(pathStr string) string {
 
 // fs returns a read-only fs.FS view of the underlying map.
 func (w FSTestFilesystemReaderWriter) fs() fs.FS {
-	return fstest.MapFS(w.FS)
+	return legacyBehaviorFS{mapFS: fstest.MapFS(w.FS)}
+}
+
+// legacyBehaviorFS is a wrapper around fstest.MapFS that only implements fs.FS.
+// This is needed in Go 1.25+ because MapFS implements io/fs.ReadLinkFS, but its resolveSymlinks
+// method does not support absolute paths, instead rejecting them with an error. This causes the
+// _MatchesReal tests for the fake filesystem to fail since the real filesystem does support
+// absolute paths for symlinks. By hiding io/fs.ReadLinkFS, fs.WalkDir falls back to the default
+// behavior of not following symlinks.
+//
+// Additionally, Go 1.25's MapFS.Open auto-resolves symlinks, which causes fs.WalkDir to follow root
+// symlinks to directories, violating filepath.Walk behavior. To fix this, Open is overridden to
+// return a custom file handle for symlinks found in the map, preventing resolution.
+type legacyBehaviorFS struct {
+	mapFS fstest.MapFS
+}
+
+// Open overrides MapFS.Open to prevent symlink resolution for entries in mapFS.
+func (f legacyBehaviorFS) Open(name string) (fs.File, error) {
+	file := f.mapFS[name]
+	if file != nil && file.Mode&fs.ModeSymlink != 0 {
+		return noFollowFile{name: name, file: file}, nil
+	}
+	return f.mapFS.Open(name)
+}
+
+// noFollowFile is a custom fs.File handle for symlinks in legacyBehaviorFS.
+// It reports its own file info as a symlink and does not follow the target.
+type noFollowFile struct {
+	name   string
+	file   *fstest.MapFile
+	offset int64
+}
+
+func (f noFollowFile) Stat() (fs.FileInfo, error) {
+	return &mapFileInfo{path: f.name, file: f.file}, nil
+}
+
+func (f noFollowFile) Close() error { return nil }
+
+func (f noFollowFile) Read(b []byte) (int, error) {
+	if f.offset >= int64(len(f.file.Data)) {
+		return 0, io.EOF
+	}
+	n := copy(b, f.file.Data[f.offset:])
+	f.offset += int64(n)
+	return n, nil
 }
 
 // resolvePath resolves symlinks in the given path.

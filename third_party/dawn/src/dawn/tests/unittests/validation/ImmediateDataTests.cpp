@@ -30,108 +30,13 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/NonMovable.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn {
 namespace {
-
-enum class FeatureMode {
-    Enabled,
-    DisabledViaNotAllowUnsafeAPIs,
-    DisabledViaBlocklistedFeatures,
-};
-
-// Test that the feature only works when enabled
-struct ImmediateDataDisableTest : ValidationTestWithParam<FeatureMode> {
-    std::vector<const char*> GetWGSLBlocklistedFeatures() override {
-        switch (GetParam()) {
-            case FeatureMode::Enabled:
-                return {};
-            case FeatureMode::DisabledViaNotAllowUnsafeAPIs:
-                return {};
-            case FeatureMode::DisabledViaBlocklistedFeatures:
-                return {"immediate_address_space"};
-        }
-        DAWN_UNREACHABLE();
-        return {};
-    }
-
-    bool AllowUnsafeAPIs() override {
-        switch (GetParam()) {
-            case FeatureMode::Enabled:
-                // Currently the only way to enable ImmediateAddressSpace is via AllowUnsafeAPIs.
-                // See GetLanguageFeatureStatus.
-                return true;
-            case FeatureMode::DisabledViaNotAllowUnsafeAPIs:
-                return false;
-            case FeatureMode::DisabledViaBlocklistedFeatures:
-                // Enabling AllowUnsafeAPIs while disabling via blocklist should still fail.
-                return true;
-        }
-        DAWN_UNREACHABLE();
-        return false;
-    }
-};
-
-// Check that creating a PipelineLayout with non-zero immediateSize is disallowed
-// without the feature enabled.
-TEST_P(ImmediateDataDisableTest, ImmediateSizeNotAllowed) {
-    wgpu::PipelineLayoutDescriptor desc{};
-    desc.immediateSize = 4;
-
-    if (GetParam() == FeatureMode::Enabled) {
-        device.CreatePipelineLayout(&desc);
-    } else {
-        ASSERT_DEVICE_ERROR(device.CreatePipelineLayout(&desc));
-    }
-}
-
-// Check that SetImmediates doesn't work (even with size=0) without the feature enabled.
-TEST_P(ImmediateDataDisableTest, SetImmediates) {
-    {
-        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
-        pass.SetImmediates(0, nullptr, 0);
-        pass.End();
-        if (GetParam() == FeatureMode::Enabled) {
-            encoder.Finish();
-        } else {
-            ASSERT_DEVICE_ERROR(encoder.Finish());
-        }
-    }
-    {
-        const uint32_t data = 0;
-
-        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
-        pass.SetImmediates(0, &data, 4);
-        pass.End();
-        if (GetParam() == FeatureMode::Enabled) {
-            encoder.Finish();
-        } else {
-            ASSERT_DEVICE_ERROR(encoder.Finish());
-        }
-    }
-}
-
-// Check that limits.maxImmediateSize is 0 when the feature is disabled, and kMaxImmediateDataBytes
-// otherwise.
-TEST_P(ImmediateDataDisableTest, MaxImmediateSizeIsZero) {
-    if (GetParam() == FeatureMode::Enabled) {
-        ASSERT_EQ(GetSupportedLimits().maxImmediateSize, kMaxImmediateDataBytes);
-    } else {
-        ASSERT_EQ(GetSupportedLimits().maxImmediateSize, 0u);
-    }
-}
-
-INSTANTIATE_TEST_SUITE_P(,
-                         ImmediateDataDisableTest,
-                         ::testing::ValuesIn({FeatureMode::Enabled,
-                                              FeatureMode::DisabledViaNotAllowUnsafeAPIs,
-                                              FeatureMode::DisabledViaBlocklistedFeatures}));
 
 class ImmediateDataTest : public ValidationTest {
   protected:
@@ -179,7 +84,7 @@ TEST_F(ImmediateDataTest, ValidateImmediateSize) {
     }
 }
 
-// Check that immediateSize must be aligned to kImmediateConstantElementByteSize (4 bytes).
+// Check that immediateSize must be aligned to kImmediateElementByteSize (4 bytes).
 TEST_F(ImmediateDataTest, ValidateImmediateSizeAlignment) {
     wgpu::PipelineLayoutDescriptor desc{};
 

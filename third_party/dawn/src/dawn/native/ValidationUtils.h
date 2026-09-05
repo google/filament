@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "dawn/native/Error.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native {
 

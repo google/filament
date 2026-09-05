@@ -1,0 +1,195 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_async_pixel
+
+Name Strings
+
+    GL_SGIX_async_pixel
+
+Version
+
+    $Date: 1998/06/04 20:57:38 $ $Revision: 1.7 $
+
+Number
+
+    133
+
+Dependencies
+
+    SGIX_async is required.
+    EXT_texture3D affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+
+Overview
+
+    This extension introduces a new asynchronous mode for texture
+    download, pixel download and pixel readback commands.  It allows
+    programs to transfer textures or images between the host and the
+    graphics accelerator in parallel with the execution of other
+    graphics commands (possibly taking advantage of a secondary path
+    to the graphics accelerator).  It also allows programs to issue
+    non-blocking pixel readback commands that return immediately after
+    they are issued so that the program can issue other commands while
+    the readback takes place.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        ASYNC_TEX_IMAGE_SGIX		0x835C
+	ASYNC_DRAW_PIXELS_SGIX		0x835D
+	ASYNC_READ_PIXELS_SGIX		0x835E
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_ASYNC_TEX_IMAGE_SGIX	0x835F
+        MAX_ASYNC_DRAW_PIXELS_SGIX	0x8360
+        MAX_ASYNC_READ_PIXELS_SGIX	0x8361
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Add a section following 3.6.3 ("Rasterization of Pixel
+    Rectangles") entitled "Asynchronous Pixel Downloads":
+
+    Normally the DrawPixels command is synchronous: OpenGL executes a
+    DrawPixels command in the order it is issued in the OpenGL command
+    stream.  Calling Enable with the <cap> parameter set to
+    ASYNC_DRAW_PIXELS_SGIX causes subsequent DrawPixels commands to be
+    asynchronous as defined in the SGIX_async extension spec.  An
+    asynchronous DrawPixels command samples the OpenGL state vector at
+    the point in the OpenGL command stream where the command is
+    issued, but the results of the command (e.g. updates to the frame
+    buffer) do not happen until some unspecified time in the future.
+    In particular, the order of the asynchronous command relative to
+    other OpenGL commands issued later in the command stream is
+    undefined.  An implementation may choose to execute asynchronous
+    commands in parallel with the normal command stream or at some
+    convenient time in the future.
+    
+    Calling Disable with the <cap> parameter set to
+    ASYNC_DRAW_PIXELS_SGIX restores the default synchronous behavior
+    for subsequent DrawPixels commands.  It does not affect any
+    pending asynchronous DrawPixels commands, or wait for their
+    completion.
+
+    When an asynchronous DrawPixels command is issued, it is
+    associated with the current value of ASYNC_MARKER_SGIX as
+    described in the SGIX_async extension specification.  A program
+    can determine if an asynchronous DrawPixels command has completed
+    using the FinishAsyncSGIX or PollAsyncSGIX commands.
+
+    Add a subsection to section 3.8 ("Texturing") entitled
+    "Asynchronous Texture Downloads":
+
+    Calling Enable with the <cap> parameter set to
+    ASYNC_TEX_IMAGE_SGIX causes subsequent TexImage1D, TexSubImage1D,
+    TexImage2D, TexSubImage2D, TexImage3DEXT, TexSubImage3DEXT,
+    TexImage4DSGIS and TexSubImage4DSGIS commands to be asynchronous
+    (similar to the asynchronous DrawPixels command described
+    earlier).  Calling Disable with the <cap> parameter set to
+    ASYNC_TEX_IMAGE_SGIX restores the default synchronous behavior for
+    subsequent TexImage commands.
+
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    Add to section 4.3.2 ("Reading Pixels"):
+
+    Calling Enable with the <cap> parameter set to
+    ASYNC_READ_PIXELS_SGIX causes subsequent ReadPixels commands to be
+    asynchronous (similar to the asynchronous DrawPixels command
+    described earlier).  An implementation of the asynchronous
+    ReadPixels command may be non-blocking: It may return control to
+    the program immediately rather than waiting for the command's
+    results to be written into the destination rectangle in host
+    memory.  The ReadPixels command samples the OpenGL state vector at
+    the time it is issued, but it may be executed at some undefined
+    point in the future.  In particular, if subsequent commands change
+    the contents of the source rectangle in the framebuffer then the
+    result of the ReadPixels is undefined.
+
+    Calling Disable with the <cap> parameter set to
+    ASYNC_READ_PIXELS_SGIX restores the default synchronous behavior
+    for subsequent ReadPixels commands.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on SGIX_async
+
+    This document adds three categories of asynchronous commands to
+    the framework defined by SGIX_async.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented then the references to
+    TexImage3DEXT and TexSubImage3DEXT should be ignored.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not implemented then the references to
+    TexImage4DSGIS and TexSubImage4DSGIS should be ignored.
+
+Errors
+
+    INVALID_OPERATION is generated if DrawPixels is called and
+    ASYNC_DRAW_PIXELS_SGIX is enabled and the number of asynchronous
+    DrawPixels commands that have been issued but not queried (using
+    FinishAsyncSGIX or PollAsyncSGIX) exceeds MAX_ASYNC_DRAW_PIXELS_SGIX.
+
+    INVALID_OPERATION is generated if TexImage1D, TexSubImage1D,
+    TexImage2D, TexSubImage2D, TexImage3DEXT, TexSubImage3DEXT,
+    TexImage4DSGIS or TexSubImage4DSGIS is called and
+    ASYNC_TEX_IMAGE_SGIX is enabled and the number of asynchronous
+    TexImage commands that have been issued but not queried (using
+    FinishAsyncSGIX or PollAsyncSGIX) exceeds
+    MAX_ASYNC_TEX_IMAGE_SGIX.
+
+    INVALID_OPERATION is generated if ReadPixels is called and
+    ASYNC_READ_PIXELS_SGIX is enabled and the number of asynchronous
+    ReadPixels commands that have been issued but not queried (using
+    FinishAsyncSGIX or PollAsyncSGIX) exceeds
+    MAX_ASYNC_READ_PIXELS_SGIX.
+
+New State
+
+    Get Value			Get Command	Type	Value	Attrib
+    ---------			-----------	----	-------	------
+    ASYNC_TEX_IMAGE_SGIX        IsEnabled       B       False   enable
+    ASYNC_DRAW_PIXELS_SGIX      IsEnabled       B       False   enable
+    ASYNC_READ_PIXELS_SGIX      IsEnabled       B       False   enable
+
+New Implementation Dependent State
+
+								Minimum
+    Get Value			Get Command	Type		Value
+    ---------			-----------	----		-------
+    MAX_ASYNC_TEX_IMAGE_SGIX    GetIntegerv     Z+              1
+    MAX_ASYNC_DRAW_PIXELS_SGIX  GetIntegerv     Z+              1
+    MAX_ASYNC_READ_PIXELS_SGIX  GetIntegerv     Z+              1

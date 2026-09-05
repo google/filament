@@ -12,9 +12,9 @@
 #ifndef SRC_DAWN_COMMON_LINKEDLIST_H_
 #define SRC_DAWN_COMMON_LINKEDLIST_H_
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Atomic.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#include "src/dawn/common/Atomic.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 

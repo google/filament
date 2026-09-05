@@ -45,6 +45,7 @@ class GPURenderBundle final : public interop::GPURenderBundle {
     GPURenderBundle(const wgpu::RenderBundleDescriptor& desc, wgpu::RenderBundle bundle);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::RenderBundle&() const { return bundle_; }
 
     // interop::GPURenderBundle interface compliance

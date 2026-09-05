@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -32,7 +32,7 @@ import (
 
 	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"github.com/stretchr/testify/require"
-	"go.chromium.org/luci/auth"
+	"go.chromium.org/luci/auth/scopes"
 )
 
 func TestDefaultAuthOptions_NoAdditionalScopes(t *testing.T) {
@@ -46,8 +46,8 @@ func TestDefaultAuthOptions_NoAdditionalScopes(t *testing.T) {
 	require.Equal(
 		t,
 		[]string{
-			"https://www.googleapis.com/auth/gerritcodereview",
-			auth.OAuthScopeEmail,
+			scopes.Gerrit,
+			scopes.Email,
 		},
 		authOptions.Scopes[len(authOptions.Scopes)-2:])
 }
@@ -63,8 +63,8 @@ func TestDefaultAuthOptions_AdditionalScopes(t *testing.T) {
 	require.Equal(
 		t,
 		[]string{
-			"https://www.googleapis.com/auth/gerritcodereview",
-			auth.OAuthScopeEmail,
+			scopes.Gerrit,
+			scopes.Email,
 			"scope1",
 			"scope2",
 		},

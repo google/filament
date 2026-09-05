@@ -31,7 +31,6 @@
 #include <unordered_map>
 
 #include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/spirv/writer/common/options.h"
 #include "src/tint/utils/result.h"
 
@@ -41,15 +40,6 @@ class Module;
 }
 
 namespace tint::spirv::writer::raise {
-
-/// The capabilities that the transform can support.
-const core::ir::Capabilities kShaderIOCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kLoosenValidationForShaderIO,
-};
 
 /// ShaderIOConfig describes the set of configuration options for the ShaderIO transform.
 struct ShaderIOConfig {
@@ -64,7 +54,7 @@ struct ShaderIOConfig {
     /// true if f16 IO types should be replaced with f32 types and converted
     bool polyfill_f16_io = false;
     /// true if we should force pixel centers via polyfill when multi-sampling.
-    bool polyfill_pixel_center = false;
+    std::optional<uint32_t> polyfill_pixel_center = std::nullopt;
     /// true if the framebuffer fetch should be multisampled
     bool multisampled_framebuffer_fetch = false;
     /// offsets for clamping frag depth

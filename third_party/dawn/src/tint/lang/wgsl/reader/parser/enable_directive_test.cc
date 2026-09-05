@@ -174,7 +174,7 @@ TEST_F(EnableDirectiveTest, InvalidExtension) {
     // Error when unknown extension found
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroup_size_control', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -188,7 +188,7 @@ TEST_F(EnableDirectiveTest, InvalidExtensionSuggest) {
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
 Did you mean 'f16'?
-Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroup_size_control', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -202,7 +202,7 @@ TEST_F(EnableDirectiveTest, InvalidChromiumExtension) {
     // Error when unknown extension found
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'atomic_vec2u_min_max', 'chromium_disable_uniformity_analysis', 'chromium_experimental_barycentric_coord', 'chromium_experimental_framebuffer_fetch', 'chromium_experimental_pixel_local', 'chromium_experimental_resource_table', 'chromium_experimental_subgroup_matrix', 'chromium_experimental_subgroup_size_control', 'chromium_internal_input_attachments', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'chromium_disable_uniformity_analysis', 'chromium_experimental_barycentric_coord', 'chromium_experimental_framebuffer_fetch', 'chromium_experimental_pixel_local', 'chromium_experimental_resource_table', 'chromium_experimental_subgroup_matrix', 'chromium_internal_input_attachments', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroup_size_control', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -250,7 +250,7 @@ TEST_F(EnableDirectiveTest, InvalidTokens) {
         p->translation_unit();
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroup_size_control', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -261,7 +261,7 @@ Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending
         p->translation_unit();
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroup_size_control', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -273,7 +273,7 @@ Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
 Did you mean 'f16'?
-Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroups')");
+Possible values: 'atomic_vec2u_min_max', 'clip_distances', 'dual_source_blending', 'f16', 'primitive_index', 'subgroup_size_control', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -328,6 +328,48 @@ enable f16;
     EXPECT_EQ(enable->extensions[0]->source.range.end.column, 11u);
     ASSERT_EQ(ast.GlobalDeclarations().Length(), 1u);
     EXPECT_EQ(ast.GlobalDeclarations()[0], enable);
+}
+
+TEST_F(EnableDirectiveTest, DependentExtensions_SubgroupSizeControl) {
+    auto p = parser(R"(
+enable subgroup_size_control;
+)");
+    p->translation_unit();
+    EXPECT_FALSE(p->has_error()) << p->error();
+    auto program = p->program();
+    auto& ast = program.AST();
+    ASSERT_EQ(ast.Enables().Length(), 1u);
+    auto* enable = ast.Enables()[0];
+    ASSERT_EQ(enable->extensions.Length(), 2u);
+    EXPECT_EQ(enable->extensions[0]->name, wgsl::Extension::kSubgroupSizeControl);
+    EXPECT_EQ(enable->extensions[1]->name, wgsl::Extension::kSubgroups);
+    auto ssc_src = enable->extensions[0]->source;
+    auto subgroups_src = enable->extensions[1]->source;
+    EXPECT_EQ(ssc_src.range.begin.line, subgroups_src.range.begin.line);
+    EXPECT_EQ(ssc_src.range.begin.column, subgroups_src.range.begin.column);
+    EXPECT_EQ(ssc_src.range.end.line, subgroups_src.range.end.line);
+    EXPECT_EQ(ssc_src.range.end.column, subgroups_src.range.end.column);
+}
+
+TEST_F(EnableDirectiveTest, DependentExtensions_ChromiumExperimentalSubgroupMatrix) {
+    auto p = parser(R"(
+enable chromium_experimental_subgroup_matrix;
+)");
+    p->translation_unit();
+    EXPECT_FALSE(p->has_error()) << p->error();
+    auto program = p->program();
+    auto& ast = program.AST();
+    ASSERT_EQ(ast.Enables().Length(), 1u);
+    auto* enable = ast.Enables()[0];
+    ASSERT_EQ(enable->extensions.Length(), 2u);
+    EXPECT_EQ(enable->extensions[0]->name, wgsl::Extension::kChromiumExperimentalSubgroupMatrix);
+    EXPECT_EQ(enable->extensions[1]->name, wgsl::Extension::kSubgroups);
+    auto sm_src = enable->extensions[0]->source;
+    auto subgroups_src = enable->extensions[1]->source;
+    EXPECT_EQ(sm_src.range.begin.line, subgroups_src.range.begin.line);
+    EXPECT_EQ(sm_src.range.begin.column, subgroups_src.range.begin.column);
+    EXPECT_EQ(sm_src.range.end.line, subgroups_src.range.end.line);
+    EXPECT_EQ(sm_src.range.end.column, subgroups_src.range.end.column);
 }
 
 }  // namespace

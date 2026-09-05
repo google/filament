@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/PipelineLayoutVk.h"
+#include "src/dawn/native/vulkan/PipelineLayoutVk.h"
 
 #include <string>
 #include <utility>
 
-#include "dawn/common/Range.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/vulkan/BindGroupLayoutVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/vulkan/BindGroupLayoutVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/FramebufferFetchHelper.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
 
 namespace dawn::native::vulkan {
 
@@ -52,13 +53,22 @@ ResultOrError<Ref<PipelineLayout>> PipelineLayout::Create(
 ResultOrError<Ref<RefCountedVkHandle<VkPipelineLayout>>> PipelineLayout::CreateVkPipelineLayout(
     const Specialization& specialization) {
     // Compute the array of VkDescriptorSetLayouts that will be chained in the create info.
-    ityp::array<BindGroupIndex, VkDescriptorSetLayout, size_t(kMaxBindGroupsTyped) + 1> setLayouts;
+    ityp::array<BindGroupIndex, VkDescriptorSetLayout, size_t{kMaxBindGroupsTyped} + 2> setLayouts;
 
-    // The first VkDescriptorSetLayout is the one for the resource table if needed.
-    BindGroupIndex startOfBindGroups{0};
+    // The first VkDescriptorSetLayouts are the for framebuffer fetch and/or the resource table if
+    // needed.
+    BindGroupIndex startOfBindGroups{0u};
+    if (specialization.framebufferFetchAttachmentCount > 0) {
+        DAWN_TRY_ASSIGN(setLayouts[startOfBindGroups],
+                        ToBackend(GetDevice())
+                            ->GetFramebufferFetchHelper()
+                            ->GetLayout(specialization.framebufferFetchAttachmentCount));
+        ++startOfBindGroups;
+    }
+
     if (UsesResourceTable()) {
-        startOfBindGroups = BindGroupIndex(1);
-        setLayouts[BindGroupIndex(0)] = ToBackend(GetDevice())->GetResourceTableLayout();
+        setLayouts[startOfBindGroups] = ToBackend(GetDevice())->GetResourceTableLayout();
+        ++startOfBindGroups;
     }
 
     // The all the descriptor sets for BindGroupLayouts, including the empty BGLs.

@@ -31,10 +31,11 @@
 #include <limits>
 #include <utility>
 
-#include "dawn/common/Platform.h"
+#include "src/utils/compiler.h"
+#include "src/utils/platform.h"
 
 #if DAWN_PLATFORM_IS(WINDOWS)
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 #elif DAWN_PLATFORM_IS(FUCHSIA)
 #include <poll.h>
 #include <unistd.h>
@@ -44,8 +45,8 @@
 #endif
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/Log.h"
-#include "dawn/native/SystemEvent.h"
+#include "src/dawn/native/SystemEvent.h"
+#include "src/utils/log.h"
 
 namespace dawn::native {
 
@@ -74,14 +75,14 @@ template <typename It>
 [[nodiscard]] bool WaitAnySystemEvent(It begin, It end, Nanoseconds timeout) {
     static_assert(std::is_same_v<typename std::iterator_traits<It>::value_type,
                                  std::pair<const SystemEventReceiver&, bool*>>);
-    size_t count = std::distance(begin, end);
+    size_t count = sign_cast(std::distance(begin, end));
     if (count == 0) {
         return false;
     }
 #if DAWN_PLATFORM_IS(WINDOWS)
     absl::InlinedVector<HANDLE, 4 /* avoid heap allocation for small waits */> handles;
     handles.reserve(count);
-    for (auto it = begin; it != end; ++it) {
+    for (auto it = begin; it != end; DAWN_UNSAFE_TODO(++it)) {
         handles.push_back((*it).first.mPrimitive.Get());
     }
     DAWN_ASSERT(handles.size() <= MAXIMUM_WAIT_OBJECTS);
@@ -91,21 +92,22 @@ template <typename It>
         return false;
     }
     DAWN_CHECK(WAIT_OBJECT_0 <= status && status < WAIT_OBJECT_0 + count);
-    const size_t completedIndex = status - WAIT_OBJECT_0;
+    const ptrdiff_t completedIndex = sign_cast(status - WAIT_OBJECT_0);
 
-    *(*(begin + completedIndex)).second = true;
+    *(*(DAWN_UNSAFE_TODO(begin + completedIndex))).second = true;
     return true;
 #elif DAWN_PLATFORM_IS(POSIX)
     absl::InlinedVector<pollfd, 4 /* avoid heap allocation for small waits */> pollfds;
     pollfds.reserve(count);
-    for (auto it = begin; it != end; ++it) {
+    for (auto it = begin; it != end; DAWN_UNSAFE_TODO(++it)) {
         pollfds.push_back(pollfd{static_cast<int>((*it).first.mPrimitive.Get()), POLLIN, 0});
     }
-    int status;
-    bool retry;
+    int status = 0;
+    bool retry = false;
     do {
         retry = false;
-        status = poll(pollfds.data(), pollfds.size(), ToMilliseconds(timeout));
+        status =
+            poll(pollfds.data(), checked_cast<nfds_t>(pollfds.size()), ToMilliseconds(timeout));
         if (status < 0) {
             int lErrno = errno;
             if (EAGAIN == lErrno || EINTR == lErrno) {
@@ -122,7 +124,7 @@ template <typename It>
     }
 
     size_t i = 0;
-    for (auto it = begin; it != end; ++it, ++i) {
+    for (auto it = begin; it != end; DAWN_UNSAFE_TODO(++it), ++i) {
         int revents = pollfds[i].revents;
         static constexpr int kAllowedEvents = POLLIN | POLLHUP;
         DAWN_CHECK((revents & kAllowedEvents) == revents);
@@ -133,7 +135,7 @@ template <typename It>
 
     return true;
 #else
-    DAWN_CHECK(false);  // Not implemented.
+    DAWN_UNREACHABLE();  // Not implemented.
 #endif
 }
 

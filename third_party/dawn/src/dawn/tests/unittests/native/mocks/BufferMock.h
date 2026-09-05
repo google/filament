@@ -30,9 +30,10 @@
 
 #include <memory>
 
-#include "dawn/native/Buffer.h"
-#include "dawn/tests/unittests/native/mocks/DeviceMock.h"
 #include "gmock/gmock.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "src/utils/heap_array.h"
 
 namespace dawn::native {
 
@@ -40,10 +41,10 @@ class BufferMock : public BufferBase {
   public:
     BufferMock(DeviceMock* device,
                const UnpackedPtr<BufferDescriptor>& descriptor,
-               std::optional<uint64_t> allocatedSize = std::nullopt);
+               std::optional<uint64_t> allocatedSizeOverride = std::nullopt);
     BufferMock(DeviceMock* device,
                const BufferDescriptor* descriptor,
-               std::optional<uint64_t> allocatedSize = std::nullopt);
+               std::optional<uint64_t> allocatedSizeOverride = std::nullopt);
     ~BufferMock() override;
 
     MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
@@ -54,13 +55,13 @@ class BufferMock : public BufferBase {
                 (wgpu::MapMode mode, size_t offset, size_t size),
                 (override));
     MOCK_METHOD(MaybeError, FinalizeMapImpl, (BufferState newState), (override));
-    MOCK_METHOD(void*, GetMappedPointerImpl, (), (override));
+    MOCK_METHOD(Span<std::byte>, GetMappedRangeImpl, (size_t offset, size_t size), (override));
     MOCK_METHOD(void, UnmapImpl, (BufferState fromState, BufferState newState), (override));
 
     MOCK_METHOD(bool, IsCPUWritableAtCreation, (), (const, override));
 
   private:
-    std::unique_ptr<uint8_t[]> mBackingData;
+    HeapArray<std::byte> mBackingData;
 };
 
 }  // namespace dawn::native

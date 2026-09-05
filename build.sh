@@ -364,6 +364,55 @@ function build_desktop {
     fi
 }
 
+# ==================================================================================================
+# Emdawnwebgpu (Dawn WebGPU bindings for WebAssembly/Emscripten)
+#
+# Builds the `emdawnwebgpu_pkg` target locally from `third_party/dawn` using Emscripten.
+#
+# Why this is needed:
+#   Emscripten's built-in remote port (`--use-port=emdawnwebgpu`) downloads a pinned, pre-built
+#   snapshot of Emdawnwebgpu that may lag behind in-tree `third_party/dawn` features (such as
+#   texture component swizzles and recent WebGPU spec updates).
+#
+#   Building `emdawnwebgpu_pkg` locally generates up-to-date C/C++ headers (webgpu.h, webgpu_cpp.h)
+#   and JavaScript runtime glue (library_webgpu.js, struct info tables) directly from the in-tree
+#   Dawn schema (dawn.json). The resulting `emdawnwebgpu.port.py` is then supplied to Emscripten
+#   via `--use-port=<path_to_port.py>` during compilation and linking of Filament's WebAssembly
+#   targets.
+#
+#   Note: If you want to use Emscripten's default built-in version of the port instead of the
+#   in-tree build from third_party/dawn, change `--use-port=${dawn_port_path}` to
+#   `--use-port=emdawnwebgpu` in `build_wasm_with_target` and skip `build_wasm_dawn_package`.
+# ==================================================================================================
+function build_wasm_dawn_package {
+    local dawn_build_dir="out/cmake-wasm-dawn"
+
+    echo "Building in-tree emdawnwebgpu_pkg from third_party/dawn..."
+    mkdir -p "${dawn_build_dir}"
+
+    (
+        # Apply the Emscripten environment within a subshell.
+        # shellcheck disable=SC1090
+        source "${EMSDK}/emsdk_env.sh"
+        pushd "${dawn_build_dir}" > /dev/null
+
+        if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
+            emcmake cmake ../../third_party/dawn \
+                -G "${BUILD_GENERATOR}" \
+                -DDAWN_ABSEIL_DIR="${PWD}/../../third_party/abseil" \
+                -DDAWN_BUILD_TESTS=OFF \
+                -DDAWN_BUILD_SAMPLES=OFF \
+                -DDAWN_BUILD_PROTOBUF=OFF \
+                -DDAWN_SUPPORTS_CXX_MODULES=OFF \
+                -DTINT_BUILD_TESTS=OFF \
+                -DTINT_BUILD_BENCHMARKS=OFF
+        fi
+
+        cmake --build . --target emdawnwebgpu_pkg
+        popd > /dev/null
+    )
+}
+
 function build_wasm_with_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
@@ -377,8 +426,13 @@ function build_wasm_with_target {
     fi
 
     if [[ "${WEBGPU_OPTION}" == *"-DFILAMENT_SUPPORTS_WEBGPU=ON"* ]]; then
-        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_CXX_FLAGS=\"--use-port=emdawnwebgpu\""
-        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_C_FLAGS=\"--use-port=emdawnwebgpu\""
+        local root_dir="$(cd ../.. && pwd)"
+        local dawn_port_path="${root_dir}/out/cmake-wasm-dawn/emdawnwebgpu_pkg/emdawnwebgpu.port.py"
+        # Note: If you want to use Emscripten's default built-in version of the port instead
+        # of the in-tree package, replace "${dawn_port_path}" with "emdawnwebgpu"
+        # (i.e. --use-port=emdawnwebgpu).
+        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_CXX_FLAGS=\"--use-port=${dawn_port_path}\""
+        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_C_FLAGS=\"--use-port=${dawn_port_path}\""
     fi
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
@@ -441,6 +495,10 @@ function build_wasm {
     INSTALL_COMMAND=${old_install_command}
     ISSUE_DEBUG_BUILD=${old_issue_debug_build}
     ISSUE_RELEASE_BUILD=${old_issue_release_build}
+
+    if [[ "${WEBGPU_OPTION}" == *"-DFILAMENT_SUPPORTS_WEBGPU=ON"* ]]; then
+        build_wasm_dawn_package
+    fi
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_wasm_with_target "Debug"

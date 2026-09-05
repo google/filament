@@ -45,6 +45,23 @@ class JNIClasses {
         jclass gpuCallbackRunnable;
         jclass gpuCallbackErrorTypeRunnable;
         jclass gpuCallbackVoidRunnable;
+        jclass stringClass;
+        jclass gpuHardwareBufferExternalTexture;
+        jclass gpuHardwareBufferTexture;
+        jclass javaIllegalStateException;
+        jclass javaUnsupportedOperationException;
+        jclass parcelFileDescriptor;
+        jmethodID pfdGetFd;
+        jmethodID pfdAdoptFd;
+        // Special handling for GPUImportedHardwareBuffer, to prevent lookup on every frame.
+        jfieldID originX;
+        jfieldID originY;
+        jfieldID extentWidth;
+        jfieldID extentHeight;
+        jfieldID colorSpacePrimaries;
+        jfieldID colorSpaceTransfer;
+        jfieldID colorSpaceYCbCrRange;
+        jfieldID colorSpaceYCbCrMatrix;
     private:
         JNIClasses(JNIEnv *env);
 };

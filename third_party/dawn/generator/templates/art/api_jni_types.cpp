@@ -28,15 +28,19 @@
 {% macro arg_to_jni_type(arg) %}
     {%- if arg == None -%}
         void
-    {%- elif arg.length and arg.length != 'constant' -%}
+    {%- elif arg.length and (arg.length != 'constant' or arg.constant_length != 1) -%}
         {%- if arg.type.category in ['callback function', 'function pointer', 'kotlin type', 'object', 'structure'] -%}
             jobjectArray
         {%- elif arg.type.name.get() == 'void' -%}
             jobject
-        {%- elif arg.type.category in ['bitmask', 'enum'] or arg.type.name.get() == 'uint32_t' -%}
+        {%- elif arg.type.category in ['bitmask', 'enum'] or arg.type.name.get() in ['int', 'int32_t', 'uint32_t'] -%}
             jintArray
+        {%- elif arg.type.name.get() == 'float' -%}
+            jfloatArray
+        {%- elif arg.type.name.get() == 'char' -%}
+            jobjectArray
         {%- else -%}
-            {{ unreachable_code() }}
+            {{ unreachable_code('Unsupported array type in arg_to_jni_type: ' ~ arg.type.name.get()) }}
         {%- endif -%}
     {%- else -%}
         {{ to_jni_type(arg.type) }}
@@ -58,7 +62,7 @@
 {% macro jni_signature(member) %}
     {%- if member.type.name.get() == 'string view' -%}
         Ljava/lang/String;
-    {%- elif member.length and member.length != 'constant' -%}
+    {%- elif member.length and (member.length != 'constant' or member.constant_length != 1) -%}
         [{{ jni_signature_single_value(member.type) }}
     {%- else -%}
         {{ jni_signature_single_value(member.type) }}
@@ -71,14 +75,18 @@
     {%- elif type.category in ['bitmask', 'enum'] -%}
         {{ jni_signatures['int32_t'] }}
     {%- elif type.category == 'native' -%}
-        {{ jni_signatures[type.name.get()] }}
+        {%- if type.name.get() == 'char' -%}
+            Ljava/lang/String;
+        {%- else -%}
+            {{ jni_signatures[type.name.get()] }}
+        {%- endif -%}
     {%- else -%}
         {{ unreachable_code('Unsupported type: ' + type.name.get()) }}
     {%- endif -%}
 {% endmacro %}
 
 {% macro convert_to_kotlin(input, output, size, member) %}
-    {% if size is string %}
+    {% if size %}
         {% if member.type.name.get() in ['void const *', 'void *'] %}
             jobject {{ output }} = toByteBuffer(env, {{ input }}, {{ size }});
         {% elif member.type.category in ['object', 'structure'] %}
@@ -92,8 +100,18 @@
         {% elif member.type.category in ['bitmask', 'enum'] or member.type.name.get() in ['int', 'int32_t', 'uint32_t'] %}
             jintArray {{ output }} = env->NewIntArray({{ size }});
             {{'    '}}env->SetIntArrayRegion({{ output }}, 0, {{ size }}, reinterpret_cast<const jint *>({{ input }}));
+        {% elif member.type.name.get() == 'float' %}
+            jfloatArray {{ output }} = env->NewFloatArray({{ size }});
+            {{'    '}}env->SetFloatArrayRegion({{ output }}, 0, {{ size }}, reinterpret_cast<const jfloat *>({{ input }}));
+        {% elif member.type.name.get() == 'char' and member.annotation == 'const*const*' %}
+            jobjectArray {{ output }} = env->NewObjectArray({{ size }}, classes->stringClass, nullptr);
+            for (int idx = 0; idx != {{ size }}; idx++) {
+                jstring element = env->NewStringUTF({{ input }}[idx]);
+                env->SetObjectArrayElement({{ output }}, idx, element);
+                env->DeleteLocalRef(element);
+            }
         {% else %}
-            {{ unreachable_code() }}
+            {{ unreachable_code('Unsupported array type in convert_to_kotlin: ' ~ member.type.name.get()) }}
         {% endif %}
     {% elif member.type.category == 'object' %}
         jobject {{ output }};

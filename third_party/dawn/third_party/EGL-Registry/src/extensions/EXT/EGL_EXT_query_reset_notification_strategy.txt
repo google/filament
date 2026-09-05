@@ -1,0 +1,79 @@
+Name
+
+	EXT_query_reset_notification_strategy
+
+Name Strings
+
+	EGL_EXT_query_reset_notification_strategy
+
+Contributors
+
+	Simon Zeni <simon.zeni@collabora.com>
+
+Contact
+
+	Simon Zeni <simon.zeni@collabora.com>
+
+Status
+
+	Draft
+
+Version
+
+	Version 0.1, 2023-11-01
+
+Number
+
+	EGL Extension #152
+
+Extension Type
+
+	Client
+
+Dependencies
+
+	Requires EGL 1.4 and EXT_create_context_robustness.
+
+	The extension is written against the wording of the EGL 1.5
+	specification, but may be implemented against 1.4.
+
+Overview
+
+	This extension complements EXT_create_context_robustness and enables
+	an application or framework to retrieve an existing context's reset
+	notification strategy in order to create a compatible shared context.
+
+New Types
+
+	None
+
+New Procedures and Functions
+
+	None
+
+New Tokens
+
+	None
+
+Specification modifications
+
+	Append in section 3.7.4 (Context Queries), to the list of attributes
+	supported by eglQueryContext.
+
+		Querying EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_EXT
+		returns the reset notification strategy that was set for this
+		context. If no strategy was set, EGL_NO_RESET_NOTIFICATION_EXT
+		must be returned.
+
+Errors
+
+	None
+
+Issues
+
+	None
+
+Revision History
+
+	Version 0.1, 2023-11-01 (Simon Zeni)
+		- Initial draft

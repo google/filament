@@ -73,6 +73,7 @@ using Mat4x3 = std::array<float, 12>;
     X(RenderPipeline)               \
     X(Sampler)                      \
     X(ShaderModule)                 \
+    X(Surface)                      \
     X(Texture)                      \
     X(TexelBufferView)              \
     X(TextureView)
@@ -219,11 +220,48 @@ DAWN_REPLAY_EXPAND_RESOLVE_MODES_ENUM(DAWN_REPLAY_ENUM)
     X(WriteTexture)                  \
     X(SetLabel)                      \
     X(InitTexture)                   \
+    X(SurfaceConfigure)              \
+    X(SurfaceUnconfigure)            \
+    X(SurfacePresent)                \
+    X(SurfaceGetCurrentTexture)      \
     X(End)
 
 #define DAWN_REPLAY_ROOT_COMMANDS_ENUM(X) X(RootCommand, DAWN_REPLAY_ROOT_COMMANDS)
 
 DAWN_REPLAY_ROOT_COMMANDS_ENUM(DAWN_REPLAY_ENUM_WITH_INVALID)
+
+#define SURFACE_CONFIGURATION_MEMBER(X)              \
+    X(ObjectId, deviceId)                            \
+    X(wgpu::TextureFormat, format)                   \
+    X(wgpu::TextureUsage, usage)                     \
+    X(std::vector<wgpu::TextureFormat>, viewFormats) \
+    X(wgpu::CompositeAlphaMode, alphaMode)           \
+    X(uint32_t, width)                               \
+    X(uint32_t, height)                              \
+    X(wgpu::PresentMode, presentMode)
+
+DAWN_REPLAY_SERIALIZABLE(struct, SurfaceConfiguration, SURFACE_CONFIGURATION_MEMBER){};
+
+#define SURFACE_CONFIGURE_CMD_DATA_MEMBER(X) \
+    X(ObjectId, surfaceId)                   \
+    X(SurfaceConfiguration, config)
+
+DAWN_REPLAY_MAKE_ROOT_CMD_AND_CMD_DATA(SurfaceConfigure, SURFACE_CONFIGURE_CMD_DATA_MEMBER){};
+
+#define SURFACE_UNCONFIGURE_CMD_DATA_MEMBER(X) X(ObjectId, surfaceId)
+
+DAWN_REPLAY_MAKE_ROOT_CMD_AND_CMD_DATA(SurfaceUnconfigure, SURFACE_UNCONFIGURE_CMD_DATA_MEMBER){};
+
+#define SURFACE_PRESENT_CMD_DATA_MEMBER(X) X(ObjectId, surfaceId)
+
+DAWN_REPLAY_MAKE_ROOT_CMD_AND_CMD_DATA(SurfacePresent, SURFACE_PRESENT_CMD_DATA_MEMBER){};
+
+#define SURFACE_GET_CURRENT_TEXTURE_CMD_DATA_MEMBER(X) \
+    X(ObjectId, surfaceId)                             \
+    X(ObjectId, textureId)
+
+DAWN_REPLAY_MAKE_ROOT_CMD_AND_CMD_DATA(SurfaceGetCurrentTexture,
+                                       SURFACE_GET_CURRENT_TEXTURE_CMD_DATA_MEMBER){};
 
 #undef DAWN_REPLAY_ENUM
 #undef DAWN_REPLAY_GET_X_MACRO
@@ -459,14 +497,15 @@ DAWN_REPLAY_SERIALIZABLE(struct, Sampler, SAMPLER_CREATION_MEMBER){};
 
 DAWN_REPLAY_SERIALIZABLE(struct, RenderBundle, RENDER_BUNDLE_CREATION_MEMBER){};
 
-#define TEXTURE_CREATION_MEMBER(X)       \
-    X(wgpu::TextureUsage, usage)         \
-    X(wgpu::TextureDimension, dimension) \
-    X(Extent3D, size)                    \
-    X(wgpu::TextureFormat, format)       \
-    X(uint32_t, mipLevelCount)           \
-    X(uint32_t, sampleCount)             \
-    X(std::vector<wgpu::TextureFormat>, viewFormats)
+#define TEXTURE_CREATION_MEMBER(X)                   \
+    X(wgpu::TextureUsage, usage)                     \
+    X(wgpu::TextureDimension, dimension)             \
+    X(Extent3D, size)                                \
+    X(wgpu::TextureFormat, format)                   \
+    X(uint32_t, mipLevelCount)                       \
+    X(uint32_t, sampleCount)                         \
+    X(std::vector<wgpu::TextureFormat>, viewFormats) \
+    X(bool, isSurfaceTexture)
 
 DAWN_REPLAY_SERIALIZABLE(struct, Texture, TEXTURE_CREATION_MEMBER){};
 

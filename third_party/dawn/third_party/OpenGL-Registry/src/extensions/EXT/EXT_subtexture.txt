@@ -1,0 +1,364 @@
+Name
+
+    EXT_subtexture
+
+Name Strings
+
+    GL_EXT_subtexture
+
+Version
+
+    $Date: 1995/10/03 05:39:55 $ $Revision: 1.17 $
+
+Number
+
+    9
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+    EXT_texture3D affects the definition of this extension
+
+Overview
+
+    This extension allows a contiguous portion of an already-existing
+    texture image to be redefined, without affecting the remaining portion
+    of the image, or any of the other state that describe the texture.  No
+    provision is made to query a subregion of a texture.
+
+    Semantics for null image pointers are defined for TexImage1D,
+    TexImage2D, and TexImage3DEXT.  Null image pointers can be used by
+    applications to effectively support texture arrays whose dimensions
+    are not a power of 2.
+
+New Procedures and Functions
+
+    void TexSubImage1DEXT(enum target,
+                          int level,
+                          int xoffset,
+                          sizei width,
+                          enum format,
+                          enum type,
+                          const void* pixels);
+
+    void TexSubImage2DEXT(enum target,
+                          int level,
+                          int xoffset,
+                          int yoffset,
+                          sizei width,
+                          sizei height,
+                          enum format,
+                          enum type,
+                          const void* pixels);
+
+    void TexSubImage3DEXT(enum target,
+                          int level,
+                          int xoffset,
+                          int yoffset,
+                          int zoffset,
+                          sizei width,
+                          sizei height,
+                          sizei depth,
+                          enum format,
+                          enum type,
+                          const void* pixels);
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    This extension makes no changes or additions to the texture operations
+    defined in the GL Specification.  Its sole purpose is to extend the
+    semantics of texture specification.
+
+    TexSubImage1DEXT, TexSubImage2DEXT, and TexSubImage3DEXT redefine a
+    contiguous subregion of an existing texture image.  Their <target>
+    parameters must be TEXTURE_1D, TEXTURE_2D, and TEXTURE_3D_EXT
+    respectively.  (The proxy targets defined by EXT_texture are not
+    accepted by the subtexture commands.)  <level>, <width>, <height>,
+    <depth>, <format>, <type>, and <pixels> correspond precisely to the
+    corresponding arguments of TexImage1D, TexImage2D, and TexImage3DEXT.
+    <xoffset>, <yoffset>, and <zoffset> specify texel offsets in the x, y,
+    and z directions within the texture array being modified.  The new
+    image replaces the portion of the texture array indexed with
+
+        xoffset <= i < (xoffset + width),
+        yoffset <= j < (yoffset + height),
+        zoffset <= k < (zoffset + depth),
+
+    where i, j, and k are indexes as described in Figure 3.10 of the GL
+    Specification.  It is an error for this region to include any texels
+    outside the range of the texture array as it was originally specified.  
+    Specifically, the error INVALID_VALUE results if any of the following
+    conditions are met:
+
+        xoffset < -TEXTURE_BORDER
+        (xoffset + width) > (TEXTURE_WIDTH - TEXTURE_BORDER)
+        yoffset < -TEXTURE_BORDER
+        (yoffset + height) > (TEXTURE_HEIGHT - TEXTURE_BORDER)
+        zoffset < -TEXTURE_BORDER
+        (zoffset + depth) > (TEXTURE_DEPTH_EXT - TEXTURE_BORDER)
+
+    and TEXTURE_WIDTH, TEXTURE_HEIGHT, TEXTURE_DEPTH_EXT, and TEXTURE_BORDER
+    are the state values of the texture array that is being modified.  Note
+    that TEXTURE_WIDTH, TEXTURE_HEIGHT, and TEXTURE_DEPTH_EXT include twice
+    the border width.
+
+    It is not an error to specify a subtexture with zero width, height, or
+    depth.  Such a specification has no effect, however.
+
+    Counting from zero, each Nth pixel is assigned internal integer
+    coordinates [i,j,k], where
+
+        i = xoffset + (N mod width),                    1D, 2D, and 3D textures
+
+        j = yoffset + ((N div width) mod height),       2D and 3D textures only
+
+        k = zoffset + ((N div (width * height)) mod depth),  3D textures only
+
+    and the div operator performs integer division with truncation.
+
+    Null images
+    -----------
+
+    It is sometimes useful to define the parameters of a texture image
+    without actually initializing the contents of that image.  In
+    particular, this capability is expected to be used in conjunction with
+    the TexSubImage commands that are defined in this extension.  If
+    EXT_subtexture is implemented, and TexImage1D, TexImage2D, or
+    TexImage3DEXT is called with <pixels> equal to the null pointer
+    (a pointer to location zero in the C language), then the specified
+    texture is created as it would otherwise be, but no pixels are
+    processed, so the contents of the resulting texture image are undefined.
+    It is permissible to use such an uninitialized texture image, the
+    resulting color buffer contents being undefined only due to the random
+    color values of the texture image.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None.  No provision is made to query a subregion of a texture image.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Several new GL rendering commands are added. All of these commands have pixel
+    data; thus they are sent to the server either as part of a glXRender request or 
+    a glXRenderLarge request:
+
+        TexSubImage1DEXT
+            2           60+n+p          rendering command length
+            2           4099
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          skip_rows
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           yoffset
+            4           INT32           width
+            4           INT32           height
+            4           ENUM            format
+            4           ENUM            type
+            4           CARD32          unused
+            n           LISTofBYTE      image
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the command
+            opcode and command length fields above are expanded to 4 bytes each:
+
+            4           64+n+p          rendering command length
+            4           4099            rendering command opcode
+
+        If <width> < 0, <format> is invalid or <type> is invalid, then the command is 
+        erroneous and n=0. The <yoffset> and <height> parameters in this request are 
+        ignored.
+
+        The structure of <pixels> is described in Appendix A of the GLX Protocol 
+        Specification, "Pixel Data", using the parameters <swap_bytes>, <lsb_first>, 
+        <row_length>, <skip_rows>, <skip_pixels>, <alignment>, <width>, <format>, and 
+        <type> as given in the request and height = 1.
+
+
+        TexSubImage2DEXT
+            2           60+n+p          rendering command length
+            2           4100            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          skip_rows
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           yoffset
+            4           INT32           width
+            4           INT32           height
+            4           ENUM            format
+            4           ENUM            type
+            4           CARD32          unused
+            n           LISTofBYTE      image
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the command
+            opcode and command length fields above are expanded to 4 bytes each:
+
+            4           64+n+p          rendering command length
+            4           4100            rendering command opcode
+
+        If <width> < 0, <height> < 0, <format> is invalid or <type> is invalid, then 
+        the command is erroneous and n=0.
+
+        The structure of <pixels> is described in Appendix A of the GLX Protocol 
+        Specification, "Pixel Data", using the parameters <swap_bytes>, <lsb_first>, 
+        <row_length>, <skip_rows>, <skip_pixels>, <alignment>, <width>, <height>, 
+        <format>, and <type> as given in the request.
+
+
+        TexSubImage3DEXT
+            2           88+n+p          rendering command length
+            2           4115            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          image_height
+            4           CARD32          image_depth
+            4           CARD32          skip_rows
+            4           CARD32          skip_images
+            4           CARD32          skip_volumes
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           yoffset
+            4           INT32           zoffset
+            4           INT32           woffset
+            4           INT32           width
+            4           INT32           height
+            4           INT32           depth
+            4           INT32           size4d
+            4           ENUM            format
+            4           ENUM            type
+            4           CARD32          unused
+            n           LISTofBYTE      image
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the command
+            opcode and command length fields above are expanded to 4 bytes each:
+
+            4           92+n+p          rendering command length
+            4           4115            rendering command opcode
+
+        If <width> < 0, <height> < 0, <depth> < 0, <format> is invalid or <type> is 
+        invalid, then the command is erroneous and n=0. The <woffset>, <size4d>,
+        <image_depth>, and <skip_volumes> parameters in this request are ignored.
+
+        <pixels> is arranged as a sequence of adjacent rectangles. Each rectangle is a
+        2-dimensional image, whose structure is determined by the image height and the
+        parameters <swap_bytes>, <lsb_first>, <row_length>, <skip_rows>, <skip_pixels>,
+        <alignment>, <width>, <format>, and <type> given in the request. If <image_height>
+        is not positive then the number of rows (i.e., the image height) is <height>;
+        otherwise the number of rows is <image_height>.
+
+        <skip_images> allows a sub-volume of the 3-dimensional image to be selected.
+        If <skip_images> is positive, then the pointer is advanced by <skip_images>
+        times the number of elements in one 2-dimensional image. Then <depth>
+        2-dimensional images are read, each having a subimage extracted in the
+        manner described in Appendix A of the GLX Protocol Specification.
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is supported, the <format> parameters of TexSubImage1DEXT,
+    TexSubImage2DEXT, and TexSubImage3DEXT accept ABGR_EXT.  Otherwise they
+    do not.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of
+    internal image format, which is defined by EXT_texture.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, then TexSubImage3DEXT is not defined
+    by this extension.  In this case, none of the description of
+    3-dimensional texture mapping in this extension document is valid.  The
+    descriptions of TexSubImage1DEXT and TexSubImage2DEXT remain valid,
+    however.
+
+Errors
+
+    INVALID_ENUM is generated by TexSubImage1DEXT if its <target> parameter
+    is not TEXTURE_1D.
+
+    INVALID_ENUM is generated by TexSubImage2DEXT if its <target> parameter
+    is not TEXTURE_2D.
+
+    INVALID_ENUM is generated by TexSubImage3DEXT if its <target> parameter
+    is not TEXTURE_3D_EXT.
+
+    INVALID_OPERATION is generated by TexSubImage1DEXT if the specified
+    texture array has not been defined by a previous TexImage1D operation.
+
+    INVALID_OPERATION is generated by TexSubImage2DEXT if the specified
+    texture array has not been defined by a previous TexImage2D operation.
+
+    INVALID_OPERATION is generated by TexSubImage3DEXT if the specified
+    texture array has not been defined by a previous TexImage3DEXT
+    operation.
+
+    INVALID_VALUE is generated if <level> is less than zero
+
+    INVALID_VALUE is generated if <width>, <height>, or <depth> is negative.
+
+    INVALID_VALUE is generated if <xoffset>, <yoffset>, or <zoffset> is
+    less than -TEXTURE_BORDER.
+
+    INVALID_VALUE is generated if
+        (xoffset + width) > (TEXTURE_WIDTH - TEXTURE_BORDER), or if
+        (yoffset + height) > (TEXTURE_HEIGHT - TEXTURE_BORDER), or if
+        (zoffset + depth) > (TEXTURE_DEPTH_EXT - TEXTURE_BORDER).
+
+    INVALID_ENUM is generated if <format> is not COLOR_INDEX, RED, GREEN,
+    BLUE, ALPHA, RGB, RGBA, LUMINANCE, or LUMINANCE_ALPHA (or ABGR_EXT if
+    EXT_abgr is supported).
+
+    INVALID_ENUM is generated if <type> is not UNSIGNED_BYTE, BYTE,
+    UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_OPERATION is generated if TexSubImage1DEXT, TexSubImage2DEXT,
+    or TexSubImage3DEXT is called between execution of Begin and the
+    corresponding execution of End.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

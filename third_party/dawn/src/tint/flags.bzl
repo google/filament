@@ -1,5 +1,4 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag", "bool_flag")
-load("@bazel_skylib//lib:selects.bzl", "selects")
 
 def declare_bool_flag(name, default):
     """Create a boolean flag and two config_settings with the names: <name>_true, <name>_false.
@@ -33,38 +32,6 @@ def declare_bool_flag(name, default):
         visibility = ["//visibility:public"],
     )
 
-def declare_os_flag():
-    """Creates the 'os' string flag that specifies the OS to target, and a pair of
-    'tint_build_is_<os>_true' and 'tint_build_is_<os>_false' targets.
-
-    The OS flag can be specified on the command line with '--//src/tint:os=<os>'
-    """
-
-    OSes = [
-        "win",
-        "linux",
-        "mac",
-        "other"
-    ]
-
-    string_flag(
-        name = "os",
-        build_setting_default = "other",
-        values = OSes,
-    )
-
-    for os in OSes:
-        native.config_setting(
-            name = "tint_build_is_{}_true".format(os),
-            flag_values = { ":os": os },
-            visibility = ["//visibility:public"],
-        )
-        selects.config_setting_group(
-            name = "tint_build_is_{}_false".format(os),
-            match_any = [ "tint_build_is_{}_true".format(other) for other in OSes if other != os],
-            visibility = ["//visibility:public"],
-        )
-
 COPTS = [
     "-fno-rtti",
     "-fno-exceptions",
@@ -95,5 +62,14 @@ COPTS = [
     "//conditions:default": [],
 }) + select({
     "//src/tint:tint_build_null_writer_true": [ "-DTINT_BUILD_NULL_WRITER" ],
+    "//conditions:default": [],
+}) + select({
+    "//src/tint:tint_build_fuzzer_vulkan_support_true": [ "-DTINT_BUILD_FUZZER_VULKAN_SUPPORT" ],
+    "//conditions:default": [],
+}) + select({
+    "//src/tint:tint_build_ir_binary_true": [ "-DTINT_BUILD_IR_BINARY" ],
+    "//conditions:default": [],
+}) + select({
+    "//src/tint:tint_build_mesa_true": [ "-DTINT_BUILD_MESA" ],
     "//conditions:default": [],
 })

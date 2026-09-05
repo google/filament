@@ -144,7 +144,7 @@ class DeviceSet:
     def maskDeviceId(self):
         if not self.mask:
             return ''
-        return ' & ' + self.mask
+        return f' & {self.mask}u'
 
 
 class Vendor:

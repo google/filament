@@ -1,0 +1,428 @@
+Name
+
+    ARB_invalidate_subdata
+
+Name Strings
+
+    GL_ARB_invalidate_subdata
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Michael Gold, NVIDIA Corporation
+    Bruce Merry
+    Pat Brown, NVIDIA Corporation
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:         July 30, 2012
+    Revision:                   5
+
+Number
+
+    ARB Extension #132
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification 
+    (Compatibility profile).
+
+    OpenGL 2.0 is required.
+    
+    This extension interacts with OpenGL ES 2.0.
+
+
+Overview
+
+    This extension adds a mechanism for an application to tell the GL that
+    the previous contents of a subregion of an image or a range of a buffer 
+    may be invalidated.
+
+    GL implementations often include several memory spaces, each with 
+    distinct performance characteristics, and the implementations 
+    transparently move allocations between memory spaces. With this 
+    extension, an application can tell the GL that the contents of a texture
+    or buffer are no longer needed, and the implementation can avoid 
+    transferring the data unnecessarily.
+
+    Examples of when this may be useful include:
+
+    (1) invalidating a multisample texture after resolving it into a non-
+        multisample texture.
+
+    (2) invalidating depth/stencil buffers after using them to generate a color
+        buffer.
+
+    (3) invalidating a subregion of a framebuffer rather than clearing it 
+        before rendering to it, when the whole subregion will be overwritten.
+
+    (4) invalidating dynamically generated data (e.g. textures written by FBO 
+        rendering or CopyTexSubImage, buffers written by transform feedback,
+        etc.) after it is no longer needed but before the end of the frame.
+
+    It is expected that the situations in which the GL will take advantage of
+    this knowledge and achieve increased performance as a result of its use
+    will be implementation-dependent. The first three examples may show 
+    benefit on tiled renderers where some data won't need to be copied into 
+    or out of on-chip memory. The fourth example may show a benefit in multi-
+    GPU systems where some data won't need to be copied between GPUs.
+
+    This extension is a superset of the EXT_discard_framebuffer extension 
+    with the following additions:
+
+      - The parameters to InvalidateFramebufferEXT are extended for MRT support
+        and Desktop-GL-only buffer enums.
+
+      - New functions to invalidate a region of a texture image or buffer object
+        data store.
+
+
+New Procedures and Functions
+
+    void InvalidateTexSubImage(uint texture, int level,
+                               int xoffset, int yoffset, int zoffset,
+                               sizei width, sizei height, sizei depth);
+    void InvalidateTexImage(uint texture, int level);
+
+    void InvalidateBufferSubData(uint buffer, intptr offset, sizeiptr length);
+    void InvalidateBufferData(uint buffer);
+
+    void InvalidateFramebuffer(enum target, 
+                               sizei numAttachments, 
+                               const enum *attachments);
+    void InvalidateSubFramebuffer(enum target, 
+                                  sizei numAttachments, 
+                                  const enum *attachments,
+                                  int x, int y, sizei width, sizei height);
+
+
+New Tokens
+
+    None.
+
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    Add a new Section 2.9.X (Invalidating Buffer Data)
+
+    Invalidating Buffer Data
+
+    All or part of the data store of a buffer object may be invalidated by
+    calling
+
+        void InvalidateBufferSubData(uint buffer, intptr offset, sizeiptr length);
+
+    with <buffer> set to the name of the buffer whose data store is being 
+    invalidated. <offset> and <length> specify the range of the data in the 
+    buffer object that is to be invalidated. If <buffer> is zero or is not the 
+    name of a buffer, the error INVALID_VALUE is generated. An INVALID_VALUE 
+    error is generated if <offset> or <length> is negative, or if <offset> + 
+    <length> is greater than the value of BUFFER_SIZE. An INVALID_OPERATION
+    error is generated if the buffer is currently mapped by MapBuffer, or if
+    the invalidate range intersects the range currently mapped by 
+    MapBufferRange. After this command, data in the specified range have 
+    undefined values.
+
+     The command
+
+        void InvalidateBufferData(uint buffer);
+
+    is equivalent to calling InvalidateBufferSubData with <offset> equal to 
+    zero and <length> equal to the value of BUFFER_SIZE.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    Add a new Section 3.9.X (Invalidating Texture Image Data)
+
+    Invalidating Texture Image Data
+
+    All or part of a texture image may be invalidated by calling
+    
+        void InvalidateTexSubImage(uint texture, int level,
+                                   int xoffset, int yoffset, int zoffset,
+                                   sizei width, sizei height, sizei depth);
+
+    with <texture> and <level> indicating which texture image is being
+    invalidated. After this command, data in that subregion have undefined
+    values. <xoffset>, <yoffset>, <zoffset>, <width>, <height>, and <depth>
+    are interpreted as they are in TexSubImage3D. For texture targets that
+    don't have certain dimensions, this command treats those dimensions as
+    having a size of 1. For example, to invalidate a portion of a two-
+    dimensional texture, the application would use <zoffset> equal to zero and
+    <depth> equal to one. Cube map textures are treated as an array of six
+    slices in the z-dimension, where a value of <zoffset> is interpreted as
+    specifying face TEXTURE_CUBE_MAP_POSITIVE_X + <zoffset>.
+
+    If <level> is less than zero or greater than the base 2 logarithm of the
+    maximum texture width, height, or depth, the error INVALID_VALUE is
+    generated. The arguments <xoffset>, <yoffset>, <zoffset>, <width>,
+    <height>, and <depth> generate the same errors as in the TexSubImage
+    commands. That is, the specified subregion must be between -<b> and
+    <dim>+<b> where <dim> is the size of the dimension of the texture image,
+    and <b> is the size of the border of that texture image, otherwise
+    INVALID_VALUE is generated (border is not applied to dimensions that don't
+    exist in a given texture target). If <texture> is zero or is not the name
+    of a texture, the error INVALID_VALUE is generated. It is not possible to
+    invalidate a portion of a default texture. If the target of <texture> is
+    TEXTURE_RECTANGLE, TEXTURE_BUFFER, TEXTURE_2D_MULTISAMPLE, or
+    TEXTURE_2D_MULTISAMPLE_ARRAY, and <level> is not zero, the error
+    INVALID_VALUE is generated.
+
+    The command
+
+        void InvalidateTexImage(uint texture, int level);
+
+    is equivalent to calling InvalidateTexSubImage with <xoffset>, <yoffset>,
+    and <zoffset> equal to <-b> and <width>, <height>, and <depth> equal to 
+    the dimensions of the texture image plus 2*<b> (or zero and one for 
+    dimensions the texture doesn't have).
+
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    Add a new section 4.5 (Invalidating Framebuffer Contents)
+
+    The GL provides a means for invalidating portions of every pixel or a 
+    subregion of pixels in a particular buffer, effectively leaving their 
+    contents undefined.  The command
+
+        void InvalidateSubFramebuffer(enum target, 
+                                      sizei numAttachments, 
+                                      const enum *attachments
+                                      int x, int y, sizei width, sizei height);
+
+    effectively signals to the GL that it need not preserve all contents of
+    a bound framebuffer object. <numAttachments> indicates how many 
+    attachments are supplied in the <attachments> list. If <numAttachments> 
+    is less than zero, the error INVALID_VALUE is generated. If an attachment
+    is specified that does not exist in the framebuffer bound to <target>, it
+    is ignored. <target> must be FRAMEBUFFER, DRAW_FRAMEBUFFER, or 
+    READ_FRAMEBUFFER. FRAMEBUFFER is treated as DRAW_FRAMEBUFFER. <x> and <y> 
+    are the origin (with lower left-hand corner at (0,0)) and <width> and 
+    <height> are the width and height, respectively, of the pixel rectangle to 
+    be invalidated. Any of these pixels lying outside of the window allocated 
+    to the current GL context, or outside of the attachments of the currently 
+    bound framebuffer object, are ignored.
+    
+    If a framebuffer object is bound to <target>, then elements of 
+    <attachments> must be COLOR_ATTACHMENTi, DEPTH_ATTACHMENT, or 
+    STENCIL_ATTACHMENT, otherwise the error INVALID_ENUM is generated. If the
+    framebuffer object is not complete, InvalidateFramebuffer may be ignored.
+    If <attachments> contains COLOR_ATTACHMENTm and m is greater than or equal to
+    the value of MAX_COLOR_ATTACHMENTS, then the error INVALID_OPERATION is 
+    generated.
+
+    If the default framebuffer is bound to <target>, then elements of 
+    <attachments> must be any of:
+
+      - FRONT_LEFT, FRONT_RIGHT, BACK_LEFT, BACK_RIGHT, AUXi, and ACCUM, 
+        identifying that specific buffer;
+      - COLOR, which is treated as BACK_LEFT for a double-buffered context
+        and FRONT_LEFT for a single-buffered context;
+      - DEPTH, identifying the depth buffer;
+      - STENCIL, identifying the stencil buffer;
+
+    otherwise the error INVALID_ENUM is generated.
+
+    The command
+
+        void InvalidateFramebuffer(enum target, 
+                                   sizei numAttachments, 
+                                   const enum *attachments);
+
+    is equivalent to the command InvalidateSubFramebuffer with <x>, 
+    <y>, <width>, <height> equal to 0, 0, <MAX_VIEWPORT_DIMS[0]>, 
+    <MAX_VIEWPORT_DIMS[1]> respectively.
+
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and
+State Requests)
+
+    None.
+
+Additions to the OpenGL Shading Language Specification
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    XXX TODO
+
+
+Dependencies on OpenGL ES 2.0
+
+    If this extension is implemented on OpenGL ES 2.0, the following
+    simplifications apply:
+    
+    - Only COLOR_ATTACHMENT0, DEPTH_ATTACHMENT, STENCIL_ATTACHMENT, COLOR_EXT,
+      DEPTH_EXT, and STENCIL_EXT are accepted in InvalidateSubFramebuffer and 
+      InvalidateFramebuffer. COLOR_EXT, DEPTH_EXT, and STENCIL_EXT are defined
+      by EXT_discard_framebuffer.
+
+    - Bordered textures are not supported, so the subregion in 
+      InvalidateTexSubImage must be between 0 and <dim>.
+
+    - 3D textures are not supported, so that language in InvalidateTexSubImage
+      doesn't apply.
+
+    - MapBuffer(Range) are not supported, so that error check is removed from
+      InvalidateBufferSubData and InvalidateBufferData.
+
+    - READ_FRAMEBUFFER/DRAW_FRAMEBUFFER are not accepted by 
+      Invalidate(Sub)Framebuffer.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Examples
+
+    XXX TODO
+
+
+Issues
+
+    (1) Should these commands use <target> or <name> to specify the object?
+
+    RESOLVED: Use <name> for textures and buffers, to avoid requiring the 
+    application to disturb any bindings in order to use it. 
+    Invalidate(Sub)Framebuffer only applies to the currently bound draw or 
+    read framebuffers.
+
+    (2) Should Invalidate(Sub)Framebuffer have any accommodations for 
+    invalidating a range in the z-dimension for a 3D or layered texture?
+
+    RESOLVED: No, all layers are invalidated, the same behavior as a Clear.
+    An application can use InvalidateTexSubImage to invalidate a subregion in 
+    the z-dimension.
+
+    (3) Should Invalidate(Sub)Framebuffer be able to use the READ_FRAMEBUFFER
+    binding?
+
+    RESOLVED: Yes. One common use case for Invalidate(Sub)Framebuffer is to 
+    invalidate the contents of a multisample buffer immediately after using 
+    BlitFramebuffer to resolve it. At this point, the multisample buffer will
+    be attached to the current READ_FRAMEBUFFER, so invalidating it is as easy 
+    as
+    
+        InvalidateFramebuffer(READ_FRAMEBUFFER, 1, [COLOR_ATTACHMENTi]);
+
+    This is a superset of the EXT_discard_framebuffer extension which only 
+    allowed FRAMEBUFFER since GLES 2.0 does not support separate read/draw
+    targets.
+
+    (4) Should there be special handling for mapped buffers or buffers in use
+    by transform feedback? These are two cases where a buffer is being 
+    written to over a period of time.
+
+    RESOLVED: Raise an error for Invalidate on mapped buffers, but not for 
+    transform feedback.
+
+    For mapped buffers, the GL doesn't know the order of the CPU writes
+    versus the invalidate. i.e. it can't distinguish between "write then 
+    Invalidate then Unmap" vs "Invalidate then write then Unmap". Trying to order
+    Invalidates against CPU writes would additionally require Invalidates to be
+    processed synchronously. Mapped buffers already provide a means to 
+    invalidate via the ARB_map_buffer_range extension.
+
+    For transform feedback, the GL is in control of when writes occur to the
+    attached buffers, and therefore knows when writes occur relative to the
+    Invalidate commands. So Invalidates are well-defined in this case. It's 
+    desirable to have this resolved in the same way as textures bound to an 
+    FBO, which we also leave as well-defined.
+
+    (5) Should we have a way to invalidate renderbuffers by name?
+
+    RESOLVED: No. 
+    
+    OpenGL 3.2 adds support for multisample textures, so there isn't any 
+    reason for renderbuffers to exist anymore. However, some GL ES
+    implementations may wish to implement this extension in an environment 
+    where ARB_texture_multisample is not supported and renderbuffers are the
+    only way to get a multisample image. There are multiple options here:
+
+    - Add a new command for invalidating contents of a renderbuffer.
+
+    - Add a <target> parameter to Invalidate*Image to distinguish between 
+      texture names and renderbuffer names.
+
+    - Hope that Invalidate(Sub)Framebuffer is sufficient, which it is at 
+      least for the use case described in issue (3).
+
+    We choose the third option, and recommend using multisample textures 
+    going forward.
+
+    (6) Should the subregion for InvalidateSubFramebuffer be explicitly 
+    specified, or re-use the Scissor?
+
+    RESOLVED: Explicitly specified in coordinates similar to Scissor, but 
+    not reusing the Scissor state. The Scissor is a fragment operation and 
+    InvalidateSubFramebuffer does not generate fragments, so it's more 
+    logical to have a separate rectangle.
+
+    (7) Do we need Sub/non-Sub versions of InvalidateFramebuffer?
+
+    RESOLVED: Yes, to make this extension a superset of 
+    EXT_discard_framebuffer. Strictly speaking the answer is "no", because 
+    an application can use values of (0,0,maxViewport[0],maxViewport[1]) to 
+    invalidate entire images. This is in contrast to the buffer and texture 
+    commands that error-check the parameters against the size of the data 
+    store. 
+    
+    Since window-system framebuffers can change size asynchronously, we don't
+    want to error-check the parameters of InvalidateSubFramebuffer. However, 
+    InvalidateBufferSubData and InvalidateTexSubImage should error-check to 
+    be consistent with MapBufferRange and TexSubImage.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    1     10/01/10  jbolz     Internal revisions.
+    2     01/12/12  jbolz     Updates to match ES.
+    3     04/16/12  pbrown    Fix the error for <level>!=0 on rectangle,
+                              buffer and multisample textures to refer to
+                              the target of <texture> instead of a <target>
+                              parameter.
+    4     05/08/12  pbrown    Fix typo in spec language describing the
+                              interpretation of <zoffset> for cube maps.
+    5     07/30/12  jbolz     Add missing error for <buffer>==0.
+

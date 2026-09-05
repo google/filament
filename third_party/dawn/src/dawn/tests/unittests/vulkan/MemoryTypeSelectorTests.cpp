@@ -27,11 +27,11 @@
 
 #include <vector>
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/vulkan/MemoryTypeSelector.h"
-#include "dawn/utils/TestUtils.h"
 #include "dawn/webgpu_cpp_print.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/vulkan/MemoryTypeSelector.h"
+#include "src/dawn/utils/TestUtils.h"
 
 namespace dawn::native::vulkan {
 
@@ -58,23 +58,23 @@ TEST(MemoryTypeSelectorTests, Quatro_P100) {
     MemoryTypeSelector selector(memoryTypes, memoryHeaps);
 
     // Device local buffers or textures.
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0);
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0u);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0u);
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal),
-              0);
+              0u);
 
     // Write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::WriteMappable),
-              1);
+              1u);
 
     // Read mappable buffers prefer HOST_CACHED.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable),
-              2);
+              2u);
 
     // Read+write mappable buffers prefer HOST_CACHED+HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              2);
+              2u);
 
     // BufferMapExtendedUsages buffers are disabled on Nvidia GPUs.
 }
@@ -95,44 +95,44 @@ TEST(MemoryTypeSelectorTests, Mali_G715) {
     MemoryTypeSelector selector(memoryTypes, memoryHeaps);
 
     // Device local buffers or textures.
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0);
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0u);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0u);
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal),
-              0);
+              0u);
 
     // Write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::WriteMappable),
-              0);
+              0u);
 
     // Read mappable buffers prefer HOST_CACHED over HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable),
-              1);
+              1u);
 
     // Read+write mappable buffers prefer HOST_CACHED since HOST_CACHED+HOST_COHERENT isn't
     // available.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              1);
+              1u);
 
     // Lazily allocated textures.
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::LazilyAllocated), 2);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::LazilyAllocated), 2u);
 
     // BufferMapExtendedUsages write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::WriteMappable),
-              0);
+              0u);
 
     // BufferMapExtendedUsages read mappable buffers prefer HOST_CACHED.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::ReadMappable),
-              1);
+              1u);
 
     // BufferMapExtendedUsages read+write mappable buffers prefer HOST_CACHED since no
     // HOST_CACHED+HOST_COHERENT exists.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              1);
+              1u);
 }
 
 TEST(MemoryTypeSelectorTests, Mali_G72) {
@@ -150,42 +150,42 @@ TEST(MemoryTypeSelectorTests, Mali_G72) {
     MemoryTypeSelector selector(memoryTypes, memoryHeaps);
 
     // Device local buffers or textures.
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0);
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0u);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0u);
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal),
-              0);
+              0u);
 
     // Write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::WriteMappable),
-              0);
+              0u);
 
     // Read mappable buffers prefer HOST_CACHED over HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable),
-              1);
+              1u);
 
     // Read+write mappable buffers prefer HOST_CACHED+HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              1);
+              1u);
 
     // Lazily allocated textures.
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::LazilyAllocated), 2);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::LazilyAllocated), 2u);
 
     // BufferMapExtendedUsages write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::WriteMappable),
-              0);
+              0u);
 
     // BufferMapExtendedUsages read mappable buffers prefer HOST_CACHED.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::ReadMappable),
-              1);
+              1u);
 
     // BufferMapExtendedUsages read+write mappable buffers prefer HOST_CACHED+HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              1);
+              1u);
 }
 
 TEST(MemoryTypeSelectorTests, Adreno_620) {
@@ -209,39 +209,39 @@ TEST(MemoryTypeSelectorTests, Adreno_620) {
     MemoryTypeSelector selector(memoryTypes, memoryHeaps);
 
     // Device local buffers or textures.
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0);
-    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear), 0u);
+    EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::DeviceLocal), 0u);
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal),
-              0);
+              0u);
 
     // Write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::WriteMappable),
-              1);
+              1u);
 
     // Read mappable buffers prefer HOST_CACHED over HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable),
-              2);
+              2u);
 
     // Read+write mappable buffers prefer HOST_CACHED+HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              3);
+              3u);
 
     // BufferMapExtendedUsages write mappable buffers prefer HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::WriteMappable),
-              1);
+              1u);
 
     // BufferMapExtendedUsages read mappable buffers prefer HOST_CACHED.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::ReadMappable),
-              2);
+              2u);
 
     // BufferMapExtendedUsages read+write mappable buffers prefer HOST_CACHED+HOST_COHERENT.
     EXPECT_EQ(selector.FindBestTypeIndex(kAnyType, MemoryKind::Linear | MemoryKind::DeviceLocal |
                                                        MemoryKind::ReadMappable |
                                                        MemoryKind::WriteMappable),
-              3);
+              3u);
 }
 
 }  // namespace dawn::native::vulkan

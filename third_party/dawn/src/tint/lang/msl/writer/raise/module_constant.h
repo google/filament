@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_MSL_WRITER_RAISE_MODULE_CONSTANT_H_
 #define SRC_TINT_LANG_MSL_WRITER_RAISE_MODULE_CONSTANT_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,20 +36,6 @@ class Module;
 }
 
 namespace tint::msl::writer::raise {
-
-/// The capabilities that the transform can support.
-const core::ir::Capabilities kModuleConstantCapabilities{
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kAllow64BitIntegers,
-    core::ir::Capability::kAllowPointSizeBuiltin,
-    core::ir::Capability::kAllowVectorElementPointer,
-    core::ir::Capability::kAllowHandleVarsWithoutBindings,
-    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
-    core::ir::Capability::kAllowAnyLetType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kMslAllowEntryPointInterface,
-    core::ir::Capability::kAllowModuleScopeLets,
-};
 
 /// The set of polyfills that should be applied.
 struct ModuleConstantConfig {

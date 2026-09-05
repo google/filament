@@ -1,0 +1,2422 @@
+Name
+
+    EXT_shader_image_load_store
+
+Name Strings
+
+    GL_EXT_shader_image_load_store
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Eric Werness, NVIDIA
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Nick Haemel, AMD
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         10/16/2013
+    NVIDIA Revision:            7
+
+Number
+
+    386
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification
+    (Compatibility Profile).
+
+    This extension is written against version 1.50 (revision 09) of the OpenGL
+    Shading Language Specification.
+
+    OpenGL 3.0 and GLSL 1.30 are required.
+
+    This extension interacts trivially with OpenGL 3.2 (Core Profile).
+
+    This extension interacts trivially with OpenGL 3.1,
+    ARB_uniform_buffer_object, and EXT_bindable_uniform.
+
+    This extension interacts trivially with ARB_draw_indirect.
+
+    This extension interacts trivially with NV_vertex_buffer_unified_memory.
+
+    This extension interacts trivially with OpenGL 3.2 and
+    ARB_texture_multisample.
+
+    This extension interacts trivially with OpenGL 4.0 and ARB_sample_shading.
+
+    This extension interacts trivially with OpenGL 4.0 and
+    ARB_texture_cube_map_array.
+
+    This extension interacts trivially with OpenGL 3.3 and
+    ARB_texture_rgb10_a2ui.
+
+    This extension interacts trivially with NV_shader_buffer_load.
+
+    This extension interacts trivially with OpenGL 4.0, ARB_gpu_shader5, and
+    NV_gpu_shader5.
+
+    This extension interacts trivially with OpenGL 4.0 and
+    ARB_tessellation_shader.
+
+    This extension interacts trivially with EXT_depth_bounds_test.
+
+    This extension interacts with EXT_separate_shader_objects.
+
+    This extension interacts with NV_gpu_program5.
+
+Overview
+
+    This extension provides GLSL built-in functions allowing shaders to load
+    from, store to, and perform atomic read-modify-write operations to a
+    single level of a texture object from any shader stage.  These built-in
+    functions are named imageLoad(), imageStore(), and imageAtomic*(),
+    respectively, and accept integer texel coordinates to identify the texel
+    accessed.  The extension adds the notion of "image units" to the OpenGL
+    API, to which texture levels are bound for access by the GLSL built-in
+    functions.  To allow shaders to specify the image unit to access, GLSL
+    provides a new set of data types ("image*") similar to samplers.  Each
+    image variable is assigned an integer value to identify an image unit to
+    access, which is specified using Uniform*() APIs in a manner similar to
+    samplers.  For implementations supporting the NV_gpu_program5 extensions,
+    assembly language instructions to perform image loads, stores, and atomics
+    are also provided.
+
+    This extension also provides the capability to explicitly enable "early"
+    per-fragment tests, where operations like depth and stencil testing are
+    performed prior to fragment shader execution.  In unextended OpenGL,
+    fragment shaders never have any side effects and implementations can
+    sometimes perform per-fragment tests and discard some fragments prior to
+    executing the fragment shader.  Since this extension allows fragment
+    shaders to write to texture and buffer object memory using the built-in
+    image functions, such optimizations could lead to non-deterministic
+    results.  To avoid this, implementations supporting this extension may not
+    perform such optimizations on shaders having such side effects.  However,
+    enabling early per-fragment tests guarantees that such tests will be
+    performed prior to fragment shader execution, and ensures that image
+    stores and atomics will not be performed by fragment shader invocations
+    where these per-fragment tests fail.
+
+    Finally, this extension provides both a GLSL built-in function and an
+    OpenGL API function allowing applications some control over the ordering
+    of image loads, stores, and atomics relative to other OpenGL pipeline
+    operations accessing the same memory.  Because the extension provides the
+    ability to perform random accesses to texture or buffer object memory,
+    such accesses are not easily tracked by the OpenGL driver.  To avoid the
+    need for heavy-handed synchronization at the driver level, this extension
+    requires manual synchronization.  The MemoryBarrierEXT() OpenGL API
+    function allows applications to specify a bitfield indicating the set of
+    OpenGL API operations to synchronize relative to shader memory access.
+    The memoryBarrier() GLSL built-in function provides a synchronization
+    point within a given shader invocation to ensure that all memory accesses
+    performed prior to the synchronization point complete prior to any started
+    after the synchronization point.
+
+New Procedures and Functions
+
+    void BindImageTextureEXT(uint index, uint texture, int level,
+                             boolean layered, int layer, enum access,
+                             int format);
+
+    void MemoryBarrierEXT(bitfield barriers);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev: 
+
+        MAX_IMAGE_UNITS_EXT                             0x8F38
+        MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS_EXT 0x8F39
+        MAX_IMAGE_SAMPLES_EXT                           0x906D
+
+    Accepted by the <target> parameter of GetIntegeri_v and GetBooleani_v:
+
+        IMAGE_BINDING_NAME_EXT                          0x8F3A
+        IMAGE_BINDING_LEVEL_EXT                         0x8F3B
+        IMAGE_BINDING_LAYERED_EXT                       0x8F3C
+        IMAGE_BINDING_LAYER_EXT                         0x8F3D
+        IMAGE_BINDING_ACCESS_EXT                        0x8F3E
+        IMAGE_BINDING_FORMAT_EXT                        0x906E
+
+    Accepted by the <barriers> parameter of MemoryBarrierEXT:
+
+        VERTEX_ATTRIB_ARRAY_BARRIER_BIT_EXT             0x00000001
+        ELEMENT_ARRAY_BARRIER_BIT_EXT                   0x00000002
+        UNIFORM_BARRIER_BIT_EXT                         0x00000004
+        TEXTURE_FETCH_BARRIER_BIT_EXT                   0x00000008
+        SHADER_IMAGE_ACCESS_BARRIER_BIT_EXT             0x00000020
+        COMMAND_BARRIER_BIT_EXT                         0x00000040
+        PIXEL_BUFFER_BARRIER_BIT_EXT                    0x00000080
+        TEXTURE_UPDATE_BARRIER_BIT_EXT                  0x00000100
+        BUFFER_UPDATE_BARRIER_BIT_EXT                   0x00000200
+        FRAMEBUFFER_BARRIER_BIT_EXT                     0x00000400
+        TRANSFORM_FEEDBACK_BARRIER_BIT_EXT              0x00000800
+        ATOMIC_COUNTER_BARRIER_BIT_EXT                  0x00001000
+        ALL_BARRIER_BITS_EXT                            0xFFFFFFFF
+
+    Returned by the <type> parameter of GetActiveUniform:
+
+        IMAGE_1D_EXT                                    0x904C
+        IMAGE_2D_EXT                                    0x904D
+        IMAGE_3D_EXT                                    0x904E
+        IMAGE_2D_RECT_EXT                               0x904F
+        IMAGE_CUBE_EXT                                  0x9050
+        IMAGE_BUFFER_EXT                                0x9051
+        IMAGE_1D_ARRAY_EXT                              0x9052
+        IMAGE_2D_ARRAY_EXT                              0x9053
+        IMAGE_CUBE_MAP_ARRAY_EXT                        0x9054
+        IMAGE_2D_MULTISAMPLE_EXT                        0x9055
+        IMAGE_2D_MULTISAMPLE_ARRAY_EXT                  0x9056
+        INT_IMAGE_1D_EXT                                0x9057
+        INT_IMAGE_2D_EXT                                0x9058
+        INT_IMAGE_3D_EXT                                0x9059
+        INT_IMAGE_2D_RECT_EXT                           0x905A
+        INT_IMAGE_CUBE_EXT                              0x905B
+        INT_IMAGE_BUFFER_EXT                            0x905C
+        INT_IMAGE_1D_ARRAY_EXT                          0x905D
+        INT_IMAGE_2D_ARRAY_EXT                          0x905E
+        INT_IMAGE_CUBE_MAP_ARRAY_EXT                    0x905F
+        INT_IMAGE_2D_MULTISAMPLE_EXT                    0x9060
+        INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT              0x9061
+        UNSIGNED_INT_IMAGE_1D_EXT                       0x9062
+        UNSIGNED_INT_IMAGE_2D_EXT                       0x9063
+        UNSIGNED_INT_IMAGE_3D_EXT                       0x9064
+        UNSIGNED_INT_IMAGE_2D_RECT_EXT                  0x9065
+        UNSIGNED_INT_IMAGE_CUBE_EXT                     0x9066
+        UNSIGNED_INT_IMAGE_BUFFER_EXT                   0x9067
+        UNSIGNED_INT_IMAGE_1D_ARRAY_EXT                 0x9068
+        UNSIGNED_INT_IMAGE_2D_ARRAY_EXT                 0x9069
+        UNSIGNED_INT_IMAGE_CUBE_MAP_ARRAY_EXT           0x906A
+        UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_EXT           0x906B
+        UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT     0x906C
+
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    (Add new types to table 2.13, pp. 96-98)
+
+      Type Name                                    Keyword
+      ------------------------------               -------------------------
+      IMAGE_1D_EXT                                 image1D
+      IMAGE_2D_EXT                                 image2D
+      IMAGE_3D_EXT                                 image3D
+      IMAGE_2D_RECT_EXT                            image2DRect
+      IMAGE_CUBE_EXT                               imageCube
+      IMAGE_BUFFER_EXT                             imageBuffer
+      IMAGE_1D_ARRAY_EXT                           image1DArray
+      IMAGE_2D_ARRAY_EXT                           image2DArray
+      IMAGE_CUBE_MAP_ARRAY_EXT                     imageCubeArray
+      IMAGE_2D_MULTISAMPLE_EXT                     image2DMS
+      IMAGE_2D_MULTISAMPLE_ARRAY_EXT               image2DMSArray
+      INT_IMAGE_1D_EXT                             iimage1D
+      INT_IMAGE_2D_EXT                             iimage2D
+      INT_IMAGE_3D_EXT                             iimage3D
+      INT_IMAGE_2D_RECT_EXT                        iimage2DRect
+      INT_IMAGE_CUBE_EXT                           iimageCube
+      INT_IMAGE_BUFFER_EXT                         iimageBuffer
+      INT_IMAGE_1D_ARRAY_EXT                       iimage1DArray
+      INT_IMAGE_2D_ARRAY_EXT                       iimage2DArray
+      INT_IMAGE_CUBE_MAP_ARRAY_EXT                 iimageCubeArray
+      INT_IMAGE_2D_MULTISAMPLE_EXT                 iimage2DMS
+      INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT           iimage2DMSArray
+      UNSIGNED_INT_IMAGE_1D_EXT                    uimage1D
+      UNSIGNED_INT_IMAGE_2D_EXT                    uimage2D
+      UNSIGNED_INT_IMAGE_3D_EXT                    uimage3D
+      UNSIGNED_INT_IMAGE_2D_RECT_EXT               uimage2DRect
+      UNSIGNED_INT_IMAGE_CUBE_EXT                  uimageCube
+      UNSIGNED_INT_IMAGE_BUFFER_EXT                uimageBuffer
+      UNSIGNED_INT_IMAGE_1D_ARRAY_EXT              uimage1DArray
+      UNSIGNED_INT_IMAGE_2D_ARRAY_EXT              uimage2DArray
+      UNSIGNED_INT_IMAGE_CUBE_MAP_ARRAY_EXT        uimageCubeArray
+      UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_EXT        uimage2DMS
+      UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT  uimage2DMSArray
+
+
+    (Add a new subsection after Section 2.14.5, Samplers, p. 106)
+
+    Section 2.14.X, Images
+
+    Images are special uniforms used in the OpenGL Shading Language to
+    identify a level of a texture to be read or written using image load,
+    store, and atomic built-in functions in the manner described in Section
+    3.9.X.  The value of an image uniform is an integer specifying the image
+    unit accessed.  Image units are numbered beginning at zero, and there is
+    an implementation-dependent number of available image units
+    (MAX_IMAGE_UNITS_EXT).  The error INVALID_VALUE is generated if a
+    Uniform1i{v} call is used to set an image uniform to a value less than
+    zero or greater than or equal to MAX_IMAGE_UNITS_EXT.  Note that image
+    units used for image variables are independent of the texture image
+    units used for sampler variables; the number of units provided by the
+    implementation may differ.  Textures are bound independently and
+    separately to image and texture image units.
+
+    The type of an image variable must match the texture target of the image
+    currently bound to the image unit, otherwise the result of the load/
+    store/atomic operation is undefined (see Section 4.1.X of the OpenGL 
+    Shading Language specification for more detail).
+
+    The location of an image variable needs to be queried with
+    GetUniformLocation, just like any uniform variable.  Image values need to
+    be set by calling Uniform1i{v}.  Loading image variables with any of the
+    other Uniform entry point is not allowed and will result in an
+    INVALID_OPERATION error.
+
+    Unlike samplers, there is no limit on the number of active image variables
+    that may be used by a program or by any particular shader.  However, given
+    that there is an implementation-dependent limit on the number of unique
+    image units, the actual number of images that may be used by all shaders
+    in a program is limited.
+
+
+    (Add a new subsection after Section 2.14.7, Shader Execution, p. 109)
+
+    Section 2.14.X, Shader Memory Access
+
+    Shaders may perform random-access reads and writes to texture or buffer
+    object memory using built-in image load, store, and atomic functions, as
+    described in the OpenGL Shading Language Specification.  The ability to
+    perform such random-access reads and writes in system that may be highly
+    pipelined results in ordering and synchronization issues discussed in the
+    sections below.
+
+
+    Shader Memory Access Ordering
+
+    The order in which texture or buffer object memory is read or written by
+    shaders is largely undefined.  For some shader types (vertex, tessellation
+    evaluation, and in some cases, fragment), the number of shader invocations
+    that might perform loads and stores is even undefined.  In particular, the
+    following rules apply:
+
+      * While a vertex or tessellation evaluation shader will be executed at
+        least once for each unique vertex specified by the application (vertex
+        shaders) or generated by the tessellation primitive generator
+        (tessellation evaluation shaders), it may be executed more than once
+        for implementation-dependent reasons.  Additionally, if the same
+        vertex is specified multiple times in a collection of primitives
+        (e.g., repeating an index in DrawElements), the vertex shader might be
+        run only once.
+
+      * For each fragment generated by the GL, the number of fragment shader
+        invocations depends on a number of factors.  If the fragment fails the
+        pixel ownership test (Section 4.1.1), the fragment shader may not be
+        executed.  Otherwise, if the framebuffer has no multisample buffer
+        (SAMPLE_BUFFERS is zero), the fragment shader will be invoked exactly
+        once.  If the fragment shader specifies per-sample shading, the
+        fragment shader will be run once per covered sample.  Otherwise, the
+        number of fragment shader invocations is undefined, but must be in the
+        range [1,<N>], where <N> is the number of samples covered by the
+        fragment.
+
+      * If a fragment shader is invoked to process fragments or samples not
+        covered by a primitive being rasterized to facilitate the
+        approximation of derivatives for texture lookups, stores and atomics
+        have no effect.
+
+      * The relative order of invocations of the same shader type are
+        undefined.  A store issued by a shader when working on primitive B
+        might complete prior to a store for primitive A, even if primitive A
+        is specified prior to primitive B.  This applies even to fragment
+        shaders; while fragment shader outputs are written to the framebuffer
+        in primitive order, stores executed by fragment shader invocations are
+        not.
+
+      * The relative order of invocations of different shader types is largely
+        undefined.  However, when executing a shader whose inputs are
+        generated from a previous programmable stage, the shader invocations
+        from the previous stage are guaranteed to have executed far enough to
+        generate final values for all next-stage inputs.  That implies shader
+        completion for all stages except geometry; geometry shaders are
+        guaranteed only to have executed far enough to emit all needed
+        vertices.
+
+    The above limitations on shader invocation order also make some forms of
+    synchronization between shader invocations within a single set of
+    primitives unimplementable.  For example, having one invocation poll
+    memory written by another invocation assumes that the other invocation has
+    been launched and can complete its writes.  The only case where such a
+    guarantee is made is when the inputs of one shader invocation are
+    generated from the outputs of a shader invocation in a previous stage.
+
+    Stores issued to different memory locations within a single shader
+    invocation may not be visible to other invocations in the order they were
+    performed.  The built-in function memoryBarrier() may be used to provide
+    stronger ordering of reads and writes performed by a single invocation.
+    Calling memoryBarrier() guarantees that any memory transactions issued by
+    the shader invocation prior to the call complete prior to the memory
+    transactions issued after the call.  Memory barriers may be needed for
+    algorithms that require multiple invocations to access the same memory and
+    require the operations need to be performed in a partially-defined
+    relative order.  For example, if one shader invocation does a series of
+    writes, followed by a memoryBarrier() call, followed by another write,
+    then another invocation that sees the results of the final write will also
+    see the previous writes.  Without the memory barrier, the final write may
+    be visible before the previous writes.
+
+    The atomic memory transaction built-in functions may be used to read and
+    write a given memory address atomically.  While atomic built-in functions
+    issued by multiple shader invocations are executed in undefined order
+    relative to each other, these functions perform both a read and a write of
+    a memory address and guarantee that no other memory transaction will write
+    to the underlying memory between the read and write.  Atomics allow
+    shaders to use shared global addresses for mutual exclusion or as
+    counters, among other uses.
+
+
+    Shader Memory Access Synchronization
+
+    Data written to textures or buffer objects by a shader invocation may
+    eventually be read by other shader invocations, sourced by other fixed
+    pipeline stages, or read back by the application.  When applications write
+    to buffer objects or textures using API commands such as TexSubImage* or
+    BufferSubData, the GL implementation knows when and where writes occur and
+    can perform implicit synchronization to ensure that operations requested
+    before the update see the original data and that subsequent operations see
+    the modified data.  Without logic to track the target address of each
+    shader instruction performing a store, automatic synchronization of stores
+    performed by a shader invocation would require the GL implementation to
+    make worst-case assumptions at significant performance cost.  To permit
+    cases where textures or buffers may be read or written in different
+    pipeline stages without the overhead of automatic synchronization, buffer
+    object and texture stores performed by shaders are not automatically
+    synchronized with other GL operations using the same memory.
+
+    Explicit synchronization is required to ensure that the effects of buffer
+    and texture data stores performed by shaders will be visible to subsequent
+    operations using the same objects and will not overwrite data still to be
+    read by previously requested operations.  Without manual synchronization,
+    shader stores for a "new" primitive may complete before processing of an
+    "old" primitive completes.  Additionally, stores for an "old" primitive
+    might not be completed before processing of a "new" primitive starts.  The
+    command
+
+        void MemoryBarrierEXT(bitfield barriers)
+
+    defines a barrier ordering the memory transactions issued prior to the
+    command relative to those issued after the barrier.  For the purposes of
+    this ordering, memory transactions performed by shaders are considered to
+    be issued by the rendering command that triggered the execution of the
+    shader.  <barriers> is a bitfield indicating the set of operations that
+    are synchronized with shader stores; the bits used in <barriers> are as
+    follows:
+    
+    - VERTEX_ATTRIB_ARRAY_BARRIER_BIT_EXT:  If set, vertex data sourced from
+        buffer objects after the barrier will reflect data written by shaders
+        prior to the barrier.  The set of buffer objects affected by this bit
+        is derived from the buffer object bindings or GPU addresses used for
+        generic vertex attributes (VERTEX_ATTRIB_ARRAY_BUFFER bindings,
+        VERTEX_ATTRIB_ARRAY_ADDRESS from NV_vertex_buffer_unified_memory), as
+        well as those for arrays of named vertex attributes (e.g., vertex,
+        color, normal).
+
+    - ELEMENT_ARRAY_BARRIER_BIT_EXT:  If set, vertex array indices sourced from
+        buffer objects after the barrier will reflect data written by shaders
+        prior to the barrier.  The buffer objects affected by this bit are
+        derived from the ELEMENT_ARRAY_BUFFER binding and the
+        NV_vertex_buffer_unified_memory ELEMENT_ARRAY_ADDRESS address.
+
+    - UNIFORM_BARRIER_BIT_EXT:  Shader uniforms and assembly program parameters
+        sourced from buffer objects after the barrier will reflect data
+        written by shaders prior to the barrier.
+
+    - TEXTURE_FETCH_BARRIER_BIT_EXT:  Texture fetches from shaders, including
+        fetches from buffer object memory via buffer textures, after the
+        barrier will reflect data written by shaders prior to the barrier.
+
+    - SHADER_IMAGE_ACCESS_BARRIER_BIT_EXT:  Memory accesses using shader image
+        load, store, and atomic built-in functions issued after the barrier
+        will reflect data written by shaders prior to the barrier.
+        Additionally, image stores and atomics issued after the barrier will
+        not execute until all memory accesses (e.g., loads, stores, texture
+        fetches, vertex fetches) initiated prior to the barrier complete.
+
+    - COMMAND_BARRIER_BIT_EXT:  Command data sourced from buffer objects by
+        Draw*Indirect commands after the barrier will reflect data written by
+        shaders prior to the barrier.  The buffer objects affected by this bit
+        are derived from the DRAW_INDIRECT_BUFFER_EXT binding and the GPU
+        address DRAW_INDIRECT_ADDRESS_EXT.
+
+    - PIXEL_BUFFER_BARRIER_BIT_EXT:  Reads/writes of buffer objects via the
+        PACK/UNPACK_BUFFER bindings (ReadPixels, TexSubImage, etc.) after the
+        barrier will reflect data written by shaders prior to the barrier.
+        Additionally, buffer object writes issued after the barrier will wait
+        on the completion of all shader writes initiated prior to the barrier.
+
+    - TEXTURE_UPDATE_BARRIER_BIT_EXT:  Writes to a texture via Tex(Sub)Image*,
+        CopyTex(Sub)Image*, CompressedTex(Sub)Image*, and reads via
+        GetTexImage after the barrier will reflect data written by shaders
+        prior to the barrier.  Additionally, texture writes from these
+        commands issued after the barrier will not execute until all shader
+        writes initiated prior to the barrier complete.
+
+    - BUFFER_UPDATE_BARRIER_BIT_EXT:  Reads/writes via Buffer(Sub)Data,
+        MapBuffer(Range), CopyBufferSubData, ProgramBufferParameters, and
+        GetBufferSubData after the barrier will reflect data written by
+        shaders prior to the barrier.  Additionally, writes via these commands
+        issued after the barrier will wait on the completion of all shader
+        writes initiated prior to the barrier.
+
+    - FRAMEBUFFER_BARRIER_BIT_EXT:  Reads and writes via framebuffer object
+        attachments after the barrier will reflect data written by shaders
+        prior to the barrier.  Additionally, framebuffer writes issued after
+        the barrier will wait on the completion of all shader writes issued
+        prior to the barrier.
+
+    - TRANSFORM_FEEDBACK_BARRIER_BIT_EXT:  Writes via transform feedback
+        bindings after the barrier will reflect data written by shaders prior
+        to the barrier.  Additionally, transform feedback writes issued after
+        the barrier will wait on the completion of all shader writes issued
+        prior to the barrier.
+
+    - ATOMIC_COUNTER_BARRIER_BIT_EXT: Accesses to atomic counters after the
+        barrier will reflect writes prior to the barrier.
+
+    If <barriers> is ALL_BARRIER_BITS_EXT, shader memory accesses will be
+    synchronized relative to all the operations described above.
+
+    Implementations may cache buffer object and texture image memory that
+    could be written by shaders in multiple caches; for example, there may be
+    separate caches for texture, vertex fetching, and one or more caches for
+    shader memory accesses.  Implementations are not required to keep these
+    caches coherent with shader memory writes.  Stores issued by one
+    invocation may not be immediately observable by other pipeline stages or
+    other shader invocations because the value stored may remain in a cache
+    local to the processor executing the store, or because data overwritten by
+    the store is still in a cache elsewhere in the system.  When MemoryBarrier
+    is called, the GL flushes and/or invalidates any caches relevant to the
+    operations specified by the <barriers> parameter to ensure consistent
+    ordering of operations across the barrier.
+
+    To allow for independent shader invocations to communicate by reads and
+    writes to a common memory address, image variables in the OpenGL Shading
+    Language may be declared as "coherent".  Buffer object or texture image
+    memory accessed through such variables may be cached only if caches are
+    automatically updated due to stores issued by any other shader invocation.
+    If the same address is accessed using both coherent and non-coherent
+    variables, the accesses using variables declared as coherent will observe
+    the results stored using coherent variables in other invocations.  Using
+    variables declared as "coherent" guarantees only that the results of
+    stores will be immediately visible to shader invocations using
+    similarly-declared variables; calling MemoryBarrier is required to ensure
+    that the stores are visible to other operations.
+
+    The following guidelines may be helpful in choosing when to use coherent
+    memory accesses and when to use barriers.
+
+    - Data that are read-only or constant may be accessed without using
+      coherent variables or calling MemoryBarrierEXT().  Updates to the
+      read-only data via API calls such as BufferSubData will invalidate
+      shader caches implicitly as required.
+
+    - Data that are shared between shader invocations at a fine granularity
+      (e.g., written by one invocation, consumed by another invocation) should
+      use coherent variables to read and write the shared data.
+
+    - Data written by one shader invocation and consumed by other shader
+      invocations launched as a result of its execution ("dependent
+      invocations") should use coherent variables in the producing shader
+      invocation and call memoryBarrier() after the last write.  The consuming
+      shader invocation should also use coherent variables.
+
+    - Data written to image variables in one rendering pass and read by the
+      shader in a later pass need not use coherent variables or
+      memoryBarrier().  Calling MemoryBarrierEXT() with the
+      SHADER_IMAGE_ACCESS_BARRIER_BIT_EXT set in <barriers> between passes is
+      necessary.
+
+    - Data written by the shader in one rendering pass and read by another
+      mechanism (e.g., vertex or index buffer pulling) in a later pass need
+      not use coherent variables or memoryBarrier().  Calling
+      MemoryBarrierEXT() with the appropriate bits set in <barriers> between
+      passes is necessary.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    (insert new section immediately before Section 3.8, Texturing, p. 210)
+
+    Section 3.X, Early Per-Fragment Tests
+
+    Once fragments are produced by rasterization (sections 3.4 through 3.8), a
+    number of per-fragment operations may be performed prior to fragment
+    shader execution.  If a fragment is discarded during any of these
+    operations, it will not be processed by any subsequent stage, including
+    fragment shader execution.
+
+    Up to six operations are performed on each fragment, in the following
+    order:
+
+      * the pixel ownership test, described in section 4.1.1;
+
+      * the scissor test, described in section 4.1.2;
+
+      * the depth bounds test, described in section 4.1.X (of the
+        EXT_depth_bounds_test specification);
+
+      * the stencil test, described in section 4.1.5;
+
+      * the depth buffer test, described in section 4.1.6; and
+
+      * occlusion query sample counting, described in section 4.1.7.
+
+    The pixel ownership and scissor tests are always performed.
+
+    The other operations are performed if and only if early fragment tests are
+    enabled in the active fragment shader (section 3.12.2).  When early
+    per-fragment operations are enabled, the depth bounds test, stencil test,
+    depth buffer test, and occlusion query sample counting operations are
+    performed prior to fragment shader execution, and the stencil buffer,
+    depth buffer, and occlusion query sample counts will be updated
+    accordingly.  When early per-fragment operations are enabled, these
+    operations will not be performed again after fragment shader execution.
+    When there is no active program, the active program has no fragment
+    shader, or the active program was linked with early fragment tests
+    disabled, these operations are performed only after fragment program
+    execution, in the order described in chapter 4.
+
+    If early fragment tests are enabled, any depth value computed by the
+    fragment shader has no effect.  Additionally, the depth buffer, stencil
+    buffer, and occlusion query sample counts may be updated even for
+    fragments or samples that would be discarded after fragment shader
+    execution due to per-fragment operations such as alpha-to-coverage or
+    alpha tests.
+
+
+    (Add new section after Section 3.9.19, Texture Application, p. 268)
+
+    Section 3.9.X, Texture Image Loads and Stores
+
+    The contents of a texture may be made available for shaders to read and
+    write by binding the texture to one of a collection of image units.  The
+    GL implementation provides an array of image units numbered beginning with
+    zero, with the total number of image units provided given by the
+    implementation-dependent constant MAX_IMAGE_UNITS_EXT.  Unlike texture
+    image units, image units do not have a separate attachment for each
+    texture target texture; each image unit may have only one texture bound at
+    a time.
+
+    A texture may be bound to an image unit for use by image loads and stores
+    by calling:
+
+        void BindImageTextureEXT(uint index, uint texture, int level,
+                                 boolean layered, int layer, enum access,
+                                 int format);
+
+    where <index> identifies the image unit, <texture> is the name of the
+    texture, and <level> selects a single level of the texture.  If <texture>
+    is zero, <level> is ignored and the currently bound texture to image unit
+    <index> is unbound.  If <index> is less than zero or greater than or equal
+    to MAX_IMAGE_UNITS_EXT, or if <texture> is not the name of an existing
+    texture object, the error INVALID_VALUE is generated.
+
+    If the texture identified by <texture> is a one-dimensional array,
+    two-dimensional array, three-dimensional, cube map, cube map array, or
+    two-dimensional multisample array texture, it is possible to bind either
+    the entire texture level or a single layer or face of the texture level.
+    If <layered> is TRUE, the entire level is bound.  If <layered> is FALSE,
+    only the single layer identified by <layer> will be bound.  When <layered>
+    is FALSE, the single bound layer is treated as a different texture target
+    for image accesses:
+
+      * one-dimensional array texture layers are treated as one-dimensional
+        textures;
+
+      * two-dimensional array, three-dimensional, cube map, cube map array
+        texture layers are treated as two-dimensional textures; and
+
+      * two-dimensional multisample array textures are treated as
+        two-dimensional multisample textures.
+
+    For cube map textures where <layered> is FALSE, the face is taken by
+    mapping the layer number to a face according to table 4.13.  For cube map
+    array textures where <layered> is FALSE, the selected layer number is
+    mapped to a texture layer and cube face using the following equations and
+    mapping <face> to a face according to table 4.13.
+
+      layer  = floor(layer_orig / 6)
+      face   = layer_orig - (layer * 6)
+
+    <format> specifies the format that the elements of the image will be 
+    treated as when doing formatted stores, as described later in this 
+    section. This is referred to as the "image unit format". This must be one
+    of the formats listed in Table X.2, otherwise the error INVALID_VALUE is
+    generated.
+
+    <access> specifies whether the texture bound to the image will be treated
+    as READ_ONLY, WRITE_ONLY, or READ_WRITE.  If a shader reads from an image
+    unit with a texture bound as WRITE_ONLY, or writes to an image unit with a
+    texture bound as READ_ONLY, the results of that shader operation are
+    undefined and may lead to application termination.
+
+    If a texture object bound to one or more image units is deleted by
+    DeleteTextures, it is detached from each such image unit, as though
+    BindImageTextureEXT were called with <index> identifying the image unit and
+    <texture> set to zero.
+
+    When a shader accesses the texture bound to an image unit using a built-in
+    image load, store, or atomic function, it identifies a single texel by
+    providing a one-, two-, or three-dimensional coordinate.  Multisample
+    texture accesses also specify a sample number.  A coordinate vector is
+    mapped to an individual texel tau_i, tau_i_j, or tau_i_j_k according to
+    the target of the texture bound to the image unit using Table X.1.  As
+    noted above, single-layer bindings of array or cube map textures are
+    considered to use a texture target corresponding to the bound layer,
+    rather than that of the full texture.
+
+                                                   face/
+                                          i  j  k  layer
+                                          -- -- -- -----
+        TEXTURE_1D                        x  -  -    -
+        TEXTURE_2D                        x  y  -    -
+        TEXTURE_3D                        x  y  z    -
+        TEXTURE_RECTANGLE                 x  y  -    -
+        TEXTURE_CUBE_MAP                  x  y  -    z
+        TEXTURE_BUFFER                    x  -  -    -
+        TEXTURE_1D_ARRAY                  x  -  -    y
+        TEXTURE_2D_ARRAY                  x  y  -    z
+        TEXTURE_CUBE_MAP_ARRAY            x  y  -    z
+        TEXTURE_2D_MULTISAMPLE            x  y  -    -
+        TEXTURE_2D_MULTISAMPLE_ARRAY      x  y  -    z
+
+        Table X.1, Mapping of image load, store, and atomic texel coordinate
+        components to texel numbers.
+
+    If the texture target has layers or cube map faces, the layer or face
+    number is taken from the <layer> argument of BindImageTextureEXT if the
+    texture is bound with <layered> set to FALSE, or from the coordinate
+    identified by Table X.1 otherwise.  For cube map and cube map array
+    textures with <layered> set to TRUE, the coordinate is mapped to a layer
+    and face in the same manner as the <layer> argument of
+    BindImageTextureEXT.
+
+    If the individual texel identified for an image load, store, or atomic
+    operation doesn't exist, the access is treated as invalid.  Invalid image
+    loads will return zero.  Invalid image stores will have no effect.
+    Invalid image atomics will not update any texture bound to the image unit
+    and will return zero.  An access is considered invalid if:
+
+      * no texture is bound to the selected image unit;
+
+      * the texture bound to the selected image unit is incomplete;
+
+      * the texture level bound to the image unit is less than the base
+        level or greater than the maximum level of the texture;
+
+      * the texture bound to the image unit is bordered;
+
+      * the internal format of the texture bound to the image unit is not
+        found in Table X.2;
+
+      * the internal format of the texture is incompatible with the specified
+        <format> according to Table X.2.
+
+      * the texture bound to the image unit has layers, is bound with
+        <layered> set to TRUE, and the selected layer or cube map face doesn't
+        exist;
+
+      * the selected texel tau_i, tau_i_j, or tau_i_j_k doesn't exist;
+
+      * the <x>, <y>, or <z> coordinate is not listed in the selected row of
+        Table X.1 and is non-zero; or
+
+      * the texture bound to the image unit has layers, is bound with
+        <layered> set to FALSE, and the corresponding coordinate in the
+        face/layer column of Table X.1 is non-zero.
+
+      * the image has more samples than the implementation-dependent value of
+        MAX_IMAGE_SAMPLES_EXT.
+
+      * the access is a load and the format is not compatible with the 
+        "size" layout qualifier of the image uniform.
+
+     For textures with multiple samples per texel, the sample selected for an
+     image load, store, or atomic is undefined if the <sample> coordinate is
+     negative or greater than or equal to the number of samples in the
+     texture.
+
+     If a shader performs an image load, store, or atomic operation using an
+     image variable declared as an array, and if the index used to select an
+     individual out of bounds is negative or greater than or equal to the size
+     of the array, the results of the operation are undefined but may not lead
+     to termination.
+
+     Accesses to textures bound to image units do format conversions based on 
+     the <format> argument specified when the image is bound. Loads always
+     return a value as a vec4, ivec4, or uvec4, and stores always take the
+     source data as a vec4, ivec4, or uvec4. Data is converted to/from the 
+     specified format as if it were passed through a TexImage2D or GetTexImage
+     command with <format> and <type> as RGBA and FLOAT for vec4 data, with 
+     <format> and <type> as RGBA_INTEGER and INT for ivec4 data, or with 
+     <format> and <type> as RGBA_INTEGER and UNSIGNED_INT for uvec4 data.
+     Unused components are filled in with (0,0,0,1) (where "1" is either a
+     float or integer depending on the format). 
+     
+     The formats that are supported for image loads are dependent on the 
+     layout(size*) qualifier of the image uniform. The following formats 
+     are supported for image loads:
+
+     - size1x8: R8I, R8UI
+     - size1x16: R16I, R16UI
+     - size1x32: R32F, R32I, R32UI
+     - size2x32: RG32F, RG32I, RG32UI
+     - size4x32: RGBA32F, RGBA32I, RGBA32UI
+
+     Image stores support all formats in Table X.2.
+
+     Table X.2 specifies how each format is stored in memory, which must be 
+     made explicit because a single image can be viewed with multiple formats 
+     according to the <format> argument. The "R", "G", "B", and "A" columns
+     indicate which bits of which 32-bit word correspond to that component.
+     For example, an entry of "1[15:0]" indicates that the selected component
+     uses sixteen bits with its most significant bit in bit 15 of the second 
+     word of memory and its least significant bit in bit 0. Floating-point 
+     textures with 32-bit components are stored using the IEEE standard 
+     representation; textures with 10-, 11-, or 16-bit floating-point 
+     components are stored according to Sections 2.1.2 and 2.1.3.  
+
+     The "equivalence" column of Table X.2 defines a set of equivalence 
+     classes for formats, such that if the internal format of a texture level
+     is in the same equivalence class as the <format> argument to 
+     BindImageTextureEXT then the image may be viewed with that format. 
+     Otherwise, the access is considered invalid as described above.
+
+        Internal format  Equivalence      R        G         B         A
+        ---------------  -----------   -------  -------   -------   -------
+        RGBA32F             4x32       0[31:0]  1[31:0]   2[31:0]   3[31:0]
+        RGBA16F             2x32       0[15:0]  0[31:16]  1[15:0]   1[31:16]
+        RG32F               2x32       0[31:0]  1[31:0] 
+        RG16F               1x32       0[15:0]  0[31:16] 
+        R11F_G11F_B10F      1x32       0[10:0]  0[21:11]  0[31:22] 
+        R32F                1x32       0[31:0]  
+        R16F                1x16       0[15:0] 
+
+        RGBA32UI            4x32       0[31:0]  1[31:0]   2[31:0]   3[31:0]
+        RGBA16UI            2x32       0[15:0]  0[31:16]  1[15:0]   1[31:16]
+        RGB10_A2UI          1x32       0[9:0]   0[19:10]  0[29:20]  0[31:30]
+        RGBA8UI             1x32       0[7:0]   0[15:8]   0[23:16]  0[31:24]
+        RG32UI              2x32       0[31:0]  1[31:0]
+        RG16UI              1x32       0[15:0]  0[31:16] 
+        RG8UI               1x16       0[7:0]   0[15:8] 
+        R32UI               1x32       0[31:0]  
+        R16UI               1x16       0[15:0] 
+        R8UI                1x8        0[7:0] 
+
+        RGBA32I             4x32       0[31:0]  1[31:0]   2[31:0]   3[31:0]
+        RGBA16I             2x32       0[15:0]  0[31:16]  1[15:0]   1[31:16]
+        RGBA8I              1x32       0[7:0]   0[15:8]   0[23:16]  0[31:24]
+        RG32I               2x32       0[31:0]  1[31:0]
+        RG16I               1x32       0[15:0]  0[31:16] 
+        RG8I                1x16       0[7:0]   0[15:8] 
+        R32I                1x32       0[31:0]  
+        R16I                1x16       0[15:0] 
+        R8I                 1x8        0[7:0] 
+
+        RGBA16              2x32       0[15:0]  0[31:16]  1[15:0]   1[31:16]
+        RGB10_A2            1x32       0[9:0]   0[19:10]  0[29:20]  0[31:30]
+        RGBA8               1x32       0[7:0]   0[15:8]   0[23:16]  0[31:24]
+        RG16                1x32       0[15:0]  0[31:16] 
+        RG8                 1x16       0[7:0]   0[15:8] 
+        R16                 1x16       0[15:0] 
+        R8                  1x8        0[7:0] 
+
+        RGBA16_SNORM        2x32       0[15:0]  0[31:16]  1[15:0]   1[31:16]
+        RGBA8_SNORM         1x32       0[7:0]   0[15:8]   0[23:16]  0[31:24]
+        RG16_SNORM          1x32       0[15:0]  0[31:16] 
+        RG8_SNORM           1x16       0[7:0]   0[15:8] 
+        R16_SNORM           1x16       0[15:0] 
+        R8_SNORM            1x8        0[7:0] 
+
+        Table X.2, Supported texture formats, component packing, and 
+        equivalence classes for formatted image accesses.
+
+     Implementations may support a limited combined number of image units and
+     active fragment shader outputs (section 4.2.1).  A link error will be 
+     generated if the number of active image uniforms used in all shaders and 
+     the number of active fragment shader outputs exceeds the implementation-
+     dependent value (MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS_EXT).
+
+
+   Modify Section 3.12.2, Shader Execution, p. 274
+
+   (add new unnumbered subsection section at the end of the section, p. 279)
+
+   Early Fragment Tests
+
+   An explicit control is provided to allow fragment shaders to enable early
+   fragment tests.  If the fragment shader specifies the
+   "early_fragment_tests" layout qualifier, the per-fragment tests described
+   in Section 3.X will be performed prior to fragment shader execution.
+   Otherwise, they will be performed after fragment shader execution.
+
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Framebuffer)
+
+    None.
+
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    Modify Section 5.4.1, Commands Not Usable In Display Lists (p. 358)
+
+    (add "MemoryBarrierEXT" to the list of commands not allowed in a display
+     list, in the "Buffer objects" paragraph)
+
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    None.
+
+
+New Implementation Dependent State
+
+                                                        Minimum
+    Get Value                    Type  Get Command      Value      Description             Sec.       Attrib
+    ---------                    ----  -----------      -------    -----------             ----       ------
+    MAX_IMAGE_UNITS_EXT          Z+    GetIntegerv      8          number of units for     3.9.X        -
+                                                                   image load/store/atom
+    MAX_COMBINED_IMAGE_UNITS_    Z+    GetIntegerv      8          limit on active image   3.9.X        -
+      AND_FRAGMENT_OUTPUTS_EXT                                     units + fragment outputs
+    MAX_IMAGE_SAMPLES_EXT        Z     GetIntegerv      0          max allowed samples     3.9.X        -
+                                                                   for a texture level
+                                                                   bound to an image unit  
+
+New State
+
+    Add a new Table 6.X, Image Stage (state per image unit)
+
+    Get Value                            Type    Get Command     Initial Value   Sec     Attribute
+    ---------                            ----    -----------     -------------   ---     ---------
+    IMAGE_BINDING_NAME_EXT               8*xZ+   GetIntegeri_v    0             3.9.X      none
+    IMAGE_BINDING_LEVEL_EXT              8*xZ+   GetIntegeri_v    0             3.9.X      none
+    IMAGE_BINDING_LAYERED_EXT            8*xB    GetBooleani_v    FALSE         3.9.X      none
+    IMAGE_BINDING_LAYER_EXT              8*xZ+   GetIntegeri_v    0             3.9.X      none
+    IMAGE_BINDING_ACCESS_EXT             8*xZ3   GetIntegeri_v    READ_ONLY     3.9.X      none
+    IMAGE_BINDING_FORMAT_EXT             8*xZ+   GetIntegeri_v    R8            3.9.X      none
+
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+
+GLX Protocol
+
+    !!! TBD !!!
+
+    
+Modifications to the OpenGL Shading Language Specification, Version 1.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_shader_image_load_store : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_EXT_shader_image_load_store    1
+
+
+    Modify Section 3.6, Keywords, p. 14
+
+    (add the following to the list of keywords, p. 14)
+
+    coherent
+    volatile
+    restrict
+
+    image1D             iimage1D                uimage1D
+    image2D             iimage2D                uimage2D
+    image3D             iimage3D                uimage3D
+    image2DRect         iimage2DRect            uimage2DRect
+    imageCube           iimageCube              uimageCube
+    imageBuffer         iimageBuffer            uimageBuffer
+    image1DArray        iimage1DArray           uimage1DArray
+    image2DArray        iimage2DArray           uimage2DArray
+    imageCubeArray      iimageCubeArray         uimageCubeArray
+    image2DMS           iimage2DMS              uimage2DMS
+    image2DMSArray      iimage2DMSArray         uimage2DMSArray
+
+    (remove from the list of reserved keywords, p. 15)
+
+    volatile
+
+
+    (Insert a new section immediately after Section 4.1.7, Samplers, p. 23)
+
+    Section 4.1.X, Images
+
+    Like samplers, images are opaque handles to one-, two-, or
+    three-dimensional images corresponding to all or a portion of a single
+    level of a texture image bound to an image unit.  There are distinct 
+    image variable types for each texture target, and for each of float, 
+    integer, and unsigned integer data types.  Image accesses should use
+    an image type that matches the target of the texture whose level is
+    bound to the image unit, or for non-layered bindings of 3D or array 
+    images should use the image type that matches the dimensionality of
+    the layer of the image (i.e. a layer of 3D, 2DArray, Cube, or 
+    CubeArray should use image2D, a layer of 1DArray should use image1D, 
+    and a layer of 2DMSArray should use image2DMS). If the image target type 
+    does not match the bound image in this manner, if the data type does not
+    match the bound image, or if the "size" layout qualifier does not match 
+    the image unit format as described in Section 3.9.X of the OpenGL 
+    Specification, the results of image accesses are undefined but may not 
+    include program termination.
+
+    Image variables are used in the image load, store, and atomic functions
+    described in Section 8.X, "Image Functions" to specify an image to access.
+    They can only be declared as function parameters or uniform variables (see
+    Section 4.3.5 "Uniform").  Except for array indexing, structure field
+    selection, and parentheses, images are not allowed to be operands in
+    expressions.  Images may be aggregated into arrays within a shader (using
+    square brackets [ ]) and can be indexed with general integer expressions.
+    The results of accessing an image array with an out-of-bounds index are
+    undefined.  Images cannot be treated as l-values; hence, they cannot be
+    used as out or inout function parameters, nor can they be assigned into.
+    As uniforms, they are initialized only with the OpenGL API; they cannot be
+    declared with an initializer in a shader.  As function parameters, images
+    may only be passed to samplers of matching type.
+
+
+    Modify Section 4.3, Storage Qualifiers, p. 29
+
+    (add new qualifiers to the first table, p. 29)
+
+        Qualifier       Meaning
+        ------------    -------------------------------------------------
+        coherent        memory variable where reads and writes are coherent
+                        with reads and writes from other shader invocations
+
+        volatile        memory variable whose underlying value may be
+                        changed at any point during shader execution by
+                        some source other than the current shader invocation
+
+        restrict        memory variable where use of that variable is the
+                        only way to read and write the underlying memory
+                        in the relevant shader stage
+
+
+    Modify Section 4.3.2, Constant Qualifier (p. 30)
+
+    (add after last paragraph of section)  
+
+    Because image variables can not be built from constant expressions, the
+    "const" qualifier may not be used to create a compile-time constant image
+    variable.  However, the "const" qualifier may be used to declare image
+    variables whose image data are treated as constant, as described in
+    Section 4.3.X.
+
+
+    Modify Section 4.3.8.1 (Input Layout Qualifiers), p. 39
+
+    Remove "only" from the sentence:
+
+    Fragment shaders can have an input layout only for redeclaring the 
+    built-in variable gl_FragCoord...
+
+    Add to the end of the section:
+
+    Fragment shaders also allow an input layout qualifier on the qualifier
+    "in". The only valid layout qualifier is:
+
+      layout-qualifier-id
+        early_fragment_tests
+
+    to indicate that fragment tests will be performed before fragment shader
+    execution, as described in Section 3.12.2 of the OpenGL Specification. 
+    For example,
+
+      layout(early_fragment_tests) in;
+
+
+    (Insert immediately after Section 4.3.8.3, Uniform Block Layout
+     Qualifiers, p. 40)
+
+    Section 4.3.8.X, Image Qualifiers
+
+    Layout qualifiers can be used for image variable declarations.  The layout
+    qualifier identifiers for image variable declarations are
+
+      layout-qualifier-id
+        size1x8
+        size1x16
+        size1x32
+        size2x32
+        size4x32
+
+    The "size" identifiers indicate the set of image formats that the image
+    variable can be used to access.  Only one "size" identifier may be
+    specified for any variable declaration.  A layout of "size1x8" is illegal
+    for image variables associated with floating-point data types.
+
+    All image variable declarations, including function parameter
+    declarations, must specify a "size" layout qualifier.  It is an error to
+    declare an image uniform variable or function parameter without a size
+    qualifier.
+
+
+    (Insert immediately after Section 4.3.9, Interpolation, p. 42)
+
+    Section 4.3.X, Memory Access Qualifiers
+
+    The "coherent", "volatile", "restrict", and "const" storage qualifiers can
+    be specified in image variable declarations to control memory accesses
+    using the declared variables.
+
+    Memory accesses to image variables declared using the "coherent" storage
+    qualifier are performed coherently with similar accesses from other shader
+    invocations.  In particular, when reading a variable declared as
+    "coherent", the values returned will reflect the results of previously
+    completed writes performed by other shader invocations.  When writing a
+    variable declared as "coherent", the values written will be reflected in
+    subsequent coherent reads performed by other shader invocations.  As
+    described in the Section 2.20.X of the OpenGL Specification, shader memory
+    reads and writes complete in a largely undefined order.  The built-in
+    function memoryBarrier() can be used if needed to guarantee the completion
+    and relative ordering of memory accesses performed by a single shader
+    invocation.
+
+    When accessing memory using variables not declared as "coherent", the
+    memory accessed by a shader may be cached by the implementation to service
+    future accesses to the same address.  Memory stores may be cached in such
+    a way that the values written may not be visible to other shader
+    invocations accessing the same memory.  The implementation may cache the
+    values fetched by memory reads and return the same values to any shader
+    invocation accessing the same memory, even if the underlying memory has
+    been modified since the first memory read.  While variables not declared
+    as "coherent" may not be useful for communicating between shader
+    invocations, using non-coherent accesses may result in higher performance.
+
+    Memory accesses to image variables declared using the "volatile" storage
+    qualifier must treat the underlying memory as though it could be read or
+    written at any point during shader execution by some source other than the
+    executing shader invocation.  When a volatile variable is read, its value
+    must be re-fetched from the underlying memory, even if the shader
+    invocation performing the read had already fetched its value from the same
+    memory once.  When a volatile variable is written, its value must be
+    written to the underlying memory, even if the compiler can conclusively
+    determine that its value will be overwritten by a subsequent write.  Since
+    the external source reading or writing a "volatile" variable may be
+    another shader invocation, variables declared as "volatile" are
+    automatically treated as coherent.
+
+    Memory accesses to image variables declared using the "restrict" storage
+    qualifier may be compiled assuming that the variable used to perform the
+    memory access is the only way to access the underlying memory using the
+    shader stage in question.  This allows the compiler to coalesce or reorder
+    loads and stores using "restrict"-qualified image variables in ways that
+    wouldn't be permitted for image variables not so qualified, because the
+    compiler can assume that the underlying image won't be read or written by
+    other code.  Applications are responsible for ensuring that image memory
+    referenced by variables qualified with "restrict" will not be referenced
+    using other variables in the same scope; otherwise, accesses to
+    "restrict"-qualified variables will have undefined results.
+
+    Memory accesses to image variables declared using the "const" storage
+    qualifier may only read the underlying memory, which is treated as
+    read-only.  It is an error to pass an image variable qualified with
+    "const" to imageStore() or imageAtomic*().
+
+    In image variable declarations, the "coherent", "volatile", "restrict",
+    and "const" qualifiers can be positioned anywhere in the declaration,
+    either before or after the data type of the variable being qualified.
+    Qualifiers before the type name apply to the image data referenced by the
+    image variable; qualifiers after the type name apply to the image variable
+    itself.  It is an error to specify "restrict" prior to the type name, as
+    "restrict" can only qualify the image variable itself.
+
+    The "coherent", "volatile", and "restrict" storage qualifiers may only be
+    used on image variables, and may not be used on variables of any other
+    type.  "const" may be used in declarations with non-image variable types,
+    as described in Section 4.3.2.
+
+    The values of variables qualified with "coherent", "volatile", "restrict",
+    or "const" may not be assigned to function parameters lacking such
+    qualifiers.  It is legal to add qualifiers in a function call, but not to
+    remove them.
+
+      vec4 funcA(layout(size4x32) image2D restrict a)   { ... }
+      vec4 funcB(layout(size4x32) image2D a)            { ... }
+      layout(size4x32) uniform image2D img1;
+      layout(size4x32) coherent uniform image2D img2;
+
+      funcA(img1);              // OK, adding "restrict" is allowed
+      funcB(img2);              // illegal, stripping "coherent" is not
+
+    
+    (Insert a new numbered section at the end of Chapter 8, Built-in
+    Functions, p. 69)
+
+    Section 8.X, Image Functions
+
+    Variables using one of the image data types may be used in the built-in
+    shader image memory functions defined in this section to read and write
+    individual texels of a texture.  Each image variable is an integer scalar
+    that references an image unit, which has a texture image attached.
+
+    When image memory functions access memory, an individual texel in the
+    image is identified using an i, (i,j), or (i,j,k) coordinate corresponding
+    to the values of <coord>.  For image2DMS and image2DMSArray variables (and 
+    the corresponding int/unsigned int types) corresponding to multisample 
+    textures, each texel may have multiple samples and an individual sample is 
+    identified using the integer <sample> parameter.  The coordinates and 
+    sample number are used to select an individual texel in the manner 
+    described in Section 3.9.X of the OpenGL specification.
+
+    Loads and stores support float, integer, and unsigned integer types. The
+    data types "gimage*" serve as placeholders meaning either "image*", 
+    "iimage*", or "uimage*" in the same way as "gvec" or "gsampler".
+
+    The "IMAGE_INFO" in the prototypes below is a placeholder representing
+    33 separate functions, each for a different type of image variable.  The
+    "IMAGE_INFO" placeholder is replaced by one of the following argument
+    lists:
+
+        gimage1D image, int coord
+        gimage2D image, ivec2 coord
+        gimage3D image, ivec3 coord
+        gimage2DRect image, ivec2 coord
+        gimageCube image, ivec3 coord
+        gimageBuffer image, int coord
+        gimage1DArray image, ivec2 coord
+        gimage2DArray image, ivec3 coord
+        gimageCubeArray image, ivec3 coord
+        gimage2DMS image, ivec2 coord, int sample
+        gimage2DMSArray image, ivec3 coord, int sample
+
+    (Note that each of the "gimage*" lines represents one of three different
+    image variable types.)
+
+    Syntax:
+
+      gvec4 imageLoad(const IMAGE_INFO);
+
+    Description:
+
+    Loads the texel at the coordinate <coord> from the image unit specified 
+    by <image>.  For multisample loads, the sample number is given by 
+    <sample>.  When <image>, <coord>, and <sample> identify a valid texel, 
+    the bits used to represent the selected texel in memory are converted to 
+    a vec4, ivec4, or uvec4 in the manner described in Section 3.9.X of the 
+    OpenGL Specification and returned.
+
+
+    Syntax:
+
+      void imageStore(IMAGE_INFO, gvec4 data);
+
+    Description:
+
+    Stores the value of <data> into the texel at the coordinate <coord> from
+    the image specified by <image>.  For multisample stores, the sample number
+    is given by <sample>.  When <image>, <coord>, and <sample> identify a
+    valid texel, the bits used to represent <data> are converted to the format
+    of the image unit in the manner described in Section 3.9.X of the OpenGL
+    Specification and stored to the specified texel.
+    
+
+    Syntax:
+
+      uint      imageAtomicAdd(IMAGE_INFO, uint data);
+      int       imageAtomicAdd(IMAGE_INFO, int data);
+
+      uint      imageAtomicMin(IMAGE_INFO, uint data);
+      int       imageAtomicMin(IMAGE_INFO, int data);
+
+      uint      imageAtomicMax(IMAGE_INFO, uint data);
+      int       imageAtomicMax(IMAGE_INFO, int data);
+
+      uint      imageAtomicIncWrap(IMAGE_INFO, uint wrap);
+
+      uint      imageAtomicDecWrap(IMAGE_INFO, uint wrap);
+
+      uint      imageAtomicAnd(IMAGE_INFO, uint data);
+      int       imageAtomicAnd(IMAGE_INFO, int data);
+
+      uint      imageAtomicOr(IMAGE_INFO, uint data);
+      int       imageAtomicOr(IMAGE_INFO, int data);
+
+      uint      imageAtomicXor(IMAGE_INFO, uint data);
+      int       imageAtomicXor(IMAGE_INFO, int data);
+
+      uint      imageAtomicExchange(IMAGE_INFO, uint data);
+      int       imageAtomicExchange(IMAGE_INFO, int data);
+
+      uint      imageAtomicCompSwap(IMAGE_INFO, uint compare, uint data);
+      int       imageAtomicCompSwap(IMAGE_INFO, int compare, int data);
+
+    Description:
+
+    These functions perform atomic operations on individual texels or samples
+    of an image variable.  Atomic memory operations read a value from the
+    selected texel, compute a new value using one of the operations described
+    below, writes the new value to the selected texel, and returns the
+    original value read.  The contents of the texel being updated by the
+    atomic operation are guaranteed not to be updated by any other image store
+    or atomic function between the time the original value is read and the
+    time the new value is written.
+
+    As with image load and store functions, <image>, <coord>, and <sample>
+    specify the the individual texel to operate on.  The method for
+    identifying the individual texel operated on from <image>, <coord>, and
+    <sample>, and the method for reading and writing the texel are specified
+    in Section 3.9.X of the OpenGL specification. The format of the image 
+    unit must be in the "1x32" equivalence class in Table X.2 in Section 3.9.X
+    of the OpenGL specification, otherwise the atomic operation is invalid.
+
+    imageAtomicAdd() computes a new value by adding the value of <data> to the
+    contents of the selected texel.  These functions support 32-bit unsigned
+    integer operands and 32-bit signed integer operands.
+
+    imageAtomicMin() computes a new value by taking the minimum of the value
+    of <data> and the contents of the selected texel.  These functions support
+    32-bit signed and unsigned integer operands.
+
+    imageAtomicMax() computes a new value by taking the maximum of the value
+    of <data> and the contents of the selected texel.  These functions support
+    32-bit signed and unsigned integer operands.
+
+    imageAtomicIncWrap() computes a new value by adding one to the contents of
+    the selected texel, and then forcing the result to zero if and only if the
+    incremented value is greater than or equal to <wrap>.  These functions
+    support only 32-bit unsigned integer operands.
+
+    imageAtomicDecWrap() computes a new value by subtracting one from the
+    contents of the selected texel, and then forcing the result to <wrap>-1 if
+    the original value read from the selected texel was either zero or greater
+    than <wrap>.  These functions support only 32-bit unsigned integer
+    operands.
+
+    imageAtomicAnd() computes a new value by performing a bitwise and of the
+    value of <data> and the contents of the selected texel.  These functions
+    support 32-bit signed and unsigned integer operands.
+
+    imageAtomicOr() computes a new value by performing a bitwise or of the
+    value of <data> and the contents of the selected texel.  These functions
+    support 32-bit signed and unsigned integer operands.
+
+    imageAtomicXor() computes a new value by performing a bitwise exclusive or
+    of the value of <data> and the contents of the selected texel.  These
+    functions support 32-bit signed and unsigned integer operands.
+
+    imageAtomicExchange() computes a new value by simply copying the value of
+    <data>.  These functions support 32-bit signed and unsigned integer
+    operands.
+
+    imageAtomicCompSwap() compares the value of <compare> and the contents of
+    the selected texel.  If the values are equal, the new value is given by
+    <data>; otherwise, it is taken from the original value loaded from the
+    texel.  These functions support 32-bit signed and unsigned integer
+    operands.
+
+
+    (Insert another new numbered section at the end of Chapter 8, Built-in
+    Functions, p. 69)
+
+    Section 8.Y, Shader Memory Functions
+
+    Shaders of all types may read and write the contents of textures and
+    buffer objects using image variables.  While the order or reads and writes
+    within a single shader invocation is well-defined, the relative order of
+    reads and writes to a single shared memory address from multiple separate
+    invocations is largely undefined.
+
+    Syntax:
+
+      void      memoryBarrier(void);
+
+    Description:
+
+    memoryBarrier() can be used to control the ordering of memory transactions
+    issued by a shader invocation.  When called, it will wait on the
+    completion of all memory accesses resulting from the use of image
+    variables prior to calling the function.  When all memory operations have
+    been flushed, memoryBarrier() returns to the caller with no other effect.
+    When this function returns, the results of any memory stores performed
+    using coherent variables performed prior to the call will be visible to
+    any future coherent memory access to the same addresses from other shader
+    invocations.  In particular, the values written and flushed this way in
+    one shader stage are guaranteed to be visible to coherent memory accesses
+    performed by shader invocations in subsequent stages when those
+    invocations were triggered by the execution of the original shader
+    invocation (e.g., fragment shader invocations for a primitive resulting
+    from a particular geometry shader invocation).
+
+
+    Modify Section 9, Shading Language Grammar (p. 105)
+
+    !!! TBD:  Add grammar constructs for memory access qualifiers, allowing
+        memory access qualifiers before or after the type in a variable
+        declaration.
+
+
+Errors
+
+    INVALID_VALUE is generated by Uniform1i{v} if the location refers to an
+    image variable and the value specified is less than zero or greater than
+    or equal to MAX_IMAGE_UNITS_EXT.
+
+    INVALID_OPERATION is generated by Uniform* functions other than
+    Uniform1i{v} if the location refers to an image variable.
+
+    INVALID_VALUE is generated by BindImageTextureEXT if <index> is less than
+    zero or greater than or equal to MAX_IMAGE_UNITS_EXT.
+
+    INVALID_VALUE is generated by BindImageTextureEXT if <texture> is not the
+    name of an existing texture object.
+
+    INVALID_VALUE is generated by BindImageTextureEXT if <format> is not a 
+    legal format.
+
+
+Dependencies on OpenGL 3.2 (Core Profile)
+
+    If only the core profile of OpenGL 3.2 is supported, references to buffer
+    objects for conventional vertex attributes and to the Begin and RasterPos
+    commands should be removed.
+
+Dependencies on OpenGL 3.1, ARB_uniform_buffer_object, and
+EXT_bindable_uniform
+
+    If OpenGL 3.1, ARB_uniform_buffer_object, and EXT_bindable_uniform are not
+    supported, references to UNIFORM_BARRIER_BIT should be removed.
+
+Dependencies on ARB_draw_indirect
+
+    If ARB_draw_indirect is not supported, references to COMMAND_BARRIER_BIT_EXT
+    should be removed.
+
+Dependencies on NV_vertex_buffer_unified_memory
+
+    If NV_vertex_buffer_unified_memory is not supported, references to that
+    extension and GPU addresses in the discussion of
+    VERTEX_ATTRIB_ARRAY_BARRIER_BIT_EXT and ELEMENT_ARRAY_BARRIER_BIT_EXT should
+    be removed.
+
+Dependencies on OpenGL 3.2 and ARB_texture_multisample
+
+    If OpenGL 3.2 and ARB_texture_multisample are not supported, references to
+    multisample textures should be removed.
+
+Dependencies on OpenGL 4.0 and ARB_sample_shading
+
+    If OpenGL 4.0 or ARB_sample_shading is supported, the discussion of the
+    number of shader invocations for a given fragment in the "Shader Memory
+    Access" section of the specification should be updated to discuss the
+    sample shading enable and the minimum sample shading factor provided in
+    that extension.
+
+Dependencies on OpenGL 4.0 and ARB_texture_cube_map_array
+
+    If OpenGL 4.0 or ARB_texture_cube_map_array are not supported, references
+    to cube map array textures should be removed.
+
+Dependencies on OpenGL 3.3 and ARB_texture_rgb10_a2ui
+
+    If OpenGL 3.3 or ARB_texture_rgb10_a2ui are not supported, references to
+    the RGB10_A2UI texture format should be removed.
+
+Dependencies on NV_shader_buffer_load
+
+    If NV_shader_buffer_load is supported, the new section 2.14.X (Shader
+    Memory Access) should be combined with "Section 2.20.X, Shader Memory
+    Access" from NV_shader_buffer_load.
+
+Dependencies on OpenGL 4.0, ARB_gpu_shader5, and NV_gpu_shader5
+
+    If OpenGL 4.0, ARB_gpu_shader5, and NV_gpu_shader5 are not supported, the
+    modifications to the OpenGL Shading Language Specification should be
+    removed.
+
+Dependencies on OpenGL 4.0 and ARB_tessellation_shader
+
+    If OpenGL 4.0 and ARB_tessellation_shader are not supported, references to
+    tessellation control and evaluation shaders should be removed.
+
+Dependencies on EXT_shader_atomic_counters
+
+    If EXT_shader_atomic_counters is not supported, remove references to
+    ATOMIC_COUNTER_BARRIER_BIT_EXT.
+
+Dependencies on EXT_depth_bounds_test
+
+    If EXT_depth_bounds_test is not supported, references to the depth bounds
+    test should be removed.
+
+Dependencies on EXT_separate_shader_objects
+
+    If EXT_separate_shader_objects is supported, early depth tests are enabled
+    if and only if (a) there is an active program for the fragment shader
+    stage and (b) the fragment shader in that program enables early depth
+    tests using a layout qualifier.
+
+Dependencies on NV_gpu_program5
+
+    If NV_gpu_program5 is supported, the following edits are made to extend
+    the assembly programming model documented in the NV_gpu_program4 extension
+    and extended by NV_gpu_program5.  No "OPTION" line is required; the
+    following capability is implied by NV_gpu_program5 program headers such as
+    "!!NVfp5.0".
+
+    If NV_gpu_program5 is not supported, the contents of this dependencies
+    section should be ignored.
+
+    Section 2.X.2, Program Grammar
+
+    (add the following rules to the grammar)
+
+      <namingStatement>       ::= IMAGE_statement
+
+      <IMAGE_statement>       ::= "IMAGE" <establishName> <imageSingleInit>
+                                | "IMAGE" <establishName> <optArraySize>
+                                    <imageMultipleInit>
+
+      <imageSingleInit>       ::= "=" <imageUseDS>
+
+      <imageMultipleInit>     ::= "=" "{" <imageItemList> "}"
+
+      <imageItemList>         ::= <imageUseDM>
+                                | <imageUseDM> "," <imageItemList>
+
+      <imageUseDS>            ::= "image" <arrayMemAbs>
+
+      <imageUseDM>            ::= <imageUseDS>
+                                | "image" <arrayRange>
+
+
+      <instruction>           ::= <ImageInstruction>
+
+      <ImageInstruction>:     ::= <LOADIMop_instruction>
+                                | <STOREIMop_instruction>
+                                | <ATOMIMop_instruction>
+
+      <LOADIMop_instruction>  ::= <LOADIMop> <opModifiers> <instResult> "," 
+                                       <instOperandV> "," <imageAccess>
+
+      <STOREIMop_instruction> ::= <STOREIMop> <opModifiers> <imageUnit> "," 
+                                       <instOperandV> "," <instOperandV> "," 
+                                       <imageTarget>
+
+      <ATOMIMop_instruction>  ::= <ATOMIMop> <opModifiers> <instResult> "," 
+                                       <instOperandV> "," <instOperandV> "," 
+                                       <imageAccess>
+
+      <LOADIMop>              ::= "LOADIM"
+      <STOREIMop>             ::= "STOREIM"
+      <ATOMIMop>              ::= "ATOMIM"
+
+      <imageAccess>           ::= <imageUnit> "," <imageTarget>
+
+      <imageUnit>             ::= "image" <arrayMemAbs>
+                                | <imageVarName> <optArrayMem>
+
+      <imageTarget>           ::= "1D"
+                                | "2D"
+                                | "3D"
+                                | "RECT"
+                                | "CUBE"
+                                | "BUFFER"
+                                | "ARRAY1D"
+                                | "ARRAY2D"
+                                | "ARRAYCUBE"
+                                | "2DMS"
+                                | "ARRAY2DMS"
+
+    Section 2.X.3.X, Program Image Variables
+
+    Program image variables are used as constants during program execution
+    and refer the image objects bound to one or more image units. All 
+    image variables have associated bindings and are read-only during
+    program execution.  Image variables retain their values across program
+    invocations, and the set of image units to which they refer is
+    constant.  The texture object a variable refers to may be changed by
+    binding a new texture object to the corresponding image unit.  Image 
+    variables may only be used to identify a texture object in image 
+    instructions, and may not be used as operands in any other instruction.
+    Image variables may be declared explicitly via the <IMAGE_statement> 
+    grammar rule, or implicitly by using an image unit binding in an 
+    instruction.
+
+    Image array variables may be declared as arrays, but the list of image 
+    units assigned to the array must increase consecutively.
+
+      Binding          Components  Underlying State
+      ---------------  ----------  ------------------------------------------
+      image[a]             x       image object bound to image unit a
+      image[a..b]          x       image objects bound to image units a
+                                     through b
+
+      Table X.12.2:  Image Unit Bindings.  <a> and <b> indicate image unit
+      numbers.
+
+    If an image binding matches "image[a]", the image variable is filled
+    with a single integer referring to image unit <a>.
+
+    If an image binding matches "image[a..b]", the image variable is
+    filled with an array of integers referring to image units <a> through 
+    <b>, inclusive.  A program will fail to compile if <a> or <b> is
+    negative or greater than or equal to the number of image units
+    supported, or if <a> is greater than <b>.
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+      Instr-      Modifiers 
+      uction  V  F I C S H D  Out Inputs    Description
+      ------- -- - - - - - -  --- --------  --------------------------------
+      ATOMIM  50 - - X - - -  s   v,vs,i    atomic image operation
+      LOADIM  50 - - X X - F  v   vs,i      image load
+      MEMBAR  50 - - - - - -  -   -         memory barrier
+      STOREIM 50 X X - - - F  -   i,v,vs    image store
+
+      ...
+
+      The input and output columns describe the formats of the operands and
+      results of the instruction.
+
+        i:  IMAGE variable, read-only
+
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+    (add to Table X.14 of the NV_gpu_program4 specification.)
+
+      Modifier  Description
+      --------  ---------------------------------------------------
+      COH       Mark LOADIM and STOREIM operations as coherent
+      VOL       Make LOADIM and STOREIM operations as volatile
+
+    For image load and store operations, the "COH" modifier controls whether
+    the operation is performed in a manner guaranteed to be coherent with
+    loads and stores performed by other shader invocations.
+
+    For image load and store operations, the "VOL" modifier controls whether
+    the operation should treat the contents of the image accessed as volatile,
+    where the underlying image contents may be changed at any point during
+    shader execution by some source other than the current shader thread.
+
+
+    Section 2.X.8.Z, LOADIM:  Image Load
+
+    The LOADIM instruction takes the components of a single signed integer
+    vector operand and uses them as coordinates to perform an unformatted 
+    image load from the texture bound to the image unit specified by 
+    <imageUnit>. Unformatted loads read the data from memory without 
+    converting from the image unit format, by copying raw bits from memory 
+    to the destination variable according to the bit layouts described in 
+    Table X.2, where word 0 is written to the .x component, word 1 to .y, 
+    etc..
+
+    Eleven image targets are supported:  1D, 2D, 3D, RECT, CUBE, BUFFER, 
+    ARRAY1D, ARRAY2D, ARRAYCUBE, 2DMS, and ARRAY2DMS.  The texel coordinate 
+    is a one-, two- or three-dimensional vector, taken from the <x>, <y>, and
+    <z> components of the operand.  For the 2DMS and ARRAY2DMS, the texel
+    coordinate is a two- or three-dimensional vector, taken from the <x>, 
+    <y>, and <z> components of the operand, and a sample number is taken from
+    the <w> component of the operand.
+
+        coords = VectorLoad(op0);
+        if (target == 1D || target == BUFFER) {
+          coords.y = 0;
+        }
+        if (target == 1D || target == 2D ||
+            target == BUFFER || target == RECT || 
+            target == 2DMS) {
+          coords.z = 0;
+        }
+        if (target != 2DMS && target != ARRAY2DMS) {
+          coords.w = 0;
+        }
+        result = ImageLoad(image, coords);
+
+    When an image load uses the "S8", "U8", "S16", "U16", "F32", "S32", or
+    "U32" storage modifiers, the <x> component of the result contains the
+    loaded value and the <y>, <z>, and <w> components of the result are zero,
+    zero, and one (int or float, depending on the type of the opModifier),
+    respectively. For "S8" and "S16" modifiers, the loaded value is sign-
+    extended; for "U8" and "U16", the loaded value is zero-extended.  When 
+    an image load uses the "F32X2", "S32X2", or "U32X2" storage modifiers, 
+    the <x> and <y> components of the result contain the loaded values and 
+    the <z>, and <w> components of the result are zero and one, respectively.
+    When an image load uses the "F32X4", "S32X4", or "U32X4" storage 
+    modifiers, all four components of the result contain the loaded values.
+    If the image load is invalid for any of the reasons described in Section
+    3.9.X, the result vector will be undefined.
+
+    LOADIM supports no base data type modifiers, but requires exactly one
+    storage modifier.  An image load is treated as invalid unless the storage
+    modifier matches the image unit format, as described in Table X.3.  The 
+    base data type of the result vector is derived from the storage modifier.
+    The single operand is always interpreted as a signed integer vector.
+
+        Data Type    Supported Modifers
+        ---------    -------------------
+          4x32       F32X4, S32X4, U32X4
+          2x32       F32X2, S32X2, U32X2
+          1x32       F32,   S32,   U32
+          1x16              S16,   U16
+          1x8               S8,    U8
+
+      Table X.3, Supported Storage Modifiers.  Unformatted image operations
+      are considered invalid unless the storage modifier is compatible with
+      the "Data Type" entry for the image unit format, as described in Table
+      X.2.
+
+
+    Section 2.X.8.Z, STOREIM:  Image Store
+
+    The STOREIM instruction takes the components of the second signed integer
+    vector operand, uses them as coordinates to perform a formatted or
+    unformatted image store to the texture bound to the image unit specified
+    by <imageUnit> using the data specified in the first vector operand.  The
+    store is performed in the manner described in Section 3.9.X.
+
+    Eleven image targets are supported:  1D, 2D, 3D, RECT, CUBE, BUFFER, 
+    ARRAY1D, ARRAY2D, ARRAYCUBE, 2DMS, and ARRAY2DMS.  The texel coordinate 
+    is a one-, two- or three-dimensional vector, taken from the <x>, <y>, and
+    <z> components of the operand.  For the 2DMS and ARRAY2DMS, the texel
+    coordinate is a two- or three-dimensional vector, taken from the <x>, 
+    <y>, and <z> components of the operand, and a sample number is taken from
+    the <w> component of the operand.
+
+        data = VectorLoad(op0);
+        coords = VectorLoad(op1);
+        if (target == 1D || target == BUFFER) {
+          coords.y = 0;
+        }
+        if (target == 1D || target == 2D ||
+            target == BUFFER || target == RECT || 
+            target == 2DMS) {
+          coords.z = 0;
+        }
+        if (target != 2DMS && target != ARRAY2DMS) {
+          coords.w = 0;
+        }
+        ImageStore(image, coords, data);
+
+    STOREIM supports an optional base data type or storage modifier.  If a
+    storage modifier is specified, the store is unformatted; otherwise, it is
+    formatted.  Formatted stores operate as described in Section 3.9.X. 
+    Unformatted stores write the data to memory without converting to the 
+    image unit format, by copying raw bits from the source variable to 
+    memory according to the bit layouts described in Table X.2, where word 
+    0 is taken from the <x> component, word 1 from <y>, etc..
+    
+    An unformatted image store is treated as invalid unless the
+    storage modifier matches image unit format, as described in Table X.3.  
+    When performing an unformatted store using the "S8", "U8", "S16", or 
+    "U16" modifiers, all bits but the least significant eight or sixteen 
+    are dropped as part of the store.  When performing a formatted store, 
+    the first operand will be converted to the image unit format as part 
+    of the store.
+
+    The base data type of the first vector operand is derived from the data
+    type or storage modifier.  The second operand is always interpreted as a
+    signed integer vector.
+
+
+    Section 2.X.8.Z, ATOMIM:  Image Atomic Memory Operation
+
+    The ATOMIM instruction takes the components of the second signed integer
+    vector operand, uses them as coordinates to perform an unformatted image
+    load from the texture bound to the image unit specified by <imageUnit>,
+    performs a computation using the loaded value and the first vector
+    operand, performs an unformatted store of the result of the computation to
+    the same texel, and then returns the loaded value in the vector result.
+    The atomic operation is performed in the manner described in Section
+    3.9.X.
+
+    The ATOMIM instruction has two required instruction modifiers.  The atomic
+    modifier specifies the type of computation to be performed.  The storage
+    modifier specifies the size and data type of the operand read from the
+    image unit and the base data type of the operation used to compute the
+    value to be written back.
+
+      atomic     storage
+      modifier   modifiers   operation
+      --------   ---------   --------------------------------------
+       ADD       U32, S32    compute a sum
+       MIN       U32, S32    compute minimum
+       MAX       U32, S32    compute maximum
+       IWRAP     U32         increment memory, wrapping at operand
+       DWRAP     U32         decrement memory, wrapping at operand
+       AND       U32, S32    compute bit-wise AND
+       OR        U32, S32    compute bit-wise OR
+       XOR       U32, S32    compute bit-wise XOR
+       EXCH      U32, S32    exchange memory with operand
+       CSWAP     U32, S32    compare-and-swap
+
+     Table X.4, Supported atomic and storage modifiers for the ATOMIM
+     instruction.
+
+    Not all storage modifiers are supported by ATOMIM, and the set of
+    modifiers allowed for any given instruction depends on the atomic modifier
+    specified.  Table X.4 enumerates the set of atomic modifiers supported by
+    the ATOMIM instruction, and the storage modifiers allowed for each.
+
+        data = VectorLoad(op0);
+        coords = VectorLoad(op1);
+        if (target == 1D || target == BUFFER) {
+          coords.y = 0;
+        }
+        if (target == 1D || target == 2D ||
+            target == BUFFER || target == RECT || 
+            target == 2DMS) {
+          coords.z = 0;
+        }
+        if (target != 2DMS && target != ARRAY2DMS) {
+          coords.w = 0;
+        }
+        result = ImageLoad(coords, data);
+        switch (atomicModifier) {
+        case ADD:
+          writeval = tmp0.x + result;
+          break;
+        case MIN:
+          writeval = min(tmp0.x, result);
+          break;
+        case MAX:
+          writeval = max(tmp0.x, result);
+          break;
+        case IWRAP:
+          writeval = (result >= tmp0.x) ? 0 : result+1; 
+          break;
+        case DWRAP:
+          writeval = (result == 0 || result > tmp0.x) ? tmp0.x : result-1;
+          break;
+        case AND:
+          writeval = tmp0.x & result;
+          break;
+        case OR:
+          writeval = tmp0.x | result;
+          break;
+        case XOR:
+          writeval = tmp0.x ^ result;
+          break;
+        case EXCH:
+          break;
+        case CSWAP:
+          if (result == tmp0.x) {
+            writeval = tmp0.y;
+          } else {
+            writeval = result;
+          }
+          break;
+        }
+        ImageStore(image, writeval);
+
+    ATOMIM performs a scalar atomic operation.  The <y>, <z>, and <w>
+    components of the result vector are undefined.
+      
+    ATOMIM supports no base data type modifiers, but requires exactly one
+    storage and one atomic modifier.  An image atomic is treated as invalid
+    unless the storage modifier matches the format of the texture bound to the
+    image unit, as described in Table X.3.  The base data type of the result
+    and the first operand is derived from the storage modifier.  The second
+    operand is always interpreted as a signed integer vector.
+
+
+    Section 2.X.8.Z, MEMBAR:  Memory Barrier
+
+    The MEMBAR instruction synchronizes memory transactions to ensure that
+    memory transactions resulting from any instruction executed by the thread
+    prior to the MEMBAR instruction complete prior to any memory transactions
+    issued after the instruction.
+
+    MEMBAR has no operands and generates no result.
+
+    Modify Section 3.9.X, Texture Image Loads and Stores, as added above.
+
+    (Add a separate paragraph and table describing how the four-component
+    coordinate vector used in image load, store, and atomic opcodes are mapped
+    to individual texels.)
+
+    When a program accesses the texture bound to an image unit using the
+    LOADIM, STOREIM, or ATOMIM opcodes, it provides a four-component
+    coordinate vector used to select individual texels or samples.  This
+    (x,y,z,w) vector is used to select an individual texel tau_i, tau_i_j, or
+    tau_i_j_k according to the target of the texture bound to the image unit
+    using Table X.5.  As noted above, single-layer bindings of array or cube
+    map textures are considered to use a texture target corresponding to the
+    bound layer, rather than that of the full texture.
+
+                                                   face/
+                                          i  j  k  layer sample
+                                          -- -- -- ----- ------
+        TEXTURE_1D                        x  -  -    -     -
+        TEXTURE_2D                        x  y  -    -     -
+        TEXTURE_3D                        x  y  z    -     -
+        TEXTURE_RECTANGLE                 x  y  -    -     -
+        TEXTURE_CUBE_MAP                  x  y  -    z     -
+        TEXTURE_BUFFER                    x  -  -    -     -
+        TEXTURE_1D_ARRAY                  x  -  -    z     -
+        TEXTURE_2D_ARRAY                  x  y  -    z     -
+        TEXTURE_CUBE_MAP_ARRAY_ARB        x  y  -    z     -
+        TEXTURE_2D_MULTISAMPLE            x  y  -    -     w
+        TEXTURE_2D_MULTISAMPLE_ARRAY      x  y  -    z     w
+
+        Table X.5, Mapping of image load, store, and atomic texel coordinate
+        components to texel numbers.
+
+
+Issues
+
+    (1) How are the format and type of the load/store determined?
+
+      RESOLVED:  There is a natural desire to load and store using a 
+      canonical 4-vector in the shader with hardware converting to/from a 
+      format compatible with the bound image, to be consistent with how
+      texture loads and fragment shader outputs currently behave. There is
+      also good reason to allow some flexibility in the format used for image
+      accesses being different from the internal format of the texture level.
+      We allow format conversions to and from any format that image units 
+      support. We make the format be selected when the image is bound to an 
+      image unit, and define which image unit formats can be used for which
+      texture level internal formats. For example, it is legal to access an
+      image whose internal format is RGBA8 with an image unit format of 
+      R32UI.
+      
+    (2) What set of texture formats should be supported for image loads and
+        stores?
+
+      RESOLVED:  We allow textures to be bound to image units if and only if
+      the implementation supports formatted stores for the texture format.
+      Any texture formats not explicitly enumerated in this extension may not
+      be bound to an image unit, although future extensions may add new
+      formats to the set of supported formats.
+
+      In particular, this extension supports one-, two-, and four-component
+      textures with 8-, 16-, and 32-bit components, including floating-point,
+      signed integer, unsigned integer, as well as signed and unsigned
+      normalized formats.  Additionally, a small number of other formats are
+      supported, including the 11/11/10 RGB format from EXT_packed_float and
+      10/10/10/2 unsigned normalized RGBA.
+
+    (3) Should we general support image loads and stores for three-component
+        "RGB" formats?
+
+      RESOLVED:  Not in this extension.  If an application needs to perform
+      image loads and stores on a three-component texture, it could use an
+      equivalent RGBA format and ignore the alpha component.  The
+      EXT_texture_swizzle extension could be used to make the values returned
+      by texture appear identical to an RGB texture, if required.
+
+    (4) Should textures be unbound from image units when they are deleted?
+
+      RESOLVED:  Yes, this matches behavior of existing bind points.
+
+    (5) Should we support image loads and stores for the deprecated LUMINANCE,
+        LUMINANCE_ALPHA, and ALPHA formats?
+
+      RESOLVED:  No, only support the RGBA-style formats. EXT_texture_swizzle
+      can be used to mimic luminance and alpha if required.
+
+    (6) Should we support 64-bit atomics on images?  Should we support atomics
+        at all on formats with 8-, 16-, 64-, or 128-bit texels?
+
+      RESOLVED:  No, we will only support 32-bit atomic operations on images.
+
+    (7) How do shader image loads and stores interact with texture
+        completeness?  What happens if you bind a texture with inconsistent
+        mipmaps?
+
+      RESOLVED:  The image unit is treated as if nothing were bound, where 
+      all accesses are treated as invalid.
+
+    (8) What happens if the value passed to Uniform1i to specify the image
+        unit corresponding to a image variable refers to a non-existent image
+        unit (i.e., is negative or greater than or equal to the number of
+        image units supported)?
+
+      RESOLVED:  Values referring to invalid image units will be rejected and
+      produce an INVALID_VALUE error.
+
+    (9) Should we provide counting rules for image variable use in different
+        shaders like we have for samplers?  In particular, there are limits
+        on the amount of state, the number of active samplers in each shader
+        stage, and the sum of the active sampler counts in each stage.
+
+      RESOLVED:  No.  It was considered sufficient to have just a limit on the
+      total number of image units in the implementation (i.e., the number of
+      distinct values that the variable can be set to).
+
+    (10) Can this extension be used to load and store values into a buffer
+         object?  Into a renderbuffer?
+
+      RESOLVED:  Yes, indirectly.  The BUFFER_TEXTURE target provided by
+      OpenGL 3.0 and the EXT_texture_buffer_object extension allows an
+      application to create a one-dimensional buffer texture using the data
+      store of a buffer object. This buffer texture may be bound to an image
+      unit and accessed with an imageBuffer variable in the Shading Language.
+
+      This extension adds support for image accesses to multisample textures, 
+      but not renderbuffers. Note that with the ARB_texture_multisample 
+      extension, there is no longer a good reason to use renderbuffers. 
+      Existing 2D or rectangle targets already provided a superset of single-
+      sample renderbuffer functionality; the new ARB extension provides a 
+      superset of multisample renderbuffer functionality.
+
+    (11) What amount of automatic synchronization is provided for image loads
+         and stores?  In particular, is the use of MemoryBarrierEXT() required
+         to ensure consistent ordering relative to other GL operations?  Or is
+         some other mechanism (e.g., unbinding a texture from an image unit
+         and then binding it to a texture image unit) sufficient?
+
+      RESOLVED:  Use of MemoryBarrierEXT is required, and there is no
+      automatic synchronization when images are bound or unbound.
+
+      Implicit synchronization is difficult, as it might require some
+      combination of:
+
+        - tracking which images might be written (randomly) in the shader
+          itself;
+
+        - assuming that if a shader that performs writes is executed, all
+          texels of all bound images could be modified and thus must be
+          treated as dirty;
+
+        - idling at the end of each primitive or draw call, so that the
+          results of all previous commands are complete.
+
+      Since normal OpenGL operation is pipelined, idling would result in a
+      significant performance impact since pipelining would otherwise allow
+      fragment shader execution for draw call N while simultaneously
+      performing vertex shader execution for draw call N+1.
+
+    (12) Should image loads and stores be allowed for all shader types?
+
+      RESOLVED:  Yes, it seems useful.
+
+      Note that some shader types pose specific implementation complexities
+      (e.g., reuse of vertices in vertex shaders, number of fragment shader
+      invocations in multisample modes, relative order of execution within and
+      between shader groups).  We have explicitly specify several cases where
+      the invocation count and execution order are undefined.  While these
+      cases may be a problem for some algorithms, we expect that many
+      algorithms will not be adversely impacted.
+
+    (13) Should an implementation be required to throw INVALID_OPERATION
+         errors if the dimension of the texture coordinates implied by the
+         image variable type doesn't match the structure of the texture
+         level/layer bound to the corresponding image unit?  If not, what
+         happens in such a mismatch?
+
+      RESOLVED:  No.  The results of image accesses are undefined.
+
+    (14) Should shader image variable types include a "format" implying the
+         data type accepted/returned by shader image loads and stores?  For
+         example, an image variable corresponding to a 2D texture with format
+         of RGBA32F might have a type "image2Dvec4", with the "vec4"
+         indicating that the image data lines up with a four-component
+         floating-point vector.
+
+      RESOLVED:  No.  Separate types are provided for float vs. int vs. 
+      unsigned int, but not for each image format.
+
+    (15) If shader image variable types include information on the texel
+         components returned or written by shader image accesses, should an
+         implementation be required to enforce errors if the variable type is
+         incompatible with the format of the referenced texture?  If not, or
+         if the image variable type doesn't include format information, what
+         happens in case of a mismatch between the texture format and the
+         shader access format?
+
+      RESOLVED:  We aren't including types in the variable that correspond
+      to the image format, so an error check in the driver is not possible.
+
+      If an individual load, store, or atomic uses a data type incompatible
+      with the texture bound to the image unit, loads will return and stores
+      will write undefined values.
+
+    (16) Is it possible to bind the "default texture" (numbered zero) for a
+         given texture target to an image unit?
+
+      RESOLVED:  No.  Passing zero to BindImageTexture unbinds and texture
+      currently bound to the selected image unit.  If this ability were
+      provided, it would also be necessary to provide some mechanism to
+      specify a texture target because there is a separate default "zero"
+      texture for each target.  
+
+      Note that existing framebuffer objects have a similar behavior; default
+      textures can't be attached to an FBO.
+
+    (17) May bordered textures be used with image loads and stores?
+
+      RESOLVED:  No.
+
+    (18) Should we have defined behavior if invalid coordinates are passed to
+         an image load, store, or atomic operation?  If so, what happens?
+
+      RESOLVED:  Yes. We define the behavior to return zeroes on a load and 
+      atomic and to have no effect on any bound texture on stores and 
+      atomics.
+
+    (19) Should we have a limit on the total number of combined image units
+         and draw buffers, and if so, what should that be?
+
+      RESOLVED:  Yes, some hardware requires this. The program will fail to 
+      link.
+
+    (20) What happens if a shader specifies an image store or atomic operation
+         for killed/discarded pixels?
+
+      RESOLVED:  For GLSL shaders that execute a "discard" instruction, any
+      image stores or atomics performed before executing the discard will
+      behave normally.  When the "discard" instruction is executed, the shader
+      invocation will be terminated and will perform no further image store or
+      atomic operations.
+
+      For assembly shaders (NV_gpu_program5) that execute a "KIL" instruction,
+      any image stores or atomics performed before executing the KIL will
+      behave normally.  Unlike GLSL's "discard", the "KIL" instruction does
+      not terminate program invocations.  However, any image store or atomic
+      operations performed after the KIL instruction do not update memory, and
+      the value returned by atomic operations is undefined.
+
+    (21) When enabling early depth tests in a program, what happens if a
+         fragment fails one of the tests (e.g., depth test)?
+
+      RESOLVED:  The specification indicates that the fragment shader is not
+      executed.  Implementations might still end up running fragment shader
+      for implementation-dependent reasons.  For example, the fragment shader
+      may be run in order to approximate derivatives for neighboring pixels
+      that did pass all per-fragment tests.  In these cases, implementations
+      must guarantee that image stores have no effect.
+
+    (22) If implementations run fragment shaders for fragments that aren't
+         covered by the primitive or fail early depth tests (e.g., "helper
+         pixels"), how does that interact with stores and atomics?
+
+      RESOLVED:  The current OpenGL specification has no formal notion of
+      "helper" pixels.  In practice, implementations may run fragment shaders
+      for pixels near the boundaries of rasterized primitives to allow
+      derivatives to be approximated by differencing.  Typically, these shader
+      invocations have no effect.  While they may produce outputs, the outputs
+      for these pixels will be discarded without affecting the framebuffer.
+      The spec basically treats these shader invocations as though they don't
+      exist.
+
+      If such a shader invocation performs store or atomic operations, we need
+      to define what happens.  In our definition, stores will have no effect,
+      atomics will not update memory, and the values returned by atomics will
+      be undefined.  The fact that these invocations don't affect memory is
+      consistent with the notion of helper pixel shader invocations not
+      existing.
+
+      However, it is possible to write a fragment shader where flow control
+      depends on the (undefined) values returned by the atomic.  In this case,
+      the undefined values returned for helper pixels could result in very
+      long execution time (appearing to be hang) or an infinite loop.  To
+      avoid hangs in such cases, it is possible to use the fragment shader
+      input sample mask to identify helper pixels:
+
+        // If the input sample mask is non-zero, at least one sample is
+        // covered and the invocation should be treated as a real invocation.
+        // If the sample mask is zero, nothing is covered and this should be
+        // treated as a helper pixel.  If more than 32 samples are supported,
+        // additional words of gl_SampleMaskIn would need to be checked.
+        if (gl_SampleMaskIn[0] != 0)  {
+          // "real" pixel, perform atomic operations
+        } else {
+          // "helper" pixel, skip atomics
+        }
+
+      It may be desirable to formalize the notion of helper pixels in a future
+      addition to the shading language.
+
+    (23) What API should we use to specify early depth tests?
+
+      RESOLVED:  Use a layout qualifier in a fragment shader rather than
+      having a separate program parameter or other piece of GL state.
+
+    (24) For formatted loads where the format doesn't include some component,
+         what values are filled in? (0,0,0,1)? (0,0,0,0)?
+         
+      RESOLVED: Prefer (0,0,0,1) to match other APIs.
+
+    (25) How does the combined-image-and-fragment-output limit interact with
+         separate shader objects?  For example, an application may want to
+         share a single image unit between two shader stages and not have it
+         count twice against the limit.
+
+      RESOLVED:  The known implementations of this extension do not have this
+      issue, so we chose not to include any spec language.  Perhaps a
+      Begin-time error could be specified in the future if this limit is
+      exceeded.
+
+    (26) What sort of qualifiers should we provide relevant to memory
+         referenced by image variables?
+
+      RESOLVED:  We will support the qualifiers "coherent", "volatile",
+      "restrict", and "const" to be used in image variable declarations.
+
+      "coherent" is used to ensure that memory accesses from different shader
+      invocations are cached coherently (i.e., one invocation will be able to
+      observe writes from another when the other invocation's writes
+      complete).  This coherence may mean the use of "coherent"-qualified
+      image variables may perform more slowly than of otherwise equivalent
+      unqualified variables.
+
+      "volatile" behaves is as in C, and may be needed if an algorithm
+      requires reading image memory that may be written asynchronously by
+      other shader invocations.
+
+      "restrict" behaves as in the C99 standard, and can be used to indicate
+      that no other image variable points to the same underlying data.  This
+      permits optimizations that would otherwise be impossible if the compiler
+      has to assume that a pair of images might end up pointing to the same
+      data.  For example, in standard C/C++, a loop like:
+
+        int *a, *b;
+        a[0] = b[0] + b[0];
+        a[1] = b[0] + b[1];
+        a[2] = b[0] + b[2];
+
+      would need to reload b[0] for each assignment because a[0] or a[1] might
+      point at the same data as b[0].  With restrict, the compiler can assume
+      that b[0] is not modified by any of the instructions and load it just
+      once.  The same considerations apply to accesses using imageLoad(),
+      imageStore(), and imageAtomic*() builtins.
+
+      "const" behaves as in C, and indicates that the image memory should be
+      treated as read-only.  Note that the use of "const" in image variable
+      declarations is different from the normal "const" qualifier, as it
+      treats the image data referenced by the variable as constant.
+
+    (27) How should shaders be able to express qualifiers for image variables?
+
+      RESOLVED:  This extension borrows from C/C++ syntax rules where a
+      qualifier may be specified before or after the type.  For example,
+
+        layout(size4x32) const uniform image2D imageVariable;
+
+      declare an image uniform whose image data are treated as read-only.  We
+      permit qualifiers to be provided either before or after the type name
+      (image2D).  The position of the qualifier is meaningful.  Qualifiers
+      before the type name apply to the data referenced by the variable.
+      Qualifiers after the type name apply to the variable itself.
+
+      The closest C/C++ equivalent to the declarations above would turn
+      declarations like:
+
+        layout(size4x32) const uniform image2D firstImage;
+        layout(size4x32) uniform image2D const secondImage;
+
+      into:
+
+        const struct image2D_data * firstImage;
+        struct image2D_data * const secondImage;
+
+      where "image2D" is replaced with "struct image2D_data *".  In this
+      model, the former declares <firstImage> to be a pointer to constant
+      image data.  The latter declares <secondImage> to be a constant pointer
+      to non-constant image data.  
+
+      For "coherent", "volatile", and "const", the qualifier should typically
+      go before the image type.  For "restrict", the qualifier must go after
+      the image type, since "restrict" applies to the pointer, not the data
+      being pointed to.
+
+      Note that a qualifier could theoretically be specified before and after
+      the type name, such as:
+
+        const image2D const imageVariable;
+
+      which would declare <imageVariable> to be constant and to reference
+      constant image data.  In this extension, declaring an image variable to
+      be constant isn't meaningful, as such variables can never be used as
+      l-values.
+
+    (28) What is the meaning of "restrict" on a system that might run either
+         multiple invocations of the same shader simultaneously, or multiple
+         invocations of different shaders (vertex and fragment)
+         simultaneously?
+
+      RESOLVED:  When an image variable is qualified with "restrict", the only
+      guarantee is that no other image variable in the same shader invocation
+      references the same underlying image data.  There is no guarantee that
+      the same image couldn't be referenced by another invocation of the same
+      shader, or by an invocation of a different shader.
+
+      The main function of "restrict" is to allow compilers to generate more
+      efficient code for a single shader invocation than it could if it had to
+      conservatively assume that accesses to other images could touch the same
+      image data.
+
+    (29) What is the purpose of the memoryBarrier() built-in function?
+
+      RESOLVED:  The memoryBarrier() function can be used to ensure that if
+      another shader invocation or other portions observe image memory being
+      written by a shader, that accesses appear in a predictable order.  For
+      example, consider the following code:
+
+        uniform imageBuffer buf1;
+        uniform imageBuffer buf2;
+        int offset1, offset2;
+        vec4 data1, data2;
+        imageStore(buf1, offset1, data1);
+        imageStore(buf2, offset2, data2);
+
+      This specification doesn't require that writes be committed to memory in
+      the order specified in the shader.  It is possible that another shader
+      invocation or some other observer would see <data2> before seeing
+      <data1>.  If an algorithm involved multiple shader invocations with one
+      possibly needing to wait on data written by another, observing <data2>
+      in the second shader would not ensure that <data1> has been written.
+      However, if memoryBarrier() were used, as in the following code, the
+      second shader would have such a guarantee.
+
+        imageStore(buf1, offset1, data1);
+        memoryBarrier();
+        imageStore(buf2, offset2, data2);
+
+    (30) What happens if the texel identified by the coordinates given to an
+         image load, store, or atomic built-in doesn't exist?  (i.e.,
+         coordinates are out of bounds)
+
+      RESOLVED:  The results of image loads return zero.  Stores do not update
+      image memory.  Atomics do not update image memory and return zero.
+      These same considerations apply if no texture is bound to an image unit,
+      the texture is incomplete, and various other conditions.  We do not ever
+      apply wrap modes on image operations.
+
+    (31) Why do we have a <format> parameter on BindImageTextureEXT?
+
+      RESOLVED:  It allows some amount of bit-casting, to view a texture with
+      one format using another format.  This parameter allows applications to
+      work around several limitations of the specification:
+
+        * Image loads do not support all formats supported for stores.  In
+          particular, the only formats supported are 1x8, 1x16, 1x32, 2x32,
+          and 4x32.  Using the <format> parameter allows an application to
+          view an RGBA8 texture as "R32UI" and examine the component bits
+          itself.
+
+        * Image atomics are single-component 32-bit operations.  The ability
+          to view some other formats as "size1x32" allows atomic operations to
+          be done on some multi-component formats, such as RGBA8.
+
+    (32) Do we support image atomics on multi-component texture formats?
+
+      RESOLVED:  Only using the formats in the "size1x32" equivalence class,
+      and then only as 32-bit scalar integer operations.  Atomics do not
+      operate on a component-by-component basis in this extension.
+
+    (33) What happens if early fragment testing is enabled, the early depth
+         test passes, and a fragment shader that computes a new depth value is
+         executed?
+
+      RESOLVED:  The depth value produced by the fragment shader has no effect
+      if early depth and stencil tests are enabled.  The depth value computed
+      by a fragment shader is used only by the post-fragment shader stencil
+      and depth tests, and those tests always have no effect when early
+      fragment tests is enabled.
+
+    (34) How do early fragment tests interact with occlusion queries?
+
+      RESOLVED:  When early fragment tests are enabled, sample counting for
+      occlusion queries also happens prior to fragment shader execution.
+      Enabling early fragment tests can change the overall sample count,
+      because samples killed by alpha test and alpha to coverage will still be
+      counted if early fragment tests are enabled.
+
+    (35) If we provide support for multiple active program objects (e.g., one
+         containing a vertex shader, another containing a fragment shader, as
+         in EXT_separate_shader_object), how will early fragment tests be
+         handled?
+
+      RESOLVED:  The early fragment test enable should be taken from the
+      active program object corresponding to the fragment shader stage.
+
+    (36) When specifying a coordinate vector to specify a texel for a
+         TEXTURE_1D_ARRAY target, what coordinate is used to specify the
+         layer?
+
+      RESOLVED:  For GLSL functions, a two-component vector is specified and
+      the second (y) component is used to select a layer.  When using the
+      LOADIM, STOREIM, and ATOMIM NV_gpu_program5 assembly opcodes, a
+      four-component vector is provided and the third (z) component selects
+      the layer.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     7    10/16/13  pbrown    Update issue (20) to clarify that any image
+                              stores and atomics issued before a "discard" do
+                              have an effect.  Update issue (22) to better
+                              define the behavior of stores and atomics on
+                              "helper" pixels and to suggest a workaround for
+                              shaders that need to use values returned by
+                              atomics (undefined for helper pixels) in flow
+                              control constructs.
+
+     6    12/12/10  pbrown    Fix minor errata reported by spec reviewers
+                              (bugs 6870 and 6991).
+
+     5    09/17/10  pbrown    Clean up the spec language specifying the
+                              mapping of coordinates to texels according to
+                              the texture target.  For 1D arrays, GLSL wants
+                              the layer in the second component of a
+                              two-component vector while NV_gpu_program5 wants
+                              it in the third component of a four-component
+                              vector.  Also clarify that single-layer bindings
+                              of an array or cube map texture use a target
+                              appropriate to the bound layer.
+                              
+     4    03/23/10  pbrown    Add interaction with EXT_separate_shader_objects.
+                              Update issues section to include some issues
+                              left behind in NV_gpu_shader5 when specs were
+                              refactored.
+
+     3    03/21/10  pbrown    Update spec overview, interactions, and issues 
+                              sections; miscellaneous minor clarifications.
+
+     2    03/16/10  pbrown    Add a separate #extension line for this
+                              extension; needed since the became packaged
+                              separately from ARB_gpu_shader5.  Added C99-like
+                              "restrict" qualifier to indicate that an image
+                              variable won't share underlying image contents
+                              with any other variable.  Added support for
+                              "const" qualifiers on images to allow indicate
+                              read-only image data.  Added language describing
+                              the significance of the position of image
+                              variable qualifiers.  Clarified rules on use of
+                              image variables as function parameters; adding
+                              qualifiers is OK, stripping them off is not.
+                              Updated image layout qualifier section to
+                              clarify that "size" layout qualifiers are
+                              required on both uniform and function parameter
+                              declarations.  Added "const" qualifier on the
+                              image argument in imageLoad() prototypes.
+                              Updated extension names in dependency sections.
+                              Add support for stores to the RGB10_A2 texture
+                              format from OpenGL 3.3.  Add several issues.
+
+     1              jbolz     Internal revisions.

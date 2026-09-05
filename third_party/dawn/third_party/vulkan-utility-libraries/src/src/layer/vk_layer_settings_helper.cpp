@@ -220,52 +220,6 @@ VkResult vkuGetLayerSettingValues(VkuLayerSettingSet layerSettingSet, const char
     return result;
 }
 
-static uint32_t TokenToUint(const std::string &token) {
-    uint32_t int_id = 0;
-    if ((token.find("0x") == 0) || token.find("0X") == 0) {  // Handle hex format
-        int_id = static_cast<uint32_t>(std::strtoul(token.c_str(), nullptr, 16));
-    } else {
-        int_id = static_cast<uint32_t>(std::strtoul(token.c_str(), nullptr, 10));  // Decimal format
-    }
-    return int_id;
-}
-
-static void SetCustomStypeInfo(std::vector<const char *> raw_id_list, std::vector<VkuCustomSTypeInfo> &custom_stype_info) {
-    // List format is a list of integer pairs
-    for (std::size_t i = 0, n = raw_id_list.size(); i < n; i += 2) {
-        uint32_t stype_id = TokenToUint(raw_id_list[i + 0]);
-        uint32_t struct_size_in_bytes = TokenToUint(raw_id_list[i + 1]);
-
-        bool found = false;
-        // Prevent duplicate entries
-        for (auto item : custom_stype_info) {
-            if (item.first == stype_id) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            custom_stype_info.push_back(std::make_pair(stype_id, struct_size_in_bytes));
-        }
-    }
-}
-
-VkResult vkuGetLayerSettingValues(VkuLayerSettingSet layerSettingSet, const char *pSettingName,
-                                  std::vector<VkuCustomSTypeInfo> &settingValues) {
-    uint32_t value_count = 0;
-    VkResult result = vkuGetLayerSettingValues(layerSettingSet, pSettingName, VKU_LAYER_SETTING_TYPE_STRING, &value_count, nullptr);
-    if (result != VK_SUCCESS) {
-        return result;
-    }
-
-    if (value_count > 0) {
-        std::vector<const char *> values(value_count);
-        result = vkuGetLayerSettingValues(layerSettingSet, pSettingName, VKU_LAYER_SETTING_TYPE_STRING, &value_count, &values[0]);
-        SetCustomStypeInfo(values, settingValues);
-    }
-    return result;
-}
-
 VkResult vkuGetUnknownSettings(VkuLayerSettingSet layerSettingSet, uint32_t layerSettingsCount, const char **pLayerSettings,
                                const VkLayerSettingsCreateInfoEXT *pFirstCreateInfo, std::vector<const char *> &unknownSettings) {
     uint32_t unknown_setting_count = 0;

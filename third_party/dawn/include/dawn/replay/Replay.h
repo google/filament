@@ -31,6 +31,7 @@
 #include <istream>
 #include <memory>
 #include <string_view>
+#include <vector>
 
 #include "dawn/replay/dawn_replay_export.h"
 #include "dawn/webgpu_cpp.h"
@@ -40,6 +41,17 @@ namespace dawn::replay {
 using CaptureStream = std::istream;
 
 class RootCommandVisitor;
+
+struct SurfaceInfo {
+    uint32_t width;
+    uint32_t height;
+};
+
+enum class ReplayStatus {
+    Continuing,
+    Finished,
+    Error,
+};
 
 // The public API of a Capture.
 // In the future it should have calls to get information (e.g. number of commands)
@@ -53,6 +65,10 @@ class DAWN_REPLAY_EXPORT Capture {
 
     // Returns true if walk successful.
     virtual bool Walk(RootCommandVisitor& visitor) = 0;
+
+    // Reflections
+    virtual std::vector<SurfaceInfo> GetSurfaceInfos() const = 0;
+    // TODO(507548342): Reflection API for general RecordableObjects.
 };
 
 // The public API of a replay controller of a capture.
@@ -63,11 +79,19 @@ class DAWN_REPLAY_EXPORT Replay {
     static std::unique_ptr<Replay> Create(wgpu::Device device, std::unique_ptr<Capture> capture);
     virtual ~Replay() = 0;
 
+    virtual void SetSurfaces(std::vector<wgpu::Surface> surfaces) = 0;
+
+    virtual Capture* GetCapture() const = 0;
+
+    // TODO(507548342): Move this to class Capture.
     template <typename T>
     T GetObjectByLabel(std::string_view label) const;
 
     // Returns if play is successful.
     bool Play();
+
+    // Replays up to the next frame boundary.
+    ReplayStatus PlayFrame();
 };
 
 }  // namespace dawn::replay

@@ -28,12 +28,14 @@
 #include <array>
 #include <vector>
 
-#include "dawn/common/Compiler.h"
-#include "dawn/common/Enumerator.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_span.h"
-#include "dawn/common/ityp_vector.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/utils/compiler.h"
+#include "src/utils/span.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn {
 namespace {
@@ -45,7 +47,7 @@ class EnumeratorTest : public testing::Test {
         size_t i = 0;
         for (auto [index, value] : Enumerate(thingToEnumerate)) {
             ASSERT_EQ(index, Index(i));
-            ASSERT_EQ(value, values[i]);
+            DAWN_UNSAFE_TODO(ASSERT_EQ(value, values[i]));
             i++;
         }
     }
@@ -101,12 +103,14 @@ TEST_F(EnumeratorTest, ITypSpan) {
 
     // Empty span for a non-null pointer.
     uint32_t whatever = 923847;
-    auto emptyThingWithGarbagePointer = ityp::SpanFromUntyped<Int>(&whatever, 0);
+    ityp::span<Int, uint32_t> emptyThingWithGarbagePointer =
+        SpanFromRef<Int>(whatever).first(Int{0u});
+    ASSERT_NE(emptyThingWithGarbagePointer.data(), nullptr);
     CheckEmpty(emptyThingWithGarbagePointer);
 
     // Non-empty span
-    std::array<uint32_t, 3> backingArray = {{37, 45, 67}};
-    auto thing = ityp::SpanFromUntyped<Int>(backingArray.data(), 3);
+    ityp::array<Int, uint32_t, 3> backingArray = {37u, 45u, 67u};
+    ityp::span<Int, uint32_t> thing{backingArray};
     Check<Int>(thing, thing.data());
 }
 
@@ -127,6 +131,14 @@ TEST_F(EnumeratorTest, ConstContainer) {
     const ityp::array<Int, uint32_t, 3> values = {37u, 45u, 67u};
     for (auto [i, value] : Enumerate(values)) {
         static_assert(std::is_same_v<decltype(value), const uint32_t&>);
+    }
+}
+
+// Test that Enumerate(rvalue reference) works.
+TEST_F(EnumeratorTest, RValueReference) {
+    auto F = []() { return ityp::array<Int, uint32_t, 3>{37u, 45u, 67u}; };
+    for ([[maybe_unused]] auto [i, value] : Enumerate(F())) {
+        // nothing, this is just a compile check
     }
 }
 

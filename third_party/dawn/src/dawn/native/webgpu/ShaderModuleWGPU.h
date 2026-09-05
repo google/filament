@@ -31,10 +31,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

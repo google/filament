@@ -31,11 +31,14 @@
 #include <span>
 #include <string>
 
+#include "src/tint/lang/core/intrinsic/table.h"
 #include "src/tint/lang/core/ir/operand_instruction.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/utils/rtti/castable.h"
 
 namespace tint::core::ir {
+
+using TemplateParameter = core::intrinsic::TemplateParameter;
 
 /// A Call instruction in the IR.
 class Call : public Castable<Call, OperandInstruction<4, 1>> {
@@ -46,12 +49,12 @@ class Call : public Castable<Call, OperandInstruction<4, 1>> {
     virtual size_t ArgsOperandOffset() const { return 0; }
 
     /// Sets the explicit template params for the call
-    void SetExplicitTemplateParams(VectorRef<const core::type::Type*> params) {
+    void SetExplicitTemplateParams(VectorRef<TemplateParameter> params) {
         explicit_template_params_ = params;
     }
 
     /// Retrieves the explicit template params for the call
-    tint::VectorRef<const core::type::Type*> ExplicitTemplateParams() const {
+    tint::VectorRef<TemplateParameter> ExplicitTemplateParams() const {
         return explicit_template_params_;
     }
 
@@ -78,7 +81,7 @@ class Call : public Castable<Call, OperandInstruction<4, 1>> {
     /// Constructor
     explicit Call(Id id);
 
-    Vector<const core::type::Type*, 1> explicit_template_params_;
+    Vector<TemplateParameter, 1> explicit_template_params_;
 };
 
 }  // namespace tint::core::ir

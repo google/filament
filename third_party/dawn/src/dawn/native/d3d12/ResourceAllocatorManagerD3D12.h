@@ -31,12 +31,12 @@
 #include <array>
 #include <memory>
 
-#include "dawn/common/SerialQueue.h"
-#include "dawn/native/BuddyMemoryAllocator.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/PooledResourceMemoryAllocator.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/native/BuddyMemoryAllocator.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PooledResourceMemoryAllocator.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 
@@ -47,7 +47,7 @@ class ResourceHeapAllocation;
 // Resource heap types + flags combinations are named after the D3D constants.
 // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_heap_flags
 // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_heap_type
-enum ResourceHeapKind {
+enum class ResourceHeapKind : uint8_t {
     // Resource heap tier 2
     // Allows resource heaps to contain all buffer and textures types.
     // This enables better heap reuse by avoiding the need for separate heaps and
@@ -76,7 +76,7 @@ enum ResourceHeapKind {
 // multiple allocation methods.
 class ResourceAllocatorManager {
   public:
-    explicit ResourceAllocatorManager(Device* device);
+    ResourceAllocatorManager(Device* device, QueueBase* queue);
     ~ResourceAllocatorManager();
 
     ResultOrError<ResourceHeapAllocation> AllocateMemory(
@@ -89,6 +89,9 @@ class ResourceAllocatorManager {
     void DeallocateMemory(ResourceHeapAllocation& allocation);
 
     void Tick(ExecutionSerial lastCompletedSerial);
+
+    uint64_t GetTotalAllocatedMemory() const;
+    uint64_t GetTotalUsedMemory() const;
 
   private:
     void FreeSubAllocatedMemory(ResourceHeapAllocation& allocation);
@@ -112,11 +115,17 @@ class ResourceAllocatorManager {
     static constexpr uint64_t kMaxHeapSize = 32ll * 1024ll * 1024ll * 1024ll;  // 32GB
     static constexpr uint64_t kMinHeapSize = 4ll * 1024ll * 1024ll;            // 4MB
 
-    std::array<std::unique_ptr<BuddyMemoryAllocator>, ResourceHeapKind::EnumCount>
-        mSubAllocatedResourceAllocators;
-    std::array<std::unique_ptr<HeapAllocator>, ResourceHeapKind::EnumCount> mHeapAllocators;
+    Ref<AllocationSizeTracker> mAllocatedMemoryTracker;
+    Ref<AllocationSizeTracker> mUsedMemoryTracker;
 
-    std::array<std::unique_ptr<PooledResourceMemoryAllocator>, ResourceHeapKind::EnumCount>
+    std::array<std::unique_ptr<BuddyMemoryAllocator>,
+               static_cast<size_t>(ResourceHeapKind::EnumCount)>
+        mSubAllocatedResourceAllocators;
+    std::array<std::unique_ptr<HeapAllocator>, static_cast<size_t>(ResourceHeapKind::EnumCount)>
+        mHeapAllocators;
+
+    std::array<std::unique_ptr<PooledResourceMemoryAllocator>,
+               static_cast<size_t>(ResourceHeapKind::EnumCount)>
         mPooledHeapAllocators;
 
     SerialQueue<ExecutionSerial, ResourceHeapAllocation> mAllocationsToDelete;

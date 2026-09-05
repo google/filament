@@ -991,6 +991,16 @@ spv_result_t RayReorderEXTPass(ValidationState_t& _, const Instruction* inst) {
                << "Hit Object Attributes id must be a OpVariable of storage "
                   "class HitObjectAttributeEXT";
       }
+
+      // Validate optional Hit Kind (operand 4)
+      if (inst->operands().size() > 4) {
+        const uint32_t hit_kind_type = _.GetOperandTypeId(inst, 4);
+        if (!_.IsUnsignedIntScalarType(hit_kind_type) ||
+            _.GetBitWidth(hit_kind_type) != 32) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Hit Kind must be a 32-bit unsigned int scalar";
+        }
+      }
       break;
     }
 

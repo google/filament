@@ -1,0 +1,10 @@
+build
+out
+third_party/abseil-cpp
+third_party/google_benchmark
+third_party/googletest
+third_party/litert-lm
+third_party/protobuf
+third_party/spirv-headers
+third_party/spirv-tools
+third_party/swiftshader

@@ -42,13 +42,21 @@ endif()
 ################################################################################
 function(common_compile_options target)
   if (COMPILER_IS_LIKE_GNU)
+    if (COMPILER_IS_CLANG)
+      target_compile_options(${target}
+        PRIVATE
+          "-Wno-assume"
+          "-Wno-deprecated-builtins"
+          "-Wno-unknown-warning-option"
+      )
+    elseif (COMPILER_IS_GNU)
+      if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+        target_compile_options(${target} PRIVATE "-Wno-sfinae-incomplete")
+      endif ()
+    endif ()
     target_compile_options(${target}
       PRIVATE
         "-fno-exceptions"
-
-        "-Wno-assume"
-        "-Wno-deprecated-builtins"
-        "-Wno-unknown-warning-option"
         "-Wno-switch-default"
         "-Wno-nrvo"
     )
@@ -76,11 +84,16 @@ function(common_compile_options target)
   if (NOT MSVC)
     get_target_property(deps ${target} LINK_LIBRARIES)
     if (deps MATCHES "absl")
+      if (COMPILER_IS_CLANG)
+        target_compile_options(${target}
+          PRIVATE
+            "-Wno-gcc-compat"
+            "-Wno-unreachable-code-break"
+            "-Wno-nullability-extension"
+        )
+      endif ()
       target_compile_options(${target} PUBLIC
-              "-Wno-gcc-compat"
-              "-Wno-unreachable-code-break"
-              "-Wno-nullability-extension"
-              "-Wno-shadow"
+        "-Wno-shadow"
       )
     endif ()
   endif ()

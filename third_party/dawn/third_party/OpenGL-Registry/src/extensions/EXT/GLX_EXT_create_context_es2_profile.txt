@@ -1,0 +1,183 @@
+Name
+
+    EXT_create_context_es_profile
+    EXT_create_context_es2_profile
+
+Name Strings
+
+    GLX_EXT_create_context_es_profile
+    GLX_EXT_create_context_es2_profile
+
+    NOTE: implementations of this extension must export BOTH extension
+    strings, for backwards compatibility with applications written
+    against version 1 of this extension.
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+    Piers Daniell (pdaniell 'at' nvidia.com)
+
+IP Status
+
+    No known IP claims.
+
+Status
+
+    Complete.
+
+Version
+
+    Version 4, April 6, 2012
+
+Number
+
+    399
+
+Dependencies
+
+    GLX 1.4 is required.
+
+    GLX_ARB_create_context is required.
+
+    GLX_ARB_create_context_profile is required.
+
+    An OpenGL ES implementation is required.
+
+Overview
+
+    This extension allows creating an OpenGL ES context.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as a bit in the attribute value for
+    GLX_CONTEXT_PROFILE_MASK_ARB in <*attrib_list>:
+
+	GLX_CONTEXT_ES_PROFILE_BIT_EXT		0x00000004
+	GLX_CONTEXT_ES2_PROFILE_BIT_EXT		0x00000004
+
+Additions to the OpenGL / WGL Specifications
+
+    None. This specification is written for GLX.
+
+Additions to the GLX 1.4 Specification
+
+    This extension modifies language specified in the
+    GLX_ARB_create_context and GLX_ARB_create_context_profile
+    extensions.
+
+    In the description of glXCreateContextAttribsARB, replace the
+    sentence
+
+   "... If a version less than or equal to 3.0 is requested, the context
+    returned may implement any of the following versions:"
+
+    with
+
+   "... If the version requested is a valid and supported OpenGL-ES version,
+    and the GLX_CONTEXT_ES_PROFILE_BIT_EXT bit is set in the
+    GLX_CONTEXT_PROFILE_MASK_ARB attribute (see below), then the context
+    returned will implement the OpenGL ES version requested.
+
+    Otherwise, if a version less than or equal to 3.0 is requested, the
+    context returned may implement any of the following versions:"
+
+
+    Replace the sentence
+
+   "... If the requested OpenGL version is less than 3.2,
+    GLX_CONTEXT_PROFILE_MASK_ARB is ignored and the functionality of the
+    context is determined solely by the requested version."
+
+    with
+
+   "... If the GLX_CONTEXT_ES_PROFILE_BIT_EXT bit is set, and the
+    requested version is a valid and supported OpenGL-ES implementation,
+    then a context implementing that OpenGL ES version is returned;
+    otherwise, if the requested OpenGL version is less than
+    3.2, GLX_CONTEXT_PROFILE_MASK_ARB is ignored and the functionality
+    of the context is determined solely by the requested version."
+
+
+    Add prior to the sentence
+
+   "The attribute name GLX_CONTEXT_FLAGS_ARB specifies a set of flag
+    bits affecting the rendering context.":
+
+   "If an OpenGL ES profile is requested, then the context returned
+    cannot implement additional functionality, including functionality
+    defined only by the core or compatibility profiles, unless such
+    functionality is defined by extensions that are themselves specified
+    relative to that specific OpenGL ES version[*].
+	[*] Such functionality should have a corresponding extension
+	specification in the OpenGL ES Registry. In some
+	implementations, vendor extensions defined relative to the OpenGL ES
+	version, but not yet added to the OpenGL ES Registry, may also be
+	supported."
+
+    Replace the bullet point starting "* If attribute
+    GLX_CONTEXT_PROFILE_MASK_ARB has no bits set;..." with
+
+ "* If attribute GLX_CONTEXT_PROFILE_MASK_ARB has no bits set; has any
+    bits set other than GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+    GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB, or
+    GLX_CONTEXT_ES_PROFILE_BIT_EXT; has more than one of these bits
+    set; or if the implementation does not supported the requested
+    profile, then GLXBadProfileARB is generated."
+
+GLX Errors
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    GLXBadProfileARB is generated if the value of
+    GLX_CONTEXT_PROFILE_MASK_ARB contains more than a single valid
+    profile bit.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+    All non-window-system dependent issues described in the
+    WGL_EXT_create_context_es_profile extension specification apply
+    equally to this extension.
+
+Revision History
+
+    Version 4, 2012/04/06 - Specify that both name strings must be
+	exported for backwards compatibility. Restore GLXBadProfileARB
+	error that was mistakenly changed in version 3.
+
+    Version 3, 2012/03/28 - Add support for any OpenGL-ES version, not
+	just version 2.0. Alias GLX_CONTEXT_ES2_PROFILE_BIT_EXT with
+	GLX_CONTEXT_ES_PROFILE_BIT_EXT and the extension name
+	GLX_EXT_create_context_es2_profile with
+	GLX_EXT_create_context_es_profile.
+
+    Version 2, 2010/08/04 - Fix typos and assign extension number.
+
+    Version 1, 2010/05/18 - Recast the OpenGL ES 2.0 "profile" mechanism
+    into a separate EXT layered on the ARB profiled context creation
+    mechanism.

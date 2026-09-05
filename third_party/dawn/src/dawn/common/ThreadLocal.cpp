@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/ThreadLocal.h"
+#include "src/dawn/common/ThreadLocal.h"
 
 #include <atomic>
 
 #include "absl/base/no_destructor.h"
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/MutexProtected.h"
+#include "src/dawn/common/MutexProtected.h"
 
 namespace dawn {
 namespace {

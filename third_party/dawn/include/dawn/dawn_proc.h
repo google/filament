@@ -43,6 +43,9 @@ extern "C" {
 // unexpected function.
 WGPU_EXPORT void dawnProcSetProcs(const DawnProcTable* procs);
 
+// Returns the static array of uint8_t of size 20 representing the Dawn version.
+WGPU_EXPORT const uint8_t* dawnProcGetVersion();
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

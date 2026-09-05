@@ -28,18 +28,6 @@
             "benchmark/benchmark.h"
         ]
     },
-    "jsoncpp": {
-        "IncludePatterns": [
-            "json/**"
-        ],
-        "Condition": "tint_build_tintd"
-    },
-    "langsvr": {
-        "IncludePatterns": [
-            "langsvr/**"
-        ],
-        "Condition": "tint_build_tintd"
-    },
     "mesa": {
         "Condition": "tint_build_mesa"
     },
@@ -112,6 +100,11 @@
       "IncludePatterns": [
           "libprotobuf-mutator/**"
       ]
+    },
+    "src_utils_crash_handler": {
+        "IncludePatterns": [
+            "src/utils/crash_handler.*"
+        ]
     },
     "src_utils": {
         "IncludePatterns": [

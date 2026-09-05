@@ -28,15 +28,15 @@
 #ifndef SRC_DAWN_NATIVE_D3D_QUEUED3D_H_
 #define SRC_DAWN_NATIVE_D3D_QUEUED3D_H_
 
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 
 #include <span>
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SerialMap.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/SystemEvent.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SerialMap.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/SystemEvent.h"
 
 namespace dawn::native::d3d {
 
@@ -55,7 +55,7 @@ class Queue : public QueueBase {
 
     ResultOrError<SystemEventReceiver> GetSystemEventReceiver();
     MaybeError ReturnSystemEventReceivers(std::span<SystemEventReceiver> receivers);
-    MaybeError RecycleSystemEventReceivers(ExecutionSerial completeSerial);
+    MaybeError RecycleSystemEventReceivers(ExecutionSerial completedSerial);
 
   private:
     virtual void SetEventOnCompletion(ExecutionSerial serial, HANDLE event) = 0;

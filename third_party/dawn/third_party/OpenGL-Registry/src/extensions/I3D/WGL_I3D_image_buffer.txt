@@ -1,0 +1,291 @@
+Name
+
+    WGL_I3D_image_buffer
+
+Name Strings
+
+    WGL_I3D_image_buffer
+
+Contact
+
+    Dale Kirkland, Intense3D (kirkland 'at' intense3d.com)
+
+Status
+
+    Complete
+
+Version
+
+    Date: 04/18/2000   Revision 1.0
+
+Number
+
+    253
+
+Dependencies
+
+    The extension is written against the OpenGL 1.2.1 Specification
+    although it should work on any previous OpenGL specification.
+
+    The WGL_EXT_extensions_string extension is required.
+
+Overview
+
+    The image buffer extension provides an interface to allocate one
+    or more memory buffers to be used for GL image functions.  These
+    functions include DrawPixels, ReadPixels, TexImage*D, and
+    TexSubImage*D.
+
+    The advantage of an image buffer over normal allocated memory is
+    as follows:
+
+      o The image buffer may be allocated on the graphics adapter.
+
+      o The image buffer may be locked once by the implementation thus
+        avoiding a call to the OS to lock the memory down each use.
+
+      o The data in the image buffer may be transferred to the adapter
+        using non-snooping accesses.
+
+      o Multiple events may be associated with the image buffer so that
+        the data can be transferred asynchronously.
+
+    Since the image buffer is created and maintained by a specific
+    graphics driver, a DC is required to create the image buffer.
+    However, the image buffer can be used with any RC created for the
+    graphics driver associated with the DC.
+
+IP Status
+
+    None
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    LPVOID wglCreateImageBufferI3D(HDC hDC,
+                                   DWORD dwSize,
+                                   UINT uFlags)
+
+    BOOL wglDestroyImageBufferI3D(HDC hDC,
+                                  LPVOID pAddress)
+
+    BOOL wglAssociateImageBufferEventsI3D(HDC hdc,
+                                          HANDLE *pEvent,
+                                          LPVOID *pAddress,
+                                          DWORD *pSize,
+                                          UINT count)
+
+    BOOL wglReleaseImageBufferEventsI3D(HDC hdc,
+                                        LPVOID *pAddress,
+                                        UINT count)
+
+New Tokens
+
+    Accepted by the <uFlags> parameter of wglCreateImageBufferI3D:
+
+      WGL_IMAGE_BUFFER_MIN_ACCESS_I3D        0x00000001
+      WGL_IMAGE_BUFFER_LOCK_I3D              0x00000002
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the WGL Specification
+
+    An image buffer is memory allocated by the GL implementation that
+    can be used to store an image for more efficient transfers to the
+    graphics adapter.  An image buffer is used with the following GL
+    image functions:  DrawPixels, ReadPixels, TexImage*D, and
+    TexSubImage*D.
+
+    An image buffer is created by calling wglCreateImageBufferI3D:
+
+      LPVOID wglCreateImageBufferI3D(HDC hDC,
+                                     DWORD dwSize,
+                                     UINT uFlags)
+
+    <hDC> is a device context for the graphics adapter or a window
+    residing on the graphics adapter that supports the image buffer
+    extension.  The image buffer can only be used for an RC created
+    on the graphics adapter associated with <hDC>.
+
+    <dwSize> is the requested byte size of the image buffer.  The
+    minimum size is implementation-dependent, but at least <dwSize>
+    will be allocated for the image buffer.
+
+    <uFlags> specifies information about the intended usage of the
+    image buffer.
+
+      WGL_IMAGE_BUFFER_MIN_ACCESS_I3D
+         The image buffer is minimally accessed by the application;
+         rather, the buffer is loaded by a device (disk, graphics
+         adapter, etc.).  The implementation may take advantage of
+         this and allocate memory that could be slower for the
+         host, but faster for devices.  Also, the memory may be
+         allocated as uncached so that the data in the image buffer
+         does not have to be "snooped" during the transfer to or
+         from the graphics adapter.
+
+      WGL_IMAGE_BUFFER_LOCK_I3D
+         The image buffer memory is locked or allocated out of
+         memory that is not swapped.
+
+    If memory is available on the graphics adapter, the implementation
+    may choose to use it for the allocation of an image buffer.
+    However, the memory must behave like system memory in that it can
+    be read and written by system devices or the host.
+
+    If an image buffer is successfully created, a pointer is returned
+    to the image buffer memory.  The boundary alignment for the image
+    buffer is at least the native alignment of the system (usually
+    32- or 64-bit alignment).
+
+    An image buffer can be destroyed by calling the function
+    wglDestroyImageBufferI3D.
+
+      BOOL wglDestroyImageBufferI3D(HDC hDC,
+                                    LPVOID pAddress)
+
+    <pAddress> is a pointer to an image buffer that was obtained from
+    a previous call to wglCreateImageBufferI3D.  The implementation
+    will wait for any outstanding calls that use the image buffer to
+    complete before it is destroyed.  If there is an event associated
+    with the image buffer, it must be freed by the caller after the
+    image buffer is destroyed.
+
+    If the call is successful, a value of TRUE is returned and the
+    resources associated with the image buffer are freed.
+
+    One or more events may be associated with the image buffer by
+    calling the function wglAssociateImageBufferEventsI3D.  Each
+    event can be associated with a region of the image buffer to allow
+    asynchronous transfers between the image buffer and the graphics
+    adapter.
+
+      BOOL wglAssociateImageBufferEventsI3D(HDC hdc,
+                                            HANDLE *pEvent,
+                                            LPVOID *pAddress,
+                                            DWORD *pSize,
+                                            UINT count)
+
+    <pEvent> points to an array of events, each of which was created
+    with CreateEvent as a manual reset event with the initial state
+    set to TRUE (i.e. both the <bManualReset> and <bInitialState>
+    arguments must be set to a value of TRUE).  All events must be
+    unique to only one portion of an image buffer (i.e., events
+    cannot be shared).
+
+    For each event in <pEvent>, a region in the image buffer is defined
+    by the corresponding <pAddress> and <pSize> entry.  <count>
+    specifies the number of events (and associated regions).
+
+    All regions for a call to wglAssociateImageBufferEventsI3D must be
+    for the same image buffer.  Additional events can be added at any
+    time.  Regions must not overlap.  The entire image buffer can be
+    defined as a single region.
+
+    Each region in an image buffer can be used as the image for
+    DrawPixels, ReadPixels, TexImage*D, and TexSubImage*D calls.
+    Once a call is made to a GL image function, the caller must wait
+    for the transfer to complete using WaitForSingleObject before the
+    image buffer can be modified (for DrawPixels, TexImage*D, or
+    TexSubImage*D) or read (for ReadPixels).
+
+    If an event is not specified for a region, the GL call using that
+    region will complete its transfer before it returns.
+
+    Events can be disassociated with their region by calling
+    wglReleaseImageBufferEventsI3D.
+
+      BOOL wglReleaseImageBufferEventsI3D(HDC hdc,
+                                          LPVOID *pAddress,
+                                          UINT count)
+
+    <pAddress> points to an array of regions previously associated
+    with events.  <count> is the number of regions in the array.  If an
+    event is associated with the specified region, it is released.  All
+    regions specified by <pAddress> must be for the same image buffer.
+
+    When an image buffer is destroyed using wglDestroyImageBufferI3D,
+    all events for that image buffer are released.  It is the
+    responsibility of the application to delete events that are no
+    longer associated with an image buffer.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    If the wglCreateImageBufferI3D function succeeds, a pointer to an
+    image buffer is returned.  If the function fails, a value of NULL
+    is returned.  To get extended error information, call GetLastError.
+
+      ERROR_DC_NOT_FOUND         The <hDC> was not valid.
+
+      ERROR_NO_SYSTEM_RESOURCES  There was insufficient resources to
+                                 support the request.
+
+      ERROR_INVALID_DATA         <dwSize> is not a positive value.
+
+    If the wglDestroyImageBufferI3D function succeeds, a value of TRUE
+    is returned.  If the function fails, a value of FALSE is returned.
+    To get extended error information, call GetLastError.
+
+      ERROR_DC_NOT_FOUND         The <hDC> was not valid.
+
+    If the wglAssociateImageBufferEventsI3D or
+    wglReleaseImageBufferEventsI3D functions succeed, a value of TRUE
+    is returned.  If the function fails, a value of FALSE is returned.
+    To get extended error information, call GetLastError.
+
+      ERROR_DC_NOT_FOUND         The <hDC> was not valid.
+
+      ERROR_INVALID_DATA         The regions specified by <pAddress>
+                                 are not valid for the specified image
+                                 buffer.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    11/15/1999  0.1  First draft.
+    11/24/1999  0.2  Fixed various typos.
+    03/16/2000  0.3  Changed to add multiple events for a single image
+                     buffer.
+    04/18/2000  1.0  Released driver to ISVs.

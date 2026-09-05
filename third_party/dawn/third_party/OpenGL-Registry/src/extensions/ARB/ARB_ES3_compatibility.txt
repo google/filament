@@ -1,0 +1,457 @@
+Name
+
+    ARB_ES3_compatibility
+
+Name Strings
+
+    GL_ARB_ES3_compatibility
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Bruce Merry
+    Jeff Bolz, NVIDIA
+    John Kessenich
+    Jon Leech
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:         October 18, 2013
+    Revision:                   10
+
+Number
+
+    ARB Extension #127
+
+Dependencies
+
+    OpenGL 3.3, ARB_ES2_compatibility, ARB_invalidate_subdata, and
+    ARB_texture_storage are required.
+    
+    The ETC2 and EAC texture compression formats added to OpenGL-ES 3.0
+    OES_compressed_ETC2_RGB8_texture,
+    OES_compressed_ETC2_sRGB8_texture,
+    OES_compressed_ETC2_punchthroughA_RGBA8_texture,
+    OES_compressed_ETC2_punchthroughA_sRGB8_alpha_texture,
+    OES_compressed_ETC2_RGBA8_texture,
+    OES_compressed_ETC2_sRGB8_alpha8_texture,
+    OES_compressed_EAC_R11_unsigned_texture,
+    OES_compressed_EAC_R11_signed_texture,
+    OES_compressed_EAC_RG11_unsigned_texture and
+    OES_compressed_EAC_RG11_signed_texture are required.
+
+    This extension is written against The OpenGL 4.2 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension adds support for features of OpenGL ES 3.0 that are
+    missing from OpenGL 3.x. Enabling these features will ease the process
+    of porting applications from OpenGL ES 3.0 to OpenGL. These features
+    include conservative boolean occlusion queries, primitive restart with a
+    fixed index, the OpenGL ES Shading Language 3.00 specification, and the
+    dependencies stated above.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of CompressedTexImage2D
+        COMPRESSED_RGB8_ETC2                             0x9274
+        COMPRESSED_SRGB8_ETC2                            0x9275
+        COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2         0x9276
+        COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2        0x9277
+        COMPRESSED_RGBA8_ETC2_EAC                        0x9278
+        COMPRESSED_SRGB8_ALPHA8_ETC2_EAC                 0x9279
+        COMPRESSED_R11_EAC                               0x9270
+        COMPRESSED_SIGNED_R11_EAC                        0x9271
+        COMPRESSED_RG11_EAC                              0x9272
+        COMPRESSED_SIGNED_RG11_EAC                       0x9273
+
+    Accepted by the <target> parameter of Enable and Disable:
+    
+        PRIMITIVE_RESTART_FIXED_INDEX                    0x8D69
+        
+    Accepted by the <target> parameter of BeginQuery, EndQuery,
+    GetQueryIndexediv and GetQueryiv:
+    
+        ANY_SAMPLES_PASSED_CONSERVATIVE                  0x8D6A
+        
+    Accepted by the <value> parameter of the GetInteger* functions:
+        
+        MAX_ELEMENT_INDEX                                0x8D6B
+        
+    Accepted by the <pname> parameters of GetTexParameterfv and 
+    GetTexParameteriv:
+
+        TEXTURE_IMMUTABLE_LEVELS                         0x82DF
+
+Additions to Chapter 2 of the OpenGL 4.2 (Compatibility Profile)
+Specification (OpenGL Operation)
+
+    Modify Section 1.7.1 (OpenGL Shading Language) to require the OpenGL
+    ES Shading Language specifications:
+    
+    "This specification should be read together with a companion documents
+    titled The OpenGL Shading Language and The OpenGL ES Shading Language.
+    ..."
+  
+    And later in this section:
+    
+    "OpenGL 4.2 implementations are guaranteed to support version 4.20 of the
+    OpenGL Shading Language, version 1.00 of the OpenGL ES Shading Language
+    and version 3.00 of the OpenGL ES Shading Language, and the version
+    required by the application is specified in the shader source. ..."
+
+    Modify Section 2.8 (Vertex Arrays) on page 45 before the start of
+    Section 2.8.1:
+    
+    "Primitive restart can also be enabled or disabled with a <target> of
+    PRIMITIVE_RESTART_FIXED_INDEX. In this case, the primitive restart index
+    is equal to 2^N-1, where N is 8, 16 or 32 if the type is UNSIGNED_BYTE,
+    UNSIGNED_SHORT, or UNSIGNED_INT, respectively, and the <index> value
+    specified by PrimitiveRestartIndex is ignored.
+
+    If both PRIMITIVE_RESTART and PRIMITIVE_RESTART_FIXED_INDEX are enabled,
+    the <index> value determined by PRIMITIVE_RESTART_FIXED_INDEX is used.
+    If PRIMITIVE_RESTART_FIXED_INDEX is enabled, primitive restart is not
+    performed for array elements transferred by any drawing command not
+    taking a <type> parameter, including ArrayElement or any of the Draw*
+    commands other than *DrawElements*."
+
+    Modify Section 2.18 (Asynchronous Queries) on page 195 to add
+    ANY_SAMPLES_PASSED_CONSERVATIVE as another <target> option:
+    
+    "BeginQuery sets the active query object name for the query type given by
+    <target> to <id>. If BeginQuery is called with an id of zero, if the
+    active query object name for target is non-zero (for the targets
+    SAMPLES_PASSED, ANY_SAMPLES_PASSED, and ANY_SAMPLES_PASSED_CONSERVATIVE if
+    the active query for either target is non-zero), if <id> is the name of an
+    existing query object whose type does not match target, if <id> is the
+    active query object name for any query type, or if id is the active query
+    object  for condtional rendering (see section 2.19), the error
+    INVALID_OPERATION is generated."
+
+    Modify Section 2.19 (Conditional Rendering) on page 197 to add
+    ANY_SAMPLES_PASSED_CONSERVATIVE as another <mode> option:
+    
+    "If the result (SAMPLES_PASSED) of the query is zero, or if the result
+    (ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE) is false, all
+    rendering comands between BeginConditionalRender and the corresponding
+    EndConditionalRender are discarded. ..."
+    
+    And later in this paragraph:
+    
+    "... If the result (SAMPLES_PASSED) of the query is non-zero, or if the
+    result (ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE) is true,
+    such commands are not discarded."
+    
+    Again at the end of Section 2.19 (Conditional Rendering) on page 198:
+    
+    "If <id> is the name of a query object with a target other than
+    SAMPLES_PASSED, ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE,
+    or if <id> is the name of a query currently in progress, the error
+    INVALID_OPERATION is generated."
+    
+    Modify subsection 3.10.15 (Texture State and Proxy State):
+    
+    Modify the end of the first paragraph on page 345
+    
+    "... The value of TEXTURE_IMMUTABLE_FORMAT is FALSE. The value of
+    TEXTURE_IMMUTABLE_LEVELS is 0. The values of DEPTH_TEXTURE_MODE,
+    TEXTURE_COMPARE_MODE, and TEXTURE_COMPARE_FUNC are LUMINANCE,
+    NONE, and LEQUAL respectively. ..."
+    
+    Modify subsection 3.10.16 (Immutable-Format Texture Images):
+    
+    Modify the second to last bullet on page 347
+    
+    "If the command is successful, TEXTURE_IMMUTABLE_FORMAT becomes
+    TRUE and TEXTURE_IMMUTABLE_LEVELS becomes <levels>."
+
+    Modify Section 4.1.7 (Occlusion Queries) to add
+    ANY_SAMPLES_PASSED_CONSERVATIVE as another <target> option:
+    
+    "Occlusion queries use query objects to track the number of fragments or
+    samples that pass the depth test. An occlusion query can be started and
+    finished by calling BeginQuery and EndQuery, respectively, with a target
+    of SAMPLES_PASSED, ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE."
+    
+    Modify last paragraph in Section 4.1.7:
+    
+    "When an occlusion query is started with the target ANY_SAMPLES_PASSED,
+    the samples-boolean state maintained by the GL is set to FALSE. While that
+    occlusion query is active, the samples-boolean state is set to TRUE if any
+    fragment or sample passes the depth test. If the target of the query is
+    ANY_SAMPLES_PASSED_CONSERVATIVE, an implementation may choose to use a
+    less precise version of the test which can additionally set the
+    samples-boolean state to TRUE in some other implementation-dependent
+    cases. This may offer better performance on some implementations at the
+    expense of false positives. When the occlusion query finishes, the
+    samples-boolean state of FALSE or TRUE is written to the corresponding
+    query object as the query result value, and the query result for that
+    object is marked as available."
+    
+    Modify the list of allowed <value> parameters to GetTexParameter* in
+    section 6.1.3 on page 478:
+    
+    "<value> must be IMAGE_FORMAT_COMPATIBILITY_TYPE,
+    TEXTURE_IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS, TEXTURE_RESIDENT,
+    or one of the symbolic values in table 3.22"
+    
+    Modify the first paragraph of Section 6.1.13 (Asynchronous Queries) as
+    follows:
+    
+    "... <target> identifies the query target, and must be one of
+    SAMPLES_PASSED, ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE
+    for occlusion queries, ..."
+    
+    Modify the first paragraph of page 488 in Section 6.1.13:
+    
+    "For occlusion queries with target ANY_SAMPLES_PASSED or
+    ANY_SAMPLES_PASSED_CONSERVATIVE, if the number of bits is non-zero, the
+    minimum number of bits is 1. ..."
+    
+Additions to Chapter 3 of the OpenGL 4.2 (Compatibility Profile)
+Specification (Rasterization)
+
+    Add to Table 3.20: Generic and specific compressed internal formats on
+    page 303:
+    
+    Compressed Internal Format                 Base Internal Format Type
+    ------------------------------------------ -------------------- ----------
+    COMPRESSED_RGB8_ETC2                       RGB                  Specific
+    COMPRESSED_SRGB8_ETC2                      RGBA                 Specific
+    COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2   RGB                  Specific
+    COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2  RGB                  Specific
+    COMPRESSED_RGBA8_ETC2_EAC                  RGBA                 Specific
+    COMPRESSED_SRGB8_ALPHA8_ETC2_EAC           RGBA                 Specific
+    COMPRESSED_R11_EAC                         RED                  Specific
+    COMPRESSED_SIGNED_R11_EAC                  RED                  Specific
+    COMPRESSED_RG11_EAC                        RG                   Specific
+    COMPRESSED_SIGNED_RG11_EAC                 RG                   Specific
+
+    Add the following text to the Table 3.20 key:
+    
+    "The specific RGTC, BPTC, ETC2 and EAC formats are described in Appendix C."
+    
+Additions to Chapter 4 of the OpenGL 4.2 (Compatibility Profile)
+Specification (Per-Fragment Operations and the Framebuffer)
+
+    Add to section 4.4.2 in the unnumbered "Required Renderbuffer Formats"
+    subsection, following the paragraph starting "Implementations are
+    required to support..."
+
+    "Implementations are also required to support STENCIL_INDEX8."
+
+    Modify section 4.4.2 in the unnumbered "Required Framebuffer Formats"
+    subsection, changing the third sentence to read
+    
+   "The depth attachment may be in any of the required depth or combined
+    depth+stencil formats described in those sections, and the stencil
+    attachment may be in any of the required stencil or combined
+    depth+stencil formats."
+
+Additions to Appendix C of the OpenGL 4.20.6 Specification (Compressed Texture
+Image Formats)
+
+    Add a new section to Appendix C:
+    
+    "C.3 ETC2/EAC Compressed Texture Image Formats
+    
+    The following sub-sections describe the texture compression format for the
+    ETC2/EAC family of compression formats. It is not necessary for the
+    GL to implement these compression formats in hardware and is acceptable
+    for the decode to occur in software and be represented internally as
+    uncompressed images."
+    
+    Then copy in the body of the OpenGL ES 3.0 Specification, Appendix C.1
+    "ETC Compressed Texture Image Formats", which describes the details of
+    the ETC2 and EAC formats required by this extension. Change "OpenGL ES
+    implementations" to "OpenGL implementations" when performing this
+    copying.
+
+Additions to Chapter 3 of the OpenGL Shading Language 4.20.6 Specification
+(Basics)
+
+    Modify the paragraph at the bottom of page 12 in Section 3.3
+    (Preprocessor) as follows:
+    
+    "... Shaders that specify #version 100 will be treated as targeting
+    version 1.00 of the OpenGL ES Shading Language. Shaders that specify
+    #version 300 will be treated as targeting version 3.00 of the OpenGL
+    ES Shading Language. Shaders declaring 1.40, 1.50, ..."
+    
+    Modify the second paragraph at the of page 13 in Section 3.3
+    (Preprocessor) as follows:
+    
+    "If the optional <profile> argument is provided, it must be the name of
+    an OpenGL profile. Currently there are three choices:
+        core
+        compatibility
+        es
+        
+    A <profile> argument can only be used with version 150 or greater. If no
+    profile argument is provided and the version is 150 or greater, the
+    default is <core>. If #version 300 is specified, the profile argument is
+    not optional and must be <es>, or a compile-time error results. The
+    Language Specification for the <es> profile is specified in  The OpenGL
+    ES Shading Language specification. Unless otherwise specified, this ..."
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Interactions with the OpenGL 4.2 Core Profile
+
+    In the core profile, remove ArrayElement from the list of drawing
+    commands for which primitive restart is not performed when
+    PRIMITIVE_RESTART_FIXED_INDEX is enabled.
+
+Errors
+
+    None
+
+New State
+
+    (add to table 6.13, p. 520 (Vertex Array Data (not in Vertex Array Objects)))
+
+                                                        Initial                          
+    Get Value                     Type  Get Command     Value     Description               Sec.    Attribute
+    ------------------------      ----  --------------- -------   ----------------------    -----   ------------
+    PRIMITIVE_RESTART_FIXED_INDEX  B    IsEnabled       FALSE     Primitive restart with    2.8     vertex-array
+                                                                  fixed index enable                
+
+    (add to table 6.24, p. 531 (Textures (state per texture object)))
+
+                                                        Initial   
+    Get Value                     Type  Get Command     Value     Description               Sec.    Attribute
+    ------------------------      ----  --------------- -------   ------------------------  ------- ---------
+    TEXTURE_IMMUTABLE_LEVELS       Z+   GetTexParameter 0         storage number of levels  3.10.15 texture
+
+New Implementation Dependent State
+                                  
+    Get Value                     Type  Get Command     Value     Description               Sec.
+    -----------------             ----  -------------   --------  ---------------------     ----
+    MAX_ELEMENT_INDEX              Z+   GetInteger64v   2^32 - 1  Maximum element index     2.6
+
+Issues
+
+    1) OpenGL-ES 3.0 contains several features that have been deprecated from
+       the latest OpenGL Core specification. These were retained in OpenGL-ES
+       3.0 in order to provide backwards compatibility with OpenGL-ES 2.0. Those
+       features are:
+       
+        * Wide lines - LineWidth values greater than 1.0 will generate an INVALID_-
+        VALUE error. The value ALIASED_LINE_WIDTH_RANGE is the max width supported.
+
+        * Global component limit query - the implementation-dependent values
+        MAX_VARYING_COMPONENTS and MAX_VARYING_FLOATS.
+
+        * Application-generated object names - the names of all object types, such as
+        buffer, query, and texture objects, must be generated using the corresponding
+        Gen* commands. Trying to bind an object name not returned by a Gen*
+        command will result in an INVALID_OPERATION error. This behavior is already
+        the case for framebuffer, renderbuffer, and vertex array objects. Object
+        types which have default objects (objects named zero), such as vertex array,
+        framebuffer, and texture objects, may also bind the default object, even
+        though it is not returned by Gen*.
+
+        * Client vertex and index arrays - all vertex array attribute and element array
+        index pointers must refer to buffer objects. The default vertex array object
+        (the name zero) is also deprecated. Calling VertexAttribPointer when no
+        buffer object or no vertex array object is bound will generate an INVALID_-
+        OPERATION error, as will calling any array drawing command when no vertex
+        array object is bound.
+
+        * Legacy pixel formats - all ALPHA, LUMINANCE, LUMINANCE_ALPHA
+
+        * Hints - GENERATE_MIPMAP_HINT targets to Hint (section 5.4).
+
+        * Unified extension string - EXTENSIONS target to GetString.
+        
+       Should we bring these features back into the OpenGL 4.x Core specification
+       so that it is a complete super-set of OpenGL-ES 3.0?
+       
+       RESOLVED: No, these will not be brought back into OpenGL 4.x Core. Apps
+       written for OpenGL-ES 3.0 that want to also be compatible with OpenGL
+       should make sure they don't use these features.
+
+    2) OpenGL ES 3.0 has some differences to OpenGL that may affect how the
+       application operates. For example, in OpenGL ES 3.0 cubemaps are
+       always seamless but with OpenGL this needs to be explicitly enabled.
+       Also sRGB is handled differently. In OpenGL ES 3.0 a surface is either
+       sRGB or not sRGB and this cannot be changed. With OpenGL a surface can
+       be sRGB capable and the mode can be toggled. How do we deal with
+       these differences?
+       
+       RESOLVED: If the application needs a strict OpenGL ES 3.0
+       implementation, it should not attempt to use a desktop GL context
+       with the ES3_compatibility extension supported. Instead, use the
+       {GLX|WGL}_EXT_create_context_es_profile extensions to request an
+       actual OpenGL ES 3.0 context, which will not have these caveats.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    10    10/18/13  Jon Leech Refer to OpenGL ES 3.0 specification appendix
+                              C.1 for ETC2/EAC formats, instead of to OES
+                              extensions (Bug 7522).
+
+    9     03/12/13  Jon Leech Update issue 2 resolution and fix typo.
+
+    8     11/10/12  pdaniell  Add the missing token TEXTURE_IMMUTABLE_LEVELS
+                              from ARB_texture_view, which is in ES 3.0, and
+                              add language describing its behavior; add
+                              PRIMITIVE_RESTART_FIXED_INDEX to state tables
+                              (Bug 9559).
+
+    7     09/16/12  Jon Leech Add language to chapter 4 requiring
+                              STENCIL_INDEX8 support (Bug 9418).
+
+    6     05/30/12  Jon Leech Add language specifying how the two types of
+                              primitive restart enable interact and that the
+                              fixed index form only applies to
+                              *DrawElements* commands taking a <type>
+                              parameter. Reorder ETC2/EAC formats to match
+                              Halti appendix.
+
+    5     04/27/12  pdaniell  Updates based on feedback from John Kessenich.
+
+    4     04/20/12  pdaniell  Resolve issue 2.
+
+    3     03/19/12  pdaniell  Remove references to RGB565, which are now fixed
+                              in ARB_ES2_compatibility and an updated OpenGL
+                              4.2 core spec. Make the ETC2/EAC compression
+                              formats compulsory and bring in the tokens.
+    
+    2     01/31/12  pdaniell  Incorporated feedback from Bruce.
+
+    1     01/23/12  pdaniell  Initial version.

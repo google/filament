@@ -1,0 +1,123 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglBindAPI">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglBindAPI</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglBindAPI</refname>
+        <refpurpose>Set the current rendering API</refpurpose>
+    </refnamediv>
+    <refsynopsisdiv><title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglBindAPI</function></funcdef>
+                <paramdef>EGLenum <parameter>api</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+        <varlistentry>
+            <term><parameter>api</parameter></term>
+            <listitem>
+                <para>
+                    Specifies the client API to bind, one of
+                    <constant>EGL_OPENGL_API</constant>,
+                    <constant>EGL_OPENGL_ES_API</constant>, or
+                    <constant>EGL_OPENVG_API</constant>.
+                </para>
+            </listitem>
+        </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglBindAPI</function> defines the current
+            rendering API for EGL in the thread it is called from. The
+            current rendering API is one of the client rendering APIs
+            supported by the EGL implementation, and affects the
+            behavior of other EGL commands including
+            <function>eglCreateContext</function>,
+            <function>eglGetCurrentContext</function>,
+            <function>eglGetCurrentDisplay</function>,
+            <function>eglGetCurrentSurface</function>,
+            <function>eglMakeCurrent</function>,
+            <function>eglSwapInterval</function>,
+            <function>eglWaitClient</function>, and
+            <function>eglWaitNative</function>.
+        </para>
+        <para>
+            If <parameter>api</parameter> is
+            <constant>EGL_OPENGL_API</constant>, the current rendering
+            API is set to the OpenGL API.
+        </para>
+        <para>
+            If <parameter>api</parameter> is
+            <constant>EGL_OPENGL_ES_API</constant>, the current
+            rendering API is set to the OpenGL ES API.
+        </para>
+        <para>
+            If <parameter>api</parameter> is
+            <constant>EGL_OPENVG_API</constant>, the current rendering
+            API is set to the OpenVG API.
+        </para>
+        <para>
+            If an error occurs, the current rendering API is unchanged.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglBindAPI</function> and the corresponding
+            <constant>EGL_OPENGL_ES_API</constant> and
+            <constant>EGL_OPENVG_API</constant>
+            <parameter>api</parameter> parameters are supported only if
+            the EGL version is 1.2 or greater. The
+            <constant>EGL_OPENGL_API</constant> parameter is supported
+            only if the EGL version is 1.4 or greater.
+        </para>
+        <para>
+            The initial value of the current rendering API is
+            <constant>EGL_OPENGL_ES_API</constant> unless OpenGL ES is
+            not supported by an implementation, in which case the
+            initial value is <constant>EGL_NONE</constant> (however,
+            <constant>EGL_NONE</constant> is not a valid
+            <parameter>api</parameter> parameter to
+            <function>eglBindAPI</function>).
+        </para>
+        <para>
+            The current rendering API can be queried by calling
+            <function>eglQueryAPI</function>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure.
+        </para>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>api</parameter> is not one of the accepted
+            tokens, or if the specified client API is not supported by
+            the EGL implementation.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQueryAPI</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSwapInterval</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitClient</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitNative</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

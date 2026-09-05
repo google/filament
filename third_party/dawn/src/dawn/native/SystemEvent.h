@@ -31,12 +31,12 @@
 #include <optional>
 #include <utility>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/NonCopyable.h"
-#include "dawn/common/Platform.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/Time.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/common/Time.h"
+#include "src/utils/non_copyable.h"
+#include "src/utils/platform.h"
 
 namespace dawn::native {
 
@@ -53,7 +53,6 @@ class SystemEventPipeSender;
 class SystemEventReceiver final : NonCopyable {
   public:
     static SystemEventReceiver CreateAlreadySignaled();
-    using SystemHandle = dawn::utils::SystemHandle;
 
     SystemEventReceiver() = default;
     explicit SystemEventReceiver(SystemHandle primitive);
@@ -82,7 +81,7 @@ class SystemEventPipeSender final : NonCopyable {
 
   private:
     friend std::pair<SystemEventPipeSender, SystemEventReceiver> CreateSystemEventPipe();
-    dawn::utils::SystemHandle mPrimitive;
+    SystemHandle mPrimitive;
 };
 
 // CreateSystemEventPipe provides an SystemEventReceiver that can be signalled by Dawn code. This is

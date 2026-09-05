@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_SWAPCHAINEGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_SWAPCHAINEGL_H_
 
-#include "dawn/common/egl_platform.h"
-#include "dawn/native/SwapChain.h"
+#include "src/dawn/common/egl_platform.h"
+#include "src/dawn/native/SwapChain.h"
 
 namespace dawn::native::opengl {
 

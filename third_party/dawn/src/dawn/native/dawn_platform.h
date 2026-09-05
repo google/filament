@@ -136,14 +136,17 @@ inline constexpr uint32_t kEnumPrefixMask = 0xFFFF'0000;
 inline constexpr uint32_t kDawnEnumPrefix = 0x0005'0000;
 
 struct Rect2D {
-    uint32_t x;
-    uint32_t y;
-    uint32_t width;
-    uint32_t height;
+    uint32_t x = 0;
+    uint32_t y = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
 };
 
 // Returns the TexelBlockInfo for t's texture and aspect
 const TexelBlockInfo& GetBlockInfo(const TexelCopyTextureInfo& t);
+
+// The typed index corresponding to `undefined` in JS.
+constexpr QueryIndex kQuerySetIndexUndefinedTyped = QueryIndex{wgpu::kQuerySetIndexUndefined};
 
 }  // namespace dawn::native
 

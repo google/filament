@@ -1,0 +1,106 @@
+        <type>struct <name>_POINTFLOAT</name> {
+    FLOAT x;
+    FLOAT y;
+};</type>
+        <type>typedef struct _POINTFLOAT <name>POINTFLOAT</name>;</type>
+        <type>typedef struct _POINTFLOAT *<name>PPOINTFLOAT</name>;</type>
+        <type requires="POINTFLOAT">struct <name>_GLYPHMETRICSFLOAT</name> {
+    FLOAT      gmfBlackBoxX;
+    FLOAT      gmfBlackBoxY;
+    POINTFLOAT gmfptGlyphOrigin;
+    FLOAT      gmfCellIncX;
+    FLOAT      gmfCellIncY;
+};</type>
+        <type requires="_GLYPHMETRICSFLOAT">typedef struct _GLYPHMETRICSFLOAT <name>GLYPHMETRICSFLOAT</name>;</type>
+        <type requires="_GLYPHMETRICSFLOAT">typedef struct _GLYPHMETRICSFLOAT *<name>PGLYPHMETRICSFLOAT</name>;</type>
+
+typedef struct tagPIXELFORMATDESCRIPTOR {
+  WORD  nSize;
+  WORD  nVersion;
+  DWORD dwFlags;
+  BYTE  iPixelType;
+  BYTE  cColorBits;
+  BYTE  cRedBits;
+  BYTE  cRedShift;
+  BYTE  cGreenBits;
+  BYTE  cGreenShift;
+  BYTE  cBlueBits;
+  BYTE  cBlueShift;
+  BYTE  cAlphaBits;
+  BYTE  cAlphaShift;
+  BYTE  cAccumBits;
+  BYTE  cAccumRedBits;
+  BYTE  cAccumGreenBits;
+  BYTE  cAccumBlueBits;
+  BYTE  cAccumAlphaBits;
+  BYTE  cDepthBits;
+  BYTE  cStencilBits;
+  BYTE  cAuxBuffers;
+  BYTE  iLayerType;
+  BYTE  bReserved;
+  DWORD dwLayerMask;
+  DWORD dwVisibleMask;
+  DWORD dwDamageMask;
+} PIXELFORMATDESCRIPTOR, *PPIXELFORMATDESCRIPTOR;
+
+PFD_DRAW_TO_WINDOW      The buffer can draw to a window or device surface.
+PFD_DRAW_TO_BITMAP      The buffer can draw to a memory bitmap.
+PFD_SUPPORT_GDI The buffer supports GDI drawing. This flag and PFD_DOUBLEBUFFER are mutually exclusive in the current generic implementation.
+PFD_SUPPORT_OPENGL      The buffer supports OpenGL drawing.
+PFD_GENERIC_ACCELERATED The pixel format is supported by a device driver that accelerates the generic implementation. If this flag is clear and the PFD_GENERIC_FORMAT flag is set, the pixel format is supported by the generic implementation only.
+PFD_GENERIC_FORMAT      The pixel format is supported by the GDI software implementation, which is also known as the generic implementation. If this bit is clear, the pixel format is supported by a device driver or hardware.
+PFD_NEED_PALETTE        The buffer uses RGBA pixels on a palette-managed device. A logical palette is required to achieve the best results for this pixel type. Colors in the palette should be specified according to the values of the cRedBits, cRedShift, cGreenBits, cGreenShift, cBluebits, and cBlueShift members. The palette should be created and realized in the device context before calling wglMakeCurrent.
+PFD_NEED_SYSTEM_PALETTE Defined in the pixel format descriptors of hardware that supports one hardware palette in 256-color mode only. For such systems to use hardware acceleration, the hardware palette must be in a fixed order (for example, 3-3-2) when in RGBA mode or must match the logical palette when in color-index mode.
+PFD_DOUBLEBUFFER        The buffer is double-buffered. This flag and PFD_SUPPORT_GDI are mutually exclusive in the current generic implementation.
+PFD_STEREO      The buffer is stereoscopic. This flag is not supported in the current generic implementation.
+PFD_SWAP_LAYER_BUFFERS  Indicates whether a device can swap individual layer planes with pixel formats that include double-buffered overlay or underlay planes. Otherwise all layer planes are swapped together as a group. When this flag is set, wglSwapLayerBuffers is supported.
+PFD_DEPTH_DONTCARE      The requested pixel format can either have or not have a depth buffer. To select a pixel format without a depth buffer, you must specify this flag. The requested pixel format can be with or without a depth buffer. Otherwise, only pixel formats with a depth buffer are considered.
+PFD_DOUBLEBUFFER_DONTCARE       The requested pixel format can be either single- or double-buffered.
+PFD_STEREO_DONTCARE     The requested pixel format can be either monoscopic or stereoscopic.
+PFD_SWAP_COPY   Specifies the content of the back buffer in the double-buffered main color plane following a buffer swap. Swapping the color buffers causes the content of the back buffer to be copied to the front buffer. The content of the back buffer is not affected by the swap. PFD_SWAP_COPY is a hint only and might not be provided by a driver.
+PFD_SWAP_EXCHANGE       Specifies the content of the back buffer in the double-buffered main color plane following a buffer swap. Swapping the color buffers causes the exchange of the back buffer's content with the front buffer's content. Following the swap, the back buffer's content contains the front buffer's content before the swap. PFD_SWAP_EXCHANGE is a hint only and might not be provided by a driver.
+PFD_TYPE_RGBA   RGBA pixels. Each pixel has four components in this order: red, green, blue, and alpha.
+PFD_TYPE_COLORINDEX     Color-index pixels. Each pixel uses a color-index value.
+typedef struct tag_LAYERPLANEDESCRIPTOR {
+  WORD     nSize;
+  WORD     nVersion;
+  DWORD    dwFlags;
+  BYTE     iPixelType;
+  BYTE     cColorBits;
+  BYTE     cRedBits;
+  BYTE     cRedShift;
+  BYTE     cGreenBits;
+  BYTE     cGreenShift;
+  BYTE     cBlueBits;
+  BYTE     cBlueShift;
+  BYTE     cAlphaBits;
+  BYTE     cAlphaShift;
+  BYTE     cAccumBits;
+  BYTE     cAccumRedBits;
+  BYTE     cAccumGreenBits;
+  BYTE     cAccumBlueBits;
+  BYTE     cAccumAlphaBits;
+  BYTE     cDepthBits;
+  BYTE     cStencilBits;
+  BYTE     cAuxBuffers;
+  BYTE     iLayerType;
+  BYTE     bReserved;
+  COLORREF crTransparent;
+} LAYERPLANEDESCRIPTOR, *PLAYERPLANEDESCRIPTOR;
+LPD_SUPPORT_OPENGL      The layer plane supports OpenGL drawing.
+LPD_SUPPORT_GDI The layer plane supports GDI drawing. The current implementation of OpenGL doesn't support this flag.
+LPD_DOUBLEBUFFER        The layer plane is double-buffered. A layer plane can be double-buffered even when the main plane is single-buffered and vice versa.
+LPD_STEREO      The layer plane is stereoscopic. A layer plane can be stereoscopic even when the main plane is monoscopic and vice versa.
+LPD_SWAP_EXCHANGE       In a double-buffered layer plane, swapping the color buffer exchanges the front buffer and back buffer contents. The back buffer then contains the contents of the front buffer before the swap. This flag is a hint only and might not be provided by a driver.
+LPD_SWAP_COPY   In a double-buffered layer plane, swapping the color buffer copies the back buffer contents to the front buffer. The swap does not affect the back buffer contents. This flag is a hint only and might not be provided by a driver.
+LPD_TRANSPARENT The crTransparent member of this structure contains a transparent color or index value that enables underlying layers to show through this layer. All layer planes, except the lowest-numbered underlay layer, have a transparent color or index.
+LPD_SHARE_DEPTH The layer plane shares the depth buffer with the main plane.
+LPD_SHARE_STENCIL       The layer plane shares the stencil buffer with the main plane.
+LPD_SHARE_ACCUM The layer plane shares the accumulation buffer with the main plane.
+ 
+iPixelType
+Specifies the type of pixel data. The following types are defined.
+Value   Meaning
+LPD_TYPE_RGBA   RGBA pixels. Each pixel has four components: red, green, blue, and alpha.
+LPD_TYPE_COLORINDEX     Color-index pixels. Each pixel uses a color-index value.
+ 

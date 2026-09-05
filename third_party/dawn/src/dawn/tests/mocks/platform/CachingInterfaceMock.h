@@ -31,13 +31,13 @@
 #include <dawn/platform/DawnPlatform.h>
 #include <gmock/gmock.h>
 
+#include <map>
 #include <mutex>
-#include <string>
-#include <unordered_map>
+#include <span>
 #include <vector>
 
-#include "dawn/common/TypedInteger.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/utils/typed_integer.h"
 
 #define EXPECT_CACHE_HIT(cache, N, statement) \
     do {                                      \
@@ -84,17 +84,25 @@ class CachingInterfaceMock : public dawn::platform::CachingInterface {
     // Returns the number of entries in the cache.
     size_t GetNumEntries() const;
 
-    MOCK_METHOD(size_t, LoadData, (const void*, size_t, void*, size_t), (override));
-    MOCK_METHOD(void, StoreData, (const void*, size_t, const void*, size_t), (override));
+    MOCK_METHOD(size_t, FindKey, (std::span<const std::byte> key), (override));
+    MOCK_METHOD(size_t,
+                LoadData,
+                (std::span<const std::byte> key, std::span<std::byte> dest),
+                (override));
+    MOCK_METHOD(void,
+                StoreData,
+                (std::span<const std::byte> key, std::span<const std::byte> src),
+                (override));
 
   private:
-    size_t LoadDataDefault(const void* key, size_t keySize, void* value, size_t valueSize);
-    void StoreDataDefault(const void* key, size_t keySize, const void* value, size_t valueSize);
+    size_t FindKeyDefault(std::span<const std::byte> key);
+    size_t LoadDataDefault(std::span<const std::byte> key, std::span<std::byte> dest);
+    void StoreDataDefault(std::span<const std::byte> key, std::span<const std::byte> src);
 
     mutable std::mutex mMutex;
     bool mEnabled = true;
     size_t mHitCount = 0;
-    std::unordered_map<std::string, std::vector<uint8_t>> mCache;
+    std::map<std::vector<std::byte>, std::vector<std::byte>> mCache;
 };
 
 // Dawn platform used for testing with a mock caching interface.

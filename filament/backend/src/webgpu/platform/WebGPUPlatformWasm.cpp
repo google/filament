@@ -59,10 +59,21 @@ wgpu::Device WebGPUPlatformWasm::requestDevice(wgpu::Adapter const& adapter) {
 }
 
 wgpu::Extent2D WebGPUPlatformWasm::getSurfaceExtent(void* nativeWindow) const {
+    FILAMENT_CHECK_PRECONDITION(nativeWindow != nullptr)
+            << "nativeWindow must not be null for WebGPU on WASM (expected canvas selector string)";
+
     const char* selector = static_cast<const char*>(nativeWindow);
     int width = 0;
     int height = 0;
     emscripten_get_canvas_element_size(selector, &width, &height);
+
+    // Fallback to non-zero default dimensions if the canvas element has not yet undergone
+    // layout or had its dimensions assigned, avoiding WebGPU validation failure during initial
+    // surface configuration before the first view resize event occurs.
+    if (width <= 0 || height <= 0) {
+        width = 640;
+        height = 480;
+    }
     return wgpu::Extent2D{
         .width = static_cast<uint32_t>(width),
         .height = static_cast<uint32_t>(height),
@@ -70,8 +81,12 @@ wgpu::Extent2D WebGPUPlatformWasm::getSurfaceExtent(void* nativeWindow) const {
 }
 
 wgpu::Surface WebGPUPlatformWasm::createSurface(void* nativeWindow, uint64_t /*flags*/) {
+    FILAMENT_CHECK_PRECONDITION(nativeWindow != nullptr)
+            << "nativeWindow must not be null for WebGPU on WASM (expected canvas selector string)";
+    const char* selector = static_cast<const char*>(nativeWindow);
+
     wgpu::EmscriptenSurfaceSourceCanvasHTMLSelector canvasSource{};
-    canvasSource.selector = static_cast<const char*>(nativeWindow);
+    canvasSource.selector = selector;
     const wgpu::SurfaceDescriptor surfaceDescriptor{
         .nextInChain = &canvasSource,
         .label = "wasm_surface",

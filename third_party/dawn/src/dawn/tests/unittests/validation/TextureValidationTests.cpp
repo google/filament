@@ -27,12 +27,12 @@
 
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -56,7 +56,7 @@ class TextureValidationTest : public ValidationTest {
         queue = device.GetQueue();
     }
 
-    wgpu::TextureDescriptor CreateDefaultTextureDescriptor() {
+    virtual wgpu::TextureDescriptor CreateDefaultTextureDescriptor() {
         wgpu::TextureDescriptor descriptor;
         descriptor.size.width = kWidth;
         descriptor.size.height = kHeight;
@@ -826,7 +826,7 @@ class CompressedTextureFormatsValidationTests : public TextureValidationTest {
                 wgpu::FeatureName::TextureCompressionASTC};
     }
 
-    wgpu::TextureDescriptor CreateDefaultTextureDescriptor() {
+    wgpu::TextureDescriptor CreateDefaultTextureDescriptor() override {
         wgpu::TextureDescriptor descriptor =
             TextureValidationTest::CreateDefaultTextureDescriptor();
         descriptor.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst |
@@ -974,6 +974,53 @@ TEST_F(CompressedTextureFormatsValidationTests, TextureSize) {
             descriptor.format = format;
             descriptor.size.width = kWidthMultiplier * blockWidth;
             descriptor.size.height = kHeightMultiplier * blockHeight;
+            device.CreateTexture(&descriptor);
+        }
+    }
+}
+
+class UnalignedCompressedTextureFormatsValidationTests
+    : public CompressedTextureFormatsValidationTests {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        std::vector<wgpu::FeatureName> features =
+            CompressedTextureFormatsValidationTests::GetRequiredFeatures();
+        features.push_back(wgpu::FeatureName::TextureCompressionUnaligned);
+        return features;
+    }
+};
+
+// Test that with that extension it is valid to create a texture with width/height that's with
+// partial blocks.
+TEST_F(UnalignedCompressedTextureFormatsValidationTests, TextureSize) {
+    for (wgpu::TextureFormat format : utils::kCompressedFormats) {
+        // Test that the default size (120 x 120) is valid for all formats.
+        {
+            wgpu::TextureDescriptor descriptor = CreateDefaultTextureDescriptor();
+            descriptor.format = format;
+            device.CreateTexture(&descriptor);
+        }
+
+        // Test that an unaligned width is valid for all formats.
+        {
+            wgpu::TextureDescriptor descriptor = CreateDefaultTextureDescriptor();
+            descriptor.size.width++;
+            descriptor.format = format;
+            device.CreateTexture(&descriptor);
+        }
+        // Test that an unaligned height is valid for all formats.
+        {
+            wgpu::TextureDescriptor descriptor = CreateDefaultTextureDescriptor();
+            descriptor.size.height++;
+            descriptor.format = format;
+            device.CreateTexture(&descriptor);
+        }
+        // Test that an 1x1 is valid for all formats.
+        {
+            wgpu::TextureDescriptor descriptor = CreateDefaultTextureDescriptor();
+            descriptor.size.width = 1;
+            descriptor.size.height = 1;
+            descriptor.format = format;
             device.CreateTexture(&descriptor);
         }
     }

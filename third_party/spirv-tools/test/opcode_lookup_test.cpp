@@ -209,6 +209,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"Extension", PrintingClass::kExtension},
         {"MemoryModel", PrintingClass::kMode_Setting},
         {"Variable", PrintingClass::kMemory},
+        {"CooperativeMatrixPerElementOpEXT", PrintingClass::kFunction},
         {"CooperativeMatrixPerElementOpNV", PrintingClass::kFunction},
         {"SampledImage", PrintingClass::kImage},
         {"ConvertFToU", PrintingClass::kConversion},

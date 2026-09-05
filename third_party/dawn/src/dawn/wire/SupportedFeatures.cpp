@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/SupportedFeatures.h"
+#include "src/dawn/wire/SupportedFeatures.h"
 
 namespace dawn::wire {
 
@@ -39,10 +39,10 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         case WGPUFeatureName_D3D11MultithreadProtected:
         case WGPUFeatureName_HostMappedPointer:
         case WGPUFeatureName_BufferMapExtendedUsages:
+        case WGPUFeatureName_BufferMapWriteExtendedUsages:
         case WGPUFeatureName_DawnFormatCapabilities:
         case WGPUFeatureName_DawnDrmFormatCapabilities:
         case WGPUFeatureName_RenderPassRenderArea:
-        case WGPUFeatureName_DawnNativeSpontaneousQueueEvents:
         case WGPUFeatureName_AdapterPropertiesDrm:
             return false;
         // NOTE: SharedTextureMemory/SharedFence are not actually intended
@@ -69,7 +69,7 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         case WGPUFeatureName_SharedFenceDXGISharedHandle:
         case WGPUFeatureName_SharedFenceMTLSharedEvent:
         case WGPUFeatureName_SharedBufferMemoryD3D12Resource:
-        case WGPUFeatureName_SharedBufferMemoryD3D12SharedMemoryFileMappingHandle:
+        case WGPUFeatureName_SharedBufferMemoryFromWindowsHandle:
 
         case WGPUFeatureName_Depth32FloatStencil8:
         case WGPUFeatureName_TimestampQuery:
@@ -126,11 +126,13 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         case WGPUFeatureName_PrimitiveIndex:
         case WGPUFeatureName_AdapterPropertiesWGPU:
         case WGPUFeatureName_ChromiumExperimentalSamplingResourceTable:
-        case WGPUFeatureName_ChromiumExperimentalSubgroupSizeControl:
+        case WGPUFeatureName_SubgroupSizeControl:
         case WGPUFeatureName_AtomicVec2uMinMax:
         case WGPUFeatureName_Unorm16FormatsForExternalTexture:
         case WGPUFeatureName_OpaqueYCbCrAndroidForExternalTexture:
         case WGPUFeatureName_Unorm16Filterable:
+        case WGPUFeatureName_TextureCompressionUnaligned:
+        case WGPUFeatureName_DawnAllowUndefinedLoadStoreOp:
             return true;
     }
 

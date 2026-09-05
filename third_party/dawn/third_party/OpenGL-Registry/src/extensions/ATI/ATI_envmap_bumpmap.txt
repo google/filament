@@ -1,0 +1,300 @@
+Name
+
+    ATI_envmap_bumpmap
+
+Name Strings
+
+    GL_ATI_envmap_bumpmap
+
+Contact
+
+    Dan Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+
+
+Version
+
+    Date: 11/04/2006
+    Revision: 1.02
+
+Number
+
+    244
+
+Dependencies
+
+    EXT_texture_env_combine is required by this extension.
+    ARB_multitexture is required by this extension.
+
+Overview
+
+    This extension adds environment mapped bump mapping (EMBM) to the GL.
+    The method exposed by this extension is to use a dependent texture
+    read on a bumpmap (du,dv) texture to offset the texture coordinates
+    read into a map on another texture unit.  This (du,dv) offset is also 
+    rotated through a user-specified rotation matrix to get the texture 
+    coordinates into the appropriate space.
+
+    A new texture format is introduced in order for specifying the (du,dv)
+    bumpmap texture.  This map represents -1 <= du,dv <= 1 offsets to
+    be applied to the texture coordinates used to read into the base
+    map.  Additionally, the (du,dv) offsets are transformed by a rotation
+    matrix that this extension allows the user to specify.  Further, a 
+    new color operation is added to EXT_texture_env_combine to specify 
+    both that bumpmapping is enabled and which texture unit to apply 
+    the bump offset to.  
+    
+Issues
+    
+    None known.
+
+New Procedures and Functions
+
+    void TexBumpParameter[i|f]vATI(enum pname, TYPE *param)
+
+    void GetTexBumpParameter[i|f]vATI(enum pname, TYPE *param)
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexBumpParameter[i|f]vATI
+
+        BUMP_ROT_MATRIX_ATI            0x8775
+    
+    Accepted by the <pname> parameter of GetTexBumpParameter[i|f]vATI
+
+        BUMP_ROT_MATRIX_ATI                
+        BUMP_ROT_MATRIX_SIZE_ATI       0x8776
+        BUMP_NUM_TEX_UNITS_ATI         0x8777
+        BUMP_TEX_UNITS_ATI             0x8778
+
+    Accepted by the <format> parameter of GetTexImage and TexImage2D
+
+        DUDV_ATI                       0x8779
+	DU8DV8_ATI                     0x877A
+
+    Accepted by the <components> parameter of TexImage2D
+
+        DUDV_ATI
+	DU8DV8_ATI
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is COMBINE_RGB_EXT
+
+        BUMP_ENVMAP_ATI                0x877B
+
+    Accepted by the <pname> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <target> parameter value is TEXTURE_ENV
+
+        BUMP_TARGET_ATI                0x877C
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is BUMP_TARGET_ATI    
+
+        TEXTURE0_ARB
+        TEXTURE1_ARB
+        TEXTURE2_ARB
+        TEXTURE3_ARB
+        TEXTURE4_ARB
+        TEXTURE5_ARB
+        TEXTURE6_ARB
+        TEXTURE7_ARB
+        TEXTURE8_ARB
+        TEXTURE9_ARB
+        TEXTURE10_ARB
+        TEXTURE11_ARB
+        TEXTURE12_ARB
+        TEXTURE13_ARB
+        TEXTURE14_ARB
+        TEXTURE15_ARB
+        TEXTURE16_ARB
+        TEXTURE17_ARB
+        TEXTURE18_ARB
+        TEXTURE19_ARB
+        TEXTURE20_ARB
+        TEXTURE21_ARB
+        TEXTURE22_ARB
+        TEXTURE23_ARB
+        TEXTURE24_ARB
+        TEXTURE25_ARB
+        TEXTURE26_ARB
+        TEXTURE27_ARB
+        TEXTURE28_ARB
+        TEXTURE29_ARB
+        TEXTURE30_ARB
+        TEXTURE31_ARB
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation):
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    - (p.144, Table 3.15) Add row to table:
+
+    "Base Internal Format            RGBA Values      Internal Components
+     --------------------            -----------      -------------------
+     DUDV_ATI                        undefined        U,V"
+
+    - (p. 155, Table 3.16) Add rows to table, add last two columns:
+
+    "Sized               Base             R    G    B    A    L    I    U    V
+     Internal Format     Internal Format  bits bits bits bits bits bits bits bits
+     ---------------     ---------------  ---- ---- ---- ---- ---- ---- ---- ----
+     DU8DV8_ATI          DUDV_ATI                                       8    8"
+
+    - (p. 136 Table 3.18) Add Row:
+
+    "Base               REPLACE            MODULATE
+     Internal Format    Texture Function   Texture Function
+     ---------------    ----------------   ----------------
+     DUDV_ATI           undefined          undefined"
+
+    - (p. 137 Table 3.19) Add Row:
+
+    "Base               DECAL              BLEND
+     Internal Format    Texture Function   Texture Function
+     ---------------    ----------------   ----------------
+     DUDV_ATI           undefined          undefined"
+
+	
+        Table 3.23: Correspondence of texture components to source
+        components for COMBINE_RGB_EXT and COMBINE_ALPHA_EXT arguments"
+
+    - (p.138, add new section 3.8.11)
+
+    "3.8.11 Texture Bump Parameters
+
+    The parameters for environment mapped bump mapping are set through
+    the entry point:
+
+       void TexBumpParameter[i|f]vATI(enum pname, TYPE *param)
+
+    When pname is BUMP_ROT_MATRIX_ATI, the rotation matrix applied to
+    each (du, dv) coordinate read from the bumpmap is specified
+    (see section 3.8.9 on environment mapped bump mapping).  The size 
+    of the rotation matrix can vary across implementations (to allow for 
+    future expansion with support for offsets to more than just two 
+    coordinates).  This size can be queried for using:
+
+       void GetTexBumpParamter[i|f]vATI(enum pname, TYPE *param)
+
+    with pname as BUMP_ROT_MATRIX_SIZE_ATI.  This returns the number
+    of entries in the BUMP_ROT_MATRIX.  When pname is BUMP_NUM_TEX_UNITS_ATI,
+    the number of texture units that support bump mapping is returned.  
+    Given this, an array of supported texture units that support bumpmapping 
+    can be queried.  When pname is BUMP_TEX_UNITS_ATI, an array of size 
+    BUMP_NUM_TEX_UNITS_ATI is returned in which each element is one of the 
+    valid texture units (TEXTURE0_ARB, TEXTURE1_ARB, etc.)."
+ 
+   - After Table 3.20 in EXT_texture_env_combine:
+
+   "In addition, a special-case COMBINE_RGB_EXT function exists for performing
+    environment mapped bump mapping.  This function does not behave as 
+    the standard combine functions.  Instead, it specifies that the given
+    texture unit has a bumpmap which will be used to offset the texture coordinate
+    reads onto another unit.
+
+    The texture unit which the bumpmap will bump is specified by setting the
+    BUMP_TARGET_ATI to be a valid texture unit.  
+
+    Environment mapped bump mapping then works as follows:
+
+    The (du,dv) offset map specified on the texture unit with BUMP_ENVMAP_ATI
+    will be used to offset the texture coordinates read into the map on the
+    BUMP_TARGET_ATI unit.  The (du,dv) texel will be fetched from the bumpmap
+    at the texture coordinate specified for the bumpmap.  This (du,dv) texel
+    will then be rotated through the BUMP_ROT_MATRIX:
+
+      du' = du * Rot[00] + dv * Rot[01]
+      dv' = du * Rot[10] + dv * Rot[11]
+
+    (du',dv') will then be used to offset the (u,v) coordinates used to read
+    into the texture on BUMP_TARGET_ATI:
+
+      u = u + du'
+      v = v + dv'
+
+    These final coordinates are then used to fetch from the texture on 
+    BUMP_TARGET_ATI."
+
+     
+    - Change to table 3.23 in EXT_texture_env_combine:
+    
+    "Base Internal Format		RGB Values	Alpha Value
+     --------------------		----------	-----------
+     ALPHA                              0,  0,  0       At
+     LUMINANCE                          Lt, Lt, Lt      1
+     LUMINANCE_ALPHA                    Lt, Lt, Lt      At
+     INTENSITY                          It, It, It      It
+     RGB                                Rt, Gt, Bt      1
+     RGBA                               Rt, Gt, Bt      At
+     DUDV_ATI                           0, 0, 0         1
+    "
+
+
+
+Additions to Chapter 4:
+
+    None
+
+Additions to Chapter 5:
+
+    None
+
+Additions to Chapter 6:
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+
+GLX Protocol
+
+    None
+
+Dependencies on EXT_point_parameters
+
+    
+Errors
+    
+    INVALID_ENUM if TexBumpParameter[i|f]vATI is called with pname not equal to
+       BUMP_ROT_MATRIX_ATI.
+
+    INVALID_ENUM if GetTexBumpParameter[i|f]vATI is called with pname not equal
+       to BUMP_ROT_MATRIX_ATI, BUMP_ROT_MATRIX_SIZE_ATI, BUMP_NUM_TEX_UNITS_ATI,
+       or BUMP_TEX_UNITS_ATI.
+
+    INVALID_VALUE if the combineRGB function is set on a unit not supported as
+       queried with BUMP_TEX_UNITS_ATI.
+
+New State
+
+    Get Value                   Get Command           Type     Minimum Value  Description
+    ---------                   -----------           ----     -------------  -----------
+    BUMP_ROT_MATRIX_ATI         GetTexBumpParameterfv n x F    -              Bump rotation matrix on current unit
+    BUMP_ROT_MATRIX_SIZE_ATI    GetTexBumpParameteriv Z+       4              Bump rotation matrix size
+    BUMP_NUM_TEX_UNITS_ATI      GetTexBumpParameteriv Z+       1              Number of bump texture units
+    BUMP_TEX_UNITS_ATI          GetTexBumpParameteriv n x Z+   -              Supported bump texture units  
+  
+
+New Implementation Dependent State
+
+    None
+
+
+Revision History
+
+   Date: 11/4/2006
+   Revision: 1.02
+      - Updated contact info after ATI/AMD merger.
+
+   Date: 1/09/2003
+   Revision: 1.01
+      - Added an error condition.
+
+   Date: 8/21/2001
+   Revision: 1.0
+      - First release.
+

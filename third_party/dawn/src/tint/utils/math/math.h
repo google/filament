@@ -102,7 +102,8 @@ inline constexpr uint64_t NextPowerOfTwo(uint64_t value) {
 /// @param value the input value
 /// @returns the largest power of two that `value` is a multiple of
 template <typename T>
-inline std::enable_if_t<std::is_unsigned<T>::value, T> MaxAlignOf(T value) {
+    requires(std::is_unsigned_v<T>)
+inline T MaxAlignOf(T value) {
     T pot = 1;
     while (value && ((value & 1u) == 0)) {
         pot <<= 1;

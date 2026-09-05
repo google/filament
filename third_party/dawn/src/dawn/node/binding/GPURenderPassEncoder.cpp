@@ -35,6 +35,7 @@
 #include "src/dawn/node/binding/GPUQuerySet.h"
 #include "src/dawn/node/binding/GPURenderBundle.h"
 #include "src/dawn/node/binding/GPURenderPipeline.h"
+#include "src/utils/compiler.h"
 
 namespace wgpu::binding {
 
@@ -150,7 +151,7 @@ void GPURenderPassEncoder::setBindGroup(
     }
 
     enc_.SetBindGroup(index, bg, dynamicOffsetsDataLength,
-                      dynamicOffsetsData.Data() + dynamicOffsetsDataStart);
+                      DAWN_UNSAFE_TODO(dynamicOffsetsData.Data() + dynamicOffsetsDataStart));
 }
 
 void GPURenderPassEncoder::setImmediates(Napi::Env env,

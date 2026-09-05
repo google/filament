@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Subresource.h"
+#include "src/dawn/native/Subresource.h"
 
 #include <bit>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/native/Format.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/Format.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 

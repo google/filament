@@ -34,17 +34,18 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/Platform.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ExecutionQueue.h"
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/native/opengl/ContextEGL.h"
-#include "dawn/native/opengl/EGLFunctions.h"
-#include "dawn/native/opengl/Forward.h"
-#include "dawn/native/opengl/GLFormat.h"
-#include "dawn/native/opengl/OpenGLFunctions.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ExecutionQueue.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/native/opengl/ContextEGL.h"
+#include "src/dawn/native/opengl/EGLFunctions.h"
+#include "src/dawn/native/opengl/Forward.h"
+#include "src/dawn/native/opengl/GLFormat.h"
+#include "src/dawn/native/opengl/OpenGLFunctions.h"
+#include "src/utils/compiler.h"
+#include "src/utils/platform.h"
 
 namespace dawn::native {
 class AHBFunctions;
@@ -142,24 +143,20 @@ class Device final : public DeviceBase {
         return EnqueueGL(ExecutionQueueBase::SubmitMode::Normal, std::forward<Fn>(work));
     }
 
-    // A variant of EnqueueGL that takes an array and a size. In deferral mode, a CPU-side copy of
+    // A variant of EnqueueGL that takes an span of data. In deferral mode, a CPU-side copy of
     // the array is made and captured with the lambda. Otherwise, the call is executed immediately
     // without copying the array.
     template <typename Fn>
-    MaybeError EnqueueGL(const void* data, size_t size, Fn work) {
+    MaybeError EnqueueGL(Span<const std::byte> data, Fn work) {
         if (!IsToggleEnabled(Toggle::GLDefer)) {
-            return ExecuteGL(ExecutionQueueBase::SubmitMode::Normal,
-                             [data, size, work](const OpenGLFunctions& gl) -> MaybeError {
-                                 return work(gl, data, size);
-                             });
+            return ExecuteGL(
+                ExecutionQueueBase::SubmitMode::Normal,
+                [data, work](const OpenGLFunctions& gl) -> MaybeError { return work(gl, data); });
         }
 
         // Call is deferred; must copy data.
-        auto* d = static_cast<const char*>(data);
-        return EnqueueGL(
-            [data = std::vector<char>(d, d + size), work](const OpenGLFunctions& gl) -> MaybeError {
-                return work(gl, data.data(), data.size());
-            });
+        return EnqueueGL([data = std::vector<std::byte>(data.begin(), data.end()), work](
+                             const OpenGLFunctions& gl) -> MaybeError { return work(gl, data); });
     }
 
     // Flush any pending GL commands enqueued via EnqueueGL().
@@ -209,7 +206,7 @@ class Device final : public DeviceBase {
 
     const GLFormat& GetGLFormat(const Format& format);
 
-    int GetMaxTextureMaxAnisotropy() const;
+    float GetMaxTextureMaxAnisotropy() const;
 
     MaybeError ValidateTextureCanBeWrapped(const UnpackedPtr<TextureDescriptor>& descriptor);
     Ref<TextureBase> CreateTextureWrappingEGLImage(const ExternalImageDescriptor* descriptor,
@@ -305,7 +302,7 @@ class Device final : public DeviceBase {
 
     GLFormatTable mFormatTable;
     std::unique_ptr<ContextEGL> mContext;
-    int mMaxTextureMaxAnisotropy = 0;
+    float mMaxTextureMaxAnisotropy = 0;
 
     // Maintain an internal uniform buffer to store extra information needed by shader emulation for
     // certain texture builtins.

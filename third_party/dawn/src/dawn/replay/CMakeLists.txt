@@ -38,6 +38,7 @@ set(private_headers
     "ReadHead.h"
     "ReplayImpl.h"
     "CaptureWalker.h"
+    "SurfaceDiscovery.h"
 )
 
 set(sources
@@ -48,6 +49,7 @@ set(sources
     "ReadHead.cpp"
     "Replay.cpp"
     "CaptureWalker.cpp"
+    "SurfaceDiscovery.cpp"
 )
 
 dawn_add_library(

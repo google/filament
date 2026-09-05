@@ -35,10 +35,10 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/NonCopyable.h"
-#include "dawn/native/AsyncTask.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/AsyncTask.h"
+#include "src/utils/non_copyable.h"
 
 namespace dawn::native {
 namespace {

@@ -25,20 +25,22 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/DynamicUploader.h"
+#include "src/dawn/native/DynamicUploader.h"
 
 #include <atomic>
 #include <utility>
 
-#include "dawn/common/Math.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Queue.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Queue.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native {
 
 namespace {
-constexpr uint64_t kRingBufferSize = 4 * 1024 * 1024;
+constexpr uint64_t kRingBufferSize = 4ULL * 1024 * 1024;
 }  // anonymous namespace
 
 DynamicUploader::DynamicUploader(DeviceBase* device) : mDevice(device) {}
@@ -46,12 +48,13 @@ DynamicUploader::DynamicUploader(DeviceBase* device) : mDevice(device) {}
 ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSize,
                                                           uint64_t offsetAlignment) {
     DAWN_ASSERT(mDevice->IsLockedByCurrentThreadIfNeeded());
+    uint64_t alignedAllocationSize = Align(allocationSize, 8);
 
     // Disable further sub-allocation should the request be too large.
     if (allocationSize > kRingBufferSize) {
         BufferDescriptor bufferDesc = {};
         bufferDesc.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::MapWrite;
-        bufferDesc.size = Align(allocationSize, 4);
+        bufferDesc.size = alignedAllocationSize;
         bufferDesc.mappedAtCreation = true;
         bufferDesc.label = "Dawn_DynamicUploaderStaging";
 
@@ -60,7 +63,7 @@ ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSiz
         DAWN_TRY_ASSIGN(stagingBuffer, mDevice->CreateBuffer(&bufferDesc));
 
         UploadReservation reservation;
-        reservation.mappedPointer = static_cast<uint8_t*>(stagingBuffer->GetMappedPointer());
+        reservation.mappedData = stagingBuffer->GetMappedRange();
         reservation.offsetInBuffer = 0;
         reservation.buffer = std::move(stagingBuffer);
         return reservation;
@@ -83,7 +86,7 @@ ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSiz
         RingBufferAllocator& ringBufferAllocator = ringBuffer->mAllocator;
         // Prevent overflow.
         DAWN_ASSERT(ringBufferAllocator.GetSize() >= ringBufferAllocator.GetUsedSize());
-        startOffset = ringBufferAllocator.Allocate(allocationSize, serial, offsetAlignment);
+        startOffset = ringBufferAllocator.Allocate(alignedAllocationSize, serial, offsetAlignment);
         if (startOffset != RingBufferAllocator::kInvalidOffset) {
             targetRingBuffer = ringBuffer.get();
             break;
@@ -97,7 +100,7 @@ ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSiz
             new RingBuffer{nullptr, RingBufferAllocator(kRingBufferSize)}));
 
         targetRingBuffer = mRingBuffers.back().get();
-        startOffset = targetRingBuffer->mAllocator.Allocate(allocationSize, serial);
+        startOffset = targetRingBuffer->mAllocator.Allocate(alignedAllocationSize, serial);
     }
 
     DAWN_ASSERT(startOffset != RingBufferAllocator::kInvalidOffset);
@@ -121,8 +124,10 @@ ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSiz
 
     UploadReservation reservation;
     reservation.buffer = targetRingBuffer->mStagingBuffer;
-    reservation.mappedPointer =
-        static_cast<uint8_t*>(reservation.buffer->GetMappedPointer()) + startOffset;
+    reservation.mappedData = reservation.buffer
+                                 ->GetMappedRange(checked_cast<size_t>(startOffset),
+                                                  checked_cast<size_t>(alignedAllocationSize))
+                                 .first(checked_cast<size_t>(allocationSize));
     reservation.offsetInBuffer = startOffset;
 
     return reservation;
@@ -135,7 +140,7 @@ MaybeError DynamicUploader::OnStagingMemoryFreePendingOnSubmit(uint64_t size) {
 }
 
 MaybeError DynamicUploader::MaybeSubmitPendingCommands() {
-    constexpr uint64_t kPendingMemorySubmitThreshold = 16 * 1024 * 1024;
+    constexpr uint64_t kPendingMemorySubmitThreshold = 16ULL * 1024 * 1024;
     if (mMemoryPendingSubmit.load(std::memory_order_relaxed) < kPendingMemorySubmitThreshold) {
         return {};
     }
@@ -170,7 +175,7 @@ void DynamicUploader::Deallocate(ExecutionSerial lastCompletedSerial, bool freeA
         // again unless explicitly asked to do so. The last buffer is the largest.
         const bool shouldFree = (i < mRingBuffers.size() - 1) || freeAll;
         if (mRingBuffers[i]->mAllocator.Empty() && shouldFree) {
-            mRingBuffers.erase(mRingBuffers.begin() + i);
+            mRingBuffers.erase(mRingBuffers.begin() + sign_cast(i));
         } else {
             i++;
         }

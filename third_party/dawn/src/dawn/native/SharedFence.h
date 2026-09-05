@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_SHAREDFENCE_H_
 #define SRC_DAWN_NATIVE_SHAREDFENCE_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ObjectBase.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ObjectBase.h"
 
 namespace dawn::native {
 
@@ -59,8 +59,8 @@ class SharedFenceBase : public ApiObjectBase {
 };
 
 struct FenceAndSignalValue {
-    Ref<SharedFenceBase> object;
-    uint64_t signaledValue;
+    Ref<SharedFenceBase> object = nullptr;
+    uint64_t signaledValue = 0;
 };
 
 }  // namespace dawn::native

@@ -25,6 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/utils/span.h"
+
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include <algorithm>
 #include <array>
 #include <ostream>
@@ -33,12 +40,12 @@
 #include <type_traits>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -62,7 +69,7 @@ struct Color {
     // Get representation of one component.
     T GetCompRep(size_t idx) const { return components[idx]; }
 
-    T components[NumComponents] = {};
+    std::array<T, NumComponents> components = {};
 };
 
 template <size_t NumComponents>
@@ -95,9 +102,9 @@ class ColorExpectation : public detail::CustomTextureExpectation {
     static constexpr size_t kNumComponents = ColorType::kNumComponents;
     using CompRepType = ColorType::ComponentRepresentation;
 
-    ColorExpectation(const ColorType* expected, size_t count, CompRepType tolerance)
+    ColorExpectation(dawn::Span<const ColorType> expected, CompRepType tolerance)
         : mTolerance(tolerance) {
-        mExpected.assign(expected, expected + count);
+        mExpected.assign(expected.begin(), expected.end());
     }
 
     uint32_t DataSize() override { return ColorType::kDataSize; }
@@ -228,11 +235,24 @@ class CopyTests {
         const utils::TextureDataCopyLayout& layout) {
         // These are some known 16 bit float values that always unpack and pack to the same bytes.
         // Pick test data from these values to provide some level of test coverage for *16Float.
-        constexpr uint8_t goodBytes[] = {
-            0x30, 0x00, 0x49, 0x00, 0x56, 0x40, 0x20, 0x00, 0x37, 0x4C, 0x42, 0x00, 0x3F, 0x6C,
-        };
+        constexpr auto goodBytes = std::to_array<uint8_t>({
+            0x30,
+            0x00,
+            0x49,
+            0x00,
+            0x56,
+            0x40,
+            0x20,
+            0x00,
+            0x37,
+            0x4C,
+            0x42,
+            0x00,
+            0x3F,
+            0x6C,
+        });
         constexpr uint32_t formatByteSize = 2;
-        constexpr uint32_t numGoodValues = sizeof(goodBytes) / sizeof(uint8_t) / formatByteSize;
+        constexpr uint32_t numGoodValues = goodBytes.size() / sizeof(uint8_t) / formatByteSize;
 
         uint32_t bytesPerTexelBlock = layout.bytesPerRow / layout.texelBlocksPerRow;
         std::vector<uint8_t> textureData(layout.byteLength);
@@ -259,12 +279,12 @@ class CopyTests {
         // These are some known 4-byte RGB9E5Ufloat values that always unpack and pack to the same
         // bytes. Pick test data from these values to provide some level of test coverage for
         // RGB9E5Ufloat.
-        constexpr uint8_t goodBytes[] = {
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
-            0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
-            0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+        constexpr auto goodBytes = std::to_array<uint8_t>(
+            {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+             0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
+             0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28});
         constexpr uint32_t formatByteSize = 4;
-        constexpr uint32_t numGoodValues = sizeof(goodBytes) / sizeof(uint8_t) / formatByteSize;
+        constexpr uint32_t numGoodValues = goodBytes.size() / sizeof(uint8_t) / formatByteSize;
         uint32_t bytesPerTexelBlock = layout.bytesPerRow / layout.texelBlocksPerRow;
         std::vector<uint8_t> textureData(layout.byteLength);
         for (uint32_t layer = 0; layer < layout.mipSize.depthOrArrayLayers; ++layer) {
@@ -291,12 +311,13 @@ class CopyTests {
         // These are some known 4-byte RG11B10Ufloat values that always unpack and pack to the same
         // bytes. Pick test data from these values to provide some level of test coverage for
         // RG11B10Ufloat.
-        constexpr uint8_t goodBytes[] = {
+        constexpr auto goodBytes = std::to_array<uint8_t>({
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
             0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
-            0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28};
+            0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+        });
         constexpr uint32_t formatByteSize = 4;
-        constexpr uint32_t numGoodValues = sizeof(goodBytes) / sizeof(uint8_t) / formatByteSize;
+        constexpr uint32_t numGoodValues = goodBytes.size() / formatByteSize;
         uint32_t bytesPerTexelBlock = layout.bytesPerRow / layout.texelBlocksPerRow;
         std::vector<uint8_t> textureData(layout.byteLength);
         for (uint32_t layer = 0; layer < layout.mipSize.depthOrArrayLayers; ++layer) {
@@ -362,9 +383,11 @@ class CopyTests {
             uint32_t srcDepthOffset = z * srcBytesPerRow * srcRowsPerImage;
             uint32_t dstDepthOffset = z * dstBytesPerRow * dstRowsPerImage;
             for (unsigned int y = 0; y < heightInBlocks; ++y) {
-                memcpy(static_cast<uint8_t*>(dstData) + dstDepthOffset + y * dstBytesPerRow,
-                       static_cast<const uint8_t*>(srcData) + srcDepthOffset + y * srcBytesPerRow,
-                       widthInBlocks * bytesPerTexelBlock);
+                memcpy(static_cast<uint8_t*>(dstData) + dstDepthOffset +
+                           static_cast<size_t>(y) * dstBytesPerRow,
+                       static_cast<const uint8_t*>(srcData) + srcDepthOffset +
+                           static_cast<size_t>(y) * srcBytesPerRow,
+                       static_cast<size_t>(widthInBlocks) * bytesPerTexelBlock);
             }
         }
     }
@@ -633,7 +656,7 @@ class CopyTests_T2B : public CopyTests_WithFormatParam {
                     << errorMsgSs.str();
             }
 
-            bufferOffset += bufferSpec.bytesPerRow * bufferSpec.rowsPerImage;
+            bufferOffset += static_cast<uint64_t>(bufferSpec.bytesPerRow) * bufferSpec.rowsPerImage;
         }
 
         if (useMappableBuffer) {
@@ -783,8 +806,9 @@ class CopyTests_B2T : public CopyTests_WithFormatParam {
                             copySize.width * bytesPerTexel, copySize.height);
 
             EXPECT_TEXTURE_EQ(
-                new ColorExpectation<PixelType>(
-                    expected.data(), copySize.width * copySize.height * copyDepth, tolerance),
+                new ColorExpectation<PixelType>(dawn::Span<const PixelType>(expected).first(
+                                                    copySize.width * copySize.height * copyDepth),
+                                                tolerance),
                 texture,
                 {textureSpec.copyOrigin.x, textureSpec.copyOrigin.y,
                  textureSpec.copyOrigin.z + layer},
@@ -808,12 +832,16 @@ class CopyTests_T2TBase : public CopyTests, public Parent {
         return {wgpu::FeatureName::DawnInternalUsages};
     }
 
-    void DoTest(const TextureSpec& srcSpec,
-                const TextureSpec& dstSpec,
-                const wgpu::Extent3D& copySize,
-                wgpu::TextureDimension srcDimension,
-                wgpu::TextureDimension dstDimension,
-                bool copyWithinSameTexture = false) {
+    void DoTest(
+        const TextureSpec& srcSpec,
+        const TextureSpec& dstSpec,
+        const wgpu::Extent3D& copySize,
+        wgpu::TextureDimension srcDimension,
+        wgpu::TextureDimension dstDimension,
+        bool copyWithinSameTexture = false,
+        wgpu::TextureViewDimension srcBindingViewDimension = wgpu::TextureViewDimension::Undefined,
+        wgpu::TextureViewDimension dstBindingViewDimension =
+            wgpu::TextureViewDimension::Undefined) {
         const wgpu::TextureFormat format = srcSpec.format;
 
         wgpu::TextureDescriptor srcDescriptor;
@@ -823,6 +851,15 @@ class CopyTests_T2TBase : public CopyTests, public Parent {
         srcDescriptor.format = format;
         srcDescriptor.mipLevelCount = srcSpec.levelCount;
         srcDescriptor.usage = wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::CopySrc;
+
+        // Test cube texture copy for compat.
+        wgpu::TextureBindingViewDimension srcTextureBindingViewDimensionDesc;
+        if (srcBindingViewDimension != wgpu::TextureViewDimension::Undefined) {
+            srcTextureBindingViewDimensionDesc.textureBindingViewDimension =
+                srcBindingViewDimension;
+            srcDescriptor.nextInChain = &srcTextureBindingViewDimensionDesc;
+        }
+
         wgpu::Texture srcTexture = this->device.CreateTexture(&srcDescriptor);
 
         wgpu::Texture dstTexture;
@@ -836,6 +873,15 @@ class CopyTests_T2TBase : public CopyTests, public Parent {
             dstDescriptor.format = dstSpec.format;
             dstDescriptor.mipLevelCount = dstSpec.levelCount;
             dstDescriptor.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst;
+
+            // Test cube texture copy for compat.
+            wgpu::TextureBindingViewDimension dstTextureBindingViewDimension;
+            if (dstBindingViewDimension != wgpu::TextureViewDimension::Undefined) {
+                dstTextureBindingViewDimension.textureBindingViewDimension =
+                    dstBindingViewDimension;
+                dstDescriptor.nextInChain = &dstTextureBindingViewDimension;
+            }
+
             dstTexture = this->device.CreateTexture(&dstDescriptor);
         }
 
@@ -941,7 +987,7 @@ class CopyTests_T2TBase : public CopyTests, public Parent {
                 // slice)-th layer to its expected data after the copy (the outputBuffer contains
                 // the data of the destination texture since the dstSpec.copyOrigin.z-th layer).
                 uint64_t outputBufferExpectationBytesOffset =
-                    dstDataCopyLayout.bytesPerImage * slice;
+                    static_cast<uint64_t>(dstDataCopyLayout.bytesPerImage) * slice;
                 EXPECT_BUFFER_U32_RANGE_EQ(
                     reinterpret_cast<const uint32_t*>(expectedDstDataPerSlice.data()), outputBuffer,
                     outputBufferExpectationBytesOffset,
@@ -1347,7 +1393,7 @@ TEST_P(CopyTests_T2B, OffsetBufferAligned) {
 
     for (unsigned int i = 0; i < 3; ++i) {
         BufferSpec bufferSpec = MinimumBufferSpec(kWidth, kHeight);
-        uint64_t offset = 512 * i;
+        uint64_t offset = 512ULL * i;
         bufferSpec.size += offset;
         bufferSpec.offset += offset;
         DoTest(textureSpec, bufferSpec, {kWidth, kHeight, 1});
@@ -1556,7 +1602,7 @@ TEST_P(CopyTests_T2B, BytesPerRowAligned) {
     BufferSpec bufferSpec = MinimumBufferSpec(kWidth, kHeight);
     for (unsigned int i = 1; i < 4; ++i) {
         bufferSpec.bytesPerRow += 256;
-        bufferSpec.size += 256 * kHeight;
+        bufferSpec.size += 256ULL * kHeight;
         DoTest(textureSpec, bufferSpec, {kWidth, kHeight, 1});
     }
 }
@@ -1575,7 +1621,7 @@ TEST_P(CopyTests_T2B, BytesPerRowUnaligned) {
     BufferSpec bufferSpec = MinimumBufferSpec(kWidth, kHeight);
     for (unsigned int i = 1; i < 4; ++i) {
         bufferSpec.bytesPerRow += 256;
-        bufferSpec.size += 256 * kHeight;
+        bufferSpec.size += 256ULL * kHeight;
         DoTest(textureSpec, bufferSpec, {kWidth, kHeight, 1});
     }
 }
@@ -2570,7 +2616,7 @@ TEST_P(CopyTests_B2T, OffsetBufferAligned) {
 
     for (unsigned int i = 0; i < 3; ++i) {
         BufferSpec bufferSpec = MinimumBufferSpec(kWidth, kHeight);
-        uint64_t offset = 512 * i;
+        uint64_t offset = 512ULL * i;
         bufferSpec.size += offset;
         bufferSpec.offset += offset;
         DoTest(textureSpec, bufferSpec, {kWidth, kHeight, 1});
@@ -2639,7 +2685,7 @@ TEST_P(CopyTests_B2T, BytesPerRowAligned) {
     BufferSpec bufferSpec = MinimumBufferSpec(kWidth, kHeight);
     for (unsigned int i = 1; i < 4; ++i) {
         bufferSpec.bytesPerRow += 256;
-        bufferSpec.size += 256 * kHeight;
+        bufferSpec.size += 256ULL * kHeight;
         DoTest(textureSpec, bufferSpec, {kWidth, kHeight, 1});
     }
 }
@@ -2658,7 +2704,7 @@ TEST_P(CopyTests_B2T, BytesPerRowUnaligned) {
     BufferSpec bufferSpec = MinimumBufferSpec(kWidth, kHeight);
     for (unsigned int i = 1; i < 4; ++i) {
         bufferSpec.bytesPerRow += 256;
-        bufferSpec.size += 256 * kHeight;
+        bufferSpec.size += 256ULL * kHeight;
         DoTest(textureSpec, bufferSpec, {kWidth, kHeight, 1});
     }
 }
@@ -3617,6 +3663,97 @@ DAWN_INSTANTIATE_TEST_P(CopyTests_T2T_Srgb,
                         {wgpu::TextureFormat::RGBA8Unorm, wgpu::TextureFormat::RGBA8UnormSrgb,
                          wgpu::TextureFormat::BGRA8Unorm, wgpu::TextureFormat::BGRA8UnormSrgb});
 
+// Test copying 2d texture arrays with binding view dimension set to cube.
+class CopyTests_T2T_Compat : public CopyTests_T2T {
+  protected:
+    void SetUp() override {
+        CopyTests_T2T::SetUp();
+        DAWN_TEST_UNSUPPORTED_IF(!IsCompatibilityMode());
+    }
+};
+
+TEST_P(CopyTests_T2T_Compat, TextureCubeToCubeOffset) {
+    constexpr uint32_t kWidth = 32;
+    constexpr uint32_t kHeight = 32;
+    constexpr uint32_t kLayers = 6;
+    constexpr uint32_t kCopyLayerCount = 2;
+
+    TextureSpec defaultTextureSpec;
+    defaultTextureSpec.textureSize = {kWidth, kHeight, kLayers};
+
+    for (uint32_t i = 0; i < kLayers - kCopyLayerCount; ++i) {
+        TextureSpec srcTextureSpec = defaultTextureSpec;
+        srcTextureSpec.copyOrigin = {0, 0, i};
+
+        for (uint32_t j = 0; j < kLayers - kCopyLayerCount; ++j) {
+            TextureSpec dstTextureSpec = defaultTextureSpec;
+            dstTextureSpec.copyOrigin = {0, 0, j};
+
+            DoTest(srcTextureSpec, dstTextureSpec, {kWidth, kHeight, kCopyLayerCount},
+                   wgpu::TextureDimension::e2D, wgpu::TextureDimension::e2D, false,
+                   wgpu::TextureViewDimension::Cube, wgpu::TextureViewDimension::Cube);
+        }
+    }
+}
+
+TEST_P(CopyTests_T2T_Compat, Texture2DToCubeOffset) {
+    constexpr uint32_t kWidth = 32;
+    constexpr uint32_t kHeight = 32;
+    constexpr uint32_t kLayers = 6;
+    constexpr uint32_t kCopyLayerCount = 2;
+
+    TextureSpec defaultTextureSpec;
+    defaultTextureSpec.textureSize = {kWidth, kHeight, kLayers};
+
+    for (uint32_t i = 0; i < kLayers - kCopyLayerCount; ++i) {
+        TextureSpec srcTextureSpec = defaultTextureSpec;
+        srcTextureSpec.copyOrigin = {0, 0, i};
+
+        for (uint32_t j = 0; j < kLayers - kCopyLayerCount; ++j) {
+            TextureSpec dstTextureSpec = defaultTextureSpec;
+            dstTextureSpec.copyOrigin = {0, 0, j};
+
+            DoTest(srcTextureSpec, dstTextureSpec, {kWidth, kHeight, kCopyLayerCount},
+                   wgpu::TextureDimension::e2D, wgpu::TextureDimension::e2D, false,
+                   wgpu::TextureViewDimension::Undefined, wgpu::TextureViewDimension::Cube);
+        }
+    }
+}
+
+TEST_P(CopyTests_T2T_Compat, TextureCubeTo2DOffset) {
+    constexpr uint32_t kWidth = 32;
+    constexpr uint32_t kHeight = 32;
+    constexpr uint32_t kLayers = 6;
+    constexpr uint32_t kCopyLayerCount = 2;
+
+    TextureSpec defaultTextureSpec;
+    defaultTextureSpec.textureSize = {kWidth, kHeight, kLayers};
+
+    for (uint32_t i = 0; i < kLayers - kCopyLayerCount; ++i) {
+        TextureSpec srcTextureSpec = defaultTextureSpec;
+        srcTextureSpec.copyOrigin = {0, 0, i};
+
+        for (uint32_t j = 0; j < kLayers - kCopyLayerCount; ++j) {
+            TextureSpec dstTextureSpec = defaultTextureSpec;
+            dstTextureSpec.copyOrigin = {0, 0, j};
+
+            DoTest(srcTextureSpec, dstTextureSpec, {kWidth, kHeight, kCopyLayerCount},
+                   wgpu::TextureDimension::e2D, wgpu::TextureDimension::e2D, false,
+                   wgpu::TextureViewDimension::Cube, wgpu::TextureViewDimension::Undefined);
+        }
+    }
+}
+
+DAWN_INSTANTIATE_TEST_P(CopyTests_T2T_Compat,
+                        {
+                            D3D11Backend(),
+                            D3D11Backend({"d3d11_disable_map_on_default_buffers"}),
+                            OpenGLBackend(),
+                            OpenGLESBackend(),
+                            OpenGLESBackend({"gl_defer"}),
+                        },
+                        {wgpu::TextureFormat::RGBA8Unorm, wgpu::TextureFormat::BGRA8Unorm});
+
 static constexpr uint64_t kSmallBufferSize = 4;
 static constexpr uint64_t kLargeBufferSize = 1 << 16;
 
@@ -4073,6 +4210,176 @@ DAWN_INSTANTIATE_TEST(T2TCopyFromDirtyHeapTests,
                       OpenGLESBackend({"gl_defer"}),
                       VulkanBackend(),
                       WebGPUBackend());
+
+class CopyTests_MemoryLeak : public DawnTest {};
+
+// Test that reproduced a memory leak triggered by the D3D12 temporary buffer workaround
+// (D3D12UseTempBufferInDepthStencilTextureAndBufferCopyWithNonZeroBufferOffset) for depth/stencil
+// texture-to-buffer copies with a non-zero buffer offset. See crbug.com/500443031
+TEST_P(CopyTests_MemoryLeak, T2BLeakUninitializedPadding) {
+    // Dirty the GPU heap with a recognizable pattern.
+    // Use a large enough size to likely hit the same heap as the upcoming temporary buffer.
+    {
+        constexpr uint64_t kDirtySize = 64ULL * 1024;
+        constexpr uint32_t kPattern = 0xDEADBEEF;
+
+        wgpu::BufferDescriptor descriptor;
+        descriptor.size = kDirtySize;
+        descriptor.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+        wgpu::Buffer buffer = device.CreateBuffer(&descriptor);
+
+        std::vector<uint32_t> data(kDirtySize / sizeof(uint32_t), kPattern);
+        queue.WriteBuffer(buffer, 0, data.data(), data.size() * sizeof(uint32_t));
+
+        // Submit and wait for idle to ensure the data is written and then the buffer can be freed.
+        queue.Submit(0, nullptr);
+        WaitForAllOperations();
+    }
+
+    // Initialize the texture with a known value.
+    constexpr float kClearDepthValue = 0.5f;
+    constexpr auto kTexFormat = wgpu::TextureFormat::Depth16Unorm;
+    constexpr uint32_t kTexWidth = 1;
+    constexpr uint32_t kTexHeight = 2;
+
+    // Create a 1x2 depth texture and clear it to kClearDepthValue. If we copy a 1x2 texture, we get
+    // padding between row 0 and row 1. We set bytesPerRow high when copying to force padding bytes
+    // on row 0.
+    wgpu::Texture texture;
+    {
+        wgpu::TextureDescriptor texDesc = {};
+        texDesc.size = {kTexWidth, kTexHeight, 1};
+        texDesc.format = kTexFormat;
+        texDesc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+        texture = device.CreateTexture(&texDesc);
+
+        utils::ComboRenderPassDescriptor renderPassDesc({}, texture.CreateView());
+        renderPassDesc.UnsetDepthStencilLoadStoreOpsForFormat(kTexFormat);
+        renderPassDesc.cDepthStencilAttachmentInfo.depthClearValue = kClearDepthValue;
+        renderPassDesc.cDepthStencilAttachmentInfo.depthLoadOp = wgpu::LoadOp::Clear;
+
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPassDesc);
+        pass.End();
+        wgpu::CommandBuffer commands = encoder.Finish();
+        queue.Submit(1, &commands);
+        WaitForAllOperations();
+    }
+
+    // Create a destination buffer with large bytesPerRow to maximize padding.
+    // 256KB padding per row (we only have 1 row though)
+    constexpr uint32_t kBytesPerRow = 256 * 1024;
+    // The D3D12UseTempBufferInDepthStencilTextureAndBufferCopyWithNonZeroBufferOffset workaround
+    // triggers when offset is not a multiple of 512.
+    constexpr uint32_t kOffset = 4;
+
+    wgpu::Buffer destinationBuffer;
+    const uint32_t destinationBufferSize = kOffset + kBytesPerRow * kTexHeight;
+    {
+        wgpu::BufferDescriptor bufferDesc = {};
+        bufferDesc.size = destinationBufferSize;
+        bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
+        destinationBuffer = device.CreateBuffer(&bufferDesc);
+    }
+
+    // Perform the copy texture to buffer
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::TexelCopyTextureInfo srcInfo = utils::CreateTexelCopyTextureInfo(
+            texture, 0, {0, 0, 0}, wgpu::TextureAspect::DepthOnly);
+        wgpu::TexelCopyBufferInfo dstInfo =
+            utils::CreateTexelCopyBufferInfo(destinationBuffer, kOffset, kBytesPerRow, kTexHeight);
+        wgpu::Extent3D copySize = {kTexWidth, kTexHeight, 1};
+        encoder.CopyTextureToBuffer(&srcInfo, &dstInfo, &copySize);
+        wgpu::CommandBuffer commands = encoder.Finish();
+        queue.Submit(1, &commands);
+    }
+
+    // Map and inspect the padding.
+    {
+        MapAsyncAndWait(destinationBuffer, wgpu::MapMode::Read, 0, destinationBufferSize);
+        const uint8_t* readbackData =
+            static_cast<const uint8_t*>(destinationBuffer.GetConstMappedRange());
+
+        // The first texel is at ptr[kOffset]. Depth16Unorm is 2 bytes.
+        // Row 0 texel: ptr[kOffset] ... ptr[kOffset + 1]
+        // Padding after row 0: ptr[kOffset + 2] ... ptr[kOffset + kBytesPerRow - 1]
+        // Row 1 texel: ptr[kOffset + kBytesPerRow] ... ptr[kOffset + kBytesPerRow + 1]
+
+        for (uint32_t i = kOffset + 2; i < kOffset + kBytesPerRow; ++i) {
+            ASSERT_EQ(readbackData[i], 0u);
+        }
+
+        destinationBuffer.Unmap();
+    }
+}
+
+DAWN_INSTANTIATE_TEST(CopyTests_MemoryLeak,
+                      D3D12Backend({
+                          // clang-format off
+        "d3d12_use_temp_buffer_in_depth_stencil_texture_and_buffer_copy_with_non_zero_buffer_offset",
+                          // clang-format on
+                      }));
+
+class BlitTextureToBufferTest : public DawnTest {};
+
+// Test that encoding a CopyTextureToBuffer but not submitting it doesn't mark the buffer as
+// initialized.
+TEST_P(BlitTextureToBufferTest, NoSubmitDoesNotMarkInitialized) {
+    DAWN_TEST_UNSUPPORTED_IF(UsesWire());
+
+    // Create a buffer that we will use as the destination of a CopyTextureToBuffer.
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = 256;
+    bufferDesc.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+    wgpu::Buffer buffer = device.CreateBuffer(&bufferDesc);
+
+    // Create a source texture.
+    wgpu::TextureDescriptor textureDesc;
+    textureDesc.size = {64, 1, 1};
+    textureDesc.format = wgpu::TextureFormat::R32Float;
+    textureDesc.usage = wgpu::TextureUsage::CopySrc;
+    wgpu::Texture texture = device.CreateTexture(&textureDesc);
+
+    wgpu::TexelCopyTextureInfo src = utils::CreateTexelCopyTextureInfo(texture, 0, {0, 0, 0});
+    wgpu::TexelCopyBufferInfo dst = utils::CreateTexelCopyBufferInfo(buffer, 0, 256, 1);
+    wgpu::Extent3D copySize = {64, 1, 1};
+
+    // Encode the CopyTextureToBuffer.
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    encoder.CopyTextureToBuffer(&src, &dst, &copySize);
+    // Finish the encoder, but do NOT submit the command buffer.
+    encoder.Finish();
+
+    // Now, if we use the buffer in a way that requires initialization (e.g., as a source of a
+    // copy), it should be lazy-cleared because the previous CopyTextureToBuffer was never
+    // submitted.
+    wgpu::BufferDescriptor dstBufferDesc;
+    dstBufferDesc.size = 256;
+    dstBufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer dstBuffer = device.CreateBuffer(&dstBufferDesc);
+
+    wgpu::CommandEncoder encoder2 = device.CreateCommandEncoder();
+    encoder2.CopyBufferToBuffer(buffer, 0, dstBuffer, 0, 256);
+    wgpu::CommandBuffer cb = encoder2.Finish();
+
+    size_t lazyClearsBefore = native::GetLazyClearCountForTesting(device.Get());
+    queue.Submit(1, &cb);
+    size_t lazyClearsAfter = native::GetLazyClearCountForTesting(device.Get());
+
+    // If the buffer was incorrectly marked as initialized during encoding of the first command,
+    // lazyClearsAfter - lazyClearsBefore will be 0.
+    // Otherwise, it should be 1.
+    EXPECT_EQ(lazyClearsAfter - lazyClearsBefore, 1u);
+}
+
+DAWN_INSTANTIATE_TEST(BlitTextureToBufferTest,
+                      D3D11Backend({"use_blit_for_t2b"}),
+                      D3D12Backend({"use_blit_for_t2b"}),
+                      MetalBackend({"use_blit_for_t2b"}),
+                      OpenGLBackend({"use_blit_for_t2b"}),
+                      OpenGLESBackend({"use_blit_for_t2b"}),
+                      VulkanBackend({"use_blit_for_t2b"}));
 
 }  // anonymous namespace
 }  // namespace dawn

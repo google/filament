@@ -46,6 +46,7 @@ class GPUComputePassEncoder final : public interop::GPUComputePassEncoder {
     GPUComputePassEncoder(const wgpu::ComputePassDescriptor& desc, wgpu::ComputePassEncoder enc);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::ComputePassEncoder&() const { return enc_; }
 
     // interop::GPUComputePassEncoder interface compliance
@@ -73,6 +74,9 @@ class GPUComputePassEncoder final : public interop::GPUComputePassEncoder {
                        interop::AllowSharedBufferSource data,
                        interop::GPUSize64 dataOffsetElements,
                        std::optional<interop::GPUSize64> sizeElements) override;
+    void setResourceTable(
+        Napi::Env,
+        std::optional<interop::Interface<interop::GPUResourceTable>> table) override;
     void pushDebugGroup(Napi::Env, std::string groupLabel) override;
     void popDebugGroup(Napi::Env) override;
     void insertDebugMarker(Napi::Env, std::string markerLabel) override;

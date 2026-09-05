@@ -25,19 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/PassResourceUsageTracker.h"
+#include "src/dawn/native/PassResourceUsageTracker.h"
 
 #include <utility>
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/ExternalTexture.h"
-#include "dawn/native/Format.h"
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/TexelBufferView.h"
-#include "dawn/native/Texture.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/ExternalTexture.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/TexelBufferView.h"
+#include "src/dawn/native/Texture.h"
 
 namespace dawn::native {
 
@@ -118,9 +118,7 @@ void SyncScopeUsageTracker::MergeResourceUsages(const SyncScopeResourceUsage& us
         mExternalTextureUsages.insert(t);
     }
 
-    for (ResourceTableBase* t : usages.usedResourceTables) {
-        mUsedResourceTables.insert(t);
-    }
+    DAWN_ASSERT(usages.resourceTable == nullptr);
 }
 
 void SyncScopeUsageTracker::AddBindGroup(BindGroupBase* group) {
@@ -228,8 +226,9 @@ void SyncScopeUsageTracker::AddBindGroup(BindGroupBase* group) {
     }
 }
 
-void SyncScopeUsageTracker::AddResourceTableUsage(ResourceTableBase* table) {
-    mUsedResourceTables.insert(table);
+void SyncScopeUsageTracker::SetUsedResourceTable(ResourceTableBase* table) {
+    DAWN_ASSERT(mUsedResourceTable == nullptr || mUsedResourceTable == table);
+    mUsedResourceTable = table;
 }
 
 SyncScopeResourceUsage SyncScopeUsageTracker::AcquireSyncScopeUsage() {
@@ -256,10 +255,10 @@ SyncScopeResourceUsage SyncScopeUsageTracker::AcquireSyncScopeUsage() {
     }
     mExternalTextureUsages.clear();
 
-    for (auto* const it : mUsedResourceTables) {
-        result.usedResourceTables.push_back(it);
+    if (auto table = mUsedResourceTable) {
+        result.resourceTable = table;
     }
-    mUsedResourceTables.clear();
+    mUsedResourceTable = nullptr;
 
     return result;
 }
@@ -317,9 +316,13 @@ RenderPassResourceUsageTracker::~RenderPassResourceUsageTracker() = default;
 RenderPassResourceUsageTracker& RenderPassResourceUsageTracker::operator=(
     RenderPassResourceUsageTracker&&) = default;
 
+void RenderPassResourceUsageTracker::MarkFramebufferFetchUsed() {
+    mFramebufferFetchUsed = true;
+}
+
 RenderPassResourceUsage RenderPassResourceUsageTracker::AcquireResourceUsage() {
     RenderPassResourceUsage result;
-    *static_cast<SyncScopeResourceUsage*>(&result) = AcquireSyncScopeUsage();
+    static_cast<SyncScopeResourceUsage&>(result) = AcquireSyncScopeUsage();
 
     result.querySets.reserve(mQueryAvailabilities.size());
     result.queryAvailabilities.reserve(mQueryAvailabilities.size());
@@ -331,11 +334,13 @@ RenderPassResourceUsage RenderPassResourceUsageTracker::AcquireResourceUsage() {
 
     mQueryAvailabilities.clear();
 
+    result.usesFramebufferFetch = mFramebufferFetchUsed;
+
     return result;
 }
 
 void RenderPassResourceUsageTracker::TrackQueryAvailability(QuerySetBase* querySet,
-                                                            uint32_t queryIndex) {
+                                                            QueryIndex queryIndex) {
     // The query availability only needs to be tracked again on render passes for checking
     // query overwrite on render pass and resetting query sets on the Vulkan backend.
     DAWN_ASSERT(querySet != nullptr);

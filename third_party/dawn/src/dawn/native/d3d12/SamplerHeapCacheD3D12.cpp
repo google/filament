@@ -25,20 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/SamplerHeapCacheD3D12.h"
+#include "src/dawn/native/d3d12/SamplerHeapCacheD3D12.h"
 
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/HashUtils.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/d3d12/BindGroupD3D12.h"
-#include "dawn/native/d3d12/BindGroupLayoutD3D12.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/Forward.h"
-#include "dawn/native/d3d12/SamplerD3D12.h"
-#include "dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
-#include "dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/d3d12/BindGroupD3D12.h"
+#include "src/dawn/native/d3d12/BindGroupLayoutD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/Forward.h"
+#include "src/dawn/native/d3d12/SamplerD3D12.h"
+#include "src/dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native::d3d12 {
 
@@ -118,9 +118,9 @@ ResultOrError<Ref<SamplerHeapCacheEntry>> SamplerHeapCache::GetOrCreate(const Bi
     std::vector<Sampler*> samplers;
     samplers.reserve(samplerCount);
 
-    for (BindingIndex bindingIndex : bgl->GetSamplerIndices()) {
-        // GetSamplerIndices() returns indices for all samplers, including non-visible ones,
-        // so we must skip them.
+    for (BindingIndex bindingIndex : bgl->GetNonStaticSamplerIndices()) {
+        // GetNonStaticSamplerIndices() returns indices for all samplers, including non-visible
+        // ones, so we must skip them.
         if (bgl->GetBindingInfo(bindingIndex).visibility != wgpu::ShaderStage::None) {
             samplers.push_back(ToBackend(group->GetBindingAsSampler(bindingIndex)));
         }

@@ -635,6 +635,374 @@ OpExtension "SPV_KHR_bfloat16"
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateConversion, VulkanOCPMicroscalingFConvertToIEEE) {
+  const std::string extensions = R"(
+OpCapability Float4EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+%fp4_undef = OpUndef %fp4
+)";
+  const std::string body = R"(
+%val = OpFConvert %f32 %fp4_undef
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingFConvertToFloat8E4M3) {
+  const std::string extensions = R"(
+OpCapability Float4EXT
+OpCapability Float8EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpExtension "SPV_EXT_float8"
+)";
+  const std::string types = R"(
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+%fp8e4m3 = OpTypeFloat 8 Float8E4M3EXT
+%fp4_undef = OpUndef %fp4
+)";
+  const std::string body = R"(
+%val = OpFConvert %fp8e4m3 %fp4_undef
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingFConvertToFloat8E5M2) {
+  const std::string extensions = R"(
+OpCapability Float6EXT
+OpCapability Float8EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpExtension "SPV_EXT_float8"
+)";
+  const std::string types = R"(
+%fp6 = OpTypeFloat 6 Float6E3M2EXT
+%fp8e5m2 = OpTypeFloat 8 Float8E5M2EXT
+%fp6_undef = OpUndef %fp6
+)";
+  const std::string body = R"(
+%val = OpFConvert %fp8e5m2 %fp6_undef
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingFConvertToBFloat16) {
+  const std::string extensions = R"(
+OpCapability Float8UnsignedE8M0EXT
+OpCapability BFloat16TypeKHR
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpExtension "SPV_KHR_bfloat16"
+)";
+  const std::string types = R"(
+%e8m0 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+%bf16 = OpTypeFloat 16 BFloat16KHR
+%e8m0_undef = OpUndef %e8m0
+)";
+  const std::string body = R"(
+%val = OpFConvert %bf16 %e8m0_undef
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingFConvertProducesOCPBad) {
+  const std::string extensions = R"(
+OpCapability Float4EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+)";
+  const std::string body = R"(
+%val = OpFConvert %fp4 %f32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpFConvert-12466"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("FConvert must not produce OCP microscaling types"));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingConvertFToUBad) {
+  const std::string extensions = R"(
+OpCapability Float8UnsignedE8M0EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%e8m0 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+%e8m0_undef = OpUndef %e8m0
+)";
+  const std::string body = R"(
+%val = OpConvertFToU %u32 %e8m0_undef
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpConvertFToU-12465"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("ConvertFToU must not consume or produce OCP "
+                        "microscaling types"));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingConvertFToSBad) {
+  const std::string extensions = R"(
+OpCapability Float6EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp6 = OpTypeFloat 6 Float6E2M3EXT
+%fp6_undef = OpUndef %fp6
+)";
+  const std::string body = R"(
+%val = OpConvertFToS %s32 %fp6_undef
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpConvertFToU-12465"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("ConvertFToS must not consume or produce OCP "
+                        "microscaling types"));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingConvertSToFBad) {
+  const std::string extensions = R"(
+OpCapability Float8UnsignedE8M0EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%e8m0 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+)";
+  const std::string body = R"(
+%val = OpConvertSToF %e8m0 %s32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpConvertFToU-12465"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("ConvertSToF must not consume or produce OCP "
+                        "microscaling types"));
+}
+
+TEST_F(ValidateConversion, VulkanOCPMicroscalingConvertUToFBad) {
+  const std::string extensions = R"(
+OpCapability MXInt8EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%mxint8 = OpTypeFloat 8 MXInt8EXT
+)";
+  const std::string body = R"(
+%val = OpConvertUToF %mxint8 %u32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpConvertFToU-12465"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("ConvertUToF must not consume or produce OCP "
+                        "microscaling types"));
+}
+
+TEST_F(ValidateConversion, VulkanBitcastExtractFloat4Good) {
+  const std::string extensions = R"(
+OpCapability Float4EXT
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %fp4 %u32_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, VulkanBitcastExtractFloat6Good) {
+  const std::string extensions = R"(
+OpCapability Float6EXT
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp6 = OpTypeFloat 6 Float6E3M2EXT
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %fp6 %u32_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, VulkanBitcastExtractVectorGood) {
+  const std::string extensions = R"(
+OpCapability Float4EXT
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+%fp4vec2 = OpTypeVector %fp4 2
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %fp4vec2 %u32vec2_12 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateConversion, BitcastExtractIntResultGood) {
+  const std::string extensions = R"(
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %u32 %u64_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, VulkanBitcastExtractResultTypeBad) {
+  const std::string extensions = R"(
+OpCapability Float8UnsignedE8M0EXT
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%e8m0 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %e8m0 %u32_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Result-12468"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to be a Float4EXT or "
+                        "Float6EXT type in the Vulkan environment"));
+}
+
+TEST_F(ValidateConversion, VulkanBitcastExtractBaseTypeBad) {
+  const std::string extensions = R"(
+OpCapability Float4EXT
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string types = R"(
+%fp4 = OpTypeFloat 4 Float4E2M1EXT
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %fp4 %f32_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str(),
+                      SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Base-12469"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Base to be an integer scalar or vector type "
+                        "in the Vulkan environment"));
+}
+
+TEST_F(ValidateConversion, BitcastExtractMissingCapabilityBad) {
+  const std::string extensions = R"(
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %u32 %u64_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Opcode BitcastExtractEXT requires one of these "
+                        "capabilities: BitcastExtractEXT"));
+}
+
+TEST_F(ValidateConversion, BitcastExtractDimensionMismatchBad) {
+  const std::string extensions = R"(
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %u32vec2 %u64_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Base to have the same dimension as Result "
+                        "Type"));
+}
+
+TEST_F(ValidateConversion, BitcastExtractBaseBitWidthBad) {
+  const std::string extensions = R"(
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %u32 %u32_1 %u32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Base component bit width to be greater than "
+                        "Result Type component bit width"));
+}
+
+TEST_F(ValidateConversion, BitcastExtractOffsetTypeBad) {
+  const std::string extensions = R"(
+OpCapability BitcastExtractEXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+)";
+  const std::string body = R"(
+%val = OpBitcastExtractEXT %u32 %u64_1 %f32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Offset to be a scalar integer type"));
+}
+
 TEST_F(ValidateConversion, QuantizeToF16Success) {
   const std::string body = R"(
 %val1 = OpQuantizeToF16 %f32 %f32_1
@@ -869,7 +1237,8 @@ TEST_F(ValidateConversion, PtrCastToGenericWrongInputStorageClass) {
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Expected input to have storage class Workgroup, "
-                        "CrossWorkgroup or Function: PtrCastToGeneric"));
+                        "CrossWorkgroup, Function or CodeSectionINTEL: "
+                        "PtrCastToGeneric"));
 }
 
 TEST_F(ValidateConversion, PtrCastToGenericPointToDifferentType) {
@@ -884,6 +1253,36 @@ TEST_F(ValidateConversion, PtrCastToGenericPointToDifferentType) {
       getDiagnosticString(),
       HasSubstr("Expected input and Result Type to point to the same type: "
                 "PtrCastToGeneric"));
+}
+
+TEST_F(ValidateConversion, PtrCastToGenericFromCodeSectionINTELSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability FunctionPointersINTEL
+OpCapability GenericPointer
+OpCapability Int8
+OpCapability Linkage
+OpExtension "SPV_INTEL_function_pointers"
+OpMemoryModel Physical64 OpenCL
+OpName %fn "fn"
+OpDecorate %fn LinkageAttributes "fn" Export
+%u8 = OpTypeInt 8 0
+%code_ptr = OpTypePointer CodeSectionINTEL %u8
+%void = OpTypeVoid
+%fn_type = OpTypeFunction %void %code_ptr
+%gen_ptr = OpTypePointer Generic %u8
+%u8_0 = OpConstantNull %u8
+%fn = OpFunction %void None %fn_type
+%param = OpFunctionParameter %code_ptr
+%entry = OpLabel
+%gen = OpPtrCastToGeneric %gen_ptr %param
+OpStore %gen %u8_0 Aligned 1
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateConversion, GenericCastToPtrSuccess) {
@@ -924,7 +1323,8 @@ TEST_F(ValidateConversion, GenericCastToPtrWrongResultStorageClass) {
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Expected Result Type to have storage class Workgroup, "
-                        "CrossWorkgroup or Function: GenericCastToPtr"));
+                        "CrossWorkgroup, Function or CodeSectionINTEL: "
+                        "GenericCastToPtr"));
 }
 
 TEST_F(ValidateConversion, GenericCastToPtrWrongInputType) {
@@ -966,6 +1366,36 @@ TEST_F(ValidateConversion, GenericCastToPtrPointToDifferentType) {
       getDiagnosticString(),
       HasSubstr("Expected input and Result Type to point to the same type: "
                 "GenericCastToPtr"));
+}
+
+TEST_F(ValidateConversion, GenericCastToPtrToCodeSectionINTELSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability FunctionPointersINTEL
+OpCapability GenericPointer
+OpCapability Int8
+OpCapability Linkage
+OpExtension "SPV_INTEL_function_pointers"
+OpMemoryModel Physical64 OpenCL
+OpName %fn "fn"
+OpDecorate %fn LinkageAttributes "fn" Export
+%u8 = OpTypeInt 8 0
+%code_ptr = OpTypePointer CodeSectionINTEL %u8
+%void = OpTypeVoid
+%fn_type = OpTypeFunction %void %code_ptr
+%gen_ptr = OpTypePointer Generic %u8
+%u8_0 = OpConstantNull %u8
+%fn = OpFunction %void None %fn_type
+%param = OpFunctionParameter %code_ptr
+%entry = OpLabel
+%gen = OpPtrCastToGeneric %gen_ptr %param
+%code = OpGenericCastToPtr %code_ptr %gen
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateConversion, GenericCastToPtrExplicitSuccess) {
@@ -1019,10 +1449,10 @@ TEST_F(ValidateConversion, GenericCastToPtrExplicitWrongResultStorageClass) {
 
   CompileSuccessfully(GenerateKernelCode(body).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Expected target storage class to be Workgroup, "
-                "CrossWorkgroup or Function: GenericCastToPtrExplicit"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected target storage class to be Workgroup, "
+                        "CrossWorkgroup, Function or CodeSectionINTEL: "
+                        "GenericCastToPtrExplicit"));
 }
 
 TEST_F(ValidateConversion, GenericCastToPtrExplicitWrongInputType) {
@@ -1065,6 +1495,35 @@ TEST_F(ValidateConversion, GenericCastToPtrExplicitPointToDifferentType) {
       getDiagnosticString(),
       HasSubstr("Expected input and Result Type to point to the same type: "
                 "GenericCastToPtrExplicit"));
+}
+
+TEST_F(ValidateConversion, GenericCastToPtrExplicitToCodeSectionINTELSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability FunctionPointersINTEL
+OpCapability GenericPointer
+OpCapability Int8
+OpCapability Linkage
+OpExtension "SPV_INTEL_function_pointers"
+OpMemoryModel Physical64 OpenCL
+OpName %fn "fn"
+OpDecorate %fn LinkageAttributes "fn" Export
+%u8 = OpTypeInt 8 0
+%code_ptr = OpTypePointer CodeSectionINTEL %u8
+%void = OpTypeVoid
+%fn_type = OpTypeFunction %void %code_ptr
+%gen_ptr = OpTypePointer Generic %u8
+%fn = OpFunction %void None %fn_type
+%param = OpFunctionParameter %code_ptr
+%entry = OpLabel
+%gen = OpPtrCastToGeneric %gen_ptr %param
+%code = OpGenericCastToPtrExplicit %code_ptr %gen CodeSectionINTEL
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateConversion, CoopMatConversionSuccess) {
@@ -2351,6 +2810,7 @@ OpEntryPoint GLCompute %main "main"
 %val52A = OpCooperativeMatrixConvertNV %f32matA %f32matAcc_1
 %val53A = OpCooperativeMatrixConvertNV %u16matA %u16matAcc_1
 %val54A = OpCooperativeMatrixConvertNV %s16matA %s16matAcc_1
+%val55A = OpCooperativeMatrixConvertNV %s16matA %u16matAcc_1
 
 %val51B = OpCooperativeMatrixConvertNV %f16matB %f16matAcc_1
 %val52B = OpCooperativeMatrixConvertNV %f32matB %f32matAcc_1
@@ -2544,6 +3004,850 @@ OpFunctionEnd)";
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Expected number of components to be identical"));
 }
+
+TEST_F(ValidateConversion, ConvertPtrToUVectorWithMaskedGatherScatterSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2ptr = OpTypeVector %ptr 2
+%v2u64 = OpTypeVector %u64 2
+%fn = OpTypeFunction %void %v2ptr
+%main = OpFunction %void None %fn
+%p = OpFunctionParameter %v2ptr
+%entry = OpLabel
+%result = OpConvertPtrToU %v2u64 %p
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, ConvertPtrToUVectorWithoutCapabilityFails) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2ptr = OpTypeVector %ptr 2
+%v2u64 = OpTypeVector %u64 2
+%fn = OpTypeFunction %void %v2ptr
+%main = OpFunction %void None %fn
+%p = OpFunctionParameter %v2ptr
+%entry = OpLabel
+%result = OpConvertPtrToU %v2u64 %p
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("OpTypeVector Component Type"));
+}
+
+TEST_F(ValidateConversion, ConvertPtrToUVectorResultScalarInputFails) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2u64 = OpTypeVector %u64 2
+%fn = OpTypeFunction %void %ptr
+%main = OpFunction %void None %fn
+%p = OpFunctionParameter %ptr
+%entry = OpLabel
+%result = OpConvertPtrToU %v2u64 %p
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected input to be a vector when Result Type is a "
+                        "vector: ConvertPtrToU"));
+}
+
+TEST_F(ValidateConversion, ConvertPtrToUVectorDimensionMismatchFails) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2ptr = OpTypeVector %ptr 2
+%v4u64 = OpTypeVector %u64 4
+%fn = OpTypeFunction %void %v2ptr
+%main = OpFunction %void None %fn
+%p = OpFunctionParameter %v2ptr
+%entry = OpLabel
+%result = OpConvertPtrToU %v4u64 %p
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected input to have the same dimension as Result Type: "
+                "ConvertPtrToU"));
+}
+
+TEST_F(ValidateConversion, ConvertUToPtrVectorWithMaskedGatherScatterSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2ptr = OpTypeVector %ptr 2
+%v2u64 = OpTypeVector %u64 2
+%fn = OpTypeFunction %void %v2u64
+%main = OpFunction %void None %fn
+%addrs = OpFunctionParameter %v2u64
+%entry = OpLabel
+%result = OpConvertUToPtr %v2ptr %addrs
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, ConvertUToPtrVectorWithoutCapabilityFails) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2ptr = OpTypeVector %ptr 2
+%v2u64 = OpTypeVector %u64 2
+%fn = OpTypeFunction %void %v2u64
+%main = OpFunction %void None %fn
+%addrs = OpFunctionParameter %v2u64
+%entry = OpLabel
+%result = OpConvertUToPtr %v2ptr %addrs
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("OpTypeVector Component Type"));
+}
+
+TEST_F(ValidateConversion, ConvertUToPtrVectorResultScalarInputFails) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v2ptr = OpTypeVector %ptr 2
+%fn = OpTypeFunction %void %u64
+%main = OpFunction %void None %fn
+%addr = OpFunctionParameter %u64
+%entry = OpLabel
+%result = OpConvertUToPtr %v2ptr %addr
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected input to be a vector when Result Type is a "
+                        "vector: ConvertUToPtr"));
+}
+
+TEST_F(ValidateConversion, ConvertUToPtrVectorDimensionMismatchFails) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v4ptr = OpTypeVector %ptr 4
+%v2u64 = OpTypeVector %u64 2
+%fn = OpTypeFunction %void %v2u64
+%main = OpFunction %void None %fn
+%addrs = OpFunctionParameter %v2u64
+%entry = OpLabel
+%result = OpConvertUToPtr %v4ptr %addrs
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected input to have the same dimension as Result Type: "
+                "ConvertUToPtr"));
+}
+
+TEST_F(ValidateConversion, ConvertPtrToUVec4WithMaskedGatherScatterSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v4ptr = OpTypeVector %ptr 4
+%v4u64 = OpTypeVector %u64 4
+%fn = OpTypeFunction %void %v4ptr
+%main = OpFunction %void None %fn
+%p = OpFunctionParameter %v4ptr
+%entry = OpLabel
+%result = OpConvertPtrToU %v4u64 %p
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, ConvertUToPtrVec4WithMaskedGatherScatterSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%v4ptr = OpTypeVector %ptr 4
+%v4u64 = OpTypeVector %u64 4
+%fn = OpTypeFunction %void %v4u64
+%main = OpFunction %void None %fn
+%addrs = OpFunctionParameter %v4u64
+%entry = OpLabel
+%result = OpConvertUToPtr %v4ptr %addrs
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+// Test that scalar conversion still works with capability present
+TEST_F(ValidateConversion, ConvertPtrToUScalarWithMaskedGatherScatterSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%fn = OpTypeFunction %void %ptr
+%main = OpFunction %void None %fn
+%p = OpFunctionParameter %ptr
+%entry = OpLabel
+%result = OpConvertPtrToU %u64 %p
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, ConvertUToPtrScalarWithMaskedGatherScatterSuccess) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability MaskedGatherScatterINTEL
+OpExtension "SPV_INTEL_masked_gather_scatter"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %main "main"
+%void = OpTypeVoid
+%u64 = OpTypeInt 64 0
+%u32 = OpTypeInt 32 0
+%ptr = OpTypePointer CrossWorkgroup %u32
+%fn = OpTypeFunction %void %u64
+%main = OpFunction %void None %fn
+%addr = OpFunctionParameter %u64
+%entry = OpLabel
+%result = OpConvertUToPtr %ptr %addr
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConversionSuccess) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability Int16
+OpCapability CooperativeMatrixConversionsEXT
+OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_EXT_cooperative_matrix_maintenance1"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical VulkanKHR
+OpEntryPoint GLCompute %main "main"
+OpDecorate %val61B CooperativeMatrixTransposeEXT
+OpDecorate %val62B CooperativeMatrixTransposeEXT
+OpDecorate %val63B CooperativeMatrixTransposeEXT
+OpDecorate %val64B CooperativeMatrixTransposeEXT
+OpDecorate %val71B CooperativeMatrixTransposeEXT
+
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u16 = OpTypeInt 16 0
+%u32 = OpTypeInt 32 0
+%s16 = OpTypeInt 16 1
+%s32 = OpTypeInt 32 1
+
+%u32_8 = OpConstant %u32 8
+%u32_16 = OpConstant %u32 16
+%use_A = OpConstant %u32 0
+%use_B = OpConstant %u32 1
+%use_Acc = OpConstant %u32 2
+%subgroup = OpConstant %u32 3
+
+%f16matA = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_A
+%f32matA = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_8 %u32_8 %use_A
+%u16matA = OpTypeCooperativeMatrixKHR %u16 %subgroup %u32_8 %u32_8 %use_A
+%u32matA = OpTypeCooperativeMatrixKHR %u32 %subgroup %u32_8 %u32_8 %use_A
+%s16matA = OpTypeCooperativeMatrixKHR %s16 %subgroup %u32_8 %u32_8 %use_A
+%s32matA = OpTypeCooperativeMatrixKHR %s32 %subgroup %u32_8 %u32_8 %use_A
+
+%f16matB = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_B
+%f32matB = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_8 %u32_8 %use_B
+%u16matB = OpTypeCooperativeMatrixKHR %u16 %subgroup %u32_8 %u32_8 %use_B
+%u32matB = OpTypeCooperativeMatrixKHR %u32 %subgroup %u32_8 %u32_8 %use_B
+%s16matB = OpTypeCooperativeMatrixKHR %s16 %subgroup %u32_8 %u32_8 %use_B
+%s32matB = OpTypeCooperativeMatrixKHR %s32 %subgroup %u32_8 %u32_8 %use_B
+
+%f16matAcc = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_Acc
+%f32matAcc = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_8 %u32_8 %use_Acc
+%u16matAcc = OpTypeCooperativeMatrixKHR %u16 %subgroup %u32_8 %u32_8 %use_Acc
+%u32matAcc = OpTypeCooperativeMatrixKHR %u32 %subgroup %u32_8 %u32_8 %use_Acc
+%s16matAcc = OpTypeCooperativeMatrixKHR %s16 %subgroup %u32_8 %u32_8 %use_Acc
+%s32matAcc = OpTypeCooperativeMatrixKHR %s32 %subgroup %u32_8 %u32_8 %use_Acc
+
+%f16matAcc16x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_8 %use_Acc
+%f16matB8x16 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_16 %use_B
+
+%f16_1 = OpConstant %f16 1
+%f32_1 = OpConstant %f32 1
+%u16_1 = OpConstant %u16 1
+%u32_1 = OpConstant %u32 1
+%s16_1 = OpConstant %s16 1
+%s32_1 = OpConstant %s32 1
+
+%f16matAcc_1 = OpConstantComposite %f16matAcc %f16_1
+%f32matAcc_1 = OpConstantComposite %f32matAcc %f32_1
+%u16matAcc_1 = OpConstantComposite %u16matAcc %u16_1
+%u32matAcc_1 = OpConstantComposite %u32matAcc %u32_1
+%s16matAcc_1 = OpConstantComposite %s16matAcc %s16_1
+%s32matAcc_1 = OpConstantComposite %s32matAcc %s32_1
+
+%f16matA_1 = OpConstantComposite %f16matA %f16_1
+%f32matA_1 = OpConstantComposite %f32matA %f32_1
+%u16matA_1 = OpConstantComposite %u16matA %u16_1
+%u32matA_1 = OpConstantComposite %u32matA %u32_1
+%s16matA_1 = OpConstantComposite %s16matA %s16_1
+%s32matA_1 = OpConstantComposite %s32matA %s32_1
+
+%f16matB_1 = OpConstantComposite %f16matB %f16_1
+%f32matB_1 = OpConstantComposite %f32matB %f32_1
+%u16matB_1 = OpConstantComposite %u16matB %u16_1
+%u32matB_1 = OpConstantComposite %u32matB %u32_1
+%s16matB_1 = OpConstantComposite %s16matB %s16_1
+%s32matB_1 = OpConstantComposite %s32matB %s32_1
+
+%f16matAcc16x8_1 = OpConstantComposite %f16matAcc16x8 %f16_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%val11A = OpConvertFToU %u16matA %f16matAcc_1
+%val12A = OpConvertFToU %u32matA %f16matAcc_1
+%val13A = OpConvertFToS %s16matA %f16matAcc_1
+%val14A = OpConvertFToS %s32matA %f16matAcc_1
+%val15A = OpFConvert %f32matA %f16matAcc_1
+
+%val11B = OpConvertFToU %u16matB %f16matAcc_1
+%val12B = OpConvertFToU %u32matB %f16matAcc_1
+%val13B = OpConvertFToS %s16matB %f16matAcc_1
+%val14B = OpConvertFToS %s32matB %f16matAcc_1
+%val15B = OpFConvert %f32matB %f16matAcc_1
+
+%val21A = OpConvertFToU %u16matA %f32matAcc_1
+%val22A = OpConvertFToU %u32matA %f32matAcc_1
+%val23A = OpConvertFToS %s16matA %f32matAcc_1
+%val24A = OpConvertFToS %s32matA %f32matAcc_1
+%val25A = OpFConvert %f16matA %f32matAcc_1
+
+%val21B = OpConvertFToU %u16matB %f32matAcc_1
+%val22B = OpConvertFToU %u32matB %f32matAcc_1
+%val23B = OpConvertFToS %s16matB %f32matAcc_1
+%val24B = OpConvertFToS %s32matB %f32matAcc_1
+%val25B = OpFConvert %f16matB %f32matAcc_1
+
+%val31A = OpConvertUToF %f16matA %u16matAcc_1
+%val32A = OpConvertUToF %f32matA %u16matAcc_1
+%val33A = OpUConvert %u32matA %u16matAcc_1
+%val34A = OpSConvert %s32matA %u16matAcc_1
+
+%val31B = OpConvertUToF %f16matB %u16matAcc_1
+%val32B = OpConvertUToF %f32matB %u16matAcc_1
+%val33B = OpUConvert %u32matB %u16matAcc_1
+%val34B = OpSConvert %s32matB %u16matAcc_1
+
+%val41A = OpConvertSToF %f16matA %s16matAcc_1
+%val42A = OpConvertSToF %f32matA %s16matAcc_1
+%val43A = OpUConvert %u32matA %s16matAcc_1
+%val44A = OpSConvert %s32matA %s16matAcc_1
+
+%val41B = OpConvertSToF %f16matB %s16matAcc_1
+%val42B = OpConvertSToF %f32matB %s16matAcc_1
+%val43B = OpUConvert %u32matB %s16matAcc_1
+%val44B = OpSConvert %s32matB %s16matAcc_1
+
+%val51A = OpCooperativeMatrixConvertUseEXT %f16matA %f16matAcc_1
+%val52A = OpCooperativeMatrixConvertUseEXT %f32matA %f32matAcc_1
+%val53A = OpCooperativeMatrixConvertUseEXT %u16matA %u16matAcc_1
+%val54A = OpCooperativeMatrixConvertUseEXT %s16matA %s16matAcc_1
+
+%val51B = OpCooperativeMatrixConvertUseEXT %f16matB %f16matAcc_1
+%val52B = OpCooperativeMatrixConvertUseEXT %f32matB %f32matAcc_1
+%val53B = OpCooperativeMatrixConvertUseEXT %u16matB %u16matAcc_1
+%val54B = OpCooperativeMatrixConvertUseEXT %s16matB %s16matAcc_1
+
+%val11A2 = OpConvertFToU %u16matAcc %f16matA_1
+%val12A2 = OpConvertFToU %u32matAcc %f16matA_1
+%val13A2 = OpConvertFToS %s16matAcc %f16matA_1
+%val14A2 = OpConvertFToS %s32matAcc %f16matA_1
+%val15A2 = OpFConvert %f32matAcc %f16matA_1
+
+%val11B2 = OpConvertFToU %u16matAcc %f16matB_1
+%val12B2 = OpConvertFToU %u32matAcc %f16matB_1
+%val13B2 = OpConvertFToS %s16matAcc %f16matB_1
+%val14B2 = OpConvertFToS %s32matAcc %f16matB_1
+%val15B2 = OpFConvert %f32matAcc %f16matB_1
+
+%val21A2 = OpConvertFToU %u16matAcc %f32matA_1
+%val22A2 = OpConvertFToU %u32matAcc %f32matA_1
+%val23A2 = OpConvertFToS %s16matAcc %f32matA_1
+%val24A2 = OpConvertFToS %s32matAcc %f32matA_1
+%val25A2 = OpFConvert %f16matAcc %f32matA_1
+
+%val21B2 = OpConvertFToU %u16matAcc %f32matB_1
+%val22B2 = OpConvertFToU %u32matAcc %f32matB_1
+%val23B2 = OpConvertFToS %s16matAcc %f32matB_1
+%val24B2 = OpConvertFToS %s32matAcc %f32matB_1
+%val25B2 = OpFConvert %f16matAcc %f32matB_1
+
+%val31A2 = OpConvertUToF %f16matAcc %u16matA_1
+%val32A2 = OpConvertUToF %f32matAcc %u16matA_1
+%val33A2 = OpUConvert %u32matAcc %u16matA_1
+%val34A2 = OpSConvert %s32matAcc %u16matA_1
+
+%val31B2 = OpConvertUToF %f16matAcc %u16matB_1
+%val32B2 = OpConvertUToF %f32matAcc %u16matB_1
+%val33B2 = OpUConvert %u32matAcc %u16matB_1
+%val34B2 = OpSConvert %s32matAcc %u16matB_1
+
+%val41A2 = OpConvertSToF %f16matAcc %s16matA_1
+%val42A2 = OpConvertSToF %f32matAcc %s16matA_1
+%val43A2 = OpUConvert %u32matAcc %s16matA_1
+%val44A2 = OpSConvert %s32matAcc %s16matA_1
+
+%val41B2 = OpConvertSToF %f16matAcc %s16matB_1
+%val42B2 = OpConvertSToF %f32matAcc %s16matB_1
+%val43B2 = OpUConvert %u32matAcc %s16matB_1
+%val44B2 = OpSConvert %s32matAcc %s16matB_1
+
+%val51A2 = OpCooperativeMatrixConvertUseEXT %f16matAcc %f16matA_1
+%val52A2 = OpCooperativeMatrixConvertUseEXT %f32matAcc %f32matA_1
+%val53A2 = OpCooperativeMatrixConvertUseEXT %u16matAcc %u16matA_1
+%val54A2 = OpCooperativeMatrixConvertUseEXT %s16matAcc %s16matA_1
+
+%val51B2 = OpCooperativeMatrixConvertUseEXT %f16matAcc %f16matB_1
+%val52B2 = OpCooperativeMatrixConvertUseEXT %f32matAcc %f32matB_1
+%val53B2 = OpCooperativeMatrixConvertUseEXT %u16matAcc %u16matB_1
+%val54B2 = OpCooperativeMatrixConvertUseEXT %s16matAcc %s16matB_1
+
+%val61B = OpCooperativeMatrixConvertUseEXT %f16matB %f16matAcc_1
+%val62B = OpCooperativeMatrixConvertUseEXT %f32matB %f32matAcc_1
+%val63B = OpCooperativeMatrixConvertUseEXT %u16matB %u16matAcc_1
+%val64B = OpCooperativeMatrixConvertUseEXT %s16matB %s16matAcc_1
+%val71B = OpCooperativeMatrixConvertUseEXT %f16matB8x16 %f16matAcc16x8_1
+
+%val81A = OpCooperativeMatrixConvertUseEXT %s32matA %u32matAcc_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+std::string GenerateCoopMatMaint1ConversionCode(
+    const std::string& annotations, const std::string& instruction) {
+  return R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixConversionsEXT
+OpCapability CooperativeMatrixKHR
+OpCapability CooperativeMatrixNV
+OpCapability VulkanMemoryModelKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_NV_cooperative_matrix"
+OpExtension "SPV_EXT_cooperative_matrix_maintenance1"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical VulkanKHR
+OpEntryPoint GLCompute %main "main"
+)" + annotations +
+         R"(
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+%u32_8 = OpConstant %u32 8
+%u32_16 = OpConstant %u32 16
+%use_A = OpConstant %u32 0
+%use_Acc = OpConstant %u32 2
+%use_spec_A = OpSpecConstant %u32 0
+%use_spec_Acc = OpSpecConstant %u32 2
+%subgroup = OpConstant %u32 3
+%f16matA8x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_A
+%f16matAcc8x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_Acc
+%f32matAcc8x8 = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_8 %u32_8 %use_Acc
+%f16matA16x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_8 %use_A
+%f32matAcc8x16 = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_8 %u32_16 %use_Acc
+%f16matSpecA8x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_spec_A
+%f16matSpecAcc8x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_8 %use_spec_Acc
+%f16matNV = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %u32_8
+%f16_1 = OpConstant %f16 1
+%f32_1 = OpConstant %f32 1
+%f16matA8x8_1 = OpConstantComposite %f16matA8x8 %f16_1
+%f16matAcc8x8_1 = OpConstantComposite %f16matAcc8x8 %f16_1
+%f16matA16x8_1 = OpConstantComposite %f16matA16x8 %f16_1
+%f32matAcc8x16_1 = OpConstantComposite %f32matAcc8x16 %f32_1
+%f16matSpecA8x8_1 = OpConstantComposite %f16matSpecA8x8 %f16_1
+%f16matSpecAcc8x8_1 = OpConstantComposite %f16matSpecAcc8x8 %f16_1
+%f16matNV_1 = OpConstantComposite %f16matNV %f16_1
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+)" + instruction +
+         R"(
+OpReturn
+OpFunctionEnd)";
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConvertUseRequiresUseChange) {
+  const std::string instruction = R"(
+%result = OpCooperativeMatrixConvertUseEXT %f16matAcc8x8 %f16matAcc8x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("must convert between MatrixAccumulatorKHR and "
+                        "MatrixAKHR or MatrixBKHR"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConvertUseSpecConstantUseSuccess) {
+  const std::string instruction = R"(
+%result = OpCooperativeMatrixConvertUseEXT %f16matSpecA8x8 %f16matSpecAcc8x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConvertUseSameSpecConstantUseFail) {
+  const std::string instruction = R"(
+%result = OpCooperativeMatrixConvertUseEXT %f16matSpecA8x8 %f16matSpecA8x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("must convert between MatrixAccumulatorKHR and "
+                        "MatrixAKHR or MatrixBKHR"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConvertUseComponentTypeFail) {
+  const std::string instruction = R"(
+%result = OpCooperativeMatrixConvertUseEXT %f32matAcc8x8 %f16matA8x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result Type and Matrix component types mismatch"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConvertUseRejectsNVResultType) {
+  const std::string instruction = R"(
+%result = OpCooperativeMatrixConvertUseEXT %f16matNV %f16matAcc8x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected OpTypeCooperativeMatrixKHR Result Type"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1ConvertUseRejectsNVMatrixType) {
+  const std::string instruction = R"(
+%result = OpCooperativeMatrixConvertUseEXT %f16matA8x8 %f16matNV_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected OpTypeCooperativeMatrixKHR type for Matrix input"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1BitcastUseMismatchFail) {
+  const std::string instruction = R"(
+%result = OpBitcast %f16matA8x8 %f16matAcc8x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode("", instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected Use of Matrix type and Result Type to be identical"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1TransposeRequiresAccumulatorInput) {
+  const std::string annotations =
+      "OpDecorate %result CooperativeMatrixTransposeEXT\n";
+  const std::string instruction = R"(
+%result = OpFConvert %f32matAcc8x16 %f16matA16x8_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode(annotations, instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("must have a MatrixAccumulatorKHR Matrix and a "
+                        "MatrixAKHR or MatrixBKHR Result Type"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1TransposeDecorationTargetFail) {
+  const std::string annotations =
+      "OpDecorate %result CooperativeMatrixTransposeEXT\n";
+  const std::string instruction = R"(
+%result = OpFAdd %f32 %f32_1 %f32_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode(annotations, instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("must be a cooperative matrix conversion instruction"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1TransposeScalarConversionTargetFail) {
+  const std::string annotations =
+      "OpDecorate %result CooperativeMatrixTransposeEXT\n";
+  const std::string instruction = R"(
+%result = OpFConvert %f32 %f16_1
+)";
+
+  CompileSuccessfully(
+      GenerateCoopMatMaint1ConversionCode(annotations, instruction).c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("must be a cooperative matrix conversion instruction"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1TransposeShapeFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability Int16
+OpCapability CooperativeMatrixConversionsEXT
+OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_EXT_cooperative_matrix_maintenance1"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical VulkanKHR
+OpEntryPoint GLCompute %main "main"
+OpDecorate %val71B CooperativeMatrixTransposeEXT
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_8 = OpConstant %u32 8
+%u32_16 = OpConstant %u32 16
+%use_B = OpConstant %u32 1
+%use_Acc = OpConstant %u32 2
+%subgroup = OpConstant %u32 3
+
+%f32matAcc16x8 = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_16 %u32_8 %use_Acc
+%f16matB16x8 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_8 %use_B
+
+%f32_1 = OpConstant %f32 1
+
+%f32matAcc16x8_1 = OpConstantComposite %f32matAcc16x8 %f32_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%val71B = OpFConvert %f16matB16x8 %f32matAcc16x8_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected rows of Matrix type and Result Type to be "
+                        "swapped with columns"));
+}
+
+TEST_F(ValidateConversion, CoopMatMaint1TransposeShapePass) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability Int16
+OpCapability CooperativeMatrixConversionsEXT
+OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_EXT_cooperative_matrix_maintenance1"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical VulkanKHR
+OpEntryPoint GLCompute %main "main"
+OpDecorate %val71B CooperativeMatrixTransposeEXT
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_8 = OpConstant %u32 8
+%u32_16 = OpConstant %u32 16
+%use_B = OpConstant %u32 1
+%use_Acc = OpConstant %u32 2
+%subgroup = OpConstant %u32 3
+
+%f32matAcc16x8 = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_16 %u32_8 %use_Acc
+%f16matB8x16 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_8 %u32_16 %use_B
+
+%f32_1 = OpConstant %f32 1
+
+%f32matAcc16x8_1 = OpConstantComposite %f32matAcc16x8 %f32_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%val71B = OpFConvert %f16matB8x16 %f32matAcc16x8_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

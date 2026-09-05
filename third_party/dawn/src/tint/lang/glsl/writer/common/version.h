@@ -30,7 +30,7 @@
 
 #include <cstdint>
 
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint::glsl::writer {
 

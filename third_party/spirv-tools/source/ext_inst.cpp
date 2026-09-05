@@ -46,8 +46,13 @@ spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name) {
   if (!strcmp("OpenCL.DebugInfo.100", name)) {
     return SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100;
   }
-  if (!strcmp("NonSemantic.Shader.DebugInfo.100", name)) {
+  // Match any version of NonSemantic.Shader.DebugInfo.
+  // Later versions are supersets that share the same instruction numbering.
+  if (!strncmp("NonSemantic.Shader.DebugInfo.", name, 29)) {
     return SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100;
+  }
+  if (!strncmp("NonSemantic.Graph.DebugInfo.", name, 28)) {
+    return SPV_EXT_INST_TYPE_NONSEMANTIC_GRAPH_DEBUGINFO;
   }
   if (!strncmp("NonSemantic.ClspvReflection.", name, 28)) {
     return SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION;
@@ -61,6 +66,9 @@ spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name) {
   if (!strcmp("Arm.MotionEngine.100", name)) {
     return SPV_EXT_INST_TYPE_ARM_MOTION_ENGINE_100;
   }
+  if (!strncmp("Arm.ExperimentalMLOperations.", name, 29)) {
+    return SPV_EXT_INST_TYPE_ARM_EXPERIMENTAL_ML_OPERATIONS;
+  }
   // ensure to add any known non-semantic extended instruction sets
   // above this point, and update spvExtInstIsNonSemantic()
   if (!strncmp("NonSemantic.", name, 12)) {
@@ -73,6 +81,7 @@ bool spvExtInstIsNonSemantic(const spv_ext_inst_type_t type) {
   if (type == SPV_EXT_INST_TYPE_NONSEMANTIC_UNKNOWN ||
       type == SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100 ||
       type == SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION ||
+      type == SPV_EXT_INST_TYPE_NONSEMANTIC_GRAPH_DEBUGINFO ||
       type == SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION) {
     return true;
   }

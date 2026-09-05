@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
 
 #include <cstring>
 #include <iomanip>
@@ -34,17 +34,18 @@
 #include <mutex>
 #include <sstream>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ExternalTexture.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/Sampler.h"
-#include "dawn/native/ShaderModule.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ExternalTexture.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::utils {
 
@@ -62,27 +63,26 @@ ResultOrError<Ref<ShaderModuleBase>> CreateShaderModule(
 ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
                                                     std::string_view label,
                                                     wgpu::BufferUsage usage,
-                                                    const void* data,
-                                                    uint64_t size) {
+                                                    Span<const std::byte> data) {
     BufferDescriptor descriptor;
     descriptor.label = label;
-    descriptor.size = size;
+    descriptor.size = data.size();
     descriptor.usage = usage;
     descriptor.mappedAtCreation = true;
     Ref<BufferBase> buffer;
     DAWN_TRY_ASSIGN(buffer, device->CreateBuffer(&descriptor));
-    memcpy(buffer->GetMappedRange(0, size), data, size);
+    buffer->GetMappedRange().CopyFrom(data);
     DAWN_TRY(buffer->Unmap());
     return buffer;
 }
 
 ResultOrError<Ref<PipelineLayoutBase>> MakeBasicPipelineLayout(
     DeviceBase* device,
-    const Ref<BindGroupLayoutBase>& bindGroupLayout) {
+    const Ref<BindGroupLayoutBase>& bindGroupLayout,
+    uint32_t immediateSize) {
     PipelineLayoutDescriptor descriptor;
-    descriptor.bindGroupLayoutCount = 1;
-    BindGroupLayoutBase* bgl = bindGroupLayout.Get();
-    descriptor.bindGroupLayouts = &bgl;
+    descriptor.bindGroupLayouts = SpanFromRef<BindGroupIndex>(bindGroupLayout.Get());
+    descriptor.immediateSize = immediateSize;
     return device->CreatePipelineLayout(&descriptor);
 }
 
@@ -96,8 +96,7 @@ ResultOrError<Ref<BindGroupLayoutBase>> MakeBindGroupLayout(
     }
 
     BindGroupLayoutDescriptor descriptor;
-    descriptor.entryCount = entries.size();
-    descriptor.entries = entries.data();
+    descriptor.entries = entries;
     return device->CreateBindGroupLayout(&descriptor, allowInternalBinding);
 }
 
@@ -204,8 +203,7 @@ ResultOrError<Ref<BindGroupBase>> MakeBindGroup(
 
     BindGroupDescriptor descriptor;
     descriptor.layout = layout.Get();
-    descriptor.entryCount = entries.size();
-    descriptor.entries = entries.data();
+    descriptor.entries = entries;
 
     return device->CreateBindGroup(&descriptor, mode);
 }
@@ -235,7 +233,7 @@ std::string_view NormalizeMessageString(StringView in) {
     if (in.IsUndefined()) {
         return {};
     }
-    return std::string_view(in.data, strnlen(in.data, in.length));
+    return DAWN_UNSAFE_TODO(std::string_view(in.data, strnlen(in.data, in.length)));
 }
 
 }  // namespace dawn::native::utils

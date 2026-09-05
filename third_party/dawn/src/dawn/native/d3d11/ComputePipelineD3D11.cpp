@@ -25,19 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/ComputePipelineD3D11.h"
+#include "src/dawn/native/d3d11/ComputePipelineD3D11.h"
 
 #include <memory>
 #include <utility>
 
-#include "dawn/native/CreatePipelineAsyncEvent.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/ShaderModuleD3D11.h"
-#include "dawn/native/d3d11/UtilsD3D11.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/ImmediatesLayoutD3D11.h"
+#include "src/dawn/native/d3d11/PipelineStateTrackerD3D11.h"
+#include "src/dawn/native/d3d11/ShaderModuleD3D11.h"
+#include "src/dawn/native/d3d11/UtilsD3D11.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
 
 namespace dawn::native::d3d11 {
 
@@ -55,8 +56,8 @@ ResultOrError<Extent3D> ComputePipeline::InitializeImpl() {
     uint32_t compileFlags = 0;
 
     if (UsesNumWorkgroups()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(ComputeImmediateConstants, numWorkgroups), sizeof(NumWorkgroupsDimensions));
+        mImmediateMask |= GetImmediateBlockBits(offsetof(ComputeImmediates, numWorkgroups),
+                                                sizeof(NumWorkgroupsDimensions));
     }
 
     if (!device->IsToggleEnabled(Toggle::UseDXC) &&
@@ -86,7 +87,7 @@ ResultOrError<Extent3D> ComputePipeline::InitializeImpl() {
                         ->Compile(programmableStage, SingleShaderStage::Compute,
                                   ToBackend(GetLayout()), compileFlags, GetImmediateMask()));
     {
-        TRACE_EVENT0(device->GetPlatform(), General, "ComputePipelineD3D11::CreateComputeShader");
+        TRACE_EVENT(DAWN_TRACE_CATEGORY(), "ComputePipelineD3D11::CreateComputeShader");
         SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(device->GetPlatform(), "D3D11.CreateComputeShaderUs");
         DAWN_TRY_ASSIGN(mComputeShader, device->GetOrCreateComputeShader(compiledShader));
     }
@@ -100,9 +101,8 @@ void ComputePipeline::SetLabelImpl() {
     SetDebugName(ToBackend(GetDevice()), mComputeShader.Get(), "Dawn_ComputePipeline", GetLabel());
 }
 
-void ComputePipeline::ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext) {
-    auto* d3dDeviceContext = commandContext->GetD3D11DeviceContext3();
-    d3dDeviceContext->CSSetShader(mComputeShader.Get(), nullptr, 0);
+void ComputePipeline::ApplyNow(PipelineStateTracker* tracker) {
+    tracker->CSSetShader(mComputeShader.Get());
 }
 
 bool ComputePipeline::UsesNumWorkgroups() const {

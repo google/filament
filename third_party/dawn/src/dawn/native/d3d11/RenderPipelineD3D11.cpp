@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/RenderPipelineD3D11.h"
+#include "src/dawn/native/d3d11/RenderPipelineD3D11.h"
 
 #include <d3dcompiler.h>
 
@@ -34,18 +34,20 @@
 #include <optional>
 #include <utility>
 
-#include "dawn/common/Range.h"
-#include "dawn/native/CreatePipelineAsyncEvent.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/ShaderUtils.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/Forward.h"
-#include "dawn/native/d3d11/PipelineLayoutD3D11.h"
-#include "dawn/native/d3d11/ShaderModuleD3D11.h"
-#include "dawn/native/d3d11/UtilsD3D11.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/ShaderUtils.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/Forward.h"
+#include "src/dawn/native/d3d11/ImmediatesLayoutD3D11.h"
+#include "src/dawn/native/d3d11/PipelineLayoutD3D11.h"
+#include "src/dawn/native/d3d11/PipelineStateTrackerD3D11.h"
+#include "src/dawn/native/d3d11/ShaderModuleD3D11.h"
+#include "src/dawn/native/d3d11/UtilsD3D11.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d11 {
 namespace {
@@ -241,10 +243,10 @@ MaybeError RenderPipeline::InitializeImpl() {
     // offset.
     // TODO(crbug.com/366291600): Setting these bits respectively after immediate covers all cases.
     if (UsesVertexIndex() || UsesInstanceIndex()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, firstVertex), kImmediateConstantElementByteSize);
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, firstInstance), kImmediateConstantElementByteSize);
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, firstVertex),
+                                                kImmediateElementByteSize);
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, firstInstance),
+                                                kImmediateElementByteSize);
     }
 
     DAWN_TRY(InitializeRasterizerState());
@@ -271,33 +273,27 @@ MaybeError RenderPipeline::InitializeImpl() {
 
 RenderPipeline::~RenderPipeline() = default;
 
-void RenderPipeline::ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext,
+void RenderPipeline::ApplyNow(PipelineStateTracker* tracker,
                               const std::array<float, 4>& blendColor,
                               uint32_t stencilReference) {
-    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
-    d3d11DeviceContext->IASetPrimitiveTopology(mD3DPrimitiveTopology);
-    // TODO(dawn:1753): deduplicate these objects in the backend eventually, and to avoid redundant
-    // state setting.
-    d3d11DeviceContext->IASetInputLayout(mInputLayout.Get());
-    d3d11DeviceContext->RSSetState(mRasterizerState.Get());
-    d3d11DeviceContext->VSSetShader(mVertexShader.Get(), nullptr, 0);
-    d3d11DeviceContext->PSSetShader(mPixelShader.Get(), nullptr, 0);
+    tracker->IASetPrimitiveTopology(mD3DPrimitiveTopology);
+    tracker->IASetInputLayout(mInputLayout.Get());
+    tracker->RSSetState(mRasterizerState.Get());
+    tracker->VSSetShader(mVertexShader.Get());
+    tracker->PSSetShader(mPixelShader.Get());
 
-    ApplyBlendState(commandContext, blendColor);
-    ApplyDepthStencilState(commandContext, stencilReference);
+    ApplyBlendState(tracker, blendColor);
+    ApplyDepthStencilState(tracker, stencilReference);
 }
 
-void RenderPipeline::ApplyBlendState(const ScopedSwapStateCommandRecordingContext* commandContext,
+void RenderPipeline::ApplyBlendState(PipelineStateTracker* tracker,
                                      const std::array<float, 4>& blendColor) {
-    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
-    d3d11DeviceContext->OMSetBlendState(mBlendState.Get(), blendColor.data(), GetSampleMask());
+    tracker->OMSetBlendState(mBlendState.Get(), blendColor.data(), GetSampleMask());
 }
 
-void RenderPipeline::ApplyDepthStencilState(
-    const ScopedSwapStateCommandRecordingContext* commandContext,
-    uint32_t stencilReference) {
-    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
-    d3d11DeviceContext->OMSetDepthStencilState(mDepthStencilState.Get(), stencilReference);
+void RenderPipeline::ApplyDepthStencilState(PipelineStateTracker* tracker,
+                                            uint32_t stencilReference) {
+    tracker->OMSetDepthStencilState(mDepthStencilState.Get(), stencilReference);
 }
 
 void RenderPipeline::SetLabelImpl() {
@@ -353,7 +349,7 @@ MaybeError RenderPipeline::InitializeInputLayout(const Blob& vertexShader) {
 
         const VertexBufferInfo& input = GetVertexBuffer(attribute.vertexBufferSlot);
 
-        inputElementDescriptor.AlignedByteOffset = attribute.offset;
+        inputElementDescriptor.AlignedByteOffset = checked_cast<UINT>(attribute.offset);
         inputElementDescriptor.InputSlotClass = VertexStepModeFunction(input.stepMode);
         if (inputElementDescriptor.InputSlotClass == D3D11_INPUT_PER_VERTEX_DATA) {
             inputElementDescriptor.InstanceDataStepRate = 0;
@@ -365,8 +361,8 @@ MaybeError RenderPipeline::InitializeInputLayout(const Blob& vertexShader) {
     ID3D11Device* d3d11Device = ToBackend(GetDevice())->GetD3D11Device();
 
     DAWN_TRY(CheckHRESULT(
-        d3d11Device->CreateInputLayout(inputElementDescriptors.data(), count, vertexShader.Data(),
-                                       vertexShader.Size(), &mInputLayout),
+        d3d11Device->CreateInputLayout(inputElementDescriptors.data(), count,
+                                       vertexShader.DataPtr(), vertexShader.Size(), &mInputLayout),
         "ID3D11Device::CreateInputLayout"));
 
     return {};
@@ -382,7 +378,7 @@ MaybeError RenderPipeline::InitializeBlendState() {
     static_assert(kMaxColorAttachments == std::size(blendDesc.RenderTarget));
     for (auto i : Range(kMaxColorAttachmentsTyped)) {
         D3D11_RENDER_TARGET_BLEND_DESC& rtBlendDesc =
-            blendDesc.RenderTarget[static_cast<uint8_t>(i)];
+            DAWN_UNSAFE_TODO(blendDesc.RenderTarget[static_cast<uint8_t>(i)]);
         const ColorTargetState* descriptor = GetColorTargetState(i);
         rtBlendDesc.BlendEnable = descriptor->blend != nullptr;
         if (rtBlendDesc.BlendEnable) {
@@ -404,7 +400,8 @@ MaybeError RenderPipeline::InitializeBlendState() {
             rtBlendDesc.DestBlendAlpha = D3DBlendAlphaFactor(descriptor->blend->alpha.dstFactor);
             rtBlendDesc.BlendOpAlpha = D3DBlendOperation(descriptor->blend->alpha.operation);
         }
-        rtBlendDesc.RenderTargetWriteMask = D3DColorWriteMask(descriptor->writeMask);
+        rtBlendDesc.RenderTargetWriteMask =
+            dchecked_cast<UINT8>(D3DColorWriteMask(descriptor->writeMask));
     }
 
     DAWN_TRY(CheckHRESULT(device->GetD3D11Device()->CreateBlendState(&blendDesc, &mBlendState),
@@ -478,14 +475,23 @@ MaybeError RenderPipeline::InitializeShaders() {
             additionalCompileFlags |= D3DCOMPILE_IEEE_STRICTNESS;
         }
 
-        DAWN_TRY_ASSIGN(compiledShader[SingleShaderStage::Vertex],
-                        ToBackend(programmableStage.module)
-                            ->Compile(programmableStage, SingleShaderStage::Vertex,
-                                      ToBackend(GetLayout()), compileFlags | additionalCompileFlags,
-                                      GetImmediateMask(), usedInterstageVariables));
+        std::vector<uint32_t> snorm10_10_10_2_locations;
+        for (VertexAttributeLocation location : GetAttributeLocationsUsed()) {
+            if (GetAttribute(location).format == wgpu::VertexFormat::Snorm10_10_10_2) {
+                snorm10_10_10_2_locations.push_back(
+                    static_cast<uint32_t>(static_cast<uint8_t>(location)));
+            }
+        }
+
+        DAWN_TRY_ASSIGN(
+            compiledShader[SingleShaderStage::Vertex],
+            ToBackend(programmableStage.module)
+                ->Compile(programmableStage, SingleShaderStage::Vertex, ToBackend(GetLayout()),
+                          compileFlags | additionalCompileFlags, GetImmediateMask(),
+                          usedInterstageVariables, {}, std::move(snorm10_10_10_2_locations)));
         const Blob& shaderBlob = compiledShader[SingleShaderStage::Vertex].shaderBlob;
         {
-            TRACE_EVENT0(device->GetPlatform(), General, "RenderPipelineD3D11::CreateVertexShader");
+            TRACE_EVENT(DAWN_TRACE_CATEGORY(), "RenderPipelineD3D11::CreateVertexShader");
             SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(device->GetPlatform(), "D3D11.CreateVertexShaderUs");
 
             DAWN_TRY_ASSIGN(mVertexShader, device->GetOrCreateVertexShader(
@@ -512,7 +518,7 @@ MaybeError RenderPipeline::InitializeShaders() {
             // allocate register u60 to u63 for them.
             const uint32_t basePixelLocalAttachmentIndex =
                 uavEndIndex - static_cast<uint32_t>(storageAttachmentSlots.size());
-            for (size_t i = 0; i < storageAttachmentSlots.size(); i++) {
+            for (uint32_t i = 0; i < storageAttachmentSlots.size(); i++) {
                 auto& attachment = pixelLocalOptions->attachments[i];
                 attachment.index = basePixelLocalAttachmentIndex + i;
 
@@ -555,7 +561,7 @@ MaybeError RenderPipeline::InitializeShaders() {
                           compileFlags | additionalCompileFlags, GetImmediateMask(),
                           usedInterstageVariables, pixelLocalOptions));
         {
-            TRACE_EVENT0(device->GetPlatform(), General, "RenderPipelineD3D11::CreatePixelShader");
+            TRACE_EVENT(DAWN_TRACE_CATEGORY(), "RenderPipelineD3D11::CreatePixelShader");
             SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(device->GetPlatform(), "D3D11.CreatePixelShaderUs");
             DAWN_TRY_ASSIGN(mPixelShader, device->GetOrCreatePixelShader(
                                               compiledShader[SingleShaderStage::Fragment]));

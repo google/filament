@@ -32,9 +32,9 @@
 
 #include <vector>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
 
 namespace dawn::native::metal {
 

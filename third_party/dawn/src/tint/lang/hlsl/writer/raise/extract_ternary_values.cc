@@ -98,7 +98,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ExtractTernaryValues(core::ir::Module& ir) {
-    AssertValid(ir, kExtractTernaryValuesCapabilities, "before hlsl.ExtractTernaryValues");
+    AssertValid(ir, "before hlsl.ExtractTernaryValues");
 
     State{ir}.Process();
 

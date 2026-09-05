@@ -28,10 +28,10 @@
 #include <memory>
 #include <string_view>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/mocks/platform/CachingInterfaceMock.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/mocks/platform/CachingInterfaceMock.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -66,14 +66,14 @@ TEST_P(ShaderModuleCachingTests, ShaderModuleNoCache) {
     // cache.
     {
         wgpu::Device device = CreateDevice();
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 
     // Second time should create fine with no cache hits since cache is disabled.
     {
         wgpu::Device device = CreateDevice();
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 }
@@ -83,7 +83,7 @@ TEST_P(ShaderModuleCachingTests, ShaderModuleFrontedCache) {
     // First creation should create a cache entry.
     wgpu::ShaderModule shaderModule;
     EXPECT_CACHE_STATS(
-        mMockCache, Hit(0), Add(1),
+        mMockCache, Hit(0u), Add(1u),
         shaderModule = utils::CreateShaderModule(device, kComputeShaderDefault.data()));
 
     // Second creation on the same device should just return from frontend cache and should not
@@ -91,7 +91,7 @@ TEST_P(ShaderModuleCachingTests, ShaderModuleFrontedCache) {
     EXPECT_CALL(mMockCache, LoadData).Times(0);
     wgpu::ShaderModule sameShaderModule;
     EXPECT_CACHE_STATS(
-        mMockCache, Hit(0), Add(0),
+        mMockCache, Hit(0u), Add(0u),
         sameShaderModule = utils::CreateShaderModule(device, kComputeShaderDefault.data()));
 
     EXPECT_EQ(shaderModule.Get() == sameShaderModule.Get(), !UsesWire());
@@ -104,14 +104,14 @@ TEST_P(ShaderModuleCachingTests, ShaderModuleBlobCache) {
     // First time should create and write out to the blob cache.
     {
         wgpu::Device device = CreateDevice();
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(1),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(1u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 
     // Second time should create shader module using the blob cache.
     {
         wgpu::Device device = CreateDevice();
-        EXPECT_CACHE_STATS(mMockCache, Hit(1), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(1u), Add(0u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 }
@@ -122,7 +122,7 @@ TEST_P(ShaderModuleCachingTests, DifferentShaderModuleBlobCache) {
     // First time should create and write out to the cache.
     {
         wgpu::Device device = CreateDevice();
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(1),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(1u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 
@@ -130,7 +130,7 @@ TEST_P(ShaderModuleCachingTests, DifferentShaderModuleBlobCache) {
     {
         wgpu::Device device = CreateDevice();
         EXPECT_CACHE_STATS(
-            mMockCache, Hit(0), Add(1),
+            mMockCache, Hit(0u), Add(1u),
             utils::CreateShaderModule(device, kComputeShaderMultipleEntryPoints.data()));
     }
 }
@@ -141,14 +141,14 @@ TEST_P(ShaderModuleCachingTests, ShaderModuleBlobCacheIsolationKey) {
     // First time should create and write out to the cache.
     {
         wgpu::Device device = CreateDevice("isolation key 1");
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(1),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(1u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 
     // Second time should also create and write out to the cache.
     {
         wgpu::Device device = CreateDevice("isolation key 2");
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(1),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(1u),
                            utils::CreateShaderModule(device, kComputeShaderDefault.data()));
     }
 }

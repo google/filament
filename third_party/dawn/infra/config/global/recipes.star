@@ -103,6 +103,10 @@ build_recipe = _recipe_for_package(
 )
 
 build_recipe(
+    name = "recipe:dawn/bazel",
+)
+
+build_recipe(
     name = "recipe:dawn/cmake",
 )
 

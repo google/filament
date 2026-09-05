@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_SINGLE_ENTRY_POINT_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_SINGLE_ENTRY_POINT_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,14 +36,6 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
-
-/// The capabilities that the transform can support.
-const Capabilities kSingleEntryPointCapabilities{
-    Capability::kAllowMultipleEntryPoints,
-    Capability::kAllowOverrides,
-    Capability::kAllow8BitIntegers,
-    Capability::kAllow16BitIntegers,
-};
 
 /// Strip a module down to a single entry point, removing any unused functions and module-scope
 /// declarations.

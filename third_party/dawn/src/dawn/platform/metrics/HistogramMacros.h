@@ -182,7 +182,7 @@ enum class ScopedHistogramTiming { kMicrosecondTimes, kMediumTimes, kLongTimes }
     class [[nodiscard]] ScopedHistogramTimer##key {                                         \
       public:                                                                               \
         using Platform = PlatformType##key;                                                 \
-        ScopedHistogramTimer##key(Platform* p)                                              \
+        explicit ScopedHistogramTimer##key(Platform* p)                                     \
             : platform_(p), constructed_(platform_->MonotonicallyIncreasingTime()) {}       \
         ~ScopedHistogramTimer##key() {                                                      \
             if (constructed_ == 0)                                                          \
@@ -206,8 +206,8 @@ enum class ScopedHistogramTiming { kMicrosecondTimes, kMediumTimes, kLongTimes }
         }                                                                                   \
                                                                                             \
       private:                                                                              \
-        raw_ptr<Platform> platform_;                                                        \
-        double constructed_;                                                                \
+        raw_ptr<Platform> platform_ = nullptr;                                              \
+        double constructed_ = 0;                                                            \
     } scoped_histogram_timer_##key(platform)
 
 namespace dawn::platform::metrics {

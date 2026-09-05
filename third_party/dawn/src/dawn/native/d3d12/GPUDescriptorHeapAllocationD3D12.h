@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_GPUDESCRIPTORHEAPALLOCATIOND3D12_H_
 #define SRC_DAWN_NATIVE_D3D12_GPUDESCRIPTORHEAPALLOCATIOND3D12_H_
 
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/d3d12/IntegerTypes.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/d3d12/IntegerTypes.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 
@@ -48,8 +48,8 @@ class GPUDescriptorHeapAllocation {
 
   private:
     D3D12_GPU_DESCRIPTOR_HANDLE mBaseDescriptor = {0};
-    ExecutionSerial mLastUsageSerial = ExecutionSerial(0);
-    HeapVersionID mHeapSerial = HeapVersionID(0);
+    ExecutionSerial mLastUsageSerial = ExecutionSerial(0u);
+    HeapVersionID mHeapSerial = HeapVersionID(0u);
 };
 
 }  // namespace dawn::native::d3d12

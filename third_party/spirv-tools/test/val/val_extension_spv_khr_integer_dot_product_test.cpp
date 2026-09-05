@@ -18,9 +18,7 @@
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "source/extensions.h"
-#include "source/spirv_target_env.h"
-#include "test/unit_spirv.h"
+#include "spirv-tools/libspirv.h"
 #include "test/val/val_fixtures.h"
 
 namespace spvtools {
@@ -739,7 +737,7 @@ INSTANTIATE_TEST_SUITE_P(
                            "%uchar",  // match width
                            "%v4uchar",
                            "%v4uchar",
-                           "%uint",
+                           "%uchar",
                            false,
                            ""},
                       Case{{"DotProductKHR", "DotProductInputAllKHR", "Int8"},
@@ -1247,80 +1245,365 @@ INSTANTIATE_TEST_SUITE_P(
                            true,
                            ""}));
 
-using ValidateSpvKHRIntegerDotProductSimple = ::testing::Test;
+using ValidateIntegerDotProductSimple = spvtest::ValidateBase<bool>;
 
-TEST(ValidateSpvKHRIntegerDotProductSimple, DISABLED_RequiresExtension) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, RequiresExtension) {
+  const std::string ss = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%fn = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%v2int = OpTypeVector %int 2
+%int_2 = OpConstant %int 2
+%vec_a = OpConstantComposite %v2int %int_2 %int_2
+%vec_b = OpConstantComposite %v2int %int_2 %int_2
+%main = OpFunction %void None %fn
+%label = OpLabel
+%x = OpSDot %int %vec_a %vec_b
+OpReturn
+OpFunctionEnd
+  )";
+  CompileSuccessfully(ss);
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Opcode SDot requires one of these capabilities: DotProduct"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple, DISABLED_Invalid_ResultTooNarrow) {
-  // Test across all the instructions.
-  FAIL();
+std::string GenerateShaderCode(const std::string& body) {
+  std::ostringstream ss;
+  ss << R"(
+OpCapability Shader
+OpCapability DotProductKHR
+OpCapability DotProductInputAll
+OpCapability DotProductInput4x8BitPacked
+OpCapability Int16
+OpCapability Int64
+OpCapability LongVectorEXT
+OpExtension "SPV_EXT_long_vector"
+OpExtension "SPV_KHR_integer_dot_product"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %spec_5 SpecId 0
+OpDecorate %spec_6 SpecId 1
+
+%void = OpTypeVoid
+%fn = OpTypeFunction %void
+
+%float = OpTypeFloat 32
+%int16 = OpTypeInt 16 1
+%uint16 = OpTypeInt 16 0
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%int64 = OpTypeInt 64 1
+%v2int = OpTypeVector %int 2
+%v3int = OpTypeVector %int 3
+%v2uint = OpTypeVector %uint 2
+%v2int16 = OpTypeVector %int16 2
+%v2uint16 = OpTypeVector %uint16 2
+%v2int64 = OpTypeVector %int64 2
+
+%float_1 = OpConstant %float 1
+%int_1 = OpConstant %int 1
+%uint_1 = OpConstant %uint 1
+%int64_1 = OpConstant %int64 1
+%int16_1 = OpConstant %int16 1
+%uint16_1 = OpConstant %uint16 1
+
+%ivec2_1 = OpConstantComposite %v2int %int_1 %int_1
+%ivec3_1 = OpConstantComposite %v3int %int_1 %int_1 %int_1
+%uvec2_1 = OpConstantComposite %v2uint %uint_1 %uint_1
+%i16vec2_1 = OpConstantComposite %v2int16 %int16_1 %int16_1
+%u16vec2_1 = OpConstantComposite %v2uint16 %uint16_1 %uint16_1
+%i64vec2_1 = OpConstantComposite %v2int64 %int64_1 %int64_1
+
+%uint_5 = OpConstant %uint 5
+%uint_6 = OpConstant %uint 6
+%spec_5 = OpSpecConstant %uint 5
+%spec_6 = OpSpecConstant %uint 6
+
+%uvec5 = OpTypeVectorIdEXT %uint %uint_5
+%uvec6 = OpTypeVectorIdEXT %uint %uint_6
+%spec_uvec5 = OpTypeVectorIdEXT %uint %spec_5
+%spec_uvec6 = OpTypeVectorIdEXT %uint %spec_6
+
+%uvec5_1 = OpConstantComposite %uvec5 %uint_1 %uint_1 %uint_1 %uint_1 %uint_1
+%uvec6_1 = OpConstantComposite %uvec6 %uint_1 %uint_1 %uint_1 %uint_1 %uint_1 %uint_1
+%spec_uvec5_1 = OpConstantComposite %spec_uvec5 %uint_1 %uint_1 %uint_1 %uint_1 %uint_1
+%spec_uvec6_1 = OpConstantComposite %spec_uvec6 %uint_1 %uint_1 %uint_1 %uint_1 %uint_1 %uint_1
+
+%main = OpFunction %void None %fn
+%label = OpLabel
+)";
+
+  ss << body;
+
+  ss << R"(
+OpReturn
+OpFunctionEnd)";
+  return ss.str();
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_UDot_OperandTypesMatch) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, Dot16BitGood) {
+  const std::string ss = R"(
+     %x = OpSDot %int %i16vec2_1 %i16vec2_1
+     %y = OpUDot %uint %u16vec2_1 %u16vec2_1
+     %z = OpSUDot %uint %i16vec2_1 %u16vec2_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_SDot_OperandTypesMatchExceptSignedness) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotDifferentVectors) {
+  const std::string ss = R"(
+     %x = OpSDot %int %ivec2_1 %ivec3_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("'Vector 1' is 2 components but 'Vector 2' is 3 components"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_SUDot_OperandTypesMatchExceptSignedness) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotFloat) {
+  const std::string ss = R"(
+     %x = OpSDot %int %float_1 %float_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected 'Vector 1' to be an int scalar or vector"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_UDotAccSat_OperandTypesMatch) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDot16BitScalar) {
+  const std::string ss = R"(
+     %x = OpSDot %int %int16_1 %int16_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected 'Vector 1' to be an int scalar or vector"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_SDotAccSat_OperandTypesMatchExceptSignedness) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotResultVector) {
+  const std::string ss = R"(
+     %x = OpSDot %v2int %ivec2_1 %ivec2_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result must be an int scalar type"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_SUDotAccSat_OperandTypesMatchExceptSignedness) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotResultSmall) {
+  const std::string ss = R"(
+     %x = OpSDot %int %i64vec2_1 %i64vec2_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result width (32) must be greater than or equal to "
+                        "the vectors width (64)"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_UDot_RequiresUnsigned) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotNoPackedVectorFormat) {
+  const std::string ss = R"(
+     %x = OpSDot %int %int_1 %int_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("'Vector 1' and 'Vector 2' are a 32-bit int scalar, "
+                        "but no Packed Vector Format was provided"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_SUDot_RequiresUnsignedSecondArg) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, UDotResultSigned) {
+  const std::string ss = R"(
+     %x = OpUDot %int %uvec2_1 %uvec2_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result must be an unsigned int scalar type"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_UDotAccSat_RequiresUnsigned) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, UDotVectorSigned) {
+  const std::string ss = R"(
+     %x = OpUDot %uint %ivec2_1 %ivec2_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected 'Vector 1' to be an vector of unsigned integers"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_SUDotAccSat_RequiresUnsignedSecondArg) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SUDotVectorSigned) {
+  const std::string ss = R"(
+     %x = OpSUDot %uint %ivec2_1 %ivec2_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected 'Vector 2' to be an vector of unsigned integers"));
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_VectorOperandsDisallowPackedFormat) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotLongVectorGood) {
+  const std::string ss = R"(
+     %x = OpSDot %uint %uvec5_1 %uvec5_1
+     %y = OpSDot %uint %uvec6_1 %uvec6_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-TEST(ValidateSpvKHRIntegerDotProductSimple,
-     DISABLED_Invalid_ScalarOperandsRequirePackedFormat) {
-  FAIL();
+TEST_F(ValidateIntegerDotProductSimple, SDotLongVectorSpec) {
+  const std::string ss = R"(
+     %x = OpSDot %uint %spec_uvec5_1 %spec_uvec6_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-// TODO(dneto): Test valid cases with other scalar integer types
-// TODO(dneto): Test valid cases of length-8 vectors
-// TODO(dneto): Test valid cases of length-16 vectors
+TEST_F(ValidateIntegerDotProductSimple, SDotLongVector) {
+  const std::string ss = R"(
+     %x = OpSDot %uint %uvec5_1 %uvec6_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("'Vector 1' is 5 components but 'Vector 2' is 6 components"));
+}
+
+TEST_F(ValidateIntegerDotProductSimple, UDotAccSat) {
+  const std::string ss = R"(
+     %x = OpUDotAccSat %uint %uvec2_1 %uvec2_1 %int_1
+  )";
+  CompileSuccessfully(GenerateShaderCode(ss));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result must be the same as the Accumulator type"));
+}
+
+TEST_F(ValidateIntegerDotProductSimple, CapabilityDotProductInput4x8BitPacked) {
+  const std::string ss = R"(
+     OpCapability Shader
+     OpCapability DotProductKHR
+     OpExtension "SPV_KHR_integer_dot_product"
+     OpMemoryModel Logical GLSL450
+     OpEntryPoint GLCompute %main "main"
+     OpExecutionMode %main LocalSize 1 1 1
+     %void = OpTypeVoid
+     %fn = OpTypeFunction %void
+     %int = OpTypeInt 32 1
+     %v2int = OpTypeVector %int 2
+     %int_1 = OpConstant %int 1
+     %main = OpFunction %void None %fn
+     %label = OpLabel
+     %x = OpSDot %int %int_1 %int_1
+     OpReturn
+     OpFunctionEnd
+  )";
+  CompileSuccessfully(ss);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("DotProductInput4x8BitPacked capability is required to "
+                        "use scalar integers"));
+}
+
+TEST_F(ValidateIntegerDotProductSimple, CapabilityDotProductInput4x8Bit) {
+  const std::string ss = R"(
+     OpCapability Shader
+     OpCapability DotProductKHR
+     OpCapability Int8
+     OpExtension "SPV_KHR_integer_dot_product"
+     OpMemoryModel Logical GLSL450
+     OpEntryPoint GLCompute %main "main"
+     OpExecutionMode %main LocalSize 1 1 1
+     %void = OpTypeVoid
+     %fn = OpTypeFunction %void
+     %char = OpTypeInt 8 1
+     %v4char = OpTypeVector %char 4
+     %char_1 = OpConstant %char 1
+     %v4char_1 = OpConstantComposite %v4char %char_1 %char_1 %char_1 %char_1
+     %main = OpFunction %void None %fn
+     %label = OpLabel
+     %x = OpSDot %char %v4char_1 %v4char_1
+     OpReturn
+     OpFunctionEnd
+  )";
+  CompileSuccessfully(ss);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("DotProductInput4x8Bit or DotProductInputAll capability is "
+                "required to use 4-component vectors of 8-bit integers"));
+}
+
+TEST_F(ValidateIntegerDotProductSimple, CapabilityDotProductInputAll) {
+  const std::string ss = R"(
+     OpCapability Shader
+     OpCapability DotProductKHR
+     OpExtension "SPV_KHR_integer_dot_product"
+     OpMemoryModel Logical GLSL450
+     OpEntryPoint GLCompute %main "main"
+     OpExecutionMode %main LocalSize 1 1 1
+     %void = OpTypeVoid
+     %fn = OpTypeFunction %void
+     %int = OpTypeInt 32 1
+     %int_1 = OpConstant %int 1
+     %v4int = OpTypeVector %int 4
+     %v4int_1 = OpConstantComposite %v4int %int_1 %int_1 %int_1 %int_1
+     %main = OpFunction %void None %fn
+     %label = OpLabel
+     %x = OpSDot %int %v4int_1 %v4int_1
+     OpReturn
+     OpFunctionEnd
+  )";
+  CompileSuccessfully(ss);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("DotProductInputAll capability is additionally required to the "
+                "DotProduct capability to use vectors. (It is possible to set "
+                "DotProductInput4x8BitPacked to only use 32-bit scalars packed "
+                "as a 4-wide 8-byte vector)"));
+}
+
+TEST_F(ValidateIntegerDotProductSimple, CapabilityDotProductInputAll2) {
+  const std::string ss = R"(
+     OpCapability Shader
+     OpCapability DotProductKHR
+     OpCapability DotProductInput4x8BitPacked
+     OpExtension "SPV_KHR_integer_dot_product"
+     OpMemoryModel Logical GLSL450
+     OpEntryPoint GLCompute %main "main"
+     OpExecutionMode %main LocalSize 1 1 1
+     %void = OpTypeVoid
+     %fn = OpTypeFunction %void
+     %int = OpTypeInt 32 1
+     %int_1 = OpConstant %int 1
+     %v4int = OpTypeVector %int 4
+     %v4int_1 = OpConstantComposite %v4int %int_1 %int_1 %int_1 %int_1
+     %main = OpFunction %void None %fn
+     %label = OpLabel
+     %x = OpSDot %int %v4int_1 %v4int_1
+     OpReturn
+     OpFunctionEnd
+  )";
+  CompileSuccessfully(ss);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("DotProductInputAll capability is required use "
+                        "vectors. (DotProductInput4x8BitPacked capability "
+                        "declared allows for only 32-bit int scalars)"));
+}
 
 }  // namespace
 }  // namespace val

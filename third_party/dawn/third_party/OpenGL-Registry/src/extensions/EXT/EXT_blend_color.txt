@@ -1,0 +1,155 @@
+Name
+
+    EXT_blend_color
+
+Name Strings
+
+    GL_EXT_blend_color
+
+Version
+
+    $Date: 1995/03/31 04:40:19 $ $Revision: 1.7 $
+
+Number
+
+    2
+
+Dependencies
+
+    None
+
+Overview
+
+    Blending capability is extended by defining a constant color that can
+    be included in blending equations.  A typical usage is blending two
+    RGB images.  Without the constant blend factor, one image must have
+    an alpha channel with each pixel set to the desired blend factor.
+
+New Procedures and Functions
+
+    void BlendColorEXT(clampf red,
+                       clampf green,
+                       clampf blue,
+                       clampf alpha);
+
+New Tokens
+
+    Accepted by the <sfactor> and <dfactor> parameters of BlendFunc:
+
+        CONSTANT_COLOR_EXT               0x8001
+        ONE_MINUS_CONSTANT_COLOR_EXT     0x8002
+        CONSTANT_ALPHA_EXT               0x8003
+        ONE_MINUS_CONSTANT_ALPHA_EXT     0x8004
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        BLEND_COLOR_EXT                  0x8005
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The commands that control blending are now BlendFunc and BlendColorEXT.
+    A constant color to be used in the blending equation is specified by
+    BlendColorEXT.  The four parameters are clamped to the range [0,1]
+    before being stored.  The default value for the constant blending color
+    is (0,0,0,0).
+
+    The constant color can be used in both the source and destination
+    blending factors.  Four lines are added to table 4.1 and table 4.2:
+
+        Value                           Blend Factors
+        -----                           -------------
+        ZERO                            (0, 0, 0, 0)
+        ONE                             (1, 1, 1, 1)
+        DST_COLOR                       (Rd/Kr, Gd/Kg, Bd/Kb, Ad/Ka)
+        ONE_MINUS_DST_COLOR             (1, 1, 1, 1) - (Rd/Kr,Gd/Kg,Bd/Kb,Ad/Ka)
+        SRC_ALPHA                       (As, As, As, As) / Ka
+        ONE_MINUS_SRC_ALPHA             (1, 1, 1, 1) - (As, As, As, As) / Ka
+        DST_ALPHA                       (Ad, Ad, Ad, Ad) / Ka
+        ONE_MINUS_DST_ALPHA             (1, 1, 1, 1) - (Ad, Ad, Ad, Ad) / Ka
+        CONSTANT_COLOR_EXT              (Rc, Gc, Bc, Ac)                                        NEW
+        ONE_MINUS_CONSTANT_COLOR_EXT    (1, 1, 1, 1) - (Rc, Gc, Bc, Ac)                         NEW
+        CONSTANT_ALPHA_EXT              (Ac, Ac, Ac, Ac)                                        NEW
+        ONE_MINUS_CONSTANT_ALPHA_EXT    (1, 1, 1, 1) - (Ac, Ac, Ac, Ac)                         NEW
+        SRC_ALPHA_SATURATE              (f, f, f, 1)
+
+        Table 4.1: Values controlling the source blending function and the
+        source blending values they compute.  Ka = 2**m - 1, where m is the
+        number of bits in the A color component.  Kr, Kg, and Kb are similarly
+        determined by the number of bits in the R, G, and B color components.
+        f = min(As, 1-Ad) / Ka.
+
+        Value                           Blend Factors
+        -----                           -------------
+        ZERO                            (0, 0, 0, 0)
+        ONE                             (1, 1, 1, 1)
+        SRC_COLOR                       (Rs/Kr, Gs/Kg, Bs/Kb, As/Ka)
+        ONE_MINUS_SRC_COLOR             (1, 1, 1, 1) - (Rs/Kr,Gs/Kg,Bs/Kb,As/Ka)
+        SRC_ALPHA                       (As, As, As, As) / Ka
+        ONE_MINUS_SRC_ALPHA             (1, 1, 1, 1) - (As, As, As, As) / Ka
+        DST_ALPHA                       (Ad, Ad, Ad, Ad) / Ka
+        ONE_MINUS_DST_ALPHA             (1, 1, 1, 1) - (Ad, Ad, Ad, Ad) / Ka
+        CONSTANT_COLOR_EXT              (Rc, Gc, Bc, Ac)                                        NEW
+        ONE_MINUS_CONSTANT_COLOR_EXT    (1, 1, 1, 1) - (Rc, Gc, Bc, Ac)                         NEW
+        CONSTANT_ALPHA_EXT              (Ac, Ac, Ac, Ac)                                        NEW
+        ONE_MINUS_CONSTANT_ALPHA_EXT    (1, 1, 1, 1) - (Ac, Ac, Ac, Ac)                         NEW
+
+        Table 4.2: Values controlling the destination blending function and
+        the destination blending values they compute.  Ka = 2**m - 1, where
+        m is the number of bits in the A color component.  Kr, Kg, and Kb
+        are similarly determined by the number of bits in the R, G, and B
+        color components.
+
+    Rc, Gc, Bc, and Ac are the four components of the constant blending
+    color.  These blend factors are not scaled by Kr, Kg, Kb, and Ka,
+    because they are already in the range [0,1].
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent to the 
+    server as part of a glXRender request:
+
+        BlendColorEXT
+            2           20              rendering command length
+            2           4096            rendering command opcode
+            4           FLOAT32         red
+            4           FLOAT32         green
+            4           FLOAT32         blue
+            4           FLOAT32         alpha
+
+Errors
+
+    INVALID_OPERATION is generated if BlendColorEXT is called between
+    execution of Begin and the corresponding call to End.
+
+New State
+
+                                                Initial
+    Get Value           Get Command     Type    Value           Attrib
+    ---------           -----------     ----    -------         ------
+    BLEND_COLOR_EXT     GetFloatv       C       (0,0,0,0)       color-buffer
+
+New Implementation Dependent State
+
+    None

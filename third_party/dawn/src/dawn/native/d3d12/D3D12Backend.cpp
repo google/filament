@@ -33,11 +33,11 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Log.h"
-#include "dawn/common/Math.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
-#include "dawn/native/d3d12/TextureD3D12.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/native/d3d12/TextureD3D12.h"
+#include "src/utils/log.h"
 
 namespace dawn::native::d3d12 {
 

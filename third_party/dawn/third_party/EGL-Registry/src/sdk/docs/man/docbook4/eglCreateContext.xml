@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglCreateContext">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglCreateContext</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreateContext</refname>
+        <refpurpose>
+            create a new <acronym>EGL</acronym> rendering context
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLContext <function>eglCreateContext</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLConfig <parameter>config</parameter></paramdef>
+                <paramdef>EGLContext <parameter>share_context</parameter></paramdef>
+                <paramdef>EGLint const * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the
+                    <acronym>EGL</acronym>
+                    display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config</parameter></term>
+                <listitem><para>Specifies the EGL frame buffer configuration that
+                    defines the frame buffer resource available to the rendering context.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>share_context</parameter></term>
+                <listitem><para>
+                    Specifies another
+                    <acronym>EGL</acronym>
+                    rendering context with which to share data, as
+                    defined by the client API corresponding to the
+                    contexts. Data is also shared with all other
+                    contexts with which
+                    <parameter>share_context</parameter> shares data.
+                    <constant>EGL_NO_CONTEXT</constant> indicates that
+                    no sharing is to take place.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies attributes and attribute values for the
+                    context being created. Only the attribute
+                    <constant>EGL_CONTEXT_CLIENT_VERSION</constant> may
+                    be specified.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglCreateContext</function> creates an EGL
+            rendering context for the current rendering API (as set with
+            <function>eglBindAPI</function>) and returns a handle to the
+            context. The context can then be used to render into an EGL
+            drawing surface. If <function>eglCreateContext</function>
+            fails to create a rendering context,
+            <constant>EGL_NO_CONTEXT</constant> is returned.
+        </para>
+        <para>
+            If <parameter>share_context</parameter> is not
+            <constant>EGL_NO_CONTEXT</constant>, then all shareable data
+            in the context (as defined by the client API specification
+            for the current rendering API) are shared by context
+            <parameter>share_context</parameter>, all other contexts
+            <parameter>share_context</parameter> already shares with,
+            and the newly created context. An arbitrary number of
+            rendering contexts can share data. However, all rendering
+            contexts that share data must themselves exist in the same
+            address space. Two rendering contexts share an address space
+            if both are owned by a single process.
+        </para>
+        <para>
+            <parameter>attrib_list</parameter> specifies a list of
+            attributes for the context. The list has the same structure
+            as described for <function>eglChooseConfig</function>. The
+            attributes and attribute values which may be specified are
+            as follows:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_CONTEXT_CLIENT_VERSION</constant></term>
+                <listitem><para>
+                    Must be followed by an integer that determines which
+                    version of an OpenGL ES context to create. A value
+                    of 1 specifies creation of an OpenGL ES 1.x context.
+                    An attribute value of 2 specifies creation of an
+                    OpenGL ES 2.x context. The default value is 1. This
+                    attribute can only be specified when creating a
+                    OpenGL ES context (e.g. when the current rendering
+                    API is <constant>EGL_OPENGL_ES_API</constant>).
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            The current rendering API is only respected if the EGL
+            version is 1.2 or greater. Otherwise, an OpenGL ES context
+            will always be created.
+        </para>
+        <para>
+            The <constant>EGL_CONTEXT_CLIENT_VERSION</constant>
+            attribute is only supported if the EGL version is 1.3 or
+            greater.
+        </para>
+        <para>
+            A <firstterm>process</firstterm> is a single execution environment,
+            implemented in a single address space, consisting of one or more threads.
+        </para>
+        <para>
+            A <firstterm>thread</firstterm> is one of a set of subprocesses that
+            share a single address space, but maintain separate program counters,
+            stack spaces, and other related global data.
+            A thread is the only member of its subprocess group is equivalent to a
+            process.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_NO_CONTEXT</constant> is returned if creation of
+            the context fails.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            current rendering API is <constant>EGL_NONE</constant> (this
+            can only arise in an EGL implementation which does not
+            support OpenGL ES, prior to the first call to
+            <function>eglBindAPI</function>).
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            server context state for
+            <parameter>share_context</parameter> exists in an address
+            space which cannot be shared with the newly created context,
+            if <parameter>share_context</parameter> was created on a
+            different display than the one referenced by
+            <parameter>config</parameter>, or if the contexts are
+            otherwise incompatible.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONFIG</constant> is generated if
+            <parameter>config</parameter> is not an EGL frame buffer
+            configuration, or does not support the current rendering
+            API. This includes requesting creation of an OpenGL ES 1.x
+            context when the <constant>EGL_RENDERABLE_TYPE</constant>
+            attribute of <parameter>config</parameter> does not contain
+            <constant>EGL_OPENGL_ES_BIT</constant>, or creation of an
+            OpenGL ES 2.x context when the attribute does not contain
+            <constant>EGL_OPENGL_ES2_BIT</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONTEXT</constant> is generated if
+            <parameter>share_context</parameter> is not an EGL rendering
+            context of the same client API type as the newly created
+            context and is not <constant>EGL_NO_CONTEXT</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attrib_list</parameter> contains an invalid
+            context attribute or if an attribute is not recognized or
+            out of range. Note that attribute
+            <constant>EGL_CONTEXT_CLIENT_VERSION</constant> is
+            only valid when the current rendering API is
+            <constant>EGL_OPENGL_ES_API</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_ALLOC</constant> is generated if there are not
+            enough resources to allocate the new context.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglDestroyContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

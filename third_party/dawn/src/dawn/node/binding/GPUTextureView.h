@@ -45,6 +45,7 @@ class GPUTextureView final : public interop::GPUTextureView {
     GPUTextureView(const wgpu::TextureViewDescriptor& desc, wgpu::TextureView view);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::TextureView&() const { return view_; }
 
     // interop::GPUTextureView interface compliance

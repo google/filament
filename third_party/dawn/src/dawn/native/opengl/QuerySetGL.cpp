@@ -25,12 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/QuerySetGL.h"
+#include "src/dawn/native/opengl/QuerySetGL.h"
 
 #include <utility>
 
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/native/opengl/UtilsGL.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/opengl/UtilsGL.h"
 
 namespace dawn::native::opengl {
 
@@ -39,7 +39,7 @@ ResultOrError<Ref<QuerySet>> QuerySet::Create(Device* device,
                                               const QuerySetDescriptor* descriptor) {
     Ref<QuerySet> querySet = AcquireRef(new QuerySet(device, descriptor));
 
-    if (querySet->mQueries.size() > 0) {
+    if (!querySet->mQueries.empty()) {
         DAWN_TRY(device->EnqueueGL(
             [querySet, count = descriptor->count](const OpenGLFunctions& gl) -> MaybeError {
                 DAWN_GL_TRY(gl, GenQueries(count, querySet->mQueries.data()));
@@ -51,29 +51,31 @@ ResultOrError<Ref<QuerySet>> QuerySet::Create(Device* device,
 }
 
 QuerySet::QuerySet(Device* device, const QuerySetDescriptor* descriptor)
-    : QuerySetBase(device, descriptor), mQueries(descriptor->count) {}
+    : QuerySetBase(device, descriptor), mQueries(GetQueryCount()) {}
 
 QuerySet::~QuerySet() = default;
 
 void QuerySet::DestroyImpl(DestroyReason reason) {
     auto device = ToBackend(GetDevice());
 
-    if (mQueries.size() > 0) {
+    if (!mQueries.empty()) {
         IgnoreErrors(device->EnqueueDestroyGL(
             this, &QuerySet::GetQueries, reason,
-            [](const OpenGLFunctions& gl, const std::vector<GLuint>& queries) -> MaybeError {
-                DAWN_GL_TRY_IGNORE_ERRORS(gl, DeleteQueries(queries.size(), queries.data()));
+            [](const OpenGLFunctions& gl,
+               const ityp::vector<QueryIndex, GLuint>& queries) -> MaybeError {
+                DAWN_GL_TRY_IGNORE_ERRORS(gl,
+                                          DeleteQueries(uint32_t{queries.size()}, queries.data()));
                 return {};
             }));
     }
     QuerySetBase::DestroyImpl(reason);
 }
 
-GLuint QuerySet::Get(uint32_t index) const {
+GLuint QuerySet::Get(QueryIndex index) const {
     return mQueries[index];
 }
 
-std::vector<GLuint> QuerySet::GetQueries() const {
+const ityp::vector<QueryIndex, GLuint>& QuerySet::GetQueries() const {
     return mQueries;
 }
 

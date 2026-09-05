@@ -25,44 +25,45 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
 
 #include <algorithm>
 #include <limits>
 #include <sstream>
 #include <utility>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/native/ChainUtils.h"
 #include "dawn/native/D3D11Backend.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/KeyedMutex.h"
-#include "dawn/native/d3d/ShaderUtils.h"
-#include "dawn/native/d3d/UtilsD3D.h"
-#include "dawn/native/d3d11/BackendD3D11.h"
-#include "dawn/native/d3d11/BindGroupD3D11.h"
-#include "dawn/native/d3d11/BindGroupLayoutD3D11.h"
-#include "dawn/native/d3d11/BufferD3D11.h"
-#include "dawn/native/d3d11/CommandBufferD3D11.h"
-#include "dawn/native/d3d11/CommandRecordingContextD3D11.h"
-#include "dawn/native/d3d11/ComputePipelineD3D11.h"
-#include "dawn/native/d3d11/PhysicalDeviceD3D11.h"
-#include "dawn/native/d3d11/PipelineLayoutD3D11.h"
-#include "dawn/native/d3d11/PlatformFunctionsD3D11.h"
-#include "dawn/native/d3d11/QuerySetD3D11.h"
-#include "dawn/native/d3d11/QueueD3D11.h"
-#include "dawn/native/d3d11/RenderPipelineD3D11.h"
-#include "dawn/native/d3d11/SamplerD3D11.h"
-#include "dawn/native/d3d11/ShaderModuleD3D11.h"
-#include "dawn/native/d3d11/SharedFenceD3D11.h"
-#include "dawn/native/d3d11/SharedTextureMemoryD3D11.h"
-#include "dawn/native/d3d11/SwapChainD3D11.h"
-#include "dawn/native/d3d11/TextureD3D11.h"
-#include "dawn/native/d3d11/UtilsD3D11.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/KeyedMutex.h"
+#include "src/dawn/native/d3d/ShaderUtils.h"
+#include "src/dawn/native/d3d/UtilsD3D.h"
+#include "src/dawn/native/d3d11/BackendD3D11.h"
+#include "src/dawn/native/d3d11/BindGroupD3D11.h"
+#include "src/dawn/native/d3d11/BindGroupLayoutD3D11.h"
+#include "src/dawn/native/d3d11/BufferD3D11.h"
+#include "src/dawn/native/d3d11/CommandBufferD3D11.h"
+#include "src/dawn/native/d3d11/CommandRecordingContextD3D11.h"
+#include "src/dawn/native/d3d11/ComputePipelineD3D11.h"
+#include "src/dawn/native/d3d11/PhysicalDeviceD3D11.h"
+#include "src/dawn/native/d3d11/PipelineLayoutD3D11.h"
+#include "src/dawn/native/d3d11/PlatformFunctionsD3D11.h"
+#include "src/dawn/native/d3d11/QuerySetD3D11.h"
+#include "src/dawn/native/d3d11/QueueD3D11.h"
+#include "src/dawn/native/d3d11/RenderPipelineD3D11.h"
+#include "src/dawn/native/d3d11/SamplerD3D11.h"
+#include "src/dawn/native/d3d11/ShaderModuleD3D11.h"
+#include "src/dawn/native/d3d11/SharedFenceD3D11.h"
+#include "src/dawn/native/d3d11/SharedTextureMemoryD3D11.h"
+#include "src/dawn/native/d3d11/SwapChainD3D11.h"
+#include "src/dawn/native/d3d11/TextureD3D11.h"
+#include "src/dawn/native/d3d11/UtilsD3D11.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d11 {
 
@@ -71,11 +72,12 @@ size_t Sha3CacheFuncs::operator()(const Sha3_256::Output& key) const {
     // Given that the randomness of SHA3 is very good across all bits (avalanche effect),
     // sampling from two distant parts of the hash and combining them results in a good hash value
     // suitable for hash table distribution, while being more performant than hashing all 32 bytes.
-    return absl::HashOf(absl::MakeSpan(key.data(), 8),
-                        absl::MakeSpan(key.data() + Sha3_256::kByteOutputLength - 8, 8));
+    return DAWN_UNSAFE_TODO(
+        absl::HashOf(absl::MakeSpan(key.data(), 8),
+                     absl::MakeSpan(key.data() + Sha3_256::kByteOutputLength - 8, 8)));
 }
 bool Sha3CacheFuncs::operator()(const Sha3_256::Output& a, const Sha3_256::Output& b) const {
-    return std::memcmp(a.data(), b.data(), sizeof(Sha3_256::Output)) == 0;
+    return DAWN_UNSAFE_TODO(std::memcmp(a.data(), b.data(), sizeof(Sha3_256::Output))) == 0;
 }
 
 namespace {
@@ -150,8 +152,8 @@ uint64_t AppendDebugLayerMessagesToError(ID3D11InfoQueue* infoQueue,
             continue;
         }
 
-        std::unique_ptr<uint8_t[]> messageData(new uint8_t[messageLength]);
-        D3D11_MESSAGE* message = reinterpret_cast<D3D11_MESSAGE*>(messageData.get());
+        HeapArray<uint8_t> messageData(messageLength);
+        D3D11_MESSAGE* message = reinterpret_cast<D3D11_MESSAGE*>(messageData.data());
         hr = infoQueue->GetMessage(i, message, &messageLength);
         if (FAILED(hr)) {
             messageStream << " ID3D11InfoQueue::GetMessage failed with " << hr;
@@ -404,8 +406,8 @@ MaybeError Device::CopyFromStagingToBuffer(BufferBase* source,
 
     auto commandContext =
         ToBackend(GetQueue())->GetScopedPendingCommandContext(QueueBase::SubmitMode::Normal);
-    return Buffer::Copy(&commandContext, ToBackend(source), sourceOffset, size,
-                        ToBackend(destination), destinationOffset);
+    return Buffer::Copy(&commandContext, ToBackend(source), sourceOffset,
+                        checked_cast<size_t>(size), ToBackend(destination), destinationOffset);
 }
 
 MaybeError Device::CopyFromStagingToTextureImpl(BufferBase* source,
@@ -533,6 +535,7 @@ bool Device::ReduceMemoryUsageImpl() {
     mComputeShaderCache.Clear();
 
     UnmapDestroyedBuffers();
+    GetPlatform()->ReportProgress();
 
     // D3D11 defers the deletion of resources until we call Flush().
     // So trigger a Flush() here to force deleting any pending resources.
@@ -540,6 +543,7 @@ bool Device::ReduceMemoryUsageImpl() {
         ToBackend(GetQueue())
             ->GetScopedPendingCommandContext(ExecutionQueueBase::SubmitMode::Passive);
     commandContext.Flush();
+    GetPlatform()->ReportProgress();
 
     // Call Trim() to delete any internal resources created by the driver.
     ComPtr<IDXGIDevice3> dxgiDevice3;
@@ -627,7 +631,7 @@ ResultOrError<TextureViewBase*> Device::GetOrCreateCachedImplicitPixelLocalStora
 ResultOrError<Ref<BufferBase>> Device::GetStagingBuffer(
     const ScopedCommandRecordingContext* commandContext,
     uint64_t size) {
-    constexpr uint64_t kMinStagingBufferSize = 4 * 1024;
+    constexpr uint64_t kMinStagingBufferSize = 4ULL * 1024;
     uint64_t bufferSize = Align(size, kMinStagingBufferSize);
     BufferDescriptor descriptor;
     descriptor.usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc;
@@ -663,7 +667,7 @@ ResultOrError<Ref<BufferBase>> Device::GetStagingBuffer(
     mTotalStagingBufferSize += bufferSize;
 
     // Purge the old staging buffers if the total size is too large.
-    constexpr uint64_t kMaxTotalSize = 16 * 1024 * 1024;
+    constexpr uint64_t kMaxTotalSize = 16ULL * 1024 * 1024;
     for (auto it = mStagingBuffers.begin(); it != mStagingBuffers.end() &&
                                             mTotalStagingBufferSize > kMaxTotalSize &&
                                             (*it)->GetLastUsageSerial() <= completedSerial;) {
@@ -688,9 +692,10 @@ ResultOrError<ComPtr<ID3D11VertexShader>> Device::GetOrCreateVertexShader(
     return mVertexShaderCache.GetOrCreate(
         args.sha3, [&](const Sha3_256::Output&) -> ResultOrError<ComPtr<ID3D11VertexShader>> {
             ComPtr<ID3D11VertexShader> vs;
-            DAWN_TRY(CheckHRESULT(mD3d11Device->CreateVertexShader(
-                                      args.shaderBlob.Data(), args.shaderBlob.Size(), nullptr, &vs),
-                                  "D3D11 create vertex shader"));
+            DAWN_TRY(
+                CheckHRESULT(mD3d11Device->CreateVertexShader(args.shaderBlob.DataPtr(),
+                                                              args.shaderBlob.Size(), nullptr, &vs),
+                             "D3D11 create vertex shader"));
             return vs;
         });
 }
@@ -700,9 +705,10 @@ ResultOrError<ComPtr<ID3D11PixelShader>> Device::GetOrCreatePixelShader(
     return mPixelShaderCache.GetOrCreate(
         args.sha3, [&](const Sha3_256::Output&) -> ResultOrError<ComPtr<ID3D11PixelShader>> {
             ComPtr<ID3D11PixelShader> ps;
-            DAWN_TRY(CheckHRESULT(mD3d11Device->CreatePixelShader(
-                                      args.shaderBlob.Data(), args.shaderBlob.Size(), nullptr, &ps),
-                                  "D3D11 create pixel shader"));
+            DAWN_TRY(
+                CheckHRESULT(mD3d11Device->CreatePixelShader(args.shaderBlob.DataPtr(),
+                                                             args.shaderBlob.Size(), nullptr, &ps),
+                             "D3D11 create pixel shader"));
             return ps;
         });
 }
@@ -712,9 +718,10 @@ ResultOrError<ComPtr<ID3D11ComputeShader>> Device::GetOrCreateComputeShader(
     return mComputeShaderCache.GetOrCreate(
         args.sha3, [&](const Sha3_256::Output&) -> ResultOrError<ComPtr<ID3D11ComputeShader>> {
             ComPtr<ID3D11ComputeShader> cs;
-            DAWN_TRY(CheckHRESULT(mD3d11Device->CreateComputeShader(
-                                      args.shaderBlob.Data(), args.shaderBlob.Size(), nullptr, &cs),
-                                  "D3D11 create compute shader"));
+            DAWN_TRY(
+                CheckHRESULT(mD3d11Device->CreateComputeShader(
+                                 args.shaderBlob.DataPtr(), args.shaderBlob.Size(), nullptr, &cs),
+                             "D3D11 create compute shader"));
             return cs;
         });
 }

@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/native/mocks/BufferMock.h"
+#include "src/dawn/tests/unittests/native/mocks/BufferMock.h"
 
 #include <memory>
 
-#include "dawn/native/ChainUtils.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/utils/heap_array.h"
 
 namespace dawn::native {
 
@@ -37,16 +38,20 @@ using ::testing::Return;
 
 BufferMock::BufferMock(DeviceMock* device,
                        const UnpackedPtr<BufferDescriptor>& descriptor,
-                       std::optional<uint64_t> allocatedSize)
+                       std::optional<uint64_t> allocatedSizeOverride)
     : BufferBase(device, descriptor) {
-    mAllocatedSize = allocatedSize.value_or(GetSize());
+    mAllocatedSize = allocatedSizeOverride.value_or(GetSize());
     DAWN_ASSERT(mAllocatedSize >= GetSize());
-    mBackingData = std::unique_ptr<uint8_t[]>(new uint8_t[mAllocatedSize]);
+    // SAFETY: Test-only code.
+    mBackingData = DAWN_UNSAFE_BUFFERS(HeapArray<std::byte>::Uninit(mAllocatedSize.value()));
 
     ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
         this->BufferBase::DestroyImpl(reason);
     });
-    ON_CALL(*this, GetMappedPointerImpl).WillByDefault(Return(mBackingData.get()));
+    ON_CALL(*this, GetMappedRangeImpl)
+        .WillByDefault([this](size_t offset, size_t size) -> Span<std::byte> {
+            return mBackingData.subspan(offset, size);
+        });
     ON_CALL(*this, IsCPUWritableAtCreation).WillByDefault([this] {
         return (GetInternalUsage() & (wgpu::BufferUsage::MapRead | wgpu::BufferUsage::MapWrite)) !=
                0;
@@ -55,8 +60,8 @@ BufferMock::BufferMock(DeviceMock* device,
 
 BufferMock::BufferMock(DeviceMock* device,
                        const BufferDescriptor* descriptor,
-                       std::optional<uint64_t> allocatedSize)
-    : BufferMock(device, Unpack(descriptor), allocatedSize) {}
+                       std::optional<uint64_t> allocatedSizeOverride)
+    : BufferMock(device, Unpack(descriptor), allocatedSizeOverride) {}
 
 BufferMock::~BufferMock() = default;
 

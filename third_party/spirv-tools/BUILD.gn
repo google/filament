@@ -52,6 +52,8 @@ action("spvtools_core_tables") {
   f8=rebase_path("${grammar_dir}/extinst.spv-amd-shader-ballot.grammar.json", root_build_dir)
   f9=rebase_path("${grammar_dir}/extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json", root_build_dir)
   f10=rebase_path("${grammar_dir}/extinst.spv-amd-shader-trinary-minmax.grammar.json", root_build_dir)
+  f11=rebase_path("${grammar_dir}/extinst.nonsemantic.graph.debuginfo.grammar.json", root_build_dir)
+  f12=rebase_path("${grammar_dir}/extinst.arm.experimental-ml-operations.grammar.json", root_build_dir)
 
   sources = [
     "utils/Table/__init__.py",
@@ -64,12 +66,14 @@ action("spvtools_core_tables") {
     "${grammar_dir}/extinst.nonsemantic.clspvreflection.grammar.json",
     "${grammar_dir}/extinst.nonsemantic.shader.debuginfo.100.grammar.json",
     "${grammar_dir}/extinst.nonsemantic.vkspreflection.grammar.json",
+    "${grammar_dir}/extinst.nonsemantic.graph.debuginfo.grammar.json",
     "${grammar_dir}/extinst.opencl.debuginfo.100.grammar.json",
     "${grammar_dir}/extinst.opencl.std.100.grammar.json",
     "${grammar_dir}/extinst.spv-amd-gcn-shader.grammar.json",
     "${grammar_dir}/extinst.spv-amd-shader-ballot.grammar.json",
     "${grammar_dir}/extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json",
     "${grammar_dir}/extinst.spv-amd-shader-trinary-minmax.grammar.json",
+    "${grammar_dir}/extinst.arm.experimental-ml-operations.grammar.json",
     "${grammar_dir}/spirv.core.grammar.json",
   ]
   outputs = [
@@ -90,6 +94,8 @@ action("spvtools_core_tables") {
     "--extinst=,${f8}",
     "--extinst=,${f9}",
     "--extinst=,${f10}",
+    "--extinst=,${f11}",
+    "--extinst=,${f12}",
     "--core-tables-body-output",
     rebase_path(core_tables_body_file, root_build_dir),
     "--core-tables-header-output",
@@ -156,9 +162,17 @@ spvtools_language_header("cldebuginfo100") {
   name = "OpenCLDebugInfo100"
   grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json"
 }
-spvtools_language_header("vkdebuginfo100") {
-  name = "NonSemanticShaderDebugInfo100"
-  grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.nonsemantic.shader.debuginfo.100.grammar.json"
+spvtools_language_header("vkdebuginfo") {
+  name = "NonSemanticShaderDebugInfo"
+  grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.nonsemantic.shader.debuginfo.grammar.json"
+}
+spvtools_language_header("graphdebuginfo") {
+  name = "NonSemanticGraphDebugInfo"
+  grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.nonsemantic.graph.debuginfo.grammar.json"
+}
+spvtools_language_header("armexperimentalmloperations") {
+  name = "ArmExperimentalMLOperations"
+  grammar_file = "${spirv_headers}/include/spirv/unified1/extinst.arm.experimental-ml-operations.grammar.json"
 }
 
 config("spvtools_public_config") {
@@ -218,7 +232,9 @@ group("spvtools_language_headers") {
   public_deps = [
     ":spvtools_language_header_cldebuginfo100",
     ":spvtools_language_header_debuginfo",
-    ":spvtools_language_header_vkdebuginfo100",
+    ":spvtools_language_header_vkdebuginfo",
+    ":spvtools_language_header_graphdebuginfo",
+    ":spvtools_language_header_armexperimentalmloperations",
   ]
 }
 
@@ -228,7 +244,9 @@ static_library("spvtools") {
     ":spvtools_generators_inc",
     ":spvtools_language_header_cldebuginfo100",
     ":spvtools_language_header_debuginfo",
-    ":spvtools_language_header_vkdebuginfo100",
+    ":spvtools_language_header_vkdebuginfo",
+    ":spvtools_language_header_graphdebuginfo",
+    ":spvtools_language_header_armexperimentalmloperations",
   ]
 
   sources = [
@@ -346,10 +364,13 @@ static_library("spvtools_val") {
     "source/val/validate_debug.cpp",
     "source/val/validate_decorations.cpp",
     "source/val/validate_derivatives.cpp",
+    "source/val/validate_dot_product.cpp",
     "source/val/validate_execution_limitations.cpp",
+    "source/val/validate_explicit_layout.cpp",
     "source/val/validate_extensions.cpp",
     "source/val/validate_function.cpp",
     "source/val/validate_graph.cpp",
+    "source/val/validate_group.cpp",
     "source/val/validate_id.cpp",
     "source/val/validate_image.cpp",
     "source/val/validate_instruction.cpp",
@@ -365,6 +386,7 @@ static_library("spvtools_val") {
     "source/val/validate_misc.cpp",
     "source/val/validate_mode_setting.cpp",
     "source/val/validate_non_uniform.cpp",
+    "source/val/validate_pipe.cpp",
     "source/val/validate_primitives.cpp",
     "source/val/validate_ray_query.cpp",
     "source/val/validate_ray_tracing.cpp",
@@ -384,7 +406,9 @@ static_library("spvtools_val") {
     ":spvtools",
     ":spvtools_language_header_cldebuginfo100",
     ":spvtools_language_header_debuginfo",
-    ":spvtools_language_header_vkdebuginfo100",
+    ":spvtools_language_header_vkdebuginfo",
+    ":spvtools_language_header_graphdebuginfo",
+    ":spvtools_language_header_armexperimentalmloperations",
   ]
   public_deps = [ ":spvtools_headers" ]
 
@@ -435,6 +459,8 @@ static_library("spvtools_opt") {
     "source/opt/convert_to_half_pass.h",
     "source/opt/convert_to_sampled_image_pass.cpp",
     "source/opt/convert_to_sampled_image_pass.h",
+    "source/opt/convert_to_untyped.cpp",
+    "source/opt/convert_to_untyped.h",
     "source/opt/copy_prop_arrays.cpp",
     "source/opt/copy_prop_arrays.h",
     "source/opt/dataflow.cpp",
@@ -518,6 +544,8 @@ static_library("spvtools_opt") {
     "source/opt/ir_loader.cpp",
     "source/opt/ir_loader.h",
     "source/opt/iterator.h",
+    "source/opt/legalize_multidim_array_pass.cpp",
+    "source/opt/legalize_multidim_array_pass.h",
     "source/opt/licm_pass.cpp",
     "source/opt/licm_pass.h",
     "source/opt/liveness.cpp",
@@ -650,7 +678,9 @@ static_library("spvtools_opt") {
   public_deps = [
     ":spvtools_headers",
     ":spvtools_language_header_cldebuginfo100",
-    ":spvtools_language_header_vkdebuginfo100",
+    ":spvtools_language_header_vkdebuginfo",
+    ":spvtools_language_header_graphdebuginfo",
+    ":spvtools_language_header_armexperimentalmloperations",
   ]
 
   if (build_with_chromium) {
@@ -1253,7 +1283,9 @@ if (build_with_chromium && spvtools_build_executables) {
       ":spvtools",
       ":spvtools_language_header_cldebuginfo100",
       ":spvtools_language_header_debuginfo",
-      ":spvtools_language_header_vkdebuginfo100",
+      ":spvtools_language_header_vkdebuginfo",
+      ":spvtools_language_header_graphdebuginfo",
+      ":spvtools_language_header_armexperimentalmloperations",
       ":spvtools_tools_io",
       ":spvtools_val",
       "//testing/gmock",

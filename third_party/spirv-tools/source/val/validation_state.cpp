@@ -1,6 +1,7 @@
 // Copyright (c) 2015-2016 The Khronos Group Inc.
 // Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
 // reserved.
+// Copyright (C) 2026 Qualcomm Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +19,9 @@
 
 #include <cassert>
 #include <cstdint>
+#include <sstream>
 #include <stack>
+#include <string>
 #include <utility>
 
 #include "source/opcode.h"
@@ -29,7 +32,10 @@
 #include "source/val/basic_block.h"
 #include "source/val/construct.h"
 #include "source/val/function.h"
+#include "source/val/instruction.h"
 #include "spirv-tools/libspirv.h"
+#include "spirv/unified1/NonSemanticShaderDebugInfo.h"
+#include "spirv/unified1/spirv.hpp11"
 
 namespace spvtools {
 namespace val {
@@ -77,6 +83,12 @@ ModuleLayoutSection InstructionLayoutSection(
     case spv::Op::OpDecorateId:
     case spv::Op::OpDecorateStringGOOGLE:
     case spv::Op::OpMemberDecorateStringGOOGLE:
+    // SPV_INTEL_memory_access_aliasing: alias scope instructions go in the
+    // annotations section so that OpDecorateId can reference them without
+    // requiring a forward reference across layout sections.
+    case spv::Op::OpAliasDomainDeclINTEL:
+    case spv::Op::OpAliasScopeDeclINTEL:
+    case spv::Op::OpAliasScopeListDeclINTEL:
       return kLayoutAnnotations;
     case spv::Op::OpTypeForwardPointer:
     case spv::Op::OpTypeTaskSequenceINTEL:
@@ -96,6 +108,7 @@ ModuleLayoutSection InstructionLayoutSection(
       return kLayoutFunctionDefinitions;
     case spv::Op::OpLine:
     case spv::Op::OpNoLine:
+    case spv::Op::OpPoisonKHR:
     case spv::Op::OpUndef:
       if (current_section == kLayoutTypes) return kLayoutTypes;
       return kLayoutFunctionDefinitions;
@@ -342,10 +355,15 @@ DiagnosticStream ValidationState_t::diag(spv_result_t error_code,
   }
 
   std::string disassembly;
-  if (inst) disassembly = Disassemble(*inst);
+  std::string shader_debug_info;
+  if (inst) {
+    disassembly = Disassemble(*inst);
+    shader_debug_info = InspectShaderDebugInfo(*inst);
+  }
 
   return DiagnosticStream({0, 0, inst ? inst->LineNum() : 0},
-                          context_->consumer, disassembly, error_code);
+                          context_->consumer, disassembly, error_code,
+                          shader_debug_info);
 }
 
 std::vector<Function>& ValidationState_t::functions() {
@@ -423,6 +441,8 @@ void ValidationState_t::RegisterCapability(spv::Capability cap) {
       features_.declare_float16_type = true;
       break;
     case spv::Capability::Float8EXT:
+    case spv::Capability::Float8UnsignedE8M0EXT:
+    case spv::Capability::MXInt8EXT:
       features_.declare_float8_type = true;
       break;
     case spv::Capability::StorageUniformBufferBlock16:
@@ -708,12 +728,31 @@ void ValidationState_t::RegisterStorageClassConsumer(
                 *message =
                     errorVUID +
                     "in Vulkan environment, Workgroup Storage Class is limited "
-                    "to MeshNV, TaskNV, and GLCompute execution model";
+                    "to MeshEXT, TaskEXT, MeshNV, TaskNV, and GLCompute "
+                    "execution model";
               }
               return false;
             }
             return true;
           });
+    }
+
+    if (storage_class == spv::StorageClass::TileImageEXT) {
+      std::string errorVUID = VkErrorID(8720);
+      function(consumer->function()->id())
+          ->RegisterExecutionModelLimitation(
+              [errorVUID](spv::ExecutionModel model, std::string* message) {
+                if (model != spv::ExecutionModel::Fragment) {
+                  if (message) {
+                    *message = errorVUID +
+                               "in Vulkan environment, TileImageEXT Storage "
+                               "Class is limited "
+                               "to Fragment execution model";
+                  }
+                  return false;
+                }
+                return true;
+              });
     }
   }
 
@@ -1139,6 +1178,48 @@ bool ValidationState_t::IsFP8Type(uint32_t id) const {
   return IsFP8ScalarType(id) || IsFP8VectorType(id) || IsFP8CoopMatType(id);
 }
 
+bool ValidationState_t::IsOCPMicroscalingScalarType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  if (inst && inst->opcode() == spv::Op::OpTypeFloat &&
+      inst->words().size() > 3) {
+    const auto encoding = inst->GetOperandAs<spv::FPEncoding>(2);
+    return encoding == spv::FPEncoding::Float6E2M3EXT ||
+           encoding == spv::FPEncoding::Float6E3M2EXT ||
+           encoding == spv::FPEncoding::Float4E2M1EXT ||
+           encoding == spv::FPEncoding::Float8UnsignedE8M0EXT ||
+           encoding == spv::FPEncoding::MXInt8EXT;
+  }
+  return false;
+}
+
+bool ValidationState_t::IsOCPMicroscalingNonByteScalarType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  if (inst && inst->opcode() == spv::Op::OpTypeFloat &&
+      inst->words().size() > 3) {
+    const auto encoding = inst->GetOperandAs<spv::FPEncoding>(2);
+    return encoding == spv::FPEncoding::Float6E2M3EXT ||
+           encoding == spv::FPEncoding::Float6E3M2EXT ||
+           encoding == spv::FPEncoding::Float4E2M1EXT;
+  }
+  return false;
+}
+
+bool ValidationState_t::IsOCPMicroscalingType(uint32_t id) const {
+  return ContainsOCPMicroscalingType(id);
+}
+
+bool ValidationState_t::ContainsOCPMicroscalingType(uint32_t id) const {
+  return ContainsType(id, [this](const Instruction* inst) {
+    return IsOCPMicroscalingScalarType(inst->id());
+  });
+}
+
+bool ValidationState_t::ContainsOCPMicroscalingNonByteType(uint32_t id) const {
+  return ContainsType(id, [this](const Instruction* inst) {
+    return IsOCPMicroscalingNonByteScalarType(inst->id());
+  });
+}
+
 bool ValidationState_t::IsFloatScalarType(uint32_t id, uint32_t width) const {
   const Instruction* inst = FindDef(id);
   bool is_float = inst && inst->opcode() == spv::Op::OpTypeFloat;
@@ -1230,6 +1311,20 @@ bool ValidationState_t::IsIntVectorType(uint32_t id) const {
   }
 
   return false;
+}
+
+bool ValidationState_t::IsIntVectorType(uint32_t id, uint32_t width,
+                                        uint32_t components) const {
+  if (!IsIntVectorType(id)) {
+    return false;
+  }
+  if (GetBitWidth(id) != width) {
+    return false;
+  }
+  if (GetDimension(id) != components) {
+    return false;
+  }
+  return true;
 }
 
 bool ValidationState_t::IsIntScalarOrVectorType(uint32_t id) const {
@@ -1580,6 +1675,8 @@ const Instruction* ValidationState_t::FindUntypedBaseVariable(
         if (GetIdOpcode(GetOperandTypeId(base_inst, 2)) ==
             spv::Op::OpTypeUntypedPointerKHR) {
           base_inst = FindDef(base_inst->GetOperandAs<uint32_t>(2));
+        } else {
+          return nullptr;
         }
         break;
       case spv::Op::OpAtomicExchange:
@@ -1603,6 +1700,8 @@ const Instruction* ValidationState_t::FindUntypedBaseVariable(
         if (GetIdOpcode(GetOperandTypeId(base_inst, 0)) ==
             spv::Op::OpTypeUntypedPointerKHR) {
           base_inst = FindDef(base_inst->GetOperandAs<uint32_t>(0));
+        } else {
+          return nullptr;
         }
         break;
       default:
@@ -1623,6 +1722,9 @@ bool ValidationState_t::IsDescriptorHeapBaseVariable(const Instruction* inst) {
     return false;
   }
   const Instruction* base_inst = FindUntypedBaseVariable(inst);
+  if (!base_inst) {
+    return false;
+  }
   const bool is_heap_base =
       IsBuiltin(base_inst->id(), spv::BuiltIn::SamplerHeapEXT) ||
       IsBuiltin(base_inst->id(), spv::BuiltIn::ResourceHeapEXT);
@@ -1699,15 +1801,45 @@ spv_result_t ValidationState_t::CooperativeMatrixShapesMatch(
     std::tie(m2_is_int32, m2_is_const_int32, m2_value) =
         EvalInt32IfConst(m2_use_id);
 
-    if (m1_is_const_int32 && m2_is_const_int32 && m1_value != m2_value &&
-        // CooperativeMatrixConversionsNV allows conversions from Acc->A/B
-        !(is_conversion &&
-          HasCapability(spv::Capability::CooperativeMatrixConversionsNV) &&
-          m2_value ==
-              (uint32_t)spv::CooperativeMatrixUse::MatrixAccumulatorKHR)) {
+    const auto is_accumulator = [](uint32_t use) {
+      return use == uint32_t(spv::CooperativeMatrixUse::MatrixAccumulatorKHR);
+    };
+    const auto is_a_or_b = [](uint32_t use) {
+      return use == uint32_t(spv::CooperativeMatrixUse::MatrixAKHR) ||
+             use == uint32_t(spv::CooperativeMatrixUse::MatrixBKHR);
+    };
+
+    if (swap_row_col &&
+        HasCapability(spv::Capability::CooperativeMatrixConversionsEXT) &&
+        (m1_use_id == m2_use_id ||
+         (m1_is_const_int32 && !is_a_or_b(m1_value)) ||
+         (m2_is_const_int32 && !is_accumulator(m2_value)))) {
       return diag(SPV_ERROR_INVALID_DATA, inst)
-             << "Expected Use of Matrix type and Result Type to be "
-             << "identical";
+             << "A conversion decorated with CooperativeMatrixTransposeEXT "
+                "must have a MatrixAccumulatorKHR Matrix and a MatrixAKHR or "
+                "MatrixBKHR Result Type: "
+             << spvOpcodeString(inst->opcode());
+    }
+
+    if (m1_is_const_int32 && m2_is_const_int32 && m1_value != m2_value) {
+      bool allow_conv = false;
+      // Conversion from Acc->A,B allowed for NV or EXT
+      if ((HasCapability(spv::Capability::CooperativeMatrixConversionsNV) ||
+           HasCapability(spv::Capability::CooperativeMatrixConversionsEXT)) &&
+          is_accumulator(m2_value) && is_a_or_b(m1_value)) {
+        allow_conv = true;
+      }
+      // Conversion from A,B->Acc allowed for EXT
+      if (HasCapability(spv::Capability::CooperativeMatrixConversionsEXT) &&
+          is_accumulator(m1_value) && is_a_or_b(m2_value)) {
+        allow_conv = true;
+      }
+
+      if (!(is_conversion && allow_conv)) {
+        return diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected Use of Matrix type and Result Type to be "
+               << "identical";
+      }
     }
   }
 
@@ -1761,16 +1893,39 @@ bool ValidationState_t::EvalConstantValUint64(uint32_t id,
 
   if (inst->opcode() == spv::Op::OpConstantNull) {
     *val = 0;
+  } else if (inst->opcode() == spv::Op::OpConstantSizeOfEXT) {
+    auto type_op = GetIdOpcode(inst->GetOperandAs<uint32_t>(2u));
+    *val = 0;
+    switch (type_op) {
+      case spv::Op::OpTypeBufferEXT:
+      case spv::Op::OpTypeAccelerationStructureKHR:
+        *val = options()->buffer_descriptor_layout.size;
+        break;
+      case spv::Op::OpTypeSampler:
+        *val = options()->sampler_descriptor_layout.size;
+        break;
+      case spv::Op::OpTypeImage:
+        *val = options()->image_descriptor_layout.size;
+        break;
+      case spv::Op::OpTypeTensorARM:
+        *val = options()->tensor_descriptor_layout.size;
+        break;
+      default:
+        break;
+    }
+    return *val > 0;
   } else if (inst->opcode() != spv::Op::OpConstant) {
     // Spec constant values cannot be evaluated so don't consider constant for
     // static validation
     return false;
   } else if (inst->words().size() == 4) {
     *val = inst->word(3);
-  } else {
-    assert(inst->words().size() == 5);
+  } else if (inst->words().size() == 5) {
     *val = inst->word(3);
     *val |= uint64_t(inst->word(4)) << 32;
+  } else {
+    // Literal value wider than 64 bits does not fit in a uint64_t.
+    return false;
   }
   return true;
 }
@@ -1786,28 +1941,52 @@ bool ValidationState_t::EvalConstantValInt64(uint32_t id, int64_t* val) const {
 
   if (inst->opcode() == spv::Op::OpConstantNull) {
     *val = 0;
+  } else if (inst->opcode() == spv::Op::OpConstantSizeOfEXT) {
+    auto type_op = GetIdOpcode(inst->GetOperandAs<uint32_t>(2u));
+    *val = 0;
+    switch (type_op) {
+      case spv::Op::OpTypeBufferEXT:
+      case spv::Op::OpTypeAccelerationStructureKHR:
+        *val = static_cast<int64_t>(options()->buffer_descriptor_layout.size);
+        break;
+      case spv::Op::OpTypeSampler:
+        *val = static_cast<int64_t>(options()->sampler_descriptor_layout.size);
+        break;
+      case spv::Op::OpTypeImage:
+        *val = static_cast<int64_t>(options()->image_descriptor_layout.size);
+        break;
+      case spv::Op::OpTypeTensorARM:
+        *val = static_cast<int64_t>(options()->tensor_descriptor_layout.size);
+        break;
+      default:
+        break;
+    }
+    return *val > 0;
   } else if (inst->opcode() != spv::Op::OpConstant) {
     // Spec constant values cannot be evaluated so don't consider constant for
     // static validation
     return false;
   } else if (inst->words().size() == 4) {
     *val = int32_t(inst->word(3));
-  } else {
-    assert(inst->words().size() == 5);
+  } else if (inst->words().size() == 5) {
     const uint32_t lo_word = inst->word(3);
     const uint32_t hi_word = inst->word(4);
     *val = static_cast<int64_t>(uint64_t(lo_word) | uint64_t(hi_word) << 32);
+  } else {
+    // Literal value wider than 64 bits does not fit in an int64_t.
+    return false;
   }
   return true;
 }
 
+// <is_int32, is_const_int32, value>
 std::tuple<bool, bool, uint32_t> ValidationState_t::EvalInt32IfConst(
     uint32_t id) const {
   const Instruction* const inst = FindDef(id);
   assert(inst);
   const uint32_t type = inst->type_id();
 
-  if (type == 0 || !IsIntScalarType(type) || GetBitWidth(type) != 32) {
+  if (type == 0 || !IsIntScalarType(type, 32)) {
     return std::make_tuple(false, false, 0);
   }
 
@@ -2133,6 +2312,412 @@ bool ValidationState_t::ContainsUntypedPointer(uint32_t id) const {
   }
 
   return false;
+}
+
+std::vector<uint32_t>& ValidationState_t::GetDebugSourceLineLength(
+    uint32_t id) {
+  auto it = debug_source_line_length_.find(id);
+  if (it == debug_source_line_length_.end()) {
+    return debug_source_line_length_[id];
+  }
+  return it->second;
+}
+
+// Main entrypoint to using ShaderDebugInfo to get better error messages
+std::string ValidationState_t::InspectShaderDebugInfo(const Instruction& inst) {
+  if (ShaderDebugInfoSet() == 0) {
+    return "";  // no ShaderDebugInfo found
+  }
+
+  std::ostringstream ss;
+  const Function* func = inst.function();
+  const spv::Op opcode = inst.opcode();
+  if (func != nullptr) {
+    if (opcode == spv::Op::OpVariable) {
+      InspectDebugLocalVariable(ss, *func, inst);
+    } else if (opcode == spv::Op::OpFunctionCall) {
+      InspectFunctionCall(ss, inst);
+    } else if (opcode == spv::Op::OpReturnValue ||
+               opcode == spv::Op::OpFunctionParameter) {
+      InspectLineAndFunctionDefinition(ss, *func, inst);
+    } else {
+      // Currently a fall back for anything in a function
+      InspectDebugLine(ss, inst);
+    }
+  } else if (opcode == spv::Op::OpVariable) {
+    // Know are global because not in any function
+    // TODO - test with OpUntypedVariable as well
+    InspectDebugGlobalVariable(ss, inst);
+  } else if (opcode == spv::Op::OpExecutionMode ||
+             opcode == spv::Op::OpExecutionModeId ||
+             opcode == spv::Op::OpEntryPoint) {
+    InspectEntryPoint(ss, inst);
+  }
+
+  return ss.str();
+}
+
+ValidationState_t::DebugSourceInfo ValidationState_t::GetDebugSourceInfo(
+    const Instruction& inst) {
+  assert(inst.opcode() == spv::Op::OpExtInst);
+  assert(inst.word(3) == ShaderDebugInfoSet());
+
+  uint32_t line_start_id = 0, line_end_id = 0, column_start_id = 0,
+           column_end_id = 0;
+
+  switch (inst.word(4)) {
+    case NonSemanticShaderDebugInfoDebugLine:
+      line_start_id = 6;
+      line_end_id = 7;
+      column_start_id = 8;
+      column_end_id = 9;
+      break;
+    case NonSemanticShaderDebugInfoDebugTypeTemplateParameterPack:
+      line_start_id = 7;
+      column_start_id = 8;
+      break;
+    case NonSemanticShaderDebugInfoDebugLexicalBlock:
+      line_start_id = 6;
+      column_start_id = 7;
+      break;
+    case NonSemanticShaderDebugInfoDebugLocalVariable:
+    case NonSemanticShaderDebugInfoDebugGlobalVariable:
+    case NonSemanticShaderDebugInfoDebugTypedef:
+    case NonSemanticShaderDebugInfoDebugTypeEnum:
+    case NonSemanticShaderDebugInfoDebugTypeComposite:
+    case NonSemanticShaderDebugInfoDebugTypeMember:
+    case NonSemanticShaderDebugInfoDebugTypeTemplateTemplateParameter:
+    case NonSemanticShaderDebugInfoDebugFunctionDeclaration:
+    case NonSemanticShaderDebugInfoDebugFunction:
+      line_start_id = 8;
+      column_start_id = 9;
+      break;
+    case NonSemanticShaderDebugInfoDebugTypeTemplateParameter:
+    case NonSemanticShaderDebugInfoDebugImportedEntity:
+      line_start_id = 9;
+      column_start_id = 10;
+      break;
+    case NonSemanticShaderDebugInfoDebugMacroDef:
+    case NonSemanticShaderDebugInfoDebugMacroUndef:
+      line_start_id = 6;
+      break;
+    default:
+      return {0, 0, 0, 0};
+  }
+
+  // spirv-val enforces these are int32 constants
+  bool is_int32 = false, is_const_int32 = false;
+  uint32_t line_start = 0;
+  uint32_t line_end = 0;
+  uint32_t column_start = 0;
+  uint32_t column_end = 0;
+
+  std::tie(is_int32, is_const_int32, line_start) =
+      EvalInt32IfConst(inst.word(line_start_id));
+
+  // Some instructions only provide a line and column, so set the "end" to be
+  // same as "start"
+  if (line_end_id != 0) {
+    std::tie(is_int32, is_const_int32, line_end) =
+        EvalInt32IfConst(inst.word(line_end_id));
+  } else {
+    line_end = line_start;
+  }
+
+  if (column_start_id != 0) {
+    std::tie(is_int32, is_const_int32, column_start) =
+        EvalInt32IfConst(inst.word(column_start_id));
+  }
+
+  if (column_end_id != 0) {
+    std::tie(is_int32, is_const_int32, column_end) =
+        EvalInt32IfConst(inst.word(column_end_id));
+  } else {
+    column_end = column_start;
+  }
+
+  return {line_start, line_end, column_start, column_end};
+}
+
+void ValidationState_t::InspectDebugLine(std::ostringstream& ss,
+                                         const Instruction& inst) {
+  const uint32_t set_id = ShaderDebugInfoSet();
+  // Find the DebugLine that is preceding
+  const Instruction* debug_line_inst = nullptr;
+  size_t idx = &inst - &ordered_instructions()[0];
+  while (idx > 0) {
+    const Instruction* prev = &ordered_instructions()[--idx];
+    if (prev->opcode() == spv::Op::OpFunction) {
+      break;
+    }
+
+    if (prev->opcode() == spv::Op::OpExtInst &&
+        prev->GetOperandAs<uint32_t>(2) == set_id) {
+      const uint32_t ext_inst = prev->GetOperandAs<uint32_t>(3);
+      if (ext_inst == NonSemanticShaderDebugInfoDebugLine) {
+        debug_line_inst = prev;
+        break;
+      } else if (ext_inst == NonSemanticShaderDebugInfoDebugNoLine) {
+        // If we see a DebugNoLine first, this section has no valid line
+        break;
+      }
+    }
+  }
+
+  if (!debug_line_inst) return;
+
+  const Instruction* debug_source =
+      FindDef(debug_line_inst->GetOperandAs<uint32_t>(4));
+  if (!debug_source || debug_source->GetOperandAs<uint32_t>(3) !=
+                           NonSemanticShaderDebugInfoDebugSource) {
+    return;
+  }
+
+  auto source_info = GetDebugSourceInfo(*debug_line_inst);
+  PrintShaderDebugInfoSource(ss, *debug_source, source_info);
+}
+
+void ValidationState_t::InspectDebugGlobalVariable(
+    std::ostringstream& ss, const Instruction& variable_inst) {
+  const uint32_t set_id = ShaderDebugInfoSet();
+
+  const Instruction* debug_gloabl_var_inst = nullptr;
+  for (const auto& inst : ordered_instructions()) {
+    if (inst.opcode() == spv::Op::OpFunction) {
+      return;  // validated to not be in a function block
+    }
+
+    if (inst.opcode() == spv::Op::OpExtInst &&
+        inst.GetOperandAs<uint32_t>(2) == set_id &&
+        inst.GetOperandAs<uint32_t>(3) ==
+            NonSemanticShaderDebugInfoDebugGlobalVariable &&
+        inst.GetOperandAs<uint32_t>(11) == variable_inst.id()) {
+      debug_gloabl_var_inst = &inst;
+      break;
+    }
+  }
+  if (!debug_gloabl_var_inst) return;
+
+  const Instruction* debug_source =
+      FindDef(debug_gloabl_var_inst->GetOperandAs<uint32_t>(6));
+  if (!debug_source || debug_source->GetOperandAs<uint32_t>(3) !=
+                           NonSemanticShaderDebugInfoDebugSource) {
+    return;
+  }
+
+  auto source_info = GetDebugSourceInfo(*debug_gloabl_var_inst);
+  PrintShaderDebugInfoSource(ss, *debug_source, source_info);
+}
+
+void ValidationState_t::InspectDebugLocalVariable(
+    std::ostringstream& ss, const Function& func,
+    const Instruction& variable_inst) {
+  const uint32_t set_id = ShaderDebugInfoSet();
+  const Instruction* debug_declare_inst = nullptr;
+
+  const Instruction* function_inst = FindDef(func.id());
+  // Loop through the Function block as the DebugDeclare needs to be inside it
+  size_t first_inst_id = (function_inst - &ordered_instructions()[0]) + 1;
+  for (size_t i = first_inst_id + 1; i < ordered_instructions().size(); ++i) {
+    const Instruction& current_inst = ordered_instructions()[i];
+    if (current_inst.opcode() == spv::Op::OpFunctionEnd) {
+      break;  // we hit the next Funciton block
+    }
+
+    if (current_inst.opcode() == spv::Op::OpExtInst &&
+        current_inst.GetOperandAs<uint32_t>(2) == set_id &&
+        current_inst.GetOperandAs<uint32_t>(3) ==
+            NonSemanticShaderDebugInfoDebugDeclare &&
+        current_inst.GetOperandAs<uint32_t>(5) == variable_inst.id()) {
+      debug_declare_inst = &current_inst;
+      break;
+    }
+  }
+
+  if (!debug_declare_inst) return;
+
+  const Instruction* debug_local_variable =
+      FindDef(debug_declare_inst->GetOperandAs<uint32_t>(4));
+  if (!debug_local_variable ||
+      debug_local_variable->GetOperandAs<uint32_t>(3) !=
+          NonSemanticShaderDebugInfoDebugLocalVariable) {
+    return;
+  }
+
+  const Instruction* debug_source =
+      FindDef(debug_local_variable->GetOperandAs<uint32_t>(6));
+  if (!debug_source || debug_source->GetOperandAs<uint32_t>(3) !=
+                           NonSemanticShaderDebugInfoDebugSource) {
+    return;
+  }
+
+  auto source_info = GetDebugSourceInfo(*debug_local_variable);
+  PrintShaderDebugInfoSource(ss, *debug_source, source_info);
+}
+
+void ValidationState_t::InspectFunctionCall(
+    std::ostringstream& ss, const Instruction& function_call_inst) {
+  // First print the caller, then print the callee if also found
+  InspectDebugLine(ss, function_call_inst);
+
+  const uint32_t callee_function_id =
+      function_call_inst.GetOperandAs<uint32_t>(2);
+  const Instruction* function_inst = FindDef(callee_function_id);
+  if (function_inst) {
+    InspectDebugFunctionDefinition(ss, *function_inst);
+  }
+}
+
+// For instruction in the function that it would be value to both get the line
+// of the invalid instruction, but also the FunctionDefinition
+void ValidationState_t::InspectLineAndFunctionDefinition(
+    std::ostringstream& ss, const Function& func, const Instruction& inst) {
+  // First print the return line (if one) than find the function def
+  InspectDebugLine(ss, inst);
+
+  const Instruction* function_inst = FindDef(func.id());
+  if (function_inst) {
+    InspectDebugFunctionDefinition(ss, *function_inst);
+  }
+}
+
+void ValidationState_t::InspectEntryPoint(std::ostringstream& ss,
+                                          const Instruction& inst) {
+  const Instruction* function_inst = nullptr;
+  if (inst.opcode() == spv::Op::OpExecutionMode ||
+      inst.opcode() == spv::Op::OpExecutionModeId) {
+    function_inst = FindDef(inst.GetOperandAs<uint32_t>(0));
+  } else if (inst.opcode() == spv::Op::OpEntryPoint) {
+    function_inst = FindDef(inst.GetOperandAs<uint32_t>(1));
+  }
+
+  if (function_inst) {
+    InspectDebugFunctionDefinition(ss, *function_inst);
+  }
+}
+
+void ValidationState_t::InspectDebugFunctionDefinition(
+    std::ostringstream& ss, const Instruction& function_inst) {
+  assert(function_inst.opcode() == spv::Op::OpFunction);
+  const uint32_t set_id = ShaderDebugInfoSet();
+  const Instruction* debug_func_def = nullptr;
+
+  // Loop through the Function block as the DebugFunctionDefinition needs to be
+  // inside it
+  size_t first_inst_id = (&function_inst - &ordered_instructions()[0]) + 1;
+  for (size_t i = first_inst_id + 1; i < ordered_instructions().size(); ++i) {
+    const Instruction& current_inst = ordered_instructions()[i];
+    if (current_inst.opcode() == spv::Op::OpFunctionEnd) {
+      break;  // we hit the next Funciton block
+    }
+
+    if (current_inst.opcode() == spv::Op::OpExtInst &&
+        current_inst.GetOperandAs<uint32_t>(2) == set_id &&
+        current_inst.GetOperandAs<uint32_t>(3) ==
+            NonSemanticShaderDebugInfoDebugFunctionDefinition &&
+        current_inst.GetOperandAs<uint32_t>(5) == function_inst.id()) {
+      debug_func_def = &current_inst;
+      break;
+    }
+  }
+  if (!debug_func_def) return;
+
+  const Instruction* debug_function =
+      FindDef(debug_func_def->GetOperandAs<uint32_t>(4));
+  if (!debug_function || debug_function->GetOperandAs<uint32_t>(3) !=
+                             NonSemanticShaderDebugInfoDebugFunction) {
+    return;
+  }
+
+  const Instruction* debug_source =
+      FindDef(debug_function->GetOperandAs<uint32_t>(6));
+  if (!debug_source || debug_source->GetOperandAs<uint32_t>(3) !=
+                           NonSemanticShaderDebugInfoDebugSource) {
+    return;
+  }
+
+  auto source_info = GetDebugSourceInfo(*debug_function);
+  PrintShaderDebugInfoSource(ss, *debug_source, source_info);
+}
+
+void ValidationState_t::PrintShaderDebugInfoSource(
+    std::ostringstream& ss, const Instruction& debug_source,
+    const DebugSourceInfo& source_info) {
+  // The left hand side line number, need to make sure if going from line number
+  // 99 to 100 that all lines have the same padding
+  const size_t vertical_line_padding =
+      std::to_string(source_info.line_end).length();
+  auto add_vertical_line = [&](uint32_t line_number) {
+    size_t padding = 1;
+    if (line_number != 0) {
+      ss << line_number;
+      padding += (vertical_line_padding - std::to_string(line_number).length());
+    } else {
+      padding += vertical_line_padding;
+    }
+    for (size_t p = 0; p < padding; p++) {
+      ss << " ";
+    }
+    ss << "|";
+    if (line_number != 0) {
+      ss << " ";  // otherwise test will fail from trailing whitespace being
+                  // trimmed
+    }
+  };
+
+  uint32_t current_line_num = 1;
+  auto stream_text = [&](const Instruction* op_string) {
+    const std::string text = op_string->GetOperandAs<std::string>(1);
+    for (const char c : text) {
+      if (current_line_num >= source_info.line_start &&
+          current_line_num <= source_info.line_end) {
+        ss << c;
+        if (c == '\n' && current_line_num < source_info.line_end) {
+          add_vertical_line(current_line_num + 1);
+        }
+      }
+
+      if (c == '\n') {
+        current_line_num++;
+      }
+    }
+  };
+
+  const Instruction* file_string =
+      FindDef(debug_source.GetOperandAs<uint32_t>(4));
+  ss << "\n  --> " << file_string->GetOperandAs<std::string>(1) << ":"
+     << source_info.line_start << ":" << source_info.column_start << '\n';
+
+  add_vertical_line(0);
+  ss << '\n';
+
+  const Instruction* source_string =
+      FindDef(debug_source.GetOperandAs<uint32_t>(5));
+  add_vertical_line(source_info.line_start);
+  stream_text(source_string);
+
+  const uint32_t set_id = ShaderDebugInfoSet();
+
+  // Look for any DebugSourceContinued
+  size_t src_idx = &debug_source - &ordered_instructions()[0] + 1;
+  for (; src_idx < ordered_instructions().size(); ++src_idx) {
+    const Instruction& continued_insn = ordered_instructions()[src_idx];
+    if (continued_insn.opcode() != spv::Op::OpExtInst ||
+        continued_insn.GetOperandAs<uint32_t>(2) != set_id ||
+        continued_insn.GetOperandAs<uint32_t>(3) !=
+            NonSemanticShaderDebugInfoDebugSourceContinued) {
+      break;
+    }
+
+    const Instruction* continued_string =
+        FindDef(continued_insn.GetOperandAs<uint32_t>(4));
+    stream_text(continued_string);
+  }
+
+  // This happens if the error is the last line of source
+  if (current_line_num == source_info.line_end) ss << "\n";
+
+  add_vertical_line(0);
 }
 
 bool ValidationState_t::IsValidStorageClass(
@@ -2655,6 +3240,8 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-OpImageTexelPointer-04658);
     case 4659:
       return VUID_WRAP(VUID-StandaloneSpirv-OpImageQuerySizeLod-04659);
+    case 4660:
+      return VUID_WRAP(VUID-StandaloneSpirv-SubpassData-04660);
     case 4664:
       return VUID_WRAP(VUID-StandaloneSpirv-OpImageGather-04664);
     case 4667:
@@ -2727,6 +3314,8 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-Component-04922);
     case 4923:
       return VUID_WRAP(VUID-StandaloneSpirv-Component-04923);
+    case 4965:
+      return VUID_WRAP(VUID-StandaloneSpirv-Image-04965);
     case 6201:
       return VUID_WRAP(VUID-StandaloneSpirv-Flat-06201);
     case 6202:
@@ -2833,20 +3422,34 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-Component-07703);
     case 7951:
       return VUID_WRAP(VUID-StandaloneSpirv-SubgroupVoteKHR-07951);
+    case 8720:
+      return VUID_WRAP(VUID-StandaloneSpirv-None-08720);
     case 8721:
       return VUID_WRAP(VUID-StandaloneSpirv-OpEntryPoint-08721);
     case 8722:
       return VUID_WRAP(VUID-StandaloneSpirv-OpEntryPoint-08722);
+    case 8723:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileImageEXT-08723);
+    case 8747:
+      return VUID_WRAP(VUID-HitTriangleVertexPositionsKHR-HitTriangleVertexPositionsKHR-08747);
+    case 8748:
+      return VUID_WRAP(VUID-HitTriangleVertexPositionsKHR-HitTriangleVertexPositionsKHR-08748);
+    case 8749:
+      return VUID_WRAP(VUID-HitTriangleVertexPositionsKHR-HitTriangleVertexPositionsKHR-08749);
     case 8973:
       return VUID_WRAP(VUID-StandaloneSpirv-Pointer-08973);
     case 9557:
-    return VUID_WRAP(VUID-StandaloneSpirv-Input-09557);
+      return VUID_WRAP(VUID-StandaloneSpirv-Input-09557);
     case 9638:
       return VUID_WRAP(VUID-StandaloneSpirv-OpTypeImage-09638);
     case 9658:
       return VUID_WRAP(VUID-StandaloneSpirv-OpEntryPoint-09658);
     case 9659:
       return VUID_WRAP(VUID-StandaloneSpirv-OpEntryPoint-09659);
+    case 9931:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpGraphInputARM-09931);
+    case 9932:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpGraphSetOutputARM-09932);
     case 10151:
       return VUID_WRAP(VUID-StandaloneSpirv-DerivativeGroupQuadsKHR-10151);
     case 10152:
@@ -2882,10 +3485,54 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-10602);
     case 10603:
       return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-10603);
+    case 10626:
+      return VUID_WRAP(VUID-TileOffsetQCOM-TileOffsetQCOM-10626);
+    case 10627:
+      return VUID_WRAP(VUID-TileOffsetQCOM-TileOffsetQCOM-10627);
+    case 10628:
+      return VUID_WRAP(VUID-TileOffsetQCOM-TileOffsetQCOM-10628);
+    case 10629:
+      return VUID_WRAP(VUID-TileDimensionQCOM-TileDimensionQCOM-10629);
+    case 10630:
+      return VUID_WRAP(VUID-TileDimensionQCOM-TileDimensionQCOM-10630);
+    case 10631:
+      return VUID_WRAP(VUID-TileDimensionQCOM-TileDimensionQCOM-10631);
+    case 10632:
+      return VUID_WRAP(VUID-TileApronSizeQCOM-TileApronSizeQCOM-10632);
+    case 10633:
+      return VUID_WRAP(VUID-TileApronSizeQCOM-TileApronSizeQCOM-10633);
+    case 10634:
+      return VUID_WRAP(VUID-TileApronSizeQCOM-TileApronSizeQCOM-10634);
+    case 10635:
+      return VUID_WRAP(VUID-WorkgroupSize-TileShadingRateQCOM-10635);
     case 10684:
       return VUID_WRAP(VUID-StandaloneSpirv-None-10684);
     case 10685:
       return VUID_WRAP(VUID-StandaloneSpirv-None-10685); // formally 04683/06426
+    case 10686:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileShadingQCOM-10686);
+    case 10687:
+      return VUID_WRAP(VUID-StandaloneSpirv-Execution-10687);
+    case 10688:
+      return VUID_WRAP(VUID-StandaloneSpirv-Execution-10688);
+    case 10689:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileAttachmentQCOM-10689);
+    case 10690:
+      return VUID_WRAP(VUID-StandaloneSpirv-NonCoherentTileAttachmentReadQCOM-10690);
+    case 10691:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileShadingRateQCOM-10691);
+    case 10692:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileShadingRateQCOM-10692);
+    case 10693:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpTypeImage-10693);
+    case 10694:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpTypeImage-10694);
+    case 10695:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileAttachmentQCOM-10695);
+    case 10696:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileAttachmentQCOM-10696);
+    case 10697:
+      return VUID_WRAP(VUID-StandaloneSpirv-TileAttachmentQCOM-10697);
     case 10823:
       return VUID_WRAP(VUID-StandaloneSpirv-OpTypeFloat-10823);
     case 10824:
@@ -2909,8 +3556,6 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-MemorySemantics-10872);
     case 10873:
       return VUID_WRAP(VUID-StandaloneSpirv-MemorySemantics-10873);
-    case 10874:
-      return VUID_WRAP(VUID-StandaloneSpirv-MemorySemantics-10874);
     case 10875:
       return VUID_WRAP(VUID-StandaloneSpirv-UnequalMemorySemantics-10875);
     case 10876:
@@ -2923,6 +3568,9 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-UnequalMemorySemantics-10879);
     case 10880:
       return VUID_WRAP(VUID-StandaloneSpirv-TessLevelInner-10880);
+    case 11165:
+      // Validation (via GPU-AV) will catch this if a non-constant
+      return VUID_WRAP(VUID-RuntimeSpirv-Size-11165);
     case 11167:
       return VUID_WRAP(VUID-StandaloneSpirv-OpUntypedVariableKHR-11167);
     case 11239:
@@ -2935,8 +3583,6 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
         return VUID_WRAP(VUID-StandaloneSpirv-Result-11337);
     case 11339:
         return VUID_WRAP(VUID-StandaloneSpirv-Result-11339);
-    case 11346:
-        return VUID_WRAP(VUID-StandaloneSpirv-Result-11346);
     case 11347:
         return VUID_WRAP(VUID-StandaloneSpirv-OpUntypedVariableKHR-11347);
     case 11416:
@@ -2951,6 +3597,30 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-Scope-12243);
     case 12294:
       return VUID_WRAP(VUID-StandaloneSpirv-Function-12294);
+    case 12295:
+      return VUID_WRAP(VUID-StandaloneSpirv-None-12295);
+    case 12297:
+      return VUID_WRAP(VUID-StandaloneSpirv-Type-12297);
+    case 13551:
+      return VUID_WRAP(VUID-StandaloneSpirv-MemorySemantics-13551);
+    case 13552:
+      return VUID_WRAP(VUID-StandaloneSpirv-SplitBarrierEXT-13552);
+    case 13553:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpControlBarrierArriveEXT-13553);
+    case 13556:
+      return VUID_WRAP(VUID-StandaloneSpirv-MemorySemantics-13556);
+    case 13557:
+      return VUID_WRAP(VUID-StandaloneSpirv-MemorySemantics-13557);
+    case 12465:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpConvertFToU-12465);
+    case 12466:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpFConvert-12466);
+    case 12467:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpFConvert-12467);
+    case 12468:
+      return VUID_WRAP(VUID-StandaloneSpirv-Result-12468);
+    case 12469:
+      return VUID_WRAP(VUID-StandaloneSpirv-Base-12469);
     default:
       return "";  // unknown id
   }

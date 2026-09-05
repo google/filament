@@ -25,17 +25,36 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
+#include <array>
 #include <limits>
 #include <utility>
 #include <vector>
 
-#include "dawn/native/CommandAllocator.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/MemoryBlockAllocator.h"
+#include "src/dawn/native/CommandAllocator.h"
 
 namespace dawn::native {
+namespace {
+
+class CommandAllocatorAndPool : public CommandAllocator {
+  public:
+    CommandAllocatorAndPool() : CommandAllocator(&mBlockAllocator) {}
+
+  private:
+    MemoryBlockAllocator mBlockAllocator;
+};
+
+}  // anonymous namespace
 
 // Definition of the command types used in the tests
-enum class CommandType {
+enum class CommandType : uint32_t {
     Draw,
     Pipeline,
     Immediate,
@@ -61,7 +80,7 @@ struct CommandImmediate {
 constexpr int kBigBufferSize = 65536;
 
 struct CommandBig {
-    uint32_t buffer[kBigBufferSize];
+    std::array<uint32_t, kBigBufferSize> buffer;
 };
 
 struct CommandSmall {
@@ -70,19 +89,19 @@ struct CommandSmall {
 
 // Test allocating nothing works
 TEST(CommandAllocator, DoNothingAllocator) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 }
 
 // Test iterating over nothing works
 TEST(CommandAllocator, DoNothingAllocatorWithIterator) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
     CommandIterator iterator(std::move(allocator));
     iterator.MakeEmptyAsDataWasDestroyed();
 }
 
 // Test basic usage of allocator + iterator
 TEST(CommandAllocator, Basic) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     uint64_t myPipeline = 0xDEADBEEFBEEFDEAD;
     uint32_t myAttachmentPoint = 2;
@@ -128,18 +147,18 @@ TEST(CommandAllocator, Basic) {
 
 // Test basic usage of allocator + iterator with data
 TEST(CommandAllocator, BasicWithData) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     uint8_t mySize = 8;
     uint8_t myOffset = 3;
-    uint32_t myValues[5] = {6, 42, 0xFFFFFFFF, 0, 54};
+    std::array<uint32_t, 5> myValues = {6, 42, 0xFFFFFFFF, 0, 54};
 
     {
         CommandImmediate* immediates = allocator.Allocate<CommandImmediate>(CommandType::Immediate);
         immediates->size = mySize;
         immediates->offset = myOffset;
 
-        uint32_t* values = allocator.AllocateData<uint32_t>(5);
+        Span<uint32_t> values = allocator.AllocateData<uint32_t>(size_t{5});
         for (size_t i = 0; i < 5; i++) {
             values[i] = myValues[i];
         }
@@ -157,9 +176,10 @@ TEST(CommandAllocator, BasicWithData) {
         ASSERT_EQ(immediates->size, mySize);
         ASSERT_EQ(immediates->offset, myOffset);
 
-        uint32_t* values = iterator.NextData<uint32_t>(5);
-        for (size_t i = 0; i < 5; i++) {
-            ASSERT_EQ(values[i], myValues[i]);
+        Span<const uint32_t> values = iterator.NextData<uint32_t>(size_t{5});
+        ASSERT_EQ(values.size(), 5u);
+        for (auto [i, value] : Enumerate(values)) {
+            ASSERT_EQ(value, myValues[i]);
         }
 
         hasNext = iterator.NextCommandId(&type);
@@ -171,7 +191,7 @@ TEST(CommandAllocator, BasicWithData) {
 
 // Test basic iterating several times
 TEST(CommandAllocator, MultipleIterations) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     uint32_t myFirst = 42;
     uint32_t myCount = 16;
@@ -215,7 +235,7 @@ TEST(CommandAllocator, MultipleIterations) {
 }
 // Test large commands work
 TEST(CommandAllocator, LargeCommands) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     const int kCommandCount = 5;
 
@@ -248,7 +268,7 @@ TEST(CommandAllocator, LargeCommands) {
 
 // Test many small commands work
 TEST(CommandAllocator, ManySmallCommands) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     // Stay under max representable uint16_t
     const int kCommandCount = 50000;
@@ -288,7 +308,7 @@ TEST(CommandAllocator, ManySmallCommands) {
 
 // Test usage of iterator.Reset
 TEST(CommandAllocator, IteratorReset) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     uint64_t myPipeline = 0xDEADBEEFBEEFDEAD;
     uint32_t myAttachmentPoint = 2;
@@ -345,7 +365,7 @@ TEST(CommandAllocator, IteratorReset) {
 // Test iterating empty iterators
 TEST(CommandAllocator, EmptyIterator) {
     {
-        CommandAllocator allocator;
+        CommandAllocatorAndPool allocator;
         CommandIterator iterator(std::move(allocator));
 
         CommandType type;
@@ -355,7 +375,7 @@ TEST(CommandAllocator, EmptyIterator) {
         iterator.MakeEmptyAsDataWasDestroyed();
     }
     {
-        CommandAllocator allocator;
+        CommandAllocatorAndPool allocator;
         CommandIterator iterator1(std::move(allocator));
         CommandIterator iterator2(std::move(iterator1));
 
@@ -383,35 +403,31 @@ struct alignas(A) AlignedStruct {
 };
 
 // Test for overflows in Allocate's computations, size 1 variant
-TEST(CommandAllocator, AllocationOverflow_1) {
-    CommandAllocator allocator;
-    AlignedStruct<1>* data =
-        allocator.AllocateData<AlignedStruct<1>>(std::numeric_limits<size_t>::max() / 1);
-    ASSERT_EQ(data, nullptr);
+TEST(CommandAllocatorDeathTest, AllocationOverflow_1) {
+    CommandAllocatorAndPool allocator;
+    EXPECT_DEATH_IF_SUPPORTED(
+        allocator.AllocateData<AlignedStruct<1>>(std::numeric_limits<size_t>::max() / 1u), "");
 }
 
 // Test for overflows in Allocate's computations, size 2 variant
-TEST(CommandAllocator, AllocationOverflow_2) {
-    CommandAllocator allocator;
-    AlignedStruct<2>* data =
-        allocator.AllocateData<AlignedStruct<2>>(std::numeric_limits<size_t>::max() / 2);
-    ASSERT_EQ(data, nullptr);
+TEST(CommandAllocatorDeathTest, AllocationOverflow_2) {
+    CommandAllocatorAndPool allocator;
+    EXPECT_DEATH_IF_SUPPORTED(
+        allocator.AllocateData<AlignedStruct<2>>(std::numeric_limits<size_t>::max() / 2u), "");
 }
 
 // Test for overflows in Allocate's computations, size 4 variant
-TEST(CommandAllocator, AllocationOverflow_4) {
-    CommandAllocator allocator;
-    AlignedStruct<4>* data =
-        allocator.AllocateData<AlignedStruct<4>>(std::numeric_limits<size_t>::max() / 4);
-    ASSERT_EQ(data, nullptr);
+TEST(CommandAllocatorDeathTest, AllocationOverflow_4) {
+    CommandAllocatorAndPool allocator;
+    EXPECT_DEATH_IF_SUPPORTED(
+        allocator.AllocateData<AlignedStruct<4>>(std::numeric_limits<size_t>::max() / 4u), "");
 }
 
 // Test for overflows in Allocate's computations, size 8 variant
-TEST(CommandAllocator, AllocationOverflow_8) {
-    CommandAllocator allocator;
-    AlignedStruct<8>* data =
-        allocator.AllocateData<AlignedStruct<8>>(std::numeric_limits<size_t>::max() / 8);
-    ASSERT_EQ(data, nullptr);
+TEST(CommandAllocatorDeathTest, AllocationOverflow_8) {
+    CommandAllocatorAndPool allocator;
+    EXPECT_DEATH_IF_SUPPORTED(
+        allocator.AllocateData<AlignedStruct<8>>(std::numeric_limits<size_t>::max() / 8u), "");
 }
 
 template <int DefaultValue>
@@ -423,7 +439,7 @@ struct IntWithDefault {
 
 // Test that the allcator correctly defaults initalizes data for Allocate
 TEST(CommandAllocator, AllocateDefaultInitializes) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
     IntWithDefault<42>* int42 = allocator.Allocate<IntWithDefault<42>>(CommandType::Draw);
     ASSERT_EQ(int42->value, 42);
@@ -440,16 +456,19 @@ TEST(CommandAllocator, AllocateDefaultInitializes) {
 
 // Test that the allocator correctly default-initalizes data for AllocateData
 TEST(CommandAllocator, AllocateDataDefaultInitializes) {
-    CommandAllocator allocator;
+    CommandAllocatorAndPool allocator;
 
-    IntWithDefault<33>* int33 = allocator.AllocateData<IntWithDefault<33>>(1);
+    Span<IntWithDefault<33>> int33 = allocator.AllocateData<IntWithDefault<33>>(size_t{1});
+    ASSERT_EQ(int33.size(), size_t{1});
     ASSERT_EQ(int33[0].value, 33);
 
-    IntWithDefault<34>* int34 = allocator.AllocateData<IntWithDefault<34>>(2);
+    Span<IntWithDefault<34>> int34 = allocator.AllocateData<IntWithDefault<34>>(size_t{2});
+    ASSERT_EQ(int34.size(), size_t{2});
     ASSERT_EQ(int34[0].value, 34);
     ASSERT_EQ(int34[0].value, 34);
 
-    IntWithDefault<35>* int35 = allocator.AllocateData<IntWithDefault<35>>(3);
+    Span<IntWithDefault<35>> int35 = allocator.AllocateData<IntWithDefault<35>>(size_t{3});
+    ASSERT_EQ(int35.size(), size_t{3});
     ASSERT_EQ(int35[0].value, 35);
     ASSERT_EQ(int35[1].value, 35);
     ASSERT_EQ(int35[2].value, 35);
@@ -463,15 +482,24 @@ TEST(CommandAllocator, AllocateDataDefaultInitializes) {
 TEST(CommandAllocator, AcquireCommandBlocks) {
     constexpr size_t kNumAllocators = 2;
     constexpr size_t kNumCommandsPerAllocator = 2;
-    const uint64_t pipelines[kNumAllocators][kNumCommandsPerAllocator] = {
-        {0xDEADBEEFBEEFDEAD, 0xC0FFEEF00DC0FFEE},
-        {0x1337C0DE1337C0DE, 0xCAFEFACEFACECAFE},
-    };
-    const uint32_t attachmentPoints[kNumAllocators][kNumCommandsPerAllocator] = {{1, 2}, {3, 4}};
-    const uint32_t firsts[kNumAllocators][kNumCommandsPerAllocator] = {{42, 43}, {5, 6}};
-    const uint32_t counts[kNumAllocators][kNumCommandsPerAllocator] = {{16, 32}, {4, 8}};
+    const std::array<std::array<const uint64_t, kNumCommandsPerAllocator>, kNumAllocators>
+        pipelines = {{
+            {0xDEADBEEFBEEFDEAD, 0xC0FFEEF00DC0FFEE},
+            {0x1337C0DE1337C0DE, 0xCAFEFACEFACECAFE},
+        }};
+    const std::array<std::array<const uint32_t, kNumCommandsPerAllocator>, kNumAllocators>
+        attachmentPoints = {{{1, 2}, {3, 4}}};
+    const std::array<std::array<const uint32_t, kNumCommandsPerAllocator>, kNumAllocators> firsts =
+        {{{42, 43}, {5, 6}}};
+    const std::array<std::array<const uint32_t, kNumCommandsPerAllocator>, kNumAllocators> counts =
+        {{{16, 32}, {4, 8}}};
 
-    std::vector<CommandAllocator> allocators(kNumAllocators);
+    MemoryBlockAllocator pool;
+    std::vector<CommandAllocator> allocators;
+    allocators.reserve(kNumAllocators);
+    for (size_t j = 0; j < kNumAllocators; j++) {
+        allocators.emplace_back(&pool);
+    }
     for (size_t j = 0; j < kNumAllocators; ++j) {
         CommandAllocator& allocator = allocators[j];
         for (size_t i = 0; i < kNumCommandsPerAllocator; ++i) {

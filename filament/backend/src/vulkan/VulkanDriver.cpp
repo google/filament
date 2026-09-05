@@ -195,25 +195,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 
-#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-        VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
-        void* pUserData) {
-    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        FVK_LOGE << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage;
-    } else {
-        // TODO: emit best practices warnings about aggressive pipeline barriers.
-        if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT")
-                || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
-            return VK_FALSE;
-        }
-        FVK_LOGW << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage;
-    }
-    FVK_LOGE << "";
-    return VK_FALSE;
-}
-#endif
-
 static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     std::unique_ptr<VulkanSync::CallbackData> cbData(
             static_cast<VulkanSync::CallbackData*>(userData));
@@ -245,62 +226,6 @@ inline VulkanYcbcrConversionCache::Params getYcbcrConversionParams(const VulkanP
 }
 
 }// anonymous namespace
-
-using DebugUtils = VulkanDriver::DebugUtils;
-DebugUtils* DebugUtils::mSingleton = nullptr;
-
-DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const& context)
-        : mInstance(instance),
-          mDevice(device),
-          mEnabled(context.isDebugUtilsEnabled()) {
-
-#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-    // Also initialize debug utils messenger here
-    if (mEnabled) {
-        VkDebugUtilsMessengerCreateInfoEXT const createInfo = {
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-                .pNext = nullptr,
-                .flags = 0,
-                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-                                   | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-                               | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-                .pfnUserCallback = debugUtilsCallback,
-        };
-        VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo,
-                VKALLOC, &mDebugMessenger);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "Unable to create Vulkan debug messenger. error="
-                << static_cast<int32_t>(result);
-    }
-#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
-}
-
-DebugUtils* DebugUtils::get() {
-    assert_invariant(DebugUtils::mSingleton);
-    return DebugUtils::mSingleton;
-}
-
-DebugUtils::~DebugUtils() {
-    if (mDebugMessenger) {
-        vkDestroyDebugUtilsMessengerEXT(mInstance, mDebugMessenger, VKALLOC);
-    }
-}
-
-void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
-    auto impl = DebugUtils::get();
-    if (!impl->mEnabled) {
-        return;
-    }
-    VkDebugUtilsObjectNameInfoEXT const info = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = type,
-            .objectHandle = handle,
-            .pObjectName = name,
-    };
-    vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
-}
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
@@ -368,8 +293,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         mJobWorker = AmortizationWorker::create(mJobQueue);
     }
 
-    DebugUtils::mSingleton =
-            new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), mContext);
+    mContext.getDebugUtils().init(mPlatform->getInstance(), mPlatform->getDevice(),
+            mContext.isDebugUtilsEnabled());
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
@@ -515,8 +440,7 @@ void VulkanDriver::terminate() {
         vkDestroyDebugReportCallbackEXT(mPlatform->getInstance(), mDebugCallback, VKALLOC);
     }
 
-    assert_invariant(DebugUtils::mSingleton);
-    delete DebugUtils::mSingleton;
+    mContext.getDebugUtils().terminate();
 
     mPlatform->terminate();
 }
@@ -620,7 +544,7 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
+    if (UTILS_UNLIKELY(texture->isExternallySampled())) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
         set->isAnExternalSamplerBound = true;
@@ -643,8 +567,6 @@ void VulkanDriver::updateDescriptorSetTexture(
         };
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
-        mExternalImageManager.clearTextureBinding(set, binding);
-        mStreamedImageManager.unbindStreamedTexture(set, binding);
     }
 }
 
@@ -752,10 +674,7 @@ void VulkanDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh, uint32_t
     // This doesn't allocate GPU memory yet, so call it synchronously on the backend thread.
     createVertexBufferCommon(vbh, vertexCount, vbih, /* asynchronous = */ true, std::move(tag));
 
-    assert_invariant(getJobQueue());
-    getJobQueue()->push([this, handler, callback, user]() {
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
-    });
+    scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
 }
 
 void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -804,10 +723,7 @@ void VulkanDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> ibh, ElementTyp
     createIndexBufferCommon(ibh, elementType, indexCount, /* asynchronous = */ true,
             std::move(tag));
 
-    assert_invariant(getJobQueue());
-    getJobQueue()->push([this, handler, callback, user]() {
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
-    });
+    scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
 }
 
 void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
@@ -856,10 +772,7 @@ void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
     createBufferObjectCommon(boh, byteCount, bindingType, usage, /* asynchronous = */ true,
             std::move(tag));
 
-    assert_invariant(getJobQueue());
-    getJobQueue()->push([this, handler, callback, user]() {
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
-    });
+    scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
 }
 
 void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
@@ -916,10 +829,7 @@ void VulkanDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target,
     createTextureCommon(th, target, levels, format, samples, w, h, depth, usage,
             /* asynchronous = */ true, std::move(tag));
 
-    assert_invariant(getJobQueue());
-    getJobQueue()->push([this, handler, callback, user]() {
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
-    });
+    scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
 }
 
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
@@ -960,10 +870,7 @@ void VulkanDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
     // This doesn't allocate GPU memory yet, so call it synchronously on the backend thread.
     createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
 
-    assert_invariant(getJobQueue());
-    getJobQueue()->push([this, handler, callback, user]() {
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
-    });
+    scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
 }
 
 void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
@@ -1009,10 +916,6 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
     texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
-
-    if (imgData.external.valid() || texture->isYUVStaging()) {
-        mExternalImageManager.addExternallySampledTexture(texture, conversion);
-    }
 
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
@@ -1067,10 +970,6 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
-
-    // Must happen immediately on the backend thread. Removes from ExternalImageManager's tracking
-    // map. Only the dec() ref-release is deferred in the async path.
-    mExternalImageManager.removeExternallySampledTexture(texture);
 
     if (texture->asynchronous && getJobQueue()) {
         // Route the `dec()` through the queue to preserve FIFO ordering with any pending async
@@ -1673,9 +1572,11 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                                          image = stream->getAcquired().image]() {
                 auto texture = s->getTexture(image);
                 if (!texture) {
-                    auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
+                    auto externalImage =
+                            fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
-                    auto imgData = mPlatform->createVkImageFromExternal(externalImage, texture->width, texture->height);
+                    auto imgData = mPlatform->createVkImageFromExternal(externalImage,
+                            metadata.width, metadata.height);
 
                     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
@@ -1710,8 +1611,6 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                             VulkanLayout::FRAG_READ);
 
                     if (imgData.external.valid()) {
-                        mExternalImageManager.addExternallySampledTexture(newTexture,
-                                conversion);
                         // Cache the AHB backed image. Acquires the image here.
                         s->pushImage(image, newTexture);
                     }
@@ -2361,7 +2260,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (depthStencil.texture->isTransientAttachment()) {
             discardEndVal |= TargetBufferFlags::DEPTH_AND_STENCIL;
         }
-        
+
         currentDepthStencilLayout = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
@@ -2396,8 +2295,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (!topMarker.empty()) {
             uint64_t fbVk = (uint64_t) vkfb->getVkFramebuffer();
             uint64_t renderPassVk = (uint64_t) renderPass->getVkRenderPass();
-            DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, fbVk, topMarker.c_str());
-            DebugUtils::setName(VK_OBJECT_TYPE_RENDER_PASS, renderPassVk, topMarker.c_str());
+            mContext.getDebugUtils().setName(VK_OBJECT_TYPE_FRAMEBUFFER, fbVk, topMarker.c_str());
+            mContext.getDebugUtils().setName(VK_OBJECT_TYPE_RENDER_PASS, renderPassVk,
+                    topMarker.c_str());
         }
     }
 
@@ -2842,7 +2742,6 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
         if (std::any_of(layoutHandles.begin(), layoutHandles.end(), haveExternalSamplers)) {
             BindInDrawBundle bundle = {
                 .pipelineState = pipelineState,
-                .dsLayoutHandles = layoutHandles,
                 .descriptorSetMask = descriptorSetMask,
             };
             mPipelineState.bindInDraw = { true, bundle };

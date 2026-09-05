@@ -27,7 +27,7 @@
 
 #include "src/dawn/native/vulkan/CommandRecordingContextVk.h"
 
-#include "dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
 #include "vulkan/vulkan_core.h"
 
 namespace dawn::native::vulkan {

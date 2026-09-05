@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglBindTexImage - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglBindTexImage">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglBindTexImage — 
+            Defines a two-dimensional texture image
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglBindTexImage</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSurface <var class="pdparam">surface</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">buffer</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL display connection.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>surface</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>buffer</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the texture image data.</p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            The texture image consists of the image data in <em class="parameter"><code>buffer</code></em> for the specified surface, and need not be copied.
+        </p>
+        <p>
+            The texture target, the texture format and the size of the texture components are derived from
+            attributes of the specified surface, which must be a pbuffer supporting one of the
+            <code class="constant">EGL_BIND_TO_TEXTURE_RGB</code> or <code class="constant">EGL_BIND_TO_TEXTURE_RGBA</code> attributes.
+        </p>
+        <p>
+            The pbuffer attribute <code class="constant">EGL_TEXTURE_FORMAT</code> determines the base internal format
+            of the texture.
+        </p>
+        <p>
+            The texture target is derived from the <code class="constant">EGL_TEXTURE_TARGET</code> attribute of surface.
+            If the attribute value is <code class="constant">EGL_TEXTURE_2D</code>, then <em class="parameter"><code>buffer</code></em> defines a texture for
+            the two-dimensional texture object which is bound to the current context (hereafter
+            referred to as the current texture object).
+        </p>
+        <p>
+            If <em class="parameter"><code>display</code></em> and <em class="parameter"><code>surface</code></em> are the display and surface for the calling thread's current
+            context, <code class="function">eglBindTexImage</code> performs an implicit <a class="citerefentry" href="glFlush.xhtml"><span class="citerefentry"><span class="refentrytitle">glFlush</span></span></a>.
+            For other surfaces, <code class="function">eglBindTexImage</code> waits for all effects from previously issued OpenGL ES commands
+            drawing to the surface to complete before defining the texture image, as
+            though <a class="citerefentry" href="glFinish.xhtml"><span class="citerefentry"><span class="refentrytitle">glFinish</span></span></a>  were called on the last context to which that surface were bound.
+        </p>
+        <p>
+            After <code class="function">eglBindTexImage</code> is called, the specified surface is no longer available
+            for reading or writing. Any read operation, such as <a class="citerefentry" href="glReadPixels.xhtml"><span class="citerefentry"><span class="refentrytitle">glReadPixels</span></span></a> or
+            <a class="citerefentry" href="eglCopyBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCopyBuffers</span></span></a>, which reads values from any of the surface's color buffers or ancillary
+            buffers will produce indeterminate results. In addition, draw operations that are
+            done to the surface before its color buffer is released from the texture produce indeterminate
+            results. Specifically, if the surface is current to a context and thread
+            then rendering commands will be processed and the context state will be updated,
+            but the surface may or may not be written.
+        </p>
+        <p>
+            Texture mipmap levels are automatically generated when all of the following
+            conditions are met while calling <code class="function">eglBindTexImage</code>:
+        </p>
+        <div class="itemizedlist">
+          <ul class="itemizedlist" style="list-style-type: disc; ">
+            <li class="listitem">
+              <p>
+            The <code class="constant">EGL_MIPMAP_TEXTURE</code> attribute of the pbuffer being bound is
+            <code class="constant">EGL_TRUE</code>.
+        </p>
+            </li>
+            <li class="listitem">
+              <p>
+            The OpenGL ES texture parameter <code class="constant">GL_GENERATE_MIPMAP</code> is <code class="constant">GL_TRUE</code> for
+            the currently bound texture.
+        </p>
+            </li>
+            <li class="listitem">
+              <p>
+            The value of the <code class="constant">EGL_MIPMAP_LEVEL</code> attribute of the pbuffer being bound is
+            equal to the value of the texture parameter <code class="constant">GL_TEXTURE_BASE_LEVEL</code>.
+            In this case, additional mipmap levels are generated as described in section 3.8
+            of the OpenGL ES 1.1 Specification.
+        </p>
+            </li>
+          </ul>
+        </div>
+        <p>
+            In this case, additional mipmap levels are generated as described in section 3.8
+            of the OpenGL ES 1.1 Specification.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a> has no effect if it is
+            called on a bound surface.
+        </p>
+        <p>
+            Any existing images associated with the different mipmap levels of the texture object
+            are freed (it is as if <a class="citerefentry" href="glTexImage.xhtml"><span class="citerefentry"><span class="refentrytitle">glTexImage</span></span></a>
+            was called with an image of zero width).
+        </p>
+        <p>
+            The color buffer is bound to a texture object. If the texture object is
+            shared between contexts, then the color buffer is also shared. If a texture object is
+            deleted before <a class="citerefentry" href="eglReleaseTexImage.xhtml"><span class="citerefentry"><span class="refentrytitle">eglReleaseTexImage</span></span></a> is called, then the color buffer is released and
+            the surface is made available for reading and writing.
+        </p>
+        <p>
+            It is not an error to call <a class="citerefentry" href="glTexImage2D.xhtml"><span class="citerefentry"><span class="refentrytitle">glTexImage2D</span></span></a> or
+            <a class="citerefentry" href="glCopyTexImage2D.xhtml"><span class="citerefentry"><span class="refentrytitle">glCopyTexImage2D</span></span></a> to replace an
+            image of a texture object that has a color buffer bound to it. However, these calls
+            will cause the color buffer to be released back to the surface and new memory will
+            be allocated for the texture. Note that the color buffer is released even if the image
+            that is being defined is a mipmap level that was not defined by the color buffer.
+        </p>
+        <p>
+            <code class="function">eglBindTexImage</code> is ignored if there is no current rendering context.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_BAD_ACCESS</code> is generated if
+            <em class="parameter"><code>buffer</code></em> is already bound to a texture.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if the
+            surface attribute <code class="constant">EGL_TEXTURE_FORMAT</code> is
+            set to <code class="constant">EGL_NO_TEXTURE</code>.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            <em class="parameter"><code>buffer</code></em> is not a valid buffer
+            (currently only <code class="constant">EGL_BACK_BUFFER</code> may be
+            specified).
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_SURFACE</code> is generated if
+            <em class="parameter"><code>surface</code></em> is not an EGL surface, or is
+            not a pbuffer surface supporting texture binding.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglReleaseTexImage.xhtml"><span class="citerefentry"><span class="refentrytitle">eglReleaseTexImage</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

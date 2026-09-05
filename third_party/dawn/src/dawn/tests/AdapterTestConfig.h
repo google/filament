@@ -37,9 +37,9 @@
 #include <vector>
 
 struct BackendTestConfig {
-    BackendTestConfig(wgpu::BackendType backendType,
-                      std::initializer_list<const char*> forceEnabledWorkarounds = {},
-                      std::initializer_list<const char*> forceDisabledWorkarounds = {});
+    explicit BackendTestConfig(wgpu::BackendType backendType,
+                               std::initializer_list<const char*> forceEnabledWorkarounds = {},
+                               std::initializer_list<const char*> forceDisabledWorkarounds = {});
 
     wgpu::BackendType backendType;
 

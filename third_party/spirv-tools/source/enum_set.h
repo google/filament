@@ -73,8 +73,8 @@ class EnumSet {
     // 1st enum this bucket can represent.
     T start;
 
-    friend bool operator==(const Bucket& lhs, const Bucket& rhs) {
-      return lhs.start == rhs.start && lhs.data == rhs.data;
+    bool operator==(const Bucket& other) const {
+      return start == other.start && data == other.data;
     }
   };
 

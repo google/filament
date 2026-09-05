@@ -430,7 +430,12 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
     mSettings.view.bloom.enabled = true;
 
     DebugRegistry& debug = mEngine->getDebugRegistry();
-    *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images") = true;
+    // The first Renderer the engine creates registers this property, and a ViewerGui can be
+    // built before any Renderer exists, in which case there is no address to write to.
+    if (bool* combineMultiviewImages =
+            debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")) {
+        *combineMultiviewImages = true;
+    }
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
@@ -1214,8 +1219,10 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Stereo mode", &mSettings.view.stereoscopicOptions.enabled);
 #if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         ImGui::Indent();
-        ImGui::Checkbox("Combine Multiview Images",
-                debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
+        if (bool* combineMultiviewImages =
+                debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")) {
+            ImGui::Checkbox("Combine Multiview Images", combineMultiviewImages);
+        }
         ImGui::Unindent();
 #endif
         ImGui::SliderFloat("Ocular distance", &mSettings.camera.eyeOcularDistance, 0.0f, 1.0f);
@@ -1232,6 +1239,28 @@ void ViewerGui::updateUserInterface() {
         mSettings.debug.skipFrames = 0;
         if (ImGui::Button("Skip 10 frames")) {
             mSettings.debug.skipFrames = 10;
+        }
+
+        ImGui::Checkbox("Frame step", &mSettings.debug.frameStep);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Freezes the image (and animation time) until stepped, so each "
+                              "frame produced by effects like TAA can be inspected on its own.");
+        }
+        if (mSettings.debug.frameStep) {
+            // While stepping, the window keeps showing the last frame that was actually
+            // rendered -- including this UI, which is why the button below stays clickable even
+            // though nothing is being redrawn. ImGui still processes input every iteration; only
+            // presentation is paused.
+            bool step = ImGui::Button("Step one frame");
+            // Space is the convenient way to do it, but must not steal the key from a text field.
+            step = step || (!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Space));
+            if (step) {
+                mSettings.debug.frameStepRequested = true;
+            }
+            ImGui::SameLine();
+            ImGui::TextDisabled("(or space)");
+            ImGui::SliderFloat("Step size (seconds)",
+                    &mSettings.debug.frameStepDeltaSeconds, 0.0f, 1.0f / 15.0f, "%.4f");
         }
     }
 
@@ -1257,7 +1286,9 @@ void ViewerGui::updateUserInterface() {
     // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
     // support these features, we will need to send a message (list of strings) from DebugServer to
     // the WebSockets client.
-    if (!isRemoteMode()) {
+    //
+    // setAsset accepts a null instance, which the Animator deref below does not survive.
+    if (!isRemoteMode() && mInstance) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
             ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);

@@ -109,6 +109,10 @@ class BitVector {
   // |this|.  Return true if |this| changed.
   bool Or(const BitVector& that);
 
+  // Returns true if |this| and |that| have the same bits set.
+  bool operator==(const BitVector& that) const;
+  bool operator!=(const BitVector& that) const { return !(*this == that); }
+
  private:
   std::vector<BitContainer> bits_;
 };

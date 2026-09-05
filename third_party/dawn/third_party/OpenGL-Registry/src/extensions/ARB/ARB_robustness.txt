@@ -1,0 +1,992 @@
+Name
+
+    ARB_robustness
+
+Name Strings
+
+    GL_ARB_robustness
+
+Contributors
+
+    Acorn Pooley, NVIDIA
+    Anton Staaf, Google
+    Barthold Lichtenbelt, NVIDIA
+    Bruce Merry, ARM
+    Chris Marrin, Apple
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Jon Leech 
+    Kenneth Russell, Google
+    Kent Miller, Apple
+    Piers Daniell, NVIDIA
+    Vladimir Vukicevic, Mozilla
+
+Contact
+
+    Mark Kilgard, NVIDIA (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 9, 2010.
+    Approved by the Khronos Board of Promoters on July 23, 2010.
+
+Version
+
+    Last Modified Date:  June 25, 2014
+    Version:             18
+
+Number
+
+    ARB Extension #105
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 Compatibility
+    Profile Specification but can apply to OpenGL 1.1 and up.
+
+    This specification interacts with the ARB_imaging subset of the OpenGL
+    3.2 Compatibility Profile.
+
+    This specification interacts with the OpenGL 3.2 Core Profile.
+
+    This specification interacts with EXT_direct_state_access.
+
+    GLX_ARB_create_context_robustness and
+    WGL_ARB_create_context_robustness are used to determine if a context
+    implementing this extension supports robust buffer access, and if it
+    supports reset notification. Equivalent platform-dependent
+    mechanisms in other window-system integration layers such as EGL and
+    AGL may exist for those platforms.
+
+Overview
+
+    Several recent trends in how OpenGL integrates into modern computer
+    systems have created new requirements for robustness and security
+    for OpenGL rendering contexts.
+    
+    Additionally GPU architectures now support hardware fault detection;
+    for example, video memory supporting ECC (error correcting codes)
+    and error detection.  OpenGL contexts should be capable of recovering
+    from hardware faults such as uncorrectable memory errors.  Along with
+    recovery from such hardware faults, the recovery mechanism can
+    also allow recovery from video memory access exceptions and system
+    software failures.  System software failures can be due to device
+    changes or driver failures.
+
+    Demands for increased software robustness and concerns about malware
+    exploiting buffer overflows have lead API designers to provide
+    additional "safe" APIs that bound the amount of data returned by
+    an API query.  For example, the safer "snprintf" or "_snprintf"
+    routines are prefered over "sprintf".
+    
+    The OpenGL API has many such robustness perils.  OpenGL queries
+    return (write) some number of bytes to a buffer indicated by a
+    pointer parameter.  The exact number of bytes written by existing
+    OpenGL queries is not expressed directly by any specific parameter;
+    instead the number of bytes returned is a complex function of one
+    or more query arguments, sometimes context state such as pixel
+    store modes or the active texture selector, and the current state
+    of an object (such as a texture level's number of total texels).
+    By the standards of modern API design, such queries are not "safe".
+    Making these queries safer involves introducing a new query API with
+    an additional parameter that specifies the number of bytes in the
+    buffer and never writing bytes beyond that limit.
+
+    Multi-threaded use of OpenGL contexts in a "share group" allow
+    sharing of objects such as textures and programs.  Such sharing in
+    conjunction with concurrent OpenGL commands stream execution by two
+    or more contexts introduces hazards whereby one context can change
+    objects in ways that can cause buffer overflows for another context's
+    OpenGL queries.
+
+    The original ARB_vertex_buffer_object extension includes an issue
+    that explicitly states program termination is allowed when
+    out-of-bounds vertex buffer object fetches occur. Modern GPUs
+    capable of DirectX 10 enforce the well-defined behavior of always
+    returning zero values for indices or non-fixed components in this
+    case. Older GPUs may require extra checks to enforce well-defined
+    (and termination free) behavior, but this expense is warranted when
+    processing potentially untrusted content.
+
+    The intent of this extension is to address some specific robustness
+    goals:
+
+    *   For all existing OpenGL queries, provide additional "safe" APIs 
+        that limit data written to user pointers to a buffer size in 
+        bytes that is an explicit additional parameter of the query.
+
+    *   Provide a mechanism for an OpenGL application to learn about
+        graphics resets that affect the context.  When a graphics reset
+        occurs, the OpenGL context becomes unusable and the application
+        must create a new context to continue operation. Detecting a
+        graphics reset happens through an inexpensive query.
+
+    *   Provide an enable to guarantee that out-of-bounds buffer object
+        accesses by the GPU will have deterministic behavior and preclude
+        application instability or termination due to an incorrect buffer
+        access.  Such accesses include vertex buffer fetches of
+        attributes and indices, and indexed reads of uniforms or
+        parameters from buffers.
+
+    In one anticipated usage model, WebGL contexts may make use of these
+    robust features to grant greater stability when using untrusted code.
+    WebGL contexts cannot call OpenGL commands directly but rather must
+    route all OpenGL API calls through the web browser.  It is then the
+    web browser that configures the context, using the commands in this
+    extension, to enforce safe behavior. In this scenario, the WebGL
+    content cannot specify or change the use of this extension's features
+    itself; the web browser enforces this policy.
+
+    There are other well-known robustness issues with the OpenGL API
+    which this extension does not address.  For example, selector-based
+    OpenGL commands are a well-known source of programming errors.
+    Code to manipulate texture state may assume the active texture
+    selector is set appropriately when an intervening function call
+    obscures a change to the active texture state resulting in
+    incorrectly updated or queried state.  The EXT_direct_state_access
+    extension introduces selector-free OpenGL commands and queries to
+    address that particular issue so this extension does not.
+
+    The intent of this extension is NOT to deprecate any existing API
+    and thereby introduce compatibility issues and coding burdens on
+    existing code, but rather to provide new APIs to ensure a level of
+    robustness commensurate with the expectations of modern applications
+    of OpenGL.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    GRAPHICS RESET DETECTION AND RECOVERY
+
+        enum GetGraphicsResetStatusARB();
+
+    SIZED BUFFER QUERIES
+
+    OpenGL 1.0 sized buffer queries
+
+        void GetnMapdvARB(enum target, enum query, sizei bufSize, double *v);
+        void GetnMapfvARB(enum target, enum query, sizei bufSize, float *v);
+        void GetnMapivARB(enum target, enum query, sizei bufSize, int *v);
+
+        void GetnPixelMapfvARB(enum map, sizei bufSize, float *values);
+        void GetnPixelMapuivARB(enum map, sizei bufSize, uint *values);
+        void GetnPixelMapusvARB(enum map, sizei bufSize, ushort *values);
+
+        void GetnPolygonStippleARB(sizei bufSize, ubyte *pattern);
+
+        void GetnTexImageARB(enum target, int level, enum format,
+                             enum type, sizei bufSize, void *img);
+
+        void ReadnPixelsARB(int x, int y, sizei width, sizei height,
+                            enum format, enum type, sizei bufSize,
+                            void *data);
+
+    ARB_imaging sized buffer queries
+
+        void GetnColorTableARB(enum target, enum format, enum type,
+                               sizei bufSize, void *table);
+        void GetnConvolutionFilterARB(enum target, enum format,
+                                      enum type, sizei bufSize, void *image);
+        void GetnSeparableFilterARB(enum target, enum format, enum type,
+                                    sizei rowBufSize, void *row,
+                                    sizei columnBufSize, void *column,
+                                    void *span);
+        void GetnHistogramARB(enum target, boolean reset, enum format,
+                              enum type, sizei bufSize, void *values);
+        void GetnMinmaxARB(enum target, boolean reset, enum format,
+                           enum type, sizei bufSize, void *values);
+
+    OpenGL 1.3 sized buffer queries
+
+        void GetnCompressedTexImageARB(enum target, int lod,
+                                       sizei bufSize, void *img);
+
+    OpenGL 2.0 sized buffer queries
+
+        void GetnUniformfvARB(uint program, int location, sizei bufSize,
+                              float *params);
+        void GetnUniformivARB(uint program, int location, sizei bufSize,
+                              int *params);
+        void GetnUniformuivARB(uint program, int location, sizei bufSize,
+                               uint *params);
+        void GetnUniformdvARB(uint program, int location, sizei bufSize,
+                              double *params);
+
+New Tokens
+
+    Returned by GetGraphicsResetStatusARB:
+
+        NO_ERROR                                        0x0000
+        GUILTY_CONTEXT_RESET_ARB                        0x8253
+        INNOCENT_CONTEXT_RESET_ARB                      0x8254
+        UNKNOWN_CONTEXT_RESET_ARB                       0x8255
+
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        RESET_NOTIFICATION_STRATEGY_ARB                 0x8256
+
+    Returned by GetIntegerv and related simple queries when
+    <value> is RESET_NOTIFICATION_STRATEGY_ARB:
+
+        LOSE_CONTEXT_ON_RESET_ARB                       0x8252
+        NO_RESET_NOTIFICATION_ARB                       0x8261
+
+    Returned by GetIntegerv when <pname> is CONTEXT_FLAGS:
+
+        CONTEXT_FLAG_ROBUST_ACCESS_BIT_ARB          0x00000004
+
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile)
+Specification (OpenGL Operation)
+
+Add a new subsection after 2.5 "GL Errors" and renumber subsequent
+sections accordingly
+
+    2.6 "Graphics Reset Recovery"
+
+    Certain events can result in a reset of the GL context. Such a reset
+    causes all context state to be lost. Recovery from such events
+    requires recreation of all objects in the affected context. The
+    current status of the graphics reset state is returned by
+
+        enum GetGraphicsResetStatusARB();
+
+    The symbolic constant returned indicates if the GL context has been
+    in a reset state at any point since the last call to
+    GetGraphicsResetStatusARB. NO_ERROR indicates that the GL context
+    has not been in a reset state since the last call.
+    GUILTY_CONTEXT_RESET_ARB indicates that a reset has been detected
+    that is attributable to the current GL context.
+    INNOCENT_CONTEXT_RESET_ARB indicates a reset has been detected that
+    is not attributable to the current GL context.
+    UNKNOWN_CONTEXT_RESET_ARB indicates a detected graphics reset whose
+    cause is unknown.
+
+    If a reset status other than NO_ERROR is returned and subsequent
+    calls return NO_ERROR, the context reset was encountered and
+    completed. If a reset status is repeatedly returned, the context may
+    be in the process of resetting.
+
+    Reset notification behavior is determined at context creation time,
+    and may be queried by calling GetIntegerv with the symbolic constant
+    RESET_NOTIFICATION_STRATEGY_ARB.
+
+    If the reset notification behavior is NO_RESET_NOTIFICATION_ARB,
+    then the implementation will never deliver notification of reset
+    events, and GetGraphicsResetStatusARB will always return
+    NO_ERROR[fn1].
+       [fn1: In this case it is recommended that implementations should
+        not allow loss of context state no matter what events occur.
+        However, this is only a recommendation, and cannot be relied
+        upon by applications.]
+
+    If the behavior is LOSE_CONTEXT_ON_RESET_ARB, a graphics reset will
+    result in the loss of all context state, requiring the recreation of
+    all associated objects. In this case GetGraphicsResetStatusARB. may
+    return any of the values described above.
+
+    If a graphics reset notification occurs in a context, a notification
+    must also occur in all other contexts which share objects with that
+    context[fn2].
+       [fn2: The values returned by GetGraphicsResetStatusARB in the
+        different contexts may differ.]
+
+    Add to Section 2.8 "Vertex Arrays" before 2.8.1 "Drawing Commands"
+
+    Robust buffer access is enabled by creating a context with robust
+    access enabled through the window system binding APIs. When enabled,
+    indices within the vertex array that lie outside the arrays defined
+    for enabled attributes result in undefined values for the
+    corresponding attributes, but cannot result in application failure.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile)
+Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile)
+Specification (Per-Fragment Operations and the Frame Buffer)
+
+    Modify section 4.3.2 "Reading Pixels"
+
+    Pixels are read using
+
+        void ReadPixels(int x, int y, sizei width, sizei height,
+                        enum format, enum type, void *data);
+        void ReadnPixelsARB(int x, int y, sizei width, sizei height,
+                            enum format, enum type, sizei bufSize,
+                            void *data);
+
+    The arguments after <x> and <y> to ReadPixels are described in
+    section 3.7.4. The pixel storage modes that apply to ReadPixels and
+    other commands that query images (see section 6.1) are summarized in
+    table 4.7.  ReadnPixelsARB behaves identically to ReadPixels except
+    that it does not write more than <bufSize> bytes into <data>.
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile)
+Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile)
+Specification (State and State Requests)
+
+      Modify Section 6.1.3 "Enumerated Queries"
+
+          void GetPixelMap{ui us f}v(enum map, T data);
+          void GetnPixelMap{ui us f}vARB(enum map, sizei bufSize, T data);
+
+      return all values in the pixel map <map> in <data>. <map> must be
+      a map name from table 3.3. GetPixelMapuiv, GetnPixelMapuivARB,
+      GetPixelMapusv, and GetnPixelMapusvARB convert floating point pixel
+      map values to integers according to the UNSIGNED_INT and
+      UNSIGNED_SHORT entries, respectively, of table 4.9.
+          GetnPixelMap{ui us f}vARB does not write more than <bufSize>
+      bytes into <data>.
+          If a pixel pack buffer ...
+      ... an INVALID_OPERATIONS_ERROR results. When calling
+      GetnPixelMap{ui us f}vARB, if a pixel pack buffer object is bound
+      and <n> is greater than <bufSize>, but <data>+<n> does not exceed
+      the size of the buffer, no error results.
+
+      ... 
+
+          void GetMap{ifd}v(enum map, enum value, T data);
+          void GetnMap{ifd}vARB(enum map, enum value, sizei bufSize, T data);
+
+      places information about <value> for <map> in <data>. <map> must
+      be one of the map types described in section 5.1, and <value> must
+      be one of ORDER, COEFF, or DOMAIN. GetnMap{ifd}vARB does not write
+      more than <bufSize> bytes into <data>.
+
+      Section 6.1.4 "Texture Queries"
+
+      
+      Modify the description of GetTexImage:
+
+      "The commands
+
+          void GetTexImage(enum tex, int lod, enum format, enum type,
+                           void *img );
+          void GetnTexImageARB(enum tex, int lod, enum format, enum type,
+                               sizei bufSize, void *img );
+
+      are used to obtain texture images. ...
+      ... <type> is a pixel type from table 3.5. GetnTexImageARB does
+      not write more than <bufSize> bytes into <img>."
+
+      Add to the end of the sixth paragraph:
+
+      "When calling GetnTextureImageARB, if a pixel pack buffer object
+      is bound and packing a texture image into buffer memory would
+      exceed <bufSize> but not the size of the buffer, no error results."
+
+      Modify the description of GetCompressedTexImage:
+
+      "The commands
+
+          void GetCompressedTexImage(enum target, int lod, void *img);
+          void GetnCompressedTexImageARB(enum target, int lod, sizei bufSize,
+                                         void *img );
+          
+      are used to obtain texture images stored in compressed form. The
+      parameters <target>, <lod>, and <img> are interpreted in the same
+      manner as in GetTexImage and GetnTexImageARB respectively. When
+      called, GetCompressedTexImage and GetnCompressedTexImageARB write
+      MIN(n,bufSize) ubytes of compressed image data ...
+
+      ... If a pixel pack buffer object is bound and img + n is greater
+      than the size of the buffer, an INVALID_OPERATION error results.
+      When calling GetnCompressedTextureImageARB, if a pixel pack buffer
+      object is bound and <n> is greater than <bufSize> but <img>+<n>
+      does not exceed the size of the buffer, no error results."
+
+      Modify Section 6.1.5 "Stipple Query"
+      
+      The commands
+
+          void GetPolygonStipple(void *pattern);
+          void GetnPolygonStippleARB(sizei bufSize, void *pattern);
+
+      obtain the polygon stipple. The pattern is packed into pixel pack
+      buffer or client memory according to the procedure given in section
+      4.3.2 for ReadPixels; it is as if the <height> and <width> passed
+      to that command were both equal to 32, the type were BITMAP, and
+      the format were COLOR_INDEX. GetnPolygonStippleARB does not write
+      more than <bufSize> bytes into <pattern>.
+
+      Modify Section 6.1.7 "Color Table Query"
+
+      The current contents of a color table are queried using
+
+          void GetColorTable(enum target, enum format, enum type,
+                             void *table );
+          void GetnColorTableARB(enum target, enum format, enum type,
+                                 sizei bufSize, void *table);
+          
+      <target> must be one of the regular color table names listed in
+      table 3.4. ...
+      ... to the components requested by format are described in table
+      6.1. GetnColorTableARB does not write more than <bufSize> bytes
+      into <table>.
+
+      Modify Section 6.1.8 "Convolution Query"
+
+      The current contents of a convolution filter image are queried
+      with the command
+
+          void GetConvolutionFilter(enum target, enum format, enum type,
+                                    void *image );
+          void GetnConvolutionFilterARB(enum target, enum format,
+                                     enum type, sizei bufSize, void *image);
+
+      <target> must be CONVOLUTION_1D or CONVOLUTION_2D. ...
+      ... Pixel processing and component mapping are identical to those
+      of GetTexImage. GetnConvolutionFilterARB does not write more than
+      <bufSize> bytes into <image>.
+
+      ...
+
+      The current contents of a separable filter image are queried using
+
+          void GetSeparableFilter(enum target, enum format, enum type,
+                                  void *row, void *column, void *span );
+          void GetnSeparableFilterARB(enum target, enum format, enum type,
+                                      sizei rowBufSize, void *row,
+                                      sizei columnBufSize, void *column,
+                                      void *span);
+
+      ... The row and column images are returned to pixel pack buffer or
+      client memory starting at row and column respectively.
+      GetnSeparableFilterARB does not write more than <rowBufSize> bytes
+      into <row> and no more than <columnBufSize> bytes into <column>.
+      <span> is currently unused. ...
+      
+
+      Modify Section 6.1.9 "Histogram Query"
+
+      The current contents of the histogram table are queried using
+
+          void GetHistogram(enum target, boolean reset, enum format,
+                            enum type, void* values );
+          void GetnHistogramARB(enum target, boolean reset, enum format,
+                             enum type, sizei bufSize, void* values);
+
+      ... component values are simply clamped to the range of the target
+      data type. GetnHistogramARB does not write more than <bufSize>
+      bytes into <values>.
+
+      Modify Section 6.1.10 "Minmax Query"
+
+      The current contents of the minmax table are queried using
+
+          void GetMinmax(enum target, boolean reset, enum format,
+                         enum type, void* values );
+          void GetnMinmaxARB(enum target, boolean reset, enum format,
+                          enum type, sizei bufSize, void* values);
+
+      ... A one-dimensional image of width 2 is returned to pixel pack
+      buffer or client memory starting at <values>. GetnMinmaxARB does
+      not write more than <bufSize> bytes into <values>.
+
+      Modify Section 6.1.11 "Pointer and String Queries"
+
+      Add to the paragraph describing the context profile mask and flags
+      (preceding the description of GetStringi) on page 379:
+
+     "If CONTEXT_FLAG_ROBUST_ACCESS_BIT_ARB is set in CONTEXT_FLAGS,
+      then robust buffer access will be enabled for drawing commands
+      using vertex arrays, as described in section 2.8."
+
+      Modify Section 6.1.16 "Shader and Program Queries"
+
+      The commands
+
+          void GetUniformfv(uint program, int location, float *params);
+          void GetnUniformfvARB(uint program, int location, sizei bufSize,
+                                float *params);
+          void GetUniformiv(uint program, int location, int *params);
+          void GetnUniformivARB(uint program, int location, sizei bufSize,
+                                int *params);
+          void GetUniformuiv(uint program, int location, uint *params);
+          void GetnUniformuivARB(uint program, int location, sizei bufSize,
+                                 uint *params);
+          void GetUniformdv(uint program, int location, double *params);
+          void GetnUniformdvARB(uint program, int location, sizei bufSize,
+                                double *params);
+
+      return the value or values of the uniform at location location of
+      the default uniform block for program object program in the array
+      params. GetnUniformfvARB, GetnUniformivARB, GetnUniformuivARB and
+      GetnUniformdvARB do not write any data to <params> if <bufSize> is
+      less than the size of the requested data.
+      ...
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to The OpenGL Shading Language Specification, Version 1.50.11
+
+    Change the first paragraph of section 4.1.9 "Arrays"
+
+    ... Undefined behavior results from indexing an array with a
+    non-constant expression that's greater than or equal to the array's
+    size or less than 0. If robust buffer access is enabled via the
+    OpenGL API, such indexing must not result in abnormal program
+    termination. The results are still undefined, but implementations
+    are encouraged to produce zero values for such accesses. Only
+    one-dimensional arrays may be declared. ...
+
+GLX Protocol
+
+    XXX
+
+Interactions with GLX_ARB_create_context_robustness
+
+    If the GLX window-system binding API is used to create a context,
+    the GLX_ARB_create_context_robustness extension is supported, and
+    the bit GLX_CONTEXT_ROBUST_ACCESS_BIT_ARB is set in
+    GLX_CONTEXT_FLAGS when glXCreateContextAttribsARB is called, the
+    resulting context will perform robust buffer access as described
+    above in section 2.8, and the CONTEXT_FLAG_ROBUST_ACCESS_BIT_ARB bit
+    will be set in CONTEXT_FLAGS as described above in section 6.1.11.
+
+    If the GLX window-system binding API is used to create a context and
+    the GLX_ARB_create_context_robustness extension is supported, then
+    the value of attribute GLX_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB
+    determines the reset notification behavior and the value of
+    RESET_NOTIFICATION_STRATEGY_ARB, as described in section 2.6.
+
+Interactions with WGL_ARB_create_context_robustness
+
+    If the WGL window-system binding API is used to create a context,
+    the WGL_ARB_create_context_robustness extension is supported, and
+    the bit WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB is set in
+    WGL_CONTEXT_FLAGS when wglCreateContextAttribsARB is called, the
+    resulting context will perform robust buffer access as described
+    above in section 2.8, and the CONTEXT_FLAG_ROBUST_ACCESS_BIT_ARB bit
+    will be set in CONTEXT_FLAGS as described above in section 6.1.11.
+
+    If the WGL window-system binding API is used to create a context and
+    the WGL_ARB_create_context_robustness extension is supported, then
+    the value of attribute WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB
+    determines the reset notification behavior and the value of
+    RESET_NOTIFICATION_STRATEGY_ARB, as described in section 2.6.
+
+Errors
+
+    GetnMapdvARB, GetnMapfvARB, GetnMapivARB, GetnPixelMapfvARB,
+    GetnPixelMapuivARB, GetnPixelMapusvARB, GetnPolygonStippleARB,
+    GetnTexImageARB, ReadnPixelsARB, GetnColorTableARB,
+    GetnConvolutionFilterARB, GetnSeparableFilterARB, GetnHistogramARB,
+    GetnMinmaxARB, GetnCompressedTexImageARB, GetnUniformfvARB,
+    GetnUniformivARB, GetnUniformuivARB and GetnUniformdvARB share all the
+    errors of their unsized buffer query counterparts with the addition
+    that INVALID_OPERATION is generated if the buffer size required to
+    fill all the requested data is greater than <bufSize>.
+
+New State
+
+    Get Value                            Type  Get Command            Value     Description                  Sec     Attribute
+    --------------------------      ----  -----------   ------------  ---------------------------  ------  ---------
+    RESET_NOTIFICATION_STRATEGY_ARB Z_2   GetIntegerv   See sec. 2.6  Reset notification behavior  2.6     -
+
+
+New Implementation Dependent State
+
+    None
+
+Dependencies on the ARB_imaging subset
+
+    If the ARB_imaging subset of the OpenGL 3.2 Compatibility Profile is not
+    supported, the commands GetnColorTableARB, GetnConvolutionFilterARB,
+    GetnHistogramARB, GetnMap*ARB, GetnMinmaxARB, GetnPixelMap*ARB, and
+    GetnSeparableFilterARB defined by this extension are not supported, and
+    all references to them should be ignored.
+
+Dependencies on OpenGL 3.2 (Core Profile)
+
+    If only the core profile of OpenGL 3.2 is supported, the commands
+    GetnColorTableARB, GetnConvolutionFilterARB, GetnHistogramARB,
+    GetnMap*ARB, GetnMinmaxARB, GetnPixelMap*ARB, GetnPolygonStippleARB, and
+    GetnSeparableFilterARB defined by this extension are not supported, and
+    all references to them should be ignored.
+
+Issues
+
+    1.  Does robust buffer access affect vertex pulling from vertex
+        buffer objects, client vertex arrays, or both?
+
+        RESOLVED:  Only vertex buffer objects.
+
+        DirectX 10-era GPUs are guaranteed to provide guarantees
+        consistent with those required by robust buffer access.
+
+        Client memory vertex arrays should not be expected to be used
+        directly in situations requiring robust operation.
+
+        Historically the original EXT_vertex_array extension provided a
+        "GLsizei count" parameter to indicate how long vertex arrays
+        should be.  This proved to be unworkable in practice because
+        applications typically found it too difficult to properly compute
+        the count; instead a very large integer was passed, obviating any
+        practical use for the parameter.  When vertex arrays were added
+        to core OpenGL in version 1.1, the "GLsizei count" parameter
+        was eliminated for this reason.
+
+        There are other problems too.  Clever applications using client
+        memory vertex arrays can specify the base pointer to be NULL
+        (address 0) and then use indices that essentially correspond
+        to pointers divided by the stride.  There's also no guarantee a
+        pointer itself has a contiguous range of memory allocate within
+        a given range.
+
+        Moreover client memory vertex arrays are no longer a performance
+        path so they simply are not particularly interesting to address.
+
+        The result is there's really no practical way to bound client
+        vertex array access in a way that's likely to be practically
+        useful.
+
+        Vertex buffer objects do not have this same problem because
+        buffer objects have a bounded index-able range.
+
+        Robust applications should simply use vertex buffer objects for
+        robust vertex pulling (ignoring client memory vertex arrays for
+        an rendering that must be done robustly).
+
+    2.  If robust buffer access is supported and a vertex index is large
+        enough to fetch beyond the size of an enabled vertex buffer
+        object, what happens?
+
+        RESOLVED:  Undefined values are read for the varying (non-fixed)
+        components.
+
+        A fixed-component would be a component such as the W component
+        when only a 2- or 3-component position is fetched.  In this case,
+        the W component is fixed as 1.0 and that will be the case still
+        if the index would have resulted in an out-of-bounds fetch.
+
+        Undefined results are required for implementations that can't
+        guarantee any particular value. It make testing this behavior
+        difficult, but it's required for certain implementations.
+
+    3.  If robust buffer access is supported and an element array buffer
+        is accessed beyond the size of the element array buffer so
+        there's not a valide index, what happens?
+
+        RESOLVED:  The value of the index is undefined.
+
+        Undefined results are required for implementations that can't
+        guarantee any particular value. It make testing this behavior
+        difficult, but it's required for certain implementations.
+
+    4.  What query commands actually need a new "GLsizei bufSize"
+        parameter?
+
+        RESOLVED:  If the number of bytes returned by the query is not
+        *completely* determined by the parameters to the function (in
+        the absence of errors) and not already bounded by an existing
+        GLsizei buffer size parameter, a new query is needed.
+
+        This means commands such as glGetClipPlane, glGetIntegerv,
+        etc. do NOT need new versions.
+
+        This means queries that depend on pixel store pack state need
+        new queries.  Examples: glReadPixels, glGetPolygonStipple,
+        glGetTexImage, glGetConvolutionFilter, etc.
+
+        This means queries that query an object's state which can
+        vary in size need new queries.  Examples:  glGetTexImage,
+        glGetCompressedTexImage, glGetUniformfv, glGetUniformuiv, etc.
+
+        This means queries that query context state which can vary
+        depending on other context state variables need new queries.
+        Examples:  glGetHistogram, glGetPixelMapfv, glGetColorTable, etc.
+
+        If the command already has a parameter that limits the amount
+        of data returned through a pointer, no new command is needed.
+        Examples: glGetActiveAttrib, glGetActiveUniform, glGetInfoLog,
+        glGetAttachedShaders, glGetAttachedObjects, glGetShaderSource,
+        glGetActiveAttrib, glGetBufferSubData, glGen*, etc.
+
+    5.  If a new query with an explicit buffer size is called and the buffer
+        size is not sufficient to return the data, what happens?
+
+        RESOLVED:  Return an INVALID_OPERATION error and ignore the query.
+
+        Some consideration was given to clearing the entire buffer range.
+        This might arguably avoid applications subsequently reading from
+        uninitialized buffers.
+
+        This was rejected for several reasons:
+
+        1)  Doing something when there's an error is inconsistent with
+            the rest of OpenGL's operation.
+
+        2)  If the buffer is left untouched, the application can initialize
+            the buffer to some bogus value (NaN or an invalid negative
+            value) and notice that the buffer was left unmodified after
+            the query without the expense of checking for OpenGL errors.
+
+        3)  Many commands return information through packing pixels based
+            on the pixel store state.  The pixel store state allows skipping
+            over some data (GL_SKIP_PIXELS, GL_SKIP_ROWS, etc.) so zero'ing
+            memory for the entire buffer isn't a good idea.
+
+
+    6.  Can you explain why various glGet queries do NOT have new
+        "sized" versions?
+
+        RESOLVED:
+
+        Queries always returning a constant number of bytes:
+
+            OpenGL 1.0
+                glGetClipPlane
+                    - always 4*sizeof(GLdouble)
+            OpenGL 2.0
+                glGetVertexAttribdv
+                    - always 4*sizeof(GLdouble)
+                glGetVertexAttribfv
+                    - always 4*sizeof(GLfloat)
+                glGetVertexAttribiv
+                    - always 4*sizeof(GLint)
+
+        Queries with an effective buffer size parameter already:
+
+            OpenGL 1.5
+                glGetBufferSubData
+                    - returns size (parameter) bytes
+
+        Queries with an effective buffer bound (no more bytes than)
+        parameter already:
+
+            OpenGL 2.0
+                glGetAttachedShaders
+                    - returns no more than sizeof(GLuint)*maxCount
+                      to count and no more than sizeof(GLuint)*maxCount
+                      to shaders
+                glGetShaderInfoLog
+                glGetProgramInfoLog
+                glGetShaderSource
+                glGetActiveAttrib
+                glGetActiveUniform
+                    - returns no more than bufSize bytes
+            OpenGL 3.0
+                glGetTransformFeedbackVarying
+                    - returns no more than bufSize bytes
+            OpenGL 3.2
+                glGetUniformIndices
+                    - returns sizeof(GLuint)*uniformCount bytes
+                glGetActiveUniformName
+                glGetActiveUniformBlockName
+                    - returns no more than bufSize bytes
+
+        Query's some function of enumeration parameters fully determine
+        the number bytes returned:
+
+            OpenGL 1.0
+                glGetIntegerv
+                glGetFloatv
+                glGetDoublev
+                glGetBooleanv
+                glGetLightiv
+                glGetLightfv
+                glGetMaterialfv
+                glGetMaterialiv
+                glGetTexEnvfv
+                glGetTexEnviv
+                glGetTexGendv
+                glGetTexGenfv
+                glGetTexGeniv
+                glGetTexParameterfv
+                glGetTexParameteriv
+                glGetTexLevelParameterfv
+                glGetTexLevelParameteriv
+                    - fully determined by pname parameter
+            OpenGL 1.1
+                glGetPointerv
+                    - fully determined by pname parameter
+                glGenTextures
+                    - sizeof(GLuint)*n
+            ARB_imaging
+                glGetColorTableParameterfv
+                glGetColorTableParameteriv
+                glGetConvolutionParameterfv
+                glGetConvolutionParameteriv
+                glGetHistogramParameterfv
+                glGetHistogramParameteriv
+                glGetMinmaxParameterfv
+                glGetMinmaxParameteriv
+                    - fully determined by pname parameter
+            OpenGL 1.5
+                glGenBuffers
+                glGenQueries
+                    - sizeof(GLuint)*n
+                glGetBufferParameteriv
+                glGetQueryObjectiv
+                glGetQueryObjectfv
+                glGetQueryiv
+                    - fully determined by pname parameter
+            OpenGL 2.0
+                glGetVertexAttribPointerv
+                glGetShaderiv
+                glGetProgramiv
+                    - fully determined by pname parameter
+            OpenGL 3.0
+                glGenRenderbuffers
+                glGenFramebuffers
+                glGenVertexArrays
+                    - sizeof(GLuint)*n
+            OpenGL 3.2
+                glGetActiveUniformBlockiv
+                    - function of pname and uniformCount
+                glGetActiveUniformsiv
+                    - function of pname
+
+            NV_vertex_program
+                glGenProgramsNV
+                    - sizeof(GLuint)*n
+            ARB_vertex_program
+                glGenProgramsARB
+                    - sizeof(GLuint)*n
+
+    7. What can cause a graphics reset?
+
+       Either user or implementor errors may result in a graphics reset.
+       If the application attempts to perform a rendering that takes too long
+       whether due to an infinite loop in a shader or even just a rendering
+       operation that takes too long on the given hardware. Implementation
+       errors may produce badly formed hardware commands. Memory access errors
+       may result from user or implementor mistakes. Any of these events may
+       result in a graphics reset event that will be detectable by the mechanism
+       described in this extension.
+
+    8. How should the application react to a reset context event?
+
+       RESOLVED: For this extension, the application is expected to query
+       the reset status until NO_ERROR is returned. If a reset is encountered,
+       at least one *RESET* status will be returned. Once NO_ERROR is
+       encountered, the application can safely destroy the old context and
+       create a new one.
+
+       After a reset event, apps should not use a context for any purpose
+       other than determining its reset status, and then destroying it. If a
+       context receives a reset event, all other contexts in its share group
+       will also receive reset events, and should be destroyed and
+       recreated.
+
+       Apps should be cautious in interpreting the GUILTY and INNOCENT reset
+       statuses. These are guidelines to the immediate cause of a reset, but
+       not guarantees of the ultimate cause.
+
+    9. If a graphics reset occurs in a shared context, what happens in
+       shared contexts?
+
+       RESOLVED: A reset in one context will result in a reset in all other
+       contexts in its share group. This is mandated, not recommended
+       behavior as of revision 14.
+
+   10. How can an application query for robust buffer access support,
+       since this is now determined at context creation time?
+
+       RESOLVED. The application can query the CONTEXT_FLAGS bitfield
+       using GetIntegerv and check for the presence of CONTEXT_FLAG_-
+       ROBUST_ACCESS_BIT_ARB.
+
+   11. How is the reset notification behavior controlled?
+
+       RESOLVED: Reset notification behavior is determined at context
+       creation time using GLX/WGL/etc. mechanisms. In order that shared
+       objects be handled predictably, a context cannot share with
+       another context unless both have the same reset notification
+       behavior.
+
+Revision History
+
+    Rev.    Date       Author     Changes
+    ----  ------------ ---------  --------------------------------------------
+     18   25 Jun 2014  Jon Leech  Fix type of <params> in Get*Uniformdv.
+     17   17 Sep 2012  Jon Leech  Clarify that GetnUniform* does not write
+                                  any data if bufSize is less than required
+                                  (Bug 8739).
+     16   25 Jun 2012  Jon Leech  Add interactions with ARB_imaging and 
+                                  core profile.
+     15   10 Apr 2012  Jon Leech  Fix description of INVALID_OPERATION
+                                  error to be when required data size is
+                                  *greater* than bufSize, not *less*.
+     14   22 Jul 2010  Jon Leech  Require resets to be delivered to all
+                                  contexts which share objects. Expand on
+                                  recommended recovery behavior in Issues 8
+                                  and 9. Assign enum for new token.
+     13   21 Jul 2010  Jon Leech  Remove RequestGraphicsResetNotificationARB
+                                  and determine graphics reset notification
+                                  behavior at context creation time in
+                                  separate GLX/WGL extensions.
+     12   19 Jul 2010  pdaniell   Added missing GetnUniformdARB. Add additional
+                                  language to the "Graphics Reset Recovery"
+                                  section to clarify objects of shared contexts.
+                                  Revert revision #7 changes to restore the
+                                  old "bufSize" behavior and remove the new
+                                  "length" parameter, both of which proved
+                                  problematic with implementation. Truncating
+                                  the output buffer data written to "bufSize"
+                                  length is hard to implement efficiently in
+                                  software and impossible with some hardware
+                                  paths. Also the additional "length" parameter
+                                  caused PBO based async calls to become sync,
+                                  which is undesirable.
+     11   07 Jun 2010  groth      Clarify PBO errors/sized queries interaction
+                                  Make consistent the app response to a reset
+                                  Resolve issue 10 per revision 10 changes.
+     10   07 Jun 2010  Jon Leech  Add a bit to the context flags query
+                                  indicating whether or not robust buffer
+                                  access was enabled at context creation.
+      9   06 Jun 2010  Jon Leech  Note interactions with context creation
+                                  extensions enabling robust buffer
+                                  access, and add issue 10 regarding
+                                  queries for robust buffer access.
+                                  Remove dangling references to old
+                                  ROBUST_BUFFER_ACCESS token.
+      8   21 May 2010  groth      bmerry comment response
+                                  Restore ARB suffixes in light of rejection from core
+      7   20 May 2010  groth      Allow bounds checking using context creation flag
+                                  Fix issues.
+                                  Revise bounded queries to take and return lengths.
+                                  Add query for current reset strategy.
+                                  72 column resizing.
+      6   06 May 2010  groth      ARBify, catch a few sized gets that hadn't
+                                  been named correctly.
+      5   05 May 2010  groth      Add clarification regarding recovered reset
+                                  detection.
+      4   02 May 2010  groth      Remove references to deleted functionality.
+                                  Add issue addressing differences with 
+      3   15 Apr 2010  groth      Describe GLSL array behavior when using
+                                  robust arrays.
+                                  Add issue explaining graphics reset causes.
+      2   22 Mar 2010  groth      Flesh out missing secions. Remove vestiges of
+                                  specified limits API. Rename sized queries.
+                                  Various grammar corrections and clarifications.
+      1   19 Jan 2010  mjk        Initial version

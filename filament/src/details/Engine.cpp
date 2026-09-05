@@ -347,6 +347,8 @@ FEngine::FEngine(Builder const& builder) :
     // Must be registered before the driver thread starts.
     mDebugRegistry.registerProperty("d.vulkan.debug_utils_names",
             &debug.vulkan.enable_debug_utils_names);
+    mDebugRegistry.registerProperty("d.vulkan.renderdoc_capture",
+            &debug.vulkan.enable_renderdoc_capture);
 }
 
 uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {

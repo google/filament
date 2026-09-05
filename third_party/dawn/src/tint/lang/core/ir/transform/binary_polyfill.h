@@ -28,8 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_BINARY_POLYFILL_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_BINARY_POLYFILL_H_
 
-#include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -38,14 +37,6 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
-
-/// The capabilities that the transform can support.
-const Capabilities kBinaryPolyfillCapabilities{
-    Capability::kAllowDuplicateBindings,
-    Capability::kAllowNonCoreTypes,
-    Capability::kAllow8BitIntegers,
-    Capability::kAllow16BitIntegers,
-};
 
 /// The set of polyfills that should be applied.
 struct BinaryPolyfillConfig {

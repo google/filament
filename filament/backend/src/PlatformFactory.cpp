@@ -33,46 +33,37 @@
     #elif defined(__EMSCRIPTEN__)
         #include "backend/platforms/WebGPUPlatformWasm.h"
     #endif
-#endif
+#endif // FILAMENT_SUPPORTS_WEBGPU
 
 #if defined(__ANDROID__)
     #include <sys/system_properties.h>
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+#endif
+
+#if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+    #if defined(__ANDROID__)
         #include "backend/platforms/PlatformEGLAndroid.h"
-    #endif
-#elif defined(FILAMENT_IOS)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+    #elif defined(FILAMENT_IOS)
         #include "backend/platforms/PlatformCocoaTouchGL.h"
-    #endif
-#elif defined(__APPLE__)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+    #elif defined(__APPLE__)
         #if defined(FILAMENT_SUPPORTS_OSMESA)
             #include <backend/platforms/PlatformOSMesa.h>
         #else
             #include <backend/platforms/PlatformCocoaGL.h>
         #endif
-    #endif
-#elif defined(__linux__)
-    #if defined(FILAMENT_SUPPORTS_X11)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+    #elif defined(__linux__)
+        #if defined(FILAMENT_SUPPORTS_X11)
             #include "backend/platforms/PlatformGLX.h"
-        #endif
-    #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+        #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
             #include "backend/platforms/PlatformEGLHeadless.h"
-        #endif
-    #elif defined(FILAMENT_SUPPORTS_OSMESA)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+        #elif defined(FILAMENT_SUPPORTS_OSMESA)
             #include "backend/platforms/PlatformOSMesa.h"
         #endif
-    #endif
-#elif defined(WIN32)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+    #elif defined(WIN32)
         #include "backend/platforms/PlatformWGL.h"
+    #elif defined(__EMSCRIPTEN__)
+        #include "backend/platforms/PlatformWebGL.h"
     #endif
-#elif defined(__EMSCRIPTEN__)
-    #include "backend/platforms/PlatformWebGL.h"
-#endif
+#endif  // FILAMENT_SUPPORTS_OPENGL
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     #if defined(__ANDROID__)
@@ -84,13 +75,13 @@
     #elif defined(WIN32)
         #include "backend/platforms/VulkanPlatformWindows.h"
     #endif
-#endif
+#endif // FILAMENT_DRIVER_SUPPORTS_VULKAN
 
 #if defined (FILAMENT_SUPPORTS_METAL)
 namespace filament::backend {
 filament::backend::Platform* createDefaultMetalPlatform();
 }
-#endif
+#endif // FILAMENT_SUPPORTS_METAL
 
 #include "noop/PlatformNoop.h"
 
@@ -213,4 +204,3 @@ void PlatformFactory::destroy(Platform** platform) noexcept {
 }
 
 } // namespace filament::backend
-

@@ -1,0 +1,216 @@
+Name
+
+    ARB_shader_ballot
+
+Name Strings
+
+    GL_ARB_shader_ballot
+
+Contact
+
+    Timothy Lottes (timothy.lottes 'at' amd.com)
+
+Contributors
+
+    Timothy Lottes, AMD
+    Graham Sellers, AMD
+    Daniel Rakos, AMD
+    Jeannot Breton, NVIDIA
+    Pat Brown, NVIDIA
+    Eric Werness, NVIDIA
+    Mark Kilgard, NVIDIA
+    Jeff Bolz, NVIDIA
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Last Modified Date: 03/18/2017
+    Revision: 8
+
+Number
+
+    ARB Extension #183
+
+Dependencies
+
+    This extension is written against Revision 5 of the version 4.50 of the
+    OpenGL Shading Language Specification, dated January 30, 2015.
+
+    This extension requires GL_ARB_gpu_shader_int64.
+
+Overview
+
+    This extension provides the ability for a group of invocations which
+    execute in lockstep to do limited forms of cross-invocation communication
+    via a group broadcast of a invocation value, or broadcast of a bitarray
+    representing a predicate value from each invocation in the group.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+IP Status
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_ballot : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_ballot               1
+
+Additions to Chapter 7 of the OpenGL Shading Language Specification
+(Built-in Variables)
+
+    Modify Section 7.4, Built-In Uniform State, p. 133
+
+    (Add to the list of built-in uniform variable declaration)
+
+        uniform uint  gl_SubGroupSizeARB;
+
+    (Add this paragraph at the end of this section)
+
+    A sub-group is a collection of invocations which execute in lockstep.
+    The variable <gl_SubGroupSizeARB> is the maximum number of invocations
+    in a sub-group. The maximum <gl_SubGroupSizeARB> supported in this
+    extension is 64.
+
+    Modify Section 7.1, Built-in Languages Variable, p. 110
+
+    (Add to the list of built-in variables for the compute, vertex, geometry,
+     tessellation control, tessellation evaluation and fragment languages)
+
+        in uint     gl_SubGroupInvocationARB;
+        in uint64_t gl_SubGroupEqMaskARB;
+        in uint64_t gl_SubGroupGeMaskARB;
+        in uint64_t gl_SubGroupGtMaskARB;
+        in uint64_t gl_SubGroupLeMaskARB;
+        in uint64_t gl_SubGroupLtMaskARB;
+
+    (Add those paragraphs at the end of this section)
+
+    The variable <gl_SubGroupInvocationARB> holds the index of the invocation within
+    sub-group. This variable is in the range 0 to <gl_SubGroupSizeARB>-1, where
+    <gl_SubGroupSizeARB> is the total number of invocations in a sub-group.
+
+    The <gl_SubGroup??MaskARB> variables provide a bitmask for all invocations,
+    with one bit per invocation starting with the least significant bit,
+    according to the following table,
+
+        variable               equation for bit values
+        --------------------   ------------------------------------
+        gl_SubGroupEqMaskARB   bit index == gl_SubGroupInvocationARB
+        gl_SubGroupGeMaskARB   bit index >= gl_SubGroupInvocationARB
+        gl_SubGroupGtMaskARB   bit index >  gl_SubGroupInvocationARB
+        gl_SubGroupLeMaskARB   bit index <= gl_SubGroupInvocationARB
+        gl_SubGroupLtMaskARB   bit index <  gl_SubGroupInvocationARB
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    Add Section 8.18, Shader Invocation Group Functions
+
+    Syntax:
+
+        uint64_t ballotARB(bool value);
+
+    The function ballotARB() returns a bitfield containing the result of
+    evaluating the expression <value> in all active invocations in the
+    sub-group. An active invocation is one that is executing the ballotARB()
+    call. The sub-group may have inactive invocations for example due to
+    exit of the shader, or divergent branching. Sub-groups of up to 64
+    invocations may be represented by the return value of ballotARB(). Bits
+    for each invocation are packed in least significant bit ordering. If
+    <value> evaluates to true for an active invocation then the corresponding
+    bit is set to one in the result, otherwise it is zero. Bits corresponding
+    to invocations that are not active or that do not exist in the sub group
+    (because, for example, they are at bit positions beyond the sub-group
+    size) are set to zero. The following trivial assumptions can be made:
+
+        * ballotARB(true) returns bitfield where the corresponding bits are
+          set for all active invocations in the sub-group.
+
+        * ballotARB(false) returns zero.
+
+    Syntax:
+
+        genType readInvocationARB(genType value, uint invocationIndex);
+        genIType readInvocationARB(genIType value, uint invocationIndex);
+        genUType readInvocationARB(genUType value, uint invocationIndex);
+
+        genType readFirstInvocationARB(genType value);
+        genIType readFirstInvocationARB(genIType value);
+        genUType readFirstInvocationARB(genUType value);
+
+    The function readInvocationARB() returns the <value> from a given
+    <invocationIndex> to all active invocations in the sub-group.
+    The <invocationIndex> must be the same for all active invocations
+    in the sub-group otherwise results are undefined.
+
+    The function readFirstInvocationARB() returns the <value> from the first
+    active invocation to all active invocations in the sub-group.
+
+Issues
+
+    1) How are the values of gl_SubGroup??MaskARB defined?
+
+    RESOLVED.  Earlier versions of this specification defined a bitmask
+    such as "LtMask" ("less than mask") as having bits set if
+    "gl_SubGroupInvocationARB <  bit index".  However, this was reversed
+    from the definition in GL_NV_shader_thread_group that these built-ins
+    were derived from, and also mismatched a recent Vulkan/SPIR-V extension.
+
+    Fortunately, all known implementations of this extension had implemented
+    "wrong" behavior (matching the sense of the original built-ins in
+    GL_NV_shader_thread_group), so the best thing to do is change the
+    definition in the spec.
+
+Revision History
+
+    Rev  Date        Author    Changes
+    ---  ----------  --------  ---------------------------------------------
+      8  03/18/2017  jbolz     Reversed the sense of the comparison in the
+                               definition of gl_SubGroup??MaskARB.
+      7  08/25/2015  nhenning  Add ARB suffix on documentation for
+                               readInvocation and readFirstInvocation
+                               functions.
+      6  07/31/2015  pdaniell  Add ARB suffix on the readInvocation and
+                               readFirstInvocation functions.
+      5  07/30/2015  pdaniell  Update the function definition syntax to use
+                               our standard gen*Type conventions.
+      4  06/23/2015  tlottes   More precise spec language.
+      3  06/22/2015  tlottes   Deferred GPU processor another spec.
+                               Cleaned up spec language.
+      2  04/20/2015  tlottes   Updated spec language.
+      1  03/09/2015  tlottes   Initial revision based on AMD_gcn_shader and
+                               NV_shader_thread_group.

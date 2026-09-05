@@ -31,6 +31,7 @@
 #include <utility>
 
 #include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/traverse.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/msl/ir/builtin_call.h"
@@ -50,7 +51,7 @@ struct State {
     core::ir::Module& ir;
 
     /// The transform options.
-    const FixTypeLayoutOptions options;
+    const FixTypeLayoutConfig options;
 
     /// The IR builder.
     core::ir::Builder b{ir};
@@ -68,11 +69,13 @@ struct State {
     /// when inside an array.
     Hashmap<const core::type::Type*, const core::type::Struct*, 4> packed_array_element_types{};
 
-    // A map from a packed pointer type to a helper function that will load it to an unpacked type.
-    Hashmap<const core::type::Pointer*, core::ir::Function*, 4> packed_load_helpers{};
+    // A map from an unpacked type and a packed pointer type to a helper that will load it.
+    Hashmap<std::pair<const core::type::Type*, const core::type::Pointer*>, core::ir::Function*, 4>
+        packed_load_helpers{};
 
-    // A map from a packed pointer type to a helper function that will store an unpacked type to it.
-    Hashmap<const core::type::Pointer*, core::ir::Function*, 4> packed_store_helpers{};
+    // A map from an unpacked type and a packed pointer type to a helper that will store it.
+    Hashmap<std::pair<const core::type::Type*, const core::type::Pointer*>, core::ir::Function*, 4>
+        packed_store_helpers{};
 
     /// Process the module.
     void Process() {
@@ -120,6 +123,64 @@ struct State {
                     });
                 }
             }
+
+            // Buffer view functions and their decompositions can contain vec3 types in a
+            // host-shareable address space. Look for those and update them to use packed_vec3.
+            // Note: bufferView, bufferArrayView, and msl.pointer_offset are handled here to avoid
+            // any unnecessary pass dependency issues.
+            Traverse(func->Block(), [&](core::ir::Instruction* inst) {
+                tint::Switch(
+                    inst,
+                    [&](core::ir::CoreBuiltinCall* core_call) {
+                        if (core_call->Func() != core::BuiltinFn::kBufferView &&
+                            core_call->Func() != core::BuiltinFn::kBufferArrayView) {
+                            return;
+                        }
+
+                        auto* ptr = core_call->Result()->Type()->As<core::type::Pointer>();
+                        if (!ptr || !AddressSpaceNeedsPacking(ptr->AddressSpace())) {
+                            return;
+                        }
+
+                        auto* packed_store_type = RewriteType(ptr->StoreType());
+                        if (packed_store_type == ptr->StoreType()) {
+                            return;
+                        }
+                        auto* new_ptr =
+                            ty.ptr(ptr->AddressSpace(), packed_store_type, ptr->Access());
+                        core_call->Result()->SetType(new_ptr);
+                        core_call->SetExplicitTemplateParams(
+                            Vector<core::ir::TemplateParameter, 1>{packed_store_type});
+                        core_call->Result()->ForEachUseSorted([&](core::ir::Usage use) {
+                            UpdateUsage(use, ptr->StoreType(), packed_store_type);
+                        });
+                    },
+                    [&](msl::ir::BuiltinCall* msl_call) {
+                        if (msl_call->Func() != BuiltinFn::kPointerOffset) {
+                            return;
+                        }
+
+                        auto* ptr = msl_call->Result()->Type()->As<core::type::Pointer>();
+                        if (!ptr || !AddressSpaceNeedsPacking(ptr->AddressSpace())) {
+                            return;
+                        }
+
+                        auto* packed_store_type = RewriteType(ptr->StoreType());
+                        if (packed_store_type == ptr->StoreType()) {
+                            return;
+                        }
+                        auto* new_ptr =
+                            ty.ptr(ptr->AddressSpace(), packed_store_type, ptr->Access());
+                        msl_call->Result()->SetType(new_ptr);
+                        if (!msl_call->ExplicitTemplateParams().IsEmpty()) {
+                            msl_call->SetExplicitTemplateParams(
+                                Vector<core::ir::TemplateParameter, 1>{packed_store_type});
+                        }
+                        msl_call->Result()->ForEachUseSorted([&](core::ir::Usage use) {
+                            UpdateUsage(use, ptr->StoreType(), packed_store_type);
+                        });
+                    });
+            });
         }
     }
 
@@ -196,7 +257,12 @@ struct State {
         const core::type::Type* new_elem_type = nullptr;
         auto* vec = arr->ElemType()->As<core::type::Vector>();
         if (vec && vec->Width() == 3) {
-            new_elem_type = GetPackedVec3ArrayElementStruct(vec->Type());
+            // A vec3<bool> is always converted to a vec3<u32>
+            if (vec->Type()->Is<core::type::Bool>()) {
+                new_elem_type = GetPackedVec3ArrayElementStruct(ty.u32());
+            } else {
+                new_elem_type = GetPackedVec3ArrayElementStruct(vec->Type());
+            }
         } else {
             new_elem_type = RewriteType(arr->ElemType());
         }
@@ -300,7 +366,25 @@ struct State {
                 UpdateAccessUsage(access, unpacked_type);
             },
             [&](core::ir::CoreBuiltinCall* call) {
-                // Assume this is only `arrayLength` until we find other cases.
+                if (call->Func() == core::BuiltinFn::kSubgroupMatrixLoad ||
+                    call->Func() == core::BuiltinFn::kSubgroupMatrixStore) {
+                    b.InsertBefore(call, [&] {
+                        // To match the intrinsic table, cast to vec4.
+                        auto* ptr_ty = call->Args()[0]->Type()->As<core::type::Pointer>();
+                        auto* arr_ty = unpacked_type->As<core::type::Array>();
+                        auto* scalar_ty = arr_ty->ElemType()->DeepestElement();
+                        auto* new_arr_ty = ty.Get<core::type::Array>(
+                            ty.vec4(scalar_ty), arr_ty->Count(), arr_ty->Size());
+                        auto* cast = b.CallExplicit<msl::ir::BuiltinCall>(
+                            ty.ptr(ptr_ty->AddressSpace(), new_arr_ty, ptr_ty->Access()),
+                            msl::BuiltinFn::kPointerOffset,
+                            Vector<core::ir::TemplateParameter, 1>{new_arr_ty}, call->Args()[0],
+                            b.Constant(u32(0)));
+                        call->SetArg(0, cast->Result());
+                    });
+                    return;
+                }
+                // Otherwise, assume this is only `arrayLength` until we find other cases.
                 TINT_IR_ASSERT(ir, call->Func() == core::BuiltinFn::kArrayLength);
                 // Nothing to do - the arrayLength builtin does not need to access the memory.
             },
@@ -462,7 +546,7 @@ struct State {
     /// @returns the helper function
     core::ir::Function* LoadPackedArrayHelper(const core::type::Array* unpacked_arr,
                                               const core::type::Pointer* packed_ptr_type) {
-        return packed_load_helpers.GetOrAdd(packed_ptr_type, [&] {
+        return packed_load_helpers.GetOrAdd(std::make_pair(unpacked_arr, packed_ptr_type), [&] {
             auto* func = b.Function(sym.New("tint_load_array_packed_vec3").Name(), unpacked_arr);
             auto* from = b.FunctionParam("from", packed_ptr_type);
             func->SetParams({from});
@@ -524,7 +608,7 @@ struct State {
     /// @returns the helper function
     core::ir::Function* LoadPackedStructHelper(const core::type::Struct* unpacked_str,
                                                const core::type::Pointer* packed_ptr_type) {
-        return packed_load_helpers.GetOrAdd(packed_ptr_type, [&] {
+        return packed_load_helpers.GetOrAdd(std::make_pair(unpacked_str, packed_ptr_type), [&] {
             auto* func = b.Function(sym.New("tint_load_struct_packed_vec3").Name(), unpacked_str);
             auto* from = b.FunctionParam("from", packed_ptr_type);
             func->SetParams({from});
@@ -610,7 +694,7 @@ struct State {
     /// @returns the helper function
     core::ir::Function* StorePackedArrayHelper(const core::type::Array* unpacked_arr,
                                                const core::type::Pointer* packed_ptr_type) {
-        return packed_store_helpers.GetOrAdd(packed_ptr_type, [&] {
+        return packed_store_helpers.GetOrAdd(std::make_pair(unpacked_arr, packed_ptr_type), [&] {
             auto* func = b.Function(sym.New("tint_store_array_packed_vec3").Name(), ty.void_());
             auto* to = b.FunctionParam("to", packed_ptr_type);
             auto* value = b.FunctionParam("value", unpacked_arr);
@@ -666,8 +750,8 @@ struct State {
     /// @returns the helper function
     core::ir::Function* StorePackedStructHelper(const core::type::Struct* unpacked_str,
                                                 const core::type::Pointer* packed_ptr_type) {
-        return packed_store_helpers.GetOrAdd(packed_ptr_type, [&] {
-            auto* func = b.Function(sym.New("tint_store_array_packed_vec3").Name(), ty.void_());
+        return packed_store_helpers.GetOrAdd(std::make_pair(unpacked_str, packed_ptr_type), [&] {
+            auto* func = b.Function(sym.New("tint_store_struct_packed_vec3").Name(), ty.void_());
             auto* to = b.FunctionParam("to", packed_ptr_type);
             auto* value = b.FunctionParam("value", unpacked_str);
             func->SetParams({to, value});
@@ -695,15 +779,8 @@ struct State {
 
 }  // namespace
 
-Result<SuccessType> FixTypeLayout(core::ir::Module& ir, const FixTypeLayoutOptions& options) {
-    AssertValid(ir,
-                tint::core::ir::Capabilities{
-                    core::ir::Capability::kAllow8BitIntegers,
-                    tint::core::ir::Capability::kAllowPointSizeBuiltin,
-                    tint::core::ir::Capability::kAllowDuplicateBindings,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                },
-                "before msl.FixTypeLayout");
+Result<SuccessType> FixTypeLayout(core::ir::Module& ir, const FixTypeLayoutConfig& options) {
+    AssertValid(ir, "before msl.FixTypeLayout");
 
     State{ir, options}.Process();
 

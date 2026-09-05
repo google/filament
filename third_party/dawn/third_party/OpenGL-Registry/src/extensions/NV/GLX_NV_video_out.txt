@@ -1,0 +1,428 @@
+Name 
+
+    NV_video_output
+
+Name Strings 
+
+    GLX_NV_video_out
+
+Contact 
+
+    Thomas True, Nvidia, ttrue@nvidia.com
+    Ian Williams, Nvidia, iwilliams@nvidia.com
+    Martin Schwarzer, Nvidia, mschwarzer@nvidia.com
+    Andy Ritger, Nvidia, aritger@nvidia.com
+
+Status 
+
+    Shipping since 2004 for NVIDIA Quadro SDI (Serial Digital Interface)
+
+Version 
+    Last Modified:      2014/06/04
+    NVIDIA Revision:    8
+
+Number 
+
+    348
+
+Dependencies 
+
+    OpenGL 1.1 is required.
+    GLX 1.3 is required.
+
+Overview 
+
+    This extension permits a color and or depth buffer of a pbuffer to
+    be used for rendering and subsequent video output.  After a pbuffer 
+    has been bound to a video device, subsequent color and or depth 
+    rendering into that buffer may be displayed on the video output.
+
+    This is intended for use with NVIDIA products such as the Quadro FX
+    4000 SDI.
+
+Issues 
+
+ 1. Should the new pbuffer attributes be available through GL queries? 
+
+    No, like other pbuffer attributes you need to query them through the 
+    window system extension. This extension does not make any changes to 
+    OpenGL. 
+
+ 2. Should glXSendPbufferToVideoNV require that the pbuffer be current?
+
+Implementation Notes
+
+ 1. Any created pbuffers must be the same resolution as that specified
+    by the state of the video output device.  The current state of the
+    video output device can be queried via the NV-CONTROL X extension.
+
+ 2. Applications may use a single pbuffer or a collection of pbuffers
+    to send frames/fields to a video device.  In the first case, an
+    application should block on the call to glXSendPbufferToVideoNV() to
+    ensure synchronization.  In the second case, an application should
+    utilize glXGetVideoInfoNV() in order to query vblank and
+    buffer counters for synchronization.
+
+Intended Usage 
+
+    1) Configure the video output device via the NV-CONTROL X extension.
+
+    2) Use glXGetFBConfigs or glXChooseFBConfig to find a suitable
+       FBConfig for rendering images.  GLX_DRAWABLE_TYPE must have
+       GLX_PBUFFER_BIT set.  The per-component pixel depth of the pbuffer
+       must be equal to or greater than the per-component depth of the
+       video output.
+
+    3) Create a GLXPbuffer for each stream of video by calling
+       glXCreatePbuffer.  Set the width and height for each GLXPbuffer
+       to match that of the intended video output device.
+
+    4) Call glXGetVideoDeviceNV to retrieve the handles for all 
+       video devices available.  A video device handle is required
+       for each video stream.  glXGetVideoDeviceNV will lock the
+       video device for exclusive use by this GLX client.  The NV-CONTROL
+       X extension will not be able to update video out attributes until
+       the video device is released with glXReleaseVideoDeviceNV.
+
+    5) Call glXBindVideoImageNV to bind each GLXPbuffer to a
+       corresponding video device handle.  Multiple pbuffers can
+       be bound, at the same time, to the same video device.
+
+    6) Render the current frame/field for each stream to one of the bound
+       GLXPbuffers. Once rendering is complete, call
+       glXSendPbufferToVideoNV to send each frame/field to the video
+       device.
+
+    7) Render subsequent video frames or fields calling
+       glXSendPbufferToVideoNV() at the completion of rendering for
+       each frame/field.
+
+    8) Call glXReleaseVideoImageNV to unbind each GLXPbuffer
+       from its associated video device.
+
+    9) Call glXReleaseVideoDeviceNV to release the video device.
+
+New Types
+    
+    /*
+     * GLXVideoDeviceNV is an opaque handle to a video device.
+     */
+    typedef unsigned int GLXVideoDeviceNV;
+
+
+New Procedures and Functions 
+
+    int glXGetVideoDeviceNV(Display *dpy, int screen, int numVideoDevices,
+                            GLXVideoDeviceNV *pVideoDevice);
+
+    int glXReleaseVideoDeviceNV(Display *dpy, int screen,
+                                GLXVideoDeviceNV VideoDevice);
+
+    int glXBindVideoImageNV(Display *dpy, GLXVideoDeviceNV VideoDevice,
+                            GLXPbuffer pbuf, int iVideoBuffer);
+
+    int glXReleaseVideoImageNV(Display *dpy, GLXPbuffer pbuf);
+
+    int glXSendPbufferToVideoNV(Display *dpy, GLXPbuffer pbuf,
+                                int iBufferType,
+                                unsigned long *pulCounterPbuffer,
+                                GLboolean bBlock);
+
+    int glXGetVideoInfoNV(Display *dpy, int screen,
+                          GLXVideoDeviceNV VideoDevice,
+                          unsigned long *pulCounterOutputPbuffer,
+                          unsigned long *pulCounterOutputVideo);
+
+New Tokens 
+
+    Accepted by the <iVideoBuffer> parameter of glXBindVideoImageNV:
+
+        GLX_VIDEO_OUT_COLOR_NV                          0x20C3
+        GLX_VIDEO_OUT_ALPHA_NV                          0x20C4
+        GLX_VIDEO_OUT_DEPTH_NV                          0x20C5
+        GLX_VIDEO_OUT_COLOR_AND_ALPHA_NV                0x20C6
+        GLX_VIDEO_OUT_COLOR_AND_DEPTH_NV                0x20C7
+
+    Accepted by the <iBufferType> parameter of glXSendPbufferToVideoNV:
+
+        GLX_VIDEO_OUT_FRAME_NV                          0x20C8
+        GLX_VIDEO_OUT_FIELD_1_NV                        0x20C9
+        GLX_VIDEO_OUT_FIELD_2_NV                        0x20CA
+        GLX_VIDEO_OUT_STACKED_FIELDS_1_2_NV             0x20CB
+        GLX_VIDEO_OUT_STACKED_FIELDS_2_1_NV             0x20CC
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation) 
+
+    None. 
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization) 
+
+    None. 
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment 
+Operations and the Frame Buffer) 
+
+    None. 
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions) 
+
+    None. 
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State 
+Requests) 
+
+    None. 
+
+
+Additions to the GLX 1.3 Specification
+
+    [Add new section, Video Out]
+
+    Video out functions permit color and depth buffers from a
+    pbuffer to be sent to a video output device.
+    
+    The command
+
+        int glXGetVideoDeviceNV(Display *dpy, int screen, int numVideoDevices,
+                                GLXVideoDeviceNV *pVideoDevice);
+
+    fills in the array <pVideoDevice> with up to <numVideoDevices>
+    handles to the available video devices.  <numVideoDevices> must be
+    non-negative, and <pVideoDevice> must not be NULL.
+
+    It is not an error if the number of available video devices is larger
+    that <numVideoDevices>; in that case the first <numVideoDevices>
+    device handles are returned.  It is an error if <numVideoDevices>
+    is larger than the number of available video devices.  The order of
+    devices returned in <pVideoDevice> is implementation dependent.
+
+    If glXGetVideoDeviceNV succeeds, 0 is returned.  Otherwise, a non-zero
+    error code is returned.
+
+
+    The command
+
+        int glXReleaseVideoDeviceNV(Display *dpy, int screen,
+                                    GLXVideoDeviceNV VideoDevice);
+
+    releases all resources associated with <VideoDevice>.
+
+    If glXReleaseVideoDeviceNV succeeds, 0 is returned.  Otherwise,
+    a non-zero error code is returned.
+
+
+    The command
+
+        int glXBindVideoImageNV(Display *dpy, GLXVideoDeviceNV VideoDevice,
+                                GLXPbuffer pbuf, int iVideoBuffer);
+
+    binds <pbuf> to <VideoDevice> for subsequent scanout where
+    <iVideoBuffer> specifies that <pbuf> contains color, alpha and/or
+    depth data.  Valid values for <iVideoBuffer> are:
+
+        GLX_VIDEO_OUT_COLOR_NV                          0x20C3
+        GLX_VIDEO_OUT_ALPHA_NV                          0x20C4
+        GLX_VIDEO_OUT_DEPTH_NV                          0x20C5
+        GLX_VIDEO_OUT_COLOR_AND_ALPHA_NV                0x20C6
+        GLX_VIDEO_OUT_COLOR_AND_DEPTH_NV                0x20C7
+
+    <pbuf> cannot be None, and <VideoDevice> must be a VideoDevice
+    returned by glXGetVideoDeviceNV().
+
+
+    A pbuffer can only be bound to one GLXVideoDeviceNV at a time.
+    If <pbuf> is already bound to a different GLXVideoDeviceNV, then
+    glXBindVideoImageNV will fail.
+
+
+    If glXBindVideoImageNV succeeds, 0 is returned.  Otherwise, 
+    a non-zero error code is returned.
+
+
+    The command
+
+        int glXReleaseVideoImageNV(Display *dpy, GLXPbuffer pbuf);
+
+    releases <pbuf> from a previously bound video device.  <pbuf> may
+    not be None.
+
+    If glXReleaseVideoImageNV succeeds, 0 is returned.  Otherwise,
+    a non-zero error code is returned.
+
+
+    The command
+
+        int glXSendPbufferToVideoNV(Display *dpy, GLXPbuffer pbuf,
+                                    int iBufferType,
+                                    unsigned long *pulCounterPbuffer,
+                                    Bool bBlock);
+
+    indicates that rendering to the <pbuf> is complete and that the
+    completed frame/field contained with <pbuf> is ready for scan out by
+    the video device where <iBufferType> specifies that <pbuf> contains
+    the first field, second field or a complete frame.  Valid values
+    for <iBufferType> are:
+
+        GLX_VIDEO_OUT_FRAME_NV                          0x20C8
+        GLX_VIDEO_OUT_FIELD_1_NV                        0x20C9
+        GLX_VIDEO_OUT_FIELD_2_NV                        0x20CA
+
+    The color buffer controlled by glReadBuffer is used as the color
+    buffer input to glXSendPbufferToVideoNV().  <pbuf> cannot be None.
+    The <bBlock> argument specifies whether or not the call should
+    block until scan out of the specified frame/field is complete.
+    <pulCounterPbuffer> returns the total number of frames/fields sent
+    to the video device.
+
+    If glXSendPbufferToVideoNV succeeds, 0 is returned.  Otherwise,
+    a non-zero error code is returned.
+
+
+    The command
+
+        int glXGetVideoInfoNV(GLXVideoDeviceNV VideoDevice,
+                              unsigned long *pulCounterOutputPbuffer,
+                              unsigned long *pulCounterOutputVideo);
+
+    returns in <pulCounterOutputVideo> the absolute count of vertical
+    blanks on <VideoDevice> since transfers were started while
+    <pulCounterOutputPbuffer> returns the count of the current pbuffer
+    being scanned out by <VideoDevice>.
+
+    If glXGetVideoInfoNV succeeds, 0 is returned.  Otherwise, a non-zero
+    error code is returned.
+
+
+GLX Protocol
+
+    Six new GLX protocol commands are added.
+
+    GetVideoDeviceNV
+        1       CARD8       opcode (X assigned)
+        1       17          GLX opcode (glXVendorPrivateWithReply)
+        2       5           request length
+        4       1313        vendor specific opcode
+        4                   unused
+        4       CARD32      num_devices
+        4       CARD32      screen
+      =>
+        1       CARD8       reply
+        1                   unused
+        2       CARD16      sequence number
+        4       n           reply length
+        4       CARD32      status
+        4       CARD32      num_devices
+        16                  unused
+        4 * n   CARD32      video_device handles
+
+    Where n is the number of device handles returned.
+
+
+    ReleaseVideoDeviceNV
+        1       CARD8       opcode (X assigned)
+        1       17          GLX opcode (glXVendorPrivateWithReply)
+        2       5           request length
+        4       1314        vendor specific opcode
+        4                   unused
+        4       CARD32      video_device
+        4       CARD32      screen
+      =>
+        1       CARD8       reply
+        1                   unused
+        2       CARD16      sequence number 
+        4       0           reply length
+        4       CARD32      status
+        20                  unused
+
+
+    BindVideoImageNV
+        1       CARD8       opcode (X assigned)
+        1       17          GLX opcode (glXVendorPrivateWithReply)
+        2       6           request length
+        4       1315        vendor specific opcode
+        4                   unused
+        4       GLX_PBUFFER pbuffer
+        4       CARD32      video_device
+        4       CARD32      video_buffer
+      =>
+        1       CARD8       reply
+        1                   unused
+        2       CARD16      sequence number
+        4       0           reply length
+        4       CARD32      status
+        20                  unused
+
+
+    ReleaseVideoImageNV
+        1       CARD8       opcode (X assigned)
+        1       17          GLX opcode (glXVendorPrivateWithReply)
+        2       4           request length
+        4       1316        vendor specific opcode
+        4       GLX_PBUFFER pbuffer
+      =>
+        1       CARD8       reply
+        1                   unused
+        2       CARD16      sequence number
+        4       0           reply length
+        4       CARD32      status
+        20                  unused
+
+
+    SendPbufferToVideoNV
+        1       CARD8       opcode (X assigned)
+        1       17          GLX opcode (glXVendorPrivateWithReply)
+        2       6           request length
+        4       1317        vendor specific opcode
+        4                   unused
+        4       GLX_PBUFFER pbuffer
+        4       CARD32      buffer_type
+        1       BOOL        block
+        1                   unused
+        2                   unused
+      =>
+        1       CARD8       reply
+        1                   unused
+        2       CARD16      sequence number
+        4       0           reply length
+        4       CARD32      status
+        4       CARD32      counter_pbuffer
+        16                  unused
+
+
+    GetVideoInfoNV
+        1       CARD8       opcode (X assigned)
+        1       17          GLX opcode (glXVendorPrivateWithReply)
+        2       5           request length
+        4       1318        vendor specific opcode
+        4       CARD32      screen
+        4       CARD32      video_device
+      =>
+        1       CARD8       reply
+        1                   unused
+        2       CARD16      sequence number
+        4       0           reply length
+        4       CARD32      status
+        4       CARD32      counter_video
+        4       CARD32      counter_pbuffer
+        12                  unused
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+History
+
+    Revision 8, June 4, 2014 (jajones)
+      - Fix extension string to match implementation.
+
+    Revision 7, February 6, 2013 (pbrown)
+      - Fix GLX protocol section to remove the duplicate
+        opcode and match the implementation.
+
+    Revision 6, February 20, 2008
+      - Internal revisions.
+    

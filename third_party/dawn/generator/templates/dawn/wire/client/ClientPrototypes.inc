@@ -28,15 +28,23 @@
 // Command handlers & doers
 {% for command in cmd_records["return command"] %}
     {% set Suffix = command.name.CamelCase() %}
+    {% set CmdName = "Return" + Suffix + "Cmd" %}
     WireResult Handle{{Suffix}}(DeserializeBuffer* deserializeBuffer);
     WireResult Do{{Suffix}}(
-        {%- for member in command.members -%}
+        {%- for member in command.members if not member.is_length -%}
+            {%- if not loop.first -%}, {% endif %}
             {%- if member.handle_type -%}
                 {{as_wireType(member.handle_type)}} {{as_varName(member.name)}}
+            {%- elif member.length and member.constant_length != 1 -%}
+                {% set length = "dawn::detail::DynamicExtent<size_t>" %}
+                {% if member.length == "constant" %}
+                    {% set length = member.constant_length %}
+                {% endif %}
+                {% set element_type = "std::remove_pointer_t<" + decorate(as_cType(member.type.name, True), member) + ">" %}
+                ityp::span<size_t, {{element_type}}, {{length}}> {{as_varName(member.name)}}
             {%- else -%}
                 {{as_annotated_wireType(member)}}
             {%- endif -%}
-            {%- if not loop.last -%}, {% endif %}
         {%- endfor -%}
     );
 

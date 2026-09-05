@@ -31,10 +31,10 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/wire/ChunkedCommandSerializer.h"
 #include "dawn/wire/server/ServerBase_autogen.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/wire/ChunkedCommandSerializer.h"
 
 namespace dawn::wire::server {
 
@@ -112,10 +112,10 @@ struct MapUserdata : CallbackUserdata {
 
     ObjectHandle buffer;
     WGPUBuffer bufferObj;
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
-    uint64_t offset;
-    uint64_t size;
+    size_t offset;
+    size_t size;
     WGPUMapMode mode;
 };
 
@@ -123,14 +123,14 @@ struct ErrorScopeUserdata : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
     ObjectHandle device;
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
 };
 
 struct ShaderModuleGetCompilationInfoUserdata : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
 };
 
@@ -138,7 +138,7 @@ struct QueueWorkDoneUserdata : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
     ObjectHandle queue;
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
 };
 
@@ -146,32 +146,32 @@ struct CreatePipelineAsyncUserData : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
     ObjectHandle device;
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
-    ObjectId pipelineObjectID;
+    ObjectHandle pipeline;
 };
 
 struct RequestAdapterUserdata : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
-    ObjectId adapterObjectId;
+    ObjectHandle adapter;
 };
 
 struct RequestDeviceUserdata : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
-    ObjectId deviceObjectId;
+    ObjectHandle device;
     WGPUFuture deviceLostFuture;
 };
 
 struct DeviceLostUserdata : CallbackUserdata {
     using CallbackUserdata::CallbackUserdata;
 
-    ObjectHandle eventManager;
+    ObjectId instanceId;
     WGPUFuture future;
 };
 
@@ -184,7 +184,7 @@ class Server : public ServerBase {
     ~Server() override;
 
     // ChunkedCommandHandler implementation
-    const volatile char* HandleCommands(const volatile char* commands, size_t size) override;
+    bool HandleCommands(Span<const volatile std::byte> commands) override;
 
     WireResult InjectBuffer(WGPUBuffer buffer, const Handle& handle, const Handle& deviceHandle);
     WireResult InjectTexture(WGPUTexture texture, const Handle& handle, const Handle& deviceHandle);
@@ -199,8 +199,8 @@ class Server : public ServerBase {
     // Flushes the command serialized from server->client if spontaneous callbacks are enabled.
     void Flush();
 
-    template <typename T,
-              typename Enable = std::enable_if<std::is_base_of<CallbackUserdata, T>::value>>
+    template <typename T>
+        requires(std::is_base_of_v<CallbackUserdata, T>)
     std::unique_ptr<T> MakeUserdata() {
         return std::unique_ptr<T>(new T(mSelf, mProcs));
     }

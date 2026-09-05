@@ -1,0 +1,124 @@
+Name
+
+    QCOM_ycbcr_degamma
+
+Name Strings
+
+    GL_QCOM_ycbcr_degamma
+
+Contributors
+
+    Ashish Mathur
+    Tate Hornbeck
+
+Contact
+
+    Ashish Mathur - asmathur 'at' qti.qualcomm.com
+
+Status
+
+    Final
+
+Version
+
+    Last Modified Date: May 17, 2024
+    Revision:  #1
+
+Number
+
+    OpenGL ES Extension #346
+
+Dependencies
+
+    OpenGL ES 3.0 is required. This extension is written against OpenGL ES 3.2 specification.
+    Requires either EGL 1.5 or EGL 1.4 with EGL_KHR_image_base or EGL_KHR_image extensions.
+
+    This extension interacts with GL_EXT_YUV_target, GL_OES_EGL_image, GL_OES_EGL_image_external,
+    GL_OES_EGL_image_external_essl3, GL_EXT_EGL_image_storage, and GL_EXT_EGL_image_array.
+
+Overview
+
+    The OpenGL ES extensions OES_EGL_image_external and EXT_EGL_image_storage provide a mechanism for creating
+    GL textures sharing storage with EGLImage objects which can encapsulate an external YCbCr buffer.
+    The YCbCr data is stored according to the colorspace standards like ITU BT.601, BT.709, or BT.2020,
+    and a transfer function like ITU OETF or sRGB EOTF, which translates the YCbCr data into non-linear space Y'CbCr.
+    When sampling a Y'CbCr texture containing texels encoded, the conversion back to linear RGB requires
+    conversion from non-linear RGB space to linear RGB space using an inverse transfer function.
+    This operation of applying the inverse transfer function is also called "degamma".
+    Currently, degamma operation is not executed as part of texture sampling, and instead
+    application's shader code is expected to perform it separately. This computation can be somewhat expensive in the shader.
+
+    This extension allows implementations to use "sRGB EOTF" inverse transform function defined in Khronos
+    data format 1.3 specification, for degamma operation. The degamma is performed during texture filtering,
+    allowing texture filtering to operate in a linear space. The extension provides this functionality by
+    selectively enabling degamma for both the luminance{Y} and/or chrominance {CbCr} components of any
+    8 bit YCbCr format.
+    This new functionality is layered on top of the OES_EGL_image_external and EXT_EGL_image_storage
+    extensions.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameteri and TexGetParameteri:
+    TEXTURE_Y_DEGAMMA_QCOM         0x9710
+    TEXTURE_CBCR_DEGAMMA_QCOM      0x9711
+
+Changes to 8.10 Texture Parameters
+
+   Add to Table 8.19 :  Texture parameters and their values:
+   -------------------------------------------------------------
+           Name              |   Type    |        Legal Value
+   -------------------------------------------------------------
+   TEXTURE_Y_DEGAMMA_QCOM    |  Boolean  |     GL_TRUE, GL_FALSE
+   TEXTURE_CBCR_DEGAMMA_QCOM |  Boolean  |     GL_TRUE, GL_FALSE
+   -------------------------------------------------------------
+
+Additions to Chapter 8 of the OpenGL ES 3.2 Specification
+(Textures and Samplers)
+
+    Add a new section "8.24 External Textures p.221" below section "8.23 Texture Image Loads and Stores p.215"
+    The wording will be the same as in extension "OES_EGL_image_external".
+
+    Add a new section "8.24.1 Degamma - sRGB transfer function" inside the section "8.24 External Textures".
+
+    Add the following paragraph to section 8.24.1 p.221 (Degamma - sRGB transfer function)
+    If texture parameter TEXTURE_Y_DEGAMMA_QCOM is set to GL_TRUE then non-linear to linear conversion is
+    applied to the R component before the color conversion to linear RGB space.
+    If texture parameter TEXTURE_CBCR_DEGAMMA_QCOM is set to GL_TRUE then non-linear to linear conversion is
+    applied to the G and B component before the color conversion to linear RGB space.
+    Alpha component, if present, remains unchanged.
+    Thus, clients must set both the parameters to TRUE to have sRGB transfer function applied to all components
+    of non-linear RGB space.
+    If either texture parameter TEXTURE_Y_DEGAMMA_QCOM or TEXTURE_CBCR_DEGAMMA_QCOM is set to GL_FALSE (also the default value),
+    the corresponding color component(s) remain in non-linear space.
+
+Errors
+
+    A GL_INVALID_OPERATION will be returned at draw time if either of the parameters, TEXTURE_Y_DEGAMMA_QCOM or
+    TEXTURE_CBCR_DEGAMMA_QCOM, is set to GL_TRUE for 10-bit depth YCbCr formats textures.
+
+Issues
+
+    1) Which Y′CBCR formats support the degamma feature?
+
+RESOLVED:  For implementations that support the extension, each format that contains 8-bit R, G, and B components.
+
+    2) Why apply sRGB transfer function instead of ITU transfer function ?
+
+RESOLVED:  Y′CBCR is frequently stored according to standards (e.g. BT.601 and BT.709) that specify that the the
+           conversion between linear and non-linear should use the ITU Transfer function.
+           The ITU transfer function is mathematically different from the sRGB transfer function and while sRGB
+           and ITU define similar curves, the difference is significant. Nonetheless, if the
+           difference is acceptable, use of sRGB degamma via this extension can siginifciantly improve the performance.
+           On the other hand using sRGB can make sense for certain use-cases where camera YCbCr images are known to be
+           in the sRGB space and known to use full-range encoding.
+           For those use-cases, this extension leverages the GPU ability to enable sRGB degamma at little cost,
+           and can improve quality because texture filtering is able to occur in linear space.
+
+
+Revision History:
+
+   Revision: 1 2024-05-17 (asmathur)

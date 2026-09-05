@@ -25,20 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/BindGroupD3D12.h"
+#include "src/dawn/native/d3d12/BindGroupD3D12.h"
 
 #include <utility>
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/ExternalTexture.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/d3d12/BindGroupLayoutD3D12.h"
-#include "dawn/native/d3d12/BufferD3D12.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/SamplerHeapCacheD3D12.h"
-#include "dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
-#include "dawn/native/d3d12/TextureD3D12.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/ExternalTexture.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/d3d12/BindGroupLayoutD3D12.h"
+#include "src/dawn/native/d3d12/BufferD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/SamplerHeapCacheD3D12.h"
+#include "src/dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/TextureD3D12.h"
 
 namespace dawn::native::d3d12 {
 
@@ -117,8 +117,8 @@ MaybeError BindGroup::InitializeImpl() {
                 switch (layout.type) {
                     case wgpu::BufferBindingType::Uniform: {
                         D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
-                        desc.SizeInBytes =
-                            Align(binding.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+                        desc.SizeInBytes = static_cast<UINT>(
+                            Align(binding.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT));
                         desc.BufferLocation = ToBackend(binding.buffer)->GetVA() + binding.offset;
 
                         d3d12Device->CreateConstantBufferView(

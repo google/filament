@@ -32,9 +32,9 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/Result.h"
-#include "dawn/native/ErrorData.h"
-#include "dawn/native/webgpu_absl_format.h"
+#include "src/dawn/common/Result.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/webgpu_absl_format.h"
 
 namespace dawn::native {
 

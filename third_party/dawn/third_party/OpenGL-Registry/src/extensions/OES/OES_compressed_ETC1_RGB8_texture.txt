@@ -1,0 +1,472 @@
+Name
+
+    OES_compressed_ETC1_RGB8_texture:
+
+Name Strings
+
+    GL_OES_compressed_ETC1_RGB8_texture
+
+Contact
+
+    Jacob Strom (jacob.strom 'at' ericsson.com)
+
+Notice
+
+    Copyright (c) 2005-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    See Ericsson's "IP Statement"
+
+Status
+
+    Ratified by the Khronos BOP, July 22, 2005.
+
+Version
+
+    Last Modified Date: April 24, 2008
+
+Number
+
+    OpenGL ES Extension #5
+
+Dependencies
+
+    Written based on the wording of the OpenGL ES 1.0 specification
+
+Overview
+
+    The goal of this extension is to allow direct support of
+    compressed textures in the Ericsson Texture Compression (ETC)
+    formats in OpenGL ES.
+
+    ETC-compressed textures are handled in OpenGL ES using the
+    CompressedTexImage2D call.
+
+    The definition of the "internalformat" parameter in the
+    CompressedTexImage2D call has been extended to support
+    ETC-compressed textures. 
+
+
+Issues
+
+    Question: "How does the data format correspond to compressed files
+    created with tool etcpack?"
+
+    If etcpack is used to convert a .ppm file to this format, the top
+    left pixel in the .ppm image will end up in the first block, which
+    in turn will end up at u=0, v=0 when sent to
+    glCompressedTexImage2D. Thus it works exactly the same way as just
+    sending the raw image data from the .ppm format directly to
+    glTexImage2D.
+
+New Procedures and Functions
+
+    None
+
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of CompressedTexImage2D
+
+    ETC1_RGB8_OES           0x8D64
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL
+Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Add to Table 3.17: Specific Compressed Internal Formats
+
+       Compressed Internal Formats           Base Internal Format
+       ===========================           ====================
+       ETC1_RGB8_OES                         RGB
+
+
+    Add to Section 3.8.3, Alternate Image Specification
+
+    ETC1_RGB8_OES:
+    ==============
+    
+    If <internalformat> is ETC1_RGB8_OES, the compressed texture is an
+    ETC1 compressed texture. 
+
+    The texture is described as a number of 4x4 pixel blocks. If the
+    texture (or a particular mip-level) is smaller than 4 pixels in
+    any dimension (such as a 2x2 or a 8x1 texture), the texture is
+    found in the upper left part of the block(s), and the rest of the
+    pixels are not used. For instance, a texture of size 4x2 will be
+    placed in the upper half of a 4x4 block, and the lower half of the
+    pixels in the block will not be accessed.
+
+    Pixel a1 (see Figure 3.9.0) of the first block in memory will
+    represent the texture coordinate (u=0, v=0). Pixel a2 in the
+    second block in memory will be adjacent to pixel m1 in the first
+    block, etc until the width of the texture. Then pixel a3 in the
+    following block (third block in memory for a 8x8 texture) will be
+    adjacent to pixel d1 in the first block, etc until the height of
+    the texture. Calling glCompressedTexImage2D to get an 8x8 texture
+    using the first, second, third and fourth block shown in Figure
+    3.9.0 would have the same effect as calling glTexImage2D where the
+    bytes describing the pixels would come in the following memory
+    order: a1 e1 i1 m1 a2 e2 i2 m2 b1 f1 j1 n1 b2 f2 j2 n2 c1 g1 k1 o1
+    c2 g2 k2 o2 d1 h1 l1 p1 d2 h2 l2 p2 a3 e3 i3 m3 a4 e4 i4 m4 b3 f3
+    j3 n3 b4 f4 j4 n4 c3 g3 k3 o3 c4 g4 k4 o4 d3 h3 l3 p3 d4 h4 l4 p4.
+
+    The number of bits that represent a 4x4 texel block is 64 bits if
+    <internalformat> is given by ETC1_RGB8_OES.
+
+    The data for a block is a number of bytes, 
+
+    {q0, q1, q2, q3, q4, q5, q6, q7} 
+
+    where byte q0 is located at the lowest memory address and q7 at
+    the highest. The 64 bits specifying the block is then represented
+    by the following 64 bit integer:
+
+    int64bit = 256*(256*(256*(256*(256*(256*(256*q0+q1)+q2)+q3)+q4)+q5)+q6)+q7;
+
+    Each 64-bit word contains information about a 4x4 pixel block as
+    shown in Figure 3.9.1. There are two modes in ETC1; the
+    'individual' mode and the 'differential' mode. Which mode is
+    active for a particular 4x4 block is controlled by bit 33, which
+    we call 'diffbit'. If diffbit = 0, the 'individual' mode is
+    chosen, and if diffbit = 1, then the 'differential' mode is
+    chosen. The bit layout for the two modes are different: The bit
+    layout for the individual mode is shown in Tables 3.17.1a and
+    3.17.1c, and the bit layout for the differential mode is laid out
+    in Tables 3.17.1b and 3.17.1c.
+
+    In both modes, the 4x4 block is divided into two subblocks of
+    either size 2x4 or 4x2. This is controlled by bit 32, which we
+    call 'flipbit'. If flipbit=0, the block is divided into two 2x4
+    subblocks side-by-side, as shown in Figure 3.9.2. If flipbit=1,
+    the block is divided into two 4x2 subblocks on top of each other,
+    as shown in Figure 3.9.3. 
+
+    In both individual and differential mode, a 'base color' for each
+    subblock is stored, but the way they are stored is different in
+    the two modes:
+
+    In the 'individual' mode (diffbit = 0), the base color for
+    subblock 1 is derived from the codewords R1 (bit 63-60), G1 (bit
+    55-52) and B1 (bit 47-44), see Table 3.17.1a. These four bit
+    values are extended to RGB888 by replicating the four higher order
+    bits in the four lower order bits. For instance, if R1 = 14 =
+    1110b, G1 = 3 = 0011b and B1 = 8 = 1000b, then the red component
+    of the base color of subblock 1 becomes 11101110b = 238, and the
+    green and blue components become 00110011b = 51 and 10001000b =
+    136. The base color for subblock 2 is decoded the same way, but
+    using the 4-bit codewords R2 (bit 59-56), G2 (bit 51-48)and B2
+    (bit 43-40) instead. In summary, the base colors for the subblocks
+    in the individual mode are:
+
+    base col subblock1 = extend_4to8bits(R1, G1, B1)
+    base col subblock2 = extend_4to8bits(R2, G2, B2) 
+
+    In the 'differential' mode (diffbit = 1), the base color for
+    subblock 1 is derived from the five-bit codewords R1', G1' and
+    B1'. These five-bit codewords are extended to eight bits by
+    replicating the top three highest order bits to the three lowest
+    order bits. For instance, if R1' = 28 = 11100b, the resulting
+    eight-bit red color component becomes 11100111b = 231. Likewise,
+    if G1' = 4 = 00100b and B1' = 3 = 00011b, the green and blue
+    components become 00100001b = 33 and 00011000b = 24
+    respectively. Thus, in this example, the base color for subblock 1
+    is (231, 33, 24). The five bit representation for the base color
+    of subblock 2 is obtained by modifying the 5-bit codewords R1' G1'
+    and B1' by the codewords dR2, dG2 and dB2. Each of dR2, dG2 and
+    dB2 is a 3-bit two-complement number that can hold values between
+    -4 and +3. For instance, if R1' = 28 as above, and dR2 = 100b =
+    -4, then the five bit representation for the red color component
+    is 28+(-4)=24 = 11000b, which is then extended to eight bits to
+    11000110b = 198. Likewise, if G1' = 4, dG2 = 2, B1' = 3 and dB2 =
+    0, the base color of subblock 2 will be RGB = (198, 49, 24). In
+    summary, the base colors for the subblocks in the differential
+    mode are:
+ 
+    base col subblock1 = extend_5to8bits(R1', G1', B1')
+    base col subblock2 = extend_5to8bits(R1'+dR2, G1'+dG2, B1'+dG2)
+
+    Note that these additions are not allowed to under- or overflow
+    (go below zero or above 31). (The compression scheme can easily
+    make sure they don't.) For over- or underflowing values, the
+    behavior is undefined for all pixels in the 4x4 block. Note also
+    that the extension to eight bits is performed _after_ the
+    addition.
+
+    After obtaining the base color, the operations are the same for
+    the two modes 'individual' and 'differential'. First a table is
+    chosen using the table codewords: For subblock 1, table codeword 1
+    is used (bits 39-37), and for subblock 2, table codeword 2 is used
+    (bits 36-34), see Table 3.17.1. The table codeword is used to
+    select one of eight modifier tables, see Table 3.17.2. For
+    instance, if the table code word is 010b = 2, then the modifier
+    table [-29, -9, 9 29] is selected. Note that the values in Table
+    3.17.2 are valid for all textures and can therefore be hardcoded
+    into the decompression unit.
+     
+    Next, we identify which modifier value to use from the modifier
+    table using the two 'pixel index' bits. The pixel index bits are
+    unique for each pixel. For instance, the pixel index for pixel d
+    (see Figure 3.9.1) can be found in bits 19 (most significant bit,
+    MSB), and 3 (least significant bit, LSB), see Table 3.17.1c. Note
+    that the pixel index for a particular texel is always stored in
+    the same bit position, irrespectively of bits 'diffbit' and
+    'flipbit'. The pixel index bits are decoded using table
+    3.17.3. If, for instance, the pixel index bits are 01b = 1, and
+    the modifier table [-29, -9, 9, 29] is used, then the modifier
+    value selected for that pixel is 29 (see table 3.17.3). This
+    modifier value is now used to additively modify the base
+    color. For example, if we have the base color (231, 8, 16), we
+    should add the modifier value 29 to all three components: (231+29,
+    8+29, 16+29) resulting in (260, 37, 45). These values are then
+    clamped to [0, 255], resulting in the color (255, 37, 45), and we
+    are finished decoding the texel.
+
+    ETC1 compressed textures support only 2D images without
+    borders. CompressedTexture2D will produce an INVALID_OPERATION if
+    <border> is non-zero.
+
+
+    Add table 3.17.1: Texel Data format for ETC1 compressed
+    textures:
+
+    ETC1_RGB8_OES:
+
+    a) bit layout in bits 63 through 32 if diffbit = 0
+
+     63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48
+     -----------------------------------------------
+    | base col1 | base col2 | base col1 | base col2 |
+    | R1 (4bits)| R2 (4bits)| G1 (4bits)| G2 (4bits)|
+     -----------------------------------------------
+
+     47 46 45 44 43 42 41 40 39 38 37 36 35 34  33  32
+     ---------------------------------------------------
+    | base col1 | base col2 | table  | table  |diff|flip|
+    | B1 (4bits)| B2 (4bits)| cw 1   | cw 2   |bit |bit |
+     ---------------------------------------------------
+    
+     
+    b) bit layout in bits 63 through 32 if diffbit = 1
+
+     63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48 
+     -----------------------------------------------
+    | base col1    | dcol 2 | base col1    | dcol 2 |
+    | R1' (5 bits) | dR2    | G1' (5 bits) | dG2    |
+     -----------------------------------------------
+    
+     47 46 45 44 43 42 41 40 39 38 37 36 35 34  33  32 
+     ---------------------------------------------------
+    | base col 1   | dcol 2 | table  | table  |diff|flip|
+    | B1' (5 bits) | dB2    | cw 1   | cw 2   |bit |bit |
+     ---------------------------------------------------
+
+     
+    c) bit layout in bits 31 through 0 (in both cases)
+
+     31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16
+     -----------------------------------------------
+    |       most significant pixel index bits       |
+    | p| o| n| m| l| k| j| i| h| g| f| e| d| c| b| a|
+     -----------------------------------------------
+
+     15 14 13 12 11 10  9  8  7  6  5  4  3   2   1  0
+     --------------------------------------------------
+    |         least significant pixel index bits       |  
+    | p| o| n| m| l| k| j| i| h| g| f| e| d| c | b | a |
+     --------------------------------------------------      
+    
+
+    Add table 3.17.2: Intensity modifier sets for ETC1 compressed textures:
+
+    table codeword                modifier table
+    ------------------        ----------------------
+            0                     -8  -2  2   8 
+            1                    -17  -5  5  17
+            2                    -29  -9  9  29 
+            3                    -42 -13 13  42 
+            4                    -60 -18 18  60 
+            5                    -80 -24 24  80
+            6                   -106 -33 33 106 
+            7                   -183 -47 47 183
+
+
+    Add table 3.17.3 Mapping from pixel index values to modifier values for
+    ETC1 compressed textures:
+
+    pixel index value
+    ---------------
+     msb     lsb           resulting modifier value
+    -----   -----          -------------------------
+      1       1            -b (large negative value)
+      1       0            -a (small negative value)
+      0       0             a (small positive value)
+      0       1             b (large positive value)
+     
+
+
+    Add figure 3.9.0: Pixel layout for a 8x8 texture using four ETC1
+    compressed blocks. Note how pixel a2 in the second block is
+    adjacent to pixel m in the first block.
+
+     First block in mem  Second block in mem
+     ---- ---- ---- ---- .... .... .... ....  --> u direction
+    |a1  |e1  |i1  |m1  |a2  :e2  :i2  :m2  :
+    |    |    |    |    |    :    :    :    : 
+     ---- ---- ---- ---- .... .... .... ....
+    |b1  |f1  |j1  |n1  |b2  :f2  :j2  :n2  : 
+    |    |    |    |    |    :    :    :    : 
+     ---- ---- ---- ---- .... .... .... ....
+    |c1  |g1  |k1  |o1  |c2  :g2  :k2  :o2  : 
+    |    |    |    |    |    :    :    :    : 
+     ---- ---- ---- ---- .... .... .... ....
+    |d1  |h1  |l1  |p1  |d2  :h2  :l2  :p2  : 
+    |    |    |    |    |    :    :    :    : 
+     ---- ---- ---- ---- ---- ---- ---- ---- 
+    :a3  :e3  :i3  :m3  |a4  |e4  |i4  |m4  |
+    :    :    :    :    |    |    |    |    |
+     .... .... .... .... ---- ---- ---- ---- 
+    :b3  :f3  :j3  :n3  |b4  |f4  |j4  |n4  |
+    :    :    :    :    |    |    |    |    |
+     .... .... .... .... ---- ---- ---- ---- 
+    :c3  :g3  :k3  :o3  |c4  |g4  |k4  |o4  |
+    :    :    :    :    |    |    |    |    |
+     .... .... .... .... ---- ---- ---- ---- 
+    :d3  :h3  :l3  :p3  |d4  |h4  |l4  |p4  |
+    :    :    :    :    |    |    |    |    |
+     .... .... .... .... ---- ---- ---- ---- 
+    | Third block in mem  Fourth block in mem
+    v
+    v direction
+
+    Add figure 3.9.1: Pixel layout for a ETC1 compressed block:
+
+     ---- ---- ---- ---- 
+    |a   |e   |i   |m   |
+    |    |    |    |    |
+     ---- ---- ---- ---- 
+    |b   |f   |j   |n   |
+    |    |    |    |    |
+     ---- ---- ---- ---- 
+    |c   |g   |k   |o   |
+    |    |    |    |    |
+     ---- ---- ---- ---- 
+    |d   |h   |l   |p   |
+    |    |    |    |    |
+     ---- ---- ---- ---- 
+     
+
+    Add figure 3.9.2: Two 2x4-pixel subblocks side-by-side:
+
+
+    subblock 1  subblock 2
+     ---- ---- ---- ----
+    |a    e   |i    m   |
+    |         |         |
+    |         |         |
+    |b    f   |j    n   |
+    |         |         |
+    |         |         |
+    |c    g   |k    o   |
+    |         |         |
+    |         |         |
+    |d    h   |l    p   |
+    |         |         |
+     ---- ---- ---- ----
+
+
+    Add figure 3.9.3: Two 4x2-pixel subblocks on top of each other:
+
+     ---- ---- ---- ----
+    |a    e    i    m   |
+    |                   |
+    |                   | subblock 1
+    |b    f    j    n   |
+    |                   |
+     -------------------
+    |c    g    k    o   |
+    |                   |
+    |                   | subblock 2
+    |d    h    l    p   |
+    |                   |
+     ---- ---- ---- ----
+
+    
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special
+Functions)
+
+    None
+
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_OPERATION is generated by CompressedTexSubImage2D,
+    TexSubImage2D, or CopyTexSubImage2D if the texture image <level>
+    bound to <target> has internal format ETC1_RGB8_OES.
+
+New State
+
+    The queries for NUM_COMPRESSED_TEXTURE_FORMATS and
+    COMPRESSED_TEXTURE_FORMATS include ETC1_RGB8_OES.
+
+
+Revision History
+    04/20/2005    0.1    (Jacob Strom)
+         - Original draft.
+    04/26/2005    0.2    (Jacob Strom)
+         - Minor bugfixes.
+    05/10/2005    0.3    (Jacob Strom)
+         - Minor bugfixes.
+    06/30/2005    0.9    (Jacob Strom)
+         - Merged iPACKMAN and iPACKMANalpha.
+    07/04/2005    0.92   (Jacob Strom)
+         - Changed name from iPACKMAN to Ericsson Texture Compression
+    07/07/2005    0.98   (Jacob Strom)
+         - Removed alpha formats
+    07/27/2005    1.00   (Jacob Strom)
+         - Added token value for ETC1_RGB8_OES
+    07/28/2005    1.001  (Jacob Strom)
+         - Changed typos found by Eric Fausett
+    10/25/2006    1.1    (Jacob Strom)
+         - Added clarification on small textures and endianess
+    04/02/2008    1.11   (Jacob Strom)
+         - Added clarification on coordinate system orientation
+    04/24/2008    1.12   (Jacob Strom)
+         - Improve error description

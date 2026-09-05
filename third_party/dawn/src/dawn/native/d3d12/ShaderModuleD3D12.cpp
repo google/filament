@@ -25,29 +25,32 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/ShaderModuleD3D12.h"
+#include "src/dawn/native/d3d12/ShaderModuleD3D12.h"
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/Pipeline.h"
-#include "dawn/native/ResourceTableDefaultResources.h"
-#include "dawn/native/TintUtils.h"
-#include "dawn/native/d3d/D3DCompilationRequest.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/BackendD3D12.h"
-#include "dawn/native/d3d12/BindGroupLayoutD3D12.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/PhysicalDeviceD3D12.h"
-#include "dawn/native/d3d12/PipelineLayoutD3D12.h"
-#include "dawn/native/d3d12/PlatformFunctionsD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/Pipeline.h"
+#include "src/dawn/native/ResourceTableDefaultResources.h"
+#include "src/dawn/native/TintUtils.h"
+#include "src/dawn/native/d3d/D3DCompilationRequest.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/BackendD3D12.h"
+#include "src/dawn/native/d3d12/BindGroupLayoutD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/ImmediatesLayoutD3D12.h"
+#include "src/dawn/native/d3d12/PhysicalDeviceD3D12.h"
+#include "src/dawn/native/d3d12/PipelineLayoutD3D12.h"
+#include "src/dawn/native/d3d12/PlatformFunctionsD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 #include "tint/tint.h"
 
 namespace dawn::native::d3d12 {
@@ -68,7 +71,7 @@ void DumpDXCCompiledShader(Device* device,
     dumpedMsg << "/* Dumped disassembled DXIL */\n";
     DxcBuffer dxcBuffer;
     dxcBuffer.Encoding = DXC_CP_UTF8;
-    dxcBuffer.Ptr = shaderBlob.Data();
+    dxcBuffer.Ptr = shaderBlob.DataPtr();
     dxcBuffer.Size = shaderBlob.Size();
 
     ComPtr<IDxcResult> dxcResult;
@@ -77,15 +80,16 @@ void DumpDXCCompiledShader(Device* device,
     ComPtr<IDxcBlobEncoding> disassembly;
     if (dxcResult && dxcResult->HasOutput(DXC_OUT_DISASSEMBLY) &&
         SUCCEEDED(dxcResult->GetOutput(DXC_OUT_DISASSEMBLY, IID_PPV_ARGS(&disassembly), nullptr))) {
-        dumpedMsg << std::string_view(static_cast<const char*>(disassembly->GetBufferPointer()),
-                                      disassembly->GetBufferSize());
+        dumpedMsg << DAWN_UNSAFE_TODO(
+            std::string_view(static_cast<const char*>(disassembly->GetBufferPointer()),
+                             disassembly->GetBufferSize()));
     } else {
         dumpedMsg << "DXC disassemble failed\n";
         ComPtr<IDxcBlobEncoding> errors;
         if (dxcResult && dxcResult->HasOutput(DXC_OUT_ERRORS) &&
             SUCCEEDED(dxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr))) {
-            dumpedMsg << std::string_view(static_cast<const char*>(errors->GetBufferPointer()),
-                                          errors->GetBufferSize());
+            dumpedMsg << DAWN_UNSAFE_TODO(std::string_view(
+                static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize()));
         }
     }
 
@@ -116,13 +120,12 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     SingleShaderStage stage,
     const PipelineLayout* layout,
     uint32_t compileFlags,
-    const std::optional<dawn::native::d3d::InterStageShaderVariablesMask>&
-        usedInterstageVariables) {
+    const ImmediateMask& pipelineImmediateMask,
+    const std::optional<dawn::native::d3d::InterStageShaderVariablesMask>& usedInterstageVariables,
+    std::vector<uint32_t> snorm10_10_10_2_locations) {
     Device* device = ToBackend(GetDevice());
-    TRACE_EVENT0(device->GetPlatform(), General, "ShaderModuleD3D12::Compile");
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "ShaderModuleD3D12::Compile");
     DAWN_ASSERT(!IsError());
-
-    const EntryPointMetadata& entryPoint = GetEntryPoint(programmableStage.entryPoint);
 
     d3d::D3DCompilationRequest req = {};
     req.tracePlatform = UnsafeUnserializedValue(device->GetPlatform());
@@ -131,6 +134,7 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     req.hlsl.disableSymbolRenaming = device->IsToggleEnabled(Toggle::DisableSymbolRenaming);
     req.hlsl.dumpShaders = device->IsToggleEnabled(Toggle::DumpShaders);
     req.hlsl.dumpShadersOnFailure = device->IsToggleEnabled(Toggle::DumpShadersOnFailure);
+    req.hlsl.tintOptions.snorm10_10_10_2_locations = std::move(snorm10_10_10_2_locations);
     req.hlsl.tintOptions.entry_point_name = programmableStage.entryPoint;
     req.hlsl.tintOptions.remapped_entry_point_name = device->GetIsolatedEntryPointName();
 
@@ -160,17 +164,35 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     }
 
     tint::hlsl::writer::ArrayLengthFromUniformOptions arrayLengthFromUniform;
-    arrayLengthFromUniform.ubo_binding = {layout->GetDynamicStorageBufferLengthsRegisterSpace(),
-                                          layout->GetDynamicStorageBufferLengthsShaderRegister()};
-
     tint::hlsl::writer::ArrayOffsetFromUniformOptions arrayOffsetFromUniform;
-    arrayOffsetFromUniform.ubo_binding = {layout->GetDynamicStorageBufferOffsetsRegisterSpace(),
-                                          layout->GetDynamicStorageBufferOffsetsShaderRegister()};
+
+    if (stage == SingleShaderStage::Compute) {
+        arrayLengthFromUniform.buffer_sizes_offset = GetImmediateByteOffsetInPipelineIfAny(
+            &ComputeImmediates::storageBufferDynamicLengths, pipelineImmediateMask);
+        arrayOffsetFromUniform.buffer_offsets_offset = GetImmediateByteOffsetInPipelineIfAny(
+            &ComputeImmediates::storageBufferDynamicOffsets, pipelineImmediateMask);
+    } else {
+        arrayLengthFromUniform.buffer_sizes_offset = GetImmediateByteOffsetInPipelineIfAny(
+            &RenderImmediates::storageBufferDynamicLengths, pipelineImmediateMask);
+        arrayOffsetFromUniform.buffer_offsets_offset = GetImmediateByteOffsetInPipelineIfAny(
+            &RenderImmediates::storageBufferDynamicOffsets, pipelineImmediateMask);
+    }
+
+    auto ToHLSLBindPoint = [&](BindGroupIndex group, BindingIndex index) -> tint::BindingPoint {
+        const BindGroupLayout* bgl = ToBackend(layout->GetBindGroupLayout(group));
+        return tint::BindingPoint{
+            .group = uint32_t{group},
+            .binding = bgl->GetShaderRegister(index),
+        };
+    };
 
     std::optional<tint::ResourceTableConfig> resourceTableConfig = std::nullopt;
     if (layout->UsesResourceTable()) {
         auto bindingTypeOrder = ResourceTableDefaultResources::GetOrder();
         uint32_t baseGroup = layout->GetBaseResourceTableRegisterSpace();
+
+        auto binding_to_resource_type = GenerateBindingToResourceType(layout, ToHLSLBindPoint);
+
         resourceTableConfig = tint::ResourceTableConfig{
             // For HLSL, Tint emits multiple unbounded arrays per type, each in its own group
             // (stage)
@@ -180,17 +202,11 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
             .resource_table_binding = tint::BindingPoint(baseGroup + 1, 0),
             .storage_buffer_binding = tint::BindingPoint(baseGroup, 0),
             .default_binding_type_order = {bindingTypeOrder.begin(), bindingTypeOrder.end()},
+            .get_sampler_index_from_metadata = true,
+            .binding_to_resource_type = binding_to_resource_type,
         };
     }
-
-    tint::Bindings bindings =
-        GenerateBindingRemapping(layout, stage, [&](BindGroupIndex group, BindingIndex index) {
-            const BindGroupLayout* bgl = ToBackend(layout->GetBindGroupLayout(group));
-            return tint::BindingPoint{
-                .group = uint32_t(group),
-                .binding = bgl->GetShaderRegister(index),
-            };
-        });
+    tint::Bindings bindings = GenerateBindingRemapping(layout, stage, ToHLSLBindPoint);
 
     std::vector<tint::BindingPoint> ignored_by_robustness;
     for (BindGroupIndex group : layout->GetBindGroupLayoutsMask()) {
@@ -228,22 +244,29 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
         // }
         for (BindingIndex index : bgl->GetBufferIndices()) {
             const auto& bindingInfo = bgl->GetBindingInfo(index);
+
+            // Skip bindings not present for this stage.
+            if (!(bindingInfo.visibility & StageBit(stage))) {
+                continue;
+            }
+
             const auto& bufferInfo = std::get<BufferBindingInfo>(bindingInfo.bindingLayout);
             if ((bufferInfo.type == wgpu::BufferBindingType::Storage ||
                  bufferInfo.type == wgpu::BufferBindingType::ReadOnlyStorage) &&
                 !bufferInfo.hasDynamicOffset) {
-                ignored_by_robustness.emplace_back(tint::BindingPoint{
-                    .group = uint32_t(group), .binding = uint32_t(bindingInfo.binding)});
+                BindingIndex bindingIndex =
+                    bgl->AsBindingIndex(bgl->GetAPIBindingIndex(bindingInfo.binding));
+                ignored_by_robustness.emplace_back(ToHLSLBindPoint(group, bindingIndex));
             }
         }
 
         // Add per-group arrayLengthFromUniform and arrayOffsetFromUniform options
-        for (const auto& bindingAndRegisterOffset :
-             layout->GetDynamicStorageBufferInfo()[group].bindingAndRegisterOffsets) {
+        for (const auto& bindingAndImmediateIndex :
+             layout->GetDynamicStorageBufferInfo()[group].bindingAndImmediateIndices) {
             // The bindpoint to index mapping is the same for both lengths and offsets,
             // the difference is the uniform buffer object binding
             // (arrayLengthFromUniform.ubo_binding and arrayOffsetFromUniform.ubo_binding).
-            BindingNumber bindingNum = bindingAndRegisterOffset.binding;
+            BindingNumber bindingNum = bindingAndImmediateIndex.binding;
 
             // Skip bindings not present for the stage because GenerateBindingRemapping doesn't
             // provide a remapping for them, which could lead to collisions between used mappings
@@ -253,11 +276,11 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
                 continue;
             }
 
-            uint32_t registerOffset = bindingAndRegisterOffset.registerOffset;
+            uint32_t immediateIndex = bindingAndImmediateIndex.immediateIndex;
             tint::BindingPoint bindingPoint{static_cast<uint32_t>(group),
                                             static_cast<uint32_t>(bindingNum)};
-            arrayLengthFromUniform.bindpoint_to_size_index.emplace(bindingPoint, registerOffset);
-            arrayOffsetFromUniform.bindpoint_to_offset_index.emplace(bindingPoint, registerOffset);
+            arrayLengthFromUniform.bindpoint_to_size_index.emplace(bindingPoint, immediateIndex);
+            arrayOffsetFromUniform.bindpoint_to_offset_index.emplace(bindingPoint, immediateIndex);
         }
     }
 
@@ -270,6 +293,8 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     req.hlsl.tintOptions.disable_robustness = !device->IsRobustnessEnabled();
     req.hlsl.tintOptions.disable_workgroup_init =
         device->IsToggleEnabled(Toggle::DisableWorkgroupInit);
+    req.hlsl.tintOptions.workarounds.d3d12_decompose_workgroup_access =
+        device->IsToggleEnabled(Toggle::D3D12DecomposeWorkgroupAccess);
     req.hlsl.tintOptions.disable_polyfill_integer_div_mod =
         device->IsToggleEnabled(Toggle::DisablePolyfillsOnIntegerDivisonAndModulo);
     req.hlsl.tintOptions.disable_integer_range_analysis =
@@ -281,17 +306,29 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
 
     req.hlsl.tintOptions.compiler = req.bytecode.compiler == d3d::Compiler::FXC
                                         ? tint::hlsl::writer::Options::Compiler::kFXC
-                                        : tint::hlsl::writer::Options::Compiler::kDXC;
+                                        : tint::hlsl::writer::Options::Compiler::kDXC_2018;
+    if (req.bytecode.compiler == d3d::Compiler::DXC &&
+        device->IsToggleEnabled(Toggle::D3D12UseHLSL2021)) {
+        req.hlsl.tintOptions.compiler = tint::hlsl::writer::Options::Compiler::kDXC_2021;
+    }
 
-    if (entryPoint.usesNumWorkgroups) {
-        DAWN_ASSERT(stage == SingleShaderStage::Compute);
-        req.hlsl.tintOptions.root_constant_binding_point = tint::BindingPoint{
-            layout->GetNumWorkgroupsRegisterSpace(), layout->GetNumWorkgroupsShaderRegister()};
-    } else if (stage == SingleShaderStage::Vertex) {
-        // For vertex shaders, use root constant to add FirstIndexOffset, if needed
-        req.hlsl.tintOptions.root_constant_binding_point =
-            tint::BindingPoint{layout->GetFirstIndexOffsetRegisterSpace(),
-                               layout->GetFirstIndexOffsetShaderRegister()};
+    req.hlsl.tintOptions.immediate_binding_point = tint::BindingPoint{
+        layout->GetImmediatesRegisterSpace(), layout->GetImmediatesShaderRegister()};
+
+    if (stage == SingleShaderStage::Compute) {
+        req.hlsl.tintOptions.num_workgroups_start_offset = GetImmediateByteOffsetInPipelineIfAny(
+            &ComputeImmediates::numWorkgroups, pipelineImmediateMask);
+    } else {
+        // firstVertex and firstInstance are set together, with firstInstance immediately after
+        // firstVertex in the packed immediate layout.
+        std::optional<uint32_t> firstIndexOffset = GetImmediateByteOffsetInPipelineIfAny(
+            &RenderImmediates::firstIndexOffset, pipelineImmediateMask);
+
+        if (firstIndexOffset.has_value()) {
+            req.hlsl.tintOptions.first_index_offset = firstIndexOffset;
+            req.hlsl.tintOptions.first_instance_offset =
+                std::optional<uint32_t>(*firstIndexOffset + kImmediateElementByteSize);
+        }
     }
 
     // TODO(dawn:549): HLSL generation outputs the indices into the
@@ -301,9 +338,6 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     // read by the shader.
     req.hlsl.tintOptions.array_length_from_uniform = std::move(arrayLengthFromUniform);
     req.hlsl.tintOptions.array_offset_from_uniform = std::move(arrayOffsetFromUniform);
-
-    req.hlsl.tintOptions.immediate_binding_point = tint::BindingPoint{
-        layout->GetImmediatesRegisterSpace(), layout->GetImmediatesShaderRegister()};
 
     if (stage == SingleShaderStage::Vertex) {
         // Now that only vertex shader can have interstage outputs.
@@ -322,6 +356,8 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
         device->IsToggleEnabled(Toggle::D3D12PolyfillReflectVec2F32);
     req.hlsl.tintOptions.workarounds.polyfill_subgroup_broadcast_f16 =
         device->IsToggleEnabled(Toggle::EnableSubgroupsIntelGen9);
+    req.hlsl.tintOptions.workarounds.collapse_subgroup_min_max =
+        device->IsToggleEnabled(Toggle::CollapseSubgroupMinMax);
 
     req.hlsl.tintOptions.extensions.polyfill_dot_4x8_packed =
         device->IsToggleEnabled(Toggle::PolyFillPacked4x8DotProduct);
@@ -332,15 +368,16 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     req.hlsl.adapterSupportedLimits = UnsafeUnserializedValue(
         LimitsForCompilationRequest::Create(device->GetAdapter()->GetLimits().v1));
     req.hlsl.maxSubgroupSize = device->GetAdapter()->GetPhysicalDevice()->GetSubgroupMaxSize();
+    req.hlsl.minSubgroupSize = device->GetAdapter()->GetPhysicalDevice()->GetSubgroupMinSize();
 
-    if (device->HasFeature(Feature::ChromiumExperimentalSubgroupSizeControl)) {
-        req.hlsl.minExplicitComputeSubgroupSize =
-            device->GetAdapter()->GetPhysicalDevice()->GetMinExplicitComputeSubgroupSize();
-        req.hlsl.maxExplicitComputeSubgroupSize =
-            device->GetAdapter()->GetPhysicalDevice()->GetMaxExplicitComputeSubgroupSize();
-        req.hlsl.maxComputeWorkgroupSubgroups =
-            device->GetAdapter()->GetPhysicalDevice()->GetMaxComputeWorkgroupSubgroups();
+    if (device->HasFeature(Feature::SubgroupSizeControl)) {
+        const D3D12DeviceInfo& deviceInfo =
+            ToBackend(device->GetAdapter()->GetPhysicalDevice())->GetDeviceInfo();
+        req.hlsl.waveLaneCountMin = deviceInfo.waveLaneCountMin;
+        req.hlsl.waveLaneCountMax = deviceInfo.waveLaneCountMax;
     }
+
+    req.hlsl.usesSubgroupMatrix = programmableStage.metadata->usesSubgroupMatrix;
 
     CacheResult<d3d::CompiledShader> compiledShader;
     DAWN_TRY_LOAD_OR_RUN(compiledShader, device, std::move(req),

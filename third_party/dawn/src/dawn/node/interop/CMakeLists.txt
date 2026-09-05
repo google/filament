@@ -78,5 +78,6 @@ target_include_directories(dawn_node_interop SYSTEM
 target_link_libraries(dawn_node_interop
     PRIVATE
         dawncpp
+        dawn_shared_utils
         dawn_warnings_config
 )

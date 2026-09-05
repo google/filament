@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_COMMON_CONTENTLESSOBJECTCACHEABLE_H_
 #define SRC_DAWN_COMMON_CONTENTLESSOBJECTCACHEABLE_H_
 
-#include "dawn/common/WeakRefSupport.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/WeakRefSupport.h"
 
 namespace dawn {
 

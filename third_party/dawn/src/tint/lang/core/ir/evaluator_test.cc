@@ -107,6 +107,18 @@ TEST_F(IR_EvaluatorTest, ConstructScalar) {
     EXPECT_EQ(1, c->Value()->ValueAs<int32_t>());
 }
 
+TEST_F(IR_EvaluatorTest, ConstructScalarEmpty) {
+    auto* inst = b.Construct(ty.i32());
+    auto res = Eval(b, inst);
+    ASSERT_EQ(res, Success);
+
+    auto* val = res.Get();
+    ASSERT_NE(val, nullptr);
+    auto* c = val->As<core::ir::Constant>();
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(0, c->Value()->ValueAs<int32_t>());
+}
+
 TEST_F(IR_EvaluatorTest, ConstructArray_Access) {
     auto* obj = b.Construct(ty.array<i32, 3>(), 1_i, 2_i, 3_i);
     auto* inst = b.Access(mod.Types().i32(), obj, 1_u);

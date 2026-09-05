@@ -76,6 +76,10 @@ Options:
                                    not be allowed by the target environment.
   --before-hlsl-legalization       Allows code patterns that are intended to be
                                    fixed by spirv-opt's legalization passes.
+  --buffer-descriptor-layout       <size>:<align> Set size and alignment for buffer and acceleration structure descriptor heap resources.
+  --image-descriptor-layout        <size>:<align> Set size and alignment for image and sampled image descriptor heap resources.
+  --sampler-descriptor-layout      <size>:<align> Set size and alignment for sampler descriptor heap resources.
+  --tensor-descriptor-layout       <size>:<align> Set size and alignment for tensor descriptor heap resources.
   --version                        Display validator version information.
   --target-env                     {%s}
                                    Use validation rules from the specified environment.
@@ -222,6 +226,82 @@ int main(int argc, char** argv) {
         options.SetAllowVulkan32BitBitwise(true);
       } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
         options.SetRelaxStructStore(true);
+      } else if (0 == strcmp(cur_arg, "--buffer-descriptor-layout")) {
+        if (argi + 1 < argc) {
+          uint32_t size = 0, alignment = 0;
+          if (sscanf(argv[++argi], "%u:%u", &size, &alignment) == 2 &&
+              size > 0 && alignment > 0) {
+            options.SetBufferDescriptorLayout(size, alignment);
+          } else {
+            fprintf(stderr,
+                    "error: Invalid argument to --buffer-descriptor-layout "
+                    "(expected <size>:<align>)\n");
+            continue_processing = false;
+            return_code = 1;
+          }
+        } else {
+          fprintf(stderr,
+                  "error: Missing argument to --buffer-descriptor-layout\n");
+          continue_processing = false;
+          return_code = 1;
+        }
+      } else if (0 == strcmp(cur_arg, "--image-descriptor-layout")) {
+        if (argi + 1 < argc) {
+          uint32_t size = 0, alignment = 0;
+          if (sscanf(argv[++argi], "%u:%u", &size, &alignment) == 2 &&
+              size > 0 && alignment > 0) {
+            options.SetImageDescriptorLayout(size, alignment);
+          } else {
+            fprintf(stderr,
+                    "error: Invalid argument to --image-descriptor-layout "
+                    "(expected <size>:<align>)\n");
+            continue_processing = false;
+            return_code = 1;
+          }
+        } else {
+          fprintf(stderr,
+                  "error: Missing argument to --image-descriptor-layout\n");
+          continue_processing = false;
+          return_code = 1;
+        }
+      } else if (0 == strcmp(cur_arg, "--sampler-descriptor-layout")) {
+        if (argi + 1 < argc) {
+          uint32_t size = 0, alignment = 0;
+          if (sscanf(argv[++argi], "%u:%u", &size, &alignment) == 2 &&
+              size > 0 && alignment > 0) {
+            options.SetSamplerDescriptorLayout(size, alignment);
+          } else {
+            fprintf(stderr,
+                    "error: Invalid argument to --sampler-descriptor-layout "
+                    "(expected <size>:<align>)\n");
+            continue_processing = false;
+            return_code = 1;
+          }
+        } else {
+          fprintf(stderr,
+                  "error: Missing argument to --sampler-descriptor-layout\n");
+          continue_processing = false;
+          return_code = 1;
+        }
+      } else if (0 == strcmp(cur_arg, "--tensor-descriptor-layout")) {
+        if (argi + 1 < argc) {
+          uint32_t size = 0, alignment = 0;
+          if (sscanf(argv[++argi], "%u:%u", &size, &alignment) == 2 &&
+              size > 0 && alignment > 0) {
+            options.SetTensorDescriptorLayout(size, alignment);
+          } else {
+            fprintf(stderr,
+                    "error: Invalid argument to --tensor-descriptor-layout "
+                    "(expected <size>:<align>)\n");
+            continue_processing = false;
+            return_code = 1;
+          }
+        } else {
+          fprintf(stderr,
+                  "error: Missing argument to --tensor-descriptor-layout\n");
+          continue_processing = false;
+          return_code = 1;
+        }
       } else if (0 == cur_arg[1]) {
         // Setting a filename of "-" to indicate stdin.
         if (!inFile) {

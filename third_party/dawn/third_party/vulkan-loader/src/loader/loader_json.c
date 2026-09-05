@@ -57,6 +57,18 @@ static VkResult loader_read_entire_file(const struct loader_instance *inst, cons
         if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, filename_utf16, filename_utf16_size) == filename_utf16_size) {
             file_handle =
                 CreateFileW(filename_utf16, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            // A path at or beyond MAX_PATH won't open unless we opt into long paths with the "\\?\" prefix, so retry with it.
+            if (INVALID_HANDLE_VALUE == file_handle && filename_utf16_size >= MAX_PATH) {
+                int prefixed_utf16_size = filename_utf16_size + 4;  // room for the leading "\\?\"
+                wchar_t *prefixed_utf16 = (wchar_t *)loader_stack_alloc(prefixed_utf16_size * sizeof(wchar_t));
+                prefixed_utf16[0] = L'\\';
+                prefixed_utf16[1] = L'\\';
+                prefixed_utf16[2] = L'?';
+                prefixed_utf16[3] = L'\\';
+                memcpy(prefixed_utf16 + 4, filename_utf16, filename_utf16_size * sizeof(wchar_t));
+                file_handle =
+                    CreateFileW(prefixed_utf16, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            }
         }
     }
     if (INVALID_HANDLE_VALUE == file_handle) {

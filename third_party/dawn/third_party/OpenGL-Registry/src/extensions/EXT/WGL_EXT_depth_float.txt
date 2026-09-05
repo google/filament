@@ -1,0 +1,98 @@
+Name
+
+    EXT_depth_float
+
+Name Strings
+
+    WGL_EXT_depth_float
+
+Version
+
+    Date: 1/27/1999  Version 1.4
+
+Number
+
+    177
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+    WGL_EXT_pixel_format is required.
+
+Overview
+
+    For perspective scenes, the density of objects (vertices) increases
+    as the distance from the eye increases.  For a linear depth buffer,
+    this means that objects (vertices) are sparse for a large portion of
+    the depth range and are dense for a small portion of the depth buffer.
+
+    This behavior is obvious if you consider standing in a boat looking
+    at the shore.  The near objects include only the boat while the far
+    objects include the entire shoreline which may include an entire city.
+
+    A non-linear (floating-point) depth buffer helps this problem.  If
+    the near clipping plane is set to 1.0, and the far clipping plane is
+    set to 0.0, a much greater resolution of objects can occur.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <attribute> parameter of wglGetPixelFormatAttribivEXT,
+    wglGetPixelFormatAttribfvEXT, and wglChoosePixelFormatExEXT:
+
+      WGL_DEPTH_FLOAT_EXT                  0x2040
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    Each of n and f are clamped to lie within [0,1], as are all arguments
+    of type clampd or clampf.  zw is taken to be represented in either
+    fixed-point or floating-point depending on the attributes of the
+    window.
+
+    If the depth buffer is a fixed-point format, then zw is taken to be
+    represented in fixed-point with at least as many bits as there are
+    in the depth buffer of the framebuffer.  We assume that the fixed-point
+    representation used represents each value k/(2^m - 1), where k is in
+    the set {0,1,...,2^m - 1}, as k (e.g. 1.0 is represented in the binary
+    as a string of all ones).
+
+    If the depth buffer is a floating-point format, then zw is taken to be
+    represented in floating-point with at least as many bits as there are
+    in the depth buffer of the framebuffer.  The floating-point
+    representation is implementation dependent.
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

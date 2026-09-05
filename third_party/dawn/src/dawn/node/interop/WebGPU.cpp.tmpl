@@ -103,7 +103,7 @@ Napi::Object Initialize(Napi::Env env) {
 // Wrappers holds all the Napi class constructors, and Napi::ObjectWrap type
 // declarations, for each of the WebIDL interface and namespace types.
 class Wrappers : public Constructors  {
-  Wrappers(Napi::Env env) : Constructors(env) {
+  explicit Wrappers(Napi::Env env) : Constructors(env) {
 {{-   range $ := .Declarations}}
 {{-     if and (IsInterfaceOrNamespace $) (not (HasAnnotation $ "ManualImplementation"))}}
 {{-       if and (IsInterface $) ($.Inherits)}}
@@ -206,7 +206,7 @@ public:
       return func;
     }
 
-    W{{$.Name}}(const Napi::CallbackInfo& info) : ObjectWrap(info) {
+    explicit W{{$.Name}}(const Napi::CallbackInfo& info) : ObjectWrap(info) {
 {{-   if IsInterface $}}
 {{-     if HasConstructor $}}
 

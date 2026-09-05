@@ -1,0 +1,1407 @@
+Name
+
+    ARB_sync
+
+Name Strings
+
+    GL_ARB_sync
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, ATI
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Jeff Juliano, NVIDIA
+    Jeremy Sandmel, Apple
+    John Kessenich, Intel
+    Jon Leech, Khronos
+    Piers Daniell, NVIDIA
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    US patent #6025855 may bear on this extension (based on ARB
+    discussion in March, 2003).
+
+    The related NV_fence extension is marked "NVIDIA Proprietary".
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    September 18, 2009 (version 25)
+
+Number
+
+    ARB Extension #66
+
+Dependencies
+
+    OpenGL 3.1 is required.
+
+    The functionality of ARB_sync was added to the OpenGL 3.2 core.
+
+Overview
+
+    This extension introduces the concept of "sync objects". Sync
+    objects are a synchronization primitive - a representation of events
+    whose completion status can be tested or waited upon. One specific
+    type of sync object, the "fence sync object", is supported in this
+    extension, and additional types can easily be added in the future.
+
+    Fence sync objects have corresponding fences, which are inserted
+    into the OpenGL command stream at the time the sync object is
+    created. A sync object can be queried for a given condition. The
+    only condition supported for fence sync objects is completion of the
+    corresponding fence command. Fence completion allows applications to
+    request a partial Finish, wherein all commands prior to the fence
+    will be forced to complete before control is returned to the calling
+    process.
+
+    These new mechanisms allow for synchronization between the host CPU
+    and the GPU, which may be accessing the same resources (typically
+    memory), as well as between multiple GL contexts bound to multiple
+    threads in the host CPU.
+
+New Types
+
+    (Implementer's Note: GLint64 and GLuint64 are defined as appropriate
+    for an ISO C 99 compiler. Other language bindings, or non-ISO
+    compilers, may need to use a different approach).
+
+    #include <inttypes.h>
+    typedef int64_t GLint64;
+    typedef uint64_t GLuint64;
+    typedef struct __GLsync *GLsync;
+
+New Procedures and Functions
+
+    sync FenceSync(enum condition,bitfield flags)
+    boolean IsSync(sync sync)
+    void DeleteSync(sync sync)
+
+    enum ClientWaitSync(sync sync,bitfield flags,uint64 timeout)
+    void WaitSync(sync sync,bitfield flags,uint64 timeout)
+
+    void GetInteger64v(enum pname, int64 *params);
+    void GetSynciv(sync sync,enum pname,sizei bufSize,sizei *length,
+                   int *values)
+
+New Tokens
+
+    Accepted as the <pname> parameter of GetInteger64v:
+
+        MAX_SERVER_WAIT_TIMEOUT         0x9111
+
+    Accepted as the <pname> parameter of GetSynciv:
+
+        OBJECT_TYPE                     0x9112
+        SYNC_CONDITION                  0x9113
+        SYNC_STATUS                     0x9114
+        SYNC_FLAGS                      0x9115
+
+    Returned in <values> for GetSynciv <pname> OBJECT_TYPE:
+
+        SYNC_FENCE                      0x9116
+
+    Returned in <values> for GetSynciv <pname> SYNC_CONDITION:
+
+        SYNC_GPU_COMMANDS_COMPLETE      0x9117
+
+    Returned in <values> for GetSynciv <pname> SYNC_STATUS:
+
+        UNSIGNALED                      0x9118
+        SIGNALED                        0x9119
+
+    Accepted in the <flags> parameter of ClientWaitSync:
+
+        SYNC_FLUSH_COMMANDS_BIT         0x00000001
+
+    Accepted in the <timeout> parameter of WaitSync:
+
+        TIMEOUT_IGNORED                 0xFFFFFFFFFFFFFFFFull
+
+    Returned by ClientWaitSync:
+
+        ALREADY_SIGNALED                0x911A
+        TIMEOUT_EXPIRED                 0x911B
+        CONDITION_SATISFIED             0x911C
+        WAIT_FAILED                     0x911D
+
+
+Additions to Chapter 2 of the OpenGL 3.1 Specification (OpenGL Operation)
+
+    Add to Table 2.2, GL data types:
+
+   "GL Type Minimum     Description
+            Bit Width
+    ------- ---------   ----------------------------------------------
+    int64   64          Signed 2's complement binary long integer
+    uint64  64          Unsigned 2's complement binary long integer.
+    sync    <ptrbits>   Sync object handle (see section 5.2)
+
+
+Additions to Chapter 5 of the OpenGL 3.1 Specification (Special Functions)
+
+    Insert a new section following "Flush and Finish" (Section 5.1)
+    describing sync objects and fence operation. Renumber existing
+    section 5.2 "Hints" and all following 5.* sections.
+
+   "5.2 Sync Objects and Fences
+    ---------------------------
+
+    Sync objects act as a <synchronization primitive> - a representation
+    of events whose completion status can be tested or waited upon. Sync
+    objects may be used for synchronization with operations occurring in
+    the GL state machine or in the graphics pipeline, and for
+    synchronizing between multiple graphics contexts, among other
+    purposes.
+
+    Sync objects have a status value with two possible states:
+    <signaled> and <unsignaled>. Events are associated with a sync
+    object. When an sync object is created, its status is set to
+    unsignaled. When the associated event occurs, the sync object is
+    signaled (its status is set to signaled). Once a sync object has
+    been created, the GL may be asked to wait for a sync object to
+    become signaled.
+
+    Initially, only one specific type of sync object is defined: the
+    fence sync object, whose associated event is triggered by a fence
+    command placed in the GL command stream. Fence sync objects are used
+    to wait for partial completion of the GL command stream, as a more
+    flexible form of Finish.
+
+    The command
+
+        sync FenceSync(enum condition,bitfield flags)
+
+    creates a new fence sync object, inserts a fence command in the GL
+    command stream and associates it with that sync object, and returns
+    a non-zero name corresponding to the sync object.
+
+    When the specified <condition> of the sync object is satisfied by
+    the fence command, the sync object is signaled by the GL, causing
+    any ClientWaitSync or WaitSync commands (see below) blocking on
+    <sync> to <unblock>. No other state is affected by FenceSync or by
+    execution of the associated fence command.
+
+    <condition> must be SYNC_GPU_COMMANDS_COMPLETE. This condition is
+    satisfied by completion of the fence command corresponding to the
+    sync object and all preceding commands in the same command stream.
+    The sync object will not be signaled until all effects from these
+    commands on GL client and server state and the framebuffer are fully
+    realized. Note that completion of the fence command occurs once the
+    state of the corresponding sync object has been changed, but
+    commands waiting on that sync object may not be unblocked until
+    after the fence command completes.
+
+    <flags> must be 0[fn1].
+       [fn1: <flags> is a placeholder for anticipated future extensions
+        of fence sync object capabilities.]
+
+    Each sync object contains a number of <properties> which determine
+    the state of the object and the behavior of any commands associated
+    with it. Each property has a <property name> and <property value>.
+    The initial property values for a sync object created by FenceSync
+    are shown in table 5.props:
+
+        Property Name   Property Value
+        -------------   --------------
+        OBJECT_TYPE     SYNC_FENCE
+        SYNC_CONDITION  <condition>
+        SYNC_STATUS     UNSIGNALED
+        SYNC_FLAGS      <flags>
+        --------------------------------------
+        Table 5.props: Initial properties of a
+        sync object created with FenceSync().
+
+    Properties of a sync object may be queried with GetSynciv (see
+    section 6.1.16). The SYNC_STATUS property will be changed to
+    SIGNALED when <condition> is satisfied.
+
+    If FenceSync fails to create a sync object, zero will be returned
+    and a GL error will be generated as described. An INVALID_ENUM error
+    is generated if <condition> is not SYNC_GPU_COMMANDS_COMPLETE. If
+    <flags> is not zero, an INVALID_VALUE error is generated.
+
+    A sync object can be deleted by passing its name to the command
+
+        void DeleteSync(sync sync)
+
+    If the fence command corresponding to the specified sync object has
+    completed, or if no ClientWaitSync or WaitSync commands are blocking
+    on <sync>, the object is deleted immediately. Otherwise, <sync> is
+    flagged for deletion and will be deleted when it is no longer
+    associated with any fence command and is no longer blocking any
+    ClientWaitSync or WaitSync command. In either case, after returning
+    from DeleteSync the <sync> name is invalid and can no longer be used
+    to refer to the sync object.
+
+    DeleteSync will silently ignore a <sync> value of zero. An
+    INVALID_VALUE error is generated if <sync> is neither zero nor the
+    name of a sync object.
+
+
+    5.2.1 Waiting for Sync Objects
+    ------------------------------
+
+    The command
+
+        enum ClientWaitSync(sync sync,bitfield flags,uint64 timeout)
+
+    causes the GL to block, and will not return until the sync object
+    <sync> is signaled, or until the specified <timeout> period expires.
+    <timeout> is in units of nanoseconds. <timeout> is adjusted to the
+    closest value allowed by the implementation-dependent timeout
+    accuracy, which may be substantially longer than one nanosecond, and
+    may be longer than the requested period.
+
+    If <sync> is signaled at the time ClientWaitSync is called
+    then ClientWaitSync returns immediately. If <sync> is unsignaled at
+    the time ClientWaitSync is called then ClientWaitSync will block and
+    will wait up to <timeout> nanoseconds for <sync> to become signaled.
+    <flags> controls command flushing behavior, and may be
+    SYNC_FLUSH_COMMANDS_BIT, as discussed in section 5.2.2.
+
+    ClientWaitSync returns one of four status values. A return value of
+    ALREADY_SIGNALED indicates that <sync> was signaled at the time
+    ClientWaitSync was called. ALREADY_SIGNALED will always be returned
+    if <sync> was signaled, even if the value of <timeout> is zero. A
+    return value of TIMEOUT_EXPIRED indicates that the specified timeout
+    period expired before <sync> was signaled. A return value of
+    CONDITION_SATISFIED indicates that <sync> was signaled before the
+    timeout expired. Finally, if an error occurs, in addition to
+    generating a GL error as specified below, ClientWaitSync immediately
+    returns WAIT_FAILED without blocking.
+
+    If the value of <timeout> is zero, then ClientWaitSync does not
+    block, but simply tests the current state of <sync>. TIMEOUT_EXPIRED
+    will be returned in this case if <sync> is not signaled, even though
+    no actual wait was performed.
+
+    If <sync> is not the name of a sync object, an INVALID_VALUE error
+    is generated. If <flags> contains any bits other than
+    SYNC_FLUSH_COMMANDS_BIT, an INVALID_VALUE error is generated.
+
+    The command
+
+        void WaitSync(sync sync,bitfield flags,uint64 timeout)
+
+    is similar to ClientWaitSync, but instead of blocking and not
+    returning to the application until <sync> is signaled, WaitSync
+    returns immediately, instead causing the GL server [fn1] to block
+    until <sync> is signaled [fn2].
+       [fn1 - the GL server may choose to wait either in the CPU
+        executing server-side code, or in the GPU hardware if it
+        supports this operation.]
+       [fn2 - WaitSync allows applications to continue to queue commands
+        from the client in anticipation of the sync being signaled,
+        increasing client-server parallelism.
+
+    <sync> has the same meaning as for ClientWaitSync.
+
+    <timeout> must currently be the special value TIMEOUT_IGNORED, and
+    is not used. Instead, WaitSync will always wait no longer than an
+    implementation-dependent timeout. The duration of this timeout in
+    nanoseconds may be queried by calling GetInteger64v with <value>
+    MAX_SERVER_WAIT_TIMEOUT. There is currently no way to determine
+    whether WaitSync unblocked because the timeout expired or because
+    the sync object being waited on was signaled.
+
+    <flags> must be 0.
+
+    If an error occurs, WaitSync generates a GL error as specified
+    below, and does not cause the GL server to block.
+
+    If <sync> is not the name of a sync object, an INVALID_VALUE error
+    is generated. If <timeout> is not TIMEOUT_IGNORED, or <flags> is not
+    zero, an INVALID_VALUE error is generated.
+
+    Multiple Waiters
+    ----------------
+
+    It is possible for both the GL client to be blocked on a sync object
+    in a ClientWaitSync command, the GL server to be blocked as the
+    result of a previous WaitSync command, and for additional WaitSync
+    commands to be queued in the GL server, all for a single sync
+    object. When such a sync object is signaled in this situation, the
+    client will be unblocked, the server will be unblocked, and all such
+    queued WaitSync commands will continue immediately when they are
+    reached.
+
+    See section D.2 for more information about blocking on a sync
+    objects in multiple GL contexts.
+
+    5.2.2 Signaling
+    ---------------
+
+    A sync object can be in the signaled state only once the
+    corresponding fence command has completed and signaled the sync
+    object.
+
+    If the sync object being blocked upon will not be signaled in finite
+    time (for example, by an associated fence command issued previously,
+    but not yet flushed to the graphics pipeline), then ClientWaitSync
+    may hang forever. To help prevent this behavior [fn4], if the
+    SYNC_FLUSH_COMMANDS_BIT bit is set in <flags>, and <sync> is
+    unsignaled when ClientWaitSync is called, then the equivalent of
+    Flush will be performed before blocking on <sync>.
+       [fn4 - The simple flushing behavior defined by
+        SYNC_FLUSH_COMMANDS_BIT will not help when waiting for a fence
+        command issued in another context's command stream to complete.
+        Applications which block on a fence sync object must take
+        additional steps to assure that the context from which the
+        corresponding fence command was issued has flushed that command
+        to the graphics pipeline.]
+
+    If a sync object is marked for deletion while a client is blocking
+    on that object in a ClientWaitSync command, or a GL server is
+    blocking on that object as a result of a prior WaitSync command,
+    deletion is deferred until the sync object is signaled and all
+    blocked GL clients and servers are unblocked.
+
+    Additional constraints on the use of sync objects are discussed in
+    Appendix D.
+
+    State must be maintained to indicate which sync object names are
+    currently in use. The state require for each sync object in use is
+    an integer for the specific type, an integer for the condition, an
+    integer for the flags, and a bit indicating whether the object is
+    signaled or unsignaled. The initial values of sync object state are
+    defined as specified by FenceSync."
+
+Additions to Chapter 6 of the OpenGL 3.1 Specification (State and State Requests)
+
+    Add GetInteger64v to the first list of commands in section 6.1.1
+    "Simple Queries", and change the next sentence to mention the query:
+
+   "There are five commands for obtaining simple state variables:
+
+       ...
+       void GetInteger64v(enum value,int64 *data)
+       ...
+
+    The commands obtain boolean, integer, 64-bit integer,
+    floating-point..."
+
+
+    Modify the third sentence of section 6.1.2 "Data Conversions":
+
+   "If any of the other simple queries are called, a boolean value of
+    TRUE or FALSE is interpreted as 1 or 0, respectively. If GetIntegerv
+    or GetInteger64v are called, a floating-point value is rounded to
+    the nearest integer, unless the value is an RGBA color component..."
+
+
+    Insert a new subsection following "Asynchronous Queries" (subsection
+    6.1.6) describing sync object queries. Renumber existing subsection
+    6.1.7 "Buffer Object Queries" and all following 6.1.* subsections.
+
+   "6.1.7 Sync Object Queries
+
+    Properties of sync objects may be queried using the command
+
+        void GetSynciv(sync sync,enum pname,sizei bufSize,sizei *length,
+                       int *values)
+
+    The value or values being queried are returned in the parameters
+    <length> and <values>.
+
+    On success, GetSynciv replaces up to <bufSize> integers in <values>
+    with the corresponding property values of the object being queried.
+    The actual number of integers replaced is returned in *<length>. If
+    <length> is NULL, no length is returned.
+
+    If <pname> is OBJECT_TYPE, a single value representing the specific
+    type of the sync object is placed in <values>. The only type
+    supported is SYNC_FENCE.
+
+    If <pname> is SYNC_STATUS, a single value representing the status of
+    the sync object (SIGNALED or UNSIGNALED) is placed in <values>.
+
+    If <pname> is SYNC_CONDITION, a single value representing the
+    condition of the sync object is placed in <values>. The only
+    condition supported is SYNC_GPU_COMMANDS_COMPLETE.
+
+    If <pname> is SYNC_FLAGS, a single value representing the flags with
+    which the sync object was created is placed in <values>. No flags
+    are currently supported.
+
+    If <sync> is not the name of a sync object, an INVALID_VALUE error
+    is generated. If <pname> is not one of the values described above,
+    an INVALID_ENUM error is generated. If an error occurs,
+    nothing will be written to <values> or <length>.
+
+    The command
+
+        boolean IsSync(sync sync)
+
+    returns TRUE if <sync> is the name of a sync object. If <sync> is
+    not the name of a sync object, or if an error condition occurs,
+    IsSync returns FALSE (note that zero is not the name of a sync
+    object).
+
+    Sync object names immediately become invalid after calling
+    DeleteSync, as discussed in sections 5.2 and D.2, but the underlying
+    sync object will not be deleted until it is no longer associated
+    with any fence command and no longer blocking any WaitSync command."
+
+
+Additions to Appendix D (Shared Objects and Multiple Contexts)
+
+    In the first paragraph of the appendix, add "sync objects" to the
+    list of shared state.
+
+    Replace the title and first sentence of section D.1 with:
+
+   "D.1 Object Deletion Behavior (other than sync objects)
+    ------------------------------------------------------
+
+    After a shared object (other than sync objects, discussed in section
+    D.2) is deleted..."
+
+
+    Insert a new section following "Object Deletion Behavior" (section
+    D.1) describing sync object multicontext behavior. Renumber existing
+    section D.2 "Propagating State Changes..." and all following D.*
+    sections.
+
+   "D.2 Sync Objects and Multiple Contexts
+    --------------------------------------
+
+    D.2.1 Sync Object Deletion Behavior
+    -----------------------------------
+
+    Deleting sync objects is similar to other shared object types in
+    that the name of the deleted object immediately becomes invalid but
+    the underlying object will not be deleted until it is no longer in
+    use. Unlike other shared object types, a sync object is determined
+    to be in use if there is a corresponding fence command which has not
+    yet completed (signaling the sync object), or if there are any GL
+    clients and/or servers blocked on the sync object as a result of
+    ClientWaitSync or WaitSync commands. Once any corresponding fence
+    commands have completed, a sync object has been signaled, and all
+    clients and/or servers blocked on that sync object have been
+    unblocked, the object may then be deleted.
+
+    D.2.2 Multiple Waiters in Multiple Contexts
+    -------------------------------------------
+
+    When multiple GL clients and/or servers are blocked on a single sync
+    object and that sync object is signaled, all such blocks are
+    released. The order in which blocks are released is
+    implementation-dependent."
+
+
+    Promote the fifth paragraph of section D.3 "Propagating State
+    Changes" (following the itemized list of changes to an object) to a
+    new subsection D.3.1. Renumber the existing subsection D.3.1
+    "Definitions" and all following D.3.* subsections.
+
+   "D.3.1 Determining Completion of Changes to an object
+    ----------------------------------------------------
+
+    The object T is considered to have been changed once a command such
+    as described in section D.3 has completed. Completion of a
+    command[fn5] may be determined either by calling Finish, or by
+    calling FenceSync and executing a WaitSync command on the associated
+    sync object. The second method does not require a round trip to the
+    GL server and may be more efficient, particularly when changes to T
+    in one context must be known to have completed before executing
+    commands dependent on those changes in another context.
+       [fn5: The GL already specifies that a single context processes
+             commands in the order they are received. This means that a
+             change to an object in a context at time <t> must be
+             completed by the time a command issued in the same context
+             at time <t+1> uses the result of that change.]"
+
+    Change all references to "calling Finish" or "using Finish" in
+    section D.3.3 "Rules" to refer to section D.3.1.
+
+Additions to the GLX 1.4 Specification
+
+    Insert a new section after section 2.5, "Texture Objects":
+
+    "2.6 Sync Objects
+
+    Sync objects are shared by rendering contexts in the same fashion as
+    texture objects (see Appendix D, "Shared Objects and Multiple
+    Contexts", of the OpenGL 3.1 Specification). If a sync object is
+    blocked upon (glClientWaitSync or glWaitSync), signaled
+    (glSignalSync), or has events associated with it (glFence) from more
+    than one context, then it is up to the programmer to ensure that the
+    correct order of operations results, and that race conditions and
+    deadlocks are avoided.
+
+    All modifications to shared context state as a changing the status
+    of a sync object are atomic. Also, a sync object will not be deleted
+    until there are no longer any outstanding fence commands or blocks
+    associated with it."
+
+    Replace the third paragraph of section 3.3.7, "Rendering Contexts":
+
+    "If <share_list> is not NULL, then all shareable GL server state
+    (excluding texture objects named 0) will be shared by <share_list>
+    and the newly created rendering context. An arbitrary number of
+    GLXContexts can share server state. The server context state for all
+    sharing contexts must exist in a single address space or a BadMatch
+    error is generated."
+
+GLX Protocol
+
+    <TBD>
+
+Errors
+
+    INVALID_VALUE is generated if the <sync> parameter of
+    ClientWaitSync, SignalSync, WaitSync, or GetSynciv is not the name
+    of a sync object.
+
+    INVALID_VALUE is generated if the <sync> parameter of DeleteSync
+    is neither zero nor the name of a sync object.
+
+    INVALID_ENUM is generated if the <condition> parameter of FenceSync
+    is not SYNC_GPU_COMMANDS_COMPLETE.
+
+    INVALID_VALUE is generated if the <flags> parameter of
+    ClientWaitSync contains bits other than SYNC_FLUSH_COMMANDS_BIT, or
+    if the <flags> parameter of WaitSync is nonzero.
+
+    INVALID_ENUM is generated if the <mode> parameter of SignalSync is
+    not SIGNALED.
+
+    INVALID_ENUM is generated if the <pname> parameter of GetSynciv is
+    neither OBJECT_TYPE, SYNC_CONDITION, SYNC_FLAGS, nor SYNC_STATUS.
+
+New State
+
+Table 6.X.  Sync Objects.
+
+Get value           Type  Get command Initial value                 Description           Section
+------------------  ----  ----------- ----------------------------  ---------------       -------
+OBJECT_TYPE         Z_1   GetSynciv  SYNC_FENCE             Type of sync object    5.2
+SYNC_STATUS         Z_2   GetSynciv  UNSIGNALED             Sync object status     5.2
+SYNC_CONDITION      Z_1   GetSynciv  SYNC_GPU_COMMANDS_COMPLETE    Sync object condition  5.2
+SYNC_FLAGS          Z     GetSynciv  SYNC_FLAGS             Sync object flags      5.2
+
+New Implementation Dependent State
+
+Table 40. Implementation Dependent Values (cont.)
+
+Get value           Type  Get command   Minimum value                 Description           Section
+------------------  ----  ------------- ----------------------------  ---------------       -------
+MAX_SERVER_WAIT_    Z^+   GetInteger64v 0                             Maximum WaitSync      5.2
+    TIMEOUT                                                           timeout interval
+
+Sample Code
+
+    ... kick off a length GL operation
+    /* Place a fence and associate a fence sync object */
+    GLsync sync = glFenceSync(GLSYNC_GPU_COMMANDS_COMPLETE, 0);
+
+    /* Elsewhere, wait for the sync to be signaled */
+
+    /* To wait a specified amount of time (possibly clamped), do
+     * this to convert a time in seconds into nanoseconds:
+     */
+    GLuint64 timeout = num_seconds * ((GLuint64)1000 * 1000 * 1000);
+    glWaitSync(sync, 0, timeout);
+
+    /* Or to determine the maximum possible wait interval and wait
+     * that long, do this instead:
+     */
+    GLuint64 max_timeout;
+    glGetInteger64v(GL_MAX_SERVER_WAIT_TIMEOUT, &max_timeout);
+    glWaitSync(sync, 0, max_timeout);
+
+Issues
+
+    1) Are sync objects shareable between multiple contexts?
+
+        RESOLVED: YES. The sync object namespace is shared, and sync
+        objects themselves may be shared or not. Shared sync objects can
+        be blocked upon or deleted from any context they're shared with.
+
+        Enabling multi-context aware sync objects is a major change from
+        earlier versions of the specification. We believe this is now OK
+        because the rules defining sync object signaling behavior are
+        clear enough to make us comfortable with restoring full
+        multi-context awareness.
+
+    2) What specializations of sync objects are supported?
+
+        RESOLVED: Only fence sync objects (corresponding to synchronous
+        command stream fences). Additionally, fence sync objects are
+        constrained so that fence "stacking" is not allowed - the
+        initial status of a fence sync is unsignaled, and it may only be
+        signaled.
+
+        We expect to define a way to map sync objects into OpenCL events
+        to help performance of CL/GL sharing.
+
+        EGL sync objects (from the EGL_KHR_sync extension) should be
+        compatible with GL sync objects, although the sync object
+        namespace may require remapping between APIs. Also, EGL sync
+        objects do support fence stacking and unsignaling, possibly
+        imposing greater complexity and risk of hanging when used with
+        GL.
+
+        The sync object framework is intended to generalize to other
+        types of sync objects, such as mappings of OS-specific events
+        and semaphores, new specializations of sync objects such as
+        "pulsed" sync objects associated with video retrace, or other
+        command stream conditions, such as sync objects which would be
+        associated with completion of single or multiple asynchronous GL
+        commands.
+
+    3) What fence sync object conditions are supported?
+
+        RESOLVED: The conditions SYNC_GPU_COMMANDS_COMPLETE (equivalent
+        to ALL_COMPLETED_NV in NV_fence), meaning that a fence command
+        has completed in the GPU pipe.
+
+        In the future, we could define two additional conditions:
+
+        SYNC_SERVER_COMMANDS_COMPLETE would correspond to a command
+        completing "in the server"; the exact definition of "server"
+        would have to be nailed down, but generally meaning that the
+        command has been issued to the GPU by the driver. The primary
+        purpose of this condition would be to delay use of an object in
+        one context until after it has been created in another context,
+        so if it proves too difficult to define "server", the condition
+        could be restricted to simply meaning that all object creation
+        commands prior to the fence have realized their effect on server
+        state.
+
+        SYNC_CLIENT_COMMANDS_COMPLETE, would correspond to a command
+        being issued from the client to the server (although this can
+        effectively be done already, by explicitly signaling a sync
+        object in the client).
+
+    4) What state is associated with a sync object? Should state be
+       validated at creation time, or when events are associated with a
+       sync? This would express itself (for example) by passing a
+       <condition> parameter to Fence(), rather than to Sync().
+
+        RESOLVED: sync object state includes specialization (type),
+        condition, flags, and status. Status is mutable data; condition
+        and flags are immutable properties defined defined at creation
+        time.
+
+        In the future, additional state and data may be introduced, such
+        as a timestamp when the sync object was last signaled, or a
+        swapbuffer / media stream count (SBC/MSC, in digital media
+        terminology), for a sync object triggered by display retrace.
+
+    5) What is the purpose of the flags argument to FenceSync?
+
+        RESOLVED: The flags argument is expected to be used by a vendor
+        extension to create sync objects in a broader sharing domain
+        than GLX/WGL share groups. In the future we may reintroduce the
+        generic property list mechanism if a generic sync object
+        creation call is defined for multiple types of sync objects, but
+        for fence sync objects alone, the flags parameter is sufficient
+        flexibility.
+
+    6) Can sync objects and NV_fence fences share enumerants and/or the
+       namespace of fences / sync objects?
+
+        RESOLVED: NO. The sync object namespace cannot be the same as
+        NV_fence since NV_fence does not put fence names on the share
+        list, while sync objects and their names are shared. We will
+        also not reuse enumerant values. The sync object interface is
+        quite a bit different from NV_fence even though the underlying
+        fence functionality is not.
+
+    7) Should we allow these commands to be compiled within display
+       lists?
+
+        RESOLVED: WaitSync and SignalSync are display listable. They
+        execute on the GL server or in the GL pipeline.
+
+        RESOLVED: ClientWaitSync and FenceSync are not display listable.
+        ClientWaitSync is defined to block the application, not the
+        server. FenceSync must return a value to the application.
+
+        (Note: this is not relevant to this draft of the extension,
+        which is written against core OpenGL 3.1. However, an
+        implementation supporting the ARB_compatibility extension should
+        behave as described. We may wish to add this qualified language
+        to the extension if it's to be shipped against such an
+        implementation).
+
+    8) What happens if you set a fence command for a sync object while a
+       previous fence command is still in flight? Are fences
+       "stackable"? (also see issue 21)
+
+        RESOLVED: Fences are not stackable at present. A single fence
+        command is associated with a fence sync object when it is
+        created. In the future we might reintroduce the separate sync
+        creation (Sync()) and fence-associated (Fence()) commands
+        present in prior drafts, with all the complexity of stacking
+        defined therein.
+
+        As with OS synchronization primitives, applications are
+        responsible for using sync objects and fences in ways that avoid
+        race conditions and hangs. Removing stackable fences may help
+        reduce the possibility of such errors.
+
+        We are still considering potential performance issues and
+        semantic difficulties of namespace sharing (e.g. when does a
+        name returned by FenceSync become valid in other contexts of the
+        share group) associated with this model.
+
+    9) What happens to *WaitSyncs blocking on a sync object, and to an
+       associated fence command still pending execution, when the sync
+       object is deleted?
+
+        RESOLVED: Following the OpenGL 3.0 shared object model, the sync
+        object name is immediately deleted, but the underlying sync
+        object is not deleted until all such outstanding references on
+        it are removed.
+
+        NOTE: This specifies behavior left intentionally unspecified by
+        earlier versions of this extension.
+
+    10) Is it possible to have multiple *WaitSyncs blocking on a single
+        sync object?
+
+        RESOLVED: YES, since we support multi-context aware sync
+        objects. *WaitSync might be issued from multiple contexts on the
+        same sync object. Additionally, multiple WaitSync commands may
+        be queued on a single GL server (although only one of them can
+        actually be blocking at any given time).
+
+    11) Can we determine completion time of a sync object?
+
+        RESOLVED: NO.
+
+        In the future, we may support variants of sync objects that
+        record their completion time in queriable object data.
+
+    12) Can we block on multiple sync objects?
+
+        RESOLVED: NO.
+
+        In the future, *WaitSyncs calls taking a list of sync object
+        names, a logical condition (any/all complete), and optionally
+        returning an index/name of a sync object triggering the
+        condition, like the GL2_async_object API, could be added.
+
+    13) Why don't the entry points/enums have ARB appended?
+
+        This functionality is going directly into the OpenGL 3.2 core
+        and also being defined as an extension for older platforms at
+        the same time, so it does not use ARB suffixes, like other such
+        new features going directly into the GL core.
+
+    14) Where can sync objects be waited on?
+
+        RESOLVED: In the client on the CPU, or in the GL server, either
+        in the CPU or GPU.
+
+        Rather than specifying where to wait in the server, the
+        implementation is allowed to choose.
+
+    15) Can the specialization of sync objects be changed, once created?
+
+        RESOLVED: NO.
+
+        This seems likely to cause errors and has little obvious use -
+        making sync objects persistent (being able to reset their status
+        and associate them with a new fence) should suffice to avoid
+        excessive creation/deletion of objects.
+
+    16) How can sync objects be used to facilitate asynchronous
+        operations, particularly large data transfer operations?
+
+        DISCUSSION: There are several methods. A more readily
+        supportable one uses multiple GL contexts and threads, with work
+        performed in one thread associated with a sync. Another thread
+        finishes, tests for completion, or waits on that sync, depending
+        on the exact semantic needed.
+
+        This method is implementable, but has the disadvantage of requiring
+        multiple contexts, drawing surfaces, and CPU threads. It also
+        requires some additional, possibly non-GL synchronization
+        between the threads (so that the work thread knows when the sync
+        created in the loader thread is valid - otherwise it can't be
+        tested without raising an error!)
+
+        It seems analogous to pbuffers in terms of overhead. That
+        suggests lighter-weight mechanisms may be preferable, in the
+        same fashion that framebuffer objects have become preferable to
+        pbuffers.
+
+        A more future-looking mechanism is to support multiple command
+        streams within a single context. Then the expensive asynchronous
+        operations can be kicked off without additional CPU threads,
+        rendering surfaces, or contexts.
+
+        This concept has not been implemented in GL yet, although the
+        original 3Dlabs white paper outlines an approach to it. The
+        desire for consistency / reproducibility means that retrofitting
+        multiple command streams onto the current API, defining when and
+        how resources changed in one stream affect another stream, may
+        require a great deal of spec work. Furthermore, most hardware
+        does not actually support multiple command streams, at least in
+        full generality.
+
+        If we do support multiple command streams, then at least at
+        first, there will probably be severe restrictions on what
+        commands could go in additional streams beyond the "main" or
+        "default" stream.
+
+        In either case, we will probably need to either define new
+        commands that are allowed to operate asynchronously (e.g.
+        TexImageAsync) with respect to surrounding commands, or to
+        overload existing commands to operate asynchronously when
+        some global state is set, like the old SGI_async extension.
+
+        Note that buffer objects allow the GL to implement data transfer
+        into, or out of, the buffer object to occur asynchronously.
+        However, once the transfer is completed, that data is in a buffer
+        object and not stored in memory that is under application control.
+
+        In defining these commands, we will probably need some way to
+        associate a sync object with them at the time they're issued,
+        not just place a fence following the async command. One reason
+        for this is wanting to know when the application data passed
+        into an asynchronous command has been consumed and can safely be
+        modified by the app.
+
+    17) Can the query object framework be used to support sync objects?
+
+        RESOLVED: NO.
+
+        It is straightforward to map the sync object API onto queries,
+        with the addition of a small number of entry points. However,
+        the query object namespace is defined not to be shared. This
+        makes it impossible to implement shared sync objects in the
+        query namespace without the possibility of breaking existing
+        code that uses the same query name in multiple contexts.
+
+        It is also possible to map occlusion queries into the sync
+        object API, again with the addition of a small number of entry
+        points. We might choose to do this in the future.
+
+    18) Do *WaitSync wait on an event, or on sync object status? What is
+        the meaning of sync object status?
+
+        RESOLVED: *WaitSync blocks until the status of the sync object
+        transitions to the signaled state. Sync object status is either
+        signaled or unsignaled. More detailed rules describing
+        signaling follow (these may need to be imbedded into the actual
+        spec language):
+
+        (Note: much of the following discussion is not relevant for the
+        constrained fence sync objects currently defined by this
+        extension, as such objects start in the unsignaled state and may
+        only transition to the signaled state, not the other way).
+
+        R1) A sync object has two possible status values: signaled or
+            unsignaled (corresponding to SYNC_STATUS values of SIGNALED
+            or UNSIGNALED, respectively).
+
+        R2) When created, the state of the sync object is signaled by
+            default, but may be explicitly set to unsignaled.
+
+        R3) A fence command is inserted into a command stream. A sync
+            object is not.
+
+        R4) When a fence command is inserted into a command stream using
+            Fence(), the status of the sync object associated with that
+            fence command is set to the unsignaled state.
+
+        R5) Multiple fence commands can be associated with the same sync
+            object.
+
+        R6) A fence command, once its condition has been met, will set
+            its associated sync object to the signaled state. The only
+            condition currently supported is SYNC_GPU_COMMANDS_COMPLETE.
+
+        R7) A wait function, such as ClientWaitSync or WaitSync, waits
+            on a sync object, not on a fence.
+
+        R8) A wait function called on a sync object in the unsignaled
+            state will block. It unblocks (note, not "returns to the
+            application") when the sync object transitions to the
+            signaled state.
+
+        Some of the behaviors resulting from these rules are:
+
+        B1) Calling ClientWaitSync with a timeout of 0 will return TRUE
+            if the sync object is in the signaled state. Note that
+            calling ClientWaitSync with a timeout of 0 in a loop can
+            miss state transitions.
+        B2) Stacking fences is allowed. Each fence, once its condition
+            has been met, will set its associated sync object to the
+            signaled state. If the sync object is already in the
+            signaled state, it stays in that state.
+        B3) ClientWaitSync could take a timeout parameter and return a
+            boolean. If the timeout period has expired, ClientWaitSync
+            will unblock and return FALSE to the caller. If
+            ClientWaitSync unblocks because the sync object it was
+            waiting on is in the signaled state, it will return TRUE.
+        B4) We could define a FinishMultipleSync() command that will
+            unblock once all (or any) of the sync objects passed to it
+            are in the signaled state (also see issue 12).
+        B5) We could define a set/resetSyncObject function to manually
+            set the sync object in the signaled or unsignaled state.
+            This makes it easy for apps to reuse a sync object in the
+            multi-context case, so the sync object can be blocked upon
+            before a fence command is associated with it in the command
+            stream.
+        B6) We could define an API to convert a sync object into an OS
+            specific synchronization primitive (Events on Windows, file
+            descriptors or X-events or semaphores on Unix?)
+
+    19) Which of the behaviors defined in issue 18 should be added?
+
+        RESOLVED: Add B1, B2, and B3 (timeout functionality).
+
+        We considered several possibilities including passing a <unit
+        duration,count> tuple, and adding a TIMEOUT_BIT to the flags to
+        representing "forever". The end result of discussion was to
+        introduce a new GL datatype, GLuint64. GLuint64 is a 64-bit
+        unsigned integer representing intervals in nanoseconds - the
+        same encoding as the Unadjusted System Time (UST) counter used
+        in OpenML and OpenKODE. All future uses of time in the GL should
+        use the GLuint64 datatype.
+
+        At present, the timeout duration passed to *WaitSync represents
+        a time relative to when the driver actually begins waiting. A
+        future extension could easily allow waiting until a specific UST
+        by adding a bit to the flags specifying that timeout is
+        absolute, not relative.
+
+        RESOLVED: Do not add B4 yet (easy to put in a future extension).
+
+        RESOLVED: Add B5 with a new glSignalSync call taking modes of
+        SIGNALED or UNSIGNALED. Might add a PULSED mode in the future,
+        but that's a bit weird - what if the sync object is already
+        signaled?
+
+        RESOLVED: Add B6 via a WGL extension supporting only
+        wglConvertSyncToEvent (no wglConvertEventToSync). Figure out the
+        corresponding Unix/X functionality and define that as well -
+        should it use pthreads? xsync objects? System V IPC semaphores?
+        etc.
+
+    20) How can multi-context aware sync objects be used to synchronize
+        two contexts?
+
+        NOTE: This example needs to be rewritten to accomodate changes
+        to the API and asynchronous object creation. In particular,
+        context B must wait for the shared sync object to be
+        successfully created before waiting on it, which requires either
+        platform-specific (non-OpenGL) code, or client-side cleverness
+        suggested by Bill Licea-Kane. There should also be an example
+        showing specifically how to use sync objects and server waiting
+        to coordinate waiting on creation of another object.
+
+        Example of context B waiting on context A:
+
+        A:  // Create a sync object in the unsignaled state
+            int props[] = {
+                OBJECT_SHARED, TRUE,
+                SYNC_STATUS, UNSIGNALED };
+
+            syncObjectA = Sync(SYNC_FENCE, 2, props);
+        B:  // Block, since syncObjectA is in the unsignaled state
+            ClientWaitSync(syncObjectA);
+        A:  // Perform rendering that B should wait on
+            render();
+            // Insert a fence into the command stream. syncObjectA
+            // remains in the unsignaled state until completion
+            Fence(syncObjectA);
+            // To prevent deadlock, A must make forward progress
+            Flush();
+        B:  // Once the fence command issued above completes, the
+            // ClientWaitSync issued above will unblock and allow B
+            // to continue.
+
+    21) What is the stacking behavior of fence commands?
+
+        RESOLVED: Stacking is not allowed.
+
+    22) What should the blocking API be called?
+
+        RESOLVED: ClientWaitSync for blocking on the client side.
+        WaitSync for blocking on the GL server (CPU or GPU).
+
+        Previously we used FinishSync by analogy with NV_fence's
+        'glFinishFence'. However, the call may return before an event
+        has actually signaled a sync, due to timeout. Also, other sync
+        object specializations do not necessarily have anything to do
+        with command streams (timers, retrace events, OS events, etc.)
+        So 'Finish' is the wrong name.
+
+    23) How are sync objects implemented in terms of generic object
+        interfaces?
+
+        RESOLVED: An object property name which could be generic is
+        introduced here (OBJECT_TYPE), but no generic object
+        manipulation commands are defined.
+
+    24) Do we need a default sync object that is always present?
+        (Notionally the "sync object named zero")?
+
+        RESOLVED: NO. Fence sync objects cannot provide this
+        functionality. Multiple contexts just have to be clever about
+        use of (potentially client-created) sync object names.
+
+        DISCUSSION: The use case for a default sync object is in
+        coordinating object creation across contexts (see the
+        out-of-date example in issue 20 as well). Suppose we want to
+        know in context B when context A has successfully created an
+        object, so we can start using it. It's possible to do this by
+        inserting a fence command after object creation in A and waiting
+        on sync completion in B. But to do this, first we must have a
+        sync object that is known to exist in both A and B, creating a
+        circular dependency!
+
+        There are several possible approaches.
+
+        1) Create a sync object in context A before forking another
+        thread that would create context B and use it. This wouldn't
+        help in the indirect rendering / separate process model case.
+
+        2) Punt to platform-specific code: create a sync object in A,
+        verify it was successfully created in A, then use
+        platform-specific IPC to let other threads / processes know the
+        sync is ready for use to coordinate object creation. This is
+        highly inelegant.
+
+        3) Mandate that all contexts in a share group have a single,
+        shared sync object defined, which is present from context
+        creation time. When requesting this default object, the driver
+        will either create it, if it doesn't already exist, or return a
+        handle to the existing default object, if it does. The key point
+        is that the handle can be obtained in two different contexts
+        without either one needing to do non-portable or non-GL
+        operations before knowing the handle is valid.
+
+        4) Clever client in context B. Bill has commented on this and
+        people seem to agree this is doable and won't cause any coding
+        issues, so we're assuming it's correct.
+
+    25) Do we need the ability to WaitSync in the GPU, as well
+        as in the server?
+
+        RESOLVED: The implementation is allowed to choose.
+
+    26) How will sync objects be linked to OpenCL events?
+
+        NOTE: This is an issue for a future extension defining a new
+        type of sync object. A suggestion for that extension is
+        circulating on the OpenCL mailing list. This will likely be done
+        as a new command taking a CL event handle and returning a GL
+        sync object behaving like a fence sync, but with a different
+        object type, and triggered by the CL event rather than a fence.
+
+    27) What is the relationship between EGL and OpenGL sync objects?
+
+        The goal is that an EGL-based implementation could support both
+        APIs to a single underlying sync object implementation. It is
+        unlikely that the namespaces of EGL and GL sync objects could be
+        shared, however.
+
+    28) What is the deletion behavior of sync objects?
+
+        RESOLVED: DeleteSync immediately releases the name, but
+        "bindings" of the underlying object, e.g. outstanding fences or
+        blocking commands, will keep its underlying storage around until
+        all such commands complete and unblock all such waiters. This is
+        consistent with the OpenGL 3.0 shared object appendix, except
+        references are formed by commands and blocks, rather than by the
+        attachment hierarchy.
+
+    29) Should there be an implementation-dependent maximum timeout
+        interval?
+
+        RESOLVED: Not for client waits, which may block "forever", but a
+        MAX_SERVER_WAIT_TIMEOUT implementation-dependent value exists,
+        together with a new GetInteger64v query (see issue 30).
+
+        In the Windsor F2F, we agreed to remove the value FOREVER.
+        Because any timeout can be clamped, FOREVER didn't really mean
+        "forever", so it was misleading (and inconsistent with the
+        special treatment of FOREVER in the EGL_KHR_sync spec) to have
+        it. Instead we have a sample code section which shows how to
+        wait a long time.
+
+    30) What is the type of the timeout interval?
+
+        RESOLVED: GLuint64. We previously typedefed uint64_t (or
+        equivalent) as 'GLtime', but now that max timeout intervals are
+        queriable, a query function is required. A generic query for
+        64-bit integer data is more useful than a GLtime-specific query.
+        Consequently the type of <timeout> has been changed to
+        'GLuint64' and a corresponding 'GetInteger64v' query taking
+        'GLint64' added (by symmetry with GetInteger, where unsigned
+        quantities are queries with a function taking a pointer to a
+        signed integer - the pointer conversion is harmless).
+
+        The existing GLintptr argument is not guaranteed to be at least
+        64 bits long, so is not appropriate here.
+
+        NOTE: We might choose a type tag for GLuint64 state other than
+        the existing 'Z^+'. It is indeed a non-negative integer but the
+        difference in size might be worth noting in the state tables.
+
+    31) Potential naming issues
+
+        Are SYNC_CONDITION and SYNC_STATUS too confusingly similar? We
+        could refine these to SYNC_FENCE_CONDITION and
+        SYNC_SIGNAL_STATUS at some wordiness cost, although the existing
+        names match the EGL sync object extension and consistency may be
+        a virtue. There's also a question of whether future types of
+        sync objects would have a use for conditions having nothing to
+        do with fences, e.g. a display sync might have conditions
+        corresponding to different points in the draw / retrace interval
+        cycle, which argues in favor of the existing name.
+
+        There's still time to change names prior to approval of EGL and
+        GL sync objects, if anyone wants to make suggestions.
+
+    32) Do we need an explicit signaling API (SignalSync)?
+
+        RESOLVED: NO, not for fence sync objects. In the future other
+        types of sync objects may choose to reintroduce this API.
+
+    33) What is the datatype of a sync object handle?
+
+        RESOLVED: GLsync, which is defined as an anonymous struct
+        pointer in the C binding. This eases implementability on 64 bit
+        environments by allowing server pointer representations to be
+        used.
+
+Revision History
+
+    Version 1, 2006/02/08 - First writeup as spec language, based on
+    NV_fence.
+
+    Version 2, 2006/02/10 - WaitSync can only wait on fence syncs. Sync
+    types are immutable once created - FenceSync can be called on an
+    existing sync of type fence to rebind it to a new fence command, but
+    it cannot be called on a non-fence sync. Expanded list of errors.
+    Numbered issues list and added issues 13-16. Noted future "multiple
+    command stream" concept in issue 16.
+
+    Version 3, 2006/02/14 - Change FenceSync behavior to leave the sync
+    state undefined if a previously issued fence command is still
+    in-flight when a fence sync is reset. Add a flags parameter to
+    FinishSync which can be used to produce flushing behavior like
+    NV_fence in the single-context use case, and note that in the
+    multiple-context case, applications must do more synchronization
+    work between threads themselves to ensure that a fence command
+    issues in one context will reach the hardware before blocking
+    another context.
+
+    Version 4, 2006/02/22 - change sharing behavior so the sync
+    namespace is shared, but sync objects can only be used from the
+    context they were created in. Add subsection 2.2.1 and new Appendix
+    C describing types of shared objects and how sharing affects sync
+    commands (also as a placeholder for a future, more general
+    discussion of shared object semantics). Remove WaitSync, since
+    that's useful when syncs are shared. Add issue 18 discussing the
+    distinction between waiting on events vs. waiting on changes in sync
+    status, and issue 19 discussing stacking of fence commands. Split
+    FenceSync into two parts to create the sync vs. issue the fence
+    command.
+
+    Version 5, 2006/02/24 - Add a bit to FenceSync to control the
+    initial status value of the sync. Note that TestSync is polling the
+    status value, not the condition which causes that status value to
+    change. Make FinishSync return immediately if the status of the sync
+    being waited on is true at the time it's called, and otherwise wait
+    for the event underlying the status to occur; change issue 18
+    accordingly.
+
+    Version 6, 2006/02/24 - Added Contributors list. Marked explicitly
+    RESOLVED all issues that have been closed, including issues 2, 3, 6
+    (partly unresolved), 7, 8 (merged with 19), 9, 10, 15, 17, and 18.
+    Allow stacking behavior for Fence and define FinishSync to wait on
+    the most recently issued fence command at the time FinishSync was
+    called. Note that DeleteSyncs() may be called while fence commands
+    are outstanding for a sync (issue 9).
+
+    Version 7, 2006/03/07 - Modify DeleteSyncs behavior to allow
+    deleting syncs from contexts other than the creator, to avoid
+    orphaned & undeleteable syncs.
+
+    Version 8, 2006/03/09 - A terminology change from "sync types" to
+    "sync specializations" affects wording of several issues. Full
+    multi-context awareness has been restored, with the aid of a compact
+    set of rules defining sync signaling behavior (see issue 18). This
+    significantly changes the resolution and discussion of issues 1, 8
+    (FinishSync blocks on the first outstanding fence command to
+    complete, not the most recently issued one), 9 (sync destruction is
+    delayed until all outstanding fence commands complete), 10, and 18
+    (describe the rules), and in the corresponding spec language. Added
+    issues 19-21 discussing additional ways to control sync signaling,
+    and providing several examples of multi-context sync usage. Enum
+    values will not be shared with NV_fence.
+
+    Version 9, 2006/03/13 - Inserting multiple outstanding fence
+    commands on a sync from different contexts may not be supported.
+    Delaying sync destruction until there are no outstanding commands
+    may be too expensive to support. Note resolution of new features
+    (support timeouts, form TBD; support SignalSync; support conversion
+    of syncs to OS events, at least for WGL). Add SignalSync spec
+    language.
+
+    Version 10, 2006/03/20 - major rewrite to replace fence-specific
+    discussion in FinishSync with Barthold's more powerful and generic
+    "signaled"/"unsignaled" terminology (also changed name of
+    SYNC_UNTRIGGERED_STATUS_BIT to SYNC_UNSIGNALED_BIT). Added a timeout
+    parameter to FinishSync and removed the now-redundant TestSync.
+    Introduced the notion of UST time and the GLtime datatype to
+    represent it. FinishSync now returns a condition code explaining why
+    it completed. Corrected "GetFenceuiv" to "GetSyncuiv" in several
+    places. Changed value of SYNC_FLUSH_COMMANDS_BIT to be exclusive
+    with SYNC_UNSIGNALED_BIT, even though they are passed to separate
+    <flag> arguments, since we don't know their future uses.
+
+    Version 11, 2006/03/23 - noted potential IP concern (first mentioned
+    WRT GL2_async_core at the March 2003 ARB meeting). Updated
+    description of sync deletion for consistency with the description of
+    texture object deletion in the GLX 1.4 specification. Noted in issue
+    8 and Appendix C that inserting fence commands on the same sync from
+    multiple threads is allowed. New issue 22 for better naming of
+    FinishSync. Noted that accuracy of GLtime is system-dependent. Fixed
+    several typos and added a missing error condition for FinishSync.
+
+    Version 12, 2006/03/31 - Changed FinishSync to ClientWaitSync. Note
+    that ClientWaitSync behavior is explicitly undefined (and note
+    several of the possible consequences) when a sync object being
+    blocked upon is deleted. Used shorthand "signaled" and "unsignaled"
+    in many places rather than the wordier "placed into the signaled
+    state". Changed sync status to SIGNALED/UNSIGNALED rather than
+    TRUE/FALSE, and rewrote SignalSync language accordingly. Updated
+    Appendix C description of multicontext behavior to explicitly
+    describe full multi-context awareness. Use "sync object"
+    consistently throughout and drop the "sync" shorthand. Use
+    "unsignaled" everywhere, instead of "non-signaled". Clean up Errors
+    section, but don't remove errors just because they're inferred from
+    the core spec - many other extensions also try to be comprehensive
+    in listing errors.
+
+    Version 13, 2006/04/03 - Add overview paragraph to start of section
+    5.6. Replace "poll" terminology with "test". Disambiguate status
+    value returned from ClientWaitSync when the sync was signaled at
+    call time, but timeout was zero. Clarify that fence commands are not
+    events, but their execution triggers events.
+
+    Version 14, 2008/06/08 - Merge changes from the Longs Peak object
+    model version of sync objects back into the GL2 API version for use
+    in OpenGL 3.0. Introduce generic object interfaces using GL2 names
+    and explicit attribute lists instead of attribute objects and use
+    those as the base of sync object manipulation. Move the object
+    shared flag, condition, and status into the attribute list. Replace
+    FenceSync creation flags with Sync using an explicit object
+    type parameter together with an attribute list mechanism. Add
+    WaitSync and rename SYNC_GPU_COMMANDS_COMPLETE to allow for possible
+    future definition of server and client completion conditions as
+    discussed in issue 3. Add issues 23 and 24 discussing generic object
+    interfaces and the potential utility of a default sync object.
+
+    Version 15, 2009/04/23 - Merge changes from (abandoned) draft GL 3.0
+    language back into this extension for consideration as a GL 3.2 /
+    ARB extension feature. Minor API and terminology changes, including
+    generating sync names at creation time instead of using Gen*
+    functions changing DeleteSyncs to DeleteSync, and using
+    sync-specific GetSynciv instead of GetObjectiv. Specify that
+    multiple waiters on a sync object are all released when it's
+    signaled. Added new issues 25-28 and moved the Issues list to the
+    bottom of the document.
+
+    Version 16, 2009/05/03 - Change Fence -> FenceSync and merge sync
+    creation into the command, removing Sync (until other sync types are
+    supported), and also removing the ability to stack fences on a
+    single fence sync object. Remove <where> parameter from WaitSync and
+    allow it to wait in either the server or GPU. Make syncs always
+    shared and remove OBJECT_SHARED property. Add issue 29 on whether
+    implementation-dependent max timeout intervals should be defined.
+
+    Version 17, 2009/05/06 - Replace GLtime with GLuint64. Add
+    implementation-dependent maximum timeout interval state in table 40.
+    Modify *WaitSync to clamp requested timeout to the appropriate
+    maximum interval. Add GetInteger64v query for these values and issue
+    30 about the type signature of the query. Add clarification in
+    FenceSync of what it means for a fence command to complete. Add
+    issue 31 about possibly confusing token naming. Additional minor
+    typos and wording changes from Greg.
+
+    Version 18, 2009/05/08 - Generate INVALID_VALUE instead of
+    INVALID_OPERATION when passing <sync> parameters that are not the
+    names of sync objects. Remove leftover language saying that a bit of
+    state is needed to specify if the sync is shared or not. Add
+    clarification that requested <timeout> intervals are adjusted to the
+    closest value supported by the implementation, and a footnote that
+    FOREVER is just shorthand for the longest representable timeout.
+    Change parameter names and error handling for GetSynciv to be
+    consistent with other variable-length queries such as
+    GetActiveAttrib.
+
+    Version 19, 2009/05/14 - Remove FOREVER and add sample code showing
+    how to wait in the server for a specified time, or for the
+    implementation-dependent maximum possible time. Resolve issue 24 by
+    saying we don't need a "default sync object".
+
+    Version 20, 2009/05/15 - Re-tag all issues still marked as
+    unresolved - none of them affect sync functionality, they are more
+    speculative for future uses of syncs, or details of spec writing.
+
+    Version 21, 2009/07/01 - "Sync" up with 3.2 core spec draft:
+      * Use GLsync instead of GLuint for sync object handle type in all
+        relevant commands,
+      * Change type of FenceSync <condition> to GLenum.
+      * Add <flags> argument to FenceSync and corresponding SYNC_FLAGS
+        property.
+      * Remove MAX_CLIENT_WAIT_TIMEOUT.
+      * Clarify that the actual client wait time may be longer than the
+        requested <timeout> and that TIMEOUT_EXPIRED may be
+        returned even when ClientWaitSync is called with a
+        <timeout> of zero.
+      * Require the <timeout> parameter to WaitSync to be a no-op value.
+      * Remove SignalSync, until a sync object type other than a fence
+        sync is defined.
+      * Change type of <flags> parameter to
+        ClientWaitSync and WaitSync to GLbitfield.
+      * Fix spelling of SYNC_FLUSH_COMMANDS_BIT
+      * Add issues 31-33 describing some of the changes.
+
+    Version 22, 2009/07/01 - Add TIMEOUT_IGNORED and WAIT_FAILED to New
+    Tokens list.
+
+    Version 23, 2009/07/20 (Apollo 11 commemorative edition) - Assign
+    enum values.
+
+    Version 24, 2009/07/24 - Rename stray GetSyncuiv functions to
+    GetSynciv.
+
+    Version 25, 2009/09/18 - Correct spelling of SYNC_FLUSH_COMMAND_BIT
+    to SYNC_FLUSH_COMMANDS_BIT in several places.

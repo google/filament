@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglSwapInterval">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglSwapInterval</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglSwapInterval</refname>
+        <refpurpose>
+            specifies the minimum number of video frame periods
+            per buffer swap for the window associated with the current context.
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglSwapInterval</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLint <parameter>interval</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>interval</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the minimum number of video frames that are displayed before
+                        a buffer swap will occur.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            The interval takes effect when <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry> is
+            first called subsequent to the <function>eglSwapInterval</function> call.
+        </para>
+        <para>
+            The <parameter>interval</parameter> specified by the function applies to the draw surface
+            bound to the context that is current on the calling thread.
+        </para>
+        <para>
+            If <parameter>interval</parameter> is set to a value of <constant>0</constant>, buffer swaps are not synchronized to a
+            video frame, and the swap happens as soon as the render is complete. interval
+            is silently clamped to minimum and maximum implementation dependent
+            valuesbefore being stored; these values are defined by <type>EGLConfig</type> attributes
+            <constant>EGL_MIN_SWAP_INTERVAL</constant> and <constant>EGL_MAX_SWAP_INTERVAL</constant> respectively.
+        </para>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            The swap interval has no effect on <citerefentry><refentrytitle>eglCopyBuffers</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            The default swap interval is 1.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure, <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONTEXT</constant> is generated if there is no current context
+            on the calling thread.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if there is no surface
+            bound to the current context.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

@@ -60,7 +60,7 @@ TEST(BitmaskTests, BasicOperations) {
     ASSERT_EQ(8u, static_cast<uint32_t>(test3));
 
     Color test4 = ~test3;
-    ASSERT_EQ(~uint32_t(8), static_cast<uint32_t>(test4));
+    ASSERT_EQ(~uint32_t{8}, static_cast<uint32_t>(test4));
 }
 
 TEST(BitmaskTests, AssignOperations) {

@@ -107,6 +107,16 @@
 #       symbols from being stripped. If you're not using dllexports in
 #       cc_generator_options, it's usually best to leave this false.
 #
+#   force_component (Default=false)
+#       When set true the generated code will be compiled as a component.
+#       In a component build, this compiles as a shared library. In a static
+#       build, this compiles as a static library.
+#       This is useful to avoid ODR violations when the generated proto library
+#       is loaded by multiple other components.
+#       Note that developers using this option might need to use
+#       `cc_generator_options` with an EXPORT macro (e.g.,
+#       'dllexport_decl=FOO_EXPORT:') and a `cc_include` to export symbols.
+#
 #   defines (optional)
 #       Defines to supply to the source set that compiles the generated source
 #       code.
@@ -277,6 +287,31 @@ if (is_mac && host_os == "mac") {
 }
 
 template("proto_library") {
+  if (defined(invoker.import_dirs)) {
+    _caller_dir = get_label_info(":$target_name", "dir")
+
+    # TODO(crbug.com/521299828): Remove these exemptions once Perfetto
+    # (https://github.com/google/perfetto/pull/6318) and cast_core
+    # (https://crrev.com/c/7976737) rolls land, and optimization_guide/internal
+    # (https://crrev.com/i/9432554) is cleaned up.
+    _is_exempt = filter_exclude([ _caller_dir ],
+                                [
+                                  "//third_party/perfetto/*",
+                                  "//third_party/cast_core/*",
+                                  "//chromecast/*",
+                                  "//components/policy/*",
+                                  "//components/optimization_guide/internal/*",
+                                ]) == []
+    if (!_is_exempt) {
+      foreach(path, invoker.import_dirs) {
+        assert(
+            rebase_path(path, "//") != "third_party/protobuf/src" &&
+                rebase_path(path, "//") != "third_party/protobuf/src/",
+            "Do not add //third_party/protobuf/src to import_dirs. It is already included by default. Target: $_caller_dir/$target_name")
+      }
+    }
+  }
+
   forward_variables_from(invoker, [ "testonly" ])
 
   # TODO(agrieve): Remove perfetto instances of this.
@@ -329,7 +364,8 @@ template("proto_library") {
     _proto_in_dir = get_path_info(_sources[0], "dir")
     _has_nested_dirs = false
 
-    # Consistency check: |proto_in_dir| should be defined to allow sub-directories.
+    # Consistency check: |proto_in_dir| should be defined to allow
+    # sub-directories.
     foreach(_source, _sources) {
       assert(get_path_info(_source, "dir") == _proto_in_dir,
              "Please define |proto_in_dir| to allow nested directories.")
@@ -412,8 +448,11 @@ template("proto_library") {
           include_dirs += [ _cc_out_dir ]
         }
         if (defined(invoker.import_dirs)) {
-          foreach(path, invoker.import_dirs) {
-            include_dirs += [ "$root_gen_dir/" + rebase_path(path, "//") ]
+          _import_dirs_abspaths = rebase_path(invoker.import_dirs, "//")
+          foreach(_abspath, _import_dirs_abspaths) {
+            _rebased_root_gen_dir = rebase_path(root_gen_dir, "//") + "/"
+            _base_path = string_replace(_abspath, _rebased_root_gen_dir, "")
+            include_dirs += [ "$root_gen_dir/$_base_path" ]
           }
         }
       }
@@ -492,9 +531,9 @@ template("proto_library") {
     public_deps = [ ":$_input_group_name" ]
 
     args = _relative_sources + [
-             # Wrapper should never pick a system protoc.
-             # Path should be rebased because |root_build_dir| for current toolchain
-             # may be different from |root_out_dir| of protoc built on host toolchain.
+             # Wrapper should never pick a system protoc. Path should be rebased
+             # because |root_build_dir| for current toolchain may be different
+             # from |root_out_dir| of protoc built on host toolchain.
              "--protoc",
              "./" + rebase_path(_protoc_path, root_build_dir),
              "--proto-in-dir",
@@ -563,8 +602,8 @@ template("proto_library") {
     if (_generate_with_plugin) {
       if (defined(invoker.generator_plugin_label)) {
         # Straightforward way to get the name of executable doesn't work because
-        # |root_out_dir| and |root_build_dir| may differ in cross-compilation and
-        # also Windows executables have .exe at the end.
+        # |root_out_dir| and |root_build_dir| may differ in cross-compilation
+        # and also Windows executables have .exe at the end.
 
         _plugin_host_label =
             "${invoker.generator_plugin_label}($host_toolchain)"
@@ -650,8 +689,11 @@ template("proto_library") {
 
   if ((defined(invoker.generate_library) && !invoker.generate_library) ||
       !_generate_sources) {
-    # If only descriptor is required, just generate a group wrapper for action output.
+    # If only descriptor is required, just generate a group wrapper for action
+    # output.
     _library_type = "group"
+  } else if (defined(invoker.force_component) && invoker.force_component) {
+    _library_type = "component"
   } else if ((defined(invoker.force_source_set) && invoker.force_source_set) ||
              (defined(invoker.component_build_force_source_set) &&
               invoker.component_build_force_source_set && is_component_build)) {
@@ -674,7 +716,10 @@ template("proto_library") {
     # This will link any libraries in the deps (the use of invoker.deps in the
     # action won't link it).
     if (defined(invoker.deps)) {
-      deps += invoker.deps
+      # Proto deps need to be public deps because their public .pb.h files
+      # include .pb.h files of dependencies. Otherwise, configs (and include
+      # dirs) wouldn't be propagated properly.
+      public_deps += invoker.deps
     }
     if (defined(invoker.link_deps)) {
       deps += invoker.link_deps
@@ -694,9 +739,10 @@ template("proto_library") {
         configs += invoker.extra_configs
       }
 
-      # Remove Sanitizer and coverage instrumentation for a performance boost when
-      # fuzzing, since the only fuzzers that use protobuf are libprotobuf-mutator
-      # based fuzzers, and they don't actually target protobuf code.
+      # Remove Sanitizer and coverage instrumentation for a performance boost
+      # when fuzzing, since the only fuzzers that use protobuf are
+      # libprotobuf-mutator based fuzzers, and they don't actually target
+      # protobuf code.
       configs -= not_fuzzed_remove_configs
       configs += not_fuzzed_add_configs
     }
@@ -723,10 +769,10 @@ template("proto_library") {
       #
       # This is required for instance for well-known protobuf types, like
       # timestamp.proto, as the non-lite version of its header is included in
-      # protobuf's sources.  Specifying the protobuf's src directory (as include_dir)
-      # before the generated directory, would cause header file mismatch and the
-      # non-lite version would be included instead of the lite one causing
-      # issues when linking binaries.
+      # protobuf's sources. Specifying the protobuf's src directory (as
+      # include_dir) before the generated directory, would cause header file
+      # mismatch and the non-lite version would be included instead of the lite
+      # one causing issues when linking binaries.
       public_configs += [ "$_this_dir:using_proto" ]
 
       # If using built-in cc generator, the resulting headers reference headers

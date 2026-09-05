@@ -2071,5 +2071,73 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(HlslWriterReplaceNonIndexableMatVecStoresTest, MatrixColumn_I32Index) {
+    auto* dyn_index = b.Var("dyn_index", ty.ptr<uniform, i32>());
+    dyn_index->SetBindingPoint(0, 0);
+    mod.root_block->Append(dyn_index);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* v = b.Var("v", ty.ptr<function>(ty.mat2x3<f32>()));
+        auto* access = b.Access(ty.ptr<function, vec3<f32>>(), v, b.Load(dyn_index));
+        b.Store(access, b.Construct(ty.vec3f(), 1.0_f, 2.0_f, 3.0_f));
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %dyn_index:ptr<uniform, i32, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %v:ptr<function, mat2x3<f32>, read_write> = var undef
+    %4:i32 = load %dyn_index
+    %5:ptr<function, vec3<f32>, read_write> = access %v, %4
+    %6:vec3<f32> = construct 1.0f, 2.0f, 3.0f
+    store %5, %6
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %dyn_index:ptr<uniform, i32, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %v:ptr<function, mat2x3<f32>, read_write> = var undef
+    %4:i32 = load %dyn_index
+    %5:ptr<function, vec3<f32>, read_write> = access %v, %4
+    %6:vec3<f32> = construct 1.0f, 2.0f, 3.0f
+    switch %4 [c: (0i, $B3), c: (1i, $B4), c: (default, $B5)] {  # switch_1
+      $B3: {  # case
+        %7:ptr<function, vec3<f32>, read_write> = access %v, 0u
+        store %7, %6
+        exit_switch  # switch_1
+      }
+      $B4: {  # case
+        %8:ptr<function, vec3<f32>, read_write> = access %v, 1u
+        store %8, %6
+        exit_switch  # switch_1
+      }
+      $B5: {  # case
+        exit_switch  # switch_1
+      }
+    }
+    ret
+  }
+}
+)";
+
+    Run(ReplaceNonIndexableMatVecStores);
+
+    EXPECT_EQ(expect, str());
+}
+
 }  // namespace
 }  // namespace tint::hlsl::writer::raise

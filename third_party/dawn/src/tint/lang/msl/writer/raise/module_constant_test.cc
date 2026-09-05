@@ -40,9 +40,9 @@ using namespace tint::core::number_suffixes;  // NOLINT
 namespace tint::msl::writer::raise {
 namespace {
 
-class MslWriter_ModuleConstantTest : public core::ir::transform::TransformTest {
-  public:
-    void SetUp() override { capabilities.Add(core::ir::Capability::kAllowModuleScopeLets); }
+struct MslWriter_ModuleConstantTest : public core::ir::transform::TransformTest {
+  protected:
+    void SetUp() override { mod.properties.Add(core::ir::Property::kAllow16BitFloats); }
 };
 
 TEST_F(MslWriter_ModuleConstantTest, ConstArray) {

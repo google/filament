@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -38,13 +38,14 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/utils"
 	"go.chromium.org/luci/auth"
 	bbpb "go.chromium.org/luci/buildbucket/proto"
+	bbgrpcpb "go.chromium.org/luci/buildbucket/proto/grpcpb"
 	"go.chromium.org/luci/grpc/prpc"
 	"go.chromium.org/luci/hardcoded/chromeinfra"
 )
 
 // Buildbucket is the client to communicate with Buildbucket.
 type Buildbucket struct {
-	client bbpb.BuildsClient
+	client bbgrpcpb.BuildsClient
 }
 
 // Builder describes a buildbucket builder
@@ -166,15 +167,12 @@ func New(ctx context.Context, credentials auth.Options) (*Buildbucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	client, err := bbpb.NewBuildsClient(
+	client := bbgrpcpb.NewBuildsClient(
 		&prpc.Client{
 			C:       http,
 			Host:    chromeinfra.BuildbucketHost,
 			Options: prpc.DefaultOptions(),
-		}), nil
-	if err != nil {
-		return nil, err
-	}
+		})
 
 	return &Buildbucket{client}, nil
 }

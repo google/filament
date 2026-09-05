@@ -276,6 +276,7 @@ spv::Id CanonicalizeIdsPass::HashTypeAndConst(spv::Id const id) const {
     case spv::Op::OpSpecConstantCompositeReplicateEXT:
     case spv::Op::OpSpecConstantOp:
     case spv::Op::OpSpecConstantStringAMDX:
+    case spv::Op::OpSpecConstantDataKHR:
       value = unmapped_;
       break;
     // TODO: Add additional types/constants as needed. See

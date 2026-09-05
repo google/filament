@@ -25,34 +25,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(protobuf_INSTALL OFF CACHE BOOL "Install protobuf binaries and files" FORCE)
-set(protobuf_BUILD_CONFORMANCE OFF CACHE BOOL "Build conformance tests" FORCE)
-set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
-set(protobuf_BUILD_LIBPROTOC OFF CACHE BOOL "Build libprotoc" FORCE)
-set(protobuf_BUILD_TESTS OFF CACHE BOOL "Controls whether protobuf tests are built" FORCE)
-set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "Controls whether a protobuf static runtime is built" FORCE)
-
-set(protobuf_BUILD_PROTOC_BINARIES ON CACHE BOOL "Build libprotoc and protoc compiler" FORCE)
-set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the binaries" FORCE)
-
-add_subdirectory("${DAWN_PROTOBUF_DIR}")
-target_compile_definitions(libprotobuf PUBLIC "-DPROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII=0")
-
-target_compile_options(libprotobuf PUBLIC -fno-exceptions)
-if (NOT DAWN_ENABLE_RTTI)
-  target_compile_options(libprotobuf PUBLIC -fno-rtti)
-endif()
-
-# Allowing usage of enable_if() and nullability extensions in abseil and avoid shadowing errors
-if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
-    ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
-  target_compile_options(libprotobuf PUBLIC
-          -Wno-gcc-compat
-          -Wno-unreachable-code-break
-          -Wno-nullability-extension
-          -Wno-shadow)
-endif()
-
 # A simplified version of protobuf_generate()
 function(generate_protos)
   set(OPTIONS APPEND_PATH)
@@ -180,11 +152,19 @@ function(generate_protos)
       set(lang_out_arg "--${ARGS_LANGUAGE}_out=${ARGS_PROTOC_OUT_DIR}")
     endif()
 
+    if (PROTOC_EXECUTABLE)
+      set(PROTOC_CMD ${PROTOC_EXECUTABLE})
+      set(PROTOC_DEPENDS "")
+    else()
+      set(PROTOC_CMD $<TARGET_FILE:protobuf::protoc>)
+      set(PROTOC_DEPENDS $<TARGET_FILE:protobuf::protoc>)
+    endif()
+
     add_custom_command(
       OUTPUT ${GENERATED_SRCS}
-      COMMAND $<TARGET_FILE:protobuf::protoc>
+      COMMAND ${PROTOC_CMD}
       ARGS ${ARGS_PROTOC_OPTIONS} ${lang_out_arg} ${_plugin} ${PROTOBUF_INCLUDE_PATH} ${ABS_FILE}
-      DEPENDS ${ABS_FILE} $<TARGET_FILE:protobuf::protoc>
+      DEPENDS ${ABS_FILE} ${PROTOC_DEPENDS}
       COMMENT ${COMMENT}
       VERBATIM)
   endforeach()
@@ -194,3 +174,129 @@ function(generate_protos)
     target_sources(${ARGS_TARGET} PRIVATE ${ALL_GENERATED_SRCS})
   endif()
 endfunction()
+
+set(protobuf_INSTALL OFF CACHE BOOL "Install protobuf binaries and files" FORCE)
+set(protobuf_BUILD_CONFORMANCE OFF CACHE BOOL "Build conformance tests" FORCE)
+set(protobuf_BUILD_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
+set(protobuf_BUILD_LIBPROTOC OFF CACHE BOOL "Build libprotoc" FORCE)
+set(protobuf_BUILD_TESTS OFF CACHE BOOL "Controls whether protobuf tests are built" FORCE)
+set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "Controls whether a protobuf static runtime is built" FORCE)
+
+if (NOT PROTOC_EXECUTABLE AND Protobuf_PROTOC_EXECUTABLE)
+  set(PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE})
+endif()
+
+if (CMAKE_CROSSCOMPILING AND NOT PROTOC_EXECUTABLE AND NOT CMAKE_CROSSCOMPILING_EMULATOR)
+  message(FATAL_ERROR "When cross-compiling, you must specify a host protoc via -DPROTOC_EXECUTABLE=... or provide a CMAKE_CROSSCOMPILING_EMULATOR.")
+endif()
+
+if (PROTOC_EXECUTABLE)
+  set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "Build libprotoc and protoc compiler" FORCE)
+else()
+  set(protobuf_BUILD_PROTOC_BINARIES ON CACHE BOOL "Build libprotoc and protoc compiler" FORCE)
+endif()
+set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the binaries" FORCE)
+
+# Well Known Types (WKTs) are no longer checked into the upstream
+# chromium repository, so need to intercept usages of them and turn
+# them into a dependency on a new target that builds them.
+
+# Intercept file_lists.cmake to remove missing WKTs and dependent subsystems before add_subdirectory
+set(protobuf_SOURCE_DIR "${DAWN_PROTOBUF_DIR}")
+include("${DAWN_PROTOBUF_DIR}/src/file_lists.cmake")
+
+set(OFFENDING_FILES
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/any.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/api.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/duration.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/empty.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/field_mask.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/source_context.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/struct.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/timestamp.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/type.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/wrappers.pb.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/any.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/api.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/duration.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/empty.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/field_mask.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/source_context.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/struct.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/timestamp.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/type.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/wrappers.pb.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver_util.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver_util.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/type_resolver_util_test.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/field_mask_util.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/field_mask_util.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/field_mask_util_test.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/time_util.cc"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/time_util.h"
+  "${protobuf_SOURCE_DIR}/src/google/protobuf/util/time_util_test.cc"
+)
+
+list(REMOVE_ITEM libprotobuf_srcs ${OFFENDING_FILES})
+list(REMOVE_ITEM libprotobuf_hdrs ${OFFENDING_FILES})
+list(REMOVE_ITEM util_test_files ${OFFENDING_FILES})
+
+# Also remove everything in src/google/protobuf/json from the lists.
+list(FILTER libprotobuf_srcs EXCLUDE REGEX "src/google/protobuf/json")
+list(FILTER libprotobuf_hdrs EXCLUDE REGEX "src/google/protobuf/json")
+
+add_subdirectory("${DAWN_PROTOBUF_DIR}")
+
+# Defining a separate library for WKTs and linking it to libprotobuf
+# as an INTERFACE dependency. To break the circular dependency with
+# protoc (which links libprotobuf), only link libprotobuf_wkt if the
+# consuming target does NOT have the SKIP_WKT property set.
+set(WKT_PROTOS
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/any.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/api.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/duration.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/empty.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/field_mask.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/source_context.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/struct.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/timestamp.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/type.proto"
+  "${DAWN_PROTOBUF_DIR}/src/google/protobuf/wrappers.proto"
+)
+
+add_library(libprotobuf_wkt STATIC ${WKT_PROTOS})
+generate_protos(
+  TARGET libprotobuf_wkt
+  IMPORT_DIRS "${DAWN_PROTOBUF_DIR}/src"
+)
+target_link_libraries(libprotobuf_wkt PRIVATE libprotobuf)
+target_include_directories(libprotobuf_wkt PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Inject the generated WKTs into libprotobuf's consumers, except those involved in building protoc.
+target_link_libraries(libprotobuf INTERFACE "$<IF:$<BOOL:$<TARGET_PROPERTY:SKIP_WKT>>,,libprotobuf_wkt>")
+target_include_directories(libprotobuf PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Mark protoc and libprotoc to skip WKT interface dependency to break cycles.
+if(TARGET protoc)
+  set_target_properties(protoc PROPERTIES SKIP_WKT TRUE)
+endif()
+if(TARGET libprotoc)
+  set_target_properties(libprotoc PROPERTIES SKIP_WKT TRUE)
+endif()
+
+target_compile_definitions(libprotobuf PUBLIC "-DPROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII=0")
+
+target_compile_options(libprotobuf PUBLIC -fno-exceptions)
+if (NOT DAWN_ENABLE_RTTI)
+  target_compile_options(libprotobuf PUBLIC -fno-rtti)
+endif()
+
+# Allowing usage of enable_if() and nullability extensions in abseil and avoid shadowing errors
+if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
+    ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+  target_compile_options(libprotobuf PUBLIC
+          -Wno-gcc-compat
+          -Wno-unreachable-code-break
+          -Wno-nullability-extension
+          -Wno-shadow)
+endif()

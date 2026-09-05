@@ -25,15 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/DescriptorSetAllocator.h"
+#include "src/dawn/native/vulkan/DescriptorSetAllocator.h"
 
 #include <algorithm>
 #include <utility>
 
-#include "dawn/native/Queue.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::vulkan {
 
@@ -56,7 +59,7 @@ DescriptorSetAllocator::DescriptorSetAllocator(
     uint32_t totalDescriptorCount = 0;
     mPoolSizes.reserve(descriptorCountPerType.size());
     for (const auto& [type, count] : descriptorCountPerType) {
-        DAWN_ASSERT(count > 0);
+        DAWN_CHECK(count > 0);
         totalDescriptorCount += count;
         mPoolSizes.push_back(VkDescriptorPoolSize{type, count});
     }
@@ -67,8 +70,8 @@ DescriptorSetAllocator::DescriptorSetAllocator(
     // Compute the total number of descriptors sets that fits given the max but always make sure
     // that at least one descriptor set can be made (bindings with visibility none can force giant
     // sets to be made).
-    mMaxSets = std::max(kMaxDescriptorsPerPool / totalDescriptorCount, 1u);
-    DAWN_ASSERT(mMaxSets > 0);
+    mMaxSets = checked_cast<SetIndex>(std::max(kMaxDescriptorsPerPool / totalDescriptorCount, 1u));
+    DAWN_CHECK(mMaxSets > 0);
 
     // Grow the number of descriptors in the pool to fit the computed |mMaxSets|.
     for (auto& poolSize : mPoolSizes) {
@@ -165,7 +168,7 @@ MaybeError DescriptorSetAllocator::AllocateDescriptorPool(VkDescriptorSetLayout 
     createInfo.pNext = nullptr;
     createInfo.flags = 0;
     createInfo.maxSets = mMaxSets;
-    createInfo.poolSizeCount = mPoolSizes.size();
+    createInfo.poolSizeCount = checked_cast<uint32_t>(mPoolSizes.size());
     createInfo.pPoolSizes = mPoolSizes.data();
 
     VkDescriptorPool descriptorPool;
@@ -183,15 +186,25 @@ MaybeError DescriptorSetAllocator::AllocateDescriptorPool(VkDescriptorSetLayout 
     allocateInfo.pSetLayouts = AsVkArray(layouts.data());
 
     std::vector<VkDescriptorSet> sets(mMaxSets);
-    MaybeError result =
-        CheckVkSuccess(mDevice->fn.AllocateDescriptorSets(mDevice->GetVkDevice(), &allocateInfo,
-                                                          AsVkArray(sets.data())),
-                       "AllocateDescriptorSets");
+    VkResult vkResult = VkResult::WrapUnsafe(
+        INJECT_ERROR_OR_RUN(mDevice->fn.AllocateDescriptorSets(
+                                mDevice->GetVkDevice(), &allocateInfo, AsVkArray(sets.data())),
+                            VK_FAKE_ERROR_FOR_TESTING));
+    MaybeError result = CheckVkSuccessImpl(vkResult, "AllocateDescriptorSets");
     if (result.IsError()) {
-        // On an error we can destroy the pool immediately because no command references it.
-        mDevice->fn.DestroyDescriptorPool(mDevice->GetVkDevice(), descriptorPool, nullptr);
-        DAWN_TRY(std::move(result));
+        // TODO(crbug.com/549311485): On Imagination (PowerVR) drivers, when AllocateDescriptorSets
+        // fails with host or device OOM, the driver's chunk allocation path publishes the chunk
+        // before allocation and fails to unpublish on error. Calling vkDestroyDescriptorPool
+        // dereferences the dangling freed meminfo pointer and crashes (UAF read / wild free).
+        bool isCorruptedImaginationPool =
+            gpu_info::IsImgTec(mDevice->GetPhysicalDevice()->GetVendorId()) &&
+            (vkResult == VK_ERROR_OUT_OF_HOST_MEMORY || vkResult == VK_ERROR_OUT_OF_DEVICE_MEMORY);
+        if (!isCorruptedImaginationPool) {
+            // On an error we can destroy the pool immediately because no command references it.
+            mDevice->fn.DestroyDescriptorPool(mDevice->GetVkDevice(), descriptorPool, nullptr);
+        }
     }
+    DAWN_TRY(std::move(result));
 
     std::vector<SetIndex> freeSetIndices;
     freeSetIndices.reserve(mMaxSets);
@@ -200,7 +213,7 @@ MaybeError DescriptorSetAllocator::AllocateDescriptorPool(VkDescriptorSetLayout 
         freeSetIndices.push_back(i);
     }
 
-    mAvailableDescriptorPoolIndices.push_back(mDescriptorPools.size());
+    mAvailableDescriptorPoolIndices.push_back(checked_cast<PoolIndex>(mDescriptorPools.size()));
     mDescriptorPools.emplace_back(
         DescriptorPool{descriptorPool, std::move(sets), std::move(freeSetIndices)});
 

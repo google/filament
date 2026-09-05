@@ -37,11 +37,20 @@ if(DEFINED CMAKE_C_COMPILER_LAUNCHER AND DEFINED CMAKE_CXX_COMPILER_LAUNCHER)
   set(EXPAT_CXX_COMPILER "${CMAKE_CXX_COMPILER_LAUNCHER} ${EXPAT_CXX_COMPILER}")
 endif()
 
+# NOTE: Fuzzer "expat_example" is being used for actual fuzzing in OSS-Fuzz.
+#       We want a rock-solid build by default (hence the pinning to a
+#       specific version) but also be fuzzing the very latest in OSS-Fuzz.
+if (LIB_PROTO_MUTATOR_EXAMPLES_USE_LATEST)
+  set(EXPAT_GIT_TAG "master")
+else()
+  set(EXPAT_GIT_TAG "R_2_6_4")
+endif()
+
 include (ExternalProject)
 ExternalProject_Add(${EXPAT_TARGET}
     PREFIX ${EXPAT_TARGET}
     GIT_REPOSITORY https://github.com/libexpat/libexpat
-    GIT_TAG master
+    GIT_TAG ${EXPAT_GIT_TAG}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND cd ${EXPAT_SRC_DIR} && ./buildconf.sh  && ./configure
                                                     --prefix=${EXPAT_INSTALL_DIR}

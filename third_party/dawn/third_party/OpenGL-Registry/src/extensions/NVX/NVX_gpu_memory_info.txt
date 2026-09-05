@@ -1,0 +1,190 @@
+Name
+
+    NVX_gpu_memory_info
+
+Name Strings
+
+    GL_NVX_gpu_memory_info
+
+Contact
+
+    Howard Stroyan, NVIDIA Corporation (hstroyan 'at' nvidia.com)
+
+Contributors
+
+    Eric Werness
+    Evan Hart
+    Mark Kilgard
+
+Status
+
+    Complete.  Shipping in NVIDIA 195.XX drivers
+
+    NVIDIA's Tegra drivers will not expose this extensions.
+
+Version
+
+    Last Modified Date: October 3, 2013
+    Author Revision: 1.4
+
+Number
+
+    438
+
+Dependencies
+
+    OpenGL 2.0 is required.
+    The extension is written against the OpenGL 2.0 Specification.
+
+Overview
+
+    Most graphics systems offer a limited amount of onboard
+    high-performance memory for storing textures, geometric
+    primitives, and other data used for rendering.
+
+    OpenGL implementations are expected to manage the residence of
+    objects (that is, the memory pools in which objects are placed)
+    automatically.  This is simple for applications to use, and the
+    high level of abstraction allows many different underlying
+    hardware implementations.  However performance sensitive 
+    applications that are willing to adjust their usage of these memory 
+    resources in order to maintain their desired performance are unable 
+    to determine when the limited onboard memory resources are 
+    approaching full utilization and swapping (with its related 
+    performance impact) is imminent.
+
+    GL_NVX_gpu_memory_info provides applications visibility into GPU 
+    hardware memory utilization in order to allow the application to 
+    effectively manage its resource allocations in the scope of the 
+    current available GPU memory.  This information is made available 
+    to the applications in the form of the total available resource 
+    size (after initial system allocations) and the current available 
+    resource (e.g. free memory) as well as a count of the number and
+    total size of evictions of data from GPU memory since the last time
+    this information was queried from this context using this extension.
+
+New Procedures and Functions
+
+        none
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetIntegerv:
+ 
+        GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX          0x9047
+        GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX    0x9048
+        GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX  0x9049
+        GPU_MEMORY_INFO_EVICTION_COUNT_NVX            0x904A
+        GPU_MEMORY_INFO_EVICTED_MEMORY_NVX            0x904B
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+        none
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+        none
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+        none
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+        none
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Section 6.1.x, GPU Memory Information Query
+
+    Inserted between sections 6.1.14 and 6.1.15 
+
+    Information on GPU memory resources available can be queried
+    by specifying one of: 
+
+        GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX 
+        GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX 
+        GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX 
+        GPU_MEMORY_INFO_EVICTION_COUNT_NVX 
+        GPU_MEMORY_INFO_EVICTED_MEMORY_NVX 
+
+    as the value parameter to GetIntegerv.
+
+    These will return the memory status of the context's associated GPU memory.  
+    The status returned is not intended as an exact measurement of the 
+    system's current status.  It will provide a approximate indicator of 
+    the overall GPU memory utilization so that an application can determine 
+    when the resource usage is approaching the full capacity of the GPU memory 
+    and it may need to adjust its usage pattern to avoid performance limiting 
+    swapping.  Each query returns a integer where the values have the 
+    following meanings:
+
+    GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX 
+      - dedicated video memory, total size (in kb) of the GPU memory
+
+    GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX 
+      - total available memory, total size (in Kb) of the memory 
+        available for allocations
+
+    GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX 
+      - current available dedicated video memory (in kb), 
+        currently unused GPU memory
+
+    GPU_MEMORY_INFO_EVICTION_COUNT_NVX 
+      - count of total evictions seen by system
+
+    GPU_MEMORY_INFO_EVICTED_MEMORY_NVX 
+      - size of total video memory evicted (in kb)
+
+    The values reported are subject to change and cannot be used as a
+    guarantee of successful future allocations.  The current available 
+    dedicated memory will be less than the total GPU memory size since 
+    system allocations for shared resources (i.e. desktop surfaces) will 
+    be accounted for.  The reported current available GPU memory will be 
+    influenced by the current binding state of resources such as 
+    textures and object buffers that can potentially migrate between 
+    system and dedicated GPU memory based on their usage.  The eviction 
+    count indicates that number of eviction events that caused 
+    an allocation to be removed from dedicated video memory to free GPU 
+    video memory to make room for other allocations.  The eviction size 
+    is the total size of memory released as a result of these evictions.
+    These eviction values are running counters and may not start at zero
+    on the first query.  This extension does not attempt to account for 
+    any potential fragmentation issues that may limit full utilization 
+    of the GPU memory resource depending on implementation.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+        none
+
+Additions to the AGL/GLX/WGL Specifications
+
+        None
+
+Errors
+
+        None
+
+Issues
+
+1)    Implementing the eviction information is OS dependent.  
+      For XP and Linux the eviction information is specific to the current process/state
+      since eviction is determined in the individual client.
+      For Vista it is system wide since eviction is determined by the OS.
+
+2)    Should Tegra advertise and support this extension?
+
+      RESOLVED:  No.  Tegra's unified memory architecture doesn't sensibly
+      map to the queries of this extensions.
+
+      A future extension is needed to address this.
+
+Revision History
+
+   1.2 Added eviction count and size information.
+   1.3 Changed to separate enums / GetIntegerv calls for each value.
+       Removed reset of eviction data on query. 
+   1.4 Document Tegra will not support this extension.
+

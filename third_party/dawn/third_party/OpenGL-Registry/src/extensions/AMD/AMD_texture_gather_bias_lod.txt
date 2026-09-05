@@ -1,0 +1,306 @@
+Name
+
+    AMD_texture_gather_bias_lod
+
+Name Strings
+
+    GL_AMD_texture_gather_bias_lod
+
+Contact
+
+    Rex Xu, AMD (Rex.Xu 'at' amd.com)
+
+Contributors
+
+    Rex Xu, AMD
+    Timothy Lottes, AMD
+    Qun Lin, AMD
+    Daniel Rakos, AMD
+    Graham Sellers, AMD
+    Dominik Witczak, AMD
+    Matthäus G. Chajdas, AMD
+
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         05/10/2017
+    Author Revision:            5
+
+Number
+
+    502
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 (Core Profile) Specification.
+
+    This extension is written against version 4.50 of the OpenGL Shading Language Specification.
+
+    OpenGL 4.0 and GLSL 4.00 are required.
+
+    This extension interacts with ARB_sparse_texture2.
+
+Overview
+
+    This extension was developed based on existing built-in texture gather functions to allow
+    implementations supporting bias of implicit level of detail and explicit control of level of
+    detail in texture gather operations.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the language features described
+    in this extension:
+
+        #extension GL_AMD_texture_gather_bias_lod : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+        #define GL_AMD_texture_gather_bias_lod      1
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification (Built-in Functions)
+
+    Modify Section 8.9.3 Texture Gather Functions
+
+    (modify the first sentence of the first paragraph on p. 170)
+
+    The texture gather functions take components of a single floating-point vector operand as a
+    texture coordinate, determine a set of four texels to sample either from the base level of
+    detail and its bias (if present) of the specified texture image or from the explicit level of
+    detail (if present) of this texture image, and return one component from each texel in a four-
+    component result vector.
+
+    (modify certain functions in the "Syntax" table cell of each gather function group, adding
+     an optional <bias> parameter for those sampler types: gsampler2D, gsampler2DArray,
+     gsamplerCube, gsamplerCubeArray, and modify four-texel sampling formulas in the "Description"
+     table cell of textureGather() on p. 171-172)
+
+    +--------------------------------------------------------------+------------------------------+
+    | Syntax                                                       | Description                  |
+    +--------------------------------------------------------------+------------------------------+
+    | gvec4 textureGather(gsampler2D sampler, vec2 P [, int comp   | Returns the value            |
+    |                     [, float bias]])                         |                              |
+    | gvec4 textureGather(gsampler2DArray sampler, vec3 P          | gvec4(                       |
+    |                     [, int comp [, float bias]])             |   Sample_i0_j1(              |
+    | gvec4 textureGather(gsamplerCube sampler, vec3 P             |     P, base, bias).comp,     |
+    |                     [, int comp [, float bias]])             |   Sample_i1_j1(              |
+    | gvec4 textureGather(gsamplerCubeArray sampler, vec4 P        |     P, base, bias).comp,     |
+    |                     [, int comp [, float bias]])             |   Sample_i1_j0(              |
+    | ...                                                          |     P, base, bias).comp,     |
+    |                                                              |   Sample_i0_j0(              |
+    |                                                              |     P, base, bias).comp)     |
+    |                                                              | ...                          |
+    +--------------------------------------------------------------+------------------------------+
+    | gvec4 textureGatherOffset(gsampler2D sampler, vec2 P,        | Perform a texture gather     |
+    |                           ivec2 offset [, int comp           | operation as in              |
+    |                           [, float bias]])                   | textureGather() by <offset>  |
+    | gvec4 textureGatherOffset(gsampler2DArray sampler, vec3 P,   | as described in              |
+    |                           ivec2 offset [, int comp           | textureOffset() except that  |
+    |                           [, float bias]])                   | the <offset> can be variable |
+    | ...                                                          | (non constant) and ...       |
+    +--------------------------------------------------------------+------------------------------+
+    | gvec4 textureGatherOffsets(gsampler2D sampler, vec2 P,       | Operate identically to       |
+    |                            ivec2 offsets[4] [, int comp      | textureGatherOffset() except |
+    |                            [, float bias]])                  | that <offsets> is used to    |
+    | gvec4 textureGatherOffsets(gsampler2DArray sampler, vec3 P,  | determine the location of the|
+    |                            ivec2 offsets[4] [, int comp      | four texels to sample. ...   |
+    |                            [, float bias]])                  |                              |
+    | ...                                                          |                              |
+    +--------------------------------------------------------------+------------------------------+
+
+    (insert new gather function table cells, at the end of the section, p. 172)
+
+    +--------------------------------------------------------------+------------------------------+
+    | Syntax                                                       | Description                  |
+    +--------------------------------------------------------------+------------------------------+
+    | gvec4 textureGatherLodAMD(gsampler2D sampler, vec2 P,        | Perform a texture gather     |
+    |                           float lod [, int comp])            | operation as in              |
+    | gvec4 textureGatherLodAMD(gsampler2DArray sampler, vec3 P,   | textureGather() with explicit|
+    |                           float lod [, int comp])            | LOD, but the four-texel      |
+    | gvec4 textureGatherLodAMD(gsamplerCube sampler, vec3 P,      | sampling is modified as      |
+    |                           float lod [, int comp])            | follow:                      |
+    | gvec4 textureGatherLodAMD(gsamplerCubeArray sampler, vec4 P, |                              |
+    |                           float lod [, int comp])            | gvec4(                       |
+    |                                                              |   Sample_i0_j1(P, lod).comp, |
+    |                                                              |   Sample_i1_j1(P, lod).comp, |
+    |                                                              |   Sample_i1_j0(P, lod).comp, |
+    |                                                              |   Sample_i0_j0(P, lod).comp) |
+    +--------------------------------------------------------------+------------------------------+
+    | gvec4 textureGatherLodOffsetAMD(gsampler2D sampler, vec2 P,  | Perform a texture gather     |
+    |                                 float lod, ivec2 offset      | operation as in              |
+    |                                 [, int comp])                | textureGatherOffset() but    |
+    | gvec4 textureGatherLodOffsetAMD(gsampler2DArray sampler,     | with explicit LOD.           |
+    |                                 vec3 P, float lod,           |                              |
+    |                                 ivec2 offset [, int comp])   |                              |
+    +--------------------------------------------------------------+------------------------------+
+    | gvec4 textureGatherLodOffsetsAMD(gsampler2D sampler, vec2 P, | Perform a texture gather     |
+    |                                  float lod, ivec2 offsets[4] | operation as in              |
+    |                                  [, int comp])               | textureGatherOffsets() but   |
+    | gvec4 textureGatherLodOffsetsAMD(gsampler2DArray sampler,    | with explicit LOD.           |
+    |                                  vec3 P, float lod,          |                              |
+    |                                  ivec2 offsets[4]            |                              |
+    |                                  [, int comp])               |                              |
+    +--------------------------------------------------------------+------------------------------+
+
+Dependencies on ARB_sparse_texture2
+
+    If the shader enables ARB_sparse_texture2, this extension modifies certain variants of
+    sparseTextureGather*(), adding optional <bias> parameter for those sampler types: gsampler2D,
+    gsampler2DArray, gsamplerCube, gsamplerCubeArray.
+
+    +--------------------------------------------------------------+------------------------------+
+    | Syntax                                                       | Description                  |
+    +--------------------------------------------------------------+------------------------------+
+    | int sparseTextureGatherARB(gsampler2D sampler, vec2 P,       | Do a texture gather operation|
+    |                            out gvec4 texel [, int comp       | as in textureGather(), but   |
+    |                            [, float bias]])                  | return texture access        |
+    | int sparseTextureGatherARB(gsampler2DArray sampler, vec3 P,  | residency information from   |
+    |                            out gvec4 texel [, int comp       | the function and the filtered|
+    |                            [, float bias]])                  | lookup result in the out     |
+    | int sparseTextureGatherARB(gsamplerCube sampler, vec3 P,     | parameter <texel>.           |
+    |                            out gvec4 texel [, int comp       |                              |
+    |                            [, float bias]])                  |                              |
+    | int sparseTextureGatherARB(gsamplerCubeArray sampler, vec4 P,|                              |
+    |                            out gvec4 texel [, int comp       |                              |
+    |                            [, float bias]])                  |                              |
+    | ...                                                          |                              |
+    +--------------------------------------------------------------+------------------------------+
+    | int sparseTextureGatherOffsetARB(gsampler2D sampler, vec2 P, | Do a texture gather operation|
+    |                                  ivec2 offset,               | as in textureGatherOffset(), |
+    |                                  out gvec4 texel             | but return texture access    |
+    |                                  [, int comp [, float bias]])| residency information from   |
+    | int sparseTextureGatherOffsetARB(gsampler2DArray sampler,    | the function and the filtered|
+    |                                  vec3 P, ivec2 offset,       | lookup result in the out     |
+    |                                  out gvec4 texel             | parameter <texel>.           |
+    |                                  [, int comp [, float bias]])|                              |
+    | ...                                                          |                              |
+    +--------------------------------------------------------------+------------------------------+
+    | int sparseTextureGatherOffsetsARB(gsampler2D sampler, vec2 P,| Do a texture gather operation|
+    |                                   ivec2 offsets[4],          | as in textureGatherOffsets(),|
+    |                                   out gvec4 texel            | but return texture access    |
+    |                                   [, int comp                | residency information from   |
+    |                                   [, float bias]])           | the function and the filtered|
+    | int sparseTextureGatherOffsetsARB(gsampler2DArray sampler,   | lookup result in the out     |
+    |                                   vec3 P, ivec2 offsets[4],  | parameter <texel>.           |
+    |                                   out gvec4 texel            |                              |
+    |                                   [, int comp                |                              |
+    |                                   [, float bias]])           |                              |
+    | ...                                                          |                              |
+    +--------------------------------------------------------------+------------------------------+
+
+    Meanwhile, this extension adds additional texture gather functions as follow if the shader
+    enables ARB_sparse_texture2, providing explicit control of level of detail.
+
+    +--------------------------------------------------------------+------------------------------+
+    | Syntax                                                       | Description                  |
+    +--------------------------------------------------------------+------------------------------+
+    | int sparseTextureGatherLodAMD(gsampler2D sampler, vec2 P,    | Do a texture gather operation|
+    |                               float lod, out gvec4 texel     | as in textureGather() with,  |
+    |                               [, int comp])                  | explicit LOD, but return     |
+    | int sparseTextureGatherLodAMD(gsampler2DArray sampler,       | texture access residency     |
+    |                               vec3 P, float lod,             | information from the function|
+    |                               out gvec4 texel [, int comp])  | and the filtered lookup      |
+    | int sparseTextureGatherLodAMD(gsamplerCube sampler, vec3 P,  | result in the out parameter  |
+    |                               float lod, out gvec4 texel     | <texel>.                     |
+    |                               [, int comp])                  |                              |
+    | int sparseTextureGatherLodAMD(gsamplerCubeArray sampler,     |                              |
+    |                               vec4 P, float lod,             |                              |
+    |                               out gvec4 texel [, int comp])  |                              |
+    +--------------------------------------------------------------+------------------------------+
+    | int sparseTextureGatherLodOffsetAMD(gsampler2D sampler,      | Do a texture gather operation|
+    |                                     vec2 P, float lod,       | as in textureGatherOffset()  |
+    |                                     ivec2 offset,            | with explicit LOD, but return|
+    |                                     out gvec4 texel          | texture access residency     |
+    |                                     [, int comp])            | information from the function|
+    | int sparseTextureGatherLodOffsetAMD(gsampler2DArray sampler, | and the filtered lookup      |
+    |                                     vec3 P, float lod,       | result in the out parameter  |
+    |                                     ivec2 offset,            | <texel>.                     |
+    |                                     out gvec4 texel          |                              |
+    |                                     [, int comp])            |                              |
+    +--------------------------------------------------------------+------------------------------+
+    | int sparseTextureGatherLodOffsetsAMD(gsampler2D sampler,     | Do a texture gather operation|
+    |                                      vec2 P, float lod,      | as in textureGatherOffsets() |
+    |                                      ivec2 offsets[4],       | with explicit LOD, but return|
+    |                                      out gvec4 texel         | texture access residency     |
+    |                                      [, int comp])           | information from the function|
+    | int sparseTextureGatherLodOffsetsAMD(gsampler2DArray sampler,| and the filtered lookup      |
+    |                                      vec3 P, float lod,      | result in the out parameter  |
+    |                                      ivec2 offsets[4],       | <texel>.                     |
+    |                                      out gvec4 texel         |                              |
+    |                                      [, int comp])           |                              |
+    +--------------------------------------------------------------+------------------------------+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Could you explain the function syntax since <bias> is added as another optional parameter?
+
+      RESOLVED: This extension adds <bias> as another optional parameter apart from the existing
+      parameter <comp>. The function syntax is somewhat similar to rules of default parameters in
+      C++. To be exact, when <comp> is not specified, <bias> should not be specified as well; when
+      <comp> is specified, <bias> could be specified or not. For example,
+
+          uniform sampler2D samp2D;
+
+          vec2  P;
+          int   comp;
+          float bias;
+
+          ...
+
+          textureGather(samp2D, P);              // legal, both comp and bias are not specified
+          textureGather(samp2D, P, bias);        // illegal, bias is specified while comp is not
+          textureGather(samp2D, P, comp);        // legal, comp is specified while bias is not
+          textureGather(samp2D, p, comp, bias);  // legal both comp and bias are specified
+
+    (2) Which level-of-detail do texture gather functions use, if the extension is defined?
+
+      RESOLVED: If GL_AMD_texture_gather_bias_lod extension is *enabled*, *all* texture
+      gather functions (ie. the ones which do not take the extra bias argument and
+      the ones that do) fetch texels from implicit LOD in fragment shader stage. In all
+      other shader stages, base level is used instead.
+
+      If the extension is *disabled*, all texture gather functions always fetch texels
+      from the base mip level.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  ---------------------------------------------------------------------
+     5    05/10/17  dwitczak  Added issue 2.
+
+     4    01/24/17  dwitczak  Fix sparseTextureGatherOffsetsARB() and
+                              sparseTextureGatherLodOffsetAMD() function prototypes.
+
+     3    11/17/16  rexu      Clarify that when <bias> parameter is specified, the optional <comp>
+                              parameter, prior to <bias>, should be specified as well based on
+                              the calling rules of default parameters.
+
+     2    11/16/16  rexu      Add the interaction with ARB_sparse_texture2.
+
+     1    11/15/16  rexu      Initial draft.

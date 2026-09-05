@@ -25,14 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <bit>
 #include <utility>
 #include <vector>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/Assert.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -54,7 +56,7 @@ constexpr float kCompareRefs[] = {-0.1, 0.4, 1.2};
 const std::vector<float> kNormalizedTextureValues = {0.0, 0.3, 0.4, 0.5, 1.0};
 
 // Test the limits, and some values in between.
-const std::vector<uint32_t> kStencilValues = {0, 1, 38, 255};
+const std::vector<uint8_t> kStencilValues = {0, 1, 38, 255};
 
 class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingTestParams> {
   protected:
@@ -351,7 +353,8 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
                     UpdateInputDepth(commandEncoder, inputTexture, format, textureValues[i]);
                     break;
                 case TestAspectAndSamplerType::StencilAsUint:
-                    UpdateInputStencil(commandEncoder, inputTexture, format, textureValues[i]);
+                    UpdateInputStencil(commandEncoder, inputTexture, format,
+                                       static_cast<uint8_t>(textureValues[i]));
                     break;
             }
 
@@ -408,7 +411,8 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
                     UpdateInputDepth(commandEncoder, inputTexture, format, textureValues[i]);
                     break;
                 case TestAspectAndSamplerType::StencilAsUint:
-                    UpdateInputStencil(commandEncoder, inputTexture, format, textureValues[i]);
+                    UpdateInputStencil(commandEncoder, inputTexture, format,
+                                       static_cast<uint8_t>(textureValues[i]));
                     break;
             }
 
@@ -469,7 +473,8 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
             StencilData ssss = {mExpected, mExpected, mExpected, mExpected};
             StencilData s001 = {mExpected, 0, 0, 1};
 
-            if (memcmp(data, ssss.data(), size) == 0 || memcmp(data, s001.data(), size) == 0) {
+            if (DAWN_UNSAFE_TODO(memcmp(data, ssss.data(), size)) == 0 ||
+                DAWN_UNSAFE_TODO(memcmp(data, s001.data(), size)) == 0) {
                 return testing::AssertionSuccess();
             }
 
@@ -477,7 +482,8 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
                    << "Expected stencil data to be " << "(" << ssss[0] << ", " << ssss[1] << ", "
                    << ssss[2] << ", " << ssss[3] << ") or " << "(" << s001[0] << ", " << s001[1]
                    << ", " << s001[2] << ", " << s001[3] << "). Got " << "(" << data[0] << ", "
-                   << data[1] << ", " << data[2] << ", " << data[3] << ").";
+                   << DAWN_UNSAFE_TODO(data[1]) << ", " << DAWN_UNSAFE_TODO(data[2]) << ", "
+                   << DAWN_UNSAFE_TODO(data[3]) << ").";
         }
 
       private:
@@ -623,12 +629,9 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
             wgpu::CommandBuffer commands = commandEncoder.Finish();
             queue.Submit(1, &commands);
 
-            float float0 = 0.f;
-            float float1 = 1.f;
-            float* expected =
-                CompareFunctionPasses(compareRef, compare, textureValue) ? &float1 : &float0;
+            float expected = CompareFunctionPasses(compareRef, compare, textureValue) ? 1.f : 0.f;
 
-            EXPECT_BUFFER_U32_EQ(*reinterpret_cast<uint32_t*>(expected), outputBuffer, 0)
+            EXPECT_BUFFER_U32_EQ(std::bit_cast<uint32_t>(expected), outputBuffer, 0)
                 << "compareRef=" << compareRef << " " << compare
                 << " textureValue=" << textureValue;
         }
@@ -790,10 +793,10 @@ TEST_P(DepthStencilSamplingTest, SampleExtraComponents) {
     wgpu::TextureFormat format = GetParam().mTextureFormat;
 
     DoSamplingExtraStencilComponentsRenderTest(TestAspectAndSamplerType::StencilAsUint, format,
-                                               {uint8_t(42), uint8_t(37)});
+                                               {uint8_t{42}, uint8_t{37}});
 
     DoSamplingExtraStencilComponentsComputeTest(TestAspectAndSamplerType::StencilAsUint, format,
-                                                {uint8_t(42), uint8_t(37)});
+                                                {uint8_t{42}, uint8_t{37}});
 }
 
 // Test sampling both depth and stencil with a render/compute pipeline works.
@@ -866,14 +869,16 @@ TEST_P(DepthStencilSamplingTest, SampleDepthAndStencilRender) {
         queue.Submit(1, &commands);
 
         float expectedDepth = 0.0f;
-        memcpy(&expectedDepth, &passDescriptor.cDepthStencilAttachmentInfo.depthClearValue,
-               sizeof(float));
+        DAWN_UNSAFE_TODO(memcpy(&expectedDepth,
+                                &passDescriptor.cDepthStencilAttachmentInfo.depthClearValue,
+                                sizeof(float)));
         EXPECT_BUFFER(depthOutput, 0, sizeof(float),
                       new ::dawn::detail::ExpectEq<float>(expectedDepth, tolerance));
 
         uint8_t expectedStencil = 0;
-        memcpy(&expectedStencil, &passDescriptor.cDepthStencilAttachmentInfo.stencilClearValue,
-               sizeof(uint8_t));
+        DAWN_UNSAFE_TODO(memcpy(&expectedStencil,
+                                &passDescriptor.cDepthStencilAttachmentInfo.stencilClearValue,
+                                sizeof(uint8_t)));
         EXPECT_BUFFER_U32_EQ(expectedStencil, stencilOutput, 0);
     }
 
@@ -916,14 +921,16 @@ TEST_P(DepthStencilSamplingTest, SampleDepthAndStencilRender) {
         queue.Submit(1, &commands);
 
         float expectedDepth = 0.0f;
-        memcpy(&expectedDepth, &passDescriptor.cDepthStencilAttachmentInfo.depthClearValue,
-               sizeof(float));
+        DAWN_UNSAFE_TODO(memcpy(&expectedDepth,
+                                &passDescriptor.cDepthStencilAttachmentInfo.depthClearValue,
+                                sizeof(float)));
         EXPECT_BUFFER(depthOutput, 0, sizeof(float),
                       new ::dawn::detail::ExpectEq<float>(expectedDepth, tolerance));
 
         uint8_t expectedStencil = 0;
-        memcpy(&expectedStencil, &passDescriptor.cDepthStencilAttachmentInfo.stencilClearValue,
-               sizeof(uint8_t));
+        DAWN_UNSAFE_TODO(memcpy(&expectedStencil,
+                                &passDescriptor.cDepthStencilAttachmentInfo.stencilClearValue,
+                                sizeof(uint8_t)));
         EXPECT_BUFFER_U32_EQ(expectedStencil, stencilOutput, 0);
     }
 }

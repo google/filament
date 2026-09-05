@@ -1,0 +1,243 @@
+Name
+
+    EXT_device_base
+
+Name Strings
+
+    EGL_EXT_device_base
+
+Contributors
+
+    James Jones
+    Daniel Kartch
+    Jamie Madill
+
+Contacts
+
+    James Jones, NVIDIA  (jajones 'at' nvidia.com)
+
+Status
+
+    Complete
+    
+    Rewritten in terms of split functionality in EXT_dispay_device and
+    EXT_device_enumeration.
+
+Version
+
+    Version 9 - March 24th, 2015
+
+Number
+
+    EGL Extension #72
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Written against the wording of EGL 1.5.
+
+    The specifications of EGL_EXT_device_query and
+    EGL_EXT_device_enumeration are required to determine the
+    specification of this extension, although those extensions may not
+    be supported.
+
+Overview
+
+    Increasingly, EGL and its client APIs are being used in place of
+    "native" rendering APIs to implement the basic graphics
+    functionality of native windowing systems.  This creates demand
+    for a method to initialize EGL displays and surfaces directly on
+    top of native GPU or device objects rather than native window
+    system objects.  The mechanics of enumerating the underlying
+    native devices and constructing EGL displays and surfaces from
+    them have been solved in various platform and implementation-
+    specific ways.  The EGL device family of extensions offers a
+    standardized framework for bootstrapping EGL without the use of
+    any underlying "native" APIs or functionality.
+
+    This extension defines the first step of this bootstrapping
+    process: Device enumeration.
+
+New Types
+
+    As defined by EGL_EXT_device_query.
+
+New Functions
+
+    As defined by EGL_EXT_device_query and EGL_EXT_device_enumeration.
+
+New Tokens
+
+    As defined by EGL_EXT_device_query.
+
+Add to section "3.2 Devices"
+
+    "EGL_EXT_device_base is equivalent to the combination of the
+    functionality defined by EGL_EXT_device_query and
+    EGL_EXT_device_enumeration."
+
+Issues
+
+    1.  Should there be a mechanism (such as an attribute list) to
+        filter devices in eglQueryDevicesEXT()?
+
+        RESOLVED: No.  This could develop too much complexity, like
+        the EGLConfig mechanism.  Instead, force applications to query
+        all devices and implement any desired filtering themselves.
+
+    2.  Should there be an eglSetDeviceAttribEXT()?
+
+        RESOLVED: No.  Device properties are immutable.
+
+    3.  Should a device file descriptor attribute be included in the
+        base specification?
+
+        RESOLVED: No.  It seems like an arbitrary attribute to include
+        in the base extension.  Other extensions can easily be added
+        if this or other device attributes are needed.
+
+    4.  Should EGLDeviceEXT handles be opaque pointers or 32-bit
+        values?
+
+        RESOLVED: Opaque pointers.  The trend seems to be to use
+        opaque pointers for object handles, and opaque pointers allow
+        more implementation flexibility than 32-bit values.
+        Additionally, the introduction of the EGLAttrib type allows
+        inclusion of pointer-sized types in attribute lists, which was
+        the only major advantage of 32-bit types.
+
+    5.  Should eglQueryDisplayAttribEXT be defined as part of this
+        extension?
+
+        RESOLVED: Yes.  There are no other known uses for this
+        function, so it should be defined here.  If other uses are
+        found, future extension specifications can reference this
+        extension or retroactively move it to a separate extension.
+
+    6.  How should bonded GPU configurations, such as SLI or Crossfire
+        be enumerated?  What about other hybrid rendering solutions?
+
+        RESOLVED: Bonded GPUs should appear as one device in this API,
+        since the client APIs generally treat them as one device.
+        Further queries can be added to distinguish the lower-level
+        hardware within these bonded devices.
+
+        Hybrid GPUs, which behave independently but are switched
+        between in a manner transparent to the user, should be
+        enumerated separately.  This extension is intended to be used
+        at a level of the software stack below this type of automatic
+        switching or output sharing.
+
+    7.  Should this extension require all displays to have an
+        associated, queryable device handle?
+
+        RESOLVED: Yes.  This allows creating new namespace containers
+        that all displays can be grouped in to and allows existing
+        applications with display-based initialization code to easily
+        add device-level functionality.  Future extensions are
+        expected to expose methods to correlate EGL devices and native
+        devices, and to use devices as namespaces for future objects
+        and operations, such as cross-display EGL streams.
+
+    8.  Are device handles returned by EGL valid in other processes?
+
+        RESOLVED: No.  Another level of indirection is required to
+        correlate two EGL devices in separate processes.
+
+    9.  Is a general display pointer query mechanism needed, or should
+        an eglGetDevice call be added to query a display's associated
+        device?
+
+        RESOLVED: A general mechanism is better.  It may have other
+        uses in the future.
+
+    10. Should a new type of extension be introduced to query device-
+        specific extensions?
+
+        RESOLVED: Yes.  Without this mechanism, it is likely that most
+        device extensions would require a separate mechanism to
+        determine which devices actually support them.  Further,
+        requiring all device-level extensions to be listed as client
+        extensions forces them to be implemented in the EGL client
+        library, or "ICD".  This is unfortunate since vendors will
+        likely wish to expose vendor-specific device extensions.
+
+        These advantages were weighed against the one known
+        disadvantage of a separate extension type: Increasing the
+        complexity of this extension and the EGL extension mechanism
+        in general.
+
+    11. Is eglQueryDeviceStringEXT necessary, or should the device
+        extension string be queried using eglQueryDeviceAttribEXT?
+
+        RESOLVED: Using a separate query seems more consistent with
+        how the current extension strings are queried.
+        
+    12. Should this extension contain both device enumeration and
+        the ability to query the device backing an EGLDisplay?
+        
+        RESOLVED: This extension initially included both of these
+        abilities.  To allow simpler implementations to add only the
+        ability to query the device of an existing EGLDisplay, this
+        extension was split into two separate extensions:
+        
+           EGL_EXT_device_query
+           EGL_EXT_device_enumeration
+           
+        The presence of this extension now only indicates support
+        for both of the above extensions.
+
+Revision History:
+
+    #9  (March 24th, 2015) James Jones
+        - Split the extension into two child extensions:
+           EGL_EXT_device_query
+           EGL_EXT_device_enumeration
+
+    #8  (May 16th, 2014) James Jones
+        - Marked the extension complete.
+        - Marked all issues resolved.
+
+    #7  (April 8th, 2014) James Jones
+        - Renamed eglGetDisplayAttribEXT back to
+          eglQueryDisplayAttribEXT.
+        - Update wording based on the EGL 1.5 specification.
+        - Use EGLAttrib instead of EGLAttribEXT.
+        - Assigned values to tokens.
+
+    #6  (November 6th, 2013) James Jones
+        - Added EGL_BAD_DEVICE_EXT error code.
+        - Renamed some functions for consistency with the core spec
+
+    #5  (November 6th, 2013) James Jones
+        - Specified this is a client extension
+        - Renamed eglQueryDisplayPointerEXT eglGetDisplayAttribEXT
+          and modified it to use the new EGLAttribEXT type rather than
+          a void pointer
+        - Introduced the "device" extension type.
+        - Added eglQueryDeviceStringEXT to query device extension
+          strings
+        - Removed issues 5, 10, and 12 as they are no longer relevant
+        - Added issues 10 and 11.
+
+    #4  (May 14th, 2013) James Jones
+        - Merged in EGL_EXT_display_attributes
+        - Changed eglGetDisplayPointerEXT to eglQueryDisplayPointerEXT
+        - Remove eglGetDisplayAttribEXT since it has no known use case
+
+    #3  (April 23rd, 2013) James Jones
+        - Include EGL_NO_DEVICE_EXT
+        - Added issues 8 and 9
+
+    #2  (April 18th, 2013) James Jones
+        - Reworded issue 3 and flipped the resolution
+        - Added issues 5, 6, and 7
+        - Filled in the actual spec language modifications
+        - Renamed from EGL_EXT_device to EGL_EXT_device_base
+        - Fixed some typos
+
+    #1  (April 16th, 2013) James Jones
+        - Initial Draft

@@ -1,0 +1,751 @@
+Name
+
+    AMD_name_gen_delete
+        
+
+Name Strings
+
+    GL_AMD_name_gen_delete
+
+
+Contributors
+
+    Balaji Calidas
+    Mark Young
+    Murat Balci
+    Benedikt Kessler
+
+Contact
+
+    Mark Young (mark.young 'at' amd.com)
+
+
+Status
+
+    In Progress.
+    
+
+Version
+    
+    Last Modified Date: February 10, 2010
+    Author Revision:    1
+
+
+Number
+
+    394
+
+
+Dependencies
+
+    OpenGL 2.1 is required.
+
+    ARB_framebuffer_object affects this spec.
+
+    ARB_vertex_array_object affects this spec.
+
+    EXT_transform_feedback affects this spec.
+
+    EXT_transform_feedback2 affects this spec.
+
+    AMD_performance_monitor affects this spec
+
+    ARB_sampler_objects affects this spec
+    
+    
+Overview
+
+    This extension simply creates 2 new entry-points that name generic
+    creation and deletion of names.  The intent is to go away from API
+    functionality that provides a create/delete function for each specific 
+    object.  
+
+    For example: 
+        glGenTextures/glDeleteTextures/glIsTexture
+        glGenBuffers/glDeleteBuffers/IsBuffer
+        glGenFramebuffers/glDeleteFramebuffers/IsFramebuffer
+
+    Instead, everything is created using one entry-point GenNamesAMD and
+    everything is now deleted with another entry-point DeleteNamesAMD with
+    the appropriate identifier set.  In addition, everything can now be 
+    queried with IsNameAMD.
+
+    This alleviates the problem we may eventually encounter where we have
+    many Gen/Delete/Is functions where 3 might suffice.  All that is needed
+    in the new case is to add a valid identifier to the accepted parameters
+    list.
+
+    
+IP Status
+    
+    No known IP claims.
+    
+     
+New Procedures and Functions
+    
+    void GenNamesAMD(enum identifier, uint num, uint *names);
+
+    void DeleteNamesAMD(enum identifier, uint num, const uint *names);
+ 
+    boolean IsNameAMD(enum identifier, uint name);   
+
+New Types
+    
+    None.
+    
+
+New Tokens
+
+    Accepted as the <identifier> parameter of GenNamesAMD and DeleteNamesAMD:
+
+    DATA_BUFFER_AMD                               0x9151
+    PERFORMANCE_MONITOR_AMD                       0x9152
+    QUERY_OBJECT_AMD                              0x9153
+    VERTEX_ARRAY_OBJECT_AMD                       0x9154
+    SAMPLER_OBJECT_AMD                            0x9155
+
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    Insert a new section before section 2.9 "Buffer Objects" titled
+    "Object Name Handling"
+    ----------------------------------------------------------------
+
+    2.x Object Name Handling
+
+    2.x.1 Name Generation
+
+    Objects in OpenGL are created, modified, and deleted using names.  These 
+    names are unique per object type, but can be common across multiple types.
+    For example, a texture and a query object may both be named 127, but two
+    query different query objects cannot have the name 127 in the same context.
+    These names are generated using each types own specific GenXXX command, but
+    can also be created using the more generic command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    where <identifier> indicates the type of object that is to be created, <n>
+    is used to indicate how many objects to create, and <names> is a previously
+    allocated array that the new generated names will be supplied in.  These 
+    names for marked as used for the purposes of the type of object specified by
+    <identifier> (and their own individual GenXXX command), but they do not
+    typically acquire any state until they are first bound, just as if they were
+    unused.
+
+    Valid values for <identifier> currently are:
+      - DATA_BUFFER_AMD   (For ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, 
+                            PIXEL_PACK_BUFFER, and PIXEL_UNPACK_BUFFER)
+      - FRAMEBUFFER
+      - RENDERBUFFER
+      - TEXTURE
+      - TRANSFORM_FEEDBACK_EXT
+      - VERTEX_ARRAY_OBJECT_AMD (For VAOs instead of VERTEX_ARRAY_BINDING)
+      - QUERY_OBJECT_AMD        (For query objects)
+      - PERFORMANCE_MONITOR_AMD (For a performance monitor object)
+      - SAMPLER_OBJECT_AMD      (For a sampler object)
+
+    If <identifier> is not one of these valid values, the error INVALID_ENUM
+    will be triggered.  If <n> is a number zero or <names> is NULL, the error
+    INVALID_VALUE is triggered.
+
+
+    2.x.2 Name Deletion
+
+    Object names can be deleted when they are no longer needed using the command
+    
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+        
+    where <identifier> indicates one of the above valid types, and <n> indicates
+    how many object names are provided in the <names> array. Similar to 
+    GenNamesAMD, each object type also has its own DeleteXXX command.  
+    DeleteNamesAMD with a given object type behaves in the same way that the
+    object types specific DeleteXXX command does.  
+
+    If <identifier> is not one of these valid values, the error INVALID_ENUM
+    will be triggered.  If <n> is a number zero or <names> is NULL, the error
+    INVALID_VALUE is triggered.
+
+
+    2.x.3 Name Querying
+
+    Object names can be queried to make sure that an object of the given type
+    exists using the command
+    
+        boolean IsNameAMD( enum identifier, uint name );
+        
+    where <identifier> indicates one of the above valid types, and <name> 
+    is the name that is being identified as a valid name for that object
+    type. Similar to GenNamesAMD and DeleteNamesAMD, each object type also 
+    has its own IsXXX command.  IsNameAMD with a given object type behaves in 
+    the same way that the object types specific IsXXX command does.  
+
+    If <identifier> is not one of these valid values, the error INVALID_ENUM
+    will be triggered.
+
+
+    2.x.4 Name Binding
+
+    Objects are typically enabled for usage through a Bind call or something
+    similar.  The process for binding objects for usage is handled differently
+    per object type.  For further information on how to use each object, refer
+    to its section later in this spec.
+
+
+
+    Modify section 2.9 "Buffer Objects", page 33.
+    ----------------------------------------------------------------
+
+
+    After the paragraphs talking about 'DeleteBuffers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to DATA_BUFFER_AMD behaves the same as using the
+    DeleteBuffers command.
+
+
+    Modify the paragraphs talking about 'GenBuffers':
+    ----------------------------------------------------------------
+
+    The commands
+
+        void GenBuffers( sizei n, uint *buffers );
+
+    returns <n> previously unused buffer object names in <buffers>. These names
+    are marked as used, for the purposes of GenBuffers and GenNamesAMD when used
+    with <identifier> set to DATA_BUFFER_AMD only, but they acquire buffer state
+    only when they are first bound, just as if they were unused.
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to DATA_BUFFER_AMD behaves the same as using the
+    GenBuffers command.
+
+    While a buffer object is bound, any GL operations on that object affect any
+    other bindings of that object. If a buffer object is deleted while it is 
+    bound, all bindings to that object in the current context (i.e. in the 
+    thread that called DeleteBuffers or DeleteNamesAMD with <identifier> set to
+    DATA_BUFFER_AMD) are reset to zero. Bindings to that buffer in other 
+    contexts and other threads are not affected, but attempting to use a deleted 
+    buffer in another thread...
+
+
+
+    Modify the new section 2.y "Vertex Array Objects".
+           Added by ARB_vertex_array_object
+    ----------------------------------------------------------------
+
+    Modify the paragraphs talking about 'GenVertexArrays':
+    ----------------------------------------------------------------
+
+    The commands
+
+        void GenVertexArrays( sizei n, uint *arrays );
+
+    returns <n> previous unused vertex array object names in <arrays>.  These
+    names are marked as used, for the purposes of GenVertexArrays and 
+    GenNamesAMD (when <identifier> is set to VERTEX_ARRAY_OBJECT_AMD) only,
+    and are initialized with the state listed in tables 6.6 (except for
+    the CLIENT_ACTIVE_TEXTURE selector state), 6.7 and 6.8.
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to VERTEX_ARRAY_OBJECT_AMD behaves the same as using
+    the GenVertexArrays command.
+
+
+    After the paragraphs talking about 'DeleteVertexArrays' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to VERTEX_ARRAY_OBJECT_AMD behaves the same as using
+    the DeleteVertexArrays command.
+
+
+    Modify the paragraph that starts with 
+    'BindVertexArray fails and an INVALID_OPERATION error'... to:
+    ----------------------------------------------------------------
+    BindVertexArray fails and an INVALID_OPERATION error is generated if
+    array is not a name returned from a previous call to
+    GenVertexArrays (or GenNamesAMD with <identifier> set to 
+    VERTEX_ARRAY_OBJECT), or if such a name has since been deleted with
+    either DeleteVertexArrays or DeleteNamesAMD (with <identifier> set to
+    VERTEX_ARRAY_OBJECT). An INVALID_OPERATION error is generated
+    if VertexAttribPointer or VertexAttribIPointer is called while a
+    non-zero vertex array object is bound and zero is bound to the
+    ARRAY_BUFFER buffer object binding point[fn].
+
+
+
+    Modify the new section 2.z.1 "Transform Feedback Objects"
+           Added by EXT_transform_feedback2
+    ----------------------------------------------------------------
+
+    Add after the paragraphs talking about 'DeleteTransformFeedbacksEXT':
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to TRANSFORM_FEEDBACK_EXT behaves the same as using
+    the DeleteTransformFeedbacksEXT command.
+
+
+    Modify the paragraphs talking about 'GenTransformFeedbacksEXT':
+    ----------------------------------------------------------------
+
+    The command
+
+        void GenTransformFeedbacksEXT(sizei n, uint *ids)
+
+    returns <n> previously unused transform feedback object names in <ids>.
+    These names are marked as used, for the purposes of
+    GenTransformFeedbacksEXT and GenNamesAMD (when <identifier> is set to 
+    TRANSFORM_FEEDBACK_EXT) only, but they acquire transform feedback state
+    only when they are first bound, just as if they were unused.
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to TRANSFORM_FEEDBACK_EXT behaves the same as using
+    the GenTransformFeedbacksEXT command.
+
+
+    Modify the paragraph that starts with 
+    'BindVertexArray fails and an INVALID_OPERATION error'... to:
+    ----------------------------------------------------------------
+    BindVertexArray fails and an INVALID_OPERATION error is generated if
+    array is not a name returned from a previous call to
+    GenVertexArrays (or GenNamesAMD with <identifier> set to 
+    VERTEX_ARRAY_OBJECT), or if such a name has since been deleted with
+    either DeleteVertexArrays or DeleteNamesAMD (with <identifier> set to
+    VERTEX_ARRAY_OBJECT). An INVALID_OPERATION error is generated
+    if VertexAttribPointer or VertexAttribIPointer is called while a
+    non-zero vertex array object is bound and zero is bound to the
+    ARRAY_BUFFER buffer object binding point[fn].
+
+
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    Modify section 3.8.12 "Texture Objects", page 182.
+    ----------------------------------------------------------------
+
+    After the paragraphs talking about 'DeleteTextures' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to TEXTURE behaves the same as using the
+    DeleteTextures command.
+
+
+    Modify the paragraphs talking about 'GenTextures':
+    ----------------------------------------------------------------
+
+    The commands
+
+        void GenTextures( sizei n, uint *textures );
+
+    returns <n> previously unused texture object names in <textures>.  These names
+    are marked as used, for the purposes of GenTextures and GenNamesAMD when used
+    with <identifier> set to TEXTURE only, but they acquire texture state and
+    dimensionality only when they are first bound, just as if they were unused.
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to TEXTURE behaves the same as using the
+    GenBuffers command.
+
+
+
+    Modify section 3.9.2 "Sampler Objects".
+    ----------------------------------------------------------------
+
+    After the paragraphs talking about 'GenSamplers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to SAMPLER_OBJECT_AMD behaves the same as using the
+    GenSamplers command.
+
+    After the paragraphs talking about 'DeleteSamplers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to SAMPLER_OBJECT_AMD behaves the same as using the
+    DeleteSamplers command.
+
+
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Modify section 4.1.7 "Occlusion Queries", page 207.
+    ----------------------------------------------------------------
+
+    Insert after the paragraph talking about 'GenQueries':
+    ----------------------------------------------------------------
+
+     Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to QUERY_OBJECT_AMD behaves the same as using the
+    GenQueries command.
+
+
+    After the paragraphs talking about 'DeleteQueries' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to QUERY_OBJECT_AMD behaves the same as using the
+    DeleteTextures command.
+
+
+    Modify the paragraph that talks about GenQueries and DeleteQueries errors
+    after that:
+    ----------------------------------------------------------------
+
+    Calling either GenQueries, DeleteQueries, GenNamesAMD(QUERY_OBJECT_AMD),
+    or DeleteNamesAMD(QUERY_OBJECT_AMD), while any query of any target is
+    active causes an INVALID OPERATION error to be generated.
+
+
+    Modify section 4.4.1 "Binding and Managing Framebuffer Objects"
+    ----------------------------------------------------------------
+
+
+    Modify the 2nd paragraph to read:
+    ----------------------------------------------------------------
+
+    A framebuffer object is created by binding a name returned by 
+    GenFramebuffers or GenNamesAMD (see below) to DRAW_FRAMEBUFFER or 
+    READ_FRAMEBUFFER. The binding is effected by calling
+
+
+    Modify the 5th paragraph to read:
+    ----------------------------------------------------------------
+
+    BindFramebuffer fails and an INVALID_OPERATION error is generated if
+    <framebuffer> is not zero or a name returned from a previous call to
+    GenFramebuffers or GenNamesAMD, or if such a name has since been 
+    deleted with DeleteFramebuffers or DeleteNamesAMD.
+
+
+    After the paragraphs talking about 'DeleteFramebuffers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to FRAMEBUFFER behaves the same as using the
+    DeleteFramebuffers command.
+
+
+    After the paragraphs talking about 'GenFramebuffers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to FRAMEBUFFER behaves the same as using the
+    GenFramebuffers command.
+
+
+    Modify section 4.4.2.1 "Renderbuffer Objects"
+    ----------------------------------------------------------------
+
+    Modify the 2nd paragraph to read:
+    ----------------------------------------------------------------
+
+    The name space for renderbuffer objects is the unsigned integers,
+    with zero reserved for the GL.  A renderbuffer object is created by
+    binding a name returned by GenRenderbuffers or GenNamesAMD (see below)
+    to RENDERBUFFER.  The binding is effected by calling
+
+    Modify the 9th paragraph to read:
+    ----------------------------------------------------------------
+
+    BindRenderbuffer fails and an INVALID_OPERATION error is generated
+    if <renderbuffer> is not a name returned from a previous call to
+    GenRenderbuffers or GenNamesAMD, or if such a name has since been 
+    deleted with DeleteRenderbuffers or DeleteNamesAMD.
+
+
+    After the paragraphs talking about 'DeleteRenderbuffers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to RENDERBUFFER behaves the same as using the
+    DeleteFramebuffers command.
+
+
+    After the paragraphs talking about 'GenRenderbuffers' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to RENDERBUFFER behaves the same as using the
+    GenFramebuffers command.
+
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special
+Functions)
+
+    Modify section 5.4 "Display Lists", page 240.
+    ----------------------------------------------------------------
+
+    Add the following to the list of things not allowed inside of a
+      display list:
+    ----------------------------------------------------------------
+
+        Name generation: GenNamesAMD and DeleteNamesAMD
+
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and
+State Requests)
+
+    Modify section 6.1.4 "Texture Queries"
+    ----------------------------------------------------------------
+
+    After the paragraphs talking about 'IsTexture' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void IsNameAMD( enum identifier, uint name );
+
+    with <identifier> set to TEXTURE behaves the same as using the
+    IsTexture command.
+
+
+    Modify section 6.1.12 "Occlusion Queries"
+    ----------------------------------------------------------------
+
+    After the paragraphs talking about 'IsQuery' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void IsNameAMD( enum identifier, uint name );
+
+    with <identifier> set to QUERY_OBJECT_AMD behaves differently from
+    calling IsQuery.  IsQuery only returns if an object is a
+    query once it has been used.  However, IsName returns TRUE if
+    a QUERY_OBJECT_AMD object had been created either through
+    GenQueries or GenNamesAMD.
+
+
+    Modify section 6.1.13 "Buffer Object Queries"
+    ----------------------------------------------------------------
+
+    After the paragraphs talking about 'IsBuffer' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void IsNameAMD( enum identifier, uint name );
+
+    with <identifier> set to DATA_BUFFER_AMD behaves the same as using the
+    IsBuffer command.
+
+
+Additions to new section for Performance Monitoring (added by 
+  AMD_performance_monitor)
+
+
+    After the paragraphs talking about 'GenPerfMonitorsAMD' insert:
+    ----------------------------------------------------------------
+
+    Calling the command
+
+        void GenNamesAMD( enum identifier, sizei n, uint *names );
+
+    with <identifier> set to PERFORMANCE_MONITOR_AMD behaves the same as
+    using the GenPerfMonitorsAMD command.
+
+
+    Modify the paragraphs talking about 'DeletePerfMonitorsAMD' to:
+    ----------------------------------------------------------------
+
+    The command
+    
+        void DeletePerfMonitorsAMD(sizei n, uint *monitors)
+        
+    is used to delete the list of monitors created by a previous call to 
+    GenPerfMonitors or GenNamesAMD (with <identifier> set to 
+    PERFORMANCE_MONITOR_AMD).  If a monitor ID in the list <monitors> does not
+    reference a previously generated performance monitor, an INVALID_VALUE
+    error is generated.
+
+    Calling the command
+
+        void DeleteNamesAMD( enum identifier, sizei n, const uint *names );
+
+    with <identifier> set to PERFORMANCE_MONITOR_AMD behaves the same as using
+    the DeletePerfMonitors command.
+
+
+    Modify the paragraph after the protoype for SelectPerfMonitorCountersAMD
+    to read:
+    ----------------------------------------------------------------
+
+    is used to enable or disable a list of counters from a group to be monitored 
+    as identified by <monitor>.  The <enable> argument determines whether the
+    counters should be enabled or disabled.  <group> specifies the group
+    ID under which counters will be enabled or disabled.  The <numCounters>
+    argument gives the number of counters to be selected from the list 
+    <counterList>.  If <monitor> is not a valid monitor created by either
+    GenPerfMonitorsAMD or GneNamesAMD (with <identifier> set to 
+    PERFORMANCE_MONITOR_AMD), then INVALID_VALUE error will be generated.  If 
+    <group> is not a valid group, the INVALID_VALUE error will be generated.  If
+    <numCounters> is less than 0, an INVALID_VALUE error will be generated. 
+
+    
+Additions to the OpenGL / GLX / GLX Protocol Specifications
+
+    None.
+
+
+Additions to the WGL Specification
+
+    None.
+    
+
+Errors
+    
+    The error INVALID_ENUM is generated by GenNamesAMD, DeleteNamesAMD, or
+    IsNameAMD if <identifier> is not one of:
+      - DATA_BUFFER_AMD   (For ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, 
+                            PIXEL_PACK_BUFFER, and PIXEL_UNPACK_BUFFER)
+      - FRAMEBUFFER
+      - RENDERBUFFER
+      - TEXTURE
+      - TRANSFORM_FEEDBACK_EXT
+      - VERTEX_ARRAY_OBJECT_AMD (For VAOs instead of VERTEX_ARRAY_BINDING)
+      - QUERY_OBJECT_AMD        (For query objects)
+      - PERFORMANCE_MONITOR_AMD (For a performance monitor object)
+      - SAMPLER_OBJECT_AMD      (For a sampler object)
+
+    The error INVALID_VALUE is generated by GenNamesAMD or DeleteNamesAMD
+    if <num> is 0.
+
+    The error INVALID_VALUE is generated by GenNamesAMD or DeleteNamesAMD
+    if <names> is NULL.
+    
+
+New State
+
+    None
+        
+
+New Implementation Dependent State
+
+    If ARB_vertex_array_object is not present, remove any reference to
+    VERTEX_ARRAY or VERTEX_ARRAY_BINDING and VAOs.
+            
+                                                                        
+Sample Code
+
+    glGenTextures/glDeleteTextures
+
+      Before:
+
+          GLuint texID[12];
+          glGenTextures(12, &texID[0]);
+          ...
+          // Use textures
+          ...
+          glDeleteTextures(12, &texID[0]);
+
+      After:
+
+          GLuint texID[12];
+          glGenNames(GL_TEXTURE, 12, &texID[0]);
+          ...
+          // Use textures
+          ...
+          glDeleteNames(GL_TEXTURE, 12, &texID[0]);
+
+
+Issues
+
+    01)   What is the main benefit of these new entry-points?
+
+          To reduce the requirement of new entry-points for generating and 
+          deleting names.
+
+
+    02)   Do we want to use VERTEX_ARRAY_BINDING for a vertex array object?
+
+          RECOMMENDATION - I suggest using a new variable called 
+                           VERTEX_ARRAY_OBJECT_AMD. This makes it clear
+                           what's being generated.
+
+
+    03)   What do we want the generic buffer object name to be called
+
+          RESOLVED - Use DATA_BUFFER_AMD.
+
+
+    04)   Do we want to include display list generation?
+
+          RECOMMENDATION - No.  There is additional restrictions on display list
+                           name generation specifically items being 
+                           consecutively generated.
+
+
+    05)   Should DeleteNamesAMD verify that the names exist and throw an error 
+          if not?
+
+          RECOMMENDATION - I think not since it might cause issues with multi-
+                           context multi-thread cases where sharing is enabled
+                           and one context deletes them follwed by another 
+                           context deleting items.
+
+
+
+Revision History
+
+    1) September 11, 2009: myoung
+        - Initial revision of AMDX extension
+
+    2) February 10, 2010: myoung
+        - Change from AMDX to AMD extension 
+
+    2) February 12, 2010: myoung
+        - Add in IsNameAMD functionality requested by Benedikt 
+  

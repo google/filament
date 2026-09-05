@@ -28,8 +28,9 @@
 #include <variant>
 #include <vector>
 
-#include "dawn/common/Sha3.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Sha3.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -613,7 +614,7 @@ TEST(Sha3, LongMessageUpdate) {
             Sha3Proxy sha3(test.type);
             ASSERT_EQ(test.expectedOutput.size(), sha3.OutputByteSize());
             sha3.Update(test.input.data(), offset);
-            sha3.Update(test.input.data() + offset, test.inputByteSize - offset);
+            sha3.Update(DAWN_UNSAFE_TODO(test.input.data() + offset), test.inputByteSize - offset);
             auto result = sha3.Finalize();
             ExpectOutput(result, test.expectedOutput);
         }

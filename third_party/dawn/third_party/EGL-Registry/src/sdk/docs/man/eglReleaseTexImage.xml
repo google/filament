@@ -1,0 +1,101 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglReleaseTexImage">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglReleaseTexImage</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglReleaseTexImage</refname>
+        <refpurpose>
+            Releases a color buffer that is being used as a texture
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglReleaseTexImage</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+                <paramdef>EGLint <parameter>buffer</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>buffer</parameter></term>
+                <listitem><para>Specifies the texture image data.</para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            The specified color buffer is released back to the surface. The surface is made
+            available for reading and writing when it no longer has any color buffers bound as
+            textures.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            If the specified color buffer is no longer bound to a texture (e.g., because the
+            texture object was deleted) then eglReleaseTexImage has no effect. No error is
+            generated.
+        </para>
+        <para>
+            The contents of the color buffer are undefined when it is first released. In particular,
+            there is no guarantee that the texture image is still present. However, the contents of
+            other color buffers are unaffected by this call. Also, the contents of the depth and stencil buffers
+            are not affected by <citerefentry><refentrytitle>eglBindTexImage</refentrytitle></citerefentry>
+            and <function>eglReleaseTexImage</function>.
+        </para>
+        <para>
+            After a color buffer is released from a texture (either explicitly by calling
+            <function>eglReleaseTexImage</function> or implicitly by calling a routine such as
+            <citerefentry><refentrytitle>glTexImage2D</refentrytitle></citerefentry>),
+            all texture images that were defined by the color buffer become <constant>NULL</constant>
+            (it is as if <citerefentry><refentrytitle>glTexImage</refentrytitle></citerefentry> was called with an image of zero width).
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            surface attribute <constant>EGL_TEXTURE_FORMAT</constant> is
+            set to <constant>EGL_NO_TEXTURE</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>buffer</parameter> is not a valid buffer
+            (currently only <constant>EGL_BACK_BUFFER</constant> may be
+            specified).
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL surface, or is
+            not a bound pbuffer surface.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglBindTexImage</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

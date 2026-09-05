@@ -27,7 +27,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dawn/common/Algebra.h"
+#include "src/dawn/common/Algebra.h"
 
 namespace dawn::math {
 namespace {
@@ -209,6 +209,34 @@ TEST(Algebra, MatrixConstructorAndIndexing) {
     }
 }
 
+// Test the helper "FromRows" static member function.
+TEST(Algebra, MatrixFromRows) {
+    {
+        Mat2x3f m = Mat2x3f::FromRows({
+            {1, 2},
+            {3, 4},
+            {5, 6},
+        });
+        EXPECT_EQ(m, Mat2x3f({1, 3, 5}, {2, 4, 6}));
+    }
+    {
+        Mat3x2f m = Mat3x2f::FromRows({
+            {1, 2, 3},
+            {4, 5, 6},
+        });
+        EXPECT_EQ(m, Mat3x2f({1, 4}, {2, 5}, {3, 6}));
+    }
+    {
+        Mat2x4f m = Mat2x4f::FromRows({
+            {1, 2},
+            {3, 4},
+            {5, 6},
+            {7, 8},
+        });
+        EXPECT_EQ(m, Mat2x4f({1, 3, 5, 7}, {2, 4, 6, 8}));
+    }
+}
+
 // Test the vector equality operator
 TEST(Algebra, MatrixEquality) {
     EXPECT_EQ(Mat3x2f({1, 2}, {3, 4}, {5, 6}), Mat3x2f({1, 2}, {3, 4}, {5, 6}));
@@ -259,12 +287,12 @@ TEST(Algebra, MatrixCropOrExpandFrom) {
 // Test computation of the determinant.
 TEST(Algebra, MatrixDeterminant) {
     // Simple test vectors.
-    EXPECT_EQ(Mat2x2f({2, 3}, {5, 7}).Determinant(), -1.0);
-    EXPECT_EQ(Mat3x3f({2, 3, 5}, {7, 11, 13}, {17, 19, 23}).Determinant(), -78.0);
+    EXPECT_EQ(Mat2x2f({2, 3}, {5, 7}).Determinant(), -1.0f);
+    EXPECT_EQ(Mat3x3f({2, 3, 5}, {7, 11, 13}, {17, 19, 23}).Determinant(), -78.0f);
 
     // Determinant of non-invertible matrices is 0.
-    EXPECT_EQ(Mat2x2f({1, 2}, {2, 4}).Determinant(), 0.0);
-    EXPECT_EQ(Mat3x3f({1, 2, 3}, {1, 3, 5}, {2, 5, 8}).Determinant(), 0.0);
+    EXPECT_EQ(Mat2x2f({1, 2}, {2, 4}).Determinant(), 0.0f);
+    EXPECT_EQ(Mat3x3f({1, 2, 3}, {1, 3, 5}, {2, 5, 8}).Determinant(), 0.0f);
 }
 
 // Test computation of the inverse.
@@ -297,6 +325,12 @@ TEST(Algebra, MatrixInverse) {
     }
 }
 
+// Test computation of the transpose of a matrix
+TEST(Algebra, MatrixTransposed) {
+    EXPECT_EQ(Mat2x2f({1, 2}, {3, 4}).Transposed(), Mat2x2f({1, 3}, {2, 4}));
+    EXPECT_EQ(Mat2x3f({1, 2, 3}, {4, 5, 6}).Transposed(), Mat3x2f({1, 4}, {2, 5}, {3, 6}));
+}
+
 // Test the vector-scalar division.
 TEST(Algebra, MatrixScalarDiv) {
     EXPECT_EQ(Mat2x2f({3, 6}, {9, 12}) / 3.0f, Mat2x2f({1, 2}, {3, 4}));
@@ -304,6 +338,15 @@ TEST(Algebra, MatrixScalarDiv) {
     Mat2x2f m = Mat2x2f({3, 6}, {9, 12});
     m /= 3.0f;
     EXPECT_EQ(m, Mat2x2f({1, 2}, {3, 4}));
+}
+
+// Test the vector-scalar division.
+TEST(Algebra, MatrixScalarMul) {
+    EXPECT_EQ(Mat2x2f({1, 2}, {3, 4}) * 3.0f, Mat2x2f({3, 6}, {9, 12}));
+
+    Mat2x2f m = Mat2x2f({1, 2}, {3, 4});
+    m *= 3.0f;
+    EXPECT_EQ(m, Mat2x2f({3, 6}, {9, 12}));
 }
 
 // Test matrix / vector multiplication.

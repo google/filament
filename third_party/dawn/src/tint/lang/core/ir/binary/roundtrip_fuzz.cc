@@ -25,11 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/binary/decode.h"
 #include "src/tint/lang/core/ir/binary/encode.h"
 #include "src/tint/lang/core/ir/disassembler.h"
-#include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::binary {
 namespace {
@@ -65,5 +64,4 @@ Result<SuccessType> IRBinaryRoundtripFuzzer(core::ir::Module& module, const fuzz
 }  // namespace
 }  // namespace tint::core::ir::binary
 
-TINT_IR_MODULE_FUZZER(tint::core::ir::binary::IRBinaryRoundtripFuzzer,
-                      tint::core::ir::Capabilities{});
+TINT_IR_MODULE_FUZZER(tint::core::ir::binary::IRBinaryRoundtripFuzzer);

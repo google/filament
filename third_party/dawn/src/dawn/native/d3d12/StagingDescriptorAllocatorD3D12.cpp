@@ -25,14 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
 
 #include <utility>
 
-#include "dawn/common/Math.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::d3d12 {
 
@@ -77,7 +78,7 @@ ResultOrError<CPUDescriptorHeapAllocation> StagingDescriptorAllocator::AllocateC
     }
 
     const D3D12_CPU_DESCRIPTOR_HANDLE baseCPUDescriptor = {
-        buffer.heap->GetCPUDescriptorHandleForHeapStart().ptr + (blockIndex * mBlockSize)};
+        buffer.heap->GetCPUDescriptorHandleForHeapStart().ptr + (SIZE_T{blockIndex} * mBlockSize)};
 
     return CPUDescriptorHeapAllocation{baseCPUDescriptor, heapIndex};
 }
@@ -144,7 +145,7 @@ uint32_t StagingDescriptorAllocator::GetSizeIncrement() const {
 }
 
 StagingDescriptorAllocator::Index StagingDescriptorAllocator::GetFreeBlockIndicesSize() const {
-    return ((mHeapSize * mSizeIncrement) / mBlockSize);
+    return checked_cast<Index>((mHeapSize * mSizeIncrement) / mBlockSize);
 }
 
 ResultOrError<CPUDescriptorHeapAllocation>

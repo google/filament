@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 # The VERSION field is generated with the "--generated-version" flag in the generate_source.py script
-project(VUL VERSION 1.4.349 LANGUAGES CXX)
+project(VUL VERSION 1.4.360 LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) # Remove when min is 3.26, see CMP0143
 
@@ -25,6 +25,14 @@ set(API_TYPE "vulkan")
 add_subdirectory(scripts)
 
 find_package(VulkanHeaders ${PROJECT_VERSION} CONFIG)
+
+# Workaround AppleClang using the wrong headers when there are headers in /usr/local/include
+if (CMAKE_CXX_COMPILER_ID STREQUAL AppleClang AND TARGET Vulkan::Headers AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
+    get_target_property(vulkan_headers_aliased Vulkan::Headers ALIASED_TARGET)
+    if (NOT vulkan_headers_aliased)
+        set_target_properties(Vulkan::Headers PROPERTIES SYSTEM OFF)
+    endif()
+endif()
 
 option(VUL_ENABLE_ASAN "Use address sanitization")
 if (VUL_ENABLE_ASAN)

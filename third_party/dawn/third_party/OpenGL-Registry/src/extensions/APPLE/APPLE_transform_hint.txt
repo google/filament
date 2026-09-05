@@ -1,0 +1,97 @@
+XXX - Not complete yet!!!
+
+Name
+
+    APPLE_transform_hint
+
+Name Strings
+
+    GL_APPLE_transform_hint
+
+Version
+
+    $Date: 1999/04/03 08:41:09 $ $Revision: 1.2 $
+
+Number
+
+    160
+
+Dependencies
+
+    None
+
+Overview
+
+    The transform_hint extension provides a new target,
+    TRANSFORM_HINT_APPLE, for the Hint procedure.  When the
+    transform hint is set to FASTEST the GL may choose to 
+    implement certain state dependent algebraic simplifications
+    in the geometry transformation that affect the sub-pixel
+    precision of the transformed vertex coordinates.  
+
+    For example, if two polygons are rendered with identical object
+    coordinates, different GL state settings, and the transform
+    hint set to FASTEST, there is no gaurantee that the resulting 
+    window coordinates of the two polygons will be precisely
+    identical.  Therefore, precise tests of the window coordinates, 
+    such as a depth test setting of EQUAL, should not be used.
+
+    If the transform hint is set to NICEST or DONT_CARE, two polygons
+    with identical object coordinates will always be transformed
+    to identical window coordinates.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of Hint and the <pname>
+    parameters of GetBooleanv, GetDoublev, GetFloatv and
+    GetIntegerv :
+
+    TRANSFORM_HINT_APPLE			0x85B1
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Section 5.6, Hints
+    The second sentence should be appended with:
+    "and TRANSFORM_HINT, indicating the desired quality of vertex coordinate
+     transformations."
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    Not done
+
+Additions to the GLX Specification
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value		 Get Command Type Value	    Attrib
+    -------------------- ----------- ---- --------  ------
+    TRANSFORM_HINT_APPLE GetIntegerv  Z3  DONT_CARE hint
+
+New Implementation Dependent State
+
+    None

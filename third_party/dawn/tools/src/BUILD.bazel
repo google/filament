@@ -1,0 +1,251 @@
+# Copyright 2026 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+load("@rules_go//docs/go/core:rules.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cmd_gen_common",
+    srcs = glob(["cmd/gen/common/*.go"]),
+    importpath = "dawn.googlesource.com/dawn/tools/src/cmd/gen/common",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fileutils",
+        ":oswrapper",
+        ":subcmd",
+    ],
+)
+
+go_library(
+    name = "gen_sources",
+    srcs = ["cmd/gen/sources/main.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/cmd/gen/sources",
+    visibility = ["//visibility:private"],
+    deps = [
+        ":cmd_gen_common",
+        ":cmd_gen_templates",
+        ":oswrapper",
+    ],
+)
+
+go_binary(
+    name = "gen-sources",
+    embed = [":gen_sources"],
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "cmd_gen_templates",
+    srcs = ["cmd/gen/templates/templates.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/cmd/gen/templates",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":cmd_gen_common",
+        ":container",
+        ":fileutils",
+        ":glob",
+        ":oswrapper",
+        ":template",
+        ":tint_intrinsic_gen",
+        ":tint_intrinsic_parser",
+        ":tint_intrinsic_resolver",
+        ":tint_intrinsic_sem",
+    ],
+)
+
+go_library(
+    name = "tint_intrinsic_tok",
+    srcs = ["tint/intrinsic/tok/tok.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/tok",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "tint_intrinsic_lexer",
+    srcs = ["tint/intrinsic/lexer/lexer.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/lexer",
+    visibility = ["//visibility:public"],
+    deps = [":tint_intrinsic_tok"],
+)
+
+go_library(
+    name = "tint_intrinsic_sem",
+    srcs = ["tint/intrinsic/sem/sem.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/sem",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":container",
+        ":tint_intrinsic_ast",
+    ],
+)
+
+go_library(
+    name = "tint_intrinsic_gen",
+    srcs = [
+        "tint/intrinsic/gen/gen.go",
+        "tint/intrinsic/gen/permutate.go",
+    ],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/gen",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fileutils",
+        ":lut",
+        ":tint_intrinsic_sem",
+    ],
+)
+
+go_library(
+    name = "tint_intrinsic_parser",
+    srcs = ["tint/intrinsic/parser/parser.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/parser",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fileutils",
+        ":oswrapper",
+        ":tint_intrinsic_ast",
+        ":tint_intrinsic_lexer",
+        ":tint_intrinsic_tok",
+    ],
+)
+
+go_library(
+    name = "tint_intrinsic_ast",
+    srcs = ["tint/intrinsic/ast/ast.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/ast",
+    visibility = ["//visibility:public"],
+    deps = [":tint_intrinsic_tok"],
+)
+
+go_library(
+    name = "tint_intrinsic_resolver",
+    srcs = ["tint/intrinsic/resolver/resolve.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/tint/intrinsic/resolver",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":container",
+        ":tint_intrinsic_ast",
+        ":tint_intrinsic_sem",
+        ":tint_intrinsic_tok",
+    ],
+)
+
+go_library(
+    name = "match",
+    srcs = ["match/match.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/match",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "template",
+    srcs = ["template/template.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/template",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":container",
+        ":fileutils",
+        ":oswrapper",
+        ":text",
+        ":transform",
+    ],
+)
+
+go_library(
+    name = "lut",
+    srcs = ["lut/lut.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/lut",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "container",
+    srcs = [
+        "container/container.go",
+        "container/key.go",
+        "container/map.go",
+        "container/set.go",
+    ],
+    importpath = "dawn.googlesource.com/dawn/tools/src/container",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "glob",
+    srcs = ["glob/glob.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/glob",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":match",
+        ":oswrapper",
+    ],
+)
+
+go_library(
+    name = "fileutils",
+    srcs = [
+        "fileutils/copy.go",
+        "fileutils/ext.go",
+        "fileutils/fileutils_other.go",
+        "fileutils/fileutils_windows.go",
+        "fileutils/paths.go",
+        "fileutils/testutils.go",
+    ],
+    importpath = "dawn.googlesource.com/dawn/tools/src/fileutils",
+    visibility = ["//visibility:public"],
+    deps = [":oswrapper"],
+)
+
+go_library(
+    name = "oswrapper",
+    srcs = glob(["oswrapper/*.go"], exclude = ["oswrapper/*_test.go"]),
+    importpath = "dawn.googlesource.com/dawn/tools/src/oswrapper",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "text",
+    srcs = ["text/case.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/text",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "subcmd",
+    srcs = ["subcmd/subcmd.go"],
+    importpath = "dawn.googlesource.com/dawn/tools/src/subcmd",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "transform",
+    srcs = [
+        "transform/errors.go",
+        "transform/map.go",
+        "transform/slice.go",
+    ],
+    importpath = "dawn.googlesource.com/dawn/tools/src/transform",
+    visibility = ["//visibility:public"],
+)

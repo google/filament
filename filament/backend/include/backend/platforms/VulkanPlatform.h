@@ -546,6 +546,11 @@ protected:
     bool isTransientAttachmentSupported() const noexcept;
 
     /**
+     * Query if RenderDoc capture mode is enabled for the backend.
+     */
+    bool isRenderDocCaptureEnabled() const noexcept;
+
+    /**
      * For pipeline cache prewarming, if external samplers are present, we need to build
      * the fake pipeline using the proper formats specified. Since there's no way to
      * get these at material build time, we allow the app to register them before
@@ -581,7 +586,7 @@ private:
         Platform::GpuContextPriority gpuContextPriority = Platform::GpuContextPriority::DEFAULT;
     };
 
-    void createInstance(ExtensionSet const& requiredExts) noexcept;
+    void createInstance(ExtensionSet const& requiredExts, bool enableRenderdoc = false) noexcept;
 
     void queryAndSetDeviceFeatures(Platform::DriverConfig const& driverConfig,
             ExtensionSet const& instExts, ExtensionSet const& deviceExts,

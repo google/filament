@@ -37,7 +37,7 @@
 #include <string>
 #include <utility>
 
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace {
 
@@ -126,8 +126,9 @@ class SpotTests : public ::testing::TestWithParam<Mode> {
         wgpu::SupportedFeatures deviceFeatures;
         device.GetFeatures(&deviceFeatures);
         mGotCompatibilityMode = true;
-        for (uint32_t i = 0; i < deviceFeatures.featureCount; ++i) {
-            if (deviceFeatures.features[i] == wgpu::FeatureName::CoreFeaturesAndLimits) {
+        for (auto feature :
+             DAWN_UNSAFE_TODO(std::span(deviceFeatures.features, deviceFeatures.featureCount))) {
+            if (feature == wgpu::FeatureName::CoreFeaturesAndLimits) {
                 mGotCompatibilityMode = false;
             }
         }
@@ -143,7 +144,10 @@ class SpotTests : public ::testing::TestWithParam<Mode> {
     bool mGotCompatibilityMode = false;
 };
 
-INSTANTIATE_TEST_SUITE_P(, SpotTests, ::testing::ValuesIn({Mode::MinCompat, Mode::MaxCore}));
+INSTANTIATE_TEST_SUITE_P(,
+                         SpotTests,
+                         ::testing::ValuesIn({Mode::MinCompat, Mode::MaxCore}),
+                         ::testing::PrintToStringParamName());
 
 TEST_P(SpotTests, QuerySet) {
     // Spot test wgpuQuerySetGetType which uses indexOf on an int-to-string table.
@@ -218,11 +222,13 @@ TEST_P(SpotTests, InvalidComponentSwizzle) {
 TEST_P(SpotTests, GetWGSLLanguageFeatures) {
     wgpu::SupportedWGSLLanguageFeatures f;
     mInstance.GetWGSLLanguageFeatures(&f);
-    auto features = std::span(f.features, f.featureCount);
+    auto features = DAWN_UNSAFE_TODO(std::span(f.features, f.featureCount));
+    std::cout << "GetWGSLLanguageFeatures:\n";
     for (auto feature : features) {
         // GetWGSLLanguageFeatures should filter out any unknown features.
         EXPECT_NE(feature, wgpu::WGSLLanguageFeatureName{0});
         EXPECT_TRUE(mInstance.HasWGSLLanguageFeature(feature));
+        std::cout << "  - " << feature << "\n";
     }
 
     // Test a specific feature to make sure minification worked.
@@ -241,7 +247,7 @@ template <typename AdapterOrDevice>
 void TestGetFeatures(AdapterOrDevice o, bool shouldHaveCompressedTexture) {
     wgpu::SupportedFeatures f;
     o.GetFeatures(&f);
-    auto features = std::span(f.features, f.featureCount);
+    auto features = DAWN_UNSAFE_TODO(std::span(f.features, f.featureCount));
     for (auto feature : features) {
         // GetFeatures should filter out any unknown features.
         EXPECT_NE(feature, wgpu::FeatureName{0});
@@ -456,7 +462,7 @@ TEST_P(SpotTests, ImportExternalTexture) {
                 readback.Unmap();
             }),
         UINT64_MAX);
-    EXPECT_EQ(result, uint32_t(0xff00ff00));  // ABGR
+    EXPECT_EQ(result, uint32_t{0xff00ff00});  // ABGR
 
     EM_ASM({
         // VideoFrames should always be closed manually.
@@ -517,6 +523,43 @@ TEST_P(SpotTests, TextureBindingViewDimension) {
     EXPECT_EQ(texture.GetTextureBindingViewDimension(),
               mGotCompatibilityMode ? textureBindingViewDimensionDesc.textureBindingViewDimension
                                     : wgpu::TextureViewDimension::Undefined);
+}
+
+TEST_P(SpotTests, AdapterInfo) {
+    wgpu::AdapterPropertiesSubgroupMatrixConfigs extConfigs;
+    wgpu::AdapterInfo info;
+    info.nextInChain = &extConfigs;
+
+    mAdapter.GetInfo(&info);
+    std::cout << "AdapterInfo:\n  ";
+    std::cout << info.vendor << ", " << info.architecture << ", " << info.device << ", "
+              << info.description << ",\n  ";
+    std::cout << info.backendType << ", " << info.adapterType << ",\n  ";
+    std::cout << info.vendorID << ", " << info.deviceID << ",\n  ";
+    std::cout << info.subgroupMinSize << ", " << info.subgroupMaxSize << "\n";
+    std::cout << "AdapterPropertiesSubgroupMatrixConfigs:\n";
+    for (auto cfg : DAWN_UNSAFE_TODO(std::span(extConfigs.configs, extConfigs.configCount))) {
+        std::cout << "  - " << cfg.componentType << ", " << cfg.resultComponentType << ", " << cfg.M
+                  << ", " << cfg.N << ", " << cfg.K << "\n";
+    }
+}
+
+TEST_P(SpotTests, AdapterFeatures) {
+    wgpu::SupportedFeatures features;
+    mAdapter.GetFeatures(&features);
+    std::cout << "Adapter features:\n";
+    for (auto feature : DAWN_UNSAFE_TODO(std::span(features.features, features.featureCount))) {
+        std::cout << "  - " << feature << "\n";
+    }
+}
+
+TEST_P(SpotTests, DeviceFeatures) {
+    wgpu::SupportedFeatures features;
+    mDevice.GetFeatures(&features);
+    std::cout << "Device features:\n";
+    for (auto feature : DAWN_UNSAFE_TODO(std::span(features.features, features.featureCount))) {
+        std::cout << "  - " << feature << "\n";
+    }
 }
 
 }  // namespace

@@ -284,18 +284,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
-      - name: Run build script
-        # We need to build before clang-tidy can run analysis
-        run: |
-          # This will build for all three desktop backends on mac
-          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
-          ./build.sh -b -p desktop debug
-          # This will build and install the release build
-          ./build.sh -p desktop release && ninja -C out/cmake-release install
-      - name: Check - clang-tidy (exception escape)
-        run: bash test/code-correctness/clang-tidy-proxy.sh
-      - name: Check - public header inclusion
-        run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Get commit message
         id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
@@ -317,6 +305,17 @@ jobs:
           else
             bash test/code-correctness/check-headers.sh ${GITHUB_SHA}
           fi
+      - name: Run build script
+        # We need to build before clang-tidy can run analysis
+        run: |
+          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
+          ./build.sh -b -p desktop debug
+          # This will build and install the release build
+          ./build.sh -p desktop release && ninja -C out/cmake-release install
+      - name: Check - clang-tidy (exception escape)
+        run: bash test/code-correctness/clang-tidy-proxy.sh
+      - name: Check - public header inclusion
+        run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Check - Filament unit tests
         run: bash test/filament-unit-test/test.sh
 

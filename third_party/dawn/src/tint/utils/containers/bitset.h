@@ -78,6 +78,7 @@ class Bitset {
 
         /// Conversion operator
         /// @returns the bit value
+        // NOLINTNEXTLINE(google-explicit-constructor)
         operator bool() const { return (word & mask) != 0; }
     };
 

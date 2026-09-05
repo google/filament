@@ -896,21 +896,33 @@ public:
     /**
      * Changes the geometry for the given primitive.
      *
-     * \see Builder::geometry()
-     */
-    void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
-            VertexBuffer* UTILS_NONNULL vertices,
-            IndexBuffer* UTILS_NONNULL indices,
-            size_t offset, size_t count) noexcept;
-
-    /**
-     * Changes the geometry for the given primitive. (non-indexed version)
+     * Buffers built asynchronously must have completed their creation. See
+     * `VertexBuffer::isCreationComplete()` and `IndexBuffer::isCreationComplete()`.
+     *
+     * @exception utils::PreConditionPanic if a buffer's creation is still in progress or was
+     *                                     canceled.
      *
      * \see Builder::geometry()
      */
     void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
             VertexBuffer* UTILS_NONNULL vertices,
-            size_t offset, size_t count) noexcept;
+            IndexBuffer* UTILS_NONNULL indices,
+            size_t offset, size_t count);
+
+    /**
+     * Changes the geometry for the given primitive. (non-indexed version)
+     *
+     * Buffers built asynchronously must have completed their creation. See
+     * `VertexBuffer::isCreationComplete()`.
+     *
+     * @exception utils::PreConditionPanic if the buffer's creation is still in progress or was
+     *                                     canceled.
+     *
+     * \see Builder::geometry()
+     */
+    void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
+            VertexBuffer* UTILS_NONNULL vertices,
+            size_t offset, size_t count);
 
     /**
      * Changes the drawing order for blended primitives. The drawing order is either global or

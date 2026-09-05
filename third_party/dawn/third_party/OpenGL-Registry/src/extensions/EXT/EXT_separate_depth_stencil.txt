@@ -1,0 +1,81 @@
+Name
+
+    EXT_separate_depth_stencil
+
+Name Strings
+
+    GL_EXT_separate_depth_stencil
+
+Contributors
+
+    Thomas Spurden
+
+Contact
+
+    Thomas Spurden, Broadcom (thomas.spurden 'at' broadcom.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: 21/01/2022
+
+Number
+
+    OpenGL ES Extension #338
+
+Dependencies
+
+    The extension is written against the OpenGL ES 3.0.6 (November 1, 2019)
+    standard
+
+Overview
+
+    This extension adds support for binding a different image to the depth and
+    stencil attachments of a framebuffer object.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+   None
+
+New Tokens
+
+   None
+
+Additions to Chapter 4 of the OpenGL ES 3.0 Specification (Per-Fragment Operations and the
+Framebuffer)
+
+   Modify section 4.4.4.2 (Whole Framebuffer Completeness)
+
+   Delete the whole of the 4th bullet point "Depth and stencil attachments, if
+   present, are the same image..."
+
+   Add a bullet point:
+   "The depth attachment is not stencil-renderable, or the implementation supports this
+   combination.
+
+    { FRAMEBUFFER_UNSUPPORTED }"
+
+   Add a bullet point:
+   "The stencil attachment is not depth-renderable, or the implementation supports this
+   combination.
+
+    { FRAMEBUFFER_UNSUPPORTED }"
+
+Issues
+
+Revision History
+    #3   (May 22, 2022) Thomas Spurden
+         - Add bullet points explicitly allowing implementations to reject framebuffers
+           where the stencil attachment is depth-renderable or the depth attachment is
+           stencil-renderable.
+    #2   (March 3, 2022) Thomas Spurden
+         - Changed to EXT from BRCM
+    #1   (January 21, 2022) Thomas Spurden
+         - Initial draft

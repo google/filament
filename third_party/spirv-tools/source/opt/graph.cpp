@@ -37,6 +37,12 @@ Graph* Graph::Clone(IRContext* ctx) const {
 
   clone->SetGraphEnd(std::unique_ptr<Instruction>(EndInst()->Clone(ctx)));
 
+  clone->non_semantic_.reserve(non_semantic_.size());
+  for (const auto& i : non_semantic_) {
+    clone->AddNonSemanticInstruction(
+        std::unique_ptr<Instruction>(i->Clone(ctx)));
+  }
+
   return clone;
 }
 
@@ -44,7 +50,6 @@ void Graph::ForEachInst(const std::function<void(Instruction*)>& f,
                         bool run_on_debug_line_insts,
                         bool run_on_non_semantic_insts) {
   (void)run_on_debug_line_insts;
-  (void)run_on_non_semantic_insts;
 
   f(def_inst_.get());
 
@@ -61,13 +66,18 @@ void Graph::ForEachInst(const std::function<void(Instruction*)>& f,
   }
 
   f(end_inst_.get());
+
+  if (run_on_non_semantic_insts) {
+    for (auto& inst : non_semantic_) {
+      f(inst.get());
+    }
+  }
 }
 
 void Graph::ForEachInst(const std::function<void(const Instruction*)>& f,
                         bool run_on_debug_line_insts,
                         bool run_on_non_semantic_insts) const {
   (void)run_on_debug_line_insts;
-  (void)run_on_non_semantic_insts;
 
   f(def_inst_.get());
 
@@ -84,6 +94,12 @@ void Graph::ForEachInst(const std::function<void(const Instruction*)>& f,
   }
 
   f(end_inst_.get());
+
+  if (run_on_non_semantic_insts) {
+    for (auto& inst : non_semantic_) {
+      f(inst.get());
+    }
+  }
 }
 
 }  // namespace opt

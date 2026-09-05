@@ -25,14 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/wire/WireTest.h"
+#include "src/dawn/tests/unittests/wire/WireTest.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::wire {
 namespace {
 
 using testing::_;
-using testing::NotNull;
-using testing::Return;
 using testing::Unused;
 
 class WireExtensionTests : public WireTest {
@@ -43,183 +42,204 @@ class WireExtensionTests : public WireTest {
 
 // Serialize/Deserializes a chained struct correctly.
 TEST_F(WireExtensionTests, ChainedStruct) {
-    wgpu::ShaderModuleDescriptor shaderModuleDesc = {};
-    wgpu::ShaderSourceWGSL clientExt = {};
-    shaderModuleDesc.nextInChain = &clientExt;
-    clientExt.code = {"/* comment */", WGPU_STRLEN};
+    wgpu::BindGroupLayoutEntry bglEntry = {};
+    wgpu::ExternalTextureBindingLayout clientExt = {};
+    bglEntry.nextInChain = &clientExt;
 
-    WGPUShaderModule apiShaderModule = api.GetNewShaderModule();
-    wgpu::ShaderModule shaderModule = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext =
-                reinterpret_cast<const WGPUShaderSourceWGSL*>(serverDesc->nextInChain);
-            EXPECT_EQ(ext->chain.sType, WGPUSType_ShaderSourceWGSL);
-            EXPECT_NE(ext->code.length, WGPU_STRLEN) << "The wire should decay WGPU_STRLEN";
-            EXPECT_EQ(0, memcmp(ext->code.data, clientExt.code.data, ext->code.length));
-            EXPECT_EQ(ext->code.length, strlen(clientExt.code.data));
-            EXPECT_EQ(ext->chain.next, nullptr);
+    wgpu::BindGroupLayoutDescriptor bglDesc = {};
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &bglEntry;
 
-            return apiShaderModule;
-        });
+    WGPUBindGroupLayout apiBgl = api.GetNewBindGroupLayout();
+    wgpu::BindGroupLayout bgl = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext = reinterpret_cast<const WGPUExternalTextureBindingLayout*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext->chain.sType, WGPUSType_ExternalTextureBindingLayout);
+                EXPECT_EQ(ext->chain.next, nullptr);
+
+                return apiBgl;
+            });
     FlushClient();
 }
 
 // Serialize/Deserializes multiple chained structs correctly.
 TEST_F(WireExtensionTests, MultipleChainedStructs) {
-    wgpu::ShaderModuleDescriptor shaderModuleDesc = {};
+    wgpu::BindGroupLayoutEntry bglEntry = {};
 
-    wgpu::ShaderModuleCompilationOptions clientExt2 = {};
-    clientExt2.strictMath = true;
+    wgpu::TexelBufferBindingLayout clientExt2 = {};
+    clientExt2.access = wgpu::TexelBufferAccess::ReadOnly;
+    clientExt2.format = wgpu::TextureFormat::RGBA8Unorm;
 
-    wgpu::ShaderSourceWGSL clientExt1 = {};
-    clientExt1.code = {"/* comment 1 */", WGPU_STRLEN};
+    wgpu::ExternalTextureBindingLayout clientExt1 = {};
     clientExt1.nextInChain = &clientExt2;
-    shaderModuleDesc.nextInChain = &clientExt1;
+    bglEntry.nextInChain = &clientExt1;
 
-    WGPUShaderModule apiShaderModule = api.GetNewShaderModule();
-    wgpu::ShaderModule shaderModule1 = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext1 =
-                reinterpret_cast<const WGPUShaderSourceWGSL*>(serverDesc->nextInChain);
-            EXPECT_EQ(ext1->chain.sType, WGPUSType_ShaderSourceWGSL);
-            EXPECT_NE(ext1->code.length, WGPU_STRLEN) << "The wire should decay WGPU_STRLEN";
-            EXPECT_EQ(0, memcmp(ext1->code.data, clientExt1.code.data, ext1->code.length));
-            EXPECT_EQ(ext1->code.length, strlen(clientExt1.code.data));
+    wgpu::BindGroupLayoutDescriptor bglDesc = {};
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &bglEntry;
 
-            const auto* ext2 =
-                reinterpret_cast<const WGPUShaderModuleCompilationOptions*>(ext1->chain.next);
-            EXPECT_EQ(ext2->chain.sType, WGPUSType_ShaderModuleCompilationOptions);
-            EXPECT_NE(ext2->strictMath, 0u);
-            EXPECT_EQ(ext2->chain.next, nullptr);
+    WGPUBindGroupLayout apiBgl = api.GetNewBindGroupLayout();
+    wgpu::BindGroupLayout bgl1 = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext1 = reinterpret_cast<const WGPUExternalTextureBindingLayout*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext1->chain.sType, WGPUSType_ExternalTextureBindingLayout);
 
-            return apiShaderModule;
-        });
+                const auto* ext2 =
+                    reinterpret_cast<const WGPUTexelBufferBindingLayout*>(ext1->chain.next);
+                EXPECT_EQ(ext2->chain.sType, WGPUSType_TexelBufferBindingLayout);
+                EXPECT_EQ(ext2->access, WGPUTexelBufferAccess_ReadOnly);
+                EXPECT_EQ(ext2->format, WGPUTextureFormat_RGBA8Unorm);
+                EXPECT_EQ(ext2->chain.next, nullptr);
+
+                return apiBgl;
+            });
     FlushClient();
 
     // Swap the order of the chained structs.
-    shaderModuleDesc.nextInChain = &clientExt2;
+    bglEntry.nextInChain = &clientExt2;
     clientExt2.nextInChain = &clientExt1;
     clientExt1.nextInChain = nullptr;
 
-    wgpu::ShaderModule shaderModule2 = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext2 = reinterpret_cast<const WGPUShaderModuleCompilationOptions*>(
-                serverDesc->nextInChain);
-            EXPECT_EQ(ext2->chain.sType, WGPUSType_ShaderModuleCompilationOptions);
-            EXPECT_NE(ext2->strictMath, 0u);
+    wgpu::BindGroupLayout bgl2 = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext2 = reinterpret_cast<const WGPUTexelBufferBindingLayout*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext2->chain.sType, WGPUSType_TexelBufferBindingLayout);
+                EXPECT_EQ(ext2->access, WGPUTexelBufferAccess_ReadOnly);
+                EXPECT_EQ(ext2->format, WGPUTextureFormat_RGBA8Unorm);
 
-            const auto* ext1 = reinterpret_cast<const WGPUShaderSourceWGSL*>(ext2->chain.next);
-            EXPECT_EQ(ext1->chain.sType, WGPUSType_ShaderSourceWGSL);
-            EXPECT_NE(ext1->code.length, WGPU_STRLEN) << "The wire should decay WGPU_STRLEN";
-            EXPECT_EQ(0, memcmp(ext1->code.data, clientExt1.code.data, ext1->code.length));
-            EXPECT_EQ(ext1->code.length, strlen(clientExt1.code.data));
-            EXPECT_EQ(ext1->chain.next, nullptr);
+                const auto* ext1 =
+                    reinterpret_cast<const WGPUExternalTextureBindingLayout*>(ext2->chain.next);
+                EXPECT_EQ(ext1->chain.sType, WGPUSType_ExternalTextureBindingLayout);
+                EXPECT_EQ(ext1->chain.next, nullptr);
 
-            return apiShaderModule;
-        });
+                return apiBgl;
+            });
     FlushClient();
 }
 
 // Test that a chained struct with Invalid sType passes through as Invalid.
 TEST_F(WireExtensionTests, InvalidSType) {
-    wgpu::ShaderModuleDescriptor shaderModuleDesc = {};
+    wgpu::BindGroupLayoutEntry bglEntry = {};
 
     wgpu::DawnWireWGSLControl clientExt = {};
-    shaderModuleDesc.nextInChain = &clientExt;
+    bglEntry.nextInChain = &clientExt;
 
-    WGPUShaderModule apiShaderModule = api.GetNewShaderModule();
-    wgpu::ShaderModule shaderModule = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext =
-                reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(serverDesc->nextInChain);
-            EXPECT_EQ(ext->chain.sType, WGPUSType_DawnInjectedInvalidSType);
-            EXPECT_EQ(ext->chain.next, nullptr);
-            EXPECT_EQ(ext->invalidSType, WGPUSType_DawnWireWGSLControl);
+    wgpu::BindGroupLayoutDescriptor bglDesc = {};
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &bglEntry;
 
-            return apiShaderModule;
-        });
+    WGPUBindGroupLayout apiBgl = api.GetNewBindGroupLayout();
+    wgpu::BindGroupLayout bgl = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext = reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext->chain.sType, WGPUSType_DawnInjectedInvalidSType);
+                EXPECT_EQ(ext->chain.next, nullptr);
+                EXPECT_EQ(ext->invalidSType, WGPUSType_DawnWireWGSLControl);
+
+                return apiBgl;
+            });
     FlushClient();
 }
 
 // Test that a chained struct with unknown sType passes through as Invalid.
 TEST_F(WireExtensionTests, UnknownSType) {
-    wgpu::ShaderModuleDescriptor shaderModuleDesc = {};
+    wgpu::BindGroupLayoutEntry bglEntry = {};
     wgpu::ChainedStruct clientExt = {};
-    shaderModuleDesc.nextInChain = &clientExt;
+    bglEntry.nextInChain = &clientExt;
 
-    WGPUShaderModule apiShaderModule = api.GetNewShaderModule();
-    wgpu::ShaderModule shaderModule = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext =
-                reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(serverDesc->nextInChain);
-            EXPECT_EQ(ext->chain.sType, WGPUSType_DawnInjectedInvalidSType);
-            EXPECT_EQ(ext->chain.next, nullptr);
-            EXPECT_EQ(ext->invalidSType, WGPUSType(0));
+    wgpu::BindGroupLayoutDescriptor bglDesc = {};
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &bglEntry;
 
-            return apiShaderModule;
-        });
+    WGPUBindGroupLayout apiBgl = api.GetNewBindGroupLayout();
+    wgpu::BindGroupLayout bgl = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext = reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext->chain.sType, WGPUSType_DawnInjectedInvalidSType);
+                EXPECT_EQ(ext->chain.next, nullptr);
+                EXPECT_EQ(ext->invalidSType, WGPUSType(0));
+
+                return apiBgl;
+            });
     FlushClient();
 }
 
 // Test that if both an invalid and valid stype are passed on the chain, only the invalid
 // sType passes through as Invalid.
 TEST_F(WireExtensionTests, ValidAndInvalidSTypeInChain) {
-    wgpu::ShaderModuleDescriptor shaderModuleDesc = {};
+    wgpu::BindGroupLayoutEntry bglEntry = {};
 
     wgpu::DawnWireWGSLControl clientExt2 = {};
-    wgpu::ShaderSourceWGSL clientExt1 = {};
-    clientExt1.code = {"/* comment 1 */", WGPU_STRLEN};
+    wgpu::ExternalTextureBindingLayout clientExt1 = {};
     clientExt1.nextInChain = &clientExt2;
-    shaderModuleDesc.nextInChain = &clientExt1;
+    bglEntry.nextInChain = &clientExt1;
 
-    WGPUShaderModule apiShaderModule = api.GetNewShaderModule();
-    wgpu::ShaderModule shaderModule1 = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext1 =
-                reinterpret_cast<const WGPUShaderSourceWGSL*>(serverDesc->nextInChain);
-            EXPECT_EQ(ext1->chain.sType, WGPUSType_ShaderSourceWGSL);
-            EXPECT_NE(ext1->code.length, WGPU_STRLEN) << "The wire should decay WGPU_STRLEN";
-            EXPECT_EQ(0, memcmp(ext1->code.data, clientExt1.code.data, ext1->code.length));
-            EXPECT_EQ(ext1->code.length, strlen(clientExt1.code.data));
+    wgpu::BindGroupLayoutDescriptor bglDesc = {};
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &bglEntry;
 
-            const auto* ext2 =
-                reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(ext1->chain.next);
-            EXPECT_EQ(ext2->chain.sType, WGPUSType_DawnInjectedInvalidSType);
-            EXPECT_EQ(ext2->chain.next, nullptr);
-            EXPECT_EQ(ext2->invalidSType, WGPUSType_DawnWireWGSLControl);
+    WGPUBindGroupLayout apiBgl = api.GetNewBindGroupLayout();
+    wgpu::BindGroupLayout bgl1 = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext1 = reinterpret_cast<const WGPUExternalTextureBindingLayout*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext1->chain.sType, WGPUSType_ExternalTextureBindingLayout);
 
-            return apiShaderModule;
-        });
+                const auto* ext2 =
+                    reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(ext1->chain.next);
+                EXPECT_EQ(ext2->chain.sType, WGPUSType_DawnInjectedInvalidSType);
+                EXPECT_EQ(ext2->chain.next, nullptr);
+                EXPECT_EQ(ext2->invalidSType, WGPUSType_DawnWireWGSLControl);
+
+                return apiBgl;
+            });
     FlushClient();
 
     // Swap the order of the chained structs.
-    shaderModuleDesc.nextInChain = &clientExt2;
+    bglEntry.nextInChain = &clientExt2;
     clientExt2.nextInChain = &clientExt1;
     clientExt1.nextInChain = nullptr;
 
-    wgpu::ShaderModule shaderModule2 = device.CreateShaderModule(&shaderModuleDesc);
-    EXPECT_CALL(api, DeviceCreateShaderModule(apiDevice, _))
-        .WillOnce([&](Unused, const WGPUShaderModuleDescriptor* serverDesc) -> WGPUShaderModule {
-            const auto* ext2 =
-                reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(serverDesc->nextInChain);
-            EXPECT_EQ(ext2->chain.sType, WGPUSType_DawnInjectedInvalidSType);
-            EXPECT_EQ(ext2->invalidSType, WGPUSType_DawnWireWGSLControl);
+    wgpu::BindGroupLayout bgl2 = device.CreateBindGroupLayout(&bglDesc);
+    EXPECT_CALL(api, DeviceCreateBindGroupLayout(apiDevice, _))
+        .WillOnce(
+            [&](Unused, const WGPUBindGroupLayoutDescriptor* serverDesc) -> WGPUBindGroupLayout {
+                EXPECT_EQ(serverDesc->entryCount, 1u);
+                const auto* ext2 = reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(
+                    serverDesc->entries[0].nextInChain);
+                EXPECT_EQ(ext2->chain.sType, WGPUSType_DawnInjectedInvalidSType);
+                EXPECT_EQ(ext2->invalidSType, WGPUSType_DawnWireWGSLControl);
 
-            const auto* ext1 = reinterpret_cast<const WGPUShaderSourceWGSL*>(ext2->chain.next);
-            EXPECT_EQ(ext1->chain.sType, WGPUSType_ShaderSourceWGSL);
-            EXPECT_EQ(ext1->chain.next, nullptr);
-            EXPECT_NE(ext1->code.length, WGPU_STRLEN) << "The wire should decay WGPU_STRLEN";
-            EXPECT_EQ(0, memcmp(ext1->code.data, clientExt1.code.data, ext1->code.length));
-            EXPECT_EQ(ext1->code.length, strlen(clientExt1.code.data));
+                const auto* ext1 =
+                    reinterpret_cast<const WGPUExternalTextureBindingLayout*>(ext2->chain.next);
+                EXPECT_EQ(ext1->chain.sType, WGPUSType_ExternalTextureBindingLayout);
+                EXPECT_EQ(ext1->chain.next, nullptr);
 
-            return apiShaderModule;
-        });
+                return apiBgl;
+            });
     FlushClient();
 }
 

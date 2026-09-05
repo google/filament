@@ -1,0 +1,687 @@
+Name
+
+    AMD_shader_ballot
+
+Name Strings
+
+    GL_AMD_shader_ballot
+
+Contact
+
+    Qun Lin, AMD (quentin.lin 'at' amd.com)
+
+Contributors
+
+    Qun Lin, AMD
+    Graham Sellers, AMD
+    Daniel Rakos, AMD
+    Rex Xu, AMD
+    Dominik Witczak, AMD
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         03/28/2018
+    Author Revision:            5
+
+Number
+
+    ???
+
+Dependencies
+
+    This extension is written against the OpenGL Shading Language
+    Specification, Version 4.50.
+
+    This extension requires ARB_shader_group_vote and ARB_shader_ballot.
+
+    This extension interacts with ARB_gpu_shader_int64.
+
+    This extension interacts with AMD_gpu_shader_half_float.
+
+    This extension interacts with AMD_gpu_shader_int16.
+
+Overview
+
+    The extensions ARB_shader_group_vote and ARB_shader_ballot introduced the
+    concept of sub-groups and a set of operations that allow data exchange
+    across shader invocations within a sub-group.
+
+    This extension further extends the capabilities of these extensions with
+    additional sub-group operations.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_AMD_shader_ballot : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_AMD_shader_ballot 1
+
+Additions to Chapter 8 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30 (Built-in functions)
+
+    Add Section 8.18, Shader Invocation Group Functions
+
+    The <min>, <max>, <add> group invocation functions process values of the
+    specified value <v> across all active shader invocations in the sub-group
+    with three special group operatons according to the following table:
+
+    Group Operation   Description
+    ---------------   ---------------------------------------------------------
+    Reduce            A reduction operation for values of the specified value
+                      <v> in the sub-group
+
+    InclusiveScan     A binary operation with an identity <I> and <n> (where
+                      <n> is the size of the sub-group) elements { a[0], a[1],
+                      .., a[n] } resulting in { a[0], (a[0] op a[1]), .., (a[0]
+                      op a[1] op .. op a[n-1]) }. <op> could be any of <min>,
+                      <max>, <add>.
+
+    ExclusiveScan     A binary operation with an identity <I> and <n> (where
+                      <n> is the size of the sub-group) elements { a[0], a[1],
+                      .., a[n] } resulting in { I, a[0], (a[0] op a[1]), ..,
+                      (a[0] op a[1] op .. op a[n-2]) }. <op> could be any of
+                      <min>, <max>, <add>.
+
+    The identity <I> in the group operations <InclusiveScan> and <ExclusiveScan>
+    is decided according to the following table:
+
+    Function   Data Type                             Identity
+    --------   -----------------------------------   ----------
+    Min        32-bit signed integer                 INT_MAX
+               64-bit signed integer                 INT64_MAX
+               32-bit unsigned integer               UINT_MAX
+               64-bit unsigned integer               UINT64_MAX
+               16-bit/32-bit/64-bit floating-point   +INF
+
+    Max        32-bit signed integer                 INT_MIN
+               64-bit signed integer                 INT64_MIN
+               32-bit/64-bit unsigned integer        0
+               floating-point                        -INF
+
+    Add        32-bit/64-bit signed integer          0
+               32-bit/64-bit unsigned integer        0
+               16-bit/32-bit/64-bit floating-point   0
+
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | Syntax                                               | Description                                               |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  minInvocationsAMD(genType  v)               | Returns the minimum value of <v> across all active shader |
+    | genIType minInvocationsAMD(genIType v)               | invocations in the sub-group with <Reduce> group          |
+    | genUType minInvocationsAMD(genUType v)               | operation. These functions must be used in uniform        |
+    | genDType minInvocationsAMD(genDType v)               | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  minInvocationsNonUniformAMD(genType  v)     | Returns the minimum value of <v> across all active shader |
+    | genIType minInvocationsNonUniformAMD(genIType v)     | invocations in the sub-group with <Reduce> group          |
+    | genUType minInvocationsNonUniformAMD(genUType v)     | operation. These functions could be used in non-uniform   |
+    | genDType minInvocationsNonUniformAMD(genDType v)     | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  minInvocationsInclusiveScanAMD(genType  v)  | Returns the minimum value of <v> across all active shader |
+    | genIType minInvocationsInclusiveScanAMD(genIType v)  | invocations in the sub-group with <InclusiveScan> group   |
+    | genUType minInvocationsInclusiveScanAMD(genUType v)  | operation. These functions must be used in uniform        |
+    | genDType minInvocationsInclusiveScanAMD(genDType v)  | control flow. These functions operate component-wise.     |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  minInvocationsInclusiveScanNonUniformAMD(   | Returns the minimum value of <v> across all active shader |
+    |          genType  v)                                 | invocations in the sub-group with <InclusiveScan> group   |
+    | genType  minInvocationsInclusiveScanNonUniformAMD(   | operation. These functions could be used in non-uniform   |
+    |          genIType v)                                 | control flow. These functions operate component-wise.     |
+    | genUType minInvocationsInclusiveScanNonUniformAMD(   |                                                           |
+    |          genUType v)                                 |                                                           |
+    | genDType minInvocationsInclusiveScanNonUniformAMD(   |                                                           |
+    |          genDType v)                                 |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  minInvocationsExclusiveScanAMD(genType  v)  | Returns the minimum value of <v> across all active shader |
+    | genIType minInvocationsExclusiveScanAMD(genIType v)  | invocations in the sub-group with <ExclusiveScan> group   |
+    | genUType minInvocationsExclusiveScanAMD(genUType v)  | operation. These functions must be used in uniform        |
+    | genDType minInvocationsExclusiveScanAMD(genDType v)  | control flow. These functions operate component-wise.     |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  minInvocationsExclusiveScanNonUniformAMD(   | Returns the minimum value of <v> across all active shader |
+    |          genType  v)                                 | invocations in the sub-group with <ExclusiveScan> group   |
+    | genIType minInvocationsExclusiveScanNonUniformAMD(   | operation. These functions could be used in non-uniform   |
+    |          genIType v)                                 | control flow. These functions operate component-wise.     |
+    | genUType minInvocationsExclusiveScanNonUniformAMD(   |                                                           |
+    |          genUType v)                                 |                                                           |
+    | genDType minInvocationsExclusiveScanNonUniformAMD(   |                                                           |
+    |          genDType v)                                 |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  maxInvocationsAMD(genType  v)               | Returns the maximum value of <v> across all active shader |
+    | genIType maxInvocationsAMD(genIType v)               | invocations in the sub-group with <Reduce> group          |
+    | genUType maxInvocationsAMD(genUType v)               | operation. These functions must be used in uniform        |
+    | genDType maxInvocationsAMD(genDType v)               | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  maxInvocationsNonUniformAMD(genType  v)     | Returns the maximum value of <v> across all active shader |
+    | genIType maxInvocationsNonUniformAMD(genIType v)     | invocations in the sub-group with <Reduce> group          |
+    | genUType maxInvocationsNonUniformAMD(genUType v)     | operation. These functions could be used in non-uniform   |
+    | genDType maxInvocationsNonUniformAMD(genDType v)     | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  maxInvocationsInclusiveScanAMD(genType  v)  | Returns the maximum value of <v> across all active shader |
+    | genIType maxInvocationsInclusiveScanAMD(genIType v)  | invocations in the sub-group with <InclusiveScan> group   |
+    | genUType maxInvocationsInclusiveScanAMD(genUType v)  | operation. These functions must be used in uniform        |
+    | genDType maxInvocationsInclusiveScanAMD(genDType v)  | control flow. These functions operate component-wise.     |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  maxInvocationsInclusiveScanNonUniformAMD(   | Returns the maximum value of <v> across all active shader |
+    |          genType  v)                                 | invocations in the sub-group with <InclusiveScan> group   |
+    | genType  maxInvocationsInclusiveScanNonUniformAMD(   | operation. These functions could be used in non-uniform   |
+    |          genIType v)                                 | control flow. These functions operate component-wise.     |
+    | genUType maxInvocationsInclusiveScanNonUniformAMD(   |                                                           |
+    |          genUType v)                                 |                                                           |
+    | genDType maxInvocationsInclusiveScanNonUniformAMD(   |                                                           |
+    |          genDType v)                                 |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  maxInvocationsExclusiveScanAMD(genType  v)  | Returns the maximum value of <v> across all active shader |
+    | genIType maxInvocationsExclusiveScanAMD(genIType v)  | invocations in the sub-group with <ExclusiveScan> group   |
+    | genUType maxInvocationsExclusiveScanAMD(genUType v)  | operation. These functions must be used in uniform        |
+    | genDType maxInvocationsExclusiveScanAMD(genDType v)  | control flow. These functions operate component-wise.     |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  maxInvocationsExclusiveScanNonUniformAMD(   | Returns the maximum value of <v> across all active shader |
+    |          genType  v)                                 | invocations in the sub-group with <ExclusiveScan> group   |
+    | genIType maxInvocationsExclusiveScanNonUniformAMD(   | operation. These functions could be used in non-uniform   |
+    |          genIType v)                                 | control flow. These functions operate component-wise.     |
+    | genUType maxInvocationsExclusiveScanNonUniformAMD(   |                                                           |
+    |          genUType v)                                 |                                                           |
+    | genDType maxInvocationsExclusiveScanNonUniformAMD(   |                                                           |
+    |          genDType v)                                 |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  addInvocationsAMD(genType  v)               | Returns the sum of the value of <v> across all active     |
+    | genIType addInvocationsAMD(genIType v)               | shader invocations in the sub-group with <Reduce> group   |
+    | genUType addInvocationsAMD(genUType v)               | operation. These functions must be used in uniform        |
+    | genDType addInvocationsAMD(genDType v)               | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  addInvocationsNonUniformAMD(genType  v)     | Returns the sum of the value of <v> across all active     |
+    | genIType addInvocationsNonUniformAMD(genIType v)     | shader invocations in the sub-group with <Reduce> group   |
+    | genUType addInvocationsNonUniformAMD(genUType v)     | operation. These functions could be used in non-uniform   |
+    | genDType addInvocationsNonUniformAMD(genDType v)     | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  addInvocationsInclusiveScanAMD(genType  v)  | Returns the sum of the value of <v> across all active     |
+    | genIType addInvocationsInclusiveScanAMD(genIType v)  | shader invocations in the sub-group with <InclusiveScan>  |
+    | genUType addInvocationsInclusiveScanAMD(genUType v)  | group operation. These functions must be used in uniform  |
+    | genDType addInvocationsInclusiveScanAMD(genDType v)  | control flow. These functions operate component-wise.     |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  addInvocationsInclusiveScanNonUniformAMD(   | Returns the sum of the value of <v> across all active     |
+    |          genType  v)                                 | shader invocations in the sub-group with <InclusiveScan>  |
+    | genIType addInvocationsInclusiveScanNonUniformAMD(   | group operation. These functions could be used in         |
+    |          genIType v)                                 | non-uniform control flow. These functions operate         |
+    | genUType addInvocationsInclusiveScanNonUniformAMD(   | component-wise.                                           |
+    |          genUType v)                                 |                                                           |
+    | genDType addInvocationsInclusiveScanNonUniformAMD(   |                                                           |
+    |          genDType v)                                 |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  addInvocationsExclusiveScanAMD(genType  v)  | Returns the sum of the value of <v> across all active     |
+    | genIType addInvocationsExclusiveScanAMD(genIType v)  | shader invocations in the sub-group with <ExclusiveScan>  |
+    | genUType addInvocationsExclusiveScanAMD(genUType v)  | group operation. These functions must be used in uniform  |
+    | genDType addInvocationsExclusiveScanAMD(genDType v)  | control flow. These functions operate component-wise.     |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    |                                                      |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  addInvocationsExclusiveScanNonUniformAMD(   | Returns the sum of the value of <v> across all active     |
+    |          genType  v)                                 | shader invocations in the sub-group with <ExclusiveScan>  |
+    | genIType addInvocationsExclusiveScanNonUniformAMD(   | group operation. These functions could be used in         |
+    |          genIType v)                                 | non-uniform control flow. These functions operate         |
+    | genUType addInvocationsExclusiveScanNonUniformAMD(   | component-wise.                                           |
+    |          genUType v)                                 |                                                           |
+    | genDType addInvocationsExclusiveScanNonUniformAMD(   |                                                           |
+    |          genDType v)                                 |                                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  swizzleInvocationsAMD(                      | Swizzles data within a group of 4 consecutive invocations |
+    |          genType data, uvec4 offset)                 | of the sub-group based on <offset> as described below:    |
+    | genIType swizzleInvocationsAMD(                      |                                                           |
+    |          genIType data, uvec4 offset)                | for (i = 0; i < gl_SubGroupSizeARB; i+=4) {               |
+    | genUType swizzleInvocationsAMD(                      |     dataOut[i+0] = isActive[i+offset.x] ?                 |
+    |          genUType data, uvec4 offset)                |                    dataIn[i+offset.x] : 0;                |
+    |                                                      |     dataOut[i+1] = isActive[i+offset.y] ?                 |
+    |                                                      |                    dataIn[i+offset.y] : 0;                |
+    |                                                      |     dataOut[i+2] = isActive[i+offset.z] ?                 |
+    |                                                      |                    dataIn[i+offset.z] : 0;                |
+    |                                                      |     dataOut[i+3] = isActive[i+offset.w] ?                 |
+    |                                                      |                    dataIn[i+offset.w] : 0;                |
+    |                                                      | }                                                         |
+    |                                                      |                                                           |
+    |                                                      | Where:                                                    |
+    |                                                      | - isActive[i] tells whether the invocation with the index |
+    |                                                      |   <i> is currently active in the sub-group.               |
+    |                                                      | - dataIn[i] is the value of <data> for invocation index   |
+    |                                                      |   <i>.                                                    |
+    |                                                      | - dataOut[i] is the return value of the function for      |
+    |                                                      |   invocation index <i>.                                   |
+    |                                                      |                                                           |
+    |                                                      | Components of <offset> must be constant integer           |
+    |                                                      | expression with a value in the range [0, 3].              |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  swizzleInvocationsMaskedAMD(                | Swizzles data within a group of 32 consecutive            |
+    |          genType data, uvec3 mask)                   | invocations with a limited mask as described below:       |
+    | genIType swizzleInvocationsMaskedAMD(                |                                                           |
+    |          genIType data, uvec3 mask)                  | for (i = 0; i < gl_SubGroupSizeARB; i++) {                |
+    | genUType swizzleInvocationsMaskedAMD(                |     j = (((i & 0x1f) & mask.x) | mask.y) ^ mask.z;        |
+    |          genIType data, uvec3 mask)                  |     j |= (i & 0x20); // which group of 32                 |
+    |                                                      |     dataOut[i] = isActive[j] ? dataIn[j] : 0;             |
+    |                                                      | }                                                         |
+    |                                                      |                                                           |
+    |                                                      | Where:                                                    |
+    |                                                      | - isActive[i] tells whether the invocation with the index |
+    |                                                      |   <i> is currently active in the sub-group.               |
+    |                                                      | - dataIn[i] is the value of <data> for invocation index   |
+    |                                                      |   <i>.                                                    |
+    |                                                      | - dataOut[i] is the return value of the function for      |
+    |                                                      |   invocation index <i>.                                   |
+    |                                                      |                                                           |
+    |                                                      | Components of <mask> must be constant integer expression  |
+    |                                                      | with a value in the range [0, 31].                        |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genType  writeInvocationAMD(                         | Returns <inputValue> for all active invocations in the    |
+    |          genType  inputValue,                        | sub-group except for the invocation whose invocation      |
+    |          genType  writeValue,                        | index within the sub-group is <invocationIndex> for which |
+    |          uint     invocationIndex)                   | <writeValue> is returned as described below:              |
+    | genIType writeInvocationAMD(                         |                                                           |
+    |          genIType inputValue,                        | for (i = 0; i < gl_SubGroupSizeARB; i++) {                |
+    |          genIType writeValue,                        |     out[i] = (i == invocationIndex) ?                     |
+    |          uint     invocationIndex)                   |              writeValue:inputValue;                       |
+    | genUType writeInvocationAMD(                         | }                                                         |
+    |          genUType inputValue,                        |                                                           |
+    |          genUType writeValue,                        | Where out[i] is the return value of the function for      |
+    |          uint     invocationIndex)                   | invocation index <i>.                                     |
+    |                                                      |                                                           |
+    |                                                      | <writeValue> and <invocationIndex> must be dynamically    |
+    |                                                      | uniform within the sub-group, otherwise the return value  |
+    |                                                      | of the function is undefined.                             |
+    +------------------------------------------------------+-----------------------------------------------------------+
+
+Dependencies on ARB_gpu_shader_int64
+
+    If the shader enables ARB_gpu_shader_int64, this extension adds additional
+    shader invocation group functions.
+
+    Add Section 8.18, Shader Invocation Group Functions
+
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | Syntax                                               | Description                                               |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type minInvocationsAMD(genI64Type v)           | Returns the minimum value of <v> across all active shader |
+    | genU64Type minInvocationsAMD(genU64Type v)           | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type minInvocationsNonUniformAMD(genI64Type v) | Returns the minimum value of <v> across all active shader |
+    | genU64Type minInvocationsNonUniformAMD(genU64Type v) | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type minInvocationsInclusiveScanAMD(           | Returns the minimum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU64Type minInvocationsInclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type minInvocationsInclusiveScanNonUniformAMD( | Returns the minimum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU64Type minInvocationsInclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type minInvocationsExclusiveScanAMD(           | Returns the minimum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU64Type minInvocationsExclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type minInvocationsExclusiveScanNonUniformAMD( | Returns the minimum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU64Type minInvocationsExclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type maxInvocationsAMD(genI64Type v)           | Returns the maximum value of <v> across all active shader |
+    | genU64Type maxInvocationsAMD(genU64Type v)           | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type maxInvocationsNonUniformAMD(genI64Type v) | Returns the maximum value of <v> across all active shader |
+    | genU64Type maxInvocationsNonUniformAMD(genU64Type v) | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type maxInvocationsInclusiveScanAMD(           | Returns the maximum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU64Type maxInvocationsInclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type maxInvocationsInclusiveScanNonUniformAMD( | Returns the maximum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU64Type maxInvocationsInclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type maxInvocationsExclusiveScanAMD(           | Returns the maximum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU64Type maxInvocationsExclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type maxInvocationsExclusiveScanNonUniformAMD( | Returns the maximum value of <v> across all active shader |
+    |            genI64Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU64Type maxInvocationsExclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type addInvocationsAMD(genI64Type v)           | Returns the sum of the value of <v> across all active     |
+    | genU64Type addInvocationsAMD(genU64Type v)           | shader invocations in the sub-group with <Reduce> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type addInvocationsNonUniformAMD(genI64Type v) | Returns the sum of the value of <v> across all active     |
+    | genU64Type addInvocationsNonUniformAMD(genU64Type v) | shader invocations in the sub-group with <Reduce> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type addInvocationsInclusiveScanAMD(           | Returns the sum of the value of <v> across all active     |
+    |            genI64Type v)                             | shader invocations in the sub-group with <InclusiveScan>  |
+    | genU64Type addInvocationsInclusiveScanAMD(           | group operation. These functions must be used in uniform  |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type addInvocationsInclusiveScanNonUniformAMD( | Returns the sum of the value of <v> across all active     |
+    |            genI64Type v)                             | shader invocations in the sub-group with <InclusiveScan>  |
+    | genU64Type addInvocationsInclusiveScanNonUniformAMD( | group operation. These functions could be used in         |
+    |            genU64Type v)                             | non-uniform control flow. These functions operate         |
+    |                                                      | component-wise.                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type addInvocationsExclusiveScanAMD(           | Returns the sum of the value of <v> across all active     |
+    |            genI64Type v)                             | shader invocations in the sub-group with <ExclusiveScan>  |
+    | genU64Type addInvocationsExclusiveScanAMD(           | group operation. These functions must be used in uniform  |
+    |            genU64Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI64Type addInvocationsExclusiveScanNonUniformAMD( | Returns the sum of the value of <v> across all active     |
+    |            genI64Type  v)                            | shader invocations in the sub-group with <ExclusiveScan>  |
+    | genU64Type addInvocationsExclusiveScanNonUniformAMD( | group operation. These functions could be used in         |
+    |            genU64Type v)                             | non-uniform control flow. These functions operate         |
+    |                                                      | component-wise.                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | uint mbcntAMD(uint64_t mask)                         | Returns the bit count of gl_SubGroupLtMaskARB with <mask> |
+    |                                                      | as described below:                                       |
+    |                                                      |                                                           |
+    |                                                      |   bitCount(gl_SubGroupLtMaskARB & mask).                  |
+    +------------------------------------------------------+-----------------------------------------------------------+
+
+Dependencies on AMD_gpu_shader_half_float
+
+    If the shader enables AMD_gpu_shader_half_float, this extension adds
+    additional shader invocation group functions.
+
+    Add Section 8.18, Shader Invocation Group Functions
+
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | Syntax                                               | Description                                               |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type minInvocationsAMD(genF16Type v)           | Returns the minimum value of <v> across all active shader |
+    |                                                      | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type minInvocationsNonUniformAMD(genF16Type v) | Returns the minimum value of <v> across all active shader |
+    |                                                      | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type minInvocationsInclusiveScanAMD(           | Returns the minimum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type minInvocationsInclusiveScanNonUniformAMD( | Returns the minimum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type minInvocationsExclusiveScanAMD(           | Returns the minimum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type minInvocationsExclusiveScanNonUniformAMD( | Returns the minimum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type maxInvocationsAMD(genF16Type v)           | Returns the maximum value of <v> across all active shader |
+    |                                                      | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type maxInvocationsNonUniformAMD(genF16Type v) | Returns the maximum value of <v> across all active shader |
+    |                                                      | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type maxInvocationsInclusiveScanAMD(           | Returns the maximum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type maxInvocationsInclusiveScanNonUniformAMD( | Returns the maximum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type maxInvocationsExclusiveScanAMD(           | Returns the maximum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type maxInvocationsExclusiveScanNonUniformAMD( | Returns the maximum value of <v> across all active shader |
+    |            genF16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type addInvocationsAMD(genF16Type v)           | Returns the sum of the value of <v> across all active     |
+    |                                                      | shader invocations in the sub-group with <Reduce> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type addInvocationsNonUniformAMD(genF16Type v) | Returns the sum of the value of <v> across all active     |
+    |                                                      | shader invocations in the sub-group with <Reduce> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type addInvocationsInclusiveScanAMD(           | Returns the sum of the value of <v> across all active     |
+    |            genF16Type v)                             | shader invocations in the sub-group with <InclusiveScan>  |
+    |                                                      | group operation. These functions must be used in uniform  |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type addInvocationsInclusiveScanNonUniformAMD( | Returns the sum of the value of <v> across all active     |
+    |            genF16Type v)                             | shader invocations in the sub-group with <InclusiveScan>  |
+    |                                                      | group operation. These functions could be used in         |
+    |                                                      | non-uniform control flow. These functions operate         |
+    |                                                      | component-wise.                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type addInvocationsExclusiveScanAMD(           | Returns the sum of the value of <v> across all active     |
+    |            genF16Type v)                             | shader invocations in the sub-group with <ExclusiveScan>  |
+    |                                                      | group operation. These functions must be used in uniform  |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genF16Type addInvocationsExclusiveScanNonUniformAMD( | Returns the sum of the value of <v> across all active     |
+    |            genF16Type  v)                            | shader invocations in the sub-group with <ExclusiveScan>  |
+    |                                                      | group operation. These functions could be used in         |
+    |                                                      | non-uniform control flow. These functions operate         |
+    |                                                      | component-wise.                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+
+Dependencies on AMD_gpu_shader_int16
+
+    If the shader enables AMD_gpu_shader_int16, this extension adds
+    additional shader invocation group functions.
+
+    Add Section 8.18, Shader Invocation Group Functions
+
+     +------------------------------------------------------+-----------------------------------------------------------+
+    | Syntax                                               | Description                                               |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type minInvocationsAMD(genI16Type v)           | Returns the minimum value of <v> across all active shader |
+    | genU16Type minInvocationsAMD(genU16Type v)           | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type minInvocationsNonUniformAMD(genI16Type v) | Returns the minimum value of <v> across all active shader |
+    | genU16Type minInvocationsNonUniformAMD(genU16Type v) | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type minInvocationsInclusiveScanAMD(           | Returns the minimum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU16Type minInvocationsInclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type minInvocationsInclusiveScanNonUniformAMD( | Returns the minimum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU16Type minInvocationsInclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type minInvocationsExclusiveScanAMD(           | Returns the minimum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU16Type minInvocationsExclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type minInvocationsExclusiveScanNonUniformAMD( | Returns the minimum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU16Type minInvocationsExclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type maxInvocationsAMD(genI16Type v)           | Returns the maximum value of <v> across all active shader |
+    | genU16Type maxInvocationsAMD(genU16Type v)           | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type maxInvocationsNonUniformAMD(genI16Type v) | Returns the maximum value of <v> across all active shader |
+    | genU16Type maxInvocationsNonUniformAMD(genU16Type v) | invocations in the sub-group with <Reduce> group          |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type maxInvocationsInclusiveScanAMD(           | Returns the maximum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU16Type maxInvocationsInclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type maxInvocationsInclusiveScanNonUniformAMD( | Returns the maximum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <InclusiveScan> group   |
+    | genU16Type maxInvocationsInclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type maxInvocationsExclusiveScanAMD(           | Returns the maximum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU16Type maxInvocationsExclusiveScanAMD(           | operation. These functions must be used in uniform        |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type maxInvocationsExclusiveScanNonUniformAMD( | Returns the maximum value of <v> across all active shader |
+    |            genI16Type v)                             | invocations in the sub-group with <ExclusiveScan> group   |
+    | genU16Type maxInvocationsExclusiveScanNonUniformAMD( | operation. These functions could be used in non-uniform   |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type addInvocationsAMD(genI16Type v)           | Returns the sum of the value of <v> across all active     |
+    | genU16Type addInvocationsAMD(genU16Type v)           | shader invocations in the sub-group with <Reduce> group   |
+    |                                                      | operation. These functions must be used in uniform        |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type addInvocationsNonUniformAMD(genI16Type v) | Returns the sum of the value of <v> across all active     |
+    | genU16Type addInvocationsNonUniformAMD(genU16Type v) | shader invocations in the sub-group with <Reduce> group   |
+    |                                                      | operation. These functions could be used in non-uniform   |
+    |                                                      | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type addInvocationsInclusiveScanAMD(           | Returns the sum of the value of <v> across all active     |
+    |            genI16Type v)                             | shader invocations in the sub-group with <InclusiveScan>  |
+    | genU16Type addInvocationsInclusiveScanAMD(           | group operation. These functions must be used in uniform  |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type addInvocationsInclusiveScanNonUniformAMD( | Returns the sum of the value of <v> across all active     |
+    |            genI16Type v)                             | shader invocations in the sub-group with <InclusiveScan>  |
+    | genU16Type addInvocationsInclusiveScanNonUniformAMD( | group operation. These functions could be used in         |
+    |            genU16Type v)                             | non-uniform control flow. These functions operate         |
+    |                                                      | component-wise.                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type addInvocationsExclusiveScanAMD(           | Returns the sum of the value of <v> across all active     |
+    |            genI16Type v)                             | shader invocations in the sub-group with <ExclusiveScan>  |
+    | genU16Type addInvocationsExclusiveScanAMD(           | group operation. These functions must be used in uniform  |
+    |            genU16Type v)                             | control flow. These functions operate component-wise.     |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    | genI16Type addInvocationsExclusiveScanNonUniformAMD( | Returns the sum of the value of <v> across all active     |
+    |            genI16Type  v)                            | shader invocations in the sub-group with <ExclusiveScan>  |
+    | genU16Type addInvocationsExclusiveScanNonUniformAMD( | group operation. These functions could be used in         |
+    |            genU16Type v)                             | non-uniform control flow. These functions operate         |
+    |                                                      | component-wise.                                           |
+    +------------------------------------------------------+-----------------------------------------------------------+
+    
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+Issues
+
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  --------------------------------------------------
+    5     03/28/2018  rexu      Add interactions with ARB_gpu_shader_int16. New
+                                group invocation functions are added to support
+                                16-bit integer type in group operations.
+
+    4     10/19/2016  rexu      Add interactions with ARB_gpu_shader_int64 and
+                                AMD_gpu_shader_half_float. New group invocation
+                                functions are added to support 64-bit integer
+                                type and 16-bit/64-bit floating-point type
+                                in group operations. Clarify that <mask> in
+                                swizzleInvocationsMaskedAMD() should be constant
+                                integer expression with a value in the range
+                                [0, 31].
+
+    3     08/16/2016  rexu      Clarify that minInvocationsAMD, maxInvocationsAMD,
+                                addInvocationsAMD, along with their non-uniform
+                                versions, operate component-wise rather than on
+                                vector.
+
+    2     08/11/2016  rexu      Add non-uniform versions of minInvocationsAMD,
+                                maxInvocationsAMD, and addInvocationsAMD.
+                                Support those operations in non-uniform control
+                                flow.
+
+    1     04/21/2016  qlin      Internal revisions.

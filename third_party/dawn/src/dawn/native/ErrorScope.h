@@ -32,8 +32,8 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/AsyncTask.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/native/AsyncTask.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -46,7 +46,7 @@ struct ErrorScopePendingAsyncTask {
     // An error type of Unknown implies that the task is blocking completion of an error scope but
     // the error should not be captured. An async task can write to different error scopes depending
     // on the type of error generated.
-    wgpu::ErrorType captureErrorType;
+    wgpu::ErrorType captureErrorType = wgpu::ErrorType::Unknown;
 };
 
 class ErrorScope {
@@ -66,7 +66,7 @@ class ErrorScope {
     friend class ErrorScopeStack;
     explicit ErrorScope(wgpu::ErrorFilter errorFilter);
 
-    wgpu::ErrorType mMatchedErrorType;
+    wgpu::ErrorType mMatchedErrorType = wgpu::ErrorType::NoError;
     wgpu::ErrorType mCapturedError = wgpu::ErrorType::NoError;
     std::string mErrorMessage = "";
 

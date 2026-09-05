@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_STREAM_BLOBSOURCE_H_
 #define SRC_DAWN_NATIVE_STREAM_BLOBSOURCE_H_
 
-#include "dawn/native/Blob.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/stream/Source.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/stream/Source.h"
 
 namespace dawn::native::stream {
 
@@ -39,7 +39,7 @@ class BlobSource : public Source {
     explicit BlobSource(Blob&& blob);
 
     // stream::Source implementation.
-    MaybeError Read(const void** ptr, size_t bytes) override;
+    ResultOrError<std::span<const std::byte>> Read(size_t bytes) override;
 
   private:
     const Blob mBlob;

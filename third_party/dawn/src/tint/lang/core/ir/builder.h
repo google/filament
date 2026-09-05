@@ -1040,7 +1040,7 @@ class Builder {
     template <typename VAL>
     ir::CoreBuiltinCall* Bitcast(const core::type::Type* type, VAL&& val) {
         return CallExplicit(type, core::BuiltinFn::kBitcast,
-                            Vector<const core::type::Type*, 1>{type},
+                            Vector<core::ir::TemplateParameter, 1>{type},
                             Vector{Value(std::forward<VAL>(val))});
     }
 
@@ -1062,7 +1062,8 @@ class Builder {
     template <typename VAL>
     ir::CoreBuiltinCall* BitcastWithResult(ir::InstructionResult* result, VAL&& val) {
         return CallExplicitWithResult<ir::CoreBuiltinCall>(
-            result, core::BuiltinFn::kBitcast, Vector<const core::type::Type*, 1>{result->Type()},
+            result, core::BuiltinFn::kBitcast,
+            Vector<core::ir::TemplateParameter, 1>{result->Type()},
             Vector{Value(std::forward<VAL>(val))});
     }
 
@@ -1157,7 +1158,7 @@ class Builder {
         requires(tint::traits::IsTypeOrDerived<KLASS, ir::BuiltinCall>)
     KLASS* CallExplicitWithResult(ir::InstructionResult* result,
                                   FUNC func,
-                                  VectorRef<const core::type::Type*> explicit_params,
+                                  VectorRef<core::ir::TemplateParameter> explicit_params,
                                   ARGS&&... args) {
         auto* inst = ir.CreateInstruction<KLASS>(result, func, Values(std::forward<ARGS>(args)...));
         inst->SetExplicitTemplateParams(explicit_params);
@@ -1186,7 +1187,7 @@ class Builder {
         requires(tint::traits::IsTypeOrDerived<KLASS, ir::BuiltinCall>)
     KLASS* CallExplicit(const core::type::Type* type,
                         FUNC func,
-                        VectorRef<const core::type::Type*> explicit_params,
+                        VectorRef<core::ir::TemplateParameter> explicit_params,
                         ARGS&&... args) {
         return CallExplicitWithResult<KLASS>(InstructionResult(type), func, explicit_params,
                                              Values(std::forward<ARGS>(args)...));
@@ -1201,7 +1202,7 @@ class Builder {
     template <typename... ARGS>
     ir::CoreBuiltinCall* CallExplicit(const core::type::Type* type,
                                       core::BuiltinFn func,
-                                      VectorRef<const core::type::Type*> explicit_params,
+                                      VectorRef<core::ir::TemplateParameter> explicit_params,
                                       ARGS&&... args) {
         return CallExplicitWithResult<core::ir::CoreBuiltinCall>(
             InstructionResult(type), func, explicit_params, Values(std::forward<ARGS>(args)...));
@@ -1235,6 +1236,27 @@ class Builder {
                                                   Values(std::forward<ARGS>(args)...)));
     }
 
+    /// Creates a member builtin call instruction with an existing instruction result and explicit
+    /// template arguments.
+    /// @param result the instruction result to use
+    /// @param func the builtin function to call
+    /// @param obj the object
+    /// @param explicit_params the explicit parameters
+    /// @param args the call arguments
+    /// @returns the instruction
+    template <typename KLASS, typename FUNC, typename OBJ, typename... ARGS>
+        requires(tint::traits::IsTypeOrDerived<KLASS, ir::MemberBuiltinCall>)
+    KLASS* MemberCallExplicitWithResult(ir::InstructionResult* result,
+                                        FUNC func,
+                                        OBJ&& obj,
+                                        VectorRef<core::ir::TemplateParameter> explicit_params,
+                                        ARGS&&... args) {
+        auto* inst = Append(ir.CreateInstruction<KLASS>(result, func, Value(std::forward<OBJ>(obj)),
+                                                        Values(std::forward<ARGS>(args)...)));
+        inst->SetExplicitTemplateParams(explicit_params);
+        return inst;
+    }
+
     /// Creates a member builtin call instruction.
     /// @param type the return type of the call
     /// @param func the builtin function to call
@@ -1247,6 +1269,25 @@ class Builder {
         return MemberCallWithResult<KLASS>(InstructionResult(type), func,
                                            Value(std::forward<OBJ>(obj)),
                                            Values(std::forward<ARGS>(args)...));
+    }
+
+    /// Creates a member builtin call instruction with explicit template arguments.
+    /// @param type the return type of the call
+    /// @param func the builtin function to call
+    /// @param obj the object
+    /// @param explicit_params the explicit parameters
+    /// @param args the call arguments
+    /// @returns the instruction
+    template <typename KLASS, typename FUNC, typename OBJ, typename... ARGS>
+        requires(tint::traits::IsTypeOrDerived<KLASS, ir::MemberBuiltinCall>)
+    KLASS* MemberCallExplicit(const core::type::Type* type,
+                              FUNC func,
+                              OBJ&& obj,
+                              VectorRef<core::ir::TemplateParameter> explicit_params,
+                              ARGS&&... args) {
+        return MemberCallExplicitWithResult<KLASS>(InstructionResult(type), func,
+                                                   Value(std::forward<OBJ>(obj)), explicit_params,
+                                                   Values(std::forward<ARGS>(args)...));
     }
 
     /// Creates a value conversion instruction with an existing instruction result.
@@ -1344,7 +1385,7 @@ class Builder {
     template <typename VAL>
     ir::Load* Load(VAL&& from) {
         auto* value = Value(std::forward<VAL>(from));
-        return LoadWithResult(InstructionResult(value->Type()->UnwrapPtrOrRef()), value);
+        return LoadWithResult(InstructionResult(value->Type()->UnwrapMemoryView()), value);
     }
 
     /// Creates a store instruction
@@ -1510,9 +1551,21 @@ class Builder {
             TINT_ASSERT(val);
             return nullptr;
         }
-        auto* let = ir.CreateInstruction<ir::Let>(InstructionResult(val->Type()), val);
-        Append(let);
-        return let;
+        return LetWithResult(InstructionResult(val->Type()), val);
+    }
+
+    /// Creates a new `let` declaration with an existing instruction result
+    /// @param result the instruction result to use
+    /// @param value the let value
+    /// @returns the instruction
+    template <typename VALUE>
+    ir::Let* LetWithResult(ir::InstructionResult* result, VALUE&& value) {
+        auto* val = Value(std::forward<VALUE>(value));
+        if (DAWN_UNLIKELY(!val)) {
+            TINT_ASSERT(val);
+            return nullptr;
+        }
+        return Append(ir.CreateInstruction<ir::Let>(result, val));
     }
 
     /// Creates a return instruction

@@ -1,0 +1,401 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_clipmap
+
+Name Strings
+
+    GL_SGIX_clipmap
+
+Version
+
+    $Date: 1996/06/12 17:19:43 $ $Revision: 1.9 $
+
+Number
+
+    33
+
+Dependencies
+
+    EXT_texture is required
+    EXT_texture_object affects the definition of this extension
+    SGIS_texture_lod affects the definition of this extension
+    SGI_detail_texture affects the definition of this extension
+    SGI_sharpen_texture affects the definition of this extension
+
+Overview
+
+    Mipmaps provide a general but expensive solution when the texture image
+    is very large.  This extension defines clipmaps, which occupy a small
+    subset of the memory required by equivalent mipmaps, but provide much
+    of the mipmap rendering capabilities.  Clipmaps are especially useful
+    for rendering terrain.
+
+Issues
+
+    *   Is lod clamping treated properly if we have no texel data?
+    *   Should we always have to specify a virtual depth?
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv,
+    when their <pname> parameter is TEXTURE_MIN_FILTER:
+
+	LINEAR_CLIPMAP_LINEAR_SGIX
+
+    Accepted by the <pname> parameter of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and GetTexParameterfv:
+
+	TEXTURE_CLIPMAP_FRAME_SGIX
+
+    Accepted by the <pname> parameter of TexParameteriv, TexParameterfv,
+    GetTexParameteriv, and GetTexParameterfv:
+
+	TEXTURE_CLIPMAP_CENTER_SGIX
+	TEXTURE_CLIPMAP_OFFSET_SGIX
+	TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	MAX_CLIPMAP_DEPTH_SGIX
+	MAX_CLIPMAP_VIRTUAL_DEPTH_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    GL Specification Table 3.7 is updated as follows:
+
+	Name				Type	    Legal Values
+	----				----	    ------------
+	TEXTURE_WRAP_S			integer	    CLAMP, REPEAT
+	TEXTURE_WRAP_T			integer	    CLAMP, REPEAT
+	TEXTURE_WRAP_R_EXT		integer	    CLAMP, REPEAT
+	TEXTURE_MIN_FILTER		integer	    NEAREST, LINEAR,
+						    NEAREST_MIPMAP_NEAREST,
+						    NEAREST_MIPMAP_LINEAR,
+						    LINEAR_MIPMAP_NEAREST,
+						    LINEAR_MIPMAP_LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_CLIPMAP_LINEAR_SGIX
+	TEXTURE_MAG_FILTER		integer	    NEAREST, LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_DETAIL_SGIS,
+						    LINEAR_DETAIL_ALPHA_SGIS,
+						    LINEAR_DETAIL_COLOR_SGIS,
+						    LINEAR_SHARPEN_SGIS,
+						    LINEAR_SHARPEN_ALPHA_SGIS,
+						    LINEAR_SHARPEN_COLOR_SGIS
+	TEXTURE_BORDER_COLOR		4 floats    any 4 values in [0,1]
+	DETAIL_TEXTURE_LEVEL_SGIS	integer	    any non-negative integer
+	DETAIL_TEXTURE_MODE_SGIS	integer	    ADD, MODULATE
+	TEXTURE_MIN_LOD_SGIS		float	    any value
+	TEXTURE_MAX_LOD_SGIS		float	    any value
+	TEXTURE_BASE_LEVEL_SGIS		integer	    any non-negative integer
+	TEXTURE_MAX_LEVEL_SGIS		integer	    any non-negative integer
+	GENERATE_MIPMAP_SGIS		boolean	    TRUE or FALSE
+	TEXTURE_CLIPMAP_FRAME_SGIX	float       any non-negative value
+	TEXTURE_CLIPMAP_CENTER_SGIX	2 integers  any 2 non-negative integers
+	TEXTURE_CLIPMAP_OFFSET_SGIX	2 integers  any 2 non-negative integers
+	TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX 3 integers  any 3 non-negative integers
+
+	Table 3.7: Texture parameters and their values.
+
+    Notes:
+
+    *   Clipmap filtering is supported only for 2D, borderless textures.
+
+    *   Clipmap filtering is performed when the texture minification filter
+	is LINEAR_CLIPMAP_LINEAR_SGIX.  We could define other clipmap
+	filters with NEAREST sampling, but it probably isn't worth the
+	trouble.
+	
+    *	Clipmap filtering is supported with all magnification filters
+	except FILTER4_SGIS.  Detail and sharpen filtering are performed
+	only when the texture data are supplied by the level 0 image.
+
+    *   A clipmap virtualizes a mipmap by holding, at any given time, only a
+	portion of a full mipmap pyramid.  A clipmap is complete only if
+	levels 0 through B have the same dimension, levels B through N form
+	the base of a valid mipmap, all image dimensions are a power of 2,
+	and N is less than MAX_CLIPMAP_DEPTH_SGIX.
+
+	Each image level P, where P ranges from B through N, is treated as
+	though it contains the full image from the same level of the complete
+	(N+1) level mipmap.
+
+	Each image level P, where P ranges from 0 through B-1, is treated as
+	though it contains a subimage from the same level of the complete
+	(N+1) level mipmap.  This subimage is centered at texel coordinates
+
+                S = (Scenter >> P)
+                T = (Tcenter >> P)
+
+	where Scenter and Tcenter are specified by the application.
+
+	For instance, if the width of the clipmap is W=8, N=12, and Scenter=
+	2048, the clipmap will contain the data given by 0's in the S-edge
+	view below:
+
+  0 .********************************00000000********************************.
+  1 .********************************00000000********************************.
+  2 .********************************00000000********************************.
+  3 .********************************00000000********************************.
+  4 .********************************00000000********************************.
+  5 .********************************00000000********************************.
+  6      ****************************00000000****************************
+  7                      ************00000000************
+  8                              ****00000000****
+B=9                                  00000000
+  10                                   0000
+  11                                    00
+N=12                                    0
+
+	Likewise, if Scenter=2016 (32 less than above):
+
+  0 .00000000****************************************************************.
+  1 .****************00000000************************************************.
+  2 .************************00000000****************************************.
+  3 .****************************00000000************************************.
+  4 .******************************00000000**********************************.
+  5 .*******************************00000000*********************************.
+  6      ****************************00000000*****************************
+  7                      ************00000000************
+  8                              ****00000000****
+  9                                  00000000
+  10                                   0000
+  11                                    00
+N=12                                    0
+
+    *   Scenter and Tcenter are specified by the application by calling
+	TexParameteriv or TexParameterfv with <target> set to TEXTURE_2D,
+	<pname> set to <TEXTURE_CLIPMAP_CENTER_SGIX>, and <params> pointing
+	to a vector whose first component is Scenter and whose second
+	component is Tcenter.  The center can be changed at any time.
+
+    *	The clipped levels (i.e. those levels P, where P<B) of the map can
+	be framed with a region of texels guaranteed not to be displayed.
+	The frames allow for paging of new texture data into a non-active
+	portion of texture memory, enabling efficient roaming throughout the
+	larger virtual mipmap.  The frames for all of the clipped levels are
+	the same width and are measured as a fraction of the width of the
+	clipped levels.  Specifically,
+
+		width of frame in texels = Cframe * W / 2
+
+	The floating point value Cframe can take on values from 0.0 to 1.0
+	and is specified by the application.
+
+	Cframe is a non-negative fraction of half the level width specified
+	by calling TexParameterf or TexParameterfv with <target> set to
+	TEXTURE_2D, <pname> set to <TEXTURE_CLIPMAP_FRAME_SGIX>, and <param>
+	set to Cframe or <params> pointing to Cframe.  Cframe is clamped to
+	the range [0,1].  The frame width can be changed at any time.
+
+    *	During filtering a level of detail is determined just as it would be
+	for the equivalent (N+1) level mipmap.  If the level of detail falls
+	into the clipped portion of the clipmap and the required texels are
+	not available within the framed region of the two closest image
+	levels, the level of detail is increased to the nearest image level
+	that does include the required texels.  The values of TEXTURE_WRAP_S
+	and TEXTURE_WRAP_T have no effect during clipmap minification.
+
+	If SGIS_texture_lod is supported, the level of detail is clamped to
+	the range defined by TEXTURE_MIN_LOD_SGIS, TEXTURE_MAX_LOD_SGIS,
+	TEXTURE_BASE_LEVEL_SGIS, and TEXTURE_MAX_LEVEL_SGIS.  (Issue:  what
+	if texels do not exist on the level given by max_lod?)
+
+    *	As the center moves, only texels along the edges of the clipmap levels
+	change.  To allow for incremental loading only of these texels via
+	TexSubImage2DEXT, torroidal offset values are added to the texture
+	addresses of each level.  For the Pth level where P ranges from 0 to
+	B-1, these offsets are
+
+		Soffsetp = (Soffset >> P)
+		Toffsetp = (Toffset >> P)
+
+	where Soffset and Toffset are specified by the application.  Note that
+	Soffset and Toffset for the top level defines the offsets for
+	subsequent levels by a simple shift just as with the center. 
+
+	Soffset and Toffset are specified by calling TexParameteriv or
+	TexParameterfv with <target> set to TEXTURE_2D, <pname> set to
+	<TEXTURE_CLIPMAP_OFFSET_SGIX>, and <params> pointing to a vector
+	whose first component is Soffset and whose second component is
+	Toffset.  The offset can be changed at any time.
+
+    *   To index into a clipmap of greater than MAX_CLIPMAP_DEPTH_SGIX levels
+	of detail, additional parameters are provided to restrictively index
+	a smaller clipmap of (N+1) levels located wholly within a complete,
+	larger clipmap.  The larger clipmap is complete only if levels 0
+	through B have the same dimension, levels B through V form the base
+	of a valid mipmap, all image dimensions are a power of 2, and V is
+	less than MAX_CLIPMAP_VIRTUAL_DEPTH_SGIX.  These constraints are
+	precisely those given above with the exception of the depth, V, being
+	allowed to range up to MAX_CLIPMAP_VIRTUAL_DEPTH_SGIX.
+
+        The second, smaller clipmap has a base level located at level D of
+	the larger clipmap and has a depth of N.  Both parameters D and N are
+	specified by the application.  The smaller clipmap is valid only if D
+	is between 0 and V, (D+N) is less than or equal to V, and D is less
+	than MAX_CLIPMAP_DEPTH_SGIX.
+
+	Scenter, Tcenter, Soffset, and Toffset are still relative the level
+	0, the base level of the larger, virtual mipmap, as are the minimum
+	and maximum levels of detail specified in the SGIS_texture_lod
+	extension.
+
+	For D=2, N=5, V=12, and Scenter=2048, the valid texels are given by
+	the x's in the diagram below.
+
+  0 ...******************************00000000******************************...
+  1 ...******************************00000000******************************...
+D=2 ...******************************xxxxxxxx******************************...
+  3 ...******************************xxxxxxxx******************************...
+  4 ...******************************xxxxxxxx******************************...
+  5 ...******************************00xxxx00******************************...
+  6      ****************************000xx000****************************
+D+N=7                    ************000x0000************
+  8                              ****00000000****
+  9                                  00000000
+  10                                   0000
+  11                                    00
+V=12                                    0
+
+	Likewise, if Scenter=2016 (32 less than above):
+
+  0 .00000000**************************************************************...
+  1 .****************00000000**********************************************...
+D=2 ...**********************xxxxxxxx**************************************...
+  3 ...**************************xxxxxxxx**********************************...
+  4 ...****************************xxxxxxxx********************************...
+  5 ...*****************************00xxxx00*******************************...
+  6      ****************************000xx000******************************
+D+N=7                    ************000x0000************
+  8                              ****00000000****
+  9                                  00000000
+  10                                   0000
+  11                                    00
+V=12                                    0
+
+	Texel address and level of detail generation proceed with the smaller
+	clipmap precisely as described above for the original clipmap.  If
+	the level of detail is such that a level below D would be indexed,
+	texture magnification is performed even though the finer texture
+	information may be present in texture memory.  Likewise, levels of
+	detail coarser than D+N may demonstrate aliasing.  The onus is on the
+	application to choose parameters D and N to prevent unwanted
+	filtering operations.
+
+	The finest level of the clipmap, D, the depth of the clipmap, N+1, and
+	the depth of the virtual clipmap, V+1, are specified by calling
+	TexParameteriv, or TexParameterfv with <target> set to TEXTURE_2D,
+	<pname> set to <TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX>, and <params> set
+	to (D,N+1,V+1).  These parameters can be changed at any time.
+
+	If the depth of the virtual clipmap is zero, clipmap virtualization
+	is ignored, and texturing proceeds as with a non-virtual clipmap.
+
+    *	Special Case:
+	TEXTURE_CLIPMAP_LOD_OFFSET_SGIX is ignored
+	TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX === TEXTURE_CLIPMAP_DEPTH_SGIX
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture
+
+    EXT_texture is required
+
+Dependencies on EXT_texture_object
+
+    If EXT_texture_object is implemented, the state values named
+
+	TEXTURE_CLIPMAP_FRAME_SGIX
+	TEXTURE_CLIPMAP_CENTER_SGIX
+	TEXTURE_CLIPMAP_OFFSET_SGIX
+	TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX
+
+    are added to the state vector of each texture object. When an attribute
+    set that includes texture information is popped, the bindings and
+    enables are first restored to their pushed values, then the bound
+    textures have their TEXTURE_CLIPMAP_FRAME_SGIX,
+    TEXTURE_CLIPMAP_CENTER_SGIX, TEXTURE_CLIPMAP_OFFSET_SGIX, and
+    TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX parameters restored to their pushed
+    values.
+
+Dependencies on SGIS_texture_lod
+
+    If SGIS_texture_lod is not supported, references to user-defined lod
+    clamping and ranges in this document are invalid and should be ignored.
+
+Dependencies on SGIS_detail_texture
+
+    If SGIS_detail_texture is not supported, references to detail texture
+    mapping in this document are invalid and should be ignored.
+
+Dependencies on SGIS_sharpen_texture
+
+    If SGIS_sharpen_texture is not supported, references to sharpen texture
+    mapping in this document are invalid and should be ignored.
+
+Errors
+
+    INVALID_VALUE is generated if TexParameteriv, TexParameterfv,
+    parameter <pname> is TEXTURE_CLIPMAP_CENTER_SGIX, and either of the two
+    parameters <params> points to are negative.
+
+    INVALID_VALUE is generated if TexParameteriv, TexParameterfv,
+    parameter <pname> is TEXTURE_CLIPMAP_OFFSET_SGIX, and either of the two
+    parameters <params> points to are negative.
+
+    INVALID_VALUE is generated if TexParameteriv, TexParameterfv,
+    parameter <pname> is TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX, and any of the
+    three parameters <params> points to are negative.
+
+    INVALID_VALUE is generated if TexParameteriv, TexParameterfv,
+    parameter <pname> is TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX, and the sum of
+    the clipmap level of detail offset and the clipmap depth is greater than
+    the virtual clipmap depth.
+
+New State
+
+							     Initial
+    Get Value			 Get Command	    Type     Value	Attrib
+    ---------			 -----------	    ----     -------	------
+    TEXTURE_CLIPMAP_FRAME_SGIX   GetTexParameterf  Z+   0		texture
+    TEXTURE_CLIPMAP_CENTER_SGIX	 GetTexParameterfv  2 x Z+   0,0	texture
+    TEXTURE_CLIPMAP_OFFSET_SGIX	 GetTexParameterfv  2 x Z+   0,0	texture
+    TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX GetTexParameterfv 3 x Z+   0,0,0	texture
+
+
+New Implementation Dependent State
+
+									Minimum
+    Get Value				Get Command	Type		Value
+    ---------				-----------	----		-------
+    MAX_CLIPMAP_DEPTH_SGIX		GetIntegerv	Z+		10
+    MAX_CLIPMAP_VIRTUAL_DEPTH_SGIX	GetIntegerv	Z+		10

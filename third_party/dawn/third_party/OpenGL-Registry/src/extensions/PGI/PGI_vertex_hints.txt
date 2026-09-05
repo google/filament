@@ -1,0 +1,215 @@
+Name
+
+    PGI_vertex_hints
+
+Name Strings
+
+    GL_PGI_vertex_hints
+
+Version
+
+    $Date: 1996/04/22 23:24:19 $ $Revision: 1.1 $
+
+Number
+
+    76
+
+Dependencies
+
+    None
+
+Overview
+
+    The extension allows the app to give hints regarding what kinds of
+    OpenGL function calls will happen between Begin/End pairs.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameters of Hint and HintPGI:
+
+        VERTEX_DATA_HINT_PGI               107050
+        VERTEX_CONSISTENT_HINT_PGI         107051
+        MATERIAL_SIDE_HINT_PGI             107052
+        MAX_VERTEX_HINT_PGI                107053
+
+    Accepted by the <mode> parameters of Hint and HintPGI:
+
+        COLOR3_BIT_PGI                  0x00010000
+        COLOR4_BIT_PGI                  0x00020000
+        EDGEFLAG_BIT_PGI                0x00040000
+        INDEX_BIT_PGI                   0x00080000
+        MAT_AMBIENT_BIT_PGI             0x00100000
+        MAT_AMBIENT_AND_DIFFUSE_BIT_PGI 0x00200000
+        MAT_DIFFUSE_BIT_PGI             0x00400000
+        MAT_EMISSION_BIT_PGI            0x00800000
+        MAT_COLOR_INDEXES_BIT_PGI       0x01000000
+        MAT_SHININESS_BIT_PGI           0x02000000
+        MAT_SPECULAR_BIT_PGI            0x04000000
+        NORMAL_BIT_PGI                  0x08000000
+        TEXCOORD1_BIT_PGI               0x10000000
+        TEXCOORD2_BIT_PGI               0x20000000
+        TEXCOORD3_BIT_PGI               0x40000000
+        TEXCOORD4_BIT_PGI               0x80000000
+        VERTEX23_BIT_PGI                0x00000004
+        VERTEX4_BIT_PGI                 0x00000008
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Functions Hint and HintPGI accept the following targets and modes:
+
+    [All hints are subject to Push/Pop with the HINT_BIT attributes.]
+
+    <target> = VERTEX_DATA_HINT_PGI
+
+    This hint indicates which GL calls might occur between Begin/End pairs.
+    If <mode> is any of FALSE, then the hint is "disabled" -- this means
+    the application is not making any predictions about which GL calls
+    might occur between Begin/End pairs.  Otherwise, <mode> must be a
+    bitwise OR of the following bits:
+
+        COLOR3_BIT_PGI                     Color3*
+        COLOR4_BIT_PGI                     Color4*
+        EDGEFLAG_BIT_PGI                   EdgeFlag*
+        INDEX_BIT_PGI                      Index*
+        MAT_AMBIENT_BIT_PGI                Material*(pname=AMBIENT)
+        MAT_AMBIENT_AND_DIFFUSE_BIT_PGI    Material*(pname=AMBIENT_AND_DIFFUSE)
+        MAT_DIFFUSE_BIT_PGI                Material*(pname=DIFFUSE)
+        MAT_EMISSION_BIT_PGI               Material*(pname=EMISSION)
+        MAT_COLOR_INDEXES_BIT_PGI          Material*(pname=COLOR_INDEXES)
+        MAT_SHININESS_BIT_PGI              Material*(pname=SHININESS)
+        MAT_SPECULAR_BIT_PGI               Material*(pname=SPECULAR)
+        NORMAL_BIT_PGI                     Normal*
+        TEXCOORD1_BIT_PGI                  TexCoord1*
+        TEXCOORD2_BIT_PGI                  TexCoord2*
+        TEXCOORD3_BIT_PGI                  TexCoord3*
+        TEXCOORD4_BIT_PGI                  TexCoord4*
+        VERTEX23_BIT_PGI                   Vertex[23]*
+        VERTEX4_BIT_PGI                    Vertex4
+
+    At least one of the bits VERTEX23_BIT_PGI or VERTEX4_BIT_PGI must be
+    set in <mode>.
+
+    Each bit above indicates that one of the associated OpenGL functions
+    might occur between Begin/End pairs.  If <mode> does not contain a
+    given bit, then GL may assume that associated functions will not occur
+    between Begin/End pairs -- in this case, behavior of these functions
+    is undefined.  (But the functions will not cause program termination.)  
+
+    <target> = VERTEX_CONSISTENT_HINT_PGI
+
+    This hint indicates that OpenGL function calls will occur
+    consistently between Begin/End pairs.  If <mode> is either
+    TRUE or FASTEST, then the application effectively is making
+    the following assertion:  Between Begin/End pairs, if any of
+    the following functions -- Color, EdgeFlag, Index, Material,
+    Normal, TexCoord -- occurs before one Vertex call, then it
+    will occur before all Vertex calls.  (Where "before" means the
+    function will occur between the current Vertex function and the
+    previous Vertex of Begin function.)  If <mode> is NICEST, DONT_CARE,
+    or FALSE, the application is asserting that any sequence of 
+    functions might occur between Begin/End pairs.
+
+    If both VERTEX_CONSISTENT_HINT_PGI and  VERTEX_DATA_HINT_PGI are
+    enabled, then GL further assumes that any functions indicated in
+    VERTEX_DATA_HINT_PGI will be called before each vertex call.  When
+    a single bit in VERTEX_DATA_HINT_PGI indicates a group of possible
+    functions, GL assumes that at least one function from the group will
+    be called before each Vertex function between Begin/End pairs.
+
+    <target> = MAX_VERTEX_HINT_PGI
+
+    This hint indicates the maximum number of Vertex functions which
+    will occur between Begin/End pairs.  If <mode> is FALSE then the
+    hint is "disabled" -- any number of Vertex functions might occur
+    between Begin/End pairs.  However, if <mode> is any value greater
+    than 0, then the application is asserting that at most that number
+    of Vertex functions will occur between Begin/End pairs.  In this
+    case, if the application exceeds the promised number of Vertex
+    calls, program termination may occur.  Negative numbers also
+    disable the hint.
+
+    <target> = MATERIAL_SIDE_HINT_PGI
+
+    This hint indicates which <face> paramters will occur for any
+    Material functions called between Begin/End pairs.  If <mode>
+    is any of FALSE, DONT_CARE, NICEST, then this hint is "disabled" --
+    any <face> parameters might occur in Material functions called
+    between Begin/End pairs.  If <mode> is FRONT, BACK, or
+    FRONT_AND_BACK, then only the given value will be used in
+    Material functions called between Begin/End pairs.  If <mode>
+    is TRUE or FASTEST, then only a single (unspecified) <face>
+    parameter will be used in Material functions called between
+    Begin/End pairs.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Interactions with PGI_misc_hints
+
+    If the PGI_misc_hints extension is available, then the hints
+    described above can be used through the HintPGI client function.
+
+    If PGI_misc_hints is not avialable, then the hints above must
+    be used through the usual Hint function.
+
+Errors
+
+    INVALID_VALUE is generated if <target> for Hint or HintPGI is
+    VERTEX_DATA_HINT_PGI and <mode> is not FALSE or some combination
+    of the bits xxx_BIT_PGI.  Also, if <mode> does not contain
+    VERTEX23_BIT_PGI or VERTEX4_BIT_PGI (or both), then INVALID_VALUE
+    is generated.
+
+    INVALID_ENUM is generated if <target> for Hint or HintPGI is
+    VERTEX_CONSISTENT_HINT_PGI and <mode> is not FASTEST, NICEST,
+    DONT_CARE, TRUE, or FALSE
+
+    INVALID_VALUE is generated if <target> for Hint or HintPGI is
+    MAX_VERTEX_HINT_PGI and <mode> is a negative number.
+
+    INVALID_ENUM is generated if <target> for Hint or HintPGI is
+    MATERIAL_SIDE_HINT_PGI and <mode> is not FASTEST, NICEST,
+    DONT_CARE, TRUE, FALSE, FRONT, BACK, or FRONT_AND_BACK.
+
+New State
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+
+    VERTEX_DATA_HINT_PGI                GetIntegerv      Z       FALSE    
+
+    VERTEX_CONSISTENT_HINT_PGI          GetIntegerv      Z       FALSE    
+
+    MAX_VERTEX_HINT_PGI                 GetIntegerv      Z       FALSE    
+
+    MATERIAL_SIDE_HINT_PGI              GetIntegerv      Z       FALSE    
+
+New Implementation Dependent State
+
+    None

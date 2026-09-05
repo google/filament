@@ -45,6 +45,7 @@ class GPUCommandBuffer final : public interop::GPUCommandBuffer {
     GPUCommandBuffer(const wgpu::CommandBufferDescriptor& desc, wgpu::CommandBuffer cmd_buf);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::CommandBuffer&() const { return cmd_buf_; }
 
     // interop::GPUCommandBuffer interface compliance

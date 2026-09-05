@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/stream/BlobSource.h"
+#include "src/dawn/native/stream/BlobSource.h"
 
 #include <utility>
 
@@ -33,11 +33,11 @@ namespace dawn::native::stream {
 
 BlobSource::BlobSource(Blob&& blob) : mBlob(std::move(blob)) {}
 
-MaybeError BlobSource::Read(const void** ptr, size_t bytes) {
+ResultOrError<std::span<const std::byte>> BlobSource::Read(size_t bytes) {
     DAWN_INVALID_IF(bytes > mBlob.Size() - mOffset, "Out of bounds.");
-    *ptr = mBlob.Data() + mOffset;
+    std::span<const std::byte> result = mBlob.Data().subspan(mOffset, bytes);
     mOffset += bytes;
-    return {};
+    return result;
 }
 
 }  // namespace dawn::native::stream

@@ -25,17 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/ResourceTable.h"
+#include "src/dawn/native/ResourceTable.h"
 
 #include <utility>
 
-#include "dawn/common/Enumerator.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/ResourceTableDefaultResources.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/ResourceTableDefaultResources.h"
+#include "src/dawn/native/Texture.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 #include "tint/tint.h"
 
 namespace dawn::native {
@@ -56,9 +59,9 @@ Ref<T> GetRef(Variant&& variant) {
 MaybeError ValidateBindingResource(const DeviceBase* device, const BindingResource* resource) {
     DAWN_INVALID_IF(resource->nextInChain != nullptr, "nextInChain is not null.");
 
-    uint32_t resourceCount = uint32_t(resource->buffer != nullptr) +
-                             uint32_t(resource->textureView != nullptr) +
-                             uint32_t(resource->sampler != nullptr);
+    uint32_t resourceCount = uint32_t{resource->buffer != nullptr} +
+                             uint32_t{resource->textureView != nullptr} +
+                             uint32_t{resource->sampler != nullptr};
     DAWN_INVALID_IF(resourceCount != 1,
                     "%i resources are specified (when there must be exactly 1).", resourceCount);
 
@@ -95,7 +98,7 @@ MaybeError ValidateBindingResource(const DeviceBase* device, const BindingResour
 
 MaybeError ValidateResourceTableDescriptor(const DeviceBase* device,
                                            const ResourceTableDescriptor* descriptor) {
-    DAWN_ASSERT(descriptor);
+    DAWN_CHECK(descriptor);
 
     DAWN_INVALID_IF(!device->HasFeature(Feature::ChromiumExperimentalSamplingResourceTable),
                     "Resource table used without the %s feature enabled.",
@@ -150,7 +153,7 @@ ResourceTableSlot ResourceTableBase::GetSizeWithDefaultResources() const {
 }
 
 BufferBase* ResourceTableBase::GetMetadataBuffer() const {
-    DAWN_ASSERT(!mDestroyed);
+    DAWN_CHECK(!mDestroyed);
     return mMetadataBuffer.Get();
 }
 
@@ -159,7 +162,7 @@ bool ResourceTableBase::IsDestroyed() const {
 }
 
 MaybeError ResourceTableBase::ValidateCanUseInSubmitNow() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     DAWN_INVALID_IF(IsDestroyed(), "%s used while destroyed.", this);
     return {};
 }
@@ -168,7 +171,7 @@ MaybeError ResourceTableBase::InitializeBase() {
     DeviceBase* device = GetDevice();
 
     // Create a storage buffer that will hold the shader-visible metadata for the dynamic array.
-    uint32_t metadataArrayLength = uint32_t(GetSizeWithDefaultResources());
+    uint32_t metadataArrayLength = uint32_t{GetSizeWithDefaultResources()};
     BufferDescriptor metadataDesc{
         .label = "resource table metadata",
         .usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst,
@@ -179,21 +182,22 @@ MaybeError ResourceTableBase::InitializeBase() {
 
     // Initialize the metadata buffer with the arrayLength and a bunch of zeroes that correspond to
     // empty entries.
-    DAWN_ASSERT(uint32_t(tint::ResourceType::kEmpty) == 0);
+    DAWN_CHECK(uint32_t(tint::ResourceType::kEmpty) == 0);
     // TODO(https://crbug.com/435317394): We could rely on zero initialization if it is enabled, and
     // also apply the initial dirty slots in this mapping instead of on the first use of the
     // resource table.
-    uint32_t* data = static_cast<uint32_t*>(mMetadataBuffer->GetMappedRange(0, metadataDesc.size));
-    *data = uint32_t(mAPISize);
-    memset(data + 1, 0, metadataDesc.size - sizeof(uint32_t));
+    Span<uint32_t> data = mMetadataBuffer->GetMappedRangeSpan<uint32_t>();
+    // Store APISize at element 0 in the metadata buffer, which will be used in the shader to index
+    // default resources at APISize + resource type index.
+    data[0] = uint32_t{mAPISize};
+    std::ranges::fill(data.subspan(1), 0u);
     DAWN_TRY(mMetadataBuffer->Unmap());
 
     // Add the default resources at the end of the table.
-    ityp::span<ResourceTableSlot, ResourceTableDefaultResources::Resource> defaultResources;
-    DAWN_TRY_ASSIGN(defaultResources,
-                    device->GetResourceTableDefaultResources()->GetOrCreate(device));
+    ResourceTableDefaultResources* defaultResources;
+    DAWN_TRY_ASSIGN(defaultResources, device->GetOrCreateResourceTableDefaultsResource());
 
-    for (auto [i, defaultResource] : Enumerate(defaultResources)) {
+    for (auto [i, defaultResource] : Enumerate(defaultResources->GetResources())) {
         BindingResource entryContents;
         MatchVariant(
             defaultResource,
@@ -206,16 +210,16 @@ MaybeError ResourceTableBase::InitializeBase() {
 }
 
 void ResourceTableBase::DestroyImpl(DestroyReason reason) {
-    DAWN_ASSERT(!mDestroyed);
+    DAWN_CHECK(!mDestroyed);
 
-    for (auto [i, slot] : Enumerate(mSlots)) {
-        if (auto view = GetRef<TextureViewBase>(slot.resource)) {
-            view->GetTexture()->RemoveResourceTableSlotUse(this, i);
-        }
+    for (auto [texture, _] : mTextureState) {
+        texture->RemoveResourceTableUse(this);
     }
 
     mSlots.clear();
     mDirtySlots.clear();
+    mTextureState.clear();
+    mDirtyStateTextures.clear();
 
     if (mMetadataBuffer != nullptr) {
         mMetadataBuffer->Destroy();
@@ -230,6 +234,8 @@ void ResourceTableBase::APIDestroy() {
     if (IsError()) {
         mSlots.clear();
         mDirtySlots.clear();
+        mTextureState.clear();
+        mDirtyStateTextures.clear();
         mDestroyed = true;
     } else {
         Destroy();
@@ -251,7 +257,7 @@ wgpu::Status ResourceTableBase::APIUpdate(uint32_t slotIn, const BindingResource
     return wgpu::Status::Success;
 }
 
-uint32_t ResourceTableBase::APIInsertBinding(const BindingResource* resource) {
+uint32_t ResourceTableBase::APIInsert(const BindingResource* resource) {
     if (IsDestroyed()) {
         return wgpu::kInvalidBinding;
     }
@@ -264,15 +270,15 @@ uint32_t ResourceTableBase::APIInsertBinding(const BindingResource* resource) {
             continue;
         }
 
-        UpdateWithDeviceValidation(slot, resource, "InsertBinding");
-        return uint32_t(slot);
+        UpdateWithDeviceValidation(slot, resource, "Insert");
+        return uint32_t{slot};
     }
 
     // No slot found, return the invalid binding.
     return wgpu::kInvalidBinding;
 }
 
-wgpu::Status ResourceTableBase::APIRemoveBinding(uint32_t slotIn) {
+wgpu::Status ResourceTableBase::APIRemove(uint32_t slotIn) {
     ResourceTableSlot slot = ResourceTableSlot(slotIn);
     if (!IsValidSlot(slot)) {
         return wgpu::Status::Error;
@@ -283,12 +289,12 @@ wgpu::Status ResourceTableBase::APIRemoveBinding(uint32_t slotIn) {
     Remove(slot);
 
     [[maybe_unused]] bool error = GetDevice()->ConsumedError(
-        GetDevice()->ValidateObject(this), "validating %s.RemoveBinding(%u)", this, slot);
+        GetDevice()->ValidateObject(this), "validating %s.Remove(%u)", this, slot);
     return wgpu::Status::Success;
 }
 
 uint32_t ResourceTableBase::APIGetSize() const {
-    return uint32_t(mAPISize);
+    return uint32_t{mAPISize};
 }
 
 // static
@@ -308,7 +314,7 @@ tint::ResourceType ResourceTableBase::ComputeTypeId(
         [&](const Ref<TextureViewBase>& view) {
             const TextureBase* texture = view->GetTexture();
             if (texture->IsMultisampledTexture()) {
-                DAWN_ASSERT(view->GetDimension() == wgpu::TextureViewDimension::e2D);
+                DAWN_CHECK(view->GetDimension() == wgpu::TextureViewDimension::e2D);
 
                 switch (view->GetAspects()) {
                     case Aspect::Color:
@@ -331,7 +337,7 @@ tint::ResourceType ResourceTableBase::ComputeTypeId(
             }
 
             if (view->GetAspects() == Aspect::Depth) {
-                DAWN_ASSERT(!texture->IsMultisampledTexture());
+                DAWN_CHECK(!texture->IsMultisampledTexture());
 
                 switch (view->GetDimension()) {
                     case wgpu::TextureViewDimension::e2D:
@@ -440,28 +446,10 @@ bool ResourceTableBase::IsValidSlot(ResourceTableSlot slot) const {
     return !mDestroyed && slot < mAPISize;
 }
 
-void ResourceTableBase::OnPinned(ResourceTableSlot slot, TextureBase* texture) {
-    DAWN_ASSERT(!mDestroyed);
-    DAWN_ASSERT(std::holds_alternative<Ref<TextureViewBase>>(mSlots[slot].resource));
-    DAWN_ASSERT(std::get<Ref<TextureViewBase>>(mSlots[slot].resource)->GetTexture() == texture);
-    DAWN_ASSERT(!mSlots[slot].pinned);
-    mSlots[slot].pinned = true;
-    MarkStateDirty(slot);
-}
-
-void ResourceTableBase::OnUnpinned(ResourceTableSlot slot, TextureBase* texture) {
-    DAWN_ASSERT(!mDestroyed);
-    DAWN_ASSERT(std::holds_alternative<Ref<TextureViewBase>>(mSlots[slot].resource));
-    DAWN_ASSERT(std::get<Ref<TextureViewBase>>(mSlots[slot].resource)->GetTexture() == texture);
-    DAWN_ASSERT(mSlots[slot].pinned);
-    mSlots[slot].pinned = false;
-    MarkStateDirty(slot);
-}
-
 void ResourceTableBase::Update(ResourceTableSlot slot, const BindingResource* contents) {
     DAWN_ASSERT(mSlots[slot].availableAfter <=
                 GetDevice()->GetQueue()->GetCompletedCommandSerial());
-    DAWN_ASSERT(mSlots[slot].typeId == tint::ResourceType::kEmpty);
+    DAWN_CHECK(mSlots[slot].typeId == tint::ResourceType::kEmpty);
     mSlots[slot].availableAfter = kMaxExecutionSerial;
     SetEntry(slot, contents);
 }
@@ -495,18 +483,27 @@ void ResourceTableBase::UpdateWithDeviceValidation(ResourceTableSlot slot,
 }
 
 void ResourceTableBase::SetEntry(ResourceTableSlot slot, const BindingResource* contents) {
-    DAWN_ASSERT(contents->buffer == nullptr);
+    DAWN_CHECK(contents->buffer == nullptr);
     SlotState& state = mSlots[slot];
 
     // Check the current state. If it's already set to the input value, early out.
-    if (auto view = GetRef<TextureViewBase>(state.resource)) {
-        if (view == contents->textureView) {
+    if (auto currView = GetRef<TextureViewBase>(state.resource)) {
+        if (currView == contents->textureView) {
             return;
         }
 
-        // Remove the mapping to the slot stored in the textures.
-        if (view != nullptr) {
-            view->GetTexture()->RemoveResourceTableSlotUse(this, slot);
+        if (currView != nullptr) {
+            // Remove from mTextureState
+            TextureBase* currTexture = currView->GetTexture();
+            auto& slots = mTextureState[currTexture].slots;
+            [[maybe_unused]] const bool erased = slots.erase(slot);
+            DAWN_ASSERT(erased);
+            // If it's the last slot, remove the entry
+            if (slots.empty()) {
+                mTextureState.erase(currTexture);
+                // Also remove the mapping of texture to this table
+                currTexture->RemoveResourceTableUse(this);
+            }
         }
     } else if (auto sampler = GetRef<SamplerBase>(state.resource)) {
         if (sampler == contents->sampler) {
@@ -516,14 +513,26 @@ void ResourceTableBase::SetEntry(ResourceTableSlot slot, const BindingResource* 
 
     // Update to new state
     state.resource = {};
-    state.pinned = false;
+    state.visible = false;
+    // Note: state.lastResource is only updated by AcquireDirtySlotUpdates
 
-    if (TextureViewBase* view = contents->textureView) {
-        // Add the mapping to the slot stored in the textures.
-        view->GetTexture()->AddResourceTableSlotUse(this, slot);
-        state.resource = view;
-        state.pinned = view->GetTexture()->HasPinnedUsage();
+    if (TextureViewBase* inputView = contents->textureView) {
+        TextureBase* inputTexture = inputView->GetTexture();
+        // Add to mTextureState
+        auto [iter, added] = mTextureState.try_emplace(inputTexture);
+        TextureState& textureState = iter->second;
+        if (added) {
+            textureState.visible = !inputTexture->IsDestroyed() && inputTexture->HasAccess();
+            // Add the mapping to this table on the texture
+            inputTexture->AddResourceTableUse(this);
+            // Make it dirty to ensure it gets transitioned
+            mDirtyStateTextures.insert(inputTexture);
+        }
+        [[maybe_unused]] const bool inserted = textureState.slots.insert(slot).second;
+        DAWN_ASSERT(inserted);
 
+        state.resource = inputView;
+        state.visible = textureState.visible;
     } else if (SamplerBase* sampler = contents->sampler) {
         state.resource = sampler;
     }
@@ -533,25 +542,109 @@ void ResourceTableBase::SetEntry(ResourceTableSlot slot, const BindingResource* 
     MarkStateDirty(slot);
 }
 
-ResourceTableBase::Updates ResourceTableBase::AcquireDirtySlotUpdates() {
-    DAWN_ASSERT(!mDestroyed);
+MaybeError ResourceTableBase::ApplyDirtySlotUpdatesWith(
+    const absl::flat_hash_set<TextureBase*>& writableTextures,
+    absl::FunctionRef<ApplyUpdateFn> ApplyUpdate) {
+    Updates updates = AcquireDirtySlotUpdates(writableTextures);
 
+    DAWN_TRY(
+        ApplyUpdate(updates.metadataUpdates, updates.resourceDiffs, updates.texturesToTransition));
+
+    // The handling of updates.texturesToTransition may cause memory barriers that mark them
+    // dirty again, when they have just been put in the correct state. Ignore this fake dirtying
+    // by clearing mDirtyStateTextures.
+#if defined(DAWN_ENABLE_ASSERTS)
+    for (const auto& texture : mDirtyStateTextures) {
+        DAWN_ASSERT(updates.texturesToTransition.contains(texture));
+    }
+#endif
+    mDirtyStateTextures = std::move(updates.texturesDirtyAfterUpdate);
+    return {};
+}
+
+ResourceTableBase::Updates ResourceTableBase::MakeResourcesVisibleExcept(
+    const absl::flat_hash_set<TextureBase*>& writableTextures) {
+    // This function uses mDirtyStateTextures and writableTextures to figure out visibility for each
+    // texture in the table. Along with returning the set of textures to transition, this function
+    // also updates the visibility flag in mTextureState so that SetEntry can set the right
+    // visibility on newly added textures.
     Updates updates;
-    for (ResourceTableSlot dirtyIndex : mDirtySlots) {
-        SlotState& state = mSlots[dirtyIndex];
-        DAWN_ASSERT(state.dirty);
+
+    auto HandleDirtyTexture = [&](TextureBase* texture) {
+        // The texture may not be in mTextureState if, for example, it was destroyed.
+        auto iter = mTextureState.find(texture);
+        if (iter == mTextureState.end()) {
+            return;
+        }
+        auto& textureState = iter->second;
+
+        // Update visible flag
+        bool visible =
+            !texture->IsDestroyed() && texture->HasAccess() && !writableTextures.contains(texture);
+
+        if (visible) {
+            updates.texturesToTransition.insert(texture);
+        }
+
+        if (textureState.visible != visible) {
+            // Used in SetEntry to update textureState.slots with this visibility
+            textureState.visible = visible;
+
+            // Update visibility of all slots that contain this texture
+            for (auto slot : textureState.slots) {
+                SlotState& state = mSlots[slot];
+                DAWN_ASSERT(state.visible != visible);
+                state.visible = visible;
+                MarkStateDirty(slot);
+            }
+        }
+    };
+
+    // First handle the textures that have been dirtied since last draw/dispatch
+    for (TextureBase* texture : mDirtyStateTextures) {
+        HandleDirtyTexture(texture);
+    }
+    // Now that we've handled them, clear
+    mDirtyStateTextures.clear();
+
+    // Now process writable textures, hiding any that are in the table.
+    // We also make sure to add them to texturesDirtyAfterUpdate so that if they're not writable
+    // next call, we unhide them.
+    for (TextureBase* texture : writableTextures) {
+        if (mTextureState.contains(texture)) {
+            // We may be recomputing visibility unnecessarily, but it will be possible to optimize,
+            // and it will get more complex once we support resource state.
+            HandleDirtyTexture(texture);
+            updates.texturesDirtyAfterUpdate.insert(texture);
+        }
+    }
+
+    return updates;
+}
+
+ResourceTableBase::Updates ResourceTableBase::AcquireDirtySlotUpdates(
+    const absl::flat_hash_set<TextureBase*>& writableTextures) {
+    DAWN_CHECK(!mDestroyed);
+
+    Updates updates = MakeResourcesVisibleExcept(writableTextures);
+
+    for (ResourceTableSlot dirtySlot : mDirtySlots) {
+        SlotState& state = mSlots[dirtySlot];
+        DAWN_CHECK(state.dirty);
         state.dirty = false;
 
         // Set the value in the table to the type id. If the resource requires pinning, we only set
         // the type id if it's pinned, else we clear it.
         tint::ResourceType effectiveType = state.typeId;
         if (std::holds_alternative<Ref<TextureViewBase>>(state.resource)) {
-            effectiveType = state.pinned ? state.typeId : tint::ResourceType::kEmpty;
+            effectiveType = state.visible ? state.typeId : tint::ResourceType::kEmpty;
         }
 
         // Add the update for the metadata buffer.
-        size_t offset = sizeof(uint32_t) * (uint32_t(dirtyIndex) + 1);
+        // Add 1 because the 0th element holds the table size (APISize).
+        size_t offset = sizeof(uint32_t) * (uint32_t(dirtySlot) + 1);
         updates.metadataUpdates.push_back({
+            .slot = dirtySlot,
             .offset = uint32_t(offset),
             .data = uint32_t(effectiveType),
         });
@@ -562,26 +655,23 @@ ResourceTableBase::Updates ResourceTableBase::AcquireDirtySlotUpdates() {
         }
         state.resourceDirty = false;
 
-        // Don't add updates for removing resources because the shader-side validation will prevent
-        // accesses anyway.
-        if (std::holds_alternative<std::monostate>(state.resource)) {
-            continue;
-        }
+        ResourceDiff update{
+            .slot = dirtySlot,
+            .removed = state.lastResource,
+            .added = state.resource,
+        };
 
-        if (auto view = GetRef<TextureViewBase>(state.resource)) {
-            updates.resourceUpdates.push_back({
-                .slot = dirtyIndex,
-                .resource = view.Get(),
-            });
-        } else if (auto sampler = GetRef<SamplerBase>(state.resource)) {
-            updates.resourceUpdates.push_back({
-                .slot = dirtyIndex,
-                .resource = sampler.Get(),
-            });
-        }
+        // At least one of removed and added must be set
+        DAWN_ASSERT(!(std::holds_alternative<std::monostate>(update.removed) &&
+                      std::holds_alternative<std::monostate>(update.added)));
+
+        updates.resourceDiffs.push_back(update);
+
+        // Update the last resource for future slot updates
+        state.lastResource = state.resource;
     }
-    mDirtySlots.clear();
 
+    mDirtySlots.clear();
     return updates;
 }
 
@@ -590,6 +680,26 @@ void ResourceTableBase::MarkStateDirty(ResourceTableSlot slot) {
         mDirtySlots.push_back(slot);
         mSlots[slot].dirty = true;
     }
+}
+
+void ResourceTableBase::OnTextureStateChange(TextureBase* texture) {
+    DAWN_ASSERT(mTextureState.contains(texture));
+    mDirtyStateTextures.insert(texture);
+}
+
+void ResourceTableBase::OnTextureDestroyed(TextureBase* texture) {
+    auto iter = mTextureState.find(texture);
+    DAWN_ASSERT(iter != mTextureState.end());
+    // Make sure all slots for this texture are hidden
+    for (auto slot : iter->second.slots) {
+        SlotState& state = mSlots[slot];
+        state.resource = std::monostate{};
+        state.typeId = tint::ResourceType::kEmpty;
+        state.visible = false;
+        state.resourceDirty = true;
+        MarkStateDirty(slot);
+    }
+    mTextureState.erase(iter);
 }
 
 }  // namespace dawn::native

@@ -25,16 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/ErrorData.h"
+#include "src/dawn/native/ErrorData.h"
 
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/SystemUtils.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/force_crash.h"
+#include "src/utils/log.h"
 
 namespace dawn::native {
 
@@ -49,7 +49,7 @@ std::unique_ptr<ErrorData> ErrorData::Create(InternalErrorType type,
     auto [var, present] = GetEnvironmentVar("DAWN_DEBUG_BREAK_ON_ERROR");
     if (present && !var.empty() && var != "0") {
         ErrorLog() << error->GetMessage();
-        BreakPoint();
+        DAWN_FORCE_CRASH();
     }
     return error;
 }
@@ -58,7 +58,7 @@ ErrorData::ErrorData(InternalErrorType type, std::string message)
     : mType(type), mMessage(std::move(message)) {}
 
 void ErrorData::AppendBacktrace(const char* file, const char* function, int line) {
-    BacktraceRecord record;
+    BacktraceRecord record = {};
     record.file = file;
     record.function = function;
     record.line = line;

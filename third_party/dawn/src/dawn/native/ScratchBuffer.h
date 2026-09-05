@@ -30,9 +30,9 @@
 
 #include <cstdint>
 
-#include "dawn/common/Ref.h"
-#include "dawn/native/Buffer.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/native/Buffer.h"
 
 namespace dawn::native {
 

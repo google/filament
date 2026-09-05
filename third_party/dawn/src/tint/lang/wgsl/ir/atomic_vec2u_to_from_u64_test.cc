@@ -305,6 +305,7 @@ $B1: {  # root
 }
 
 TEST_F(AtomicVec2uToFromU64Test, AtomicStoreMax_FromU64) {
+    mod.properties.Add(core::ir::Property::kAllow64BitIntegers);
     auto* var = b.Var("v", ty.ptr<storage, atomic<u64>>());
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);
@@ -400,6 +401,7 @@ $B1: {  # root
 }
 
 TEST_F(AtomicVec2uToFromU64Test, AtomicStoreMin_FromU64) {
+    mod.properties.Add(core::ir::Property::kAllow64BitIntegers);
     auto* var = b.Var("v", ty.ptr<storage, atomic<u64>>());
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);

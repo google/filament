@@ -1,0 +1,200 @@
+Name
+
+    MESA_map_buffer_client_pointer
+
+Name Strings
+
+    GL_MESA_map_buffer_client_pointer
+
+Contact
+
+    Derek Lesho <dlesho@codeweavers.com>
+
+Contributors
+
+    Derek Lesho, Codeweavers
+
+Status
+
+    Proposal
+
+Version
+
+    Version 1, February, 2026
+
+Number
+
+    OpenGL Extension 562
+
+Dependencies
+
+    OpenGL 3.0 or ARB_map_buffer_ranged is required.
+
+    This extension is written against the OpenGL 4.6 (Core Profile)
+    Specification.
+
+Overview
+
+    This extension allows the application to specify pointer ranges within
+    which buffers should be mapped.
+
+    This extension is proposed to help the WINE project [https://winehq.org],
+    which implements the 32-bit Windows OpenGL ABI on top of 64-bit Linux,
+    return an address in the 32-bit address range from Map(Named)Buffer(Range).
+
+IP Status
+
+    None
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    void AddClientPointerRangeMESA( void *addr, sizeiptr size );
+
+    void *ReleaseClientPointerRangeMESA( bitfield flags,
+                                         sizeiptr *size );
+
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <access> parameter of MapBufferRange and <flags> parameter
+    of BufferStorage:
+
+        MAP_CLIENT_POINTER_BIT_MESA                0x4000
+
+    Accepted by the <pname> parameter of GetBufferParameter{i|i64}v:
+
+        BUFFER_CLIENT_POINTER_SIZE_MESA            0x9790
+
+    Accepted by the <flags> parameter of ReleaseClientPointerRangeMESA:
+
+        CLIENT_POINTER_RELEASE_ALL_MESA            0x0001
+
+    Accepted by the <usage> parameter of BufferData:
+
+        GL_CLIENT_POINTER_STREAM_DRAW_MESA         0x9791
+        GL_CLIENT_POINTER_STREAM_READ_MESA         0x9792
+        GL_CLIENT_POINTER_STREAM_COPY_MESA         0x9793
+        GL_CLIENT_POINTER_STATIC_DRAW_MESA         0x9794
+        GL_CLIENT_POINTER_STATIC_READ_MESA         0x9795
+        GL_CLIENT_POINTER_STATIC_COPY_MESA         0x9796
+        GL_CLIENT_POINTER_DYNAMIC_DRAW_MESA        0x9797
+        GL_CLIENT_POINTER_DYNAMIC_READ_MESA        0x9798
+        GL_CLIENT_POINTER_DYNAMIC_COPY_MESA        0x9799
+
+
+Additions to Chapter 6 of the OpenGL Core Profile Specification, Version 4.6,
+"Buffer Objects"
+
+    Modify Section 6.2, "Creating and Modifying Buffer Object Data Stores"
+
+    Add to the list of accepted values for the <flags> parameter to
+    BufferStorage, p.66.
+
+        MAP_CLIENT_POINTER_BIT_MESA   The data store can only be mapped onto an
+    address range provided by AddClientPointerRangeMESA.
+
+    Add to the the list of accepted values for the <usage> parameter to
+    BufferData, p.69.
+
+        CLIENT_POINTER_* The data store usage is defined identically to the
+    value without the CLIENT_POINTER suffix, and the value of
+    BUFFER_STORAGE_FLAGS will include MAP_CLIENT_POINTER_BIT_MESA.
+
+    Modify Table 6.3, "Buffer object state after calling BufferData,
+            BufferStorage, or NamedBufferStorage.":
+
+    Name                 | Value for                   | Value for
+                         | BufferData                  | BufferStorage
+    ---------------------+-----------------------------+---------------
+    BUFFER_STORAGE_FLAGS | MAP_READ_BIT |              |  <flags>
+                         | MAP_WRITE_BIT |             |
+                         | DYNAMIC_STORAGE_BIT         |
+                         | and |                       |
+                         | MAP_CLIENT_POINTER_BIT_MESA |
+                         | if the value of <usage> is  |
+                         | is CLIENT_POINTER_*         |
+
+    Modify Section 6.3, "Mapping and Unmapping Buffer Data"
+
+    Add to the bulleted list describing flags that modify buffer mappings,
+    p.73.
+
+        * MAP_CLIENT_POINTER_BIT_MESA indicates the mapped buffer pointer must
+          be in an address range provided by AddClientPointerRangeMESA. If no
+          space is found here, an OUT_OF_MEMORY error is generated. The value
+          of BUFFER_STORAGE_FLAGS for the buffer being mapped must share the
+          same MAP_CLIENT_POINTER_BIT_MESA bit as <access>.
+
+    Append to Section 6.3 "Mapping and Unmapping Buffer Data", p.78.
+
+        If a buffer is mapped with the MAP_CLIENT_POINTER_BIT_MESA flag, the
+        returned pointer will be in a range provided by the application through
+
+            void AddClientPointerRangeMESA( void *addr, sizeiptr size );
+
+        with <addr> set to the start of a page-aligned address range of size
+        <size> with read and write permissions.
+
+        The range will be held as client state, and if needed consumed by a
+        call to MapBufferRange with access including
+        MAP_CLIENT_POINTER_BIT_MESA. It is an error to provide a new range
+        AddClientPointerRangeMESA again before the previous is range consumed
+        or released. To ensure this, call ReleaseClientPointerRange if MapRange
+        fails after AddClientPointerRangeMESA.
+
+        The consumed range is shareable server state which may be used and
+        reused for any buffers mapped with <access> including
+        MAP_CLIENT_POINTER_BIT_MESA. The driver will hold this address range as
+        long as any buffers are mapped in it. To reclaim the range, first unmap
+        any buffers in the range, call Flush, and thence
+
+            void *ReleaseClientPointerRangeMESA( bitfield flags,
+                                                 sizeiptr *size );
+
+        will return the range back to the application, with <size> relaying
+        back the size of the returned range. If CLIENT_POINTER_RELEASE_ALL_MESA
+        is set in <flags>, the driver must release all client pointer ranges
+        that don't contain a currently mapped buffer pointer. Otherwise, the
+        driver may hold onto unused mappings which can be reused.
+
+        While the pages sit in the driver, memory access in any manner other
+        than as defined by Map(Named)BufferRange is not permitted, and results
+        in undefined behavior.
+
+        If no range can be released, ReleaseClientPointerRange will return
+        NULL.
+
+
+Errors
+
+    An OUT_OF_MEMORY error is generated by Map(Named)BufferRange if
+    MAP_CLIENT_POINTER_BIT_MESA is included in <access> but no space can be
+    found for a mapping in the ranges provided by AddClientPointerRangeMESA. In
+    this case, the buffer object state value BUFFER_CLIENT_POINTER_SIZE_MESA is
+    set to the size required of a new client pointer range to enable mapping
+    the buffer with MAP_CLIENT_POINTER_BIT_MESA.
+
+    An INVALID_OPERATION error is generated by Map(Named)BufferRange if the
+    MAP_CLIENT_POINTER_BIT_MESA bit in <access> isn't equal to the
+    MAP_CLIENT_POINTER_BIT_MESA bit in BUFFER_STORAGE_FLAGS.
+
+    An INVALID_OPERATION error is generated by AddClientPointerRangeMESA if a
+    previous range hasn't yet been consumed or released.
+
+Revision History
+
+    Version 2, 2026-7-28 (Derek Lesho)
+        - CLIENT_POINTER_RELEASE_ALL_MESA flag
+        - CLIENT_POINTER buffer storage flag
+        - Specify shareable state
+
+    Version 1, 2026-2-25 (Derek Lesho)
+        Initial draft.

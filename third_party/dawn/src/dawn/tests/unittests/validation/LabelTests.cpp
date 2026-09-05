@@ -27,10 +27,10 @@
 
 #include <string>
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderBundleEncoderDescriptor.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderBundleEncoderDescriptor.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -263,7 +263,7 @@ TEST_F(LabelTest, ExternalTexture) {
 
     wgpu::ExternalTextureDescriptor descriptor;
     descriptor.plane0 = texture.CreateView();
-    std::array<float, 12> mPlaceholderConstantArray;
+    std::array<float, 12> mPlaceholderConstantArray = {};
     descriptor.yuvToRgbConversionMatrix = mPlaceholderConstantArray.data();
     descriptor.gamutConversionMatrix = mPlaceholderConstantArray.data();
     descriptor.srcTransferFunctionParameters = mPlaceholderConstantArray.data();

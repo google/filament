@@ -384,6 +384,93 @@ OpFunctionEnd
 
   SinglePassRunAndCheck<SimplificationPass>(text, text, false);
 }
+
+TEST_F(SimplificationTest, CopyLogicalOfCompositeConstructMatchingTypes) {
+  // OpCopyLogical fed by an OpCompositeConstruct whose constituents are
+  // already typed exactly as the corresponding fields of the OpCopyLogical's
+  // result type can be rewritten as an OpCompositeConstruct of the result
+  // type.
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
+  const std::string text = R"(
+; CHECK: [[ptr:%\w+]] = OpVariable %_ptr_StorageBuffer_int StorageBuffer
+; CHECK: [[ctor:%\w+]] = OpCompositeConstruct {{%\w+}} [[ptr]]
+; CHECK-NOT: OpCopyLogical
+; CHECK: [[ctor2:%\w+]] = OpCompositeConstruct {{%\w+}} [[ptr]]
+; CHECK: OpStore {{%\w+}} [[ctor2]]
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %ResHolder_block Block
+OpMemberDecorate %ResHolder_block 0 Offset 0
+OpDecorate %ssbo DescriptorSet 0
+OpDecorate %ssbo Binding 0
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+%ssbo = OpVariable %_ptr_StorageBuffer_int StorageBuffer
+%ResHolder_block = OpTypeStruct %int
+%ResHolder_fn = OpTypeStruct %_ptr_StorageBuffer_int
+%_ptr_Function_ResHolder_fn = OpTypePointer Function %ResHolder_fn
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%h = OpVariable %_ptr_Function_ResHolder_fn Function
+%cc = OpCompositeConstruct %ResHolder_block %ssbo
+%cl = OpCopyLogical %ResHolder_fn %cc
+OpStore %h %cl
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<SimplificationPass>(text, false);
+}
+
+TEST_F(SimplificationTest, CopyLogicalOfCompositeConstructMixedTypes) {
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
+  const std::string text = R"(
+; CHECK: [[ptr:%\w+]] = OpVariable %_ptr_StorageBuffer_int StorageBuffer
+; CHECK: [[u:%\w+]] = OpLoad {{%\w+}}
+; CHECK: [[copy:%\w+]] = OpCopyLogical {{%\w+}} [[u]]
+; CHECK: [[ctor:%\w+]] = OpCompositeConstruct {{%\w+}} [[copy]] [[ptr]]
+; CHECK-NOT: OpCopyLogical {{%\w+}} {{%\w+}} {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[ctor]]
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %Uniforms_block Block
+OpMemberDecorate %Uniforms_block 0 Offset 0
+OpDecorate %ubo DescriptorSet 0
+OpDecorate %ubo Binding 0
+OpDecorate %ssbo DescriptorSet 0
+OpDecorate %ssbo Binding 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%Uniforms_block = OpTypeStruct %int
+%Uniforms_fn = OpTypeStruct %int
+%_ptr_Uniform_Uniforms_block = OpTypePointer Uniform %Uniforms_block
+%ubo = OpVariable %_ptr_Uniform_Uniforms_block Uniform
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+%ssbo = OpVariable %_ptr_StorageBuffer_int StorageBuffer
+%Ctx_block = OpTypeStruct %Uniforms_block %int
+%Ctx_fn = OpTypeStruct %Uniforms_fn %_ptr_StorageBuffer_int
+%_ptr_Function_Ctx_fn = OpTypePointer Function %Ctx_fn
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%h = OpVariable %_ptr_Function_Ctx_fn Function
+%u = OpLoad %Uniforms_block %ubo
+%cc = OpCompositeConstruct %Ctx_block %u %ssbo
+%cl = OpCopyLogical %Ctx_fn %cc
+OpStore %h %cl
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<SimplificationPass>(text, false);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

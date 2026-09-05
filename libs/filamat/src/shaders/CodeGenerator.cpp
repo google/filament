@@ -290,6 +290,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // constants for UBO sizes, we must hardcode WebGPU minspec in both places.
         // With a WebGPU UBO minspec of 64 KiB (65536 bytes), height is set to 65536 / 16 = 4096.
         out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 4096;\n";
+        // Unlike the layout constants above, other specialization constants generated below
+        // remain WGSL overrides whose defaults are specialized by WebGPUProgram before it creates
+        // the shader module.
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
@@ -1210,6 +1213,9 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::CLIP_SPACE_POSITION:         return "CLIP_SPACE_POSITION";
         case Property::SECOND_ROUGHNESS:            return "SECOND_ROUGHNESS";
         case Property::SECOND_ROUGHNESS_WEIGHT:     return "SECOND_ROUGHNESS_WEIGHT";
+        case Property::IRIDESCENCE:                 return "IRIDESCENCE";
+        case Property::IRIDESCENCE_IOR:             return "IRIDESCENCE_IOR";
+        case Property::IRIDESCENCE_THICKNESS:       return "IRIDESCENCE_THICKNESS";
     }
 }
 

@@ -28,16 +28,16 @@
 #include <vector>
 
 #include "absl/types/span.h"  // TODO(343500108): Use std::span when we have C++20.
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/wire/SupportedFeatures.h"
-#include "dawn/wire/WireResult.h"
-#include "dawn/wire/server/ObjectStorage.h"
-#include "dawn/wire/server/Server.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/wire/SupportedFeatures.h"
+#include "src/dawn/wire/WireResult.h"
+#include "src/dawn/wire/server/ObjectStorage.h"
+#include "src/dawn/wire/server/Server.h"
 
 namespace dawn::wire::server {
 
 WireResult Server::DoAdapterRequestDevice(Known<WGPUAdapter> adapter,
-                                          ObjectHandle eventManager,
+                                          Known<WGPUInstance> instance,
                                           WGPUFuture future,
                                           ObjectHandle deviceHandle,
                                           WGPUFuture deviceLostFuture,
@@ -46,14 +46,14 @@ WireResult Server::DoAdapterRequestDevice(Known<WGPUAdapter> adapter,
     WIRE_TRY(Allocate(&device, deviceHandle, AllocationState::Reserved));
 
     auto userdata = MakeUserdata<RequestDeviceUserdata>();
-    userdata->eventManager = eventManager;
+    userdata->instanceId = instance.id;
     userdata->future = future;
-    userdata->deviceObjectId = device.id;
+    userdata->device = device.AsHandle();
     userdata->deviceLostFuture = deviceLostFuture;
 
     // Update the descriptor with the device lost callback associated with this request.
     auto deviceLostUserdata = MakeUserdata<DeviceLostUserdata>();
-    deviceLostUserdata->eventManager = eventManager;
+    deviceLostUserdata->instanceId = instance.id;
     deviceLostUserdata->future = deviceLostFuture;
 
     WGPUDeviceDescriptor desc = *descriptor;
@@ -84,7 +84,7 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
                                      WGPUDevice device,
                                      WGPUStringView message) {
     ReturnAdapterRequestDeviceCallbackCmd cmd = {};
-    cmd.eventManager = data->eventManager;
+    cmd.instanceId = data->instanceId;
     cmd.future = data->future;
     cmd.status = status;
     cmd.message = message;
@@ -101,8 +101,9 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
     // the request to preserve callback ordering.
     FreeMembers<WGPUSupportedFeatures> supportedFeatures(mProcs);
     mProcs->deviceGetFeatures(device, &supportedFeatures);
-    absl::Span<const WGPUFeatureName> features(supportedFeatures.features,
-                                               supportedFeatures.featureCount);
+    // SAFETY: WebGPU API guarantees that the returned features are valid.
+    Span<const WGPUFeatureName> DAWN_UNSAFE_BUFFERS(
+        features(supportedFeatures.features, supportedFeatures.featureCount));
     for (WGPUFeatureName feature : features) {
         if (!IsFeatureSupported(feature)) {
             // Release the device.
@@ -115,8 +116,7 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
             return;
         }
     }
-    cmd.featuresCount = features.size();
-    cmd.features = features.data();
+    cmd.features = features;
 
     // Query and report the adapter limits, including all known extension limits.
     // TODO(crbug.com/421950205): Use dawn::utils::ComboLimits here.
@@ -134,7 +134,7 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
 
     // Assign the handle and allocated status if the device is created successfully.
     Known<WGPUDevice> reservation;
-    if (FillReservation(data->deviceObjectId, device, &reservation) == WireResult::FatalError) {
+    if (FillReservation(data->device, device, &reservation) == WireResult::FatalError) {
         cmd.status = WGPURequestDeviceStatus_CallbackCancelled;
         cmd.message = ToOutputStringView("Destroyed before request was fulfilled.");
         SerializeCommand(cmd);

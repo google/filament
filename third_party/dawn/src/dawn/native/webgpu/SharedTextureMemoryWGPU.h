@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_SHAREDTEXTUREMEMORYWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_SHAREDTEXTUREMEMORYWGPU_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/SharedTextureMemory.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/SharedTextureMemory.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

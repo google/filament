@@ -1,0 +1,88 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_occlusion_instrument
+
+Name Strings
+
+    GL_SGIX_occlusion_instrument
+
+Version
+
+    $Date: 1998/04/21 03:53:34 $ $Revision: 1.1 $
+
+Number
+
+    151
+
+Dependencies
+
+    SGIX_intruments is required
+
+Overview
+
+    This extension defines an occlusion instrument that can be used by
+    applications to determine whether a set of fragments are completely
+    occluded (i.e., fail the depth test) by fragments already in the
+    frame buffer.
+
+Issues
+
+    * This extension is named like this so that developers have a better
+      idea of what the extension does instead of being obscured by a
+      device-specific name.  The extension encompasses functionality that
+      is exposed by the bali_r_extension, but it does not try to address
+      the different mode of retrieving occlusion information.  It's
+      possible that Bali may not be able to support this extension easily.
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled:
+
+	OCCLUSION_INSTRUMENT_SGIX		0x6060
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    Added to subsection 4.1.5 (Depth buffer test) at the end of the
+    paragraph which begins "If the depth buffer test fails...":
+
+    If OCCLUSION_INSTRUMENT_SGIX is enabled and instruments have been
+    started via a call to StartInstrumentSGIX, a flag is maintained
+    of whether fragments pass or fail the depth test.  The flag's initial
+    state is TRUE and it is set to FALSE whenever a fragment generated
+    during rasterization passes the depth test.
+
+    The format of the measured occlusion instrument consists of four
+    words:  the occlusion instrument enable enum (OCCLUSION_INSTRUMENT_SGIX);
+    the size of the measurement (4); the result of the measurement; and
+    the marker passed in with either StopInstrumentsSGIX or
+    ReadInstrumentsSGIX.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+Additions to the GLX Specification
+
+
+Errors
+
+New State
+
+New Implementation Dependent State
+

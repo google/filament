@@ -1,0 +1,367 @@
+Name
+
+    NV_copy_image
+
+Name Strings
+
+    GL_NV_copy_image
+    WGL_NV_copy_image
+    GLX_NV_copy_image
+
+Contact
+
+    Michael Gold, NVIDIA Corporation (gold 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+    James Jones, NVIDIA Corporation (jajones 'at' nvidia.com)
+    Joe Kain, NVIDIA Corporation (jkain 'at' nvidia.com)
+    Benjamin Morris, NVIDIA Corporation (bmorris 'at' nvidia.com)
+    Michael Morrison, NVIDIA Corporation (mmorrison 'at' nvidia.com)
+    Aaron Plattner, NVIDIA Corporation (aplattner 'at' nvidia.com)
+    Thomas Volk, NVIDIA Corporation (tvolk 'at' nvidia.com)
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+    Shazia Rahman, NVIDIA Corporation (srahman 'at' nvidia.com)
+
+Status
+
+    Shipping (July 2009, Release 190)
+
+Version
+
+    Last Modified Date:         8/7/2012
+    NVIDIA revision:            5
+
+Number
+
+    376
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    The extension is written against the OpenGL 3.1 Specification.
+
+Overview
+
+    This extension enables efficient image data transfer between image
+    objects (i.e. textures and renderbuffers) without the need to bind
+    the objects or otherwise configure the rendering pipeline.  The
+    WGL and GLX versions allow copying between images in different
+    contexts, even if those contexts are in different sharelists or
+    even on different physical devices.
+
+New Procedures and Functions
+
+    void CopyImageSubDataNV(
+        uint srcName, enum srcTarget, int srcLevel,
+        int srcX, int srcY, int srcZ,
+        uint dstName, enum dstTarget, int dstLevel,
+        int dstX, int dstY, int dstZ,
+        sizei width, sizei height, sizei depth);
+
+New Tokens
+
+    None
+
+Additions to Chapter 4 of the OpenGL 3.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Append to section 4.3.3:
+
+    The function
+
+        void CopyImageSubDataNV(
+            uint srcName, enum srcTarget, int srcLevel,
+            int srcX, int srcY, int srcZ,
+            uint dstName, enum dstTarget, int dstLevel,
+            int dstX, int dstY, int dstZ,
+            sizei width, sizei height, sizei depth);
+
+    may be used to copy a region of texel data between two image
+    objects.  An image object may be either a texture or a
+    renderbuffer.
+
+    The source object is identified by <srcName> and <srcTarget>.
+    Similarly the destination object is identified by <dstName> and
+    <dstTarget>.  The interpretation of the name depends on the value
+    of the corresponding target parameter.  If the target parameter is
+    RENDERBUFFER, the name is interpreted as the name of a
+    renderbuffer object.  If the target parameter is a texture target,
+    the name is interpreted as a texture object.  All non-proxy
+    texture targets are accepted, with the exception of TEXTURE_BUFFER
+    and the cubemap face selectors described in table 3.23.
+
+    <srcLevel> and <dstLevel> identify the source and destination
+    level of detail.  For textures, this must be a valid level of
+    detail in the texture object.  For renderbuffers, this value must
+    be zero.
+
+    <srcX>, <srcY>, and <srcZ> specify the lower left texel
+    coordinates of a <width>-wide by <height>-high by <depth>-deep
+    rectangular subregion of the source texel array.  Negative values
+    of <srcX>, <srcY>, and <srcZ> correspond to the coordinates of
+    border texels, addressed as in figure 3.10.  Similarly, <dstX>,
+    <dstY> and <dstZ> specify the coordinates of a subregion of the
+    destination texel array.  The source and destination subregions
+    must be contained entirely within the specified level of the
+    corresponding image objects.
+
+    Slices of a TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_3D and
+    faces of TEXTURE_CUBE_MAP are all compatible provided they share
+    an internal format, and multiple slices or faces may be copied
+    between these objects with a single call by specifying the
+    starting slice with <srcZ> and <dstZ>, and the number of slices to
+    be copied with <depth>.  Cubemap textures always have six faces
+    which are selected by a zero-based face index, according to the
+    order specified in table 3.23.
+
+    CopyImageSubDataNV may fail with any of the following errors:
+    INVALID_ENUM is generated if either target is not RENDERBUFFER or
+    a valid non-proxy texture target, or is TEXTURE_BUFFER, or is one
+    of the cubemap face selectors described in table 3.23, or if the
+    target does not match the type of the object.  INVALID_OPERATION
+    is generated if either object is a texture and the texture is not
+    consistent, or if the source and destination internal formats or
+    number of samples do not match.  INVALID_VALUE is generated if
+    either name does not correspond to a valid renderbuffer or texture
+    object according to the corresponding target parameter, or if the
+    specified level is not a valid level for the image, or if the
+    dimensions of the either subregion exceeds the boundaries of the
+    corresponding image object, or if the image format is compressed
+    and the dimensions of the subregion fail to meet the alignment
+    constraints of the format.
+
+************************************************************************
+
+Additions to the WGL Specification
+
+    The function
+
+        BOOL wglCopyImageSubDataNV(
+            HGLRC hSrcRC, uint srcName, enum srcTarget, int srcLevel,
+            int srcX, int srcY, int srcZ,
+            HGLRC hDstRC, uint dstName, enum dstTarget, int dstLevel,
+            int dstX, int dstY, int dstZ,
+            sizei width, sizei height, sizei depth);
+
+    behaves identically to the core function glCopyImageSubDataNV,
+    except that the <hSrcRC> and <hDstRC> parameters specify the
+    contexts in which to look up the source and destination objects,
+    respectively.  A value of zero indicates that the currently bound
+    context should be used instead.
+
+    Upon success, the value TRUE is returned.  Upon failure, the value
+    FALSE is returned, and the system error code will be set to one of
+    the following:
+
+        ERROR_INVALID_HANDLE indicates that either of <hSrcRC> or
+        <hDstRC> is non-zero and is not recognized by the
+        implementation as a valid context, or is zero and there is no
+        valid context bound in the current thread.
+
+        ERROR_INVALID_OPERATION indicates that the call failed, and if
+        either the source or the destination context is bound in the
+        current thread, a GL error code is set to indicate the cause.
+        This error code may be retrieved by calling glGetError().  If
+        neither the source nor the destination context is bound in the
+        current thread, no GL error is set.
+
+Additions to the GLX Specification
+
+    The function
+
+        void glXCopyImageSubDataNV(Display *dpy,
+            GLXContext srcCtx, uint srcName, enum srcTarget, int srcLevel,
+            int srcX, int srcY, int srcZ,
+            GLXContext dstCtx, uint dstName, enum dstTarget, int dstLevel,
+            int dstX, int dstY, int dstZ,
+            sizei width, sizei height, sizei depth);
+
+    behaves identically to the core function glCopyImageSubDataNV,
+    except that the <srcCtx> and <dstCtx> parameters specify the
+    contexts in which to look up the source and destination objects,
+    respectively.  A value of NULL for either context indicates that
+    the value which is returned by glXGetCurrentContext() should be
+    used instead. Both contexts must share the same address space, as
+    described in section 2.3.
+
+    If either <srcCtx> or <dstCtx> is not a valid rendering context,
+    the error GLXBadContext is generated.
+
+    If the server portion of the contexts do not share the same
+    address space, the error BadMatch is generated.
+
+    If an error occurs due to GL parameter validation, the error
+    BadMatch will be generated.  Additionally, if either the source or
+    destination context is bound to the current thread, a GL error is
+    set to indicate the cause. This error code may be retrieved by
+    calling glGetError().  If neither the source nor the destination
+    context is bound in the current thread, no GL error is set.
+
+GLX Protocol
+
+    One new GLX protocol command is added.
+
+    glXCopyImageSubDataNV
+        1       CARD8           opcode (X assigned)
+        1       16              GLX opcode (glXVendorPrivate)
+        2       20              request length
+        4       1360            vendor specific opcode
+        4                       unused
+        4       GLX_CONTEXT     src_context
+        4       CARD32          src_name
+        4       ENUM            src_target
+        4       INT32           src_level
+        4       INT32           src_x
+        4       INT32           src_y
+        4       INT32           src_z
+        4       GLX_CONTEXT     dst_context
+        4       CARD32          dst_name
+        4       ENUM            dst_target
+        4       INT32           dst_level
+        4       INT32           dst_x
+        4       INT32           dst_y
+        4       INT32           dst_z
+        4       INT32           width
+        4       INT32           height
+        4       INT32           depth
+
+    The following rendering command is sent to the server as a part of
+    glXRender request:
+
+    CopyImageSubDataNV
+        2       64              rendering command length
+        2       4291            rendering command opcode
+        4       CARD32          src_name
+        4       ENUM            src_target
+        4       INT32           src_level
+        4       INT32           src_x
+        4       INT32           src_y
+        4       INT32           src_z
+        4       CARD32          dst_name
+        4       ENUM            dst_target
+        4       INT32           dst_level
+        4       INT32           dst_x
+        4       INT32           dst_y
+        4       INT32           dst_z
+        4       INT32           width
+        4       INT32           height
+        4       INT32           depth
+
+Dependencies on EXT_extension_name
+
+    The list of supported image targets depends on the availability of
+    such targets in the implementation.
+
+Errors
+
+    CopyImageSubDataNV may fail with any of the following errors:
+    INVALID_ENUM is generated if either target is not RENDERBUFFER or
+    a valid non-proxy texture target, or is TEXTURE_BUFFER, or is one
+    of the cubemap face selectors described in table 3.23, or if the
+    target does not match the type of the object.  INVALID_OPERATION
+    is generated if either object is a texture and the texture is not
+    consistent, or if the source and destination internal formats or
+    number of samples do not match.  INVALID_VALUE is generated if
+    either name does not correspond to a valid renderbuffer or texture
+    object according to the corresponding target parameter, or if the
+    specified level is not a valid level for the image, or if the
+    dimensions of the either subregion exceeds the boundaries of the
+    corresponding image object, or if the image format is compressed
+    and the dimensions of the subregion fail to meet the alignment
+    constraints of the format.
+
+Sample Code
+
+    TBD
+
+Issues
+
+1) Should there be a single function for all image types, or
+   "per-dimensional" functions?
+
+    Resolved.
+
+    A single function can support all image types.  Not only are
+    per-dimensional functions an unnecessary convenience, they also
+    restrict some of the flexibility offered by this extension,
+    e.g. copying a slice of data between a 2D and a 3D image.
+
+2) Should the extension support "deep copies", i.e. multiple slices of
+   a 3D texture, a 2D array texture, or a cubemap?
+
+    Resolved.
+
+    Yes, there may be performance advantages in copying a multiple
+    slices in a single call.
+
+3) Should renderbuffers be supported by the same function as textures?
+
+    Resolved.
+
+    Yes, there is no fundamental difference between the two object
+    classes, and allowing them to be used interchangeably has the
+    advantage of allowing data transfers between them.
+
+4) Is the "target" parameter necessary?
+
+    Resolved.
+
+    Yes, given the current object model and texture API, there are two
+    obvious applications of the target parameter:
+
+    1) Allows the selection of a single cubemap face.
+    2) Differentiate between TEXTURE and RENDERBUFFER targets.
+
+5) Should the target TEXTURE_CUBE_MAP be supported, and with what
+   behavior?
+
+    Resolved.
+
+    Given the resolution of issue 7, this is moot.  The
+    TEXTURE_CUBE_MAP token is the only way to access a cubemap.
+
+6) Should the "extra" parameters for a given dimension be ignored, or
+   should there be required values?
+
+    Resolved.
+
+    All parameters are required to have sensible values, for the
+    simple reason that future extensions may give meaning to these
+    values.  For dimensions which are currently superfluous, the
+    offset must be zero and the size must be one, e.g. if the target
+    is TEXTURE_2D, z must be 0 and depth must be 1.
+
+7) Should the per-face cubemap targets be accepted at all?  Why not
+   use Z as the selector?
+
+    Resolved.
+
+    The existing per-face targets effectively define the face order:
+
+       face_index = face_target - TEXTURE_CUBE_MAP_POSITIVE_X;
+
+    Therefore it makes sense to generalize a cubemap as an array of
+    size 6, and use the Z parameter to select the face(s).
+
+8) Should the WGL/GLX functions accept a source context as well as a
+   destination context?
+
+    Resolved.
+
+    Yes, the symmetry and flexibility this offers has advantages, and
+    there is no obvious technical reason to disallow this.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     1              gold      Internal revisions.
+     2    09/09/09  mjk       Assign number
+     3    09/16/09  Jon Leech Fix hDstRC->hSrcRC in prototype.
+     4    10/13/11  srahman   Added protocol for the GL command.
+     5    08/07/12  pbrown    Fix the GLX protocol section to clarify that
+                              the first set of protocol is for
+                              glXCopyImageSubDataNV and not the GL command.

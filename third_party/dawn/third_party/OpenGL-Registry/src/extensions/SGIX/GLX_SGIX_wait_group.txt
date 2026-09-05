@@ -1,0 +1,106 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_wait_group
+
+Name Strings
+
+    GLX_SGIX_wait_group
+
+Version
+
+    $Date: 1997/04/17 04:46:55 $ $Revision: 1.1 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    none
+
+Overview
+
+    This extension provides the capability to synchronize drawing from two
+    separate GLX Contexts.  A wait group is created, and GLX Contexts are 
+    added as members to the wait group.  It will then be possible to 
+    specify that no member will be able to continue to render until all the
+    outstanding OpenGL commands from each of the members have been completed.
+
+    This extension sets conditions that must be met before a set of OpenGL
+    contexts can continue drawing.  This extension is primarily useful for
+    coordinating operations in an environment where more than one OpenGL
+    context may render simultaneously.
+
+Dependencies
+
+    none
+
+Issues
+
+    * Do we need a query to ask whether a context is in a group?
+    * Do we need to support having contexts in multiple wait groups?
+
+New Procedures and Functions
+
+    void JoinWaitGroupSGIX(Display *dpy, 
+			   GLXContext context, 
+			   GLXContext member);
+
+    void WaitGroupSGIX(Display *dpy, 
+			   GLXContext context);
+
+New Tokens
+
+    none
+
+Additions to the GLX Specification
+
+    Add to the end of section 3.2.5, Synchronization Primitives:
+
+    JoinWaitGroupSGIX adds <context> to the wait group containing <member> as 
+    a member.  If <context> is already a member of a different group, it is 
+    implicitly removed from that group first.  If <member> is None, <context> 
+    is removed from the wait group that it belongs to, if any.
+
+    A wait group is referenced by naming any context in the group; there is no
+    other way to refer to a group.
+
+    When a context is destroyed, it is removed from any wait group of
+    which it is a member.
+
+    WaitGroupSGIX causes <context> to wait until all the other member 
+    contexts of the wait group have also called WaitGroupSGIX. 
+
+    The following must be satisfied before a WaitGroupSGIX command 
+    can complete:
+
+	1. All contexts in the wait group must have issued a 
+	   WaitGroupSGIX command
+
+    OpenGL rendering commands issued by all of the member contexts
+    in the wait group will complete before any of the member contexts
+    can further affect the framebuffer.
+
+    A wait group exists until the last remaining context leaves the group.
+
+    JoinWaitGroupSGIX and WaitGroupSGIX are part of the X stream.
+
+Errors
+
+    JoinWaitGroupSGIX generates GLXBadContext if <context> is an invalid 
+    GLX context, or if <member> is an invalid GLX context.
+
+    WaitGroupSGIX generates GLXBadContext if <context> is an invalid
+    GLX context.
+
+New State
+
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+    <whether context is in a wait group>	??		B	False
+
+New Implementation Dependent State
+
+    None

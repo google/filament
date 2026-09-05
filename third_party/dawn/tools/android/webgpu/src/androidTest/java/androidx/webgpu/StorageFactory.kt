@@ -22,7 +22,7 @@ import android.content.Context
  * implementation based on the environment.
  */
 object StorageFactory {
-    fun createStore(context: Context): Storage {
-        return StorageProvider.get(context)
-    }
+  fun createStore(context: Context): Storage {
+    return StorageProvider.get(context)
+  }
 }

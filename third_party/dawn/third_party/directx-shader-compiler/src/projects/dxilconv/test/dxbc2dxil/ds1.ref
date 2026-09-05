@@ -1,0 +1,174 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.CBufRet.i32 = type { i32, i32, i32, i32 }
+%dx.types.i8x16 = type { [16 x i8] }
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+  %1 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %2 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %3 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  %4 = call float @dx.op.bitcastI32toF32(i32 126, i32 0)
+  br label %loop0
+
+loop0:                                            ; preds = %loop0.breakc0, %entry
+  %dx.v32.r2.0 = phi float [ %3, %entry ], [ %11, %loop0.breakc0 ]
+  %dx.v32.r3.0 = phi float [ %4, %entry ], [ %12, %loop0.breakc0 ]
+  %dx.v32.r4.0 = phi i32 [ 0, %entry ], [ %13, %loop0.breakc0 ]
+  %dx.v32.r1.0 = phi float [ %2, %entry ], [ %10, %loop0.breakc0 ]
+  %dx.v32.r0.0 = phi float [ %1, %entry ], [ %9, %loop0.breakc0 ]
+  %5 = icmp sge i32 %dx.v32.r4.0, 16
+  br i1 %5, label %loop0.end, label %loop0.breakc0
+
+loop0.breakc0:                                    ; preds = %loop0
+  %6 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 %dx.v32.r4.0)
+  %7 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 %dx.v32.r4.0)
+  %8 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 %dx.v32.r4.0)
+  %9 = fadd fast float %dx.v32.r0.0, %6
+  %10 = fadd fast float %dx.v32.r1.0, %7
+  %11 = fadd fast float %dx.v32.r2.0, %8
+  %12 = fadd fast float %dx.v32.r3.0, %8
+  %13 = add i32 %dx.v32.r4.0, 1
+  br label %loop0
+
+loop0.end:                                        ; preds = %loop0
+  %14 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 0, i32 0, i8 0)
+  %15 = fadd fast float %dx.v32.r0.0, %14
+  %16 = fadd fast float %dx.v32.r1.0, %14
+  %17 = fadd fast float %dx.v32.r2.0, %14
+  %18 = fadd fast float %dx.v32.r3.0, %14
+  %19 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 1, i32 0, i8 0)
+  %20 = call float @dx.op.tertiary.f32(i32 46, float %19, float 2.000000e+00, float %15)
+  %21 = call float @dx.op.tertiary.f32(i32 46, float %19, float 2.000000e+00, float %16)
+  %22 = call float @dx.op.tertiary.f32(i32 46, float %19, float 2.000000e+00, float %17)
+  %23 = call float @dx.op.tertiary.f32(i32 46, float %19, float 2.000000e+00, float %18)
+  %24 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 2, i32 0, i8 0)
+  %25 = call float @dx.op.tertiary.f32(i32 46, float %24, float 3.000000e+00, float %20)
+  %26 = call float @dx.op.tertiary.f32(i32 46, float %24, float 3.000000e+00, float %21)
+  %27 = call float @dx.op.tertiary.f32(i32 46, float %24, float 3.000000e+00, float %22)
+  %28 = call float @dx.op.tertiary.f32(i32 46, float %24, float 3.000000e+00, float %23)
+  %29 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 3, i32 0, i8 0)
+  %30 = call float @dx.op.tertiary.f32(i32 46, float %29, float 4.000000e+00, float %25)
+  %31 = call float @dx.op.tertiary.f32(i32 46, float %29, float 4.000000e+00, float %26)
+  %32 = call float @dx.op.tertiary.f32(i32 46, float %29, float 4.000000e+00, float %27)
+  %33 = call float @dx.op.tertiary.f32(i32 46, float %29, float 4.000000e+00, float %28)
+  %34 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 4, i32 0, i8 0)
+  %35 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 5, i32 0, i8 0)
+  %36 = fadd fast float %34, %35
+  %37 = fadd fast float %30, %36
+  %38 = fadd fast float %31, %36
+  %39 = fadd fast float %32, %36
+  %40 = fadd fast float %33, %36
+  %41 = call %dx.types.CBufRet.i32 @dx.op.cbufferLoadLegacy.i32(i32 59, %dx.types.Handle %0, i32 0)
+  %42 = extractvalue %dx.types.CBufRet.i32 %41, 0
+  %43 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 6, i32 0, i8 3)
+  %44 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 6, i32 0, i8 1)
+  %45 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 6, i32 0, i8 0)
+  %46 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 6, i32 0, i8 2)
+  %47 = add i32 %42, 7
+  %48 = sub i32 %47, 7
+  %49 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 7, i32 %48, i8 0)
+  %50 = sub i32 %47, 7
+  %51 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 7, i32 %50, i8 1)
+  %52 = sub i32 %47, 7
+  %53 = call float @dx.op.loadPatchConstant.f32(i32 104, i32 7, i32 %52, i8 2)
+  %54 = fadd fast float %43, %49
+  %55 = fadd fast float %44, %51
+  %56 = fadd fast float %45, %53
+  %57 = fadd fast float %46, %51
+  %58 = fadd fast float %37, %54
+  %59 = fadd fast float %38, %55
+  %60 = fadd fast float %39, %56
+  %61 = fadd fast float %40, %57
+  %62 = call float @dx.op.domainLocation.f32(i32 105, i8 0)
+  %63 = call float @dx.op.domainLocation.f32(i32 105, i8 1)
+  %64 = fmul fast float %58, %62
+  %65 = fmul fast float %59, %63
+  %66 = fmul fast float %60, %63
+  %67 = fmul fast float %61, %62
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %64)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %65)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %66)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %67)
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.i32(i32, i32, i32) #1
+
+; Function Attrs: nounwind readonly
+declare i32 @dx.op.tempRegLoad.i32(i32, i32) #0
+
+; Function Attrs: nounwind readonly
+declare float @dx.op.tempRegLoad.f32(i32, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f32(i32, i32, float) #1
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadPatchConstant.f32(i32, i32, i32, i8) #2
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.tertiary.f32(i32, float, float, float) #2
+
+; Function Attrs: nounwind readonly
+declare %dx.types.CBufRet.i32 @dx.op.cbufferLoadLegacy.i32(i32, %dx.types.Handle, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.domainLocation.f32(i32, i8) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #1
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.bitcastI32toF32(i32, i32) #2
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.bitcastF32toI32(i32, float) #2
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind }
+attributes #2 = { nounwind readnone }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!5}
+!llvm.ident = !{!27}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ds", i32 6, i32 0}
+!2 = !{null, null, !3, null}
+!3 = !{!4}
+!4 = !{i32 0, %dx.types.i8x16 addrspace(2)* undef, !"CB0", i32 0, i32 0, i32 1, i32 16, null}
+!5 = !{void ()* @main, !"main", !6, !2, !25}
+!6 = !{!7, !10, !12}
+!7 = !{!8}
+!8 = !{i32 0, !"AAA_HSFoo", i8 9, i8 0, !9, i8 0, i32 1, i8 3, i32 0, i8 0, null}
+!9 = !{i32 0}
+!10 = !{!11}
+!11 = !{i32 0, !"SV_Position", i8 9, i8 3, !9, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!12 = !{!13, !14, !16, !18, !20, !21, !22, !23}
+!13 = !{i32 0, !"SV_TessFactor", i8 9, i8 25, !9, i8 0, i32 1, i8 1, i32 0, i8 0, null}
+!14 = !{i32 1, !"SV_TessFactor", i8 9, i8 25, !15, i8 0, i32 1, i8 1, i32 1, i8 0, null}
+!15 = !{i32 1}
+!16 = !{i32 2, !"SV_TessFactor", i8 9, i8 25, !17, i8 0, i32 1, i8 1, i32 2, i8 0, null}
+!17 = !{i32 2}
+!18 = !{i32 3, !"SV_TessFactor", i8 9, i8 25, !19, i8 0, i32 1, i8 1, i32 3, i8 0, null}
+!19 = !{i32 3}
+!20 = !{i32 4, !"SV_InsideTessFactor", i8 9, i8 26, !9, i8 0, i32 1, i8 1, i32 4, i8 0, null}
+!21 = !{i32 5, !"SV_InsideTessFactor", i8 9, i8 26, !15, i8 0, i32 1, i8 1, i32 5, i8 0, null}
+!22 = !{i32 6, !"AAA", i8 9, i8 0, !9, i8 0, i32 1, i8 4, i32 6, i8 0, null}
+!23 = !{i32 7, !"BBB", i8 9, i8 0, !24, i8 0, i32 3, i8 3, i32 7, i8 0, null}
+!24 = !{i32 0, i32 1, i32 2}
+!25 = !{i32 0, i64 256, i32 2, !26}
+!26 = !{i32 3, i32 16}
+!27 = !{!"dxbc2dxil 1.2"}

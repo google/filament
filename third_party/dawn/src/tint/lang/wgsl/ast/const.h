@@ -50,13 +50,11 @@ class Const final : public Castable<Const, Variable> {
     /// @param name the variable name
     /// @param type the declared variable type
     /// @param initializer the initializer expression. Must not be nullptr.
-    /// @param attributes the variable attributes
     Const(NodeID nid,
           const Source& source,
           const Identifier* name,
           Type type,
-          const Expression* initializer,
-          VectorRef<const Attribute*> attributes);
+          const Expression* initializer);
 
     /// Destructor
     ~Const() override;

@@ -596,7 +596,7 @@ void printDeviceDetails(wgpu::Device const& device) {
                 });
     }
     wgpu::Limits supportedLimits{};
-    if (!device.GetLimits(&supportedLimits)) {
+    if (device.GetLimits(&supportedLimits) != wgpu::Status::Success) {
         FWGPU_LOGW << "Failed to get WebGPU supported device limits";
     } else {
         FWGPU_LOGI << "WebGPU device supported limits:";
@@ -641,7 +641,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     // in the future.
     wgpu::Limits supportedLimits{};
     FILAMENT_CHECK_POSTCONDITION(
-            adapter.GetLimits(&supportedLimits).status == wgpu::Status::Success)
+            adapter.GetLimits(&supportedLimits) == wgpu::Status::Success)
             << "Failed to get limits for WebGPU adapter";
     auto limitsToRequest = REQUIRED_LIMITS;
     limitsToRequest.maxStorageTexturesPerShaderStage =

@@ -65,6 +65,8 @@ if (tint_build_spv_writer) {
       "raise.h",
       "remove_unreachable_in_loop_continuing.cc",
       "remove_unreachable_in_loop_continuing.h",
+      "replace_unsigned_compare_zero.cc",
+      "replace_unsigned_compare_zero.h",
       "resource_table_helper.cc",
       "resource_table_helper.h",
       "shader_io.cc",
@@ -76,6 +78,7 @@ if (tint_build_spv_writer) {
     ]
     deps = [
       "${dawn_root}/src/utils",
+      "${tint_spirv_headers_dir}:spv_headers",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
@@ -87,6 +90,7 @@ if (tint_build_spv_writer) {
       "${tint_src_dir}/lang/spirv/intrinsic",
       "${tint_src_dir}/lang/spirv/ir",
       "${tint_src_dir}/lang/spirv/type",
+      "${tint_src_dir}/lang/spirv/writer/common",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
@@ -94,18 +98,11 @@ if (tint_build_spv_writer) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
-
-    if (tint_build_spv_reader || tint_build_spv_writer) {
-      deps += [ "${tint_spirv_headers_dir}:spv_headers" ]
-    }
-
-    if (tint_build_spv_writer) {
-      deps += [ "${tint_src_dir}/lang/spirv/writer/common" ]
-    }
   }
 }
 if (tint_build_unittests) {
@@ -121,6 +118,7 @@ if (tint_build_unittests) {
         "merge_return_test.cc",
         "pass_matrix_by_pointer_test.cc",
         "remove_unreachable_in_loop_continuing_test.cc",
+        "replace_unsigned_compare_zero_test.cc",
         "shader_io_test.cc",
         "unary_polyfill_test.cc",
         "var_for_dynamic_index_test.cc",
@@ -140,6 +138,8 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/spirv/intrinsic",
         "${tint_src_dir}/lang/spirv/ir",
         "${tint_src_dir}/lang/spirv/type",
+        "${tint_src_dir}/lang/spirv/writer/common",
+        "${tint_src_dir}/lang/spirv/writer/raise",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
         "${tint_src_dir}/utils/diagnostic",
@@ -147,17 +147,11 @@ if (tint_build_unittests) {
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/symbol",
         "${tint_src_dir}/utils/text",
       ]
-
-      if (tint_build_spv_writer) {
-        deps += [
-          "${tint_src_dir}/lang/spirv/writer/common",
-          "${tint_src_dir}/lang/spirv/writer/raise",
-        ]
-      }
     }
   }
 }

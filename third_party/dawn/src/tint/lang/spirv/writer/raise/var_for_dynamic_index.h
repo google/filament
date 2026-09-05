@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_VAR_FOR_DYNAMIC_INDEX_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_VAR_FOR_DYNAMIC_INDEX_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,16 +36,6 @@ class Module;
 }
 
 namespace tint::spirv::writer::raise {
-
-/// The capabilities that the transform can support.
-const core::ir::Capabilities kVarForDynamicIndexCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kLoosenValidationForShaderIO,
-    core::ir::Capability::kAllowPointSizeBuiltin,
-};
 
 /// VarForDynamicIndex is a transform that copies array and matrix values that are dynamically
 /// indexed to a temporary local `var` before performing the index. This transform is used by the

@@ -31,99 +31,15 @@ import("//build_overrides/build.gni")
 import("${dawn_root}/generator/dawn_generator.gni")
 import("${dawn_root}/scripts/dawn_features.gni")
 
-# Use Chromium's dcheck_always_on when available so that we respect it when
-# running tests on the GPU builders
-if (build_with_chromium) {
-  import("//build/config/dcheck_always_on.gni")
-} else {
-  dcheck_always_on = false
-}
-
-if (build_with_chromium) {
-  import("//build/config/sanitizers/sanitizers.gni")
-} else {
-  use_fuzzing_engine = false
-}
-
-# Helper template to define clang plugins.
-#
-# Params:
-#   plugin: The name of the clang plugin to load.
-#   plugin_arguments: List of arguments to pass to the plugin.
-template("clang_plugin") {
-  config(target_name) {
-    cflags = [
-      "-Xclang",
-      "-add-plugin",
-      "-Xclang",
-      invoker.plugin,
-    ]
-
-    foreach(flag, invoker.plugin_arguments) {
-      cflags += [
-        "-Xclang",
-        "-plugin-arg-${invoker.plugin}",
-        "-Xclang",
-        flag,
-      ]
-    }
-  }
-}
-
-# Check struct/class member pointers are using raw_ptr<> where appropriate.
-clang_plugin("raw_ptr_check") {
-  # Defined in <chromium>/tools/clang/raw_ptr_plugin/RawPtrPlugin.cpp
-  plugin = "raw-ptr-plugin"
-
-  plugin_arguments = [
-    "check-raw-ptr-fields",
-    "check-raw-ptr-to-stack-allocated",
-    "check-raw-ref-fields",
-    "check-span-fields",
-  ]
-
-  _exclusions = [
-    "/include/",
-    "/src/tint/",
-    "/src/dawn/replay/",
-
-    # TODO(479743213): Enforce raw_ptr usage in dawn/node as well.
-    "/src/dawn/node/",
-  ]
-
-  foreach(dir, _exclusions) {
-    plugin_arguments += [ "raw-ptr-exclude-path=" +
-                          rebase_path("${dawn_root}/${dir}", root_build_dir) ]
-  }
-}
-
 ###############################################################################
 # Common dawn configs
 ###############################################################################
 
 config("internal_config") {
-  configs = []
-  include_dirs = [
-    "${target_gen_dir}/../../../src",
-    "${dawn_root}/src",
-  ]
+  configs = [ "${dawn_root}/src/utils:internal_config" ]
+  include_dirs = [ "${target_gen_dir}/../../../src" ]
 
   defines = []
-  if (dawn_always_assert || dcheck_always_on || is_debug ||
-      use_fuzzing_engine) {
-    defines += [ "DAWN_ENABLE_ASSERTS" ]
-  }
-
-  if (build_with_chromium || use_fuzzing_engine) {
-    # Does a hard abort when an assertion fails so that fuzzers catch and parse the failure.
-    # Also call abort() so chrome can dump crash stach in console.
-    defines += [ "DAWN_ABORT_ON_ASSERT" ]
-  }
-
-  if (use_fuzzing_engine) {
-    # Disable logging to make fuzzing more efficient.
-    defines += [ "DAWN_DISABLE_LOGGING" ]
-  }
 
   if (dawn_enable_d3d11) {
     defines += [ "DAWN_ENABLE_BACKEND_D3D11" ]
@@ -153,13 +69,6 @@ config("internal_config") {
     defines += [ "DAWN_ENABLE_BACKEND_VULKAN" ]
   }
 
-  # OS_CHROMEOS cannot be autodetected in runtime and
-  # cannot be detected with regular compiler macros either.
-  # Inject it from the build system
-  if (is_chromeos) {
-    defines += [ "DAWN_OS_CHROMEOS" ]
-  }
-
   if (dawn_use_wayland) {
     defines += [ "DAWN_USE_WAYLAND" ]
   }
@@ -168,6 +77,10 @@ config("internal_config") {
   }
   if (dawn_use_windows_ui) {
     defines += [ "DAWN_USE_WINDOWS_UI" ]
+  }
+
+  if (dawn_supports_glfw_for_windowing) {
+    defines += [ "DAWN_SUPPORTS_GLFW_FOR_WINDOWING" ]
   }
 
   if (dawn_enable_error_injection) {
@@ -180,85 +93,19 @@ config("internal_config") {
 
   # Only internal Dawn targets can use this config, this means only targets in
   # this BUILD.gn file and related subdirs.
-  visibility = [
-    "${dawn_root}/samples/dawn/*",
-    "${dawn_root}/src/dawn/*",
-  ]
+  visibility = [ "${dawn_root}/src/dawn/*" ]
 
   cflags = []
-
-  if (is_clang) {
-    # We use __builtin_assume liberally in DAWN_ASSERT, allow ignoring side-effects there.
-    cflags += [ "-Wno-assume" ]
-
-    # Flags use of __COUNTER__, which is used in histogram macros that were
-    # largely copied from Chromium. Chromium continues to use __COUNTER__ in
-    # their copy.
-    cflags += [ "-Wno-c2y-extensions" ]
-
-    # Dawn doesn't have the annotations to work with this analysis.
-    cflags_cc = [ "-Wno-thread-safety" ]
-  }
-
-  # Enable more warnings that were found when using Dawn in other projects.
-  # Add them only when building in standalone because we control which clang
-  # version we use. Otherwise we risk breaking projects depending on Dawn when
-  # the use a different clang version.
-  if (dawn_standalone && is_clang) {
-    cflags += [
-      "-Wconditional-uninitialized",
-      "-Wcstring-format-directive",
-      "-Wctad-maybe-unsupported",
-      "-Wc++11-narrowing",
-      "-Wdeprecated-copy",
-      "-Wdeprecated-copy-dtor",
-      "-Wduplicate-enum",
-      "-Wextra-semi",
-      "-Wextra-semi-stmt",
-      "-Wimplicit-fallthrough",
-      "-Winconsistent-missing-destructor-override",
-      "-Winvalid-offsetof",
-      "-Wmissing-field-initializers",
-      "-Wnon-c-typedef-for-linkage",
-      "-Wpessimizing-move",
-      "-Wrange-loop-analysis",
-      "-Wredundant-move",
-      "-Wshadow-field",
-      "-Wstrict-prototypes",
-      "-Wsuggest-destructor-override",
-      "-Wsuggest-override",
-      "-Wtautological-unsigned-zero-compare",
-      "-Wunreachable-code-aggressive",
-      "-Wunused-but-set-variable",
-      "-Wunused-macros",
-    ]
-
-    if (!is_wasm) {
-      configs += [ ":raw_ptr_check" ]
-    }
-
-    if (is_win) {
-      cflags += [
-        # clang-cl doesn't know -pedantic, pass it explicitly to the clang driver
-        "/clang:-pedantic",
-
-        # Allow the use of __uuidof()
-        "-Wno-language-extension-token",
-      ]
-    } else {
-      cflags += [ "-pedantic" ]
-    }
-  }
 
   if (!is_clang && is_win) {
     # Dawn extends wgpu enums with internal enums.
     # MSVC considers these invalid switch values. crbug.com/dawn/397.
     cflags += [ "/wd4063" ]
 
-    # MSVC things that a switch over all the enum values of an enum class is
-    # not sufficient to cover all control paths. Turn off this warning so that
-    # the respective clang warning tells us where to add switch cases
-    # (otherwise we have to add default: DAWN_UNREACHABLE() that silences clang too)
+    # MSVC things that a switch over all the enum values of an enum class is not
+    # sufficient to cover all control paths. Turn off this warning so that the
+    # respective clang warning tells us where to add switch cases (otherwise we
+    # have to add default: DAWN_UNREACHABLE() that silences clang too)
     cflags += [ "/wd4715" ]
 
     # MSVC needs a flag to enable a standard-compliant preprocessor.
@@ -281,23 +128,8 @@ config("internal_config") {
 # Common dawn library
 ###############################################################################
 
-dawn_generator("dawn_version_gen") {
-  script = "${dawn_root}/generator/dawn_version_generator.py"
-  args = [
-    "--dawn-dir",
-    rebase_path("${dawn_root}", root_build_dir),
-  ]
-
-  # We can use the explicit version file if it is generated instead of relying
-  # on the existence of git.
-  if (dawn_version_file != "") {
-    args += [
-      "--version-file",
-      rebase_path(dawn_version_file, root_build_dir),
-    ]
-  }
-
-  outputs = [ "src/dawn/common/Version_autogen.h" ]
+group("dawn_version_gen") {
+  public_deps = [ "${dawn_root}/src/dawn:dawn_version_gen" ]
 }
 
 dawn_generator("dawn_gpu_info_gen") {
@@ -309,6 +141,11 @@ dawn_generator("dawn_gpu_info_gen") {
   outputs = [
     "src/dawn/common/GPUInfo_autogen.h",
     "src/dawn/common/GPUInfo_autogen.cpp",
+  ]
+  inputs = [
+    "${dawn_root}/src/dawn/gpu_info.json",
+    "${dawn_root}/generator/templates/dawn/common/GPUInfo.h",
+    "${dawn_root}/generator/templates/dawn/common/GPUInfo.cpp",
   ]
 }
 
@@ -322,9 +159,6 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "Algebra.h",
       "AlignedAlloc.cpp",
       "AlignedAlloc.h",
-      "Alloc.h",
-      "Assert.cpp",
-      "Assert.h",
       "Atomic.h",
       "BitSetRangeIterator.h",
       "ColorSpace.h",
@@ -346,19 +180,16 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "IOKitRef.h",
       "LRUCache.h",
       "LinkedList.h",
-      "Log.cpp",
-      "Log.h",
       "MatchVariant.h",
       "Math.cpp",
       "Math.h",
+      "MemoryBlockAllocator.cpp",
+      "MemoryBlockAllocator.h",
       "Mutex.h",
       "MutexProtected.h",
       "NSRef.h",
-      "NonCopyable.h",
-      "NonMovable.h",
       "Numeric.h",
       "PlacementAllocated.h",
-      "Platform.h",
       "Preprocessor.h",
       "Range.h",
       "Ref.h",
@@ -378,14 +209,15 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "StackAllocated.h",
       "StringViewUtils.cpp",
       "StringViewUtils.h",
+      "Strings.h",
+      "SystemHandle.cpp",
+      "SystemHandle.h",
       "SystemUtils.cpp",
       "SystemUtils.h",
       "ThreadLocal.cpp",
       "ThreadLocal.h",
       "Time.h",
       "TypeTraits.h",
-      "TypedInteger.h",
-      "UnderlyingType.h",
       "WGSLFeatureMapping.h",
       "WeakRef.h",
       "WeakRefSupport.cpp",
@@ -393,7 +225,6 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "egl_platform.h",
       "ityp_array.h",
       "ityp_bitset.h",
-      "ityp_span.h",
       "ityp_stack_vec.h",
       "ityp_vector.h",
       "vulkan_platform.h",
@@ -413,7 +244,7 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
     public_deps = [
       ":dawn_gpu_info_gen",
       ":dawn_version_gen",
-      "${dawn_root}:abseil",
+      "${dawn_abseil_dir}:absl",
       "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
       "${dawn_root}/src/utils",
     ]
@@ -439,11 +270,16 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       sources += [
         "WindowsUtils.cpp",
         "WindowsUtils.h",
-        "windows_with_undefs.h",
       ]
     }
     if (dawn_enable_vulkan) {
       public_deps += [ "${dawn_vulkan_headers_dir}:vulkan_headers" ]
+    }
+    if (dawn_enable_vulkan && (is_chromeos || is_linux)) {
+      sources += [
+        "DRMUtils.cpp",
+        "DRMUtils.h",
+      ]
     }
     if (is_android) {
       libs = [ "log" ]

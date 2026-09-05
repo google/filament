@@ -31,8 +31,8 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/native/Device.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {
 
@@ -46,7 +46,7 @@ class Device : public DeviceBase {
            Ref<DeviceBase::DeviceLostEvent>&& lostEvent);
     ~Device() override;
 
-    const PlatformFunctions* GetFunctions() const;
+    const PlatformFunctions* GetFunctionsBase() const;
     ComPtr<IDXGIFactory4> GetFactory() const;
 
     virtual void DisposeKeyedMutex(ComPtr<IDXGIKeyedMutex> dxgiKeyedMutex) = 0;

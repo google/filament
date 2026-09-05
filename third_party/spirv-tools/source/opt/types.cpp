@@ -303,6 +303,78 @@ uint64_t Type::NumberOfComponents() const {
   }
 }
 
+std::optional<uint32_t> Type::GetByteOffset(
+    const std::vector<uint32_t>& access_chain) const {
+  uint32_t offset = 0;
+  const Type* current_type = this;
+  for (uint32_t index : access_chain) {
+    if (const Struct* struct_type = current_type->AsStruct()) {
+      std::optional<uint32_t> member_offset;
+      for (const auto& deco : struct_type->element_decorations()) {
+        if (deco.first != index) continue;
+        for (const auto& inst : deco.second) {
+          if (inst[0] == uint32_t(spv::Decoration::Offset)) {
+            member_offset = inst[1];
+            break;
+          }
+        }
+      }
+      if (!member_offset) return {};
+      offset += *member_offset;
+      current_type = struct_type->element_types()[index];
+    } else if (const Array* array_type = current_type->AsArray()) {
+      std::optional<uint32_t> array_stride;
+      for (const auto& deco : array_type->decorations()) {
+        if (deco[0] == uint32_t(spv::Decoration::ArrayStride)) {
+          array_stride = deco[1];
+          break;
+        }
+      }
+      if (!array_stride) return {};
+      offset += *array_stride * index;
+      current_type = array_type->element_type();
+    } else if (const RuntimeArray* runtime_array_type =
+                   current_type->AsRuntimeArray()) {
+      std::optional<uint32_t> array_stride;
+      for (const auto& deco : runtime_array_type->decorations()) {
+        if (deco[0] == uint32_t(spv::Decoration::ArrayStride)) {
+          array_stride = deco[1];
+          break;
+        }
+      }
+      if (!array_stride) return {};
+      offset += *array_stride * index;
+      current_type = runtime_array_type->element_type();
+    } else if (const Matrix* matrix_type = current_type->AsMatrix()) {
+      std::optional<uint32_t> matrix_stride;
+      for (const auto& deco : matrix_type->decorations()) {
+        if (deco[0] == uint32_t(spv::Decoration::MatrixStride)) {
+          matrix_stride = deco[1];
+          break;
+        }
+      }
+      if (!matrix_stride) return {};
+      offset += *matrix_stride * index;
+      current_type = matrix_type->element_type();
+    } else if (const Vector* vector_type = current_type->AsVector()) {
+      const Type* component_type = vector_type->element_type();
+      uint32_t component_size = 0;
+      if (component_type->AsInteger()) {
+        component_size = component_type->AsInteger()->width() / 8;
+      } else if (component_type->AsFloat()) {
+        component_size = component_type->AsFloat()->width() / 8;
+      } else {
+        return {};
+      }
+      offset += component_size * index;
+      current_type = component_type;
+    } else {
+      return {};
+    }
+  }
+  return offset;
+}
+
 bool Integer::IsSameImpl(const Type* that, IsSameCache*) const {
   const Integer* it = that->AsInteger();
   return it && width_ == it->width_ && signed_ == it->signed_ &&
@@ -328,6 +400,18 @@ bool Float::IsSameImpl(const Type* that, IsSameCache*) const {
 std::string Float::str() const {
   std::ostringstream oss;
   switch (encoding_) {
+    case spv::FPEncoding::Float4E2M1EXT:
+      assert(width_ == 4);
+      oss << "fp4e2m1";
+      break;
+    case spv::FPEncoding::Float6E2M3EXT:
+      assert(width_ == 6);
+      oss << "fp6e2m3";
+      break;
+    case spv::FPEncoding::Float6E3M2EXT:
+      assert(width_ == 6);
+      oss << "fp6e3m2";
+      break;
     case spv::FPEncoding::BFloat16KHR:
       assert(width_ == 16);
       oss << "bfloat16";
@@ -339,6 +423,14 @@ std::string Float::str() const {
     case spv::FPEncoding::Float8E5M2EXT:
       assert(width_ == 8);
       oss << "fp8e5m2";
+      break;
+    case spv::FPEncoding::Float8UnsignedE8M0EXT:
+      assert(width_ == 8);
+      oss << "fp8e8m0";
+      break;
+    case spv::FPEncoding::MXInt8EXT:
+      assert(width_ == 8);
+      oss << "mxint8";
       break;
     default:
       oss << "float" << width_;

@@ -25,25 +25,28 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
 
 #include <algorithm>
 #include <string>
 #include <utility>
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/QueueWGPU.h"
-#include "dawn/native/webgpu/Serialization.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/QueueWGPU.h"
+#include "src/dawn/native/webgpu/Serialization.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::webgpu {
 
 // static
 ResultOrError<Ref<Buffer>> Buffer::Create(Device* device,
                                           const UnpackedPtr<BufferDescriptor>& descriptor) {
-    auto actualUsage = ComputeInternalBufferUsages(device, descriptor->usage, descriptor->size);
+    auto actualUsage = ComputeInternalBufferUsages(device, descriptor->usage,
+                                                   checked_cast<size_t>(descriptor->size));
 
     // Make the inner buffer copyable for readback if possible.
     if (!(actualUsage & wgpu::BufferUsage::MapRead)) {
@@ -98,11 +101,24 @@ bool Buffer::IsCPUWritableAtCreation() const {
 }
 
 MaybeError Buffer::MapAtCreationImpl() {
-    mMappedData = ToBackend(GetDevice())->wgpu->bufferGetMappedRange(mInnerHandle, 0, GetSize());
+    mMappedDataOffsetInBuffer = 0;
+    void* mappedPointer =
+        ToBackend(GetDevice())
+            ->wgpu->bufferGetMappedRange(mInnerHandle, 0, checked_cast<size_t>(GetAllocatedSize()));
+
+    DAWN_CHECK(checked_cast<size_t>(GetAllocatedSize()) != WGPU_WHOLE_MAP_SIZE);
+    // SAFETY: A non-null pointer returned by GetMappedRange points at `size` valid bytes of data
+    // (assuming `size` is not `WGPU_WHOLE_MAP_SIZE`).
+    mMappedData = DAWN_UNSAFE_BUFFERS(
+        {static_cast<std::byte*>(mappedPointer), checked_cast<size_t>(GetAllocatedSize())});
     return {};
 }
 
 MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) {
+    // We only map the range requested by the MapAsync call so mMappedData will correspond to an
+    // interval in the buffer that can be at an offset from the start.
+    mMappedDataOffsetInBuffer = offset;
+
     auto deviceGuard = GetDevice()->GetGuard();
 
     struct MapAsyncResult {
@@ -134,18 +150,22 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
         return DAWN_INTERNAL_ERROR(mapAsyncResult.message);
     }
 
-    // The frontend asks that the pointer returned by GetMappedPointer is from the start of
-    // the resource but WGPU gives us the pointer at offset. Remove the offset.
+    // The frontend requires a non-const span but will never write to it when using it for MapRead
+    // so cast away the constness.
+    void* mappedPointer = nullptr;
     if (bool{mode & wgpu::MapMode::Write}) {
-        mMappedData =
-            static_cast<uint8_t*>(wgpu.bufferGetMappedRange(mInnerHandle, offset, size)) - offset;
+        mappedPointer = wgpu.bufferGetMappedRange(mInnerHandle, offset, size);
     } else if (bool{mode & wgpu::MapMode::Read}) {
-        mMappedData = static_cast<uint8_t*>(const_cast<void*>(
-                          wgpu.bufferGetConstMappedRange(mInnerHandle, offset, size))) -
-                      offset;
+        mappedPointer =
+            const_cast<void*>(wgpu.bufferGetConstMappedRange(mInnerHandle, offset, size));
     } else {
         DAWN_UNREACHABLE();
     }
+
+    DAWN_CHECK(size != WGPU_WHOLE_MAP_SIZE);
+    // SAFETY: A non-null pointer returned by GetMappedRange points at `size` valid bytes of data
+    // (assuming `size` is not `WGPU_WHOLE_MAP_SIZE`).
+    mMappedData = DAWN_UNSAFE_BUFFERS({static_cast<std::byte*>(mappedPointer), size});
     return {};
 }
 
@@ -153,9 +173,9 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
     return {};
 }
 
-void* Buffer::GetMappedPointerImpl() {
-    // The mapping offset has already been removed.
-    return mMappedData;
+Span<std::byte> Buffer::GetMappedRangeImpl(size_t offset, size_t size) {
+    DAWN_ASSERT(offset >= mMappedDataOffsetInBuffer);
+    return mMappedData.subspan(offset - mMappedDataOffsetInBuffer, size);
 }
 
 void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
@@ -172,7 +192,7 @@ void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
     if (mInnerHandle) {
         ToBackend(GetDevice())->wgpu->bufferUnmap(mInnerHandle);
     }
-    mMappedData = nullptr;
+    mMappedData = {};
 }
 
 void Buffer::DestroyImpl(DestroyReason reason) {
@@ -283,8 +303,8 @@ MaybeError Buffer::AddContentToCapture(CaptureContext& captureContext) {
 
         // We read this back synchronously. I'm not sure we could do much more.
         WGPUFutureWaitInfo waitInfo = {};
-        waitInfo.future =
-            wgpu.bufferMapAsync(copyBuffer, WGPUMapMode_Read, 0, copySize, innerCallbackInfo);
+        waitInfo.future = wgpu.bufferMapAsync(copyBuffer, WGPUMapMode_Read, 0,
+                                              checked_cast<size_t>(copySize), innerCallbackInfo);
         wgpu.instanceWaitAny(device->GetInnerInstance(), 1, &waitInfo, UINT64_MAX);
 
         DAWN_ASSERT(mapAsyncResult.status == WGPUMapAsyncStatus_Success);
@@ -293,8 +313,9 @@ MaybeError Buffer::AddContentToCapture(CaptureContext& captureContext) {
             return DAWN_INTERNAL_ERROR(mapAsyncResult.message);
         }
 
-        const void* data = wgpu.bufferGetConstMappedRange(copyBuffer, 0, copySize);
-        writer.WriteContentBytes(data, copySize);
+        const void* data =
+            wgpu.bufferGetConstMappedRange(copyBuffer, 0, checked_cast<size_t>(copySize));
+        writer.WriteContentBytes(data, checked_cast<size_t>(copySize));
         wgpu.bufferUnmap(copyBuffer);
     }
 

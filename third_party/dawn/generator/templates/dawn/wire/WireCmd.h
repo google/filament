@@ -30,10 +30,13 @@
 
 #include <webgpu/webgpu.h>
 
-#include "dawn/wire/BufferConsumer.h"
+#include <optional>
+
 #include "dawn/wire/ObjectType_autogen.h"
-#include "dawn/wire/ObjectHandle.h"
-#include "dawn/wire/WireResult.h"
+#include "src/dawn/wire/BufferConsumer.h"
+#include "src/dawn/wire/ObjectHandle.h"
+#include "src/dawn/wire/WireResult.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire {
 
@@ -41,13 +44,15 @@ namespace dawn::wire {
     // nullptr is treated as an error.
     class DeserializeAllocator {
         public:
-            virtual void* GetSpace(size_t size) = 0;
+            virtual ~DeserializeAllocator() = default;
+            virtual std::optional<Span<std::byte>> TryGetSpace(size_t size) = 0;
     };
 
     // Interface to convert an ID to a server object, if possible.
     // Methods return FatalError if the ID is for a non-existent object and Success otherwise.
     class ObjectIdResolver {
         public:
+            virtual ~ObjectIdResolver() = default;
             {% for type in by_category["object"] %}
                 virtual WireResult GetFromId(ObjectId id, {{as_cType(type.name)}}* out) const = 0;
                 virtual WireResult GetOptionalFromId(ObjectId id, {{as_cType(type.name)}}* out) const = 0;
@@ -57,9 +62,10 @@ namespace dawn::wire {
     // Interface to convert a client object to its ID for the wiring.
     class ObjectIdProvider {
         public:
+            virtual ~ObjectIdProvider() = default;
             {% for type in by_category["object"] %}
-                virtual WireResult GetId({{as_cType(type.name)}} object, ObjectId* out) const = 0;
-                virtual WireResult GetOptionalId({{as_cType(type.name)}} object, ObjectId* out) const = 0;
+                virtual WireResult GetId({{as_cType(type.name)}} object, volatile ObjectId* out) const = 0;
+                virtual WireResult GetOptionalId({{as_cType(type.name)}} object, volatile ObjectId* out) const = 0;
             {% endfor %}
     };
 
@@ -82,12 +88,34 @@ namespace dawn::wire {
 
     struct CmdHeader {
         uint64_t commandSize;
+        WireCmd commandId;
+
+        CmdHeader() = default;
+        CmdHeader(const CmdHeader&) = default;
+        CmdHeader(CmdHeader&&) = default;
+
+        // Volatile constructors and assignment operators are never expected to be called at
+        // runtime when handling wire commands. They exist solely to satisfy C++20 iterator and
+        // std::span requirements (e.g. std::indirectly_readable) when constructing views over
+        // volatile shared memory buffers.
+        [[noreturn]] CmdHeader(const volatile CmdHeader& other) {
+            DAWN_UNREACHABLE();
+        }
+        [[noreturn]] CmdHeader(volatile CmdHeader&& other) {
+            DAWN_UNREACHABLE();
+        }
+        [[noreturn]] CmdHeader(const volatile CmdHeader&& other) {
+            DAWN_UNREACHABLE();
+        }
+        [[noreturn]] CmdHeader& operator=(const volatile CmdHeader& other) {
+            DAWN_UNREACHABLE();
+        }
     };
 
 {% macro write_command_struct(command, is_return_command) %}
     {% set Return = "Return" if is_return_command else "" %}
-    {% set Cmd = command.name.CamelCase() + "Cmd" %}
-    struct {{Return}}{{Cmd}} {
+    {% set CmdName = Return + command.name.CamelCase() + "Cmd" %}
+    struct {{CmdName}} {
         //* From a filled structure, compute how much size will be used in the serialization buffer.
         size_t GetRequiredSize() const;
 
@@ -115,7 +143,22 @@ namespace dawn::wire {
         {% endif %}
 
         {% for member in command.members %}
-            {{as_annotated_cType(member)}};
+            {% if member.is_length %}
+                //* Skip as it's included in the span just below.
+            {% elif member.length and member.constant_length != 1 %}
+                {% set length = "dawn::detail::DynamicExtent<size_t>" %}
+                {% if member.length == "constant" %}
+                    {% set length = member.constant_length %}
+                {% endif %}
+                {% set element_type = "std::remove_pointer_t<" + decorate(as_cType(member.type.name, True), member) + ">" %}
+                {% if is_wire_data_only(member) %}
+                    //* If the member is data only, we do not copy the data, so it will be volatile.
+                    {% set element_type = "volatile " + element_type %}
+                {% endif %}
+                ityp::span<size_t, {{element_type}}, {{length}}> {{as_varName(member.name)}};
+            {% else %}
+                {{as_annotated_cType(member)}};
+            {% endif %}
         {% endfor %}
     };
 {% endmacro %}

@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)
 ################################################################################
 # Target:    tint_cmd_info_cmd
 # Kind:      cmd
+# Condition: TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER
 ################################################################################
 tint_add_target(tint_cmd_info_cmd cmd
   cmd/info/main.cc
@@ -53,7 +55,6 @@ tint_target_add_dependencies(tint_cmd_info_cmd cmd
   tint_lang_wgsl_inspector
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
-  tint_lang_wgsl_writer_common
   tint_utils
   tint_utils_command
   tint_utils_containers
@@ -62,6 +63,7 @@ tint_target_add_dependencies(tint_cmd_info_cmd cmd
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -77,4 +79,12 @@ if(TINT_BUILD_SPV_READER)
   )
 endif(TINT_BUILD_SPV_READER)
 
+if(TINT_BUILD_WGSL_WRITER)
+  tint_target_add_dependencies(tint_cmd_info_cmd cmd
+    tint_lang_wgsl_writer_common
+  )
+endif(TINT_BUILD_WGSL_WRITER)
+
 tint_target_set_output_name(tint_cmd_info_cmd cmd "tint_info")
+
+endif(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)

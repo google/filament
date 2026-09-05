@@ -31,10 +31,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "dawn/native/CacheRequest.h"
-#include "dawn/native/Limits.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/ShaderModule.h"
+#include "src/dawn/native/CacheRequest.h"
+#include "src/dawn/native/Limits.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/ShaderModule.h"
 
 namespace dawn::native {
 

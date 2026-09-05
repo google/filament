@@ -29,11 +29,11 @@
 #include <cstdlib>
 #include <vector>
 
-#include "dawn/samples/SampleUtils.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/Timer.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/samples/SampleUtils.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/Timer.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 constexpr size_t kNumTriangles = 10000;
 

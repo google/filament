@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/SerialStorage.h"
+#include "src/dawn/common/SerialStorage.h"
 
 namespace dawn {
 
@@ -66,7 +66,7 @@ class SerialQueue : public SerialStorage<SerialQueue<Serial, Value>> {
 
 template <typename Serial, typename Value>
 void SerialQueue<Serial, Value>::Enqueue(const Value& value, Serial serial) {
-    DAWN_ASSERT(this->Empty() || this->mStorage.back().first <= serial);
+    DAWN_RELEASE_ASSUME(this->Empty() || this->mStorage.back().first <= serial);
 
     if (this->Empty() || this->mStorage.back().first < serial) {
         this->mStorage.emplace_back(serial, std::vector<Value>{});
@@ -76,7 +76,7 @@ void SerialQueue<Serial, Value>::Enqueue(const Value& value, Serial serial) {
 
 template <typename Serial, typename Value>
 void SerialQueue<Serial, Value>::Enqueue(Value&& value, Serial serial) {
-    DAWN_ASSERT(this->Empty() || this->mStorage.back().first <= serial);
+    DAWN_RELEASE_ASSUME(this->Empty() || this->mStorage.back().first <= serial);
 
     if (this->Empty() || this->mStorage.back().first < serial) {
         this->mStorage.emplace_back(serial, std::vector<Value>{});
@@ -86,15 +86,15 @@ void SerialQueue<Serial, Value>::Enqueue(Value&& value, Serial serial) {
 
 template <typename Serial, typename Value>
 void SerialQueue<Serial, Value>::Enqueue(const std::vector<Value>& values, Serial serial) {
-    DAWN_ASSERT(values.size() > 0);
-    DAWN_ASSERT(this->Empty() || this->mStorage.back().first <= serial);
+    DAWN_RELEASE_ASSUME(values.size() > 0);
+    DAWN_RELEASE_ASSUME(this->Empty() || this->mStorage.back().first <= serial);
     this->mStorage.emplace_back(serial, values);
 }
 
 template <typename Serial, typename Value>
 void SerialQueue<Serial, Value>::Enqueue(std::vector<Value>&& values, Serial serial) {
-    DAWN_ASSERT(values.size() > 0);
-    DAWN_ASSERT(this->Empty() || this->mStorage.back().first <= serial);
+    DAWN_RELEASE_ASSUME(values.size() > 0);
+    DAWN_RELEASE_ASSUME(this->Empty() || this->mStorage.back().first <= serial);
     this->mStorage.emplace_back(serial, std::move(values));
 }
 

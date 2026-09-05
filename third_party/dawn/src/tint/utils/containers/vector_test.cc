@@ -36,20 +36,21 @@
 #include "src/tint/utils/memory/bitcast.h"
 #include "src/tint/utils/text/string_stream.h"
 
-// MSVC claims there's unreachable code in some of the EXPECT_DEATH cases, but scoping the
+// MSVC claims there's unreachable code in some of the death test cases, but scoping the
 // DISABLE_WARNING to the test is not sufficient to suppress the warning.
 TINT_BEGIN_DISABLE_WARNING(UNREACHABLE_CODE);
 // Some of these tests are inspecting the underlying pointers being used by iterators, so there is
 // no simple way to avoid unsafe buffer usage warnings.
 TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
-namespace tint {
-namespace {
+namespace tint::test {
 
 class C0 : public Castable<C0> {};
 class C1 : public Castable<C1, C0> {};
 class C2a : public Castable<C2a, C1> {};
 class C2b : public Castable<C2b, C1> {};
+
+namespace {
 
 /// @returns true if the address of el is within the memory of the vector vec.
 template <typename T, size_t N, typename E>
@@ -2456,12 +2457,12 @@ TEST(TintVectorRefDeathTest, AssertOOBs) {
 }
 
 }  // namespace
-}  // namespace tint
+}  // namespace tint::test
 
-TINT_INSTANTIATE_TYPEINFO(tint::C0);
-TINT_INSTANTIATE_TYPEINFO(tint::C1);
-TINT_INSTANTIATE_TYPEINFO(tint::C2a);
-TINT_INSTANTIATE_TYPEINFO(tint::C2b);
+TINT_INSTANTIATE_TYPEINFO(tint::test::C0);
+TINT_INSTANTIATE_TYPEINFO(tint::test::C1);
+TINT_INSTANTIATE_TYPEINFO(tint::test::C2a);
+TINT_INSTANTIATE_TYPEINFO(tint::test::C2b);
 
 TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 TINT_END_DISABLE_WARNING(UNREACHABLE_CODE);

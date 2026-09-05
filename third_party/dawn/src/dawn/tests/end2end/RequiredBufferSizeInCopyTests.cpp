@@ -27,10 +27,10 @@
 
 #include <vector>
 
-#include "dawn/common/Platform.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/platform.h"
 
 namespace dawn {
 namespace {
@@ -95,6 +95,12 @@ DAWN_TEST_PARAM_STRUCT(RequiredBufferSizeInCopyTestsParams,
 class RequiredBufferSizeInCopyTests
     : public DawnTestWithParams<RequiredBufferSizeInCopyTestsParams> {
   protected:
+    void SetUp() override {
+        DawnTestWithParams<RequiredBufferSizeInCopyTestsParams>::SetUp();
+        // TODO(crbug.com/523272950): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsOpenGLES());
+    }
+
     void DoTest(const uint64_t bufferSize,
                 const wgpu::Extent3D copySize,
                 const uint64_t rowsPerImage) {
@@ -125,7 +131,7 @@ class RequiredBufferSizeInCopyTests
         uint64_t imageSize = kBytesPerRow * rowsPerImage;
         DAWN_ASSERT(bufferSize >= (imageSize * (copySize.depthOrArrayLayers - 1) + kBytesPerBlock));
         uint32_t numOfImageElements = imageSize / kBytesPerBlock;
-        for (uint32_t i = 0; i < copySize.depthOrArrayLayers; ++i) {
+        for (size_t i = 0; i < copySize.depthOrArrayLayers; ++i) {
             data[i * numOfImageElements] = 0x80808080;
             expectedBufferData[i * numOfImageElements] = 0x80808080;
             expectedTextureData[i] = 0x80808080;
@@ -189,7 +195,8 @@ TEST_P(RequiredBufferSizeInCopyTests, BufferSizeOnBoundary) {
         const uint64_t rowsPerImage = extraRowsPerImage + copySize.height;
 
         uint64_t size = kOffset + kBytesPerRow * rowsPerImage * (copySize.depthOrArrayLayers - 1) +
-                        kBytesPerRow * (rowsPerImage - 1) + kBytesPerBlock * copySize.width;
+                        kBytesPerRow * (rowsPerImage - 1) +
+                        static_cast<uint64_t>(kBytesPerBlock) * copySize.width;
         DoTest(size, copySize, rowsPerImage);
 
         size -= kBytesPerBlock;

@@ -25,18 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/white_box/SharedTextureMemoryTests.h"
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
+#include "src/dawn/tests/white_box/SharedTextureMemoryTests.h"
 
 #include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 using testing::SizedStringMatches;
 
@@ -51,6 +56,32 @@ struct BackendBeginStateVk : public SharedTextureMemoryTestBackend::BackendBegin
 struct BackendEndStateVk : public SharedTextureMemoryTestBackend::BackendEndState {
     wgpu::SharedTextureMemoryVkImageLayoutEndState imageLayouts{};
 };
+
+// TODO(crbug.com/535646877): Move this utility to shared header and use in more places
+bool HasAlphaChannel(wgpu::TextureFormat format) {
+    switch (format) {
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::RGBA8UnormSrgb:
+        case wgpu::TextureFormat::BGRA8Unorm:
+        case wgpu::TextureFormat::BGRA8UnormSrgb:
+        case wgpu::TextureFormat::RGBA8Snorm:
+        case wgpu::TextureFormat::RGBA8Uint:
+        case wgpu::TextureFormat::RGBA8Sint:
+        case wgpu::TextureFormat::RGBA16Unorm:
+        case wgpu::TextureFormat::RGBA16Snorm:
+        case wgpu::TextureFormat::RGBA16Uint:
+        case wgpu::TextureFormat::RGBA16Sint:
+        case wgpu::TextureFormat::RGBA16Float:
+        case wgpu::TextureFormat::RGBA32Uint:
+        case wgpu::TextureFormat::RGBA32Sint:
+        case wgpu::TextureFormat::RGBA32Float:
+        case wgpu::TextureFormat::RGB10A2Unorm:
+        case wgpu::TextureFormat::RGB10A2Uint:
+            return true;
+        default:
+            return false;
+    }
+}
 
 }  // anonymous namespace
 
@@ -107,6 +138,8 @@ std::vector<wgpu::FeatureName> SharedTextureMemoryTests::GetRequiredFeatures() {
         wgpu::FeatureName::TextureFormatsTier1,
         wgpu::FeatureName::BGRA8UnormStorage,
         wgpu::FeatureName::FlexibleTextureViews,
+        wgpu::FeatureName::MSAARenderToSingleSampled,
+        wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable,
     };
     for (auto feature : kOptionalFeatures) {
         if (SupportsFeatures({feature})) {
@@ -799,6 +832,142 @@ void SharedTextureMemoryTests::CheckFourColors(wgpu::Device& deviceObj,
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(SharedTextureMemoryNoFeatureTests);
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(SharedTextureMemoryTests);
 
+wgpu::ResourceTable SharedTextureMemoryTests::MakeResourceTable(
+    wgpu::Device& deviceObj,
+    uint32_t size,
+    std::vector<std::pair<uint32_t, wgpu::BindingResource>> resources) {
+    wgpu::ResourceTableDescriptor desc;
+    desc.size = size;
+    wgpu::ResourceTable table = deviceObj.CreateResourceTable(&desc);
+
+    for (auto& [slot, resource] : resources) {
+        EXPECT_EQ(wgpu::Status::Success, table.Update(slot, &resource));
+    }
+
+    return table;
+}
+
+wgpu::ResourceTable SharedTextureMemoryTests::MakeResourceTable(
+    uint32_t size,
+    std::vector<std::pair<uint32_t, wgpu::BindingResource>> resources) {
+    return MakeResourceTable(device, size, resources);
+}
+
+// Make a command buffer that samples the contents of the input texture via a ResourceTable into an
+// RGBA8Unorm texture.
+std::pair<wgpu::CommandBuffer, wgpu::Texture>
+SharedTextureMemoryTests::MakeCheckBySamplingResourceTableCommandBuffer(wgpu::Device& deviceObj,
+                                                                        wgpu::ResourceTable table,
+                                                                        wgpu::Texture& texture) {
+    wgpu::ShaderModule module = utils::CreateShaderModule(deviceObj, R"(
+      enable chromium_experimental_resource_table;
+
+      @vertex fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4f {
+          let pos = array(
+            vec2( 1.0,  1.0),
+            vec2( 1.0, -1.0),
+            vec2(-1.0, -1.0),
+            vec2( 1.0,  1.0),
+            vec2(-1.0, -1.0),
+            vec2(-1.0,  1.0),
+          );
+          return vec4f(pos[VertexIndex], 0.0, 1.0);
+      }
+
+      @fragment fn frag_main(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4f {
+        let t = getResource<texture_2d<f32>>(0);
+        return textureLoad(t, vec2u(coord_in.xy), 0);
+      }
+    )");
+
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    textureDesc.dimension = wgpu::TextureDimension::e2D;
+    textureDesc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    textureDesc.size = {texture.GetWidth(), texture.GetHeight(), 1};
+    textureDesc.label = "intermediate check texture";
+
+    wgpu::Texture colorTarget = deviceObj.CreateTexture(&textureDesc);
+
+    utils::ComboRenderPipelineDescriptor pipelineDesc;
+    pipelineDesc.vertex.module = module;
+    pipelineDesc.cFragment.module = module;
+    pipelineDesc.cTargets[0].format = colorTarget.GetFormat();
+
+    wgpu::RenderPipeline pipeline = deviceObj.CreateRenderPipeline(&pipelineDesc);
+
+    wgpu::CommandEncoder encoder = deviceObj.CreateCommandEncoder();
+    utils::ComboRenderPassDescriptor passDescriptor({colorTarget.CreateView()});
+    passDescriptor.cColorAttachments[0].storeOp = wgpu::StoreOp::Store;
+
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&passDescriptor);
+    pass.SetResourceTable(table);
+    pass.SetPipeline(pipeline);
+    pass.Draw(6);
+    pass.End();
+    return {encoder.Finish(), colorTarget};
+}
+
+wgpu::TextureView SharedTextureMemoryTests::CreateViewForTable(const wgpu::Texture& tex) {
+    wgpu::TextureViewDescriptor desc;
+    desc.usage = wgpu::TextureUsage::TextureBinding;
+    return tex.CreateView(&desc);
+}
+
+// Test that the `table` has resources of `wgslType` in the `expected` slots.
+void SharedTextureMemoryTests::TestTableHasResource(wgpu::ResourceTable table,
+                                                    std::vector<bool> expected,
+                                                    std::string wgslType) {
+    ASSERT_EQ(table.GetSize(), expected.size());
+
+    std::string shader = R"(
+        enable chromium_experimental_resource_table;
+
+        @group(0) @binding(0) var<storage, read_write> results : array<u32>;
+        var<immediate> resourceCount : u32;
+        @compute @workgroup_size(1) fn main() {
+            for (var i = 0u; i < resourceCount; i++) {
+                results[i] = u32(hasResource<)" +
+                         wgslType + R"(>(i));
+            }
+        }
+    )";
+
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, shader.c_str());
+
+    wgpu::ComputePipelineDescriptor cpDesc;
+    cpDesc.compute.module = module;
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&cpDesc);
+
+    wgpu::BufferDescriptor bufDesc;
+    bufDesc.size = expected.size() * sizeof(uint32_t);
+    bufDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer resultBuffer = device.CreateBuffer(&bufDesc);
+
+    wgpu::BindGroup bindGroup =
+        utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, resultBuffer}});
+
+    uint32_t count = static_cast<uint32_t>(expected.size());
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetResourceTable(table);
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bindGroup);
+    pass.SetImmediates(0, &count, sizeof(count));
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    std::vector<uint32_t> expectedU32(expected.size());
+    for (size_t i = 0; i < expected.size(); i++) {
+        expectedU32[i] = expected[i] ? 1 : 0;
+    }
+
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedU32.data(), resultBuffer, 0, expected.size());
+}
+
 namespace {
 
 using testing::HasSubstr;
@@ -834,12 +1003,14 @@ TEST_P(SharedTextureMemoryNoFeatureTests, CreationWithoutFeature) {
         beginDesc.concurrentRead = false;
         beginDesc.initialized = true;
 
-        ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(texture, &beginDesc)),
-                                HasSubstr("is invalid"));
+        ASSERT_DEVICE_ERROR_MSG(
+            EXPECT_NE(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success),
+            HasSubstr("is invalid"));
 
         wgpu::SharedTextureMemoryEndAccessState endState = {};
-        ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.EndAccess(texture, &endState)),
-                                HasSubstr("is invalid"));
+        ASSERT_DEVICE_ERROR_MSG(
+            EXPECT_NE(memory.EndAccess(texture, &endState), wgpu::Status::Success),
+            HasSubstr("is invalid"));
     }
 }
 
@@ -888,7 +1059,7 @@ TEST_P(SharedTextureMemoryTests, ImportSharedTextureMemoryDeviceDestroyed) {
     beginDesc.concurrentRead = false;
     beginDesc.initialized = true;
     // That the begin access does not succeed since the device is destroyed.
-    EXPECT_FALSE(memory.BeginAccess(memory.CreateTexture(), &beginDesc));
+    EXPECT_NE(memory.BeginAccess(memory.CreateTexture(), &beginDesc), wgpu::Status::Success);
 }
 
 // Test that SharedTextureMemory::IsDeviceLost() returns the expected value before and
@@ -925,7 +1096,7 @@ TEST_P(SharedTextureMemoryTests, ImportSharedFenceDeviceDestroyed) {
     beginDesc.concurrentRead = false;
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
-    EXPECT_TRUE(memory.BeginAccess(texture, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success);
 
     // Use the texture so there is a fence to export on end access.
     wgpu::SharedTextureMemoryProperties properties;
@@ -948,7 +1119,7 @@ TEST_P(SharedTextureMemoryTests, ImportSharedFenceDeviceDestroyed) {
     // End access to export a fence.
     wgpu::SharedTextureMemoryEndAccessState endState = {};
     auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
-    EXPECT_TRUE(memory.EndAccess(texture, &endState));
+    EXPECT_EQ(memory.EndAccess(texture, &endState), wgpu::Status::Success);
 
     // Destroy the device.
     device.Destroy();
@@ -960,13 +1131,14 @@ TEST_P(SharedTextureMemoryTests, ImportSharedFenceDeviceDestroyed) {
     }
     beginDesc.fenceCount = endState.fenceCount;
     beginDesc.fences = sharedFences.data();
+    beginDesc.signaledValueCount = endState.signaledValueCount;
     beginDesc.signaledValues = endState.signaledValues;
     beginDesc.concurrentRead = false;
     beginDesc.initialized = endState.initialized;
     backendBeginState = GetParam().mBackend->ChainBeginState(&beginDesc, endState);
 
     // Begin access should fail.
-    EXPECT_FALSE(memory.BeginAccess(texture, &beginDesc));
+    EXPECT_NE(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success);
 }
 
 // Test calling GetProperties with an error memory. The properties are filled with 0/None/Undefined.
@@ -1276,9 +1448,33 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccess) {
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
     // It should be an error to BeginAccess twice in a row.
-    EXPECT_TRUE(memory.BeginAccess(texture, &beginDesc));
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(texture, &beginDesc)),
-                            HasSubstr("is already used to access"));
+    EXPECT_EQ(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success);
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is already used to access"));
+}
+
+// Test that it is an error to call BeginAccess with fenceCount != signaledValueCount
+TEST_P(SharedTextureMemoryTests, FenceCountMatchesSignaledValueCount) {
+    wgpu::SharedTextureMemory memory =
+        GetParam().mBackend->CreateSharedTextureMemory(device, GetParam().mLayerCount);
+    wgpu::Texture texture = memory.CreateTexture();
+
+    uint64_t signalValue = 0;
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc = {};
+    beginDesc.concurrentRead = false;
+    beginDesc.initialized = true;
+    beginDesc.fenceCount = 0;
+    auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
+
+    // Error case, fenceCount != signaledValueCount
+    beginDesc.signaledValueCount = 1;
+    beginDesc.signaledValues = &signalValue;
+    ASSERT_DEVICE_ERROR(EXPECT_NE(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success));
+
+    // Success case, fenceCount == signaledValueCount
+    beginDesc.signaledValueCount = 0;
+    EXPECT_EQ(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success);
 }
 
 // Test that it is an error to call BeginAccess concurrently on a write texture
@@ -1295,9 +1491,10 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesWriteRead) {
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(writeTexture, &beginDesc));
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(readTexture, &beginDesc)),
-                            HasSubstr("is currently accessed for writing"));
+    EXPECT_EQ(memory.BeginAccess(writeTexture, &beginDesc), wgpu::Status::Success);
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(readTexture, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for writing"));
 }
 
 // Test that it is an error to call BeginAccess concurrently on a write texture
@@ -1317,10 +1514,11 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesWriteConcurren
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(writeTexture, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(writeTexture, &beginDesc), wgpu::Status::Success);
     beginDesc.concurrentRead = true;
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(readTexture, &beginDesc)),
-                            HasSubstr("is currently accessed for writing"));
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(readTexture, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for writing"));
 }
 
 // Test that it is an error to call BeginAccess concurrently on a read texture
@@ -1337,9 +1535,10 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesReadWrite) {
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(readTexture, &beginDesc));
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(writeTexture, &beginDesc)),
-                            HasSubstr("is currently accessed for exclusive reading"));
+    EXPECT_EQ(memory.BeginAccess(readTexture, &beginDesc), wgpu::Status::Success);
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(writeTexture, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for exclusive reading"));
 }
 
 // Test that it is an error to call BeginAccess concurrently on a read texture
@@ -1359,10 +1558,11 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesConcurrentRead
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(readTexture, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(readTexture, &beginDesc), wgpu::Status::Success);
     beginDesc.concurrentRead = false;
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(writeTexture, &beginDesc)),
-                            HasSubstr("is currently accessed for reading."));
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(writeTexture, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for reading."));
 }
 
 // Test that it is an error to call BeginAccess concurrently on two write textures on a single
@@ -1379,9 +1579,10 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesWriteWrite) {
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(writeTexture1, &beginDesc));
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(writeTexture2, &beginDesc)),
-                            HasSubstr("is currently accessed for writing"));
+    EXPECT_EQ(memory.BeginAccess(writeTexture1, &beginDesc), wgpu::Status::Success);
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(writeTexture2, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for writing"));
 }
 
 // Test that it is valid to call BeginAccess concurrently on two read textures on a single
@@ -1398,9 +1599,10 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesReadRead) {
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(readTexture1, &beginDesc));
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(readTexture2, &beginDesc)),
-                            HasSubstr("is currently accessed for exclusive reading"));
+    EXPECT_EQ(memory.BeginAccess(readTexture1, &beginDesc), wgpu::Status::Success);
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(readTexture2, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for exclusive reading"));
 }
 
 // Test that it is valid to call BeginAccess concurrently on two read textures on a single
@@ -1420,13 +1622,13 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesConcurrentRead
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(readTexture1, &beginDesc));
-    EXPECT_TRUE(memory.BeginAccess(readTexture2, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(readTexture1, &beginDesc), wgpu::Status::Success);
+    EXPECT_EQ(memory.BeginAccess(readTexture2, &beginDesc), wgpu::Status::Success);
 
     wgpu::SharedTextureMemoryEndAccessState endState1 = {};
-    EXPECT_TRUE(memory.EndAccess(readTexture1, &endState1));
+    EXPECT_EQ(memory.EndAccess(readTexture1, &endState1), wgpu::Status::Success);
     wgpu::SharedTextureMemoryEndAccessState endState2 = {};
-    EXPECT_TRUE(memory.EndAccess(readTexture2, &endState2));
+    EXPECT_EQ(memory.EndAccess(readTexture2, &endState2), wgpu::Status::Success);
 }
 
 // Test that it is valid to call BeginAccess concurrently on read textures on a single
@@ -1445,10 +1647,11 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesConcurrentRead
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
     beginDesc.concurrentRead = true;
-    EXPECT_TRUE(memory.BeginAccess(readTexture1, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(readTexture1, &beginDesc), wgpu::Status::Success);
     beginDesc.concurrentRead = false;
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(readTexture2, &beginDesc)),
-                            HasSubstr("is currently accessed for reading."));
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(readTexture2, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for reading."));
 }
 
 // Test that it is valid to call BeginAccess concurrently on read textures on a single
@@ -1467,10 +1670,11 @@ TEST_P(SharedTextureMemoryTests, DoubleBeginAccessSeparateTexturesReadConcurrent
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
     beginDesc.concurrentRead = false;
-    EXPECT_TRUE(memory.BeginAccess(readTexture1, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(readTexture1, &beginDesc), wgpu::Status::Success);
     beginDesc.concurrentRead = true;
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(readTexture2, &beginDesc)),
-                            HasSubstr("is currently accessed for exclusive reading."));
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(readTexture2, &beginDesc), wgpu::Status::Success),
+        HasSubstr("is currently accessed for exclusive reading."));
 }
 
 // Test that it is valid to call BeginAccess concurrently on write textures with concurrentRead is
@@ -1489,8 +1693,9 @@ TEST_P(SharedTextureMemoryTests, ConcurrentWrite) {
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
     beginDesc.concurrentRead = true;
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.BeginAccess(writeTexture, &beginDesc)),
-                            HasSubstr("Concurrent reading read-write"));
+    ASSERT_DEVICE_ERROR_MSG(
+        EXPECT_NE(memory.BeginAccess(writeTexture, &beginDesc), wgpu::Status::Success),
+        HasSubstr("Concurrent reading read-write"));
 }
 
 // Test that it is an error to call EndAccess twice in a row on the same memory.
@@ -1504,14 +1709,14 @@ TEST_P(SharedTextureMemoryTests, DoubleEndAccess) {
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(texture, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(texture, &beginDesc), wgpu::Status::Success);
 
     wgpu::SharedTextureMemoryEndAccessState endState = {};
     auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
-    EXPECT_TRUE(memory.EndAccess(texture, &endState));
+    EXPECT_EQ(memory.EndAccess(texture, &endState), wgpu::Status::Success);
 
     // Invalid to end access a second time.
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.EndAccess(texture, &endState)),
+    ASSERT_DEVICE_ERROR_MSG(EXPECT_NE(memory.EndAccess(texture, &endState), wgpu::Status::Success),
                             HasSubstr("is not currently being accessed"));
 }
 
@@ -1528,11 +1733,11 @@ TEST_P(SharedTextureMemoryTests, BeginThenEndOnDifferentTexture) {
     beginDesc.initialized = true;
     auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
 
-    EXPECT_TRUE(memory.BeginAccess(texture1, &beginDesc));
+    EXPECT_EQ(memory.BeginAccess(texture1, &beginDesc), wgpu::Status::Success);
 
     wgpu::SharedTextureMemoryEndAccessState endState = {};
     auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.EndAccess(texture2, &endState)),
+    ASSERT_DEVICE_ERROR_MSG(EXPECT_NE(memory.EndAccess(texture2, &endState), wgpu::Status::Success),
                             HasSubstr("is not currently being accessed"));
 }
 
@@ -1544,7 +1749,7 @@ TEST_P(SharedTextureMemoryTests, EndAccessWithoutBegin) {
 
     wgpu::SharedTextureMemoryEndAccessState endState = {};
     auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
-    ASSERT_DEVICE_ERROR_MSG(EXPECT_FALSE(memory.EndAccess(texture, &endState)),
+    ASSERT_DEVICE_ERROR_MSG(EXPECT_NE(memory.EndAccess(texture, &endState), wgpu::Status::Success),
                             HasSubstr("is not currently being accessed"));
 }
 
@@ -1619,6 +1824,9 @@ TEST_P(SharedTextureMemoryTests, TextureAccessOutlivesMemory) {
 
 // Test that if the texture is uninitialized, it is cleared on first use.
 TEST_P(SharedTextureMemoryTests, UninitializedTextureIsCleared) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
 
@@ -1663,6 +1871,7 @@ TEST_P(SharedTextureMemoryTests, UninitializedTextureIsCleared) {
             // Now, BeginAccess on the texture as uninitialized.
             beginDesc.fenceCount = endState.fenceCount;
             beginDesc.fences = endState.fences;
+            beginDesc.signaledValueCount = endState.signaledValueCount;
             beginDesc.signaledValues = endState.signaledValues;
             beginDesc.concurrentRead = false;
             beginDesc.initialized = false;
@@ -1684,6 +1893,7 @@ TEST_P(SharedTextureMemoryTests, UninitializedTextureIsCleared) {
 
                 beginDesc.fenceCount = endState.fenceCount;
                 beginDesc.fences = endState.fences;
+                beginDesc.signaledValueCount = endState.signaledValueCount;
                 beginDesc.signaledValues = endState.signaledValues;
                 beginDesc.concurrentRead = false;
                 beginDesc.initialized = endState.initialized;
@@ -1707,8 +1917,9 @@ TEST_P(SharedTextureMemoryTests, UninitializedTextureIsCleared) {
                         alphaVal = 255;
                         break;
                 }
-                std::vector<utils::RGBA8> expected(texture.GetWidth() * texture.GetHeight(),
-                                                   utils::RGBA8{0, 0, 0, alphaVal});
+                std::vector<utils::RGBA8> expected(
+                    static_cast<size_t>(texture.GetWidth()) * texture.GetHeight(),
+                    utils::RGBA8{0, 0, 0, alphaVal});
                 EXPECT_TEXTURE_EQ(device, expected.data(), colorTarget, {0, 0},
                                   {colorTarget.GetWidth(), colorTarget.GetHeight()})
                     << "format: " << static_cast<uint32_t>(properties.format);
@@ -1867,6 +2078,7 @@ TEST_P(SharedTextureMemoryTests, CopyToTextureThenSample) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -1909,6 +2121,7 @@ TEST_P(SharedTextureMemoryTests, EndWithoutUse) {
         memory.EndAccess(texture, &endState);
 
         EXPECT_EQ(endState.fenceCount, 0u);
+        EXPECT_EQ(endState.signaledValueCount, 0u);
     }
 }
 
@@ -1976,6 +2189,7 @@ TEST_P(SharedTextureMemoryTests, BeginEndWithoutUse) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         // Do concurrent read if the backend supports it, and not Vulkan.
         // Note that here, the "backend" means the handle type. So on Vulkan, sync fds do support
@@ -2001,6 +2215,7 @@ TEST_P(SharedTextureMemoryTests, BeginEndWithoutUse) {
             memories[1].BeginAccess(noopTexture, &beginDesc);
             memories[1].EndAccess(noopTexture, &endState);
             EXPECT_EQ(endState.fenceCount, 0u);
+            EXPECT_EQ(endState.signaledValueCount, 0u);
         }
         memories[1].EndAccess(texture, &endState);
 
@@ -2070,6 +2285,7 @@ TEST_P(SharedTextureMemoryTests, CopyToTextureThenSample2DArray) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2092,6 +2308,9 @@ TEST_P(SharedTextureMemoryTests, CopyToTextureThenSample2DArray) {
 // Test rendering to a texture memory on one device, then sampling it using another device.
 // Encode the commands after performing BeginAccess.
 TEST_P(SharedTextureMemoryTests, RenderThenSampleEncodeAfterBeginAccess) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
 
@@ -2128,6 +2347,7 @@ TEST_P(SharedTextureMemoryTests, RenderThenSampleEncodeAfterBeginAccess) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2150,6 +2370,9 @@ TEST_P(SharedTextureMemoryTests, RenderThenSampleEncodeAfterBeginAccess) {
 // Test rendering to a texture memory on one device, then sampling it using another device.
 // Encode the commands before performing BeginAccess (the access is only held during) QueueSubmit.
 TEST_P(SharedTextureMemoryTests, RenderThenSampleEncodeBeforeBeginAccess) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
 
@@ -2188,6 +2411,7 @@ TEST_P(SharedTextureMemoryTests, RenderThenSampleEncodeBeforeBeginAccess) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2206,6 +2430,9 @@ TEST_P(SharedTextureMemoryTests, RenderThenSampleEncodeBeforeBeginAccess) {
 // EndAccess. The second device should still be able to wait on the first device and see the
 // results.
 TEST_P(SharedTextureMemoryTests, RenderThenTextureDestroyBeforeEndAccessThenSample) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
 
@@ -2247,6 +2474,7 @@ TEST_P(SharedTextureMemoryTests, RenderThenTextureDestroyBeforeEndAccessThenSamp
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2264,6 +2492,9 @@ TEST_P(SharedTextureMemoryTests, RenderThenTextureDestroyBeforeEndAccessThenSamp
 // accessing on the second device. Operations on the second device must
 // still wait for the preceding operations to complete.
 TEST_P(SharedTextureMemoryTests, RenderThenDropAllMemoriesThenSample) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
 
@@ -2303,6 +2534,7 @@ TEST_P(SharedTextureMemoryTests, RenderThenDropAllMemoriesThenSample) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2324,6 +2556,9 @@ TEST_P(SharedTextureMemoryTests, RenderThenDropAllMemoriesThenSample) {
 // results.
 // This tests both cases where the device is destroyed, and where the device is lost.
 TEST_P(SharedTextureMemoryTests, RenderThenLoseOrDestroyDeviceBeforeEndAccessThenSample) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // Not supported if using the same device. Not possible to lose one without losing the other.
     DAWN_TEST_UNSUPPORTED_IF(GetParam().mBackend->UseSameDevice());
 
@@ -2371,6 +2606,7 @@ TEST_P(SharedTextureMemoryTests, RenderThenLoseOrDestroyDeviceBeforeEndAccessThe
         auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
         memories[0].EndAccess(textures[0], &endState);
         EXPECT_GT(endState.fenceCount, 0u);
+        EXPECT_GT(endState.signaledValueCount, 0u);
 
         std::vector<wgpu::SharedFence> sharedFences(endState.fenceCount);
         for (size_t i = 0; i < endState.fenceCount; ++i) {
@@ -2378,6 +2614,7 @@ TEST_P(SharedTextureMemoryTests, RenderThenLoseOrDestroyDeviceBeforeEndAccessThe
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2399,6 +2636,9 @@ TEST_P(SharedTextureMemoryTests, RenderThenLoseOrDestroyDeviceBeforeEndAccessThe
 // Write to the texture, then read from two separate devices concurrently, then write again.
 // Reads should happen strictly after the writes. The final write should wait for the reads.
 TEST_P(SharedTextureMemoryTests, SeparateDevicesWriteThenConcurrentReadThenWrite) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     DAWN_TEST_UNSUPPORTED_IF(!GetParam().mBackend->SupportsConcurrentRead());
 
     // crbug.com/358166479
@@ -2485,6 +2725,7 @@ TEST_P(SharedTextureMemoryTests, SeparateDevicesWriteThenConcurrentReadThenWrite
         }
         beginDesc.fenceCount = sharedFences.size();
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = sharedFences.size();
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = true;
@@ -2531,6 +2772,7 @@ TEST_P(SharedTextureMemoryTests, SeparateDevicesWriteThenConcurrentReadThenWrite
 
         beginDesc.fenceCount = sharedFences.size();
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = sharedFences.size();
         beginDesc.signaledValues = signaledValues.data();
         beginDesc.concurrentRead = false;
         beginDesc.initialized = true;
@@ -2631,6 +2873,7 @@ TEST_P(SharedTextureMemoryTests, SameDeviceWriteThenConcurrentReadThenWrite) {
         }
         beginDesc.fenceCount = sharedFences.size();
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = true;
         beginDesc.initialized = true;
@@ -2675,6 +2918,7 @@ TEST_P(SharedTextureMemoryTests, SameDeviceWriteThenConcurrentReadThenWrite) {
 
         beginDesc.fenceCount = sharedFences.size();
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = signaledValues.size();
         beginDesc.signaledValues = signaledValues.data();
         beginDesc.concurrentRead = false;
         beginDesc.initialized = true;
@@ -2769,6 +3013,7 @@ TEST_P(SharedTextureMemoryTests, SRGBReinterpretation) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2838,6 +3083,7 @@ TEST_P(SharedTextureMemoryTests, WriteStorageThenReadSample) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.concurrentRead = false;
         beginDesc.initialized = endState.initialized;
@@ -2855,6 +3101,9 @@ TEST_P(SharedTextureMemoryTests, WriteStorageThenReadSample) {
 
 // Test writing to texture memory using queue.writeTexture, then sampling it using another device.
 TEST_P(SharedTextureMemoryTests, WriteTextureThenReadSample) {
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
 
@@ -2902,6 +3151,7 @@ TEST_P(SharedTextureMemoryTests, WriteTextureThenReadSample) {
         }
         beginDesc.fenceCount = endState.fenceCount;
         beginDesc.fences = sharedFences.data();
+        beginDesc.signaledValueCount = endState.signaledValueCount;
         beginDesc.signaledValues = endState.signaledValues;
         beginDesc.initialized = endState.initialized;
         backendBeginState = GetParam().mBackend->ChainBeginState(&beginDesc, endState);
@@ -2913,6 +3163,263 @@ TEST_P(SharedTextureMemoryTests, WriteTextureThenReadSample) {
 
         // Check all the sampled colors are correct.
         CheckFourColors(devices[1], texture1.GetFormat(), resultTarget);
+    }
+}
+
+// Test that calling memory.EndAccess() implicitly hides the texture, and BeginAccess() unhides it.
+TEST_P(SharedTextureMemoryTests, HasResourceOneTextureEndAccess) {
+    DAWN_TEST_UNSUPPORTED_IF(
+        !SupportsFeatures({wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable}));
+    // Swiftshader doesn't support variable count descriptor sets used in draw operations.
+    DAWN_SUPPRESS_TEST_IF(IsSwiftshader());
+
+    wgpu::SharedTextureMemory memory =
+        GetParam().mBackend->CreateSharedTextureMemory(device, GetParam().mLayerCount);
+    wgpu::Texture texture = memory.CreateTexture();
+
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc = {};
+    auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
+    memory.BeginAccess(texture, &beginDesc);
+
+    wgpu::ResourceTable table =
+        MakeResourceTable(3, {{1, {.textureView = CreateViewForTable(texture)}}});
+
+    // Has one valid entry
+    TestTableHasResource(table, {false, true, false});
+
+    // After EndAccess it has no more valid entries.
+    wgpu::SharedTextureMemoryEndAccessState endState = {};
+    auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
+    memory.EndAccess(texture, &endState);
+    TestTableHasResource(table, {false, false, false});
+
+    // After BeginAccess again it has the valid entry again.
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc2 = {};
+    auto backendBeginState2 = GetParam().mBackend->ChainBeginState(&beginDesc2, endState);
+    memory.BeginAccess(texture, &beginDesc2);
+    TestTableHasResource(table, {false, true, false});
+}
+
+// Test that updating a table with a texture whose access has ended works, but doesn't show that
+// entry as available until BeginAccess is called.
+TEST_P(SharedTextureMemoryTests, HasResourceUpdateWithTextureAlreadyEndedAccess) {
+    DAWN_TEST_UNSUPPORTED_IF(
+        !SupportsFeatures({wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable}));
+    // Swiftshader doesn't support variable count descriptor sets used in draw operations.
+    DAWN_SUPPRESS_TEST_IF(IsSwiftshader());
+
+    wgpu::SharedTextureMemory memory =
+        GetParam().mBackend->CreateSharedTextureMemory(device, GetParam().mLayerCount);
+    wgpu::Texture texture = memory.CreateTexture();
+
+    // Begin access and then end access so that access is ended.
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc = {};
+    auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
+    memory.BeginAccess(texture, &beginDesc);
+
+    wgpu::SharedTextureMemoryEndAccessState endState = {};
+    auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
+    memory.EndAccess(texture, &endState);
+
+    wgpu::ResourceTable table =
+        MakeResourceTable(1, {{0, {.textureView = CreateViewForTable(texture)}}});
+
+    TestTableHasResource(table, {false});
+
+    // When access is begun again, it becomes available in the table.
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc2 = {};
+    auto backendBeginState2 = GetParam().mBackend->ChainBeginState(&beginDesc2, endState);
+    memory.BeginAccess(texture, &beginDesc2);
+    TestTableHasResource(table, {true});
+}
+
+// Test that a texture used in multiple resource tables has its availability correctly updated on
+// EndAccess and BeginAccess.
+TEST_P(SharedTextureMemoryTests, HasResourceSameTextureMultipleTablesEndAccess) {
+    DAWN_TEST_UNSUPPORTED_IF(
+        !SupportsFeatures({wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable}));
+    // Swiftshader doesn't support variable count descriptor sets used in draw operations.
+    DAWN_SUPPRESS_TEST_IF(IsSwiftshader());
+
+    wgpu::SharedTextureMemory memory =
+        GetParam().mBackend->CreateSharedTextureMemory(device, GetParam().mLayerCount);
+    wgpu::Texture texture = memory.CreateTexture();
+
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc = {};
+    auto backendBeginState = GetParam().mBackend->ChainInitialBeginState(&beginDesc);
+    memory.BeginAccess(texture, &beginDesc);
+
+    wgpu::ResourceTable table1 =
+        MakeResourceTable(3, {{1, {.textureView = CreateViewForTable(texture)}}});
+    wgpu::ResourceTable table2 =
+        MakeResourceTable(1, {{0, {.textureView = CreateViewForTable(texture)}}});
+
+    // Table bound textures are visible by default
+    TestTableHasResource(table1, {false, true, false});
+    TestTableHasResource(table2, {true});
+
+    // After EndAccess on the texture, both tables show the texture as unavailable.
+    wgpu::SharedTextureMemoryEndAccessState endState = {};
+    auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
+    memory.EndAccess(texture, &endState);
+    TestTableHasResource(table1, {false, false, false});
+    TestTableHasResource(table2, {false});
+
+    // After BeginAccess again, both tables show the texture as available again.
+    wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc2 = {};
+    auto backendBeginState2 = GetParam().mBackend->ChainBeginState(&beginDesc2, endState);
+    memory.BeginAccess(texture, &beginDesc2);
+    TestTableHasResource(table1, {false, true, false});
+    TestTableHasResource(table2, {true});
+}
+
+// Test synchronization and memory barriers across two devices sharing the same SharedTextureMemory,
+// where one device interacts via a bindful render attachment and the other via a bindless resource
+// table.
+TEST_P(SharedTextureMemoryTests, InterDeviceRenderAttachmentAndBindlessTexture) {
+    DAWN_TEST_UNSUPPORTED_IF(
+        !SupportsFeatures({wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable}));
+    // Swiftshader doesn't support variable count descriptor sets used in draw operations.
+    DAWN_SUPPRESS_TEST_IF(IsSwiftshader());
+
+    // crbug.com/358166479
+    DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
+
+    // TODO(crbug.com/523272965): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
+    // crbug.com/475503907
+    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsImgTec());
+
+    wgpu::Device renderDevice = device;
+    wgpu::Device sampleDevice = CreateDevice();
+    std::vector<wgpu::Device> devices = {renderDevice, sampleDevice};
+
+    for (const auto& memories :
+         GetParam().mBackend->CreatePerDeviceSharedTextureMemoriesFilterByUsage(
+             devices, wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding,
+             GetParam().mLayerCount)) {
+        const auto& renderMemory = memories[0];
+        const auto& sampleMemory = memories[1];
+
+        // Create the textures on each SharedTextureMemory.
+        wgpu::Texture renderTexture = renderMemory.CreateTexture();
+        wgpu::Texture sampleTexture = sampleMemory.CreateTexture();
+
+        wgpu::SharedTextureMemoryEndAccessState sampleEndState = {};
+        std::unique_ptr<SharedTextureMemoryTestBackend::BackendEndState> backendSampleEndState;
+
+        // Bindful Render Write on renderDevice -> Bindless Read on sampleDevice
+        {
+            // Make a command buffer to render four colors in quadrants to renderTexture on
+            // renderDevice.
+            wgpu::CommandBuffer renderCommandBuffer =
+                MakeFourColorsClearCommandBuffer(renderDevice, renderTexture);
+
+            wgpu::SharedTextureMemoryBeginAccessDescriptor renderBeginDesc = {};
+            renderBeginDesc.concurrentRead = false;
+            renderBeginDesc.initialized = false;
+            auto backendRenderBeginState =
+                GetParam().mBackend->ChainInitialBeginState(&renderBeginDesc);
+
+            wgpu::SharedTextureMemoryEndAccessState renderEndState = {};
+            auto backendRenderEndState = GetParam().mBackend->ChainEndState(&renderEndState);
+
+            // Begin access on renderMemory, submit render pass command buffer, end access.
+            renderMemory.BeginAccess(renderTexture, &renderBeginDesc);
+            renderDevice.GetQueue().Submit(1, &renderCommandBuffer);
+            renderMemory.EndAccess(renderTexture, &renderEndState);
+
+            // Import fences from renderDevice to sampleDevice.
+            std::vector<wgpu::SharedFence> sharedFences(renderEndState.fenceCount);
+            for (size_t i = 0; i < renderEndState.fenceCount; ++i) {
+                sharedFences[i] =
+                    GetParam().mBackend->ImportFenceTo(sampleDevice, renderEndState.fences[i]);
+            }
+            wgpu::SharedTextureMemoryBeginAccessDescriptor sampleBeginDesc = {};
+            sampleBeginDesc.fenceCount = sharedFences.size();
+            sampleBeginDesc.fences = sharedFences.data();
+            sampleBeginDesc.signaledValueCount = renderEndState.signaledValueCount;
+            sampleBeginDesc.signaledValues = renderEndState.signaledValues;
+            sampleBeginDesc.concurrentRead = false;
+            sampleBeginDesc.initialized = renderEndState.initialized;
+            auto backendSampleBeginState =
+                GetParam().mBackend->ChainBeginState(&sampleBeginDesc, renderEndState);
+
+            backendSampleEndState = GetParam().mBackend->ChainEndState(&sampleEndState);
+
+            // Create a resource table on sampleDevice containing sampleTexture.
+            wgpu::ResourceTable resourceTable = MakeResourceTable(
+                sampleDevice, 1, {{0, {.textureView = CreateViewForTable(sampleTexture)}}});
+
+            // Make a command buffer to sample sampleTexture via the resource table and check
+            // contents.
+            wgpu::Texture sampleResultTarget;
+            wgpu::CommandBuffer sampleCommandBuffer;
+            std::tie(sampleCommandBuffer, sampleResultTarget) =
+                MakeCheckBySamplingResourceTableCommandBuffer(sampleDevice, resourceTable,
+                                                              sampleTexture);
+
+            // Begin access on sampleMemory, submit sampling command buffer, end access.
+            sampleMemory.BeginAccess(sampleTexture, &sampleBeginDesc);
+            sampleDevice.GetQueue().Submit(1, &sampleCommandBuffer);
+            sampleMemory.EndAccess(sampleTexture, &sampleEndState);
+
+            // Check that all the sampled colors on sampleDevice are correct.
+            CheckFourColors(sampleDevice, sampleTexture.GetFormat(), sampleResultTarget);
+        }
+
+        // EndAccess on sampleDevice (after bindless read) -> BeginAccess on renderDevice (write
+        // clear)
+        {
+            // Import fences from sampleDevice back to renderDevice.
+            std::vector<wgpu::SharedFence> sharedFences(sampleEndState.fenceCount);
+            for (size_t i = 0; i < sampleEndState.fenceCount; ++i) {
+                sharedFences[i] =
+                    GetParam().mBackend->ImportFenceTo(renderDevice, sampleEndState.fences[i]);
+            }
+            wgpu::SharedTextureMemoryBeginAccessDescriptor beginDesc = {};
+            beginDesc.fenceCount = sharedFences.size();
+            beginDesc.fences = sharedFences.data();
+            beginDesc.signaledValueCount = sampleEndState.signaledValueCount;
+            beginDesc.signaledValues = sampleEndState.signaledValues;
+            beginDesc.concurrentRead = false;
+            beginDesc.initialized = sampleEndState.initialized;
+            auto backendBeginState =
+                GetParam().mBackend->ChainBeginState(&beginDesc, sampleEndState);
+
+            wgpu::SharedTextureMemoryEndAccessState endState = {};
+            auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
+
+            // Make a command buffer on renderDevice to clear renderTexture to zero via a render
+            // pass.
+            wgpu::CommandEncoder clearEncoder = renderDevice.CreateCommandEncoder();
+            utils::ComboRenderPassDescriptor clearPassDescriptor({renderTexture.CreateView()});
+            clearPassDescriptor.cColorAttachments[0].loadOp = wgpu::LoadOp::Clear;
+            clearPassDescriptor.cColorAttachments[0].clearValue = {0.0, 0.0, 0.0, 0.0};
+            clearPassDescriptor.cColorAttachments[0].storeOp = wgpu::StoreOp::Store;
+            wgpu::RenderPassEncoder clearPass = clearEncoder.BeginRenderPass(&clearPassDescriptor);
+            clearPass.End();
+            wgpu::CommandBuffer clearCommandBuffer = clearEncoder.Finish();
+
+            // Make a command buffer on renderDevice to sample renderTexture using standard bindful
+            // sampling to verify the clear.
+            wgpu::Texture resultTarget;
+            wgpu::CommandBuffer sampleCommandBuffer;
+            std::tie(sampleCommandBuffer, resultTarget) =
+                MakeCheckBySamplingCommandBuffer(renderDevice, renderTexture);
+
+            // Begin access on renderMemory, submit clear and sampling command buffers, end access.
+            renderMemory.BeginAccess(renderTexture, &beginDesc);
+            wgpu::CommandBuffer commandBuffers[] = {clearCommandBuffer, sampleCommandBuffer};
+            renderDevice.GetQueue().Submit(2, commandBuffers);
+            renderMemory.EndAccess(renderTexture, &endState);
+
+            // Check that pixels on renderDevice were cleared to zero.
+            uint8_t expectedAlpha = HasAlphaChannel(renderTexture.GetFormat()) ? 0x00 : 0xFF;
+            utils::RGBA8 expectedZero(0, 0, 0, expectedAlpha);
+            EXPECT_TEXTURE_EQ(renderDevice, &expectedZero, resultTarget, {0, 0}, {1, 1});
+        }
     }
 }
 

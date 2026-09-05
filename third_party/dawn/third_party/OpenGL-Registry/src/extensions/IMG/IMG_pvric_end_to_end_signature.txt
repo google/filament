@@ -1,0 +1,221 @@
+Name
+
+    IMG_pvric_end_to_end_signature
+
+Name Strings
+
+    GL_IMG_pvric_end_to_end_signature
+
+Contact
+
+    Deepak Ravikumar, Imagination Technologies 
+    (deepak 'dot' ravikumar 'at' imgtec 'dot' com)
+    
+    Frank Bouwer, Imagination Technologies
+    (frank 'dot' bouwer 'at' imgtec 'dot' com)
+
+Contributors
+
+    Ian King, Imagination Technologies
+    (Ian 'dot' King 'at' imgtec 'dot' com)
+
+    Deepak Ravikumar, Imagination Technologies 
+    (deepak 'dot' ravikumar 'at' imgtec 'dot' com)
+
+    Brajesh Gupta, Imagination Technologies 
+    brajesh 'dot' gupta 'at' imgtec 'dot'com
+    
+    Amey Prabhu, Imagination Technologies
+    amey 'dot' prabhu 'at' imgtec 'dot'com
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: March 29, 2023
+    Revision: 1.0
+
+Number
+
+    OpenGL SC Extension #2
+ 
+Dependencies
+
+    This extension is written against the OpenGL SC 2.0.1 
+    specification, EGL Version 1.4 specification and the
+    GLSL ES Shading Language 1.00 specification with limitations as 
+    specified in Appendix F of the OpenGL SC 2.0.1 specification.
+ 
+    IMG_tile_region_protection needs to be present for this extension
+    to be implemented.
+
+Overview
+
+    This extension provides a safety signature mechanism
+    for Imagination Technologies Power VR Image Compression (PVRIC), 
+    that can be used to efficiently verify the integrity of the 
+    compression and decompression done by PowerVR's PVRIC as well as the 
+    corresponding memory accesses data paths, when processing 
+    safety-related workloads, in the presence of potential faults.
+
+    Application should use IMG_tile_region_protection extension to
+    tag a workload as safety-related.
+
+IP Status
+
+    Imagination Technologies Proprietary
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Returned by GetError
+
+    GL_PVRIC_SIGNATURE_MISMATCH_IMG         0x8EA3
+
+
+Additions to Chapter 2 of the OpenGL SC 2.0.1 Specification
+(OpenGL SC Operation)
+
+    Section 2.5 GL Errors Add below to the value that can be returned 
+    by GetError
+
+    If a signature mismatch is detected by the PVRIC safety mechanism 
+    while processing a safety-related workload, the error 
+    PVRIC_SIGNATURE_MISMATCH_IMG is generated.
+
+    Table 2.3 Summary of GL errors add the below entry
+                                            
+    Error                           Description         Offending 
+                                                        command 
+                                                        ignored?   Advisory Action
+    -------------------             -----------         ------    ------------------- 
+    PVRIC_SIGNATURE_MISMATCH_IMG    Signature           Yes        Abort for
+                                    mismatch detected              safety
+                                    during PVRIC                   renders.
+                                    operation
+
+ 
+Dependencies on GL and ES profiles, versions, and other extensions
+
+    None
+   
+Errors
+
+    PVRIC_SIGNATURE_MISMATCH_IMG error is generated if a signature
+    mismatch is detected by the PVRIC safety mechanism when processing
+    the safety-related workload
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Sample Code
+
+    /* Step 1 Tag all safety-related textures / render buffers to 
+     *        GL before creating their storage 
+     */
+    glEnable(GL_TRP_IMG)
+    glTexStorage2D(GL_TEXTURE_2D,
+                   texture_levels,
+                   GL_RGBA8,
+                   texwidth,
+                   texheight)
+        
+    if (error == (GLenum)GL_NO_ERROR)
+    {
+        glTexSubImage2D(GL_TEXTURE_2D,
+                        0,
+                        0,
+                        0,
+                        texwidth,
+                        texheight,
+                        GL_RGBA,
+                        GL_UNSIGNED_BYTE,
+                        texdata)
+    }
+    ...
+    /* Create storage for safety-related render buffers */
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB565, width, height)
+    ...
+    glDisable(GL_TRP_IMG)
+    ...
+    /* Create storage for non safety-related render buffers 
+     * with TRP off
+     */
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB565, width, height)
+    ...
+    /* Step 2 Mark WLs as safety-related by enabling TRP */
+    glEnable(GL_TRP_IMG);
+    GLenum error = glGetError();
+    if (error == (GLenum)GL_NO_ERROR)
+    {
+        /* Step 3 Submit commands for rendering the 
+         * safety-related sequence of geometric primitives.
+         */
+        ...
+    }
+    /* Step 4  Upon completion of the submitted commands to GL,  
+     * check status of the safety-related renders
+     */
+    error = glGetError();
+    if (error != (GLenum)GL_NO_ERROR)
+    {
+       /*
+        * Safety FAULT: Abort and initiate fault handling
+        */
+    }
+
+
+Conformance Tests
+
+    None
+
+Issues
+
+    1) How can application turn on the PVRIC signature mechanism for 
+       its safety-related workloads?
+
+        RESOLVED: From application perspective, it needs to use 
+        IMG_tile_region_protection extension interface 
+        glEnable(GL_TRP_IMG) to tag all its safety-related workloads. 
+        Also, before creating storage using glTexStorage2D() for
+        textures or glRenderbufferStorage() for render buffers  which 
+        are safety-related, application should indicate to the GL that 
+        it is safety-related by calling glEnable(GL_TRP_IMG).
+
+        This extension efficiently enables PVRIC safety signature 
+        verification for all safety workloads and safety-related
+        resources such as textures and render buffers,  and informs the 
+        application about any mismatch in signature verification, 
+        so that, if a signature fault is reported, application can 
+        act on it.
+
+    2) How should application handle a PVRIC signature mismatch?
+
+         RESOLVED: A PVRIC signature fault indicates that there was a 
+         fault in either the compression / decompression or in the
+         corresponding data path which has affected the integrity of the
+         safety-related render. In this case, the safety render might be
+         rendered incorrectly. It is hence recommended that the 
+         application aborts this faulty render,
+         recreates the safety-related resources such as textures, 
+         render buffers and resubmits the safety-workload after any
+         additional fault handling.
+
+Revision History
+
+      Revision 1.0, 29/03/2023 
+      - Initial revision.

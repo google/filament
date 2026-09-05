@@ -1,0 +1,192 @@
+Name
+
+    NV_query_resource
+
+Name Strings
+
+    GL_NV_query_resource
+
+Contact
+
+    Kevin Lefebvre, NVIDIA (klefebvre 'at' nvidia.com)
+
+Contributors
+
+Status
+
+    Under review.  Target release in NVIDIA 387.00 drivers.
+    NVIDIA's Tegra drivers will not expose this extensions.
+
+Version
+
+    Last Modified Date: May 4, 2017
+    Author Revision: 0.1
+
+Number
+
+     OpenGL Extension #511
+
+Dependencies
+
+    OpenGL 2.0 is required.
+    The extension is written against the OpenGL 2.0 Specification.
+
+Overview
+
+    OpenGL implementations manage the residence of textures, shaders, and
+    other graphical objects in GPU accessible memory (whether in on-board
+    video memory or addressable system memory is implementation dependent).
+    With more insight into OpenGL's memory usage 1) applications could make
+    educated decisions on better utilizing the limited GPU resources,
+    2) users could better optimize their workflow when working with multiple
+    tools, and 3) administrators can make better decisions regarding resource
+    allocation and system configurations.
+
+    The purpose of this extension is to return a more detailed breakdown
+    of memory usage in terms of the OpenGL objects residing in memory
+    (textures, render buffers, buffer objects, system reserved objects, ...).
+    This extension differs from GL_NVX_gpu_memory_info in that this extension
+    returns detailed memory usage at the object level for video memory while
+    the other extension only reports total vidmem usage.
+
+    For the purposes of this specification the term vidmem refers to video
+    memory resident on the graphics card that is directly accessible to the
+    GPU at the highest performance level.
+
+New Procedures and Functions
+
+    int QueryResourceNV(enum queryType, int pname, unsigned int bufSize, 
+                        int *buffer);
+
+New Tokens
+
+    Accepted by the <queryType> parameter of QueryResource:
+
+        QUERY_RESOURCE_TYPE_VIDMEM_ALLOC_NV         0x9540
+
+    New enums defined:
+
+        QUERY_RESOURCE_MEMTYPE_VIDMEM_NV            0x9542
+        QUERY_RESOURCE_SYS_RESERVED_NV              0x9544
+        QUERY_RESOURCE_TEXTURE_NV                   0x9545
+        QUERY_RESOURCE_RENDERBUFFER_NV              0x9546
+        QUERY_RESOURCE_BUFFEROBJECT_NV              0x9547
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    none
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    none
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    none
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    none
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Section 6.1.x GPU Query Resource
+
+    The command QueryResourceNV returns GL object usage of video memory in the
+    application provided buffer. Both a summary of the total vidmen allocated
+    by the driver is written along with a more detailed breakdown of memory
+    used by the GL objects created by the application (textures, render buffers
+    buffer objects, ...). Memory sizes reported are in kilobytes.
+
+    Due to various factors with the OpenGL driver the amount of memory in use
+    by GL objects may not equal the amount of memory actually allocated.
+    Alignment issues, freed but not released objects, or  memory block
+    sub-allocation options may result in the driver holding more memory than
+    what can be accounted for by the total memory used by the GL objects. This
+    command will report both the memory used by GL objects and the amount of
+    memory free but allocated by the driver.
+
+    Currently the queryType parameter only accepts the type VIDMEM_ALLOC_NV
+    leaving future extensions possible. The param parameter is reserved for
+    future usage. The bufSize parameter indicates the size of the application
+    provided buffer in ints where the query results are returned. The buffer
+    parameter points to this return buffer. The commands return value is the
+    number of ints written in the return buffer. If the return value is
+    negative then the buffer is too small to hold the returned data. If the
+    buffer pointer is NULL then the return value specifies the size of buffer
+    needed to hold the results from the query call.
+
+    The format of the returned data from a query is a series of int's of the
+    form:
+
+    fixedHeader
+        size - size of fixed header(in int's)
+        version - data stream version number (version = 1 at this time)
+        devCount - count of devices
+    deviceBlk[i from 0 to devCount - 1]
+        size - size of per device info including detail blocks (in int's)
+        numAllocs - number of GL object allocations
+        vidmem - size of vidmem in use by GL objects
+        vidmemFree - size of vidmem allocated but not in use
+        detailCount - number of detail blocks
+        detailBlk[j from 0 to detailCount - 1]
+            size - size of single detail block (in int's)
+            memType - only vidmem at this time
+            objType - GL object type
+            numAllocs - number of objects of this objType
+            vidmem - amount of memory used for this objType
+
+    For decoding the detail blocks the following constants are defined:
+
+        memType:
+            QUERY_RESOURCE_MEMTYPE_VIDMEM_NV
+
+        objType:
+            QUERY_RESOURCE_SYS_RESERVED_NV
+            QUERY_RESOURCE_TEXTURE_NV
+            QUERY_RESOURCE_RENDERBUFFER_NV
+            QUERY_RESOURCE_BUFFEROBJECT_NV
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Issues
+
+    1) With Windows 10 comes additional capabilities with respect to how much
+       vidmem an applicaiton can really gain access to and what happens when
+       the application comes under memory pressure. These capabilities include
+       OS vidmem budget levels, application setting a vidmem reservation as a
+       hint to the OS in an attempt to reduce memory thrashing, and what
+       allocations will be forced out of vidmem (into sysmem if the allocation
+       permits it). Should this extension try to report some of this
+       information?
+
+       PROPOSED RESOLUTION: This extension as written currently describes the
+       mem usage at a point in time that is only valid at the time of
+       calling. If this level of information is not sufficient to meet the
+       ISV and User needs then we should consider adding some of the Window 10
+       capabilities (abstracted for other OS/s if possible) in a follow-on
+       extension.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ------------------------------------------------
+    1     05/04/17 klefebvre  First draft
+
+          Changes from NVX version of extension:
+            - fix function prototype of QueryResourceNV
+            - remove queryType SUMMARY, default to DETAILED, leave queryType
+              parameter for future extension
+            - add size entries to each return record to support future
+              addition of data and have backwards compatability to decoder
+            - rework format of buffer return data
+
+

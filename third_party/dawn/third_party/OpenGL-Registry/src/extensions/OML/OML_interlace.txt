@@ -1,0 +1,182 @@
+Name
+
+    OML_interlace
+
+Name Strings
+
+    GL_OML_interlace
+
+Contact
+
+    Jon Leech, Silicon Graphics (ljp 'at' sgi.com)
+
+Status
+
+    Complete. Approved by the Khronos SIG on July 19, 2001.
+
+Version
+
+    Last Modified Date: 07/23/2001
+    Author Revision: $Header: //depot/main/doc/registry/extensions/OML/interlace.spec#5 $
+
+Number
+
+    239
+
+Dependencies
+
+    None.
+
+Overview
+
+    This extension provides a way to interlace rows of pixels when
+    drawing, reading, or copying pixel rectangles or texture images. In
+    this context, interlacing means skiping over rows of pixels or
+    texels in the destination. This is useful for dealing with video
+    data since a single frame of video is typically composed from two
+    images or fields: one image specifying the data for even rows of the
+    frame and the other image specifying the data for odd rows of the
+    frame.
+
+    The functionality provided by this extension is a combination
+    of the older SGIX_interlace and INGR_interlace_read extensions,
+    with  changes applying interlacing to texture image queries.
+
+Issues
+
+  * Should there be a single enumerant controlling both draw and read
+    operations? For the moment, we continue using separate enums, for
+    backwards compatibility with SGIX_interlace and INGR_interlace_read.
+
+  * Can we use the same enum values as the older extensions? Possibly,
+    depending on the resolution of issues of exactly which operations
+    interlacing is applied to. For the moment we assume the same
+    values cannot be used.
+
+  * Are there any GLX protocol issues relating to the actual vs.
+    specified size of the image being transferred? Probably not, since
+    unlike the effects of convolution, the image being transferred over
+    the wire is always the specified size; all that changes is where the
+    pixels are positioned in the frame buffer.
+
+  * Discreet requested that INTERLACE_READ_OML apply to GetTexImage. The
+    extension does not support this because there's no easy way to
+    support it with any generality: with only the binary
+    INTERLACE_READ_OML setting available, the implementation could
+    return only the even rows, but would have no way of indicating that
+    only the odd rows should be returned. This is non-orthogonal
+    probably more frustrating than useful; a generic solution would
+    require creation of a GetTexSubImage call.
+
+  * We may need to be more precise about exactly which operations
+    interlacing is and is not applied to. Currently it must be inferred
+    from other parts of the OpenGL Specification, and different
+    implementations are likely to disagree on this. Some language has
+    been added to section 6.1.4 to deal explicitly with GetTexImage, but
+    may be needed elsewhere as well.
+
+IP Status
+
+    No known issues.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+	INTERLACE_OML				0x8980
+	INTERLACE_READ_OML			0x8981
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+  - (3.6.4, p. 99) Insert the following subsection between "Pixel
+    Transfer Operations" and "Final Conversion"
+
+    Interlacing
+
+    This step applies only if INTERLACE_OML is enabled. All of the
+    groups which belong to a row m in the source image are treated as if
+    they belonged to the row 2 * m. If the source image has a height of
+    h rows, this effectively expands the height of the image to 2 * h -
+    1 rows. After interlacing, only every other row of the image is
+    defined. If the interlaced pixel rectangle is rasterized to the
+    framebuffer, then only these rows are converted to fragments. If the
+    interlaced pixel rectangle is a texture image, then only these rows
+    are written to texure memory.
+
+    In cases where errors can result from the specification of invalid
+    image dimensions, it is the resulting dimensions that are tested,
+    not the dimensions of the source image. (A specific example is
+    TexImage2D, which specifies constraints for image dimensions. Even
+    if TexImage2D is called with a null pixel pointer, the dimensions of
+    the resulting texture image are those that would result from the
+    effective expansion of the specified image due to interlacing.)
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+  - (4.3.2, p. 157) Modify the 5th paragraph of "Obtaining Pixels from
+    the Framebuffer" to read
+
+    If INTERLACE_READ_OML is disabled, then ReadPixels obtains values
+    from the selected buffer for each pixel with lower left hand corner
+    at (x+i, y+j) for 0 <= i < width and 0 <= j < height; this pixel is
+    said to be the ith pixel in the jth row.
+
+    If INTERLACE_READ_OML is enabled, then ReadPixels obtains values
+    from the selected buffer for each pixel with lower left hand corner
+    at (x+i, y+(j*2)) for 0 <= i < width and 0 <= j < height; this pixel
+    is said to be the ith pixel in the jth row.
+
+    If any of these pixels lies outside of the window...
+
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State Requests)
+
+  - (6.1.4, p. 184) Insert in the second paragraph, following "... and
+    from the first image to the last for three-dimensional textures."
+
+    The value of INTERLACE_READ_OML has no effect on the operation of
+    GetTexImage.
+
+Additions to the GLX 1.3 Specification
+
+    None.
+
+Errors
+
+    See above.
+
+New State
+
+    Get Value		Type Get Command Initial Value Attribute
+    ---------		---- ----------- ------------- ---------
+    INTERLACE_OML	B    IsEnabled	 False	       pixel/enable
+    INTERLACE_READ_OML	B    IsEnabled	 False	       pixel/enable
+
+New Implementation Dependent State
+
+    None.
+
+Revision History
+
+  * Revision 5, 07/24/2001 - Finalized Status for OpenML 1.0.
+  * Revision 4, 07/11/2001 - Assign enum values and extension number
+    for the registry.
+  * Revision 3 - formatting changes for OpenML Specification
+  * Revision 2 - expanded description of why GetTexImage doesn't support
+    interlaced readbacks.
+  * Revision 1 - derived from SGIX_interlace and INGR_interlace_read.

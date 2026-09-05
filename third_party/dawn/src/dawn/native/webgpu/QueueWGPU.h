@@ -32,10 +32,10 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
 
 namespace dawn::native::webgpu {
 
@@ -54,14 +54,12 @@ class Queue final : public QueueBase, public ObjectWGPU<WGPUQueue> {
 
   private:
     Queue(Device* device, const QueueDescriptor* descriptor);
-    MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
+    MaybeError SubmitImpl(Span<CommandBufferBase* const> commands) override;
     MaybeError WriteBufferImpl(BufferBase* buffer,
                                uint64_t bufferOffset,
-                               const void* data,
-                               size_t size) override;
+                               Span<const std::byte> data) override;
     MaybeError WriteTextureImpl(const TexelCopyTextureInfo& destination,
-                                const void* data,
-                                size_t dataSize,
+                                Span<const std::byte> data,
                                 const TexelCopyBufferLayout& dataLayout,
                                 const Extent3D& writeSizePixel) override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;

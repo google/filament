@@ -34,4 +34,14 @@ declare_args() {
   if (!defined(meson_src_dir)) {
     meson_src_dir = "//third_party/meson"
   }
+
+  # Path to the llvm-config binary.
+  if (!defined(meson_llvm_config_bin)) {
+    meson_llvm_config_bin = "//third_party/llvm-dev/bin/llvm-config"
+  }
+
+  # Path to the zstd library.
+  if (!defined(meson_zstd_dir)) {
+    meson_zstd_dir = "//third_party/zstd"
+  }
 }
