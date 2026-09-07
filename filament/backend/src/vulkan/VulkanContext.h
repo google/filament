@@ -223,6 +223,10 @@ public:
         return mExtendedDynamicState2Features.extendedDynamicState2 == VK_TRUE;
     }
 
+    inline bool isColorWriteEnableSupported() const noexcept {
+        return mColorWriteEnableFeatures.colorWriteEnable == VK_TRUE;
+    }
+
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
     }
@@ -292,6 +296,9 @@ private:
     };
     VkPhysicalDeviceExtendedDynamicState2FeaturesEXT mExtendedDynamicState2Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+    };
+    VkPhysicalDeviceColorWriteEnableFeaturesEXT mColorWriteEnableFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT,
     };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
