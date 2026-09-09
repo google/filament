@@ -21,6 +21,8 @@
 #include "details/Material.h"
 #include "details/VertexBuffer.h"
 
+#include <utils/Panic.h>
+
 using namespace utils;
 
 namespace filament {
@@ -166,14 +168,23 @@ AttributeBitset RenderableManager::getEnabledAttributesAt(Instance const instanc
 
 void RenderableManager::setGeometryAt(Instance const instance, size_t const primitiveIndex,
         PrimitiveType const type, VertexBuffer* vertices, IndexBuffer* indices,
-        size_t const offset, size_t const count) noexcept {
+        size_t const offset, size_t const count) {
+    FILAMENT_CHECK_PRECONDITION(vertices->isCreationComplete())
+            << "VertexBuffer's creation is still in progress or was canceled";
+
+    FILAMENT_CHECK_PRECONDITION(indices->isCreationComplete())
+            << "IndexBuffer's creation is still in progress or was canceled";
+
     downcast(this)->setGeometryAt(instance, 0, primitiveIndex,
             type, downcast(vertices), downcast(indices), offset, count);
 }
 
 void RenderableManager::setGeometryAt(Instance const instance, size_t const primitiveIndex,
         PrimitiveType const type, VertexBuffer* vertices,
-        size_t const offset, size_t const count) noexcept {
+        size_t const offset, size_t const count) {
+    FILAMENT_CHECK_PRECONDITION(vertices->isCreationComplete())
+            << "VertexBuffer's creation is still in progress or was canceled";
+
     downcast(this)->setGeometryAt(instance, 0, primitiveIndex,
             type, downcast(vertices), offset, count);
 }

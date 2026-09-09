@@ -31,7 +31,11 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
     JobId jobId = preIssuedJobId;
     {
         LockGuard const lock(mQueueMutex);
-        if (mIsStopping) {
+        if (UTILS_UNLIKELY(mIsStopping)) {
+            // This queue is stopping, so any placeholder previously issued should be removed here.
+            if (jobId != InvalidJobId) {
+                mJobsMap.erase(jobId);
+            }
             return InvalidJobId;
         }
 

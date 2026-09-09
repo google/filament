@@ -31,7 +31,7 @@ runs:
         wget -qO- "https://github.com/Kitware/CMake/releases/download/v${GITHUB_CMAKE_VERSION}/cmake-${GITHUB_CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" | sudo tar xz -C /usr/local --strip-components=1
 
         # For dawn
-        sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libx11-xcb-dev
+        sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libx11-xcb-dev libgbm-dev libdrm-dev
 
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100

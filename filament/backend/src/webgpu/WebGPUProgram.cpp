@@ -20,6 +20,8 @@
 #include "WebGPUConstants.h"
 #include "WebGPUStrings.h"
 
+#include "webgpu/utils/SpecializationConstantProcessor.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
@@ -44,8 +46,8 @@ namespace filament::backend {
 namespace {
 
 /**
- * Creates a WebGPU shader module for a given "program" "stage", accounting for override constants.
- * Effectively, this function is responsible for preprocessing the shader source and compiling it.
+ * Creates a WebGPU shader module for a given "program" "stage". Program specialization constants
+ * are applied to WGSL override initializers while preprocessing the shader source.
  * @param device The WebGPU device, which is the WebGPU API entry point for creating/registering
  * a shader module
  * @param program The "program" to compile/create the shader, which includes the shader source
@@ -68,8 +70,16 @@ namespace {
     labelStream << programName << " " << filamentShaderStageToString(stage) << " shader";
     const auto label = labelStream.str();
 
+    // Bake the Program values into the defaults of the WGSL overrides that survived in this stage.
+    // Constants used for WebGPU buffer layouts were emitted as ordinary shader constants by
+    // filamat and therefore do not appear here. Passing every Program constant to the pipeline is
+    // invalid when Tint has optimized some of them out of a shader stage.
+    utils::CString const specializedSource = webgpuutils::specializeShaderSource(
+            std::string_view(reinterpret_cast<const char*>(sourceBytes.data()),
+                    sourceBytes.size() - 1),
+            program.getSpecializationConstants());
     wgpu::ShaderSourceWGSL wgslDescriptor{};
-    wgslDescriptor.code = wgpu::StringView(reinterpret_cast<const char*>(sourceBytes.data()));
+    wgslDescriptor.code = wgpu::StringView(specializedSource.data(), specializedSource.size());
     const wgpu::ShaderModuleDescriptor descriptor{
         .nextInChain = &wgslDescriptor,
         .label = label.data()
