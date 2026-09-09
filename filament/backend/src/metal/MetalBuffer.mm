@@ -24,7 +24,7 @@
 namespace filament {
 namespace backend {
 
-std::array<uint64_t, TrackedMetalBuffer::TypeCount> TrackedMetalBuffer::aliveBuffers = { 0 };
+std::array<std::atomic<uint64_t>, TrackedMetalBuffer::TypeCount> TrackedMetalBuffer::aliveBuffers = { 0 };
 PlatformMetal* TrackedMetalBuffer::platform = nullptr;
 PlatformMetal* ScopedAllocationTimer::platform = nullptr;
 
