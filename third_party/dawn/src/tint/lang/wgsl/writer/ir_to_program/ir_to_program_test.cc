@@ -48,10 +48,15 @@ namespace tint::wgsl::writer {
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
 
-IRToProgramTest::Result IRToProgramTest::Run() {
+IRToProgramTest::Result IRToProgramTest::RunTest() {
     Result result;
 
     result.ir = str();
+
+    mod.properties.Add(core::ir::Property::kAllowOverrides);
+    mod.properties.Add(core::ir::Property::kAllowPhonyInstructions);
+    mod.properties.Add(core::ir::Property::kAllowRefTypes);
+    mod.properties.Add(core::ir::Property::kAllow16BitFloats);
 
     auto output_program = IRToProgram(mod, options);
     if (!output_program.IsValid()) {
@@ -3562,7 +3567,8 @@ TEST_F(IRToProgramTest, Override_BitcastInitializer) {
         from->SetOverrideId(OverrideId{10});
 
         o = b.Override("o", b.CallExplicit<wgsl::ir::BuiltinCall>(
-                                ty.i32(), wgsl::BuiltinFn::kBitcast, Vector{ty.i32()}, from));
+                                ty.i32(), wgsl::BuiltinFn::kBitcast,
+                                Vector<core::ir::TemplateParameter, 1>{ty.i32()}, from));
     });
 
     auto* fn = b.Function("f", ty.i32());

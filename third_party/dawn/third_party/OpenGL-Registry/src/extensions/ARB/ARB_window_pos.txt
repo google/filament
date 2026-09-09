@@ -1,0 +1,351 @@
+Name
+
+    ARB_window_pos
+
+Name Strings
+
+    GL_ARB_window_pos
+
+Contact
+
+    Brian Paul, brian_e_paul 'at' yahoo.com
+
+Notice
+
+    Copyright (c) 2002-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on February 14, 2002.
+
+Version
+
+    Last Modified Date: June 11, 2002
+
+Number
+
+    ARB Extension #25
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    The extension is written against the OpenGL 1.3 Specification
+    GL_EXT_fog_coordinate effects the definition of this extension.
+    GL_EXT_secondary_color effects the definition of this extension.
+
+Overview
+
+    In order to set the current raster position to a specific window
+    coordinate with the RasterPos command, the modelview matrix, projection
+    matrix and viewport must be set very carefully.  Furthermore, if the
+    desired window coordinate is outside of the window's bounds one must rely
+    on a subtle side-effect of the Bitmap command in order to avoid frustum
+    clipping.
+
+    This extension provides a set of functions to directly set the current
+    raster position in window coordinates, bypassing the modelview matrix, the
+    projection matrix and the viewport-to-window mapping.  Furthermore, clip
+    testing is not performed, so that the current raster position is always
+    valid.
+
+    This greatly simplifies the process of setting the current raster position
+    to a specific window coordinate prior to calling DrawPixels, CopyPixels or
+    Bitmap.  Many matrix operations can be avoided when mixing 2D and 3D
+    rendering.
+
+IP Status
+
+    No IP issues.
+
+Issues
+
+    (1) Should we offer all 24 entrypoints, just like glRasterPos?
+
+      RESOLVED.  No.  Don't implement the 4-coordinate functions as
+      they're really useless.  However, we will implement the short
+      and double-type functions for completeness.
+
+      For example, it's conceivable that an application may have
+      data structures encoding window coordinates as a 2- or 3-vector
+      of shorts and will want to use WindowPos3svARB().  Chris Hecker
+      lobbied for this on the grounds of orthogonality.
+
+    (2) Should we have unique GLX protocol requests for every entrypoint
+      or just a 3-float version?
+
+      RESOLVED.  Just a 3-float version will suffice since all reasonable
+      window coordinate values can be perfectly represented with
+      single-precision floating point.
+
+    (4) For WindowPos2*ARB(), is zero the correct value for z?  Afterall,
+      z is a window coordinate, not an object coordinate.
+
+      RESOLVED.  Yes, zero is correct.  Zero corresponds to the front
+      of the depth range.  That's where one would usually want Bitmap,
+      DrawPixels and CopyPixels to be positioned in z when rendering 2D
+      primitives over a 3D scene.
+
+    (5) What about glDepthRange?
+
+      RESOLVED.  Map the WindowPos z value into the range specified by
+      DepthRange.  There's a popular optimization used to avoid depth
+      buffer clears for scenes that completely fill the window in which
+      the depth buffer is effectively halfed and reversed in alternate
+      frames by calling DepthRange.  The WindowPos z value should be
+      subjected to depth range mapping so that it will work with this
+      optimization, and in other scenarios.
+
+    (6) Should we mention EXT_fog_coord and EXT_secondary_color in this
+      extension?
+
+      RESOLVED.  Yes, otherwise implementors may not know what to do
+      with them.  It's been suggested that we instead go back and
+      update the EXT_fog_coordinate and EXT_secondary_color specifications
+      with respect to ARB_window_pos instead.  However, that seems
+      unlikely to happen and seems error-prone/obscure for implementors.
+
+    (7) What about the raster fog coordinate?
+
+      RESOLVED. If EXT_fog_coord is not supported, CURRENT_RASTER_DISTANCE
+      is set to zero.
+
+      If EXT_fog_coord is supported, the behavior is dependent on
+      the current state of FOG_COORDINATE_SOURCE_EXT. If the fog
+      coordinate source is FRAGMENT_DEPTH_EXT, CURRENT_RASTER_DISTANCE
+      is set to zero.  If the fog coordinate source is FOG_COORDINATE_EXT,
+      CURRENT_RASTER_DISTANCE is set to the current fog coordinate.
+
+      The value chosen for CURRENT_RASTER_DISTANCE state matches the value
+      that would be chosen for normal vertices, except that WindowPos
+      does not allow the GL to compute eye coordinates that would be
+      used to generate a fog distance value.  Instead, a value of zero is
+      always used as a fog distance.
+
+      With the current EXT_fog_coord specification, there are two pieces
+      of RasterPos state that drive fog (CURRENT_RASTER_DISTANCE and
+      the current raster fog coordinate).  The setting of the fog
+      coordinate source selects which piece of state is used at
+      rasterization (Bitmap, DrawPixels) time. Instead, this extension
+      moves the selection of fog state to RasterPos state computation instead
+      of rasterization and combines the two pieces of state into a
+      single CURRENT_RASTER_DISTANCE.
+
+      Current implementations of EXT_fog_coord that support two pieces of
+      state can either change the implementations to merge the two pieces
+      into a single state or contiue to maintain two pieces of state.
+      If the implementations continue to maintain two pieces of state,
+      both the CURRENT_RASTER_DISTANCE and current raster fog coordinate
+      are set to the same value.
+
+    (8) What about the secondary raster color?
+
+      RESOLVED.  If EXT_secondary_color is supported, the (unnamed) current
+      raster secondary color is set by taking the current secondary color and
+      clamping the components to the range [0,1].
+
+      If EXT_secondary_color is not supported, the current raster secondary
+      color is set to (0,0,0).
+
+    (9) How is this extension specification different from the
+      MESA_window_pos extension?
+
+      (a) Clarified that lighting and texgen aren't used when updating
+      the current raster state.
+
+      (b) Explicitly state the effect on CURRENT_RASTER_DISTANCE and
+      CURRENT_RASTER_POSITION_VALID.
+
+      (c) Explain how the raster position's secondary color and fog
+      coordinate are handled.
+
+      (d) Z is mapped according to the DEPTH_RANGE values.
+
+      (e) Removed the functions which take 4 coordinates.
+
+New Procedures and Functions
+
+    void WindowPos2dARB(double x, double y)
+    void WindowPos2fARB(float x, float y)
+    void WindowPos2iARB(int x, int y)
+    void WindowPos2sARB(short x, short y)
+
+    void WindowPos2dvARB(const double *p)
+    void WindowPos2fvARB(const float *p)
+    void WindowPos2ivARB(const int *p)
+    void WindowPos2svARB(const short *p)
+
+    void WindowPos3dARB(double x, double y, double z)
+    void WindowPos3fARB(float x, float y, float z)
+    void WindowPos3iARB(int x, int y, int z)
+    void WindowPos3sARB(short x, short y, short z)
+
+    void WindowPos3dvARB(const double *p)
+    void WindowPos3fvARB(const float *p)
+    void WindowPos3ivARB(const int *p)
+    void WindowPos3svARB(const short *p)
+
+New Tokens
+
+    none
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    In section 2.12 (Current Raster Position), p. 42, insert after
+    fifth paragraph:
+
+        Alternately, the current raster position may be set by one of the
+        WindowPosARB commands:
+
+           void WindowPos{23}{ifds}ARB( T coords );
+           void WindowPos{23}{ifds}vARB( const T coords );
+
+        WindosPos3ARB takes three values indicating x, y and z while
+        WindowPos2ARB takes two values indicating x and y with z implicitly
+        set to 0.
+
+        The CURRENT_RASTER_POSITION, (RPx, RPy, RPz, RPw), is updated as
+        follows:
+
+            RPx = x
+
+            RPy = y
+
+                  { n,                 if z <= 0
+            RPz = { f,                 if z >= 1
+                  { n + z * (f - n),   otherwise
+
+            RPw = 1
+
+        where <n> is the DEPTH_RANGE's near value, and <f> is the
+        DEPTH_RANGE's far value.
+
+        In RGBA mode, CURRENT_RASTER_COLOR is updated from CURRENT_COLOR
+        with each color component clamped to the range [0,1].
+
+        In color index mode, CURRENT_RASTER_INDEX is updated from
+        CURRENT_INDEX.
+
+        All sets of CURRENT_RASTER_TEXTURE_COORDS are updated from
+        the corresponding CURRENT_TEXTURE_COORDS sets.
+
+        CURRENT_RASTER_POSITION_VALID is set to TRUE.
+
+        If EXT_fog_coord is not supported.
+
+          CURRENT_RASTER_DISTANCE is set to zero.
+
+        If EXT_fog_coord is supported:
+
+          CURRENT_RASTER_DISTANCE is set to
+
+            { CURRENT_FOG_COORDINATE, if FOG_COORDINATE_SOURCE_EXT is set
+            {                           to FOG_COORDINATE_EXT, or
+            { 0,                      if FOG_COORDINATE_SOURCE_EXT is set
+            {                           to FRAGMENT_DEPTH_EXT.
+
+        If EXT_secondary_color is supported:
+
+          The current raster secondary color is set by clamping the components
+          of CURRENT_SECONDARY_COLOR_EXT to [0,1], if in RGBA mode.
+
+        If EXT_secondary_color is not supported:
+
+         The current raster secondary color (the secondary color used for all
+         pixel and bitmap rasterization) is set to (0,0,0), if in RGBA mode.
+
+        Note that lighting, texture coordinate generation, and clipping are
+        not performed by the WindowPos*ARB functions.
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    In section 5.2 (Selection), p. 188, modify the fourth paragraph to read:
+
+        In selection mode, if a point, line, polygon, or the valid
+        coordinates produced by a RasterPos command intersects the clip
+        volume (section 2.11) then this primitive (or RasterPos command)
+        causes a selection hit.  WindowPos commands always generate a
+        selection hit since the resulting raster position is always
+        valid.  In the case of polygons (...)
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    One new GL rendering command is added. The following command is
+    sent to the server as part of a glXRender request:
+
+        WindowPosARB
+            2           16              rendering command length
+            2           230             rendering command opcode
+            4           FLOAT32         x       
+            4           FLOAT32         y       
+            4           FLOAT32         z       
+
+Errors
+
+    INVALID_OPERATION is generated if WindowPosARB is called betweeen
+    Begin and End.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Revision History
+
+    May 17, 2001
+        - Initial version based on GL_MESA_window_pos extension
+    May 22, 2001
+        - Explicitly state that x, y, z are window coordinates and w is
+          a clip space coordinate.  (Dan Brokenshire)
+    May 23, 2001
+        - Resolved issues 1 and 2.
+        - Added issues 4 and 5.
+    May 24, 2001
+        - Rewrote body of specification to more clearly indicate how all
+          raster position state is updated by WindowPos.
+        - Updated the issues section.
+    Jun 13, 2001
+        - Added back the double and short versions of WindowPos()
+        - Added fog coord issue and discusstion.
+        - Reordered/renumbered the issues section.
+    Jun 22, 2001
+        - Set raster secondary color to current secondary color, not black
+    Jun 25, 2001
+        - Another change to secondary color, think I got it now!
+    Nov 16, 2001
+        - updated email address
+        - List options "A" and "B" to determine behaviour of current raster
+          fog coordinate.
+    Nov 17, 2001
+        - minor clean-ups
+    Dec 12, 2001
+        - rewrite against the OpenGL 1.3 spec
+        - fixed a few typos
+    Jan 10, 2002
+        - update the interaction with EXT_fog_coord and EXT_secondary_color
+          based on the proposed resolution from the December 2001 ARB
+          meeting. (Pat Brown)
+    Jan 18, 2002
+        - Merges two pieces of fog state into a single state. (Bimal Poddar)
+    Mar 12, 2002
+        - Added GLX protocol. (Jon Leech)
+    June 11, 2002
+        - Clarifications: RGBA/index color updates apply only in 
+          RGBA/index mode respectively. Hits are generated in selection mode.

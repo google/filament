@@ -1,0 +1,290 @@
+Name
+
+    AMD_draw_buffers_blend
+
+Name Strings
+
+    GL_AMD_draw_buffers_blend
+
+Contributors
+
+    Mark Young
+    Graham Sellers
+    Timothy Lamb
+    Pierre Boudier
+    Nick Haemel
+
+Contact
+
+    Mark Young, AMD (mark.young 'at' amd.com)
+
+Status
+
+    In progress
+
+Version
+
+    Last Modified Date:         July 10, 2009
+    Author Revision:            3
+
+Number
+
+    366
+
+Dependencies
+
+    The extension is written against the OpenGL 2.0 Specification.
+
+    OpenGL 2.0 is required.
+
+    EXT_draw_buffers2 is required.
+
+Overview
+
+    This extension builds upon the ARB_draw_buffers and EXT_draw_buffers2
+    extensions. In ARB_draw_buffers (part of OpenGL 2.0), separate values
+    could be written to each color buffer.  This was further enhanced by
+    EXT_draw_buffers2 by adding in the ability to enable blending and to set
+    color write masks independently per color output.
+
+    This extension provides the ability to set individual blend equations and
+    blend functions for each color output.
+
+New Procedures and Functions
+
+   void BlendFuncIndexedAMD(uint buf, enum src, enum dst);
+
+   void BlendFuncSeparateIndexedAMD(uint buf, enum srcRGB, enum dstRGB,
+                                    enum srcAlpha, enum dstAlpha);
+
+   void BlendEquationIndexedAMD(uint buf, enum mode);
+
+   void BlendEquationSeparateIndexedAMD(uint buf, enum modeRGB,
+                                        enum modeAlpha);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify the first two paragraphs of section 4.1.8 (Blending - Blending
+    Equation), p206, to read as follows:
+
+        "Blending is controlled by the blend equation.  This equation can be
+        simultaneously set to the same value for all draw buffers using the
+        commands:
+    
+           void BlendEquation(enum mode);
+    
+           void BlendEquationSeparate(enum modeRGB, enum modeAlpha);
+    
+        or for an individual draw buffer using the indexed versions of the
+        same commands:
+    
+            void BlendEquationIndexedAMD(uint buf, enum mode);
+    
+            void BlendEquationSeparateIndexedAMD(uint buf
+                                                 enum modeRGB,
+                                                 enum modeAlpha);
+    
+        BlendEquationSeparate and BlendEquationSeparateIndexedAMD separate
+        out the blend equations into an RGB argument and an Alpha argument.
+        <modeRGB> determine the RGB blend function while <modeAlpha>
+        determines the alpha equation.  BlendEquation and
+        BlendEquationIndexedAMD control both the RGB and Alpha blend
+        equations with a single argument <mode>.  <modeRGB> and <modeAlpha>
+        must each be one of FUNC_ADD, FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT,
+        MIN_MAX, or LOGIC_OP.  BlendEquationIndexedAMD and
+        BlendEquationSeparateIndexedAMD argument <buf> sets the blend
+        equations for an individual draw buffer.  The blend equations for
+        DRAW_BUFFERi are modified by passing i as the parameter <buf>."
+
+
+    Modify the first two paragraphs of section 4.1.8 (Blending - Blending
+    Functions), p207, to read as follows:
+
+        "The weighting factors used by the blend equation are determined by
+        the blend functions.  Blend functions are simultaneously specified for
+        all draw buffers using the commands:
+
+        void BlendFunc(enum src, enum dst);
+
+        void BlendFuncSeparate(enum srcRGB, enum dstRGB,
+                               enum srcAlpha, enum dstAlpha);
+
+        or for an individual draw buffer using the indexed versions of the
+        same commands:
+    
+            void BlendFuncIndexedAMD(uint buf, enum src, enum dst);
+    
+            void BlendFuncSeparateIndexedAMD(uint buf, enum srcRGB,
+                                             enum dstRGB, enum srcAlpha,
+                                             enum dstAlpha);
+    
+        BlendFuncSeparate and BlendFuncSeparateIndexedAMD arguments <srcRGB>
+        and <dstRGB> determine the source and destination RGB blend functions,
+        respectively, while <srcAlpha> and <dstAlpha> determine the source and
+        destination alpha blend functions.  BlendFunc and BlendFuncIndexedAMD
+        arguments <src> determines both RGB and alpha source functions, while
+        <dst> determines both RGB and alpha destination functions.
+        BlendFuncSeparateIndexedAMD and BlendFuncIndexedAMD argument <buf>
+        sets the blend functions for an indivual draw buffer.  The blend
+        functions for DRAW_BUFFERi are modified by passing i as the parameter
+        <buf>."
+
+
+    Modify the first paragraph of section 4.1.8 (Blending - Blending
+    State), p209, to read as follows:
+
+        "For each of n draw buffers, the state required for blending is two
+        integers for the RGB and alpha blend equations, four integers
+        indicating the source and destination RGB and alpha blending functions,
+        four floating-point values to store the RGBA constant blend color, and
+        a bit indicating whether blending is enabled or disabled.  For all draw
+        buffers, the initial blend equations for RGB and alpha are both
+        FUNC_ADD.  The initial blending functions for all draw buffers are ONE
+        for the source RGB and alpha functions, and ZERO for the destination
+        RGB and alpha functions.  For all draw buffers initial constant blend
+        color is (R, G, B, A) = (0, 0, 0, 0).  Initially, blending is disabled
+        for all draw buffers."
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    The error INVALID_ENUM is generated if the <buf> parameter of
+    BlendFuncIndexedAMD, BlendFuncSeparateIndexedAMD, BlendEquationIndexedAMD,
+    or BlendEquatioSeparateIndexedAMD is outside the range
+    [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by BlendFuncIndexedAMD
+    if either <src>, or <dst> is not an accepted value.
+
+    The error INVALID_ENUM is generated by BlendFuncSeparateIndexedAMD
+    if either <srcRGB>, <dstRGB>, <srcAlpha>, or <dstAlpha> is not
+    an accepted value.
+
+    The error INVALID_ENUM is generated if the <mode> parameter of
+    BlendEquationIndexedAMD is not one of FUNC_ADD, FUNC_SUBTRACT,
+    FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    The error INVALID_ENUM is generated if either the <modeRGB> or <modeAlpha>
+    parameter of BlendEquationSeparateIndexedAMD is not one of
+    FUNC_ADD, FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    The error INVALID_OPERATION is generated if any of these new entry-points
+    are executed between the execution of glBegin and the corresponding
+    execution of glEnd.
+
+New State
+
+    Modify (table 6.20, p281), modifying the entries for BLEND_SRC_RGB,
+    BLEND_SRC_ALPHA, BLEND_DST_RGB, BLEND_DST_ALPHA, BLEND_EQUATION_RGB,
+    and BLEND_EQUATION_ALPHA and adding new indexed versions as well.
+
+
+    Get Target               Type Get Command           Initial Value  Description                                     Section       Attribute
+    ----------               ---- --------------------- -------------- ----------------------------------------------- ------- -------------------
+    BLEND_SRC_RGB            Z15  GetIntegerv           ONE            Blending source RGB function for draw buffer 0  4.1.8   color-buffer
+      (v1.3:BLEND_SRC)
+
+    BLEND_SRC_RGB            Z15  GetIntegerIndexedvEXT ONE            Blending source RGB function for draw buffer i  4.1.8   color-buffer
+      (v1.3:BLEND_SRC)                                                 where i is specified as <buf>
+
+    BLEND_SRC_ALPHA          Z15  GetIntegerv           ONE            Blending source A function for draw buffer 0    4.1.8   color-buffer
+
+    BLEND_SRC_ALPHA          Z15  GetIntegerIndexedvEXT ONE            Blending source A function for draw buffer i    4.1.8   color-buffer
+                                                                        where i is specified as <buf>
+
+    BLEND_DST_RGB            Z14  GetIntegerv           ZERO           Blending dest. RGB function for draw buffer 0   4.1.8   color-buffer
+      (v1.3:BLEND DST)
+
+    BLEND_DST_RGB            Z14  GetIntegerIndexedvEXT ZERO           Blending dest. RGB function for draw buffer i   4.1.8   color-buffer
+      (v1.3:BLEND DST)                                                  where i is specified as <buf>
+
+    BLEND_DST_ALPHA          Z14  GetIntegerv           ZERO           Blending dest. A function for draw buffer 0     4.1.8   color-buffer
+
+    BLEND_DST_ALPHA          Z14  GetIntegerIndexedvEXT ZERO           Blending dest. A function for draw buffer i     4.1.8   color-buffer
+                                                                        where i is specified as <buf>
+
+    BLEND_EQUATION_RGB       Z5   GetIntegerv           FUNC_ADD       RGB blending equation for draw buffer 0         4.1.8   color-buffer
+      (v1.5: BLEND EQUATION)
+
+    BLEND_EQUATION_RGB       Z5   GetIntegerIndexedvEXT FUNC_ADD       RGB blending equation for draw buffer i         4.1.8   color-buffer
+      (v1.5: BLEND EQUATION)                                            where i is specified as <buf>
+
+    BLEND_EQUATION_ALPHA     Z5   GetIntegerv           FUNC_ADD       Alpha blending equation for draw buffer 0       4.1.8   color-buffer
+
+    BLEND_EQUATION_ALPHA     Z5   GetIntegerIndexedvEXT FUNC_ADD       Alpha blending equation for draw buffer i       4.1.8   color-buffer
+                                                                        where i is specified as <buf>
+
+Issues
+
+    1.  What should we call this?
+
+        PROPOSED: Suggestions currently are
+             AMD_draw_buffers_blend
+             AMD_drawbuffers_blend
+             AMD_mrt_blend
+
+
+    2.  Should this be an AMDX extension or just AMD?
+
+        PROPOSED: We propose AMD since the functionality currently exists in
+        DX 10.1 and is used by developers in that API.
+
+
+    3.  What effect does using the non-indexed versions of the blend function
+        or equation entry-points have upon the new indexed per draw buffer
+        versions?
+
+        RESOLVED: Similar to the way EXT_draw_buffers2 handles the indexed
+        and non-indexed ColorMask interaction in issue 3.  The non-indexed
+        versions of the functions will set all buffers to the passed in
+        parameters.
+
+        For example, BlendFunc will set all color buffer blend functions to
+        the values passed in.
+
+    4.  Should the new functions be ---Indexed (as in EXT_draw_buffers2) or
+        ---i (as in OpenGL 3.0 core)?
+
+        RESOLVED: For consistency with EXT_draw_buffers2, leave them as
+        ---Indexed. If this functionality is promoted to core in a later
+        version of OpenGL, they can be changed to ---i.
+
+Revision History
+
+    #3, July 10, 2009: Jon Leech
+	Assign extension number, minor formatting cleanup for registry.
+
+    #2, March 26, 2009: myoung
+        Tightened up language. Resolved some issues.
+
+    #1, March 25, 2009: myoung
+        Internal spec development.

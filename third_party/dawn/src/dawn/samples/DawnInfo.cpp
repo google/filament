@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -41,6 +36,7 @@
 #include "dawn/dawn_proc.h"  // nogncheck
 #include "dawn/native/DawnNative.h"
 #include "dawn/webgpu_cpp_print.h"
+#include "src/utils/compiler.h"
 
 namespace {
 
@@ -244,7 +240,7 @@ void DumpAdapterFeatures(const wgpu::Adapter& adapter) {
     std::cout << "  Features\n";
     std::cout << "  ========\n";
     for (uint32_t i = 0; i < supportedFeatures.featureCount; ++i) {
-        wgpu::FeatureName f = supportedFeatures.features[i];
+        wgpu::FeatureName f = DAWN_UNSAFE_TODO(supportedFeatures.features[i]);
         auto info = dawn::native::GetFeatureInfo(f);
         std::cout << "   * " << info->name << "\n";
         std::cout << WrapString(info->description, "      ") << "\n";
@@ -254,7 +250,7 @@ void DumpAdapterFeatures(const wgpu::Adapter& adapter) {
 
 void DumpAdapterLimits(const wgpu::Adapter& adapter) {
     wgpu::Limits adapterLimits;
-    if (adapter.GetLimits(&adapterLimits)) {
+    if (adapter.GetLimits(&adapterLimits) == wgpu::Status::Success) {
         std::cout << "\n";
         std::cout << "  Adapter Limits\n";
         std::cout << "  ==============\n";

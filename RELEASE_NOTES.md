@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.76.1
+
+- backend: re-enable the `backend_test` build on iOS (opt-in via `INSTALL_BACKEND_TEST`) and record its golden-image hashes
+- vulkan: fix very slow `readPixels` on devices without host-cached staging memory (e.g. PowerVR)
+
 ## v1.76.0
 
 - backend: async completion callbacks now take a `backend::AsyncCallStatus` argument reporting

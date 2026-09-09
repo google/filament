@@ -25,9 +25,119 @@
 ; jump to the next function in the call chain
 
 
+#if defined(_ARM64EC_)
+; arm64ec needs the SDK macros, which ksarm64.h gates on _M_ARM64EC. MARMASM
+; doesn't set that, so derive it from the _ARM64EC_ it does set.
+#define _M_ARM64EC 1
+#include "ksarm64.h"
+#endif
+
     GET gen_defines.asm
 
     EXTERN loader_log_asm_function_not_supported
+
+#if defined(_ARM64EC_)
+
+; arm64ec apps can reach these through emulated x64, so each trampoline is an
+; adjustor thunk: an entry thunk for x64 callers (jumps via __os_arm64x_x64_jump)
+; and a body for arm64ec callers (checks the target with __os_arm64x_check_icall).
+; Entry thunk goes first, and the body must be non-COMDAT, or the SDK's
+; __AddEntryThunkPointer won't wire the two together.
+
+    IMPORT __os_arm64x_check_icall
+    IMPORT __os_arm64x_x64_jump
+
+    MACRO
+    PhysDevExtTramp $num
+    ARM64EC_CUSTOM_ENTRY_THUNK A64NAME(vkPhysDevExtTramp$num)
+    ldr     x9, [x0]                                                 ; Load the loader_instance_dispatch_table* into x9
+    ldr     x9, [x9, (PHYS_DEV_OFFSET_INST_DISPATCH + (PTR_SIZE * $num))] ; Load the address to branch to out of the dispatch table
+    ldr     x0, [x0, PHYS_DEV_OFFSET_PHYS_DEV_TRAMP]                 ; Load the unwrapped VkPhysicalDevice into x0
+    adrp    xip0, __os_arm64x_x64_jump
+    ldr     xip0, [xip0, __os_arm64x_x64_jump]
+    br      xip0                                                     ; jump to the target
+    LEAF_END
+    NESTED_ENTRY A64NAME(vkPhysDevExtTramp$num)
+    PROLOG_SAVE_REG_PAIR fp, lr, #-16!
+    ldr     x9, [x0]                                                 ; Load the loader_instance_dispatch_table* into x9
+    ldr     x11, [x9, (PHYS_DEV_OFFSET_INST_DISPATCH + (PTR_SIZE * $num))] ; Load the address to branch to out of the dispatch table
+    ldr     x0, [x0, PHYS_DEV_OFFSET_PHYS_DEV_TRAMP]                 ; Load the unwrapped VkPhysicalDevice into x0
+    adrp    xip0, __os_arm64x_check_icall
+    ldr     xip0, [xip0, __os_arm64x_check_icall]
+    blr     xip0                                                     ; check the target arch
+    EPILOG_RESTORE_REG_PAIR fp, lr, #16!
+    EPILOG_END              br x11                                   ; Branch to the next member of the dispatch chain
+    NESTED_END
+    MEND
+
+    MACRO
+$label    PhysDevExtTermin $num
+    ARM64EC_CUSTOM_ENTRY_THUNK A64NAME(vkPhysDevExtTermin$num)
+    ldr     x9, [x0, ICD_TERM_OFFSET_PHYS_DEV_TERM]             ; Load the loader_icd_term* in x9
+    ldr     x10, [x9, (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * $num))] ; Load the address of the next function in the dispatch chain
+    cbz     x10, terminEntryError$num                           ; Go to the error section if the next function in the chain is NULL
+    ldr     x0, [x0, PHYS_DEV_OFFSET_PHYS_DEV_TERM]             ; Unwrap the VkPhysicalDevice in x0
+    mov     x9, x10                                             ; jump helper wants the target in x9
+    adrp    xip0, __os_arm64x_x64_jump
+    ldr     xip0, [xip0, __os_arm64x_x64_jump]
+    br      xip0                                                ; jump to the target
+terminEntryError$num
+    mov     x10, (FUNCTION_OFFSET_INSTANCE + (CHAR_PTR_SIZE * $num)) ; Offset of the function name string in the instance
+    ldr     x11, [x9, INSTANCE_OFFSET_ICD_TERM]   ; Load the instance pointer
+    mov     x0, x11                               ; Vulkan instance pointer (first arg)
+    mov     x1, VULKAN_LOADER_ERROR_BIT           ; The error logging bit (second arg)
+    mov     x2, #0                                ; Zero (third arg)
+    ldr     x3, [x11, x10]                        ; The function name (fourth arg)
+    bl      loader_log_asm_function_not_supported ; Log the error message before we crash
+    mov     x0, #0
+    br      x0                                    ; Crash intentionally by jumping to address zero
+    LEAF_END
+    NESTED_ENTRY A64NAME(vkPhysDevExtTermin$num)
+    PROLOG_SAVE_REG_PAIR fp, lr, #-16!
+    ldr     x9, [x0, ICD_TERM_OFFSET_PHYS_DEV_TERM]             ; Load the loader_icd_term* in x9
+    ldr     x11, [x9, (DISPATCH_OFFSET_ICD_TERM + (PTR_SIZE * $num))] ; Load the address of the next function in the dispatch chain
+    cbz     x11, terminError$num                                ; Go to the error section if the next function in the chain is NULL
+    ldr     x0, [x0, PHYS_DEV_OFFSET_PHYS_DEV_TERM]             ; Unwrap the VkPhysicalDevice in x0
+    adrp    xip0, __os_arm64x_check_icall
+    ldr     xip0, [xip0, __os_arm64x_check_icall]
+    blr     xip0                                                ; check the target arch
+    EPILOG_RESTORE_REG_PAIR fp, lr, #16!
+    EPILOG_END              br x11                               ; Jump to the next function in the chain
+terminError$num
+    mov     x10, (FUNCTION_OFFSET_INSTANCE + (CHAR_PTR_SIZE * $num)) ; Offset of the function name string in the instance
+    ldr     x11, [x9, INSTANCE_OFFSET_ICD_TERM]   ; Load the instance pointer
+    mov     x0, x11                               ; Vulkan instance pointer (first arg)
+    mov     x1, VULKAN_LOADER_ERROR_BIT           ; The error logging bit (second arg)
+    mov     x2, #0                                ; Zero (third arg)
+    ldr     x3, [x11, x10]                        ; The function name (fourth arg)
+    bl      loader_log_asm_function_not_supported ; Log the error message before we crash
+    mov     x0, #0
+    br      x0                                    ; Crash intentionally by jumping to address zero
+    NESTED_END
+    MEND
+
+    MACRO
+    DevExtTramp $num
+    ARM64EC_CUSTOM_ENTRY_THUNK A64NAME(vkdev_ext$num)
+    ldr     x9, [x0]                                              ; Load the loader_instance_dispatch_table* into x9
+    ldr     x9, [x9, (EXT_OFFSET_DEVICE_DISPATCH + (PTR_SIZE * $num))] ; Load the function address
+    adrp    xip0, __os_arm64x_x64_jump
+    ldr     xip0, [xip0, __os_arm64x_x64_jump]
+    br      xip0                                                  ; jump to the target
+    LEAF_END
+    NESTED_ENTRY A64NAME(vkdev_ext$num)
+    PROLOG_SAVE_REG_PAIR fp, lr, #-16!
+    ldr     x9, [x0]                                              ; Load the loader_instance_dispatch_table* into x9
+    ldr     x11, [x9, (EXT_OFFSET_DEVICE_DISPATCH + (PTR_SIZE * $num))] ; Load the function address
+    adrp    xip0, __os_arm64x_check_icall
+    ldr     xip0, [xip0, __os_arm64x_check_icall]
+    blr     xip0                                                  ; check the target arch
+    EPILOG_RESTORE_REG_PAIR fp, lr, #16!
+    EPILOG_END              br x11
+    NESTED_END
+    MEND
+
+#else
 
     IF AARCH_64==1
 
@@ -134,11 +244,18 @@ vkdev_ext$num FUNCTION
 
     ENDIF
 
+#endif
+
     AREA terminator_string_data, DATA, READONLY
 
 termin_error_string DCB "Function %s not supported for this physical device", 0
 
+#if defined(_ARM64EC_)
+; the entry-thunk pointer wants 16-byte aligned functions, so set .text alignment here
+    AREA |.text|, CODE, READONLY, ALIGN=4
+#else
     AREA UnknownFunctionImpl, CODE, READONLY
+#endif
 
     PhysDevExtTramp 0
     PhysDevExtTramp 1

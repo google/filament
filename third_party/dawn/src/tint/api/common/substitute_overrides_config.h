@@ -31,7 +31,7 @@
 #include <unordered_map>
 
 #include "src/tint/api/common/override_id.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint {
 

@@ -31,7 +31,8 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/wire/client/ObjectBase.h"
 
 namespace dawn::wire::client {
 
@@ -46,19 +47,24 @@ class ClientBase;
 // type-generic, so ObjectStore is type-erased to only work on ObjectBase.
 class ObjectStore {
   public:
-    ObjectStore();
-
     ObjectHandle ReserveHandle();
     void Insert(ObjectBase* obj, const ClientBase* forClient);
     void Remove(ObjectBase* obj, const ClientBase* forClient);
 
     ObjectBase* Get(ObjectId id) const;
-    const std::vector<raw_ptr<ObjectBase>>& GetAllObjects() const;
+
+    // This returns a copy of the list of all objects so that we can iterate the objects without
+    // holding the lock. This is important because objects can call |Unregister| which will try to
+    // remove itself from the source-of-truth list behind the lock.
+    std::vector<raw_ptr<ObjectBase>> GetAllObjects() const;
 
   private:
-    uint32_t mCurrentId;
-    std::vector<ObjectHandle> mFreeHandles;
-    std::vector<raw_ptr<ObjectBase>> mObjects;
+    struct State {
+        uint32_t currentId = 1;
+        std::vector<ObjectHandle> freeHandles;
+        std::vector<raw_ptr<ObjectBase>> objects = {nullptr};
+    };
+    MutexRWProtected<State> mState;
 };
 
 }  // namespace dawn::wire::client

@@ -25,34 +25,36 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/QueryHelper.h"
+#include "src/dawn/native/QueryHelper.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "dawn/common/Strings.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/ComputePassEncoder.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/InternalPipelineStore.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/ComputePassEncoder.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
 
 namespace dawn::native {
 
 namespace {
 
 // Assert the offsets in dawn::native::TimestampParams are same with the ones in the shader
-static_assert(offsetof(dawn::native::TimestampParams, first) == 0);
-static_assert(offsetof(dawn::native::TimestampParams, count) == 4);
-static_assert(offsetof(dawn::native::TimestampParams, offset) == 8);
-static_assert(offsetof(dawn::native::TimestampParams, quantizationMask) == 12);
-static_assert(offsetof(dawn::native::TimestampParams, multiplier) == 16);
-static_assert(offsetof(dawn::native::TimestampParams, rightShift) == 20);
+static_assert(offsetof(dawn::native::TimestampParams, count) == 0);
+static_assert(offsetof(dawn::native::TimestampParams, offset) == 4);
+static_assert(offsetof(dawn::native::TimestampParams, quantizationMask) == 8);
+static_assert(offsetof(dawn::native::TimestampParams, multiplier) == 12);
+static_assert(offsetof(dawn::native::TimestampParams, rightShift) == 16);
 
+// TODO(https://crbug.com/465714204): Use immediates instead of a params buffer, which will make
+// EncodeConvertTimestampsToNanoseconds take a TimestampParams directly, and removes the need for
+// the duplicate queryCount parameter.
 static const char sConvertTimestampsToNanoseconds[] = DAWN_MULTILINE(
     struct Timestamp {
         low  : u32,
@@ -63,12 +65,7 @@ static const char sConvertTimestampsToNanoseconds[] = DAWN_MULTILINE(
         t : array<Timestamp>
     }
 
-    struct AvailabilityArr {
-        v : array<u32>
-    }
-
     struct TimestampParams {
-        first  : u32,
         count  : u32,
         offset : u32,
         quantization_mask : u32,
@@ -77,8 +74,7 @@ static const char sConvertTimestampsToNanoseconds[] = DAWN_MULTILINE(
     }
 
     @group(0) @binding(0) var<storage, read_write> timestamps : TimestampArr;
-    @group(0) @binding(1) var<storage, read> availability : AvailabilityArr;
-    @group(0) @binding(2) var<uniform> params : TimestampParams;
+    @group(0) @binding(1) var<uniform> params : TimestampParams;
 
     const sizeofTimestamp : u32 = 8u;
 
@@ -87,14 +83,6 @@ static const char sConvertTimestampsToNanoseconds[] = DAWN_MULTILINE(
         if (GlobalInvocationID.x >= params.count) { return; }
 
         var index = GlobalInvocationID.x + params.offset / sizeofTimestamp;
-
-        // Return 0 for the unavailable value.
-        if (availability.v[GlobalInvocationID.x + params.first] == 0u) {
-            timestamps.t[index].low = 0u;
-            timestamps.t[index].high = 0u;
-            return;
-        }
-
         var timestamp = timestamps.t[index];
 
         // TODO(dawn:1250): Consider using the umulExtended and uaddCarry intrinsics once
@@ -146,15 +134,14 @@ ResultOrError<ComputePipelineBase*> GetOrCreateTimestampComputePipeline(DeviceBa
 
         // Create binding group layout
         Ref<BindGroupLayoutBase> bgl;
-        DAWN_TRY_ASSIGN(
-            bgl, utils::MakeBindGroupLayout(
-                     device,
-                     {
-                         {0, wgpu::ShaderStage::Compute, kInternalStorageBufferBinding},
-                         {1, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::ReadOnlyStorage},
-                         {2, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Uniform},
-                     },
-                     /* allowInternalBinding */ true));
+        DAWN_TRY_ASSIGN(bgl,
+                        utils::MakeBindGroupLayout(
+                            device,
+                            {
+                                {0, wgpu::ShaderStage::Compute, kInternalStorageBufferBinding},
+                                {1, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Uniform},
+                            },
+                            /* allowInternalBinding */ true));
 
         // Create pipeline layout
         Ref<PipelineLayoutBase> layout;
@@ -176,12 +163,11 @@ ResultOrError<ComputePipelineBase*> GetOrCreateTimestampComputePipeline(DeviceBa
 
 }  // anonymous namespace
 
-TimestampParams::TimestampParams(uint32_t first,
-                                 uint32_t count,
+TimestampParams::TimestampParams(uint32_t count,
                                  uint32_t offset,
                                  uint32_t quantizationMask,
                                  float period)
-    : first(first), count(count), offset(offset), quantizationMask(quantizationMask) {
+    : count(count), offset(offset), quantizationMask(quantizationMask) {
     // The overall conversion happening, if p is the period, m the multiplier, s the shift, is::
     //
     //   m = round(p * 2^s)
@@ -195,18 +181,18 @@ TimestampParams::TimestampParams(uint32_t first,
     // so we need to keep the multiplier under 2^16. At the same time, the larger the
     // multiplier, the better the precision, so we maximize the value of the right shift while
     // keeping the multiplier under 2 ^ 16
-    uint32_t upperLog2 = uint32_t(ceil(log2(period)));
+    uint32_t upperLog2 = static_cast<uint32_t>(ceil(log2(period)));
 
     // Clamp the shift to 16 because we're doing computations in 16bit chunks. The
     // multiplication by the period will overflow the chunks, but timestamps are mostly
     // informational so that's ok.
     rightShift = 16u - std::min(upperLog2, 16u);
-    multiplier = uint32_t(period * (1 << rightShift));
+    multiplier = static_cast<uint32_t>(period * static_cast<float>(1u << rightShift));
 }
 
 MaybeError EncodeConvertTimestampsToNanoseconds(CommandEncoder* encoder,
+                                                uint32_t queryCount,
                                                 BufferBase* timestamps,
-                                                BufferBase* availability,
                                                 BufferBase* params) {
     DeviceBase* device = encoder->GetDevice();
     DAWN_ASSERT(device->IsLockedByCurrentThreadIfNeeded());
@@ -220,17 +206,14 @@ MaybeError EncodeConvertTimestampsToNanoseconds(CommandEncoder* encoder,
 
     // Create bind group after all binding entries are set.
     Ref<BindGroupBase> bindGroup;
-    DAWN_TRY_ASSIGN(
-        bindGroup,
-        utils::MakeBindGroup(device, layout, {{0, timestamps}, {1, availability}, {2, params}},
-                             UsageValidationMode::Internal));
+    DAWN_TRY_ASSIGN(bindGroup, utils::MakeBindGroup(device, layout, {{0, timestamps}, {1, params}},
+                                                    UsageValidationMode::Internal));
 
     // Create compute encoder and issue dispatch.
     Ref<ComputePassEncoder> pass = encoder->BeginComputePass();
     pass->APISetPipeline(pipeline);
     pass->APISetBindGroup(0, bindGroup.Get());
-    pass->APIDispatchWorkgroups(
-        static_cast<uint32_t>((timestamps->GetSize() / sizeof(uint64_t) + 7) / 8));
+    pass->APIDispatchWorkgroups((queryCount + 7) / 8);
     pass->APIEnd();
 
     return {};

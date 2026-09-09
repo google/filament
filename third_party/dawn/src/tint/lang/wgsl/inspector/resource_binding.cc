@@ -61,14 +61,6 @@ ResourceBinding::TextureDimension TypeTextureDimensionToResourceBindingTextureDi
 }
 
 ResourceBinding::SampledKind ToFilterableSampledKind(const core::type::SampledTexture* tex) {
-    switch (tex->Filterable()) {
-        case core::TextureFilterable::kFilterable:
-            return ResourceBinding::SampledKind::kFilterable;
-        case core::TextureFilterable::kUnfilterable:
-            return ResourceBinding::SampledKind::kUnfilterable;
-        default:
-            break;
-    }
     // We don't want to say `float` in this case, we want `unknown-filterable` to signify the
     // unknown filterablity.
     if (tex->Type()->Is<core::type::F32>()) {
@@ -95,14 +87,7 @@ ResourceBinding::SampledKind BaseTypeToSampledKind(const core::type::Type* base_
 
 ResourceBinding::SamplerType SamplerToSamplerType(const core::type::Sampler* sampler) {
     if (sampler->Kind() == core::type::SamplerKind::kSampler) {
-        switch (sampler->Filtering()) {
-            case core::SamplerFiltering::kFiltering:
-                return ResourceBinding::SamplerType::kFiltering;
-            case core::SamplerFiltering::kNonFiltering:
-                return ResourceBinding::SamplerType::kNonFiltering;
-            default:
-                return ResourceBinding::SamplerType::kUnknownFiltering;
-        }
+        return ResourceBinding::SamplerType::kUnknownFiltering;
     }
     if (sampler->Kind() == core::type::SamplerKind::kComparisonSampler) {
         return ResourceBinding::SamplerType::kComparison;

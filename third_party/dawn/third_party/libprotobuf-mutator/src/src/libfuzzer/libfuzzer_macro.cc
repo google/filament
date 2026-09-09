@@ -235,7 +235,7 @@ void RegisterPostProcessor(
     const protobuf::Descriptor* desc,
     std::function<void(protobuf::Message* message, unsigned int seed)>
         callback) {
-  GetMutator()->RegisterPostProcessor(desc, callback);
+  GetMutator()->RegisterPostProcessor(desc, std::move(callback));
 }
 
 }  // namespace libfuzzer

@@ -72,6 +72,8 @@ class MslWriterTestHelperBase : public BASE {
     core::type::Manager& ty{mod.Types()};
 
   protected:
+    void SetUp() override { mod.properties.Add(core::ir::Property::kAllow16BitFloats); }
+
     /// Generated MSL
     Output output_;
 

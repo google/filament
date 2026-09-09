@@ -21,16 +21,26 @@ import androidx.webgpu.helper.WebGpu
 import androidx.webgpu.helper.createWebGpu
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlinx.coroutines.CoroutineDispatcher
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 
 @Suppress("UNUSED_VARIABLE")
 @SmallTest
 class RenderPassEncoderTest {
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
   private var webGpu: WebGpu? = null
   private lateinit var device: GPUDevice
   private lateinit var defaultColorPipeline: GPURenderPipeline
@@ -43,77 +53,79 @@ class RenderPassEncoderTest {
   private val kDepthFormat = TextureFormat.Depth24Plus
 
   @Before
-  fun setup() = runBlocking {
-    val gpu = createWebGpu()
+  fun setup(): Unit = runBlocking {
+    val gpu = createWebGpu(dispatcher)
     webGpu = gpu
     device = gpu.device
+    testScope.launch {
+      gpu.processEventsLoop()
+    }
 
-    renderTarget = device.createTexture(
-      GPUTextureDescriptor(
-        size = GPUExtent3D(1, 1, 1),
-        format = TextureFormat.RGBA8Unorm,
-        usage = TextureUsage.RenderAttachment
-      )
-    )
-    renderTargetView = renderTarget.createView()
-
-    renderTargetDepth = device.createTexture(
-      GPUTextureDescriptor(
-        size = GPUExtent3D(1, 1, 1),
-        format = kDepthFormat,
-        usage = TextureUsage.RenderAttachment
-      )
-    )
-    renderTargetDepthView = renderTargetDepth.createView()
-
-    shaderModule = device.createShaderModule(
-      GPUShaderModuleDescriptor(
-        shaderSourceWGSL = GPUShaderSourceWGSL(
-          """
-                        @vertex fn vsMain() -> @builtin(position) vec4<f32> {
-                            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-                        }
-                        @fragment fn fsMain() -> @location(0) vec4<f32> {
-                            return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-                        }
-                        """.trimIndent()
+    gpu.execute {
+      renderTarget = device.createTexture(
+        GPUTextureDescriptor(
+          size = GPUExtent3D(1, 1, 1),
+          format = TextureFormat.RGBA8Unorm,
+          usage = TextureUsage.RenderAttachment
         )
       )
-    )
+      renderTargetView = renderTarget.createView()
 
-    layout = device.createPipelineLayout(GPUPipelineLayoutDescriptor())
-
-    defaultColorPipeline = device.createRenderPipeline(
-      GPURenderPipelineDescriptor(
-        layout = layout,
-        vertex = GPUVertexState(module = shaderModule, entryPoint = "vsMain"),
-        fragment = GPUFragmentState(
-          module = shaderModule,
-          entryPoint = "fsMain",
-          targets = arrayOf(
-            GPUColorTargetState(format = TextureFormat.RGBA8Unorm)
-          )
-        ),
-        primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
+      renderTargetDepth = device.createTexture(
+        GPUTextureDescriptor(
+          size = GPUExtent3D(1, 1, 1),
+          format = kDepthFormat,
+          usage = TextureUsage.RenderAttachment
+        )
       )
-    )
+      renderTargetDepthView = renderTargetDepth.createView()
+
+      shaderModule = device.createShaderModule(
+        GPUShaderModuleDescriptor(
+          shaderSourceWGSL = GPUShaderSourceWGSL(
+            """@vertex fn vsMain() -> @builtin(position) vec4<f32> {
+                          return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+                      }
+                      @fragment fn fsMain() -> @location(0) vec4<f32> {
+                          return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+                      }
+                   """.trimIndent()
+          )
+        )
+      )
+
+      layout = device.createPipelineLayout(GPUPipelineLayoutDescriptor())
+
+      defaultColorPipeline = device.createRenderPipeline(
+        GPURenderPipelineDescriptor(
+          layout = layout,
+          vertex = GPUVertexState(module = shaderModule, entryPoint = "vsMain"),
+          fragment = GPUFragmentState(
+            module = shaderModule,
+            entryPoint = "fsMain",
+            targets = arrayOf(
+              GPUColorTargetState(format = TextureFormat.RGBA8Unorm)
+            )
+          ),
+          primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
+        )
+      )
+    }
   }
 
   @After
   fun teardown() {
-    defaultColorPipeline.close()
-    renderTargetView.close()
-    renderTarget.destroy()
-
-    renderTargetDepthView.close()
-    renderTargetDepth.destroy()
-
-    shaderModule.close()
-    layout.close()
-
-    runCatching { device.destroy() }
-    webGpu?.close()
-    webGpu = null
+    val gpu = webGpu
+    if (::device.isInitialized && gpu != null) {
+      runCatching {
+        runBlocking {
+          gpu.execute { device.destroy() }
+        }
+      }
+    }
+    gpu?.close()
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
   }
 
   /**
@@ -174,273 +186,325 @@ class RenderPassEncoderTest {
 
   @Test
   fun testDebugMarker() {
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
 
-    passEncoder.insertDebugMarker("Drawing background")
+        passEncoder.insertDebugMarker("Drawing background")
 
-    passEncoder.end()
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val error = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val error = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, error)
+        assertEquals(ErrorType.NoError, error)
+      }
+    }
   }
 
   @Test
   fun testPopDebugGroupWithoutPushFails() {
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.popDebugGroup()  // Invalid call.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.popDebugGroup()  // Invalid call.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+      }
     }
   }
 
   @Test
   fun testDrawWithoutPipelineFails() {
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.draw(3)  // Invalid: pipeline not set.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.draw(3)  // Invalid: pipeline not set.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+      }
     }
   }
 
   @Test
   fun testSetVertexBufferInvalidUsageFails() {
-    val invalidBuffer = device.createBuffer(
-      GPUBufferDescriptor(size = 16, usage = BufferUsage.CopyDst)
-    )
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setVertexBuffer(0, invalidBuffer)  // Invalid.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val invalidBuffer = device.createBuffer(
+          GPUBufferDescriptor(size = 16, usage = BufferUsage.CopyDst)
+        )
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setVertexBuffer(0, invalidBuffer)  // Invalid.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        invalidBuffer.destroy()
+      }
     }
-    invalidBuffer.destroy()
   }
 
   @Test
   fun testDrawIndexedWithoutIndexBufferFails() {
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setPipeline(defaultColorPipeline)
-    passEncoder.drawIndexed(3)  // Invalid: index buffer not set.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setPipeline(defaultColorPipeline)
+        passEncoder.drawIndexed(3)  // Invalid: index buffer not set.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+      }
     }
   }
 
   @Test
   fun testDrawIndexedValidSucceeds() {
-    val indexBuffer = createIndexBuffer(shortArrayOf(0, 1, 2))
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setPipeline(defaultColorPipeline)
-    passEncoder.setIndexBuffer(indexBuffer, IndexFormat.Uint16)  // Valid.
-    passEncoder.drawIndexed(3)  // Valid.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val indexBuffer = createIndexBuffer(shortArrayOf(0, 1, 2))
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setPipeline(defaultColorPipeline)
+        passEncoder.setIndexBuffer(indexBuffer, IndexFormat.Uint16)  // Valid.
+        passEncoder.drawIndexed(3)  // Valid.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val errorType = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val errorType = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, errorType)
-    indexBuffer.destroy()
+        assertEquals(ErrorType.NoError, errorType)
+        indexBuffer.destroy()
+      }
+    }
   }
 
   @Test
   fun testDrawIndirectInvalidBufferFails() {
-    val invalidBuffer = device.createBuffer(
-      GPUBufferDescriptor(size = 16, usage = BufferUsage.CopyDst)  // 4 * Int.
-    )
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setPipeline(defaultColorPipeline)
-    passEncoder.drawIndirect(invalidBuffer, 0)  // Invalid.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val invalidBuffer = device.createBuffer(
+          GPUBufferDescriptor(size = 16, usage = BufferUsage.CopyDst)  // 4 * Int.
+        )
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setPipeline(defaultColorPipeline)
+        passEncoder.drawIndirect(invalidBuffer, 0)  // Invalid.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        invalidBuffer.destroy()
+      }
     }
-    invalidBuffer.destroy()
   }
 
   @Test
   fun testDrawIndexedIndirectWithoutIndexBufferFails() {
-    val indirectBuffer = createIndirectBuffer(intArrayOf(3, 1, 0, 0, 0))
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setPipeline(defaultColorPipeline)
-    passEncoder.drawIndexedIndirect(indirectBuffer, 0)  // Invalid.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val indirectBuffer = createIndirectBuffer(intArrayOf(3, 1, 0, 0, 0))
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setPipeline(defaultColorPipeline)
+        passEncoder.drawIndexedIndirect(indirectBuffer, 0)  // Invalid.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+        indirectBuffer.destroy()
+      }
     }
-    indirectBuffer.destroy()
   }
 
   @Test
   @MediumTest
   fun testDrawIndexedIndirectValidSucceeds() {
-    val indirectBuffer = createIndirectBuffer(intArrayOf(3, 1, 0, 0, 0))
-    val indexBuffer = createIndexBuffer(shortArrayOf(0, 1, 2))
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setPipeline(defaultColorPipeline)
-    passEncoder.setIndexBuffer(indexBuffer, IndexFormat.Uint16)  // Valid.
-    passEncoder.drawIndexedIndirect(indirectBuffer, 0)  // Valid.
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val indirectBuffer = createIndirectBuffer(intArrayOf(3, 1, 0, 0, 0))
+        val indexBuffer = createIndexBuffer(shortArrayOf(0, 1, 2))
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setPipeline(defaultColorPipeline)
+        passEncoder.setIndexBuffer(indexBuffer, IndexFormat.Uint16)  // Valid.
+        passEncoder.drawIndexedIndirect(indirectBuffer, 0)  // Valid.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val error = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val error = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, error)
-    indirectBuffer.destroy()
-    indexBuffer.destroy()
+        assertEquals(ErrorType.NoError, error)
+        indirectBuffer.destroy()
+        indexBuffer.destroy()
+      }
+    }
   }
 
   @Test
   fun testOcclusionQueryValidSucceeds() {
-    // This test needs its OWN depth-enabled pipeline.
-    // We can't use the class-level 'defaultColorPipeline' because it's color-only.
+    runBlocking {
+      val unused = webGpu!!.execute {
+        // This test needs its OWN depth-enabled pipeline.
+        // We can't use the class-level 'defaultColorPipeline' because it's color-only.
 
-    val depthPipeline = device.createRenderPipeline(
-      GPURenderPipelineDescriptor(
-        layout = layout,
-        vertex = GPUVertexState(module = shaderModule, entryPoint = "vsMain"),
-        fragment = GPUFragmentState(
-          module = shaderModule,
-          entryPoint = "fsMain",
-          targets = arrayOf(
-            GPUColorTargetState(format = TextureFormat.RGBA8Unorm)
+        val depthPipeline = device.createRenderPipeline(
+          GPURenderPipelineDescriptor(
+            layout = layout,
+            vertex = GPUVertexState(module = shaderModule, entryPoint = "vsMain"),
+            fragment = GPUFragmentState(
+              module = shaderModule,
+              entryPoint = "fsMain",
+              targets = arrayOf(
+                GPUColorTargetState(format = TextureFormat.RGBA8Unorm)
+              )
+            ),
+            primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
+            depthStencil = GPUDepthStencilState(
+              format = kDepthFormat,
+              depthWriteEnabled = OptionalBool.True,
+              depthCompare = CompareFunction.Always
+            )
           )
-        ),
-        primitive = GPUPrimitiveState(topology = PrimitiveTopology.TriangleList),
-        depthStencil = GPUDepthStencilState(
-          format = kDepthFormat,
-          depthWriteEnabled = OptionalBool.Companion.True,
-          depthCompare = CompareFunction.Always
         )
-      )
-    )
 
-    val querySet = device.createQuerySet(
-      GPUQuerySetDescriptor(type = QueryType.Occlusion, count = 1)
-    )
-    val encoder = device.createCommandEncoder()
-    val passEncoder = encoder.beginRenderPass(
-      GPURenderPassDescriptor(
-        colorAttachments = arrayOf(
-          GPURenderPassColorAttachment(
-            view = renderTargetView,
-            loadOp = LoadOp.Clear,
-            storeOp = StoreOp.Store,
-            clearValue = GPUColor(0.0, 0.0, 0.0, 1.0)
+        val querySet = device.createQuerySet(
+          GPUQuerySetDescriptor(type = QueryType.Occlusion, count = 1)
+        )
+        val encoder = device.createCommandEncoder()
+        val passEncoder = encoder.beginRenderPass(
+          GPURenderPassDescriptor(
+            colorAttachments = arrayOf(
+              GPURenderPassColorAttachment(
+                view = renderTargetView,
+                loadOp = LoadOp.Clear,
+                storeOp = StoreOp.Store,
+                clearValue = GPUColor(0.0, 0.0, 0.0, 1.0)
+              )
+            ),
+            depthStencilAttachment = GPURenderPassDepthStencilAttachment(
+              view = renderTargetDepthView,
+              depthLoadOp = LoadOp.Clear,
+              depthStoreOp = StoreOp.Store,
+              depthClearValue = 1.0f
+            ),
+            occlusionQuerySet = querySet
           )
-        ),
-        depthStencilAttachment = GPURenderPassDepthStencilAttachment(
-          view = renderTargetDepthView,
-          depthLoadOp = LoadOp.Clear,
-          depthStoreOp = StoreOp.Store,
-          depthClearValue = 1.0f
-        ),
-        occlusionQuerySet = querySet
-      )
-    )
+        )
 
-    passEncoder.beginOcclusionQuery(0)
-    passEncoder.setPipeline(depthPipeline)  // Use the local depth-pipeline.
-    passEncoder.draw(3)
-    passEncoder.endOcclusionQuery()
-    passEncoder.end()
+        passEncoder.beginOcclusionQuery(0)
+        passEncoder.setPipeline(depthPipeline)  // Use the local depth-pipeline.
+        passEncoder.draw(3)
+        passEncoder.endOcclusionQuery()
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val error = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val error = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, error)
+        assertEquals(ErrorType.NoError, error)
 
-    querySet.destroy()
-    depthPipeline.close()
+        querySet.destroy()
+        depthPipeline.close()
+      }
+    }
   }
 
   @Test
   fun testSetPassPropertiesSucceeds() {
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.setViewport(0f, 0f, 1f, 1f, 0f, 1f)
-    passEncoder.setScissorRect(0, 0, 1, 1)
-    passEncoder.setBlendConstant(GPUColor(0.0, 0.0, 0.0, 0.0))
-    passEncoder.setStencilReference(0)
-    passEncoder.end()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.setViewport(0f, 0f, 1f, 1f, 0f, 1f)
+        passEncoder.setScissorRect(0, 0, 1, 1)
+        passEncoder.setBlendConstant(GPUColor(0.0, 0.0, 0.0, 0.0))
+        passEncoder.setStencilReference(0)
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val error = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val error = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, error)
+        assertEquals(ErrorType.NoError, error)
+      }
+    }
   }
 
   @Test
   fun testEndCalledTwiceFails() {
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)
-    passEncoder.end()  // First call (valid).
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)
+        passEncoder.end()  // First call (valid).
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    passEncoder.end()  // Second call (invalid).
-    assertThrows(ValidationException::class.java) {
-      runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        passEncoder.end()  // Second call (invalid).
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          val unusedPop = device.popErrorScope()
+        }
+      }
     }
   }
 
   @Test
   fun testExecuteBundlesSucceeds() {
-    val bundleEncoder = device.createRenderBundleEncoder(
-      GPURenderBundleEncoderDescriptor(
-        colorFormats = intArrayOf(TextureFormat.RGBA8Unorm)
-      )
-    )
-    bundleEncoder.setPipeline(defaultColorPipeline)  // Use the color-only pipeline.
-    bundleEncoder.draw(3)
-    val bundle = bundleEncoder.finish()
+    runBlocking {
+      val unused = webGpu!!.execute {
+        val bundleEncoder = device.createRenderBundleEncoder(
+          GPURenderBundleEncoderDescriptor(
+            colorFormats = intArrayOf(TextureFormat.RGBA8Unorm)
+          )
+        )
+        bundleEncoder.setPipeline(defaultColorPipeline)  // Use the color-only pipeline.
+        bundleEncoder.draw(3)
+        val bundle = bundleEncoder.finish()
 
-    val encoder = device.createCommandEncoder()
-    val passEncoder = beginDefaultRenderPass(encoder)  // Use the color-only pass.
-    passEncoder.executeBundles(arrayOf(bundle))  // Valid.
-    passEncoder.end()
+        val encoder = device.createCommandEncoder()
+        val passEncoder = beginDefaultRenderPass(encoder)  // Use the color-only pass.
+        passEncoder.executeBundles(arrayOf(bundle))  // Valid.
+        passEncoder.end()
 
-    device.pushErrorScope(ErrorFilter.Validation)
-    val unusedCommandBuffer = encoder.finish()
-    val error = runBlocking { device.popErrorScope() }
+        device.pushErrorScope(ErrorFilter.Validation)
+        val unusedCommandBuffer = encoder.finish()
+        val error = device.popErrorScope()
 
-    assertEquals(ErrorType.NoError, error)
+        assertEquals(ErrorType.NoError, error)
 
-    bundle.close()
+        bundle.close()
+      }
+    }
   }
 }

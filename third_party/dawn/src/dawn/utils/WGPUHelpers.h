@@ -36,8 +36,9 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/Constants.h"
-#include "dawn/utils/TextureUtils.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/utils/platform.h"
 
 namespace dawn::utils {
 
@@ -48,7 +49,7 @@ wgpu::ShaderModule CreateShaderModule(const wgpu::Device& device, const std::str
 
 wgpu::Buffer CreateBufferFromData(const wgpu::Device& device,
                                   const void* data,
-                                  uint64_t size,
+                                  size_t size,
                                   wgpu::BufferUsage usage,
                                   std::string_view label = "");
 
@@ -68,7 +69,7 @@ wgpu::TexelCopyBufferInfo CreateTexelCopyBufferInfo(
     uint32_t rowsPerImage = wgpu::kCopyStrideUndefined);
 wgpu::TexelCopyTextureInfo CreateTexelCopyTextureInfo(
     wgpu::Texture texture,
-    uint32_t level = 0,
+    uint32_t mipLevel = 0,
     wgpu::Origin3D origin = {0, 0, 0},
     wgpu::TextureAspect aspect = wgpu::TextureAspect::All);
 wgpu::TexelCopyBufferLayout CreateTexelCopyBufferLayout(
@@ -78,8 +79,9 @@ wgpu::TexelCopyBufferLayout CreateTexelCopyBufferLayout(
 
 struct ComboRenderPassDescriptor : public wgpu::RenderPassDescriptor {
   public:
-    ComboRenderPassDescriptor(const std::vector<wgpu::TextureView>& colorAttachmentInfo = {},
-                              wgpu::TextureView depthStencil = wgpu::TextureView());
+    explicit ComboRenderPassDescriptor(
+        const std::vector<wgpu::TextureView>& colorAttachmentInfo = {},
+        wgpu::TextureView depthStencil = wgpu::TextureView());
     ~ComboRenderPassDescriptor();
 
     ComboRenderPassDescriptor(const ComboRenderPassDescriptor& otherRenderPass);
@@ -101,10 +103,10 @@ struct BasicRenderPass {
 
     static constexpr wgpu::TextureFormat kDefaultColorFormat = wgpu::TextureFormat::RGBA8Unorm;
 
-    uint32_t width;
-    uint32_t height;
-    wgpu::Texture color;
-    wgpu::TextureFormat colorFormat;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    wgpu::Texture color = nullptr;
+    wgpu::TextureFormat colorFormat = kDefaultColorFormat;
     ComboRenderPassDescriptor renderPassInfo;
 };
 BasicRenderPass CreateBasicRenderPass(
@@ -123,9 +125,9 @@ wgpu::PipelineLayout MakePipelineLayout(const wgpu::Device& device,
 
 extern wgpu::ExternalTextureBindingLayout kExternalTextureBindingLayout;
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 extern wgpu::TexelBufferBindingLayout kTexelBufferBindingLayout;
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 // Helpers to make creating bind group layouts look nicer:
 //
@@ -159,13 +161,12 @@ struct BindingLayoutEntryInitializationHelper : wgpu::BindGroupLayoutEntry {
     BindingLayoutEntryInitializationHelper(uint32_t entryBinding,
                                            wgpu::ShaderStage entryVisibility,
                                            wgpu::ExternalTextureBindingLayout* bindingLayout);
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     BindingLayoutEntryInitializationHelper(uint32_t entryBinding,
                                            wgpu::ShaderStage entryVisibility,
                                            wgpu::TexelBufferBindingLayout* bindingLayout);
-#endif  // __EMSCRIPTEN__
-    // NOLINTNEXTLINE(runtime/explicit)
-    BindingLayoutEntryInitializationHelper(const wgpu::BindGroupLayoutEntry& entry);
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
+    explicit(false) BindingLayoutEntryInitializationHelper(const wgpu::BindGroupLayoutEntry& entry);
 };
 
 wgpu::BindGroupLayout MakeBindGroupLayout(
@@ -186,9 +187,9 @@ struct BindingInitializationHelper {
     BindingInitializationHelper(uint32_t binding, const wgpu::Sampler& sampler);
     BindingInitializationHelper(uint32_t binding, const wgpu::TextureView& textureView);
     BindingInitializationHelper(uint32_t binding, const wgpu::ExternalTexture& externalTexture);
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     BindingInitializationHelper(uint32_t binding, const wgpu::TexelBufferView& texelBufferView);
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
     BindingInitializationHelper(uint32_t binding,
                                 const wgpu::Buffer& buffer,
                                 uint64_t offset = 0,
@@ -203,9 +204,9 @@ struct BindingInitializationHelper {
     wgpu::TextureView textureView;
     wgpu::Buffer buffer;
     mutable wgpu::ExternalTextureBindingEntry externalTextureBindingEntry;
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     mutable wgpu::TexelBufferBindingEntry texelBufferBindingEntry = {};
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
     uint64_t offset = 0;
     uint64_t size = 0;
 };
@@ -215,13 +216,13 @@ wgpu::BindGroup MakeBindGroup(
     const wgpu::BindGroupLayout& layout,
     std::initializer_list<BindingInitializationHelper> entriesInitializer);
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 // Make an external texture from one or two planes that doesn't perform any color-space conversion
 // or YUV to RGB conversion. The planes are given as textures so that we can reflect their size.
 wgpu::ExternalTexture MakePassthroughExternalTexture(const wgpu::Device& device,
                                                      const wgpu::Texture& plane0,
                                                      const wgpu::Texture& plane1 = {});
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 bool BackendRequiresCompat(wgpu::BackendType backend);
 

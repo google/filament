@@ -95,6 +95,7 @@ enum class BuiltinFn : uint8_t {
     kSimdgroupMultiplyAccumulate,
     kOsLog,
     kPointerOffset,
+    kVolatileZero,
     kNone,
 };
 

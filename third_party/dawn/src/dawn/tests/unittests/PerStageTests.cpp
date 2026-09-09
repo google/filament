@@ -27,7 +27,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dawn/native/PerStage.h"
+#include "src/dawn/native/PerStage.h"
 
 namespace dawn::native {
 

@@ -1,0 +1,232 @@
+XXX - Not complete yet!!!
+Name
+
+    SGIX_nurbs_eval
+
+Name Strings
+
+    GL_SGIX_nurbs_eval
+
+Version
+
+    $Date: 1998/02/12 18:24:45 $ $Revision: 1.6 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension adds a new evaluators type, NURBS.  NURBS are a compact
+    representation of the datasets that many CAD and entertainment industry
+    customers are already using.  The creation of a new interface allows for
+    levels of performance not achievable with the current evaluators API.
+
+    The current evaluators interface supports only Bezier curves, which suffer
+    from several disadvantages:  Beziers are a wasteful of memory and graphics
+    interface bandwidth; Beziers representations are often larger than
+    the representations of the tesselated surfaces they are used to render;
+    Beziers are not a native format used by CAD and entertainment applications.
+
+    In the new NURBS extension, every effort has been made to extend the
+    existing evaluators interface, rather than define a completely new set of
+    interfaces and state. 
+
+Issues
+
+    * Should it be NURB or NURBS?
+    
+    I'm choosing NURBS since it matches the GLU spec and glu extensions.
+    This does not agree with Farin's usage in the literature, but does agree
+    with many other authors.
+
+New Procedures and Functions
+
+    void NurbsKnots1SGIX[fd]( enum target,
+			      int uknotcount, T *uknots );
+    void NurbsKnots2SGIX[fd]( enum target,
+			      int uknotcount, int vknotcount,
+			      T *uknots, T *vknots );
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+	MAP1_VERTEX_3_NURBS_SGIX	0x81CB
+	MAP1_VERTEX_4_NURBS_SGIX	0x81CC
+	MAP1_INDEX_NURBS_SGIX		0x81CD
+	MAP1_COLOR_4_NURBS_SGIX		0x81CE
+	MAP1_NORMAL_NURBS_SGIX		0x81CF
+	MAP1_TEXTURE_COORD_1_NURBS_SGIX	0x81E0
+	MAP1_TEXTURE_COORD_2_NURBS_SGIX	0x81E1
+	MAP1_TEXTURE_COORD_3_NURBS_SGIX	0x81E2
+	MAP1_TEXTURE_COORD_4_NURBS_SGIX	0x81E3
+	MAP2_VERTEX_3_NURBS_SGIX	0x81E4
+	MAP2_VERTEX_4_NURBS_SGIX	0x81E5
+	MAP2_INDEX_NURBS_SGIX		0x81E6
+	MAP2_COLOR_4_NURBS_SGIX		0x81E7
+	MAP2_NORMAL_NURBS_SGIX		0x81E8
+	MAP2_TEXTURE_COORD_1_NURBS_SGIX	0x81E9
+	MAP2_TEXTURE_COORD_2_NURBS_SGIX	0x81EA
+	MAP2_TEXTURE_COORD_3_NURBS_SGIX	0x81EB
+	MAP2_TEXTURE_COORD_4_NURBS_SGIX	0x81EC
+
+    Accepted by the <value> parameter of GetMap[ifd]v:
+
+	NURBS_KNOT_COUNT_SGIX		0x81ED
+	NURBS_KNOT_VECTOR_SGIX		0x81EE
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Evaluators are extended to support both the existing specification, which
+    is a Bezier formulation, and a new NURBS formulation.  New enable tokens
+    are used to enable NURBS evaluation when it is desired.
+
+  Basis Functions:
+
+    NURBS polynomials for curves are defined as follows:
+    Consider the R^k-valued polynomial q(u) is defined by 
+	 q(u) = sum(i=0,n) N_i^d(u) * R_i
+    with N_i^d(u) =    N_i^(d-1)(u) * (u-u(i-1))/(u(i+d-1)-u(i-1)) +
+		    N(i+1)^(d-1)(u) * (u(i+d)-u)/(u(i+d)-u_i)
+    the i_th NURBS basis polynomial of degree d.
+
+    Each R_i is a control point, and each u_i is a knot-value.
+    The complete set of {u_i} values is called the knot vector. 
+
+  Map1[fd]:
+
+    When NURBS evaluation is enabled, the <order> parameter to the Map1[fd]
+    function is not really the mathematical order of the NURBS polynomial.
+    Instead, the <order> parameter merely determines the size of the array
+    given as input to Map1[fd] or Map2[fd].  In other words, the <order>
+    parameter only determines the size of the valid GL state for the map
+    array; it does not really capture the mathematical order of the curve or
+    surface. 
+
+    Note that it is still true that the <order> parameter to Map1[fd] is equal
+    to n+1 in the equation defining NURBS polynomials at the beginning of this
+    section. 
+
+  Map2[fd]:
+
+    NURBS polynomials for surfaces are defined as bivariate polynomials using
+    the same N_i^d basis functions as NURBS curves:
+	q(u,v) = sum(i=0,n) sum(j=0,m) N_i^d(u) * N_j^c(v) * R_ij
+
+  NurbsKnots1SGIX:
+  NurbsKnots2SGIX:
+
+    The <target> parameter must be one of GL_MAP1_VERTEX_3, GL_MAP1_VERTEX_4,
+    GL_MAP1_COLOR_4, GL_MAP1_INDEX, GL_MAP1_NORMAL, GL_MAP1_TEXTURE_COORD_1,
+    GL_MAP1_TEXTURE_COORD_2, GL_MAP1_TEXTURE_COORD_3, GL_MAP1_TEXTURE_COORD_4,
+    GL_MAP2_VERTEX_3, GL_MAP2_VERTEX_4, GL_MAP2_COLOR_4, GL_MAP2_INDEX,
+    GL_MAP2_NORMAL, GL_MAP2_TEXTURE_COORD_1, GL_MAP2_TEXTURE_COORD_2,
+    GL_MAP2_TEXTURE_COORD_3, or GL_MAP2_TEXTURE_COORD_4.
+
+    The knots vectors are defined by the new functions NurbsKnots1SGIX and
+    NurbsKnots2SGIX.  The size of the knot vectors, <uknotcount> and
+    <vknotcount> implicitly define the degree of the NURBS curves or surfaces
+    defined.  For curves, the degree is defined as:
+	d = <uknotcount> - <uorder> + 1
+    For surfaces, the second degree is defined as:
+	c = <vknotcount> - <vorder> + 1
+
+    The entries from the <uknots> and <vknots> input arrays are immediately
+    copied by the GL by the completion of this procedure.
+
+  EvalCoord[12][fd]:
+  EvalCoord[12][fd]v:
+  EvalPoint[12]:
+  EvalMesh[12]:
+
+    For all of the new MAP1_XXX_NURBS tokens, when MAP1_XXX_NURBS is disabled,
+    the evaluation functions, EvalCoord1[fd], EvalCoord1[fd]v, EvalPoint1, and
+    EvalMesh1 all evaluate Bezier curves for the given map as usual.  When
+    MAP1_XXX_NURBS is enabled, the evaluation functions instead evaluate NURBS
+    curves.  Similarly, the new MAP2_XXX_NURBS tokens are used to enable NURBS
+    surface evaluation for the functions EvalCoord2[fd], EvalCoord2[fd]v,
+    EvalPoint2, and EvalMesh2.   
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX - Not figured out yet.
+
+Dependencies on other extensions
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if NurbsKnots[12]SGIX parameter <uknotcount> or
+    <vknotcount> are negative or greater that or equal to MAX_EVAL_ORDER.
+
+    INVALID_VALUE is generated if <uorder> > <uknotcount>+1 when any of 
+    EvalCoord1[fd], EvalCoord1[fd]v, EvalPoint1, or EvalMesh1 are called if
+    both of MAP1_XXX and MAP1_XXX_NURBS_SGIX are enabled.
+
+    INVALID_VALUE is generated if <uorder> > <uknotcount>+1 or <vorder> >
+    <vknotcount>+1 when any of EvalCoord2[fd], EvalCoord2[fd]v, EvalPoint2, or
+    EvalMesh2 are called if both of MAP2_XXX and MAP2_XXX_NURBS_SGIX are
+    enabled.
+
+New State
+
+									Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+    MAP1_VERTEX_3_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP1_VERTEX_4_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP1_INDEX_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP1_COLOR_4_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP1_NORMAL_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP1_TEXTURE_COORD_1_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP1_TEXTURE_COORD_2_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP1_TEXTURE_COORD_3_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP1_TEXTURE_COORD_4_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP2_VERTEX_3_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP2_VERTEX_4_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP2_INDEX_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP2_COLOR_4_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP2_NORMAL_NURBS_SGIX		glIsEnabled	B	FALSE	eval/enable
+    MAP2_TEXTURE_COORD_1_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP2_TEXTURE_COORD_2_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP2_TEXTURE_COORD_3_NURBS_SGIX	glIsEnabled	B	FALSE	eval/enable
+    MAP2_TEXTURE_COORD_4_NURBS_SGIX	glIsEnabled	B	FALSE   eval/enable
+
+    NURBS_KNOT_COUNT_SGIX		GetMapiv	9XZ+	 0	
+    NURBS_KNOT_COUNT_SGIX		GetMapiv	9X2XZ+	 0,0	
+    NURBS_KNOT_VECTOR_SGIX		GetMapdv	9X7*XR	 undef.	
+    NURBS_KNOT_VECTOR_SGIX		GetMapdv	9X2X7*XR undef.	
+
+
+New Implementation Dependent State
+
+    None

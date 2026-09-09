@@ -31,6 +31,7 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 #include "src/tint/lang/core/number.h"
+#include "src/tint/lang/msl/ir/builtin_call.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -40,8 +41,13 @@ namespace {
 
 class MslWriter_FixTypeLayoutTest : public core::ir::transform::TransformTest {
   protected:
-    FixTypeLayoutOptions options;
-    void Run() { core::ir::transform::TransformTest::Run(FixTypeLayout, options); }
+    void SetUp() override {
+        mod.properties.Add(core::ir::Property::kAllow16BitFloats,
+                           core::ir::Property::kAllowBufferTypes);
+    }
+
+    FixTypeLayoutConfig options;
+    void RunTransform() { core::ir::transform::TransformTest::Run(FixTypeLayout, options); }
 };
 
 TEST_F(MslWriter_FixTypeLayoutTest, NoModify_PrivateVar) {
@@ -69,7 +75,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -100,7 +106,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -131,7 +137,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -162,7 +168,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -204,7 +210,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -247,7 +253,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -290,7 +296,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -338,7 +344,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -384,7 +390,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -435,7 +441,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -490,7 +496,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -564,7 +570,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -634,7 +640,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -698,7 +704,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -768,7 +774,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -834,7 +840,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -885,7 +891,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -943,7 +949,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1019,7 +1025,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1077,7 +1083,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1133,7 +1139,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1195,7 +1201,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1271,7 +1277,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1329,7 +1335,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1385,7 +1391,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1443,7 +1449,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1513,7 +1519,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1600,7 +1606,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1660,7 +1666,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1736,7 +1742,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1824,7 +1830,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1882,7 +1888,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -1987,7 +1993,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2093,7 +2099,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2161,11 +2167,11 @@ $B1: {  # root
 
 %foo = func(%value:S):void {
   $B2: {
-    %4:void = call %tint_store_array_packed_vec3, %v, %value
+    %4:void = call %tint_store_struct_packed_vec3, %v, %value
     ret
   }
 }
-%tint_store_array_packed_vec3 = func(%to:ptr<storage, S_packed_vec3, read_write>, %value_1:S):void {  # %value_1: 'value'
+%tint_store_struct_packed_vec3 = func(%to:ptr<storage, S_packed_vec3, read_write>, %value_1:S):void {  # %value_1: 'value'
   $B3: {
     %8:vec3<f32> = access %value_1, 0u
     %9:ptr<storage, __packed_vec3<f32>, read_write> = access %to, 0u
@@ -2191,11 +2197,11 @@ $B1: {  # root
     store %22, %24
     %25:array<vec3<f32>, 2> = access %value_1, 2u
     %26:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = access %to, 2u
-    %27:void = call %tint_store_array_packed_vec3_1, %26, %25
+    %27:void = call %tint_store_array_packed_vec3, %26, %25
     ret
   }
 }
-%tint_store_array_packed_vec3_1 = func(%to_1:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write>, %value_2:array<vec3<f32>, 2>):void {  # %to_1: 'to', %value_2: 'value'
+%tint_store_array_packed_vec3 = func(%to_1:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write>, %value_2:array<vec3<f32>, 2>):void {  # %to_1: 'to', %value_2: 'value'
   $B4: {
     %31:vec3<f32> = access %value_2, 0u
     %32:ptr<storage, __packed_vec3<f32>, read_write> = access %to_1, 0u, 0u
@@ -2210,7 +2216,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2299,7 +2305,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2428,7 +2434,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2570,7 +2576,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2654,11 +2660,11 @@ $B1: {  # root
 
 %foo = func(%value:S):void {
   $B2: {
-    %4:void = call %tint_store_array_packed_vec3, %v, %value
+    %4:void = call %tint_store_struct_packed_vec3, %v, %value
     ret
   }
 }
-%tint_store_array_packed_vec3 = func(%to:ptr<storage, S_packed_vec3, read_write>, %value_1:S):void {  # %value_1: 'value'
+%tint_store_struct_packed_vec3 = func(%to:ptr<storage, S_packed_vec3, read_write>, %value_1:S):void {  # %value_1: 'value'
   $B3: {
     %8:u32 = access %value_1, 0u
     %9:ptr<storage, u32, read_write> = access %to, 0u
@@ -2693,14 +2699,14 @@ $B1: {  # root
     store %30, %29
     %31:array<vec3<f32>, 2> = access %value_1, 5u
     %32:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = access %to, 5u
-    %33:void = call %tint_store_array_packed_vec3_1, %32, %31
+    %33:void = call %tint_store_array_packed_vec3, %32, %31
     %35:array<vec4<f32>, 2> = access %value_1, 6u
     %36:ptr<storage, array<vec4<f32>, 2>, read_write> = access %to, 6u
     store %36, %35
     ret
   }
 }
-%tint_store_array_packed_vec3_1 = func(%to_1:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write>, %value_2:array<vec3<f32>, 2>):void {  # %to_1: 'to', %value_2: 'value'
+%tint_store_array_packed_vec3 = func(%to_1:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write>, %value_2:array<vec3<f32>, 2>):void {  # %to_1: 'to', %value_2: 'value'
   $B4: {
     %39:vec3<f32> = access %value_2, 0u
     %40:ptr<storage, __packed_vec3<f32>, read_write> = access %to_1, 0u, 0u
@@ -2715,7 +2721,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2794,7 +2800,7 @@ $B1: {  # root
 
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -2972,7 +2978,7 @@ $B1: {  # root
         }
         %50:S = access %value, %idx_2
         %51:ptr<storage, S_packed_vec3, read_write> = access %to, %idx_2
-        %52:void = call %tint_store_array_packed_vec3_1, %51, %50
+        %52:void = call %tint_store_struct_packed_vec3, %51, %50
         continue  # -> $B17
       }
       $B17: {  # continuing
@@ -2983,7 +2989,7 @@ $B1: {  # root
     ret
   }
 }
-%tint_store_array_packed_vec3_1 = func(%to_1:ptr<storage, S_packed_vec3, read_write>, %value_1:S):void {  # %to_1: 'to', %value_1: 'value'
+%tint_store_struct_packed_vec3 = func(%to_1:ptr<storage, S_packed_vec3, read_write>, %value_1:S):void {  # %to_1: 'to', %value_1: 'value'
   $B19: {
     %57:vec3<u32> = access %value_1, 0u
     %58:ptr<storage, __packed_vec3<u32>, read_write> = access %to_1, 0u
@@ -2991,11 +2997,11 @@ $B1: {  # root
     store %58, %59
     %60:array<mat2x3<f32>, 11> = access %value_1, 1u
     %61:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 11>, read_write> = access %to_1, 1u
-    %62:void = call %tint_store_array_packed_vec3_2, %61, %60
+    %62:void = call %tint_store_array_packed_vec3_1, %61, %60
     ret
   }
 }
-%tint_store_array_packed_vec3_2 = func(%to_2:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 11>, read_write>, %value_2:array<mat2x3<f32>, 11>):void {  # %to_2: 'to', %value_2: 'value'
+%tint_store_array_packed_vec3_1 = func(%to_2:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 11>, read_write>, %value_2:array<mat2x3<f32>, 11>):void {  # %to_2: 'to', %value_2: 'value'
   $B20: {
     loop [i: $B21, b: $B22, c: $B23] {  # loop_4
       $B21: {  # initializer
@@ -3030,7 +3036,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3095,7 +3101,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3185,7 +3191,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3298,7 +3304,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3345,7 +3351,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3449,7 +3455,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3529,7 +3535,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3646,7 +3652,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3709,12 +3715,12 @@ $B1: {  # root
 
 %foo = func():void {
   $B2: {
-    %4:void = call %tint_store_array_packed_vec3, %s, S(vec3<u32>(0u), 0u)
-    %6:void = call %tint_store_array_packed_vec3_1, %w, S(vec3<u32>(0u), 0u)
+    %4:void = call %tint_store_struct_packed_vec3, %s, S(vec3<u32>(0u), 0u)
+    %6:void = call %tint_store_struct_packed_vec3_1, %w, S(vec3<u32>(0u), 0u)
     ret
   }
 }
-%tint_store_array_packed_vec3 = func(%to:ptr<storage, S_packed_vec3, read_write>, %value:S):void {
+%tint_store_struct_packed_vec3 = func(%to:ptr<storage, S_packed_vec3, read_write>, %value:S):void {
   $B3: {
     %10:vec3<u32> = access %value, 0u
     %11:ptr<storage, __packed_vec3<u32>, read_write> = access %to, 0u
@@ -3726,7 +3732,7 @@ $B1: {  # root
     ret
   }
 }
-%tint_store_array_packed_vec3_1 = func(%to_1:ptr<workgroup, S_packed_vec3, read_write>, %value_1:S):void {  # %to_1: 'to', %value_1: 'value'
+%tint_store_struct_packed_vec3_1 = func(%to_1:ptr<workgroup, S_packed_vec3, read_write>, %value_1:S):void {  # %to_1: 'to', %value_1: 'value'
   $B4: {
     %17:vec3<u32> = access %value_1, 0u
     %18:ptr<workgroup, __packed_vec3<u32>, read_write> = access %to_1, 0u
@@ -3740,7 +3746,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3805,7 +3811,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3872,7 +3878,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3922,7 +3928,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -3971,7 +3977,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -4036,7 +4042,7 @@ $B1: {  # root
 }
 )";
 
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -4070,7 +4076,7 @@ $B1: {  # root
     auto* expect = src;
 
     options.replace_bool_with_u32 = false;
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -4119,7 +4125,7 @@ $B1: {  # root
 )";
 
     options.replace_bool_with_u32 = true;
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -4154,7 +4160,7 @@ $B1: {  # root
     auto* expect = src;
 
     options.replace_bool_with_u32 = false;
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -4204,7 +4210,7 @@ $B1: {  # root
 )";
 
     options.replace_bool_with_u32 = true;
-    Run();
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }
@@ -4301,7 +4307,526 @@ $B1: {  # root
 )";
 
     options.replace_bool_with_u32 = true;
-    Run();
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+// Test that an array<vec3<bool>> handles the `u32` conversion correctly.
+// https://crbug.com/505317119
+TEST_F(MslWriter_FixTypeLayoutTest, ArrayVec3Bool) {
+    auto* var = b.Var<workgroup, array<vec3<bool>, 1>>("v");
+    mod.root_block->Append(var);
+
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {  //
+        auto* ptr = b.Access(ty.ptr(workgroup, ty.vec3<bool>(), read_write), var, 0_u);
+        b.LoadVectorElement(ptr, 0_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, array<vec3<bool>, 1>, read_write> = var undef
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<workgroup, vec3<bool>, read_write> = access %v, 0u
+    %4:bool = load_vector_element %3, 0u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+tint_packed_vec3_u32_array_element = struct @align(16) {
+  packed:__packed_vec3<u32> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<workgroup, array<tint_packed_vec3_u32_array_element, 1>, read_write> = var undef
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<workgroup, __packed_vec3<u32>, read_write> = access %v, 0u, 0u
+    %4:u32 = load_vector_element %3, 0u
+    %5:bool = convert %4
+    ret
+  }
+}
+)";
+
+    options.replace_bool_with_u32 = false;
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_FixTypeLayoutTest, BufferView_Vec3) {
+    auto* S = ty.Struct(mod.symbols.New("S"), {
+                                                  {mod.symbols.New("a"), ty.vec3u()},
+                                                  {mod.symbols.New("b"), ty.u32()},
+                                              });
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.void_());
+    b.Append(foo->Block(), [&] {
+        auto* p = b.CallExplicit(ty.ptr(storage, S), core::BuiltinFn::kBufferView,
+                                 Vector<core::ir::TemplateParameter, 1>{S}, v, 0_u);
+        b.Load(p);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, S, read_write> = bufferView<S> %v, 0u
+    %4:S = load %3
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+S_packed_vec3 = struct @align(16) {
+  a:__packed_vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, S_packed_vec3, read_write> = bufferView<S_packed_vec3> %v, 0u
+    %4:S = call %tint_load_struct_packed_vec3, %3
+    ret
+  }
+}
+%tint_load_struct_packed_vec3 = func(%from:ptr<storage, S_packed_vec3, read_write>):S {
+  $B3: {
+    %7:ptr<storage, __packed_vec3<u32>, read_write> = access %from, 0u
+    %8:__packed_vec3<u32> = load %7
+    %9:vec3<u32> = msl.convert %8
+    %10:ptr<storage, u32, read_write> = access %from, 1u
+    %11:u32 = load %10
+    %12:S = construct %9, %11
+    ret %12
+  }
+}
+)";
+
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_FixTypeLayoutTest, BufferArrayView_Vec3) {
+    auto* S = ty.Struct(mod.symbols.New("S"), {
+                                                  {mod.symbols.New("a"), ty.vec3u()},
+                                                  {mod.symbols.New("b"), ty.u32()},
+                                              });
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.void_());
+    b.Append(foo->Block(), [&] {
+        auto* p = b.CallExplicit(
+            ty.ptr(storage, ty.runtime_array(S)), core::BuiltinFn::kBufferArrayView,
+            Vector<core::ir::TemplateParameter, 1>{ty.runtime_array(S)}, v, 0_u, 128_u);
+        auto* a = b.Access(ty.ptr(storage, S), p, 0_u);
+        b.Load(a);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, array<S>, read_write> = bufferArrayView<array<S>> %v, 0u, 128u
+    %4:ptr<storage, S, read_write> = access %3, 0u
+    %5:S = load %4
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+S_packed_vec3 = struct @align(16) {
+  a:__packed_vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, array<S_packed_vec3>, read_write> = bufferArrayView<array<S_packed_vec3>> %v, 0u, 128u
+    %4:ptr<storage, S_packed_vec3, read_write> = access %3, 0u
+    %5:S = call %tint_load_struct_packed_vec3, %4
+    ret
+  }
+}
+%tint_load_struct_packed_vec3 = func(%from:ptr<storage, S_packed_vec3, read_write>):S {
+  $B3: {
+    %8:ptr<storage, __packed_vec3<u32>, read_write> = access %from, 0u
+    %9:__packed_vec3<u32> = load %8
+    %10:vec3<u32> = msl.convert %9
+    %11:ptr<storage, u32, read_write> = access %from, 1u
+    %12:u32 = load %11
+    %13:S = construct %10, %12
+    ret %13
+  }
+}
+)";
+
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_FixTypeLayoutTest, PointerOffset_Vec3) {
+    mod.properties.Add(core::ir::Property::kAllow8BitIntegers);
+
+    auto* S = ty.Struct(mod.symbols.New("S"), {
+                                                  {mod.symbols.New("a"), ty.vec3u()},
+                                                  {mod.symbols.New("b"), ty.u32()},
+                                              });
+    auto* v = b.Var("v", ty.ptr(storage, ty.runtime_array(ty.u8())));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.void_());
+    b.Append(foo->Block(), [&] {
+        auto* p =
+            b.CallExplicit<ir::BuiltinCall>(ty.ptr(storage, S), BuiltinFn::kPointerOffset,
+                                            Vector<core::ir::TemplateParameter, 1>{S}, v, 0_u);
+        b.Load(p);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+S = struct @align(16) {
+  a:vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+$B1: {  # root
+  %v:ptr<storage, array<u8>, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, S, read_write> = msl.pointer_offset<S> %v, 0u
+    %4:S = load %3
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+S_packed_vec3 = struct @align(16) {
+  a:__packed_vec3<u32> @offset(0)
+  b:u32 @offset(12)
+}
+
+$B1: {  # root
+  %v:ptr<storage, array<u8>, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, S_packed_vec3, read_write> = msl.pointer_offset<S_packed_vec3> %v, 0u
+    %4:S = call %tint_load_struct_packed_vec3, %3
+    ret
+  }
+}
+%tint_load_struct_packed_vec3 = func(%from:ptr<storage, S_packed_vec3, read_write>):S {
+  $B3: {
+    %7:ptr<storage, __packed_vec3<u32>, read_write> = access %from, 0u
+    %8:__packed_vec3<u32> = load %7
+    %9:vec3<u32> = msl.convert %8
+    %10:ptr<storage, u32, read_write> = access %from, 1u
+    %11:u32 = load %10
+    %12:S = construct %9, %11
+    ret %12
+  }
+}
+)";
+
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_FixTypeLayoutTest, ArrayOfMatrixAndArrayOfArrayCollision) {
+    auto* s = ty.Struct(mod.symbols.New("S"),
+                        {
+                            {mod.symbols.Register("a"), ty.array<mat3x3<f32>, 3>()},
+                            {mod.symbols.Register("b"), ty.array(ty.array<vec3<f32>, 3>(), 3)},
+                        });
+
+    auto* var = b.Var("v", storage, s);
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {  //
+        b.Load(var);
+        b.Return(func);
+    });
+
+    auto* expect = R"(
+S = struct @align(16) {
+  a:array<mat3x3<f32>, 3> @offset(0)
+  b:array<array<vec3<f32>, 3>, 3> @offset(144)
+}
+
+tint_packed_vec3_f32_array_element = struct @align(16) {
+  packed:__packed_vec3<f32> @offset(0)
+}
+
+S_packed_vec3 = struct @align(16) {
+  a:array<array<tint_packed_vec3_f32_array_element, 3>, 3> @offset(0)
+  b:array<array<tint_packed_vec3_f32_array_element, 3>, 3> @offset(144)
+}
+
+$B1: {  # root
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:S = call %tint_load_struct_packed_vec3, %v
+    ret
+  }
+}
+%tint_load_struct_packed_vec3 = func(%from:ptr<storage, S_packed_vec3, read_write>):S {
+  $B3: {
+    %6:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 3>, 3>, read_write> = access %from, 0u
+    %7:array<mat3x3<f32>, 3> = call %tint_load_array_packed_vec3, %6
+    %9:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 3>, 3>, read_write> = access %from, 1u
+    %10:array<array<vec3<f32>, 3>, 3> = call %tint_load_array_packed_vec3_1, %9
+    %12:S = construct %7, %10
+    ret %12
+  }
+}
+%tint_load_array_packed_vec3 = func(%from_1:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 3>, 3>, read_write>):array<mat3x3<f32>, 3> {  # %from_1: 'from'
+  $B4: {
+    %14:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write> = access %from_1, 0u
+    %15:array<tint_packed_vec3_f32_array_element, 3> = load %14
+    %16:__packed_vec3<f32> = access %15, 0u, 0u
+    %17:vec3<f32> = msl.convert %16
+    %18:__packed_vec3<f32> = access %15, 1u, 0u
+    %19:vec3<f32> = msl.convert %18
+    %20:__packed_vec3<f32> = access %15, 2u, 0u
+    %21:vec3<f32> = msl.convert %20
+    %22:mat3x3<f32> = construct %17, %19, %21
+    %23:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write> = access %from_1, 1u
+    %24:array<tint_packed_vec3_f32_array_element, 3> = load %23
+    %25:__packed_vec3<f32> = access %24, 0u, 0u
+    %26:vec3<f32> = msl.convert %25
+    %27:__packed_vec3<f32> = access %24, 1u, 0u
+    %28:vec3<f32> = msl.convert %27
+    %29:__packed_vec3<f32> = access %24, 2u, 0u
+    %30:vec3<f32> = msl.convert %29
+    %31:mat3x3<f32> = construct %26, %28, %30
+    %32:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write> = access %from_1, 2u
+    %33:array<tint_packed_vec3_f32_array_element, 3> = load %32
+    %34:__packed_vec3<f32> = access %33, 0u, 0u
+    %35:vec3<f32> = msl.convert %34
+    %36:__packed_vec3<f32> = access %33, 1u, 0u
+    %37:vec3<f32> = msl.convert %36
+    %38:__packed_vec3<f32> = access %33, 2u, 0u
+    %39:vec3<f32> = msl.convert %38
+    %40:mat3x3<f32> = construct %35, %37, %39
+    %41:array<mat3x3<f32>, 3> = construct %22, %31, %40
+    ret %41
+  }
+}
+%tint_load_array_packed_vec3_1 = func(%from_2:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 3>, 3>, read_write>):array<array<vec3<f32>, 3>, 3> {  # %from_2: 'from'
+  $B5: {
+    %43:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write> = access %from_2, 0u
+    %44:array<vec3<f32>, 3> = call %tint_load_array_packed_vec3_2, %43
+    %46:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write> = access %from_2, 1u
+    %47:array<vec3<f32>, 3> = call %tint_load_array_packed_vec3_2, %46
+    %48:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write> = access %from_2, 2u
+    %49:array<vec3<f32>, 3> = call %tint_load_array_packed_vec3_2, %48
+    %50:array<array<vec3<f32>, 3>, 3> = construct %44, %47, %49
+    ret %50
+  }
+}
+%tint_load_array_packed_vec3_2 = func(%from_3:ptr<storage, array<tint_packed_vec3_f32_array_element, 3>, read_write>):array<vec3<f32>, 3> {  # %from_3: 'from'
+  $B6: {
+    %52:ptr<storage, __packed_vec3<f32>, read_write> = access %from_3, 0u, 0u
+    %53:__packed_vec3<f32> = load %52
+    %54:vec3<f32> = msl.convert %53
+    %55:ptr<storage, __packed_vec3<f32>, read_write> = access %from_3, 1u, 0u
+    %56:__packed_vec3<f32> = load %55
+    %57:vec3<f32> = msl.convert %56
+    %58:ptr<storage, __packed_vec3<f32>, read_write> = access %from_3, 2u, 0u
+    %59:__packed_vec3<f32> = load %58
+    %60:vec3<f32> = msl.convert %59
+    %61:array<vec3<f32>, 3> = construct %54, %57, %60
+    ret %61
+  }
+}
+)";
+
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_FixTypeLayoutTest, SugroupMatrixLoad_Vec3) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.runtime_array(ty.vec3u())));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* mat_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kLeft, ty.f32(), 8, 8);
+    auto* foo = b.Function("foo", ty.void_());
+    b.Append(foo->Block(), [&] {
+        b.CallExplicit(mat_ty, core::BuiltinFn::kSubgroupMatrixLoad,
+                       Vector<core::ir::TemplateParameter, 1>{mat_ty, core::Majorness::kColMajor},
+                       v, 0_u, 8_u);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, array<vec3<u32>>, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:subgroup_matrix_left<f32, 8, 8> = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>, col_major> %v, 0u, 8u
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+tint_packed_vec3_u32_array_element = struct @align(16) {
+  packed:__packed_vec3<u32> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<storage, array<tint_packed_vec3_u32_array_element>, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:ptr<storage, array<vec4<u32>>, read_write> = msl.pointer_offset<array<vec4<u32>>> %v, 0u
+    %4:subgroup_matrix_left<f32, 8, 8> = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>, col_major> %3, 0u, 8u
+    ret
+  }
+}
+)";
+
+    RunTransform();
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_FixTypeLayoutTest, SugroupMatrixStore_vec3) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.runtime_array(ty.vec3i())));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* mat_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kLeft, ty.f32(), 8, 8);
+    auto* foo = b.Function("foo", ty.void_());
+    auto* m = b.FunctionParam("m", mat_ty);
+    foo->SetParams({m});
+    b.Append(foo->Block(), [&] {
+        b.CallExplicit(ty.void_(), core::BuiltinFn::kSubgroupMatrixStore,
+                       Vector<core::ir::TemplateParameter, 2>{core::Majorness::kRowMajor}, v, 0_u,
+                       m, 8_u);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, array<vec3<i32>>, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%m:subgroup_matrix_left<f32, 8, 8>):void {
+  $B2: {
+    %4:void = subgroupMatrixStore<row_major> %v, 0u, %m, 8u
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+tint_packed_vec3_i32_array_element = struct @align(16) {
+  packed:__packed_vec3<i32> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<storage, array<tint_packed_vec3_i32_array_element>, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%m:subgroup_matrix_left<f32, 8, 8>):void {
+  $B2: {
+    %4:ptr<storage, array<vec4<i32>>, read_write> = msl.pointer_offset<array<vec4<i32>>> %v, 0u
+    %5:void = subgroupMatrixStore<row_major> %4, 0u, %m, 8u
+    ret
+  }
+}
+)";
+
+    RunTransform();
 
     EXPECT_EQ(expect, str());
 }

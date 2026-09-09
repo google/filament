@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-{% from 'art/api_kotlin_types.kt' import kotlin_annotation, kotlin_declaration, kotlin_definition, check_if_doc_present, generate_kdoc, generate_simple_kdoc, add_kdoc_disclaimer with context %}
+{% from 'art/api_kotlin_types.kt' import kotlin_annotation, kotlin_declaration, kotlin_definition, check_if_doc_present, generate_kdoc, generate_simple_kdoc, add_kdoc_disclaimer, kotlin_member_optin, kotlin_class_optin, item_requires_optin with context %}
 {% from 'art/api_kotlin_async_helpers.kt' import async_wrapper, analyze_callback with context %}
 {{ add_kdoc_disclaimer() }}
 package {{ kotlin_package }}
@@ -34,6 +34,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 {% if doc_str | trim %}
     {{ generate_simple_kdoc(doc_str) }}
 {% endif %}
+{% set experimental = kotlin_class_optin(obj) -%}
+{% if experimental %}
+    //* Requires opt-in if this entire WebGPU object class itself is experimental.
+    {{ experimental }}
+{% endif %}
 public class {{ kotlin_name(obj) }} private constructor(public val handle: Long): AutoCloseable {
     {% set all_method_info = object_info.methods if object_info else {} %}
     {% for method in obj.methods if include_method(obj, method) %}
@@ -48,6 +53,11 @@ public class {{ kotlin_name(obj) }} private constructor(public val handle: Long)
         {{ generate_kdoc(main_doc, return_doc, arg_docs_map, method_args, "\n     * ", indent_prefix = "    ") }}
 
         {%- endif %}
+        {% set experimental = kotlin_member_optin(method, parent=obj) -%}
+        {% if experimental %}
+            //* Requires opt-in if the method, its return type, or any of its arguments require experimental opt-in.
+            {{ experimental }}
+        {% endif %}
         @FastNative
         @JvmName("{{ method.name.camelCase() }}")
         {% for arg in kotlin_record_members(method.arguments) %}
@@ -75,6 +85,9 @@ public class {{ kotlin_name(obj) }} private constructor(public val handle: Long)
             //* For the Kotlin getter, strip word 'get' from name and convert the remainder to
             //* camelCase() (lower case first word). E.g. "get foo bar" translated to fooBar.
             {% set name = method.name.chunks[1] + method.name.chunks[2:] | map('title') | join %}
+            {% if experimental %}
+                {{ experimental }}
+            {% endif %}
             @get:JvmName("{{ name }}")
             public val {{ name }}: {{ kotlin_declaration(_kotlin_return) if _kotlin_return else 'Unit' }} get() = {{ method.name.camelCase() }}()
 

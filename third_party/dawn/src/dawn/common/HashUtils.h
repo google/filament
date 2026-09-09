@@ -30,11 +30,12 @@
 
 #include <bitset>
 #include <functional>
+#include <utility>
 
-#include "dawn/common/Platform.h"
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/ityp_bitset.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/utils/platform.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn {
 
@@ -120,5 +121,15 @@ struct hash<dawn::ityp::bitset<Index, N>> {
     }
 };
 }  // namespace std
+
+namespace dawn::ityp {
+// Allow ityp::bitset to be used as a key in absl hash containers (e.g. absl::flat_hash_map), which
+// hash through AbslHashValue rather than std::hash. Forward to dawn::Hash, which uses the std::hash
+// specialization above.
+template <typename H, typename Index, size_t N>
+H AbslHashValue(H h, const bitset<Index, N>& value) {
+    return H::combine(std::move(h), dawn::Hash(value));
+}
+}  // namespace dawn::ityp
 
 #endif  // SRC_DAWN_COMMON_HASHUTILS_H_

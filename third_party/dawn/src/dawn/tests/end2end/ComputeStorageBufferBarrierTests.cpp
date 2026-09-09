@@ -25,10 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <array>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -260,14 +262,14 @@ TEST_P(ComputeStorageBufferBarrierTests, UniformToStorageAddPingPong) {
                                                           {1, bufferA, 0, bufferSize},
                                                       });
 
-    wgpu::BindGroup bindGroups[2] = {bindGroupA, bindGroupB};
+    std::array<wgpu::BindGroup, 2> bindGroups = {bindGroupA, bindGroupB};
 
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
 
     for (uint32_t i = 0, b = 0; i < kIterations; ++i, b = 1 - b) {
         wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
         pass.SetPipeline(pipeline);
-        pass.SetBindGroup(0, bindGroups[b]);
+        pass.SetBindGroup(0, DAWN_UNSAFE_TODO(bindGroups[b]));
         pass.DispatchWorkgroups(kNumValues / 4);
         pass.End();
     }
@@ -327,7 +329,7 @@ TEST_P(ComputeStorageBufferBarrierTests, UniformToStorageAddPingPongInOnePass) {
                                                           {1, bufferA, 0, bufferSize},
                                                       });
 
-    wgpu::BindGroup bindGroups[2] = {bindGroupA, bindGroupB};
+    std::array<wgpu::BindGroup, 2> bindGroups = {bindGroupA, bindGroupB};
 
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
     wgpu::ComputePassEncoder pass = encoder.BeginComputePass();

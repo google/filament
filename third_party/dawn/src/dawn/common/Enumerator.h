@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #ifndef SRC_DAWN_COMMON_ENUMERATOR_H_
 #define SRC_DAWN_COMMON_ENUMERATOR_H_
 
@@ -37,6 +32,7 @@
 #include <utility>
 
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 
@@ -59,7 +55,7 @@ class EnumerateRange final {
         bool operator!=(const Iterator& other) const { return !(*this == other); }
         Iterator& operator++() {
             mIndex++;
-            mValue++;
+            DAWN_UNSAFE_TODO(mValue++);
             return *this;
         }
         std::pair<Index, Value&> operator*() const { return {mIndex, *mValue}; }
@@ -83,6 +79,13 @@ template <typename T,
           typename Index = decltype(std::declval<T>().size()),
           typename Value = std::remove_pointer_t<decltype(std::declval<T>().data())>>
 EnumerateRange<Index, Value> Enumerate(T& v) {
+    return {v.size(), v.data()};
+}
+
+template <typename T,
+          typename Index = decltype(std::declval<T>().size()),
+          typename Value = std::remove_pointer_t<decltype(std::declval<T>().data())>>
+EnumerateRange<Index, Value> Enumerate(T&& v) {
     return {v.size(), v.data()};
 }
 }  // namespace dawn

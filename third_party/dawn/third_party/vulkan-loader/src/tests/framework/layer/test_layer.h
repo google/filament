@@ -35,6 +35,7 @@
 
 #include "loader/generated/vk_layer_dispatch_table.h"
 
+#include "util/dispatchable_handle.h"
 #include "util/functions.h"
 
 #include "layer_util.h"
@@ -140,12 +141,12 @@ struct TestLayer {
     BUILDER_VALUE(bool, add_phys_devs)
     BUILDER_VALUE(bool, remove_phys_devs)
     BUILDER_VALUE(bool, reorder_phys_devs)
-    BUILDER_VECTOR(VkPhysicalDevice, complete_physical_devices, complete_physical_device)
-    BUILDER_VECTOR(VkPhysicalDevice, removed_physical_devices, removed_physical_device)
-    BUILDER_VECTOR(VkPhysicalDevice, added_physical_devices, added_physical_device)
-    BUILDER_VECTOR(VkPhysicalDeviceGroupProperties, complete_physical_device_groups, complete_physical_device_group)
-    BUILDER_VECTOR(VkPhysicalDeviceGroupProperties, removed_physical_device_groups, removed_physical_device_group)
-    BUILDER_VECTOR(VkPhysicalDeviceGroupProperties, added_physical_device_groups, added_physical_device_group)
+    std::vector<VkPhysicalDevice> complete_physical_devices;
+    std::vector<VkPhysicalDevice> removed_physical_devices;
+    std::vector<DispatchableHandle<VkPhysicalDevice>> added_physical_devices;
+    std::vector<VkPhysicalDeviceGroupProperties> complete_physical_device_groups;
+    std::vector<VkPhysicalDeviceGroupProperties> removed_physical_device_groups;
+    std::vector<VkPhysicalDeviceGroupProperties> added_physical_device_groups;
 
     BUILDER_VECTOR(VulkanFunction, custom_physical_device_implementation_functions, custom_physical_device_implementation_function)
     BUILDER_VECTOR(VulkanFunction, custom_device_implementation_functions, custom_device_implementation_function)

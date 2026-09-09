@@ -46,7 +46,13 @@ using namespace tint::core::number_suffixes;  // NOLINT
 namespace tint::hlsl::ir {
 namespace {
 
-using IR_HlslMemberBuiltinCallTest = core::ir::IRTestHelper;
+class IR_HlslMemberBuiltinCallTest : public core::ir::IRTestHelper {
+  protected:
+    void SetUp() override {
+        core::ir::IRTestHelper::SetUp();
+        mod.properties.Add(core::ir::Property::kAllowNonCoreTypes);
+    }
+};
 
 TEST_F(IR_HlslMemberBuiltinCallTest, Clone) {
     auto* buf = ty.Get<hlsl::type::ByteAddressBuffer>(core::Access::kReadWrite);
@@ -74,7 +80,7 @@ TEST_F(IR_HlslMemberBuiltinCallTest, CloneWithExplicitParams) {
 
     auto* t = b.FunctionParam("t", buf);
     auto* builtin = b.MemberCall<MemberBuiltinCall>(mod.Types().u32(), BuiltinFn::kLoad, t, 2_u);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<core::ir::TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());
@@ -97,9 +103,7 @@ TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchNonMemberFunction) {
         b.Return(func, builtin);
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
@@ -139,16 +143,25 @@ TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchIncorrectType) {
         b.Return(func, builtin);
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
         R"(:7:17 error: Store: no matching call to 'Store(hlsl.byte_address_buffer<read>, u32, u32)'
 
-1 candidate function:
+5 candidate functions:
  • 'Store(byte_address_buffer<write' or 'read_write>  ✗ , offset: u32  ✓ , value: u32  ✓ )'
+ • 'Store(subgroup_matrix<K, S, C, R>  ✗ , ptr<workgroup, array<S, AC>, read_write>  ✗ , offset: u32  ✓ , stride: u32  ✗ , matrix_layout  ✗ )' where:
+      ✗  'S' is 'f32', 'i32', 'u32', 'f16', 'i8' or 'u8'
+ • 'Store(subgroup_matrix<K, S, C, R>  ✗ , byte_address_buffer<AM>  ✗ , offset: u32  ✓ , stride: u32  ✗ , matrix_layout  ✗ )' where:
+      ✗  'S' is 'f32', 'i32', 'u32', 'f16', 'i8' or 'u8'
+      ✗  'AM' is 'write' or 'read_write'
+ • 'Store(subgroup_matrix<K, S, C, R>  ✗ , ptr<workgroup, array<AE, AC>, read_write>  ✗ , offset: u32  ✓ , stride: u32  ✗ , matrix_layout  ✗ )' where:
+      ✗  'S' is 'f32', 'i32', 'u32', 'f16', 'i8' or 'u8'
+      ✗  'AE' is 'u16' or 'u32'
+ • 'Store(subgroup_matrix<K, S, C, R>  ✗ , ptr<workgroup, array<vecN<AE>, AC>, read_write>  ✗ , offset: u32  ✓ , stride: u32  ✗ , matrix_layout  ✗ )' where:
+      ✗  'S' is 'f32', 'i32', 'u32', 'f16', 'i8' or 'u8'
+      ✗  'AE' is 'u16' or 'u32'
 
     %3:u32 = %t.Store 2u, 2u
                 ^^^^^
@@ -180,14 +193,12 @@ TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchIncorrectType_NotAllOverloadsAr
     auto* func = b.Function("foo", ty.u32());
     b.Append(func->Block(), [&] {
         auto* var = b.Var<function, i32>("var");
-        auto* builtin = b.MemberCall<MemberBuiltinCall>(ty.void_(), BuiltinFn::kInterlockedExchange,
-                                                        t, 4_f, 123_i, var);
-        b.Return(func, builtin);
+        b.MemberCall<MemberBuiltinCall>(ty.void_(), BuiltinFn::kInterlockedExchange, t, 4_f, 123_i,
+                                        var);
+        b.Return(func, b.Zero(ty.u32()));
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
@@ -203,14 +214,6 @@ TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchIncorrectType_NotAllOverloadsAr
   $B2: {
   ^^^
 
-:9:5 error: return: return value type 'void' does not match function return type 'u32'
-    ret %4
-    ^^^^^^
-
-:6:3 note: in block
-  $B2: {
-  ^^^
-
 note: # Disassembly
 $B1: {  # root
   %t:hlsl.byte_address_buffer<read_write> = var undef @binding_point(0, 0)
@@ -220,7 +223,7 @@ $B1: {  # root
   $B2: {
     %var:ptr<function, i32, read_write> = var undef
     %4:void = %t.InterlockedExchange 4.0f, 123i, %var
-    ret %4
+    ret 0u
   }
 }
 )");
@@ -238,9 +241,7 @@ TEST_F(IR_HlslMemberBuiltinCallTest, Valid) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_EQ(res, Success);
 }
 
@@ -258,9 +259,7 @@ TEST_F(IR_HlslMemberBuiltinCallTest, MissingResults) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(res.Failure().reason,
               R"(:7:16 error: Load: expected exactly 1 results, got 0
@@ -297,14 +296,12 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooFewArgs) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(res.Failure().reason,
               R"(:7:17 error: Load: no matching call to 'Load(hlsl.byte_address_buffer<read>)'
 
-28 candidate functions:
+24 candidate functions:
  • 'Load(byte_address_buffer<read' or 'read_write>  ✓ , offset: u32  ✗ ) -> u32'
  • 'Load(texture: texture_depth_2d  ✗ , location: vec3<i32>  ✗ ) -> vec4<f32>'
  • 'Load(texture: texture_depth_2d_array  ✗ , location: vec4<i32>  ✗ ) -> vec4<f32>'
@@ -316,18 +313,6 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooFewArgs) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'Load(texture: texture_3d<T>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
- • 'Load(texture: texture_1d<f32, F>  ✗ , location: vec2<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'Load(texture: texture_2d<f32, F>  ✗ , location: vec3<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'Load(texture: texture_2d_array<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'Load(texture: texture_3d<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<f32>' where:
       ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'C' is 'i32' or 'u32'
@@ -410,15 +395,13 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooManyArgs) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod, core::ir::Capabilities{
-                                           core::ir::Capability::kAllowNonCoreTypes,
-                                       });
+    auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
         R"(:7:17 error: Load: no matching call to 'Load(hlsl.byte_address_buffer<read>, u32, u32, u32)'
 
-28 candidate functions:
+24 candidate functions:
  • 'Load(byte_address_buffer<read' or 'read_write>  ✓ , offset: u32  ✓ ) -> u32' where:
       ✗  overload expects 2 arguments, call passed 4 arguments
  • 'Load(texture: texture_depth_multisampled_2d  ✗ , location: vec2<i32>  ✗ , sample_index: i32  ✗ ) -> vec4<f32>'
@@ -434,18 +417,6 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooManyArgs) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'Load(texture: texture_3d<T>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
- • 'Load(texture: texture_1d<f32, F>  ✗ , location: vec2<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'Load(texture: texture_2d<f32, F>  ✗ , location: vec3<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'Load(texture: texture_2d_array<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
- • 'Load(texture: texture_3d<f32, F>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
-      ✗  'T' is 'f32'
-      ✗  'F' is 'filterable' or 'unfilterable'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<f32>' where:
       ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'C' is 'i32' or 'u32'

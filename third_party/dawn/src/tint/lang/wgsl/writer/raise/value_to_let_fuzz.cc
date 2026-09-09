@@ -19,14 +19,13 @@
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 // DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
 // FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT\ OF SUBSTITUTE GOODS OR
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 // SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
-#include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/wgsl/writer/raise/value_to_let.h"
 
 namespace tint::wgsl::writer::raise {
@@ -39,7 +38,4 @@ Result<SuccessType> ValueToLetFuzzer(core::ir::Module& ir, const fuzz::ir::Conte
 }  // namespace
 }  // namespace tint::wgsl::writer::raise
 
-TINT_IR_MODULE_FUZZER(tint::wgsl::writer::raise::ValueToLetFuzzer,
-                      tint::core::ir::Capabilities{},
-                      tint::core::ir::Capabilities{
-                          tint::core::ir::Capability::kAllowPhonyInstructions});
+TINT_IR_MODULE_FUZZER(tint::wgsl::writer::raise::ValueToLetFuzzer);

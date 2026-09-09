@@ -25,23 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Pipeline.h"
+#include "src/dawn/native/Pipeline.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <set>
 #include <utility>
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/string_view.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Enumerator.h"
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/ObjectContentHasher.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/ShaderModule.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ImmediatesLayout.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/ObjectContentHasher.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/utils/compiler.h"
 #include "src/utils/numeric.h"
 
 namespace dawn::native {
@@ -77,12 +79,12 @@ uint32_t ComputeNumTextureSamplerCombinations(const dawn::native::EntryPointMeta
     }
 
     // count the number of non-sampled that are not referenced by sampled pairs.
-    auto numNonSampled = std::count_if(nonSampled.begin(), nonSampled.end(),
-                                       [&](const WGSLBindPoint& nonSampledBindingPoint) {
-                                           return !sampledTextures.contains(nonSampledBindingPoint);
-                                       });
+    uint32_t numNonSampled = dchecked_cast<uint32_t>(std::count_if(
+        nonSampled.begin(), nonSampled.end(), [&](const WGSLBindPoint& nonSampledBindingPoint) {
+            return !sampledTextures.contains(nonSampledBindingPoint);
+        }));
     return numSamplerTexturePairs + numNonSampled + numSamplerExternalTexturePairs * 3 +
-           uint32_t(sampledExternalTextures.size());
+           static_cast<uint32_t>(sampledExternalTextures.size());
 }
 
 }  // namespace
@@ -90,8 +92,7 @@ uint32_t ComputeNumTextureSamplerCombinations(const dawn::native::EntryPointMeta
 ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* device,
                                                                 const ShaderModuleBase* module,
                                                                 StringView entryPointName,
-                                                                size_t constantCount,
-                                                                const ConstantEntry* constants,
+                                                                Span<const ConstantEntry> constants,
                                                                 const PipelineLayoutBase* layout,
                                                                 SingleShaderStage stage) {
     DAWN_TRY(device->ValidateObject(module));
@@ -164,9 +165,9 @@ ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* devi
     size_t numUninitializedConstants = metadata.uninitializedOverrides.size();
     // Keep an initialized constants sets to handle duplicate initialization cases
     absl::flat_hash_set<std::string_view> stageInitializedConstantIdentifiers;
-    for (uint32_t i = 0; i < constantCount; i++) {
-        absl::string_view key = {constants[i].key};
-        double value = constants[i].value;
+    for (auto [i, constant] : Enumerate(constants)) {
+        absl::string_view key = constant.key;
+        double value = constant.value;
 
         DAWN_INVALID_IF(!metadata.overrides.contains(key),
                         "Pipeline overridable constant \"%s\" not found in %s.", constants[i].key,
@@ -249,7 +250,7 @@ ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* devi
     return entryPoint;
 }
 
-uint32_t GetRawBits(ImmediateConstantMask bits) {
+uint32_t GetRawBits(ImmediateMask bits) {
     return static_cast<uint32_t>(bits.to_ulong());
 }
 
@@ -260,7 +261,7 @@ PipelineBase::PipelineBase(DeviceBase* device,
                            StringView label,
                            std::vector<StageAndDescriptor> stages)
     : ApiObjectBase(device, label), mLayout(layout) {
-    DAWN_ASSERT(!stages.empty());
+    DAWN_CHECK(!stages.empty());
 
     for (const StageAndDescriptor& stage : stages) {
         // Extract argument for this stage.
@@ -269,7 +270,7 @@ PipelineBase::PipelineBase(DeviceBase* device,
         const char* entryPointName = stage.entryPoint.c_str();
 
         const EntryPointMetadata& metadata = module->GetEntryPoint(entryPointName);
-        DAWN_ASSERT(metadata.stage == shaderStage);
+        DAWN_CHECK(metadata.stage == shaderStage);
 
         // Record them internally.
         bool isFirstStage = mStageMask == wgpu::ShaderStage::None;
@@ -277,8 +278,8 @@ PipelineBase::PipelineBase(DeviceBase* device,
         mStages[shaderStage] = {module, entryPointName, &metadata, {}};
 
         auto& constants = mStages[shaderStage].constants;
-        for (uint32_t i = 0; i < stage.constantCount; i++) {
-            constants.emplace(stage.constants[i].key, stage.constants[i].value);
+        for (const ConstantEntry& constant : stage.constants) {
+            constants.emplace(constant.key, constant.value);
         }
 
         // Compute the max() of all minBufferSizes across all stages.
@@ -289,7 +290,7 @@ PipelineBase::PipelineBase(DeviceBase* device,
             mMinBufferSizes = std::move(stageMinBufferSizes);
         } else {
             for (auto [group, minBufferSize] : Enumerate(mMinBufferSizes)) {
-                DAWN_ASSERT(stageMinBufferSizes[group].size() == minBufferSize.size());
+                DAWN_CHECK(stageMinBufferSizes[group].size() == minBufferSize.size());
 
                 for (size_t i = 0; i < stageMinBufferSizes[group].size(); ++i) {
                     minBufferSize[i] = std::max(minBufferSize[i], stageMinBufferSizes[group][i]);
@@ -307,22 +308,22 @@ PipelineBase::PipelineBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringV
 PipelineBase::~PipelineBase() = default;
 
 PipelineLayoutBase* PipelineBase::GetLayout() {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mLayout.Get();
 }
 
 const PipelineLayoutBase* PipelineBase::GetLayout() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mLayout.Get();
 }
 
 const RequiredBufferSizes& PipelineBase::GetMinBufferSizes() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mMinBufferSizes;
 }
 
 const ProgrammableStage& PipelineBase::GetStage(SingleShaderStage stage) const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mStages[stage];
 }
 
@@ -338,7 +339,7 @@ wgpu::ShaderStage PipelineBase::GetStageMask() const {
     return mStageMask;
 }
 
-const ImmediateConstantMask& PipelineBase::GetImmediateMask() const {
+const ImmediateMask& PipelineBase::GetImmediateMask() const {
     return mImmediateMask;
 }
 
@@ -348,7 +349,7 @@ MaybeError PipelineBase::ValidateGetBindGroupLayout(BindGroupIndex groupIndex) {
     DAWN_TRY(GetDevice()->ValidateObject(mLayout.Get()));
 
     if (mLayout->UsesResourceTable()) {
-        DAWN_INVALID_IF(groupIndex >= kMaxBindGroupsTyped - BindGroupIndex(1),
+        DAWN_INVALID_IF(groupIndex >= kMaxBindGroupsTyped - BindGroupIndex(1u),
                         "Bind group layout index (%u) exceeds or equals the maximum number of bind "
                         "groups (%u) - 1 (one slot reserved for the resource table).",
                         groupIndex, kMaxBindGroups);
@@ -436,25 +437,25 @@ MaybeError PipelineBase::Initialize(std::optional<ScopedUseShaderPrograms> scope
         scopedUsePrograms = UseShaderPrograms();
     }
 
-    // Set immediate constant status. userConstants is the first element in both
-    // RenderImmediateConstants and ComputeImmediateConstants.
-    ImmediateConstantMask userConstantsBits =
-        GetImmediateConstantBlockBits(0, GetLayout()->GetImmediateDataRangeByteSize());
-    mImmediateMask |= userConstantsBits;
+    // Set immediate status. userImmediates is the first element in both
+    // RenderImmediates and ComputeImmediates.
+    ImmediateMask userImmediatesBits =
+        GetImmediateBlockBits(0, GetLayout()->GetImmediateDataRangeByteSize());
+    mImmediateMask |= userImmediatesBits;
 
     DAWN_TRY_CONTEXT(InitializeWithShaders(), "initializing %s", this);
     return {};
 }
 
-void PipelineBase::SetImmediateMaskForTesting(ImmediateConstantMask immediateConstantMask) {
-    mImmediateMask = immediateConstantMask;
+void PipelineBase::SetImmediateMaskForTesting(ImmediateMask immediateMask) {
+    mImmediateMask = immediateMask;
 }
 
-uint32_t PipelineBase::GetImmediateConstantSize() const {
+uint32_t PipelineBase::GetImmediateSize() const {
     return static_cast<uint32_t>(mImmediateMask.count());
 }
 
-ImmediateConstantMask PipelineBase::GetUserImmediateSlots() const {
+ImmediateMask PipelineBase::GetUserImmediateSlots() const {
     return mUserImmdiateSlots;
 }
 
@@ -489,7 +490,7 @@ PipelineBase::SamplerForExternalTextureMap PipelineBase::ComputeSamplerForExtern
             // where the external texture is used by two different samplers, emit a warning (as
             // that's just a minor correctness issue).
             auto it = map.find({pair.texture.group, textureBinding});
-            DAWN_ASSERT(it != map.end());
+            DAWN_CHECK(it != map.end());
             auto& mapValue = it->second;
 
             const auto* samplerBGL = GetLayout()->GetBindGroupLayout(pair.sampler.group);

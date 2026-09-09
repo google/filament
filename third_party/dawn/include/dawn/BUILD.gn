@@ -36,6 +36,12 @@ import("${dawn_root}/scripts/dawn_component.gni")
 
 dawn_json_generator("headers_gen") {
   target = "headers"
+  inputs = [
+    "${dawn_template_dir}/api.h",
+    "${dawn_template_dir}/dawn/wire/client/api.h",
+    "${dawn_template_dir}/dawn_proc_table.h",
+    "${dawn_template_dir}/BSD_LICENSE",
+  ]
   outputs = [
     "include/dawn/dawn_proc_table.h",
     "include/dawn/webgpu.h",
@@ -56,6 +62,12 @@ source_set("headers") {
 
 dawn_json_generator("cpp_headers_gen") {
   target = "cpp_headers"
+  inputs = [
+    "${dawn_template_dir}/api_cpp_chained_struct.h",
+    "${dawn_template_dir}/api_cpp_print.h",
+    "${dawn_template_dir}/api_cpp.h",
+    "${dawn_template_dir}/dawn/cpp_macros.tmpl",
+  ]
   outputs = [
     "include/dawn/webgpu_cpp.h",
     "include/dawn/webgpu_cpp_print.h",
@@ -65,6 +77,16 @@ dawn_json_generator("cpp_headers_gen") {
   ]
 }
 
+dawn_json_generator("cpp_modules_gen") {
+  if (is_wasm) {
+    target = "emdawnwebgpu_modules"
+  } else {
+    target = "cpp_modules"
+  }
+  inputs = [ "${dawn_template_dir}/api_cpp.ixx" ]
+  outputs = [ "include/dawn/webgpu.ixx" ]
+}
+
 source_set("cpp_headers") {
   all_dependent_configs = [ ":public" ]
   sources = [ "${dawn_root}/include/webgpu/webgpu_enum_class_bitmasks.h" ]
@@ -72,7 +94,7 @@ source_set("cpp_headers") {
   if (is_wasm) {
     all_dependent_configs +=
         [ "${dawn_root}/src/emdawnwebgpu:emdawnwebgpu_config" ]
-    public_deps = [ "${dawn_root}/src/emdawnwebgpu:emdawnwebgpu" ]
+    public_deps = [ "${dawn_root}/src/emdawnwebgpu" ]
   } else {
     public_deps = [
       ":cpp_headers_gen",
@@ -80,6 +102,7 @@ source_set("cpp_headers") {
     ]
     sources += get_target_outputs(":cpp_headers_gen")
   }
+  public_deps += [ ":cpp_modules_gen" ]
 }
 
 ###############################################################################

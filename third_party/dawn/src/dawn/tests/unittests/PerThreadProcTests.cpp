@@ -33,8 +33,8 @@
 
 #include "dawn/dawn_thread_dispatch_proc.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/null/DeviceNull.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/null/DeviceNull.h"
 
 namespace dawn {
 namespace {

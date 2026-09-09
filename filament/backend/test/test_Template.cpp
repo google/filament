@@ -69,7 +69,7 @@ TEST_F(BackendTest, TestTemplate) {
         api.endRenderPass();
 
         EXPECT_IMAGE(renderTarget,
-                ScreenshotParams(kRenderTargetSize, kRenderTargetSize, "TestTemplate", 1048576));
+                ScreenshotParams(kRenderTargetSize, kRenderTargetSize, "TestTemplate", 1994067673u));
 
         api.commit(swapChain);
     }

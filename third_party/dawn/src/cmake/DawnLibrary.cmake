@@ -124,9 +124,10 @@ function(dawn_add_library name)
     target_link_libraries("${name}"
       INTERFACE
         ${arg_DEPENDS})
-    target_sources("${name}"
-      PUBLIC
-        ${arg_HEADERS})
+    if (arg_HEADERS)
+      add_custom_target("${name}_gen_headers" DEPENDS ${arg_HEADERS})
+      add_dependencies("${name}" "${name}_gen_headers")
+    endif ()
   else ()
     add_library("${name}" ${library_type})
     if (arg_HEADERS)

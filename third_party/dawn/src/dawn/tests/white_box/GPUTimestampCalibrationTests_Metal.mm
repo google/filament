@@ -27,9 +27,9 @@
 
 #include <memory>
 
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/tests/white_box/GPUTimestampCalibrationTests.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/tests/white_box/GPUTimestampCalibrationTests.h"
 
 namespace dawn {
 namespace {

@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -194,6 +194,9 @@ class VertexOnlyRenderPipelineTest : public DawnTest {
 // Test that a vertex-only render pipeline modify the stencil attachment as same as a complete
 // render pipeline do.
 TEST_P(VertexOnlyRenderPipelineTest, Stencil) {
+    // TODO(crbug.com/523272964): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     auto doStencilTest = [&](const wgpu::RenderPassDescriptor* renderPass,
                              const wgpu::RenderPipeline& pipeline,
                              const utils::RGBA8& colorExpect) -> void {

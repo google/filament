@@ -26,7 +26,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gmock/gmock.h"
+#include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/spirv/writer/common/helper_test.h"
+#include "src/tint/utils/internal_limits.h"
 
 namespace tint::spirv::writer {
 namespace {
@@ -77,6 +79,34 @@ TEST_F(SpirvWriterTest, CanGenerate_SubgroupMatrixRequiresVulkanMemoryModel) {
     ASSERT_NE(result, Success);
     EXPECT_THAT(result.Failure().reason,
                 testing::HasSubstr("using subgroup matrices requires the Vulkan Memory Model"));
+}
+
+TEST_F(SpirvWriterTest, EntryPoint_InputLocation_ExceedsMax) {
+    auto* f = b.FragmentFunction("my_func", ty.void_());
+    auto* p = b.FunctionParam("p", ty.f32());
+    p->SetLocation(4096);
+    f->SetParams({p});
+
+    b.Append(f->Block(), [&] { b.Return(f); });
+
+    Options options;
+    options.entry_point_name = "my_func";
+    auto res = Generate(options);
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "location(4096) exceeds the maximum allowed value of '4095'");
+}
+
+TEST_F(SpirvWriterTest, EntryPoint_OutputLocation_ExceedsMax) {
+    auto* f = b.FragmentFunction("my_func", ty.f32());
+    f->SetReturnLocation(4096);
+
+    b.Append(f->Block(), [&] { b.Return(f, 1.0_f); });
+
+    Options options;
+    options.entry_point_name = "my_func";
+    auto res = Generate(options);
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "location(4096) exceeds the maximum allowed value of '4095'");
 }
 
 TEST_F(SpirvWriterTest, Unreachable) {
@@ -392,6 +422,319 @@ TEST_F(SpirvWriterTest, WorkgroupStorageSize_OverflowAfterAlign) {
     auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_EQ(workgroup_info.storage_size, 0x100000000ull);
+}
+
+TEST_F(SpirvWriterTest, CanGenerate_StructMemberPadding_TooLarge) {
+    ty.Get<core::type::Struct>(
+        mod.symbols.New("S"),
+        tint::Vector{ty.Get<core::type::StructMember>(mod.symbols.New("a"), ty.i32(), 0u, 0u, 4u,
+                                                      4u, core::IOAttributes{}),
+                     ty.Get<core::type::StructMember>(
+                         mod.symbols.New("b"), ty.i32(), 1u,
+                         static_cast<uint32_t>(tint::internal_limits::kMaxStructMemberPadding + 4),
+                         4u, 4u, core::IOAttributes{})},
+        8u /* size */);
+
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] { b.Return(ep); });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason, testing::HasSubstr("is larger than the maximum"));
+}
+
+TEST_F(SpirvWriterTest, PolyfillPixelCenter) {
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+
+    auto* ep = b.FragmentFunction("main", ty.void_());
+    ep->SetParams({position});
+
+    b.Append(ep->Block(), [&] {
+        b.Let("p", position);
+        b.Return(ep);
+    });
+
+    Options options;
+    options.polyfill_pixel_center = 0;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+       %main = OpFunction %void None %12
+         %13 = OpLabel
+         %14 = OpLoad %v4float %main_position_Input None
+         %15 = OpVectorShuffle %v2float %14 %14 0 1
+         %17 = OpExtInst %v2float %18 Floor %15
+         %19 = OpFAdd %v2float %17 %20
+         %22 = OpExtInst %v4float %18 InterpolateAtOffset %main_loc0_Input %23
+         %24 = OpCompositeExtract %float %22 2
+         %25 = OpCompositeExtract %float %22 3
+         %26 = OpFDiv %float %24 %25
+         %27 = OpFDiv %float %float_1 %25
+         %29 = OpCompositeConstruct %v4float %19 %26 %27
+         %30 = OpFunctionCall %void %main_inner %29
+               OpReturn
+               OpFunctionEnd
+)");
+}
+
+TEST_F(SpirvWriterTest, MaximalReconvergence_Compute) {
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    ep->Block()->Append(b.Return(ep));
+
+    Options options;
+    options.extensions.use_maximal_reconvergence = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+               OpExtension "SPV_KHR_maximal_reconvergence"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpExecutionMode %main MaximallyReconvergesKHR
+)");
+}
+
+TEST_F(SpirvWriterTest, MaximalReconvergence_Fragment) {
+    auto* ep = b.FragmentFunction("main", ty.void_());
+    ep->Block()->Append(b.Return(ep));
+
+    Options options;
+    options.extensions.use_maximal_reconvergence = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+               OpExtension "SPV_KHR_maximal_reconvergence"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpExecutionMode %main MaximallyReconvergesKHR
+)");
+}
+
+TEST_F(SpirvWriterTest, MaximalReconvergence_Vertex) {
+    auto* ep = b.Function("main", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
+    ep->SetReturnAttributes({.builtin = core::BuiltinValue::kPosition});
+    ep->Block()->Append(b.Return(ep, b.Zero(ty.vec4f())));
+
+    Options options;
+    options.extensions.use_maximal_reconvergence = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+               OpExtension "SPV_KHR_maximal_reconvergence"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %main_position_Output %main___point_size_Output
+               OpExecutionMode %main MaximallyReconvergesKHR
+)");
+}
+
+TEST_F(SpirvWriterTest, SubgroupUniformControlFlow_Compute) {
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    ep->Block()->Append(b.Return(ep));
+
+    Options options;
+    options.extensions.use_subgroup_uniform_control_flow = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+               OpExtension "SPV_KHR_subgroup_uniform_control_flow"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpExecutionMode %main SubgroupUniformControlFlowKHR
+)");
+}
+
+TEST_F(SpirvWriterTest, SubgroupUniformControlFlow_Fragment) {
+    auto* ep = b.FragmentFunction("main", ty.void_());
+    ep->Block()->Append(b.Return(ep));
+
+    Options options;
+    options.extensions.use_subgroup_uniform_control_flow = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+               OpExtension "SPV_KHR_subgroup_uniform_control_flow"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpExecutionMode %main SubgroupUniformControlFlowKHR
+)");
+}
+
+TEST_F(SpirvWriterTest, SubgroupUniformControlFlow_Vertex) {
+    auto* ep = b.Function("main", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
+    ep->SetReturnAttributes({.builtin = core::BuiltinValue::kPosition});
+    ep->Block()->Append(b.Return(ep, b.Zero(ty.vec4f())));
+
+    Options options;
+    options.extensions.use_subgroup_uniform_control_flow = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(
+        R"(              OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %main_position_Output %main___point_size_Output
+
+)");
+}
+
+TEST_F(SpirvWriterTest, BufferView_Vec2h_Via_U16) {
+    mod.properties.Add(core::ir::Property::kAllowBufferTypes);
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* view = b.CallExplicit(ty.ptr(storage, ty.vec2h()), core::BuiltinFn::kBufferView,
+                                    Vector<core::ir::TemplateParameter, 1>{ty.vec2h()}, v, 0_u);
+        b.Store(view, b.Zero(ty.vec2h()));
+        b.Return(ep);
+    });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(OpCapability Int16)");
+    EXPECT_INST(R"(OpTypeInt 16 0)");
+}
+
+TEST_F(SpirvWriterTest, Alignment_Load_Workgroup) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.u32()));
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* ld = b.Load(v);
+        ld->SetAlignment(16);
+        b.Return(ep);
+    });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpLoad %uint %v None");
+}
+
+TEST_F(SpirvWriterTest, Alignment_Load) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.u32()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* ld = b.Load(v);
+        ld->SetAlignment(16);
+        b.Return(ep);
+    });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpLoad %uint %9 Aligned 16");
+}
+
+TEST_F(SpirvWriterTest, Alignment_LoadVectorElement) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.vec4u()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* ld = b.LoadVectorElement(v, 2_u);
+        ld->SetAlignment(8);
+        b.Return(ep);
+    });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpLoad %uint %13 Aligned 8");
+}
+
+TEST_F(SpirvWriterTest, Alignment_Store) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.u32()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* st = b.Store(v, 0_u);
+        st->SetAlignment(16);
+        b.Return(ep);
+    });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpStore %9 %uint_0 Aligned 16");
+}
+
+TEST_F(SpirvWriterTest, Alignment_StoreVectorElement) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.vec4u()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* st = b.StoreVectorElement(v, 2_u, 0_u);
+        st->SetAlignment(8);
+        b.Return(ep);
+    });
+
+    Options options;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpStore %13 %uint_0 Aligned 8");
+}
+
+TEST_F(SpirvWriterTest, Alignment_CooperativeMatrixLoad) {
+    auto* mat_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kLeft, ty.f32(), 8, 8);
+    auto* v = b.Var("v", ty.ptr(storage, ty.runtime_array(ty.f32())));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* ld = b.CallExplicit(
+            mat_ty, core::BuiltinFn::kSubgroupMatrixLoad,
+            Vector<core::ir::TemplateParameter, 2>{mat_ty, core::Majorness::kRowMajor}, v, 0_u,
+            8_u);
+        ld->SetAlignment(64);
+        b.Return(ep);
+    });
+
+    Options options;
+    options.extensions.use_vulkan_memory_model = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpCooperativeMatrixLoadKHR %28 %25 %uint_0 %23 Aligned|NonPrivatePointer 64");
+}
+
+TEST_F(SpirvWriterTest, Alignment_CooperativeMatrixStore) {
+    auto* mat_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kLeft, ty.f32(), 8, 8);
+    auto* v = b.Var("v", ty.ptr(storage, ty.runtime_array(ty.f32())));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* ep = b.ComputeFunction("main", 1_u, 1_u, 1_u);
+    b.Append(ep->Block(), [&] {
+        auto* m = b.Construct(mat_ty);
+        auto* st = b.CallExplicit(
+            ty.void_(), core::BuiltinFn::kSubgroupMatrixStore,
+            Vector<core::ir::TemplateParameter, 1>{core::Majorness::kRowMajor}, v, 0_u, m, 8_u);
+        st->SetAlignment(64);
+        b.Return(ep);
+    });
+
+    Options options;
+    options.extensions.use_vulkan_memory_model = true;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST("OpCooperativeMatrixStoreKHR %28 %10 %uint_0 %26 Aligned|NonPrivatePointer 64");
 }
 
 }  // namespace

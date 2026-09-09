@@ -27,6 +27,8 @@
 
 #include "src/dawn/node/interop/Core.h"
 
+#include "src/utils/numeric.h"
+
 namespace wgpu::interop {
 
 Result Success;
@@ -58,7 +60,7 @@ Napi::Value Converter<std::string>::ToJS(Napi::Env env, std::string value) {
 
 Result Converter<int8_t>::FromJS(Napi::Env env, Napi::Value value, int8_t& out) {
     if (value.IsNumber()) {
-        out = value.ToNumber().Int32Value();
+        out = dawn::dchecked_cast<int8_t>(value.ToNumber().Int32Value());
         return Success;
     }
     return Error("value is not a number");
@@ -69,7 +71,7 @@ Napi::Value Converter<int8_t>::ToJS(Napi::Env env, int8_t value) {
 
 Result Converter<uint8_t>::FromJS(Napi::Env env, Napi::Value value, uint8_t& out) {
     if (value.IsNumber()) {
-        out = value.ToNumber().Uint32Value();
+        out = dawn::dchecked_cast<uint8_t>(value.ToNumber().Uint32Value());
         return Success;
     }
     return Error("value is not a number");
@@ -80,7 +82,7 @@ Napi::Value Converter<uint8_t>::ToJS(Napi::Env env, uint8_t value) {
 
 Result Converter<int16_t>::FromJS(Napi::Env env, Napi::Value value, int16_t& out) {
     if (value.IsNumber()) {
-        out = value.ToNumber().Int32Value();
+        out = dawn::dchecked_cast<int16_t>(value.ToNumber().Int32Value());
         return Success;
     }
     return Error("value is not a number");
@@ -91,7 +93,7 @@ Napi::Value Converter<int16_t>::ToJS(Napi::Env env, int16_t value) {
 
 Result Converter<uint16_t>::FromJS(Napi::Env env, Napi::Value value, uint16_t& out) {
     if (value.IsNumber()) {
-        out = value.ToNumber().Uint32Value();
+        out = dawn::dchecked_cast<uint16_t>(value.ToNumber().Uint32Value());
         return Success;
     }
     return Error("value is not a number");

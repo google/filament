@@ -30,11 +30,18 @@
 
 #include <mutex>
 #include <optional>
+#include <thread>
 
-#include "dawn/common/Compiler.h"
-#include "dawn/common/Defer.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/Ref.h"
+#include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Atomic.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/Defer.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Ref.h"
+
+namespace dawn::platform {
+class Platform;
+}  // namespace dawn::platform
 
 namespace dawn::native {
 
@@ -42,23 +49,33 @@ class DeviceBase;
 
 class DeviceMutex : public RecursiveMutex {
   public:
+    explicit DeviceMutex(dawn::platform::Platform* platform);
     ~DeviceMutex() override;
 
   private:
     friend class DeviceBase;
     friend struct AutoLockBase<DeviceMutex*>;
+    friend class DeviceMutexTest;
 
     void Lock() DAWN_EXCLUSIVE_LOCK_FUNCTION;
     void Unlock() DAWN_UNLOCK_FUNCTION;
 
     uint32_t mRecursionStackDepth = 0;
     std::optional<class Defer> mDefer = std::nullopt;
+    Atomic<std::thread::id, std::memory_order_acquire, std::memory_order_release> mOwningThread{
+        std::thread::id()};
+    const raw_ptr<dawn::platform::Platform> mPlatform = nullptr;
+
+    double mAcquireTimeSum = 0.0;
+    double mAcquireTimeMax = 0.0;
+    uint64_t mAcquireCount = 0;
 };
 
 namespace detail {
 
 struct DeviceMutexTraits {
     using MutexType = Ref<DeviceMutex>;
+    template <typename Unused>
     using LockType = DeviceMutex::AutoLockBase<DeviceMutex*>;
 
     static DeviceMutex* GetMutex(MutexType& m) { return m.Get(); }

@@ -34,7 +34,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
 
 // Use a nested namespace so that we can fill it with shorthand functions like `Mul` and shorthand
 // type aliases.
@@ -185,6 +185,7 @@ class Matrix {
     static inline constexpr size_t ColumnCount = Cols;
     static inline constexpr size_t RowCount = Cols;
     using Column = Vector<Rows, Scalar>;
+    using Row = Vector<Cols, Scalar>;
 
   private:
     using Self = Matrix<Cols, Rows, Scalar>;
@@ -207,10 +208,31 @@ class Matrix {
         requires(Cols == 4)
         : data{c1, c2, c3, c4} {}
 
+    // Other ways to construct matrices so that the code initializing the matrix looks like you'd
+    // write on a piece of paper.
+    //
+    //   auto m = Mat3x2f::FromRows({
+    //       {1, 2, 3},
+    //       {4, 5, 6},
+    //   });
+    static constexpr Self FromRows(Matrix<Rows, Cols, Scalar> transposed) {
+        return transposed.Transposed();
+    }
+
     constexpr Scalar Determinant() const
         requires std::is_floating_point_v<Scalar> && (Cols == Rows) && (Rows < 4);
     constexpr Self Inverse() const
         requires std::is_floating_point_v<Scalar> && (Cols == Rows) && (Rows < 4);
+
+    constexpr Matrix<Rows, Cols, Scalar> Transposed() const {
+        Matrix<Rows, Cols, Scalar> transposed;
+        for (size_t i = 0; i < Cols; i++) {
+            for (size_t j = 0; j < Rows; j++) {
+                transposed[j][i] = data[i][j];
+            }
+        }
+        return transposed;
+    }
 
     // Returns the identity matrix of that dimensionality.
     constexpr static Self Identity()
@@ -275,6 +297,18 @@ class Matrix {
     constexpr const Column& operator[](size_t i) const { return data[i]; }
 
     constexpr bool operator==(const Self& other) const = default;
+
+    constexpr Self operator*(const Scalar& s) const {
+        Self result;
+        for (size_t i = 0; i < Cols; i++) {
+            result[i] = data[i] * s;
+        }
+        return result;
+    }
+    constexpr Self& operator*=(const Scalar& other) {
+        *this = *this * other;
+        return *this;
+    }
 
     constexpr Self operator/(const Scalar& s) const {
         Self result;

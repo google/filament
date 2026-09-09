@@ -5,7 +5,13 @@
 # SPDX-License-Identifier: Apache-2.0
 set(CMAKE_FOLDER "${CMAKE_FOLDER}/VulkanSafeStruct")
 
-add_library(VulkanSafeStruct STATIC)
+add_library(VulkanSafeStruct)
+if(BUILD_SHARED_LIBS)
+    set_target_properties(VulkanSafeStruct PROPERTIES
+        CXX_VISIBILITY_PRESET default
+        VISIBILITY_INLINES_HIDDEN NO
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 add_library(Vulkan::SafeStruct ALIAS VulkanSafeStruct)
 
 target_sources(VulkanSafeStruct PRIVATE

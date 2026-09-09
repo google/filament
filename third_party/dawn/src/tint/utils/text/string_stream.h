@@ -76,8 +76,8 @@ class StringStream {
     /// Emit `value` to the stream
     /// @param value the value to emit
     /// @returns a reference to this
-    template <typename T,
-              typename std::enable_if_t<std::is_integral_v<std::decay_t<T>>, bool> = true>
+    template <typename T>
+        requires(std::is_integral_v<std::decay_t<T>>)
     StringStream& operator<<(T&& value) {
         return EmitValue(std::forward<T>(value));
     }
@@ -103,8 +103,8 @@ class StringStream {
     /// Emit `value` to the stream
     /// @param value the value to emit
     /// @returns a reference to this
-    template <typename T,
-              typename std::enable_if_t<std::is_floating_point_v<std::decay_t<T>>, bool> = true>
+    template <typename T>
+        requires(std::is_floating_point_v<std::decay_t<T>>)
     StringStream& operator<<(T&& value) {
         return EmitFloat(std::forward<T>(value));
     }
@@ -145,8 +145,15 @@ class StringStream {
                 str.pop_back();
             }
 
-            sstream_ << str;
-            return *this;
+            // Allow numbers up to 45 characters to be printed in fixed-point.
+            // This is large enough to allow float::max() (which requires 42 characters: sign, 39
+            // digits, '.', and '0') to be printed in fixed-point notation, but prevents excessively
+            // long double values (which can be up to 309 characters) from polluting outputs and
+            // error messages.
+            if (str.size() < 45) {
+                sstream_ << str;
+                return *this;
+            }
         }
 
         // Resort to scientific, with the minimum precision needed to preserve the whole float
@@ -160,7 +167,7 @@ class StringStream {
     }
 
     /// Swaps streams
-    /// @param other stream to swap too
+    /// @param other stream to swap to
     void swap(StringStream& other) { sstream_.swap(other.sstream_); }
 
     /// repeat queues the character c to be written to the printer n times.
@@ -171,27 +178,28 @@ class StringStream {
     /// The callback to emit a `endl` to the stream
     using StdEndl = std::ostream& (*)(std::ostream&);
 
-    /// @param manipulator the callback to emit too
+    /// @param manipulator the callback to emit to
     /// @returns a reference to this
     StringStream& operator<<(StdEndl manipulator) {
-        // call the function, and return it's value
+        // call the function, and return its value
         manipulator(sstream_);
         return *this;
     }
 
-    /// @param manipulator the callback to emit too
+    /// @param manipulator the callback to emit to
     /// @returns a reference to this
     StringStream& operator<<(decltype(std::hex) manipulator) {
-        // call the function, and return it's value
+        // call the function, and return its value
         manipulator(sstream_);
         return *this;
     }
 
     /// @param value the value to emit
     /// @returns a reference to this
-    template <typename T, typename std::enable_if_t<IsSetType<T>, int> = 0>
+    template <typename T>
+        requires(IsSetType<T>)
     StringStream& operator<<(T&& value) {
-        // call the function, and return it's value
+        // call the function, and return its value
         sstream_ << std::forward<T>(value);
         return *this;
     }

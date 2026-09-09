@@ -22,6 +22,13 @@ import androidx.webgpu.helper.WebGpu
 import androidx.webgpu.helper.createWebGpu
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -33,22 +40,31 @@ import org.junit.Rule
 
 @Suppress("UNUSED_VARIABLE")
 class BufferTest {
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
   private lateinit var device: GPUDevice
   private lateinit var webGpu: WebGpu
+
   @get:Rule
   val apiSkipRule = ApiLevelSkipRule()
 
   @Before
-  fun setup() = runBlocking {
-    webGpu = createWebGpu()
+  fun setup(): Unit = runBlocking {
+    webGpu = createWebGpu(dispatcher)
     device = webGpu.device
+    testScope.launch {
+      webGpu.processEventsLoop()
+    }
   }
 
   @After
   fun teardown() {
     runCatching { device.destroy() }
     webGpu.close()
-
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
   }
 
   /**
@@ -57,14 +73,18 @@ class BufferTest {
   @SmallTest
   @Test
   fun bufferMapTest() {
-    device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.Vertex,
-        size = 1024,
-        mappedAtCreation = true
-      )
-    ).apply {
-     val unused = getMappedRange(size = size)
+    runBlocking {
+      val unused = webGpu.execute {
+        device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.Vertex,
+            size = 1024,
+            mappedAtCreation = true
+          )
+        ).apply {
+          val unused = getMappedRange(size = size)
+        }
+      }
     }
   }
 
@@ -74,17 +94,21 @@ class BufferTest {
   @SmallTest
   @Test
   fun bufferMapFailureTest() {
-    //TODO(b/452516879): Catch a more specific exception type.
-    assertThrows(Error::class.java) {
-      device.createBuffer(
-        GPUBufferDescriptor(
-          usage = BufferUsage.Vertex,
-          size = 1024,
-          mappedAtCreation = false
-        )
-      ).apply {
-        val status = getMappedRange(size = size)
-        assertEquals(MapAsyncStatus.Success, status)
+    runBlocking {
+      val unused = webGpu.execute {
+        //TODO(b/452516879): Catch a more specific exception type.
+        assertThrows(Error::class.java) {
+          device.createBuffer(
+            GPUBufferDescriptor(
+              usage = BufferUsage.Vertex,
+              size = 1024,
+              mappedAtCreation = false
+            )
+          ).apply {
+            val status = getMappedRange(size = size)
+            assertEquals(MapAsyncStatus.Success, status)
+          }
+        }
       }
     }
   }
@@ -95,18 +119,22 @@ class BufferTest {
   @SmallTest
   @Test
   fun testBufferSizeAndUsage() {
-    val bufferSize = 256L
-    val bufferUsage = BufferUsage.Vertex or BufferUsage.CopyDst
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 256L
+        val bufferUsage = BufferUsage.Vertex or BufferUsage.CopyDst
 
-    val buffer = device.createBuffer(
-      GPUBufferDescriptor(
-        usage = bufferUsage,
-        size = bufferSize
-      )
-    )
+        val buffer = device.createBuffer(
+          GPUBufferDescriptor(
+            usage = bufferUsage,
+            size = bufferSize
+          )
+        )
 
-    assertEquals(bufferSize, buffer.size)
-    assertEquals(bufferUsage, buffer.usage)
+        assertEquals(bufferSize, buffer.size)
+        assertEquals(bufferUsage, buffer.usage)
+      }
+    }
   }
 
   /**
@@ -115,19 +143,21 @@ class BufferTest {
   @SmallTest
   @Test
   fun testDestroy() {
-    val buffer = device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapRead,
-        size = 16
-      )
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        val buffer = device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapRead,
+            size = 16
+          )
+        )
 
-    buffer.destroy()
+        buffer.destroy()
 
-    // After destroying the buffer, further operations should fail.
-    assertThrows(ValidationException::class.java) {
-      runBlocking {
-        buffer.mapAndAwait(MapMode.Read, 0, 16)
+        // After destroying the buffer, further operations should fail.
+        val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+          buffer.mapAndAwait(MapMode.Read, 0, 16)
+        }
       }
     }
   }
@@ -139,53 +169,58 @@ class BufferTest {
   @Test
   @ApiRequirement(minApi = EMULATOR_TESTS_MIN_API_LEVEL, onlySkipOnEmulator = true)
   fun testWriteAndReadBuffer() {
-    val queue = device.getQueue()
+    runBlocking {
+      val unused = webGpu.execute {
+        val queue = device.getQueue()
 
-    val cpuData = floatArrayOf(1.1f, 2.2f, 3.3f, 4.4f, 5.5f)
-    val bufferSize = cpuData.size * Float.SIZE_BYTES * 1L
+        val cpuData = floatArrayOf(1.1f, 2.2f, 3.3f, 4.4f, 5.5f)
+        val bufferSize = cpuData.size * Float.SIZE_BYTES * 1L
 
-    val cpuDataBuffer = ByteBuffer.allocateDirect(bufferSize.toInt()).order(ByteOrder.nativeOrder())
-      .apply { asFloatBuffer().put(cpuData).rewind() }
+        val cpuDataBuffer =
+          ByteBuffer.allocateDirect(bufferSize.toInt()).order(ByteOrder.nativeOrder())
+            .apply { asFloatBuffer().put(cpuData).rewind() }
 
-    val gpuWriteBuffer = device.createBuffer(
-      GPUBufferDescriptor(
-        size = bufferSize,
-        usage = BufferUsage.CopyDst or BufferUsage.CopySrc
-      )
-    )
+        val gpuWriteBuffer = device.createBuffer(
+          GPUBufferDescriptor(
+            size = bufferSize,
+            usage = BufferUsage.CopyDst or BufferUsage.CopySrc
+          )
+        )
 
-    queue.writeBuffer(gpuWriteBuffer, 0, cpuDataBuffer)
+        queue.writeBuffer(gpuWriteBuffer, 0, cpuDataBuffer)
 
-    val gpuReadBuffer = device.createBuffer(
-      GPUBufferDescriptor(
-        size = bufferSize,
-        usage = BufferUsage.CopyDst or BufferUsage.MapRead
-      )
-    )
-    val commandEncoder = device.createCommandEncoder()
-    commandEncoder.copyBufferToBuffer(
-      source = gpuWriteBuffer,
-      sourceOffset = 0,
-      destination = gpuReadBuffer,
-      destinationOffset = 0,
-      size = bufferSize
-    )
-    val gpuCommand = commandEncoder.finish()
-    queue.submit(arrayOf(gpuCommand))
-    runBlocking { queue.onSubmittedWorkDone() }
-    runBlocking { gpuReadBuffer.mapAndAwait(mode = MapMode.Read, size = bufferSize, offset = 0) }
+        val gpuReadBuffer = device.createBuffer(
+          GPUBufferDescriptor(
+            size = bufferSize,
+            usage = BufferUsage.CopyDst or BufferUsage.MapRead
+          )
+        )
+        val commandEncoder = device.createCommandEncoder()
+        commandEncoder.copyBufferToBuffer(
+          source = gpuWriteBuffer,
+          sourceOffset = 0,
+          destination = gpuReadBuffer,
+          destinationOffset = 0,
+          size = bufferSize
+        )
+        val gpuCommand = commandEncoder.finish()
+        queue.submit(arrayOf(gpuCommand))
+        queue.onSubmittedWorkDone()
+        gpuReadBuffer.mapAndAwait(mode = MapMode.Read, size = bufferSize, offset = 0)
 
-    val arrayBuffer = gpuReadBuffer.getConstMappedRange(size = bufferSize).asFloatBuffer()
-    gpuReadBuffer.unmap()
-    val floatArray = FloatArray(arrayBuffer.remaining())
-    arrayBuffer.get(floatArray)
-    val delta = 0.00001f // Define an acceptable tolerance
-    assertArrayEquals(
-      "The GPU data does not match the original CPU data.",
-      cpuData,
-      floatArray,
-      delta
-    )
+        val arrayBuffer = gpuReadBuffer.getConstMappedRange(size = bufferSize).asFloatBuffer()
+        gpuReadBuffer.unmap()
+        val floatArray = FloatArray(arrayBuffer.remaining())
+        arrayBuffer.get(floatArray)
+        val delta = 0.00001f // Define an acceptable tolerance
+        assertArrayEquals(
+          "The GPU data does not match the original CPU data.",
+          cpuData,
+          floatArray,
+          delta
+        )
+      }
+    }
   }
 
 
@@ -195,28 +230,32 @@ class BufferTest {
   @MediumTest
   @Test
   fun testMapAsyncUnmap() {
-    val bufferSize = 16L
-    val buffer = device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapRead or BufferUsage.CopyDst,
-        size = bufferSize,
-      )
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 16L
+        val buffer = device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapRead or BufferUsage.CopyDst,
+            size = bufferSize,
+          )
+        )
 
-    assertEquals(BufferMapState.Unmapped, buffer.mapState)
+        assertEquals(BufferMapState.Unmapped, buffer.mapState)
 
-    runBlocking { buffer.mapAndAwait(MapMode.Read, 0, bufferSize) }
+        buffer.mapAndAwait(MapMode.Read, 0, bufferSize)
 
-    assertEquals(BufferMapState.Mapped, buffer.mapState)
+        assertEquals(BufferMapState.Mapped, buffer.mapState)
 
-    buffer.unmap()
+        buffer.unmap()
 
-    assertEquals(BufferMapState.Unmapped, buffer.mapState)
+        assertEquals(BufferMapState.Unmapped, buffer.mapState)
 
-    //TODO(b/452516879): Catch a more specific exception type.
-    // Should not be able to get the mapped range after unmapping.
-    assertThrows(Error::class.java) {
-      buffer.getMappedRange(0, bufferSize)
+        //TODO(b/452516879): Catch a more specific exception type.
+        // Should not be able to get the mapped range after unmapping.
+        assertThrows(Error::class.java) {
+          buffer.getMappedRange(0, bufferSize)
+        }
+      }
     }
   }
 
@@ -226,40 +265,43 @@ class BufferTest {
   @SmallTest
   @Test
   fun testReadMappedRangeSucceedsAndDataIsCorrect() {
-    val initialData = floatArrayOf(1f, 2f, 3f, 4f)
-    val bufferSize = initialData.size * Float.SIZE_BYTES * 1L
-
-    val byteBuffer = ByteBuffer.allocateDirect(bufferSize.toInt()).order(ByteOrder.nativeOrder())
-      .apply { asFloatBuffer().put(initialData).rewind() }
-
-    val buffer = device.createBuffer(
-      GPUBufferDescriptor(
-        size = bufferSize,
-        usage = BufferUsage.MapRead or BufferUsage.CopyDst
-      )
-    )
-    device.getQueue().writeBuffer(buffer, 0, byteBuffer)
-
     runBlocking {
-      val unusedBufferMapReturn = buffer.mapAndAwait(MapMode.Read, offset = 0, size = bufferSize)
+      val unused = webGpu.execute {
+        val initialData = floatArrayOf(1f, 2f, 3f, 4f)
+        val bufferSize = initialData.size * Float.SIZE_BYTES * 1L
+
+        val byteBuffer =
+          ByteBuffer.allocateDirect(bufferSize.toInt()).order(ByteOrder.nativeOrder())
+            .apply { asFloatBuffer().put(initialData).rewind() }
+
+        val buffer = device.createBuffer(
+          GPUBufferDescriptor(
+            size = bufferSize,
+            usage = BufferUsage.MapRead or BufferUsage.CopyDst
+          )
+        )
+        device.getQueue().writeBuffer(buffer, 0, byteBuffer)
+
+        val unusedBufferMapReturn = buffer.mapAndAwait(MapMode.Read, offset = 0, size = bufferSize)
+
+        val readByteBuffer =
+          ByteBuffer.allocateDirect(bufferSize.toInt()).order(ByteOrder.nativeOrder())
+        // The testcase will fail in case readMappedRange throws WebGpuException
+        buffer.readMappedRange(0, readByteBuffer)
+        val readByteBufferFloat = readByteBuffer.asFloatBuffer()
+        val readData = FloatArray(readByteBufferFloat.remaining())
+
+        readByteBufferFloat.get(readData)
+
+        val delta = 0.00001f // Define an acceptable tolerance
+        assertArrayEquals(
+          "The GPU data does not match the original CPU data.",
+          initialData,
+          readData,
+          delta
+        )
+      }
     }
-
-    val readByteBuffer =
-      ByteBuffer.allocateDirect(bufferSize.toInt()).order(ByteOrder.nativeOrder())
-    // The testcase will fail in case readMappedRange throws WebGpuException
-    buffer.readMappedRange(0, readByteBuffer)
-    val readByteBufferFloat = readByteBuffer.asFloatBuffer()
-    val readData = FloatArray(readByteBufferFloat.remaining())
-
-    readByteBufferFloat.get(readData)
-
-    val delta = 0.00001f // Define an acceptable tolerance
-    assertArrayEquals(
-      "The GPU data does not match the original CPU data.",
-      initialData,
-      readData,
-      delta
-    )
   }
 
   /**
@@ -268,112 +310,136 @@ class BufferTest {
   @SmallTest
   @Test
   fun testWriteMappedRangeFailsWhenNotMapped() {
-    val buffer = device.createBuffer(
-      GPUBufferDescriptor(size = 16, usage = BufferUsage.MapWrite)
-    )
-    val byteBuffer = ByteBuffer.allocateDirect(16)
+    runBlocking {
+      val unused = webGpu.execute {
+        val buffer = device.createBuffer(
+          GPUBufferDescriptor(size = 16, usage = BufferUsage.MapWrite)
+        )
+        val byteBuffer = ByteBuffer.allocateDirect(16)
 
-    assertThrows(WebGpuException::class.java) {
-      buffer.writeMappedRange(0, byteBuffer)
+        assertThrows(WebGpuException::class.java) {
+          buffer.writeMappedRange(0, byteBuffer)
+        }
+      }
     }
   }
 
   @SmallTest
   @Test
   fun getMappedRangeWithDefaultValuesReturnsFullBuffer() {
-    val bufferSize = 1024L
-    device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapWrite,
-        size = bufferSize,
-        mappedAtCreation = true
-      )
-    ).use { buffer ->
-      // Call with defaults: offset = 0, size = -1L (WGPU_WHOLE_MAP_SIZE).
-      val byteBuffer = buffer.getMappedRange()
-      buffer.unmap()
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 1024L
+        device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapWrite,
+            size = bufferSize,
+            mappedAtCreation = true
+          )
+        ).use { buffer ->
+          // Call with defaults: offset = 0, size = -1L (WGPU_WHOLE_MAP_SIZE).
+          val byteBuffer = buffer.getMappedRange()
+          buffer.unmap()
 
-      assertEquals(bufferSize, byteBuffer.capacity().toLong())
+          assertEquals(bufferSize, byteBuffer.capacity().toLong())
+        }
+      }
     }
   }
 
   @SmallTest
   @Test
   fun getMappedRangeWithOffsetAndDefaultSizeReturnsPartialBuffer() {
-    val bufferSize = 1024L
-    val offset = 256L
-    device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapWrite,
-        size = bufferSize,
-        mappedAtCreation = true
-      )
-    ).use { buffer ->
-      // Call with offset and default size: size = -1L (WGPU_WHOLE_MAP_SIZE).
-      val byteBuffer = buffer.getMappedRange(offset = offset)
-      buffer.unmap()
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 1024L
+        val offset = 256L
+        device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapWrite,
+            size = bufferSize,
+            mappedAtCreation = true
+          )
+        ).use { buffer ->
+          // Call with offset and default size: size = -1L (WGPU_WHOLE_MAP_SIZE).
+          val byteBuffer = buffer.getMappedRange(offset = offset)
+          buffer.unmap()
 
-      val expectedSize = bufferSize - offset
-      assertEquals(expectedSize, byteBuffer.capacity().toLong())
+          val expectedSize = bufferSize - offset
+          assertEquals(expectedSize, byteBuffer.capacity().toLong())
+        }
+      }
     }
   }
 
   @SmallTest
   @Test
   fun getMappedRangeWithOffsetAndExplicitSizeReturnsPartialBuffer() {
-    val bufferSize = 1024L
-    val offset = 256L
-    val size = 512L
-    device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapWrite,
-        size = bufferSize,
-        mappedAtCreation = true
-      )
-    ).use { buffer ->
-      val byteBuffer = buffer.getMappedRange(offset = offset, size = size)
-      buffer.unmap()
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 1024L
+        val offset = 256L
+        val size = 512L
+        device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapWrite,
+            size = bufferSize,
+            mappedAtCreation = true
+          )
+        ).use { buffer ->
+          val byteBuffer = buffer.getMappedRange(offset = offset, size = size)
+          buffer.unmap()
 
-      assertEquals(size, byteBuffer.capacity().toLong())
+          assertEquals(size, byteBuffer.capacity().toLong())
+        }
+      }
     }
   }
 
   @SmallTest
   @Test
   fun getConstMappedRangeWithDefaultValuesReturnsFullBuffer() {
-    val bufferSize = 1024L
-    device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapRead,
-        size = bufferSize,
-        mappedAtCreation = true
-      )
-    ).use { buffer ->
-      val byteBuffer = buffer.getConstMappedRange()
-      buffer.unmap()
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 1024L
+        device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapRead,
+            size = bufferSize,
+            mappedAtCreation = true
+          )
+        ).use { buffer ->
+          val byteBuffer = buffer.getConstMappedRange()
+          buffer.unmap()
 
-      assertEquals(bufferSize, byteBuffer.capacity().toLong())
+          assertEquals(bufferSize, byteBuffer.capacity().toLong())
+        }
+      }
     }
   }
 
   @SmallTest
   @Test
   fun getConstMappedRangeWithOffsetAndDefaultSizeReturnsPartialBuffer() {
-    val bufferSize = 1024L
-    val offset = 128L
-    device.createBuffer(
-      GPUBufferDescriptor(
-        usage = BufferUsage.MapRead,
-        size = bufferSize,
-        mappedAtCreation = true
-      )
-    ).use { buffer ->
-      // Call with offset and default size.
-      val byteBuffer = buffer.getConstMappedRange(offset = offset)
-      buffer.unmap()
+    runBlocking {
+      val unused = webGpu.execute {
+        val bufferSize = 1024L
+        val offset = 128L
+        device.createBuffer(
+          GPUBufferDescriptor(
+            usage = BufferUsage.MapRead,
+            size = bufferSize,
+            mappedAtCreation = true
+          )
+        ).use { buffer ->
+          // Call with offset and default size.
+          val byteBuffer = buffer.getConstMappedRange(offset = offset)
+          buffer.unmap()
 
-      val expectedSize = bufferSize - offset
-      assertEquals(expectedSize, byteBuffer.capacity().toLong())
+          val expectedSize = bufferSize - offset
+          assertEquals(expectedSize, byteBuffer.capacity().toLong())
+        }
+      }
     }
   }
 }

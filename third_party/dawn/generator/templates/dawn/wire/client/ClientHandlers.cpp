@@ -25,13 +25,14 @@
 //* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/Assert.h"
-#include "dawn/wire/client/Client.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/utils/assert.h"
 
 #include <string>
 
 namespace dawn::wire::client {
     {% for command in cmd_records["return command"] %}
+        {% set CmdName = "Return" + command.name.CamelCase() + "Cmd" %}
         WireResult Client::Handle{{command.name.CamelCase()}}(DeserializeBuffer* deserializeBuffer) {
             Return{{command.name.CamelCase()}}Cmd cmd;
             WIRE_TRY(cmd.Deserialize(deserializeBuffer, &mAllocator));
@@ -49,24 +50,24 @@ namespace dawn::wire::client {
             {% endfor %}
 
             return Do{{command.name.CamelCase()}}(
-                {%- for member in command.members -%}
+                {%- for member in command.members if not member.is_length -%}
+                    {%- if not loop.first -%}, {% endif %}
                     {%- if member.handle_type -%}
                         {{as_varName(member.name)}}
                     {%- else -%}
                         cmd.{{as_varName(member.name)}}
                     {%- endif -%}
-                    {%- if not loop.last -%}, {% endif %}
                 {%- endfor -%}
             );
         }
     {% endfor %}
 
-    const volatile char* Client::HandleCommands(const volatile char* commands, size_t size) {
-        DeserializeBuffer deserializeBuffer(commands, size);
+    bool Client::HandleCommands(Span<const volatile std::byte> commands) {
+        DeserializeBuffer deserializeBuffer(commands);
 
-        while (deserializeBuffer.AvailableSize() >= sizeof(CmdHeader) + sizeof(WireCmd)) {
-            WireCmd cmdId = *static_cast<const volatile WireCmd*>(static_cast<const volatile void*>(
-                deserializeBuffer.Buffer() + sizeof(CmdHeader)));
+        const volatile CmdHeader* cmdHeader;
+        while (deserializeBuffer.Peek(&cmdHeader) != WireResult::FatalError) {
+            WireCmd cmdId = cmdHeader->commandId;
             WireResult result = WireResult::FatalError;
             switch (cmdId) {
                 {% for command in cmd_records["special command"] %}
@@ -86,15 +87,15 @@ namespace dawn::wire::client {
             }
 
             if (result != WireResult::Success) {
-                return nullptr;
+                return false;
             }
             mAllocator.Reset();
         }
 
-        if (deserializeBuffer.AvailableSize() != 0) {
-            return nullptr;
+        if (!deserializeBuffer.Empty()) {
+            return false;
         }
 
-        return commands;
+        return true;
     }
 }  // namespace dawn::wire::client

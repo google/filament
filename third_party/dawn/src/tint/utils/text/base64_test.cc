@@ -28,6 +28,7 @@
 #include "src/tint/utils/text/base64.h"
 
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -212,6 +213,146 @@ c)",
                                  {26, 27, 28},
                              },
                          }));
+
+struct EncodeBase64Case {
+    std::vector<uint8_t> in;
+    std::optional<std::string> expected;
+};
+
+using EncodeBase64Test = testing::TestWithParam<EncodeBase64Case>;
+
+TEST_P(EncodeBase64Test, Bytes) {
+    tint::Vector<std::byte, 0> bytes;
+    for (auto b : GetParam().in) {
+        bytes.Push(std::byte{b});
+    }
+    auto got = EncodeBase64(bytes.AsSpan());
+    if (GetParam().expected) {
+        ASSERT_EQ(got, Success);
+        EXPECT_EQ(got.Get(), *GetParam().expected);
+    } else {
+        EXPECT_NE(got, Success);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(,
+                         EncodeBase64Test,
+                         testing::Values(EncodeBase64Case{{}, std::string{""}},
+                                         EncodeBase64Case{{0}, std::string{"A"}},
+                                         EncodeBase64Case{{1}, std::string{"B"}},
+                                         EncodeBase64Case{{1, 2, 3}, std::string{"BCD"}},
+                                         EncodeBase64Case{{62, 63}, std::string{"+/"}},
+                                         EncodeBase64Case{{64}, std::nullopt},
+                                         EncodeBase64Case{{255}, std::nullopt}));
+
+struct EncodeBase64SingleCase {
+    uint8_t in;
+    char expected;
+};
+
+using EncodeBase64SingleTest = testing::TestWithParam<EncodeBase64SingleCase>;
+
+TEST_P(EncodeBase64SingleTest, Char) {
+    std::byte b{GetParam().in};
+    auto got = EncodeBase64(std::span{&b, 1});
+    ASSERT_EQ(got, Success);
+    EXPECT_EQ(got.Get(), std::string(1, GetParam().expected));
+}
+
+INSTANTIATE_TEST_SUITE_P(Valid,
+                         EncodeBase64SingleTest,
+                         testing::Values(EncodeBase64SingleCase{0, 'A'},
+                                         EncodeBase64SingleCase{1, 'B'},
+                                         EncodeBase64SingleCase{2, 'C'},
+                                         EncodeBase64SingleCase{3, 'D'},
+                                         EncodeBase64SingleCase{4, 'E'},
+                                         EncodeBase64SingleCase{5, 'F'},
+                                         EncodeBase64SingleCase{6, 'G'},
+                                         EncodeBase64SingleCase{7, 'H'},
+                                         EncodeBase64SingleCase{8, 'I'},
+                                         EncodeBase64SingleCase{9, 'J'},
+                                         EncodeBase64SingleCase{10, 'K'},
+                                         EncodeBase64SingleCase{11, 'L'},
+                                         EncodeBase64SingleCase{12, 'M'},
+                                         EncodeBase64SingleCase{13, 'N'},
+                                         EncodeBase64SingleCase{14, 'O'},
+                                         EncodeBase64SingleCase{15, 'P'},
+                                         EncodeBase64SingleCase{16, 'Q'},
+                                         EncodeBase64SingleCase{17, 'R'},
+                                         EncodeBase64SingleCase{18, 'S'},
+                                         EncodeBase64SingleCase{19, 'T'},
+                                         EncodeBase64SingleCase{20, 'U'},
+                                         EncodeBase64SingleCase{21, 'V'},
+                                         EncodeBase64SingleCase{22, 'W'},
+                                         EncodeBase64SingleCase{23, 'X'},
+                                         EncodeBase64SingleCase{24, 'Y'},
+                                         EncodeBase64SingleCase{25, 'Z'},
+                                         EncodeBase64SingleCase{26, 'a'},
+                                         EncodeBase64SingleCase{27, 'b'},
+                                         EncodeBase64SingleCase{28, 'c'},
+                                         EncodeBase64SingleCase{29, 'd'},
+                                         EncodeBase64SingleCase{30, 'e'},
+                                         EncodeBase64SingleCase{31, 'f'},
+                                         EncodeBase64SingleCase{32, 'g'},
+                                         EncodeBase64SingleCase{33, 'h'},
+                                         EncodeBase64SingleCase{34, 'i'},
+                                         EncodeBase64SingleCase{35, 'j'},
+                                         EncodeBase64SingleCase{36, 'k'},
+                                         EncodeBase64SingleCase{37, 'l'},
+                                         EncodeBase64SingleCase{38, 'm'},
+                                         EncodeBase64SingleCase{39, 'n'},
+                                         EncodeBase64SingleCase{40, 'o'},
+                                         EncodeBase64SingleCase{41, 'p'},
+                                         EncodeBase64SingleCase{42, 'q'},
+                                         EncodeBase64SingleCase{43, 'r'},
+                                         EncodeBase64SingleCase{44, 's'},
+                                         EncodeBase64SingleCase{45, 't'},
+                                         EncodeBase64SingleCase{46, 'u'},
+                                         EncodeBase64SingleCase{47, 'v'},
+                                         EncodeBase64SingleCase{48, 'w'},
+                                         EncodeBase64SingleCase{49, 'x'},
+                                         EncodeBase64SingleCase{50, 'y'},
+                                         EncodeBase64SingleCase{51, 'z'},
+                                         EncodeBase64SingleCase{52, '0'},
+                                         EncodeBase64SingleCase{53, '1'},
+                                         EncodeBase64SingleCase{54, '2'},
+                                         EncodeBase64SingleCase{55, '3'},
+                                         EncodeBase64SingleCase{56, '4'},
+                                         EncodeBase64SingleCase{57, '5'},
+                                         EncodeBase64SingleCase{58, '6'},
+                                         EncodeBase64SingleCase{59, '7'},
+                                         EncodeBase64SingleCase{60, '8'},
+                                         EncodeBase64SingleCase{61, '9'},
+                                         EncodeBase64SingleCase{62, '+'},
+                                         EncodeBase64SingleCase{63, '/'}));
+
+TEST(Base64Test, RoundtripSingleComment) {
+    std::string input = "// AQID\n@compute fn main() {}";
+    auto decoded = DecodeBase64FromComments(input);
+    auto reencoded = EncodeBase64(decoded.AsSpan());
+    ASSERT_EQ(reencoded, Success);
+    std::string output = "// " + reencoded.Get() + "\n@compute fn main() {}";
+    EXPECT_EQ(input, output);
+}
+
+TEST(Base64Test, RoundtripMultiComment) {
+    std::string input = "// AQ\n// ID\n@compute fn main() {}";
+    auto decoded_input = DecodeBase64FromComments(input);
+
+    auto reencoded = EncodeBase64(decoded_input.AsSpan());
+    ASSERT_EQ(reencoded, Success);
+    std::string output = "// " + reencoded.Get() + "\n@compute fn main() {}";
+
+    // Reconstructed string has a single comment, so it is different.
+    EXPECT_NE(input, output);
+    EXPECT_EQ(output, "// AQID\n@compute fn main() {}");
+
+    // But the binary produced by both should be the same.
+    auto decoded_output = DecodeBase64FromComments(output);
+    auto got_input = Transform(decoded_input, [](std::byte b) { return static_cast<int>(b); });
+    auto got_output = Transform(decoded_output, [](std::byte b) { return static_cast<int>(b); });
+    EXPECT_EQ(got_input, got_output);
+}
 
 }  // namespace
 }  // namespace tint::utils

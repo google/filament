@@ -25,16 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Limits.h"
+#include "src/dawn/native/Limits.h"
 
 #include <algorithm>
 #include <array>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/Math.h"
-#include "dawn/native/Instance.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/Instance.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
 
 // clang-format off
 // TODO(crbug.com/dawn/685):
@@ -354,14 +354,14 @@ void NormalizeLimits(CombinedLimits* limits) {
     limits->v1.maxVertexBufferArrayStride =
         std::min(limits->v1.maxVertexBufferArrayStride, kMaxVertexBufferArrayStride);
     limits->v1.maxColorAttachments =
-        std::min(limits->v1.maxColorAttachments, uint32_t(kMaxColorAttachments));
+        std::min(limits->v1.maxColorAttachments, uint32_t{kMaxColorAttachments});
     limits->v1.maxBindGroups = std::min(limits->v1.maxBindGroups, kMaxBindGroups);
     limits->v1.maxBindGroupsPlusVertexBuffers =
         std::min(limits->v1.maxBindGroupsPlusVertexBuffers, kMaxBindGroupsPlusVertexBuffers);
     limits->v1.maxVertexAttributes =
-        std::min(limits->v1.maxVertexAttributes, uint32_t(kMaxVertexAttributes));
+        std::min(limits->v1.maxVertexAttributes, uint32_t{kMaxVertexAttributes});
     limits->v1.maxVertexBuffers =
-        std::min(limits->v1.maxVertexBuffers, uint32_t(kMaxVertexBuffers));
+        std::min(limits->v1.maxVertexBuffers, uint32_t{kMaxVertexBuffers});
     limits->v1.maxSampledTexturesPerShaderStage =
         std::min(limits->v1.maxSampledTexturesPerShaderStage, kMaxSampledTexturesPerShaderStage);
     limits->v1.maxSamplersPerShaderStage =

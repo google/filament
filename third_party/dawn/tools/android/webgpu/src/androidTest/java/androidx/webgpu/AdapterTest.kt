@@ -196,16 +196,16 @@ class AdapterTest {
    */
   @Test
   fun requestDeviceWithWorseThanDefaultLimitClamps() {
-      val worseLimit = kDefaultLimits.getValue("maxBindGroups") - 1
-      assert(worseLimit > 0) // Ensure the value is still valid, just worse.
-      val device = runBlocking { requestTestDevice(limits = GPULimits(maxBindGroups = worseLimit)) }
-      val deviceLimits = device.getLimits()
-      assertEquals(
-        "Device limit should be clamped to the default",
-        kDefaultLimits.getValue("maxBindGroups"),
-        deviceLimits.maxBindGroups
-      )
-      runCatching { device.destroy() }
+    val worseLimit = kDefaultLimits.getValue("maxBindGroups") - 1
+    assert(worseLimit > 0) // Ensure the value is still valid, just worse.
+    val device = runBlocking { requestTestDevice(limits = GPULimits(maxBindGroups = worseLimit)) }
+    val deviceLimits = device.getLimits()
+    assertEquals(
+      "Device limit should be clamped to the default",
+      kDefaultLimits.getValue("maxBindGroups"),
+      deviceLimits.maxBindGroups
+    )
+    runCatching { device.destroy() }
   }
 
   /**

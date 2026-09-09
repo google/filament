@@ -25,27 +25,28 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/CopyTextureForBrowserHelper.h"
+#include "src/dawn/native/CopyTextureForBrowserHelper.h"
 
 #include <utility>
 
-#include "dawn/common/Strings.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ExternalTexture.h"
-#include "dawn/native/InternalPipelineStore.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/RenderPassEncoder.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/Sampler.h"
-#include "dawn/native/Texture.h"
 #include "dawn/native/ValidationUtils_autogen.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ExternalTexture.h"
+#include "src/dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/RenderPassEncoder.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 namespace {
@@ -290,28 +291,23 @@ ResultOrError<Ref<RenderPipelineBase>> CreateCopyForBrowserPipeline(
     vertex.module = shaderModule;
     vertex.entryPoint = "vs_main";
 
-    // Prepare frgament stage.
-    FragmentState fragment = {};
-    fragment.module = shaderModule;
-    fragment.entryPoint = fragmentEntryPoint;
-
     // Prepare color state.
     ColorTargetState target = {};
     target.format = dstFormat;
 
+    // Prepare fragment stage.
+    FragmentState fragment = {};
+    fragment.module = shaderModule;
+    fragment.entryPoint = fragmentEntryPoint;
+    fragment.targets = SpanFromRef<ColorAttachmentIndex>(target);
+
     // Create RenderPipeline.
     RenderPipelineDescriptor renderPipelineDesc = {};
-
     // Generate the layout based on shader modules.
     renderPipelineDesc.layout = nullptr;
-
     renderPipelineDesc.vertex = vertex;
     renderPipelineDesc.fragment = &fragment;
-
     renderPipelineDesc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
-
-    fragment.targetCount = 1;
-    fragment.targets = &target;
 
     return device->CreateRenderPipeline(&renderPipelineDesc);
 }
@@ -403,8 +399,9 @@ MaybeError DoCopyForBrowser(DeviceBase* device,
     // this flip when converting positions to texcoords.
     // https://www.w3.org/TR/webgpu/#coordinate-systems
     if (!options->flipY) {
-        uniformData.scaleY *= -1.0;
-        uniformData.offsetY += copySize->height / static_cast<float>(sourceInfo->size.height);
+        uniformData.scaleY *= -1.0f;
+        uniformData.offsetY +=
+            static_cast<float>(copySize->height) / static_cast<float>(sourceInfo->size.height);
     }
 
     uint32_t stepsMask = 0u;
@@ -443,14 +440,14 @@ MaybeError DoCopyForBrowser(DeviceBase* device,
 
     if (options->needsColorSpaceConversion) {
         stepsMask |= kDecodeToLinearStep;
-        const float* decodingParams = options->srcTransferFunctionParameters;
+        auto decodingParams = options->srcTransferFunctionParameters;
 
         uniformData.gammaDecodingParams = {decodingParams[0], decodingParams[1], decodingParams[2],
                                            decodingParams[3], decodingParams[4], decodingParams[5],
                                            decodingParams[6]};
 
         stepsMask |= kConvertToDstGamutStep;
-        const float* matrix = options->conversionMatrix;
+        auto matrix = options->conversionMatrix;
         uniformData.conversionMatrix = {{
             matrix[0],
             matrix[1],
@@ -467,7 +464,7 @@ MaybeError DoCopyForBrowser(DeviceBase* device,
         }};
 
         stepsMask |= kEncodeToGammaStep;
-        const float* encodingParams = options->dstTransferFunctionParameters;
+        auto encodingParams = options->dstTransferFunctionParameters;
 
         uniformData.gammaEncodingParams = {encodingParams[0], encodingParams[1], encodingParams[2],
                                            encodingParams[3], encodingParams[4], encodingParams[5],
@@ -554,8 +551,7 @@ MaybeError DoCopyForBrowser(DeviceBase* device,
 
     // Create render pass.
     RenderPassDescriptor renderPassDesc;
-    renderPassDesc.colorAttachmentCount = 1;
-    renderPassDesc.colorAttachments = &colorAttachmentDesc;
+    renderPassDesc.colorAttachments = SpanFromRef<ColorAttachmentIndex>(colorAttachmentDesc);
     Ref<RenderPassEncoder> passEncoder = encoder->BeginRenderPass(&renderPassDesc);
 
     // Start pipeline and encode commands to complete
@@ -574,7 +570,7 @@ MaybeError DoCopyForBrowser(DeviceBase* device,
     CommandBufferBase* submitCommandBuffer = commandBuffer.Get();
 
     // Submit command buffer.
-    device->GetQueue()->APISubmit(1, &submitCommandBuffer);
+    device->GetQueue()->APISubmit(SpanFromRef(submitCommandBuffer));
     return {};
 }
 
@@ -618,11 +614,11 @@ MaybeError ValidateCopyForBrowserOptions(const CopyTextureForBrowserOptions& opt
     DAWN_TRY(ValidateAlphaMode(options.dstAlphaMode));
 
     if (options.needsColorSpaceConversion) {
-        DAWN_INVALID_IF(options.srcTransferFunctionParameters == nullptr,
+        DAWN_INVALID_IF(options.srcTransferFunctionParameters.empty(),
                         "srcTransferFunctionParameters is nullptr when doing color conversion");
-        DAWN_INVALID_IF(options.conversionMatrix == nullptr,
+        DAWN_INVALID_IF(options.conversionMatrix.empty(),
                         "conversionMatrix is nullptr when doing color conversion");
-        DAWN_INVALID_IF(options.dstTransferFunctionParameters == nullptr,
+        DAWN_INVALID_IF(options.dstTransferFunctionParameters.empty(),
                         "dstTransferFunctionParameters is nullptr when doing color conversion");
     }
     return {};
@@ -678,7 +674,7 @@ MaybeError ValidateCopyExternalTextureForBrowser(DeviceBase* device,
     DAWN_TRY(device->ValidateObject(source->externalTexture));
     DAWN_TRY(source->externalTexture->ValidateCanUseInSubmitNow());
 
-    Extent2D sourceSize;
+    Extent2D sourceSize = {};
     sourceSize.width = source->naturalSize.width;
     sourceSize.height = source->naturalSize.height;
 

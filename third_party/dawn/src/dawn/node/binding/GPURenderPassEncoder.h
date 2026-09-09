@@ -46,6 +46,7 @@ class GPURenderPassEncoder final : public interop::GPURenderPassEncoder {
     GPURenderPassEncoder(const wgpu::RenderPassDescriptor& desc, wgpu::RenderPassEncoder enc);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::RenderPassEncoder&() const { return enc_; }
 
     // interop::GPURenderPassEncoder interface compliance

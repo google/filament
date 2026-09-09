@@ -30,9 +30,9 @@
 
 #include <utility>
 
-#include "dawn/native/stream/BlobSource.h"
-#include "dawn/native/stream/ByteVectorSink.h"
-#include "dawn/native/stream/Stream.h"
+#include "src/dawn/native/stream/BlobSource.h"
+#include "src/dawn/native/stream/ByteVectorSink.h"
+#include "src/dawn/native/stream/Stream.h"
 
 // Helper for X macro to declare a visitable member.
 #define DAWN_INTERNAL_VISITABLE_MEMBER_DECL(type, name, ...) type name{__VA_OPT__(__VA_ARGS__)};

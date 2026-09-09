@@ -1,0 +1,806 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_mpeg1
+
+Name Strings
+
+    GL_SGIX_mpeg1
+
+Version
+
+    $Date: 1997/06/07 01:23:57 $ $Revision: 1.10 $
+
+Number
+
+    ???
+
+Dependencies
+
+    SGIX_image_compression is required.
+
+Overview
+
+    This extension provides support for MPEG1-compressed images.
+    MPEG1 compression is considered a pixel storage mode.  Predictor
+    frames are supported and are managed as objects in a manner
+    similar to texture objects.
+
+    MPEG images may be uncompressed when transferred from client
+    memory during the unpacking phase of pixel operations.  Images may
+    be compressed when transferred to client memory during the packing
+    phase of pixel operations.
+
+    MPEG predictor frames are stored as two-dimensional RGB images of
+    unspecified type.  The predictors are referred to by numerical
+    names.  The allocation and deallocation of memory to store the
+    predictor images takes place through the GL routines
+    AllocMPEGPredictorsSGIX and DeleteMPEGPredictorsSGIX which are
+    defined by this extension.
+
+    Support of this extension does not imply conformance to the MPEG1
+    standard (ISO 11172), although the following guarantees are made:
+
+        - During decode, the picture_coding_type piece of the picture
+          coding header is extracted and interpreted correctly.  The
+          treatment of the resulting value is discussed below.
+
+Issues
+
+    *    Some systems may not support predictors.  Should we split the
+         extension into two: one for intraframe only and a second
+         which allows predictors?
+
+         A: Predictors are pretty fundamental to MPEG, so we will
+            leave them in the spec.  Implementations that do not
+            support them can do a partial implementation and not
+            advertise the extension.
+
+    *    Should we introduce the concept of "residency" for predictors
+         as we did for texture objects?  
+
+         A: No.  Caching of predictors would be far less useful than
+            caching textures.  If we find an application which could
+            use this capability, we'll add another extension.
+
+    *    When drawing from a predictor object, we always take the
+         entire image.  Should we allow a way to take a subregion of
+         the predictor?  A similar question arises for drawing to a
+         predictor object.
+
+         A: Supporting this functionality could be difficult to
+            impossible for systems using specialized compression and
+            decompression hardware.  Therefore, we will leave it for
+            another extension.
+
+    *    Currently, we require that the user allocate a predictor
+         before using any predictors.  That is, there is no default
+         predictor created at context init.  Is this the correct
+         behavior?  In the texture object extension, there is a
+         default texture which is used.
+
+         A: Since predictors are used as sources, destinations, and
+            forward and backward predictors, choosing the correct
+            number of default predictors and bindings for them which
+            would be at all useful would be difficult if not
+            impossible.  Textures are a simpler case since they are
+            basically only used for one thing.  Additionally, having
+            default predictors would require implementations to
+            reserve space for the predictors at context init (which
+            would waste space since the vast majority of applications
+            will not use MPEG compression) or to allocate the space
+            during a pixel command (which could cause the pixel
+            command to generate an out-of-memory error).  Therefore,
+            we will stick with the current approach.
+
+    *    Should we add "error recovery" bind points?  These predictors
+         could be used by the implementation to replace regions of a
+         decoded image which were determined to be bogus because of
+         image data errors.  Frank Bernard says this is a fairly
+         common technique.
+
+         A: We'll leave this for another extension.
+
+    *    Do we need a proxy mechanism to determine the amount of
+         predictor space available?
+
+    *    Do we need a more straightforward way to copy predictors from
+         the frame buffer?  Something like CopyMPEGPredictorSGIX?
+
+    *    We guarantee that the picture_structure and picture_type
+         fields are interpreted and set correctly.  We do this so that
+         we can make guarantees about which predictors will be used
+         and updated.  Should we make this less restrictive?
+
+    *    Drawing from predictors is still a little awkward.  We
+         require the user to draw a zero-size MPEG-compressed image.
+         The user needs to have a legal picture header.  Should we add
+         some more direct way to accomplish this step?
+
+Reasoning
+
+    *    We have used a scheme for predictor management which is
+         slightly different from the scheme for texture objects.
+         Specifically, we have an allocation routine
+         (AllocMPEGPredictorsSGIX), but textures are allocated on
+         download.  The reason for this is that it removes the need to
+         allocate memory during commands like DrawPixels and
+         ReadPixels.  Failure of either of these commands due to an
+         out-of-memory error would be highly counterintuitive.
+
+    *    To simplify state management and queries, we perform
+         upsampling prior to motion compensation and predictor
+         storage. 
+
+    *    We manage quantization tables using a syntax similar to that
+         of pixel maps instead of managing them as pixel data since
+         they update the pack and unpack state.  Using and
+         simultaneously updating the state would be awkward.  Also,
+         the values are always one unscaled component, meaning that
+         the added flexibility of a user-specified type and format
+         would be virtually useless.
+
+New Procedures and Functions
+
+    void GenMPEGPredictorsSGIX(sizei n,
+			       uint *predictors);
+
+    void AllocMPEGPredictorsSGIX(sizei width, 
+				 sizei height, 
+				 sizei n,
+				 uint *predictors);
+
+    void DeleteMPEGPredictorsSGIX(sizei n,
+				  uint *predictors);
+
+    boolean IsMPEGPredictorSGIX(uint predictor);
+
+    void MPEGPredictorSGIX(enum target, 
+			   enum format,
+			   enum type,
+			   void *pixels);
+
+    void GetMPEGPredictorSGIX(enum target,
+                              enum format,
+                              enum type,
+                              void *pixels);
+
+    void SwapMPEGPredictorsSGIX(enum target0, 
+				enum target1);
+
+    void GetMPEGParameterfvSGIX(enum target,
+				enum pname,
+				float *params);
+
+    void GetMPEGParameterivSGIX(enum target, 
+				enum pname,
+				int *params);
+
+    void MPEGQuantTableubv(enum target,
+			   ubyte *values);
+
+    void GetMPEGQuantTableubv(enum target,
+			      ubyte *values);
+
+New Tokens
+
+    Accepted by the <target> parameter of GetMPEGParameterfvSGIX and
+    GetMPEGParameterivSGIX; by the <target0> and <target1> parameters
+    of SwapMPEGPredictorsSGIX; by the <param> parameter of PixelStoref
+    and PixelStorei; and by the <pname> parameter of GetBooleanv,
+    GetIntegerv, GetFloatv, and GetDoublev:
+
+        PACK_MPEG_PREDICTOR_FWD_SGIX			????
+        PACK_MPEG_PREDICTOR_BACK_SGIX			????
+
+        UNPACK_MPEG_PREDICTOR_FWD_SGIX			????
+        UNPACK_MPEG_PREDICTOR_BACK_SGIX			????
+
+    Accepted by the <pname> parameter of PixelStoref, PixelStorei,
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        PACK_MPEG_PREDICTOR_STORE_SGIX			????
+	PACK_MPEG_PREDICTOR_STORE_SINK_SGIX		????
+	PACK_MPEG_PREDICTOR_READ_SGIX			????
+        UNPACK_MPEG_PREDICTOR_STORE_SGIX		????
+	UNPACK_MPEG_PREDICTOR_STORE_SINK_SGIX		????
+	UNPACK_MPEG_PREDICTOR_READ_SGIX			????
+
+        PACK_MPEG_PICTURE_TYPE_SGIX			????
+        PACK_MPEG_ADAPT_QUANT_SCALE			????
+
+    Accepted by the <param> parameter of PixelStoref and PixelStorei:
+
+        MPEG1_SGIX					????
+        MPEG_IFRAME_SGIX				????
+        MPEG_PFRAME_SGIX				????
+        MPEG_BFRAME_SGIX				????
+
+    Accepted by the <pname> parameter of GetMPEGParameterfvSGIX and
+    GetMPEGParameterivSGIX:
+
+        MPEG_PREDICTOR_WIDTH_SGIX			????
+        MPEG_PREDICTOR_HEIGHT_SGIX			????
+
+    Accepted by the <target> parameter of MPEGQuantTableubv and
+    GetMPEGQuantTableubv:
+
+	PACK_MPEG_INTRA_QUANT				????
+	PACK_MPEG_NON_INTRA_QUANT			????
+	UNPACK_MPEG_INTRA_QUANT				????
+	UNPACK_MPEG_NON_INTRA_QUANT			????
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    The pixel storage modes are augmented to support MPEG compressed
+    images in memory.  The following entries are added to Table 3.1:
+
+	Parameter Name				Type		Initial Value	Valid Range
+	--------------				----		-------------	-----------
+	UNPACK_MPEG_PREDICTOR_FWD_SGIX		integer		0	        [0, infinity]
+	UNPACK_MPEG_PREDICTOR_BACK_SGIX		integer		0	        [0, infinity]
+	UNPACK_MPEG_PREDICTOR_STORE_SGIX	Z3		NONE		NONE, UNPACK_MPEG_PREDICTOR_FWD_SGIX, UNPACK_MPEG_PREDICTOR_BACK_SGIX
+	UNPACK_MPEG_PREDICTOR_STORE_SINK_SGIX	boolean		FALSE		
+	UNPACK_MPEG_PREDICTOR_READ_SGIX		Z3		NONE		NONE, UNPACK_MPEG_PREDICTOR_FWD_SGIX, UNPACK_MPEG_PREDICTOR_BACK_SGIX
+
+    Additionally, the value MPEG1_SGIX is added to the valid range of
+    PACK_COMPRESSION_TYPE_SGIX and UNPACK_COMPRESSION_TYPE_SGIX.
+
+    The following should be added to the end of section 3.6.1 (Pixel
+    Storage Modes): 
+
+    In addition to PixelStoref and PixelStorei, several commands
+    control the unpacking of MPEG-compressed images.  The command:
+
+        MPEGQuantTableubv(enum target, ubyte *values);
+
+    allows the specification of custom quantization tables for MPEG
+    decode.  The following are legal values for the <target>
+    parameter: PACK_MPEG_INTRA_QUANT, PACK_MPEG_NON_INTRA_QUANT,
+    UNPACK_MPEG_INTRA_QUANT, and UNPACK_MPEG_NON_INTRA_QUANT.  If the
+    value of <target> is not legal, the error INVALID_ENUM is
+    generated.  <values> points to a 64-element array of values
+    representing the quantizer grid which will update the state
+    specified by <target>.  The organization of the elements in the
+    grid is not specified by this extension.
+
+    Several other commands are used to manage predictor objects for
+    MPEG compressed images.  Predictor objects represent
+    two-dimensional images allocated by GL.  The images are stored in
+    a YUV format.  Each component is stored as a number of unspecified
+    precision.  Predictor objects are referred to by unsigned integer
+    names.  A predictor name is considered "in use" when an image
+    (including a zero-size image) is associated with it.  The name
+    zero is reserved for the GL and is permanently associated with a
+    zero-size image.
+
+    Predictor frame names are allocated using the command:
+
+        void GenMPEGPredictorsSGIX( sizei n, uint *predictors );
+
+    The parameter <predictors> points to an array of <n> unsigned
+    integers.  GenMPEGPredictorsSGIX places <n> predictor names in
+    <predictors>.  Names are chosen in an unspecified manner, the only
+    conditions being that only names that were not in use immediately
+    prior to the call to GenMPEGPredictorsSGIX will be returned, zero
+    will not be returned, and each name returned will be unique.  An
+    image with width and height equal to zero is associated with each
+    name returned.
+
+    Images associated with MPEG predictor names are allocated using
+    the command:
+
+        AllocMPEGPredictorsSGIX( sizei width, sizei height, 
+				 sizei n, uint *predictors );
+
+    This function associates an image of size <width> by <height> with
+    each of the <n> predictors whose names are in <predictors>.  The
+    parameters <width> and <height> specify the size of images to be
+    associated with the predictor objects.  If a name was previously
+    in use, the image previously associated with it is deleted, just
+    as though DeleteMPEGPredictorsSGIX (see below) had been called.
+    The name zero may not be included in the list of predictor objects
+    or the error INVALID_OPERATION results.  After allocation, the
+    contents of the allocated images are undefined.
+
+    Predictor frames are deleted by calling:
+
+        DeleteMPEGPredictorsSGIX( sizei n, uint *predictors );
+
+    with <predictors> pointing to a list of <n> predictor names of
+    objects to be deleted.  When an object is deleted, the memory
+    associated with its image is freed.  After the object is deleted,
+    it has no image size or contents and its name is considered no
+    longer in use.  If a predictor object which is currently bound is
+    deleted, the binding reverts to zero. DeleteMPEGPredictorsSGIX
+    ignores names which do not correspond to predictor objects.  The
+    name zero is also silently ignored.
+
+    Predictors are associated with bind points which define their
+    usage during pixel download and readback operations.  The valid
+    bind points are: PACK_MPEG_PREDICTOR_FWD_SGIX,
+    PACK_MPEG_PREDICTOR_BACK_SGIX, PACK_MPEG_PREDICTOR_BACK_SGIX, and
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX. The use of each bind point is
+    described in detail in either section 3.6.3 (Rasterization of
+    Pixel Rectangles) or in the section of Chapter 4 entitled "Packing
+    of Compressed Images."  To bind a predictor to a bind point, the
+    commands PixelStorei and PixelStoref are used.  The parameter
+    <pname> gives the name of a bind point and the parameter <param>
+    gives the numerical name of a predictor object.  If <param> is not
+    a predictor object, the error INVALID_VALUE is generated.
+
+    The command
+
+        MPEGPredictorSGIX(enum target, enum format, enum type, 
+			  void *pixels);
+
+    is used to download images from client memory to the predictor
+    bound to the bind point <target>.  If <target> is not the name of
+    a predictor bind point, the error INVALID_ENUM is generated.
+    <format> must be one of RED, GREEN, BLUE, ALPHA, RGB, RGBA,
+    ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.  <type> must be
+    UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or
+    FLOAT.  <pixels> points to a two-dimensional image stored as
+    specified by <format> and <type>.  The width and height of the
+    image are assumed to be the same as the width and height of the
+    predictor bound to <target>.  The image is extracted from memory
+    and processed just as if DrawPixels were called, stopping after
+    the Final Expansion to RGBA step.  
+
+    The command
+
+        SwapMPEGPredictorsSGIX(enum target0, enum target1);
+
+    is used to swap the predictor objects associated with two
+    predictor bind points.  The predictor bound to <target0> is bound
+    to <target1> and the predictor bound to <target1> is bound to
+    <target0>.  The error INVALID_ENUM is generated if <target0> or
+    <target1> is not the name of a predictor bind point.  
+
+    3.6.3 Rasterization of Pixel Rectangles
+
+    The following should be added to the "Unpacking of Compressed
+    Images" subsection of section 3.6.3 (Rasterization of Pixel
+    Rectangles) following the paragraph which begins "Once the byte
+    stream has been taken from host memory...": If
+    UNPACK_COMPRESSION_TYPE_SGIX is equal to MPEG1_SGIX, the byte
+    stream is assumed to represent an MPEG1 picture header followed by
+    picture data.  MPEG1 images are classified as one of three frame
+    types: I-frame, P-frame, or B-frame.  The frame type is determined
+    by the value of the picture_type field in the picture header.
+    This extraction and interpretation takes place as described in the
+    MPEG specification (ISO 11172).  The initial steps of MPEG
+    decompression are the same for all frames, but later steps are
+    dependent upon the frame type.
+
+    The size of the image represented by the byte stream is determined
+    by the width and height values as computed in the
+    SGIX_image_compression extension.  Only image sizes for which the
+    width and height are multiples of 16 are valid.  Specification of
+    an invalid size for the decompressed image will result in the
+    error INVALID_OPERATION.
+
+    Entropy decoding, inverse quantization, and inverse discrete
+    cosine transform operations are applied to the image.  This
+    extension does not specify the algorithm used, nor does it imply
+    conformance to the MPEG2 specification.
+
+    The IDCT step produces three output images: Y, Cr, and Cb.  The
+    images are upsampled as determined by the setting of
+    UNPACK_UPSAMPLE_SGIX.  The upsampling is performed as described in
+    SGIX_image_compression.  The output of the upsampling step is a
+    single width by height YCrCB image.  The contents of the image and
+    how it is handled after the upsampling step is determined by the
+    type of MPEG frame.
+
+    The frame conversion step is described below for each of the
+    types.  For all frame types, the output of the conversion step is
+    a single YCrCb image of the same width and height as the output of
+    the upsampling step.  
+
+    If the image is an I-frame, no predictors are used to compute the
+    output image, but the quantizer table UNPACK_MPEG_INTRA_QUANT may
+    be used.  The quantizer table contents may also be changed during
+    the decompression if the byte stream contains an embedded
+    quantization table.  Any changes made are reflected in the GL state
+    and persist until the quantizer table is respecified through a
+    call to MPEGQuantTableubv or during decompression of another
+    I-frame.  The exact algorithm used to compute the output image is
+    not specified in this extension.
+
+    If the image is a P-frame, the image represents a predicted picture.
+    The output of the frame conversion step is determined by the
+    contents of the image and by the contents of the predictor object
+    bound to the UNPACK_MPEG_PREDICTOR_BACK_SGIX bind point.  This
+    predictor must be the same size as the current image or the error
+    INVALID_OPERATION is generated and processing of the image
+    terminates.  The quantizer table UNPACK_MPEG_NON_INTRA_QUANT may
+    be used and possibly changed during the decompression.
+
+    If the image is a B-frame, the image represents a bidirectionally
+    predicted picture.  The output of the frame conversion step is
+    determined by the contents of the image and by the contents of the
+    predictor objects bound to the UNPACK_MPEG_PREDICTOR_BACK_SGIX and
+    UNPACK_MPEG_PREDICTOR_FWD_SGIX bind points.  The predictor objects
+    must be the same size as the current image or the error
+    INVALID_OPERATION is generated and processing of the image
+    terminates.  The quantizer table UNPACK_MPEG_NON_INTRA_QUANT may
+    be used and possibly changed during the decompression.  The
+    algorithm used to compute the output image is not specified in
+    this extension.
+
+    After the frame conversion step, the YCrCb image may be used to
+    update the predictor bound to UNPACK_MPEG_PREDICTOR_FORWARD_SGIX
+    or UNPACK_MPEG_PREDICTOR_BACK_SGIX in the predictor update step
+    described here.  The predictor to be updated is specified using
+    the parameter UNPACK_MPEG_PREDICTOR_STORE_SGIX.  If this value is
+    NONE, the predictor update step is skipped.  Otherwise, the YCrCb
+    image from the frame conversion step overwrites the current
+    contents of the predictor bound to the target which was
+    specified with UNPACK_MPEG_PREDICTOR_STORE_SGIX.  The affected
+    predictor's size must be the same as that of the current image or
+    the error INVALID_OPERATION is generated.  Also, a predictor may
+    not be updated if it is being used in a previous step of the
+    decompression process or the error INVALID_OPERATION is generated.
+    This means that the UNPACK_MPEG_PREDICTOR_STORE_SGIX may not be
+    set to UNPACK_MPEG_PREDICTOR_BACK_SGIX during the download of a P-
+    or B-frame and that UNPACK_MPEG_PREDICTOR_STORE_SGIX may not be
+    set to UNPACK_MPEG_PREDICTOR_FORWARD_SGIX during the download of a
+    B-frame.  If an error is generated during the predictor update
+    step, processing terminates and the contents of the predictor are
+    left unchanged.
+
+    If UNPACK_MPEG_PREDICTOR_STORE_SINK_SGIX is TRUE, the operation
+    terminates after the update step (even if no update was
+    performed).
+
+    After the predictor update step, the YCrCb image from the frame
+    conversion step may be replaced by the predictor bound to
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX or UNPACK_MPEG_PREDICTOR_FWD_SGIX
+    as specified by UNPACK_MPEG_PREDICTOR_READ_SGIX.  If We refer to
+    this step as the source replacement step.  If
+    UNPACK_MPEG_PREDICTOR_READ_SGIX is equal to NONE, the image from
+    the conversion step is unchanged.  If
+    UNPACK_MPEG_PREDICTOR_READ_SGIX is
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX, the image is replaced by the
+    predictor image bound to UNPACK_MPEG_PREDICTOR_BACK_SGIX.  If
+    UNPACK_MPEG_PREDICTOR_READ_SGIX is
+    UNPACK_MPEG_PREDICTOR_FORWARD_SGIX, the image is replaced by the
+    predictor image bound to UNPACK_MPEG_PREDICTOR_FORWARD_SGIX.  When
+    replacement occurs, the image passed to the next stage in the
+    unpacking process has the same size and contents as the specified
+    predictor.  Therefore, a predictor may be downloaded from a bind
+    point by setting UNPACK_MPEG_PREDICTOR_READ_SGIX appropriately and
+    drawing a zero-size MPEG image.
+
+    Predictors may not be used for replacement if they were written
+    during a previous step of the same operation.  That is to say,
+    UNPACK_MPEG_PREDICTOR_READ_SGIX may not be set to the same value
+    as UNPACK_MPEG_PREDICTOR_STORE_SGIX unless that value is NONE.
+    Also, UNPACK_MPEG_PREDICTOR_READ_SGIX and
+    UNPACK_MPEG_PREDICTOR_STORE_SGIX may not specify bind points to
+    which the same predictor is bound, even if the bind points are
+    different.  If either error condition occurs, the error
+    INVALID_OPERATION is generated and the operation terminates.  The
+    termination of the operation occurs prior to the predictor update
+    step, so if the error occurs the contents of the predictors are
+    left unchanged.
+
+    After the replacement step, the YCrCb image is converted to RGB.
+    If UNPACK_TO_RGB_SGIX is enabled, an RGB image is produced using
+    an unspecified algorithm.  If UNPACK_TO_RGB_SGIX is disabled, the
+    RGB image is producted by setting R to Y, G to Cr, and B to Cb.
+    The output image is treated as an RGB floating-point image.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    The following entries are added to Table 4.5:
+
+	Parameter Name				Type		Initial Value	Valid Range
+	--------------				----		-------------	-----------
+	PACK_MPEG_PREDICTOR_FWD_SGIX		integer		0	        [0, infinity]
+	PACK_MPEG_PREDICTOR_BACK_SGIX		integer		0	        [0, infinity]
+	PACK_MPEG_PREDICTOR_STORE_SGIX		Z3		NONE    	NONE, PACK_MPEG_PREDICTOR_FWD_SGIX, PACK_MPEG_PREDICTOR_BACK_SGIX
+	PACK_MPEG_PREDICTOR_STORE_SINK_SGIX	boolean		FALSE		TRUE/FALSE
+	PACK_MPEG_PREDICTOR_READ_SGIX		Z3		NONE		NONE, PACK_MPEG_PREDICTOR_FWD_SGIX, PACK_MPEG_PREDICTOR_BACK_SGIX
+	PACK_MPEG_PICTURE_TYPE_SGIX		Z3		NONE		MPEG_IFRAME_SGIX, MPEG_PFRAME_SGIX, MPEG_BFRAME_SGIX
+	PACK_MPEG_ADAPT_QUANT_SCALE		b		FALSE		TRUE/FALSE
+
+    The following is added to the "Packing of Compressed Images"
+    subsection following the paragraph beginning "If image compression
+    is on...": For MPEG1-compressed images (PACK_COMPRESSION_TYPE_SGIX
+    equal to MPEG1_SGIX), only image sizes for which width and height
+    are multiples of 16 are permitted.  Other image sizes result in
+    the generation of the error INVALID_OPERATION.  The type of frame
+    to be created is determined by the setting of
+    PACK_MPEG_PICTURE_TYPE_SGIX.  During MPEG1 compression, if this
+    value is not equal to MPEG_IFRAME_SGIX, MPEG_PFRAME_SGIX, or
+    MPEG_BFRAME_SGIX, the error INVALID_ENUM is generated and no
+    processing takes place.
+
+    If PACK_TO_RGB_SGIX is TRUE, the RGBA input image is converted
+    to a YCrCb image using an unspecified algorithm.  If
+    PACK_TO_RGB_SGIX is FALSE, the input image is converted to YCrCb
+    by setting the Y equal to R, Cr equal to G, and Cb equal to B.
+
+    The MPEG predictor bound to the bind point specified by
+    PACK_MPEG_PREDICTOR_STORE_SGIX is overwritten by the current image
+    if the value of PACK_MPEG_PREDICTOR_STORE_SGIX is not equal to
+    NONE.  The update of PACK_MPEG_PREDICTOR_SGIX takes place in the
+    same manner as the update of UNPACK_MPEG_PREDICTOR_SGIX described
+    in section 3.6.3 (including the generation of errors and possible
+    termination of processing), except that the appropriate PACK
+    values are used in place of the UNPACK values.
+
+    As with decompression, the value PACK_MPEG_PREDICTOR_READ_SGIX may
+    be used to specify a bind point whose contents will replace the
+    current image in all subsequent processing.  This update is
+    identical to that described in section 3.6.3 (including the
+    generation of errors and possible termination of processing),
+    except that the appropriate PACK values are used in place of the
+    UNPACK values.  
+
+    The YCrCb image as downsampled is specified by PACK_SAMPLE_SGIX.
+    The operation is described in SGIX_image_compression.
+
+    The output of the downsampling step is converted based upon the
+    frame type specified by PACK_MPEG_PICTURE_TYPE_SGIX.  In this
+    extension, we do not specify the algorithms used.  We list the GL
+    state used to control the algorithm, but the interpretation of
+    this state is implementation-dependent.  All algorithms may be
+    effected by the setting of PACK_MPEG_ADAPT_QUANT_SCALE.  Other
+    parameters affect different frame types in different ways and will
+    be discussed in the paragraphs below.
+
+    If the frame type is MPEG_IFRAME_SGIX, the conversion does not use
+    any predictors.  The conversion may use the contents of the
+    quantizer table PACK_MPEG_INTRA_QUANT_SGIX.  Unlike during
+    decompression, the contents of the quant tables may not be changed
+    by the compression operation.
+
+    If the frame type is MPEG_PFRAME_SGIX, the data is converted using
+    the predictor bound to PACK_MPEG_PREDICTOR_BACK_SGIX.  If the
+    image size is not equal to the size of the predictor, the error
+    INVALID_OPERATION is generated and the operation is terminated.
+    The conversion may also use the contents of the quantizer table
+    PACK_MPEG_NON_INTRA_QUANT_SGIX, but the contents of the quantizer
+    may not be changed by the compression operation.
+
+    If the frame type is MPEG_BFRAME_SGIX, the data is converted using
+    the predictors bound to PACK_MPEG_PREDICTOR_BACK_SGIX and
+    PACK_MPEG_PREDICTOR_FWD_SGIX.  If the sizes of the predictors are
+    not equal to the image size, the error INVALID_OPERATION is
+    generated and the operation is terminated.  The algorithms used in
+    the compression are not defined by this extension.  The conversion
+    may also use the contents of the quantizer table
+    PACK_MPEG_NON_INTRA_QUANT_SGIX.  The contents of table not may be
+    changed by the compression operation.
+
+    The output of MPEG1 compression is a byte stream containing an
+    MPEG1 picture header followed by picture data.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    All of the procedures and functions added by this extension are
+    not included in display lists, but instead are executed
+    immediately. 
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    The routine
+
+       void GetMPEGQuantTableubv(enum target, ubyte *values);
+
+    is used to read back the contents of an MPEG quantizer table.  The
+    valid values for the parameter <target> are:
+    PACK_MPEG_INTRA_QUANT_SGIX, PACK_MPEG_NON_INTRA_QUANT_SGIX,
+    UNPACK_MPEG_INTRA_QUANT_SGIX, and
+    UNPACK_MPEG_NON_INTRA_QUANT_SGIX.  If the value of <target> is not
+    legal, the error INVALID_ENUM is generated.  <values> points to a
+    64-element array.  The organization of data in the array is not
+    specified by this extension.
+
+    The routine
+
+        void GetMPEGPredictorSGIX(enum target, enum format, enum type, 
+                                  void *pixels);
+
+    is used to read back the contents of the predictor bound to a bind
+    point specified by <target>.  The error INVALID_ENUM is generated
+    if <target> is not one of UNPACK_MPEG_PREDICTOR_FWD_SGIX,
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX, PACK_MPEG_PREDICTOR_FWD_SGIX, or
+    PACK_MPEG_PREDICTOR_BACK_SGIX.  <format> must be one of RED,
+    GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA.  <type> must be UNSIGNED_BYTE, BYTE,
+    UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.  If <format>
+    or <type> does not give a legal value, the error INVALID_ENUM is
+    generated.  The two-dimensional image is returned to <pixels>.  No
+    pixel transfer operations are performed on this image, but pixel
+    storage modes (including possibly MPEG compression) that are
+    applicable to ReadPixels are performed.  Since the predictor does
+    not contain an alpha channel, any alpha values which are returned
+    are set to zero.  If the pixel store operations applied would
+    change the contents of the predictor bound to <target>, the error
+    INVALID_OPERATION is generated.
+
+    The routines
+    
+        void GetMPEGParameterfvSGIX(enum target, enum pname, 
+		                    float *params);
+
+    and
+
+        void GetMPEGParameterivSGIX(enum target, enum pname,
+                                    int *params);
+
+    are used to return attributes of a predictor object bound to
+    <target> as floating-point or integer values (respectively).
+    <target> must specify one of UNPACK_MPEG_PREDICTOR_FWD_SGIX,
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX, PACK_MPEG_PREDICTOR_FWD_SGIX, or
+    PACK_MPEG_PREDICTOR_BACK_SGIX or the error INVALID_ENUM is
+    generated.  <pname> specifies the attribute to be returned and
+    must be MPEG_PREDICTOR_WIDTH_SGIX or MPEG_PREDICTOR_HEIGHT_SGIX.
+    These values cause the width or height of the predictor to be
+    returned to the location in client memory specified by <params>.
+    If <pname> does not specify a legal value, the error INVALID_ENUM
+    is generated.
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    XXX
+
+Errors
+
+    INVALID_ENUM is generated if the parameter <target> to
+    MPEGQuantTableubv is not one of the legal values listed above.
+
+    INVALID_OPERATION is generated if the name zero is passed as one
+    of the predictors to AllocMPEGPredictorsSGIX.
+ 
+    INVALID_VALUE is generated if the parameter <pname> to PixelStorei
+    or PixelStoref indicates a predictor bind point but <param> is not
+    the name of a predictor object.
+
+    INVALID_OPERATION is generated if parameter <format> to
+    MPEGPredictorSGIX is not one of RED, GREEN, BLUE, ALPHA, RGB,
+    RGBA, ABGR_EXT, LUMINANCE, or LUMINANCE_ALPHA.
+
+    INVALID_OPERATION is generated if parameter <type> to
+    MPEGPredictorSGIX is not one of UNSIGNED_BYTE, BYTE,
+    UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_ENUM is generated if either or both of the parameters
+    <target0> and <target1> to the command SwapMPEGPredictorsSGIX is
+    not the name of a valid predictor bind point.
+
+    INVALID_OPERATION is generated if UNPACK_COMPRESSION_TYPE_SGIX is
+    MPEG1_SGIX and during a pixel download the values width and height
+    (as computed in SGIX_image_compression) are not legal for MPEG1
+    decompression. 
+
+    INVALID_OPERATION is generated if UNPACK_MPEG_PREDICTOR_STORE_SGIX
+    is set to UNPACK_MPEG_PREDICTOR_BACK_SGIX during the download of a
+    P- or B-frame or if UNPACK_MPEG_PREDICTOR_STORE_SGIX is set to
+    UNPACK_MPEG_PREDICTOR_FORWARD_SGIX during the download of a
+    B-frame.
+
+    INVALID_OPERATION is generated if UNPACK_MPEG_PREDICTOR_READ_SGIX
+    and UNPACK_MPEG_PREDICTOR_STORE_SGIX are set to the same value
+    during a MPEG decompression and that value is not NONE.
+
+    INVALID_OPERATION is generated if during MPEG decompression
+    UNPACK_MPEG_PREDICTOR_READ_SGIX and
+    UNPACK_MPEG_PREDICTOR_STORE_SGIX specify bind points to which the
+    same predictor is bound.
+
+    INVALID_OPERATION is generated if PACK_COMPRESSION_TYPE_SGIX is
+    MPEG1_SGIX and during a pixel readback the values width and height
+    (as computed in SGIX_image_compression) are not legal for MPEG1
+    compression.
+
+    INVALID_OPERATION is generated if PACK_MPEG_PREDICTOR_STORE_SGIX
+    is set to PACK_MPEG_PREDICTOR_BACK_SGIX during the readback of a
+    P- or B-frame or if PACK_MPEG_PREDICTOR_STORE_SGIX is set to
+    PACK_MPEG_PREDICTOR_FORWARD_SGIX during the readback of a B-frame.
+
+    INVALID_OPERATION is generated if PACK_MPEG_PREDICTOR_READ_SGIX
+    and PACK_MPEG_PREDICTOR_STORE_SGIX are set to the same value
+    during a MPEG compression and that value is not NONE.
+
+    INVALID_OPERATION is generated if during MPEG decompression
+    PACK_MPEG_PREDICTOR_READ_SGIX and PACK_MPEG_PREDICTOR_STORE_SGIX
+    specify bind points to which the same predictor is bound.
+
+    INVALID_ENUM is generated if the <target> parameter to
+    GetMPEGPredictorSGIX is not a legal value.
+
+    INVALID_ENUM is generated if the <format> parameter to
+    GetMPEGPredictorSGIX is not one of the accepted values.
+
+    INVALID_ENUM is generated if the <type> parameter to
+    GetMPEGPredictorSGIX is not one of the accepted values.
+
+    INVALID_OPERATION is generated if the pixel storage modes in
+    operation when GetMPEGPredictorSGIX is called would change the
+    contents of the predictor bound to <target>.
+
+    INVALID_ENUM is generated if the <target> parameter to
+    GetMPEGParameterfvSGIX or GetMPEGParameterivSGIX is not one of the
+    accepted values.
+
+    INVALID_ENUM is generated if the <pname> parameter to
+    GetMPEGParameterfvSGIX or GetMPEGParameterivSGIX is not one of the
+    accepted values.
+
+    INVALID_OPERATION is generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the
+    corresponding execution of End.
+
+New State
+										Initial
+    Get Value					Get Command		Type	Value				Attrib
+    ---------					-----------		----	-------				------
+    PACK_MPEG_PREDICTOR_DST_SGIX		GetIntegerv		Z+	0				client
+    PACK_MPEG_PREDICTOR_SRC_SGIX		GetIntegerv		Z+	0				client
+    PACK_MPEG_PREDICTOR_FWD_SGIX		GetIntegerv		Z+	0				client
+    PACK_MPEG_PREDICTOR_BACK_SGIX		GetIntegerv		Z+	0				client
+    UNPACK_MPEG_PREDICTOR_DST_SGIX		GetIntegerv		Z+	0				client
+    UNPACK_MPEG_PREDICTOR_SRC_SGIX		GetIntegerv		Z+	0				client
+    UNPACK_MPEG_PREDICTOR_FWD_SGIX		GetIntegerv		Z+	0				client
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX		GetIntegerv		Z+	0				client
+
+    PACK_MPEG_PREDICTOR_TO_DST_SGI		GetIntegerv		B	0				client
+    PACK_MPEG_PREDICTOR_FROM_SRC_SGIX		GetIntegerv		B	0				client
+    PACK_MPEG_PREDICTOR_TO_DST_SINK_SGIX	GetIntegerv		B	0				client
+    UNPACK_MPEG_PREDICTOR_TO_DST_SGIX		GetIntegerv		B	0				client
+    UNPACK_MPEG_PREDICTOR_FROM_SRC_SGIX		GetIntegerv		B	0				client
+    UNPACK_MPEG_PREDICTOR_TO_DST_SINK_SGIX	GetIntegerv		B	0				client
+
+    PACK_MPEG_INTRA_QUANT			GetMPEGQuantTableubv	64*Z+	( 8,16,19,22,26,27,29,34,	client
+										 16,16,22,24,47,49,34,37,
+										 19,22,26,27,29,34,34,38,
+										 22,22,26,27,29,34,37,40,
+										 22,26,27,29,32,35,40,48,
+										 26,27,29,32,35,40,48,58,
+										 26,27,29,34,38,46,56,69,
+										 27,29,35,38,46,56,69,83)
+    PACK_MPEG_NON_INTRA_QUANT			GetMPEGQuantTableubv	64*Z+	(16,16,16,16,16,16,16,16,	client
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16)
+    UNPACK_MPEG_INTRA_QUANT			GetMPEGQuantTableubv	64*Z+	( 8,16,19,22,26,27,29,34,	client
+										 16,16,22,24,47,49,34,37,
+										 19,22,26,27,29,34,34,38,
+										 22,22,26,27,29,34,37,40,
+										 22,26,27,29,32,35,40,48,
+										 26,27,29,32,35,40,48,58,
+										 26,27,29,34,38,46,56,69,
+										 27,29,35,38,46,56,69,83)
+    UNPACK_MPEG_NON_INTRA_QUANT			GetMPEGQuantTableubv	64*Z+	(16,16,16,16,16,16,16,16,	client
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16,
+										 16,16,16,16,16,16,16,16)
+    MPEG_PREDICTOR_WIDTH_SGIX			GetMPEGParameterivSGIX	3 x Z+	0				client
+    MPEG_PREDICTOR_HEIGHT_SGIX			GetMPEGParameterivSGIX	3 x Z+	0				client
+
+New Implementation Dependent State
+
+	None.

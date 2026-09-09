@@ -1,0 +1,442 @@
+Name
+    
+    NV_vertex_program1_1
+
+Name Strings
+
+    GL_NV_vertex_program1_1
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown
+    Erik Lindholm
+    Steve Glanville
+    Erik Faye-Lund
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001, 2002.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Version 1.0
+
+Version
+
+    NVIDIA Date: March 4, 2014
+    Version:     8
+
+Number
+
+    266
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification and
+    requires OpenGL 1.2.1.
+
+    Assumes support for the NV_vertex_program extension.
+
+Overview
+
+    This extension adds four new vertex program instructions (DPH,
+    RCC, SUB, and ABS).
+
+    This extension also supports a position-invariant vertex program
+    option.  A vertex program is position-invariant when it generates
+    the _exact_ same homogenuous position and window space position
+    for a vertex as conventional OpenGL transformation (ignoring vertex
+    blending and weighting).
+
+    By default, vertex programs are _not_ guaranteed to be
+    position-invariant because there is no guarantee made that the way
+    a vertex program might compute its homogenous position is exactly
+    identical to the way conventional OpenGL transformation computes
+    its homogenous positions.  In a position-invariant vertex program,
+    the homogeneous position (HPOS) is not output by the program.
+    Instead, the OpenGL implementation is expected to compute the HPOS
+    for position-invariant vertex programs in a manner exactly identical
+    to how the homogenous position and window position are computed
+    for a vertex by conventional OpenGL transformation.  In this way
+    position-invariant vertex programs guarantee correct multi-pass
+    rendering semantics in cases where multiple passes are rendered and
+    the second and subsequent passes use a GL_EQUAL depth test.
+
+Issues
+
+    How should options to the vertex program semantics be handled?
+
+      RESOLUTION:  A VP1.1 vertex program can contain a sequence
+      of options.  This extension provides a single option
+      ("NV_position_invariant").  Specifying an option changes the
+      way the program's subsequent instruction sequence are parsed,
+      may add new semantic checks, and modifies the semantics by which
+      the vertex program is executed.
+
+    Should this extension provide SUB and ABS instructions even though
+    the functionality can be accomplished with ADD and MAX?
+
+      RESOLUTION:  Yes.  SUB and ABS provide no functionality that could
+      not be accomplished in VP1.0 with ADD and MAX idioms, SUB and ABS
+      provide more understanable vertex programs.
+
+    Should the optionalSign in a VP1.1 accept both "-" and "+"?
+
+      RESOLUTION:  Yes.  The "+" does not negate its operand but is
+      available for symetry.
+
+    Is relative addressing available to position-invariant version 1.1
+    vertex programs?
+
+      RESOLUTION:  No.  This reflects a hardware restriction.
+
+    Should something be said about the relative performance of
+    position-invariant vertex programs and conventional vertex programs?
+
+      RESOLUTION:  For architectural reasons, position-invariant vertex
+      programs may be _slightly_ faster than conventional vertex programs.
+      This is true in the GeForce3 architecture.  If your vertex program
+      transforms the object-space position to clip-space with four DP4
+      instructions using the tracked GL_MODELVIEW_PROJECTION_NV matrix,
+      consider using position-invariant vertex programs.  Do not expect a
+      measurable performance improvement unless vertex program processing
+      is your bottleneck and your vertex program is relatively short.
+
+    Should position-invariant vertex programs have a lower limit on the
+    maximum instructions?
+
+      RESOLUTION:  Yes, the driver takes care to match the same
+      instructions used for position transformation used by conventional
+      transformation and this requires a few vertex program instructions.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    2.14.1.9  Vertex Program Register Accesses
+
+    Replace the first two sentences and update Table X.4:
+
+    "There are 21 vertex program instructions.  The instructions and their
+    respective input and output parameters are summarized in Table X.4."
+
+                             Output
+         Inputs              (vector or
+Opcode   (scalar or vector)  replicated scalar)   Operation
+------   ------------------  ------------------   --------------------------
+ ARL     s                   address register     address register load
+ MOV     v                   v                    move
+ MUL     v,v                 v                    multiply
+ ADD     v,v                 v                    add
+ MAD     v,v,v               v                    multiply and add
+ RCP     s                   ssss                 reciprocal
+ RSQ     s                   ssss                 reciprocal square root
+ DP3     v,v                 ssss                 3-component dot product
+ DP4     v,v                 ssss                 4-component dot product
+ DST     v,v                 v                    distance vector
+ MIN     v,v                 v                    minimum
+ MAX     v,v                 v                    maximum
+ SLT     v,v                 v                    set on less than
+ SGE     v,v                 v                    set on greater equal than
+ EXP     s                   v                    exponential base 2
+ LOG     s                   v                    logarithm base 2
+ LIT     v                   v                    light coefficients
+ DPH     v,v                 ssss                 homogeneous dot product
+ RCC     s                   ssss                 reciprocal clamped
+ SUB     v,v                 v                    subtract
+ ABS     v                   v                    absolute value
+
+Table X.4:  Summary of vertex program instructions.  "v" indicates a
+vector input or output, "s" indicates a scalar input, and "ssss" indicates
+a scalar output replicated across a 4-component vector.
+
+    Add four new sections describing the DPH, RCC, SUB, and ABS
+    instructions.
+
+    "2.14.1.10.18  DPH: Homogeneous Dot Product
+
+    The DPH instruction assigns the four-component dot product of the
+    two source vectors where the W component of the first source vector
+    is assumed to be 1.0 into the destination register.
+
+        t.x = source0.c***;
+        t.y = source0.*c**;
+        t.z = source0.**c*;
+        if (negate0) {
+          t.x = -t.x;
+          t.y = -t.y;
+          t.z = -t.z;
+        }
+        u.x = source1.c***;
+        u.y = source1.*c**;
+        u.z = source1.**c*;
+        u.w = source1.***c;
+        if (negate1) {
+          u.x = -u.x;
+          u.y = -u.y;
+          u.z = -u.z;
+          u.w = -u.w;
+        }
+        v.x = t.x * u.x + t.y * u.y + t.z * u.z + u.w;
+        if (xmask) destination.x = v.x;
+        if (ymask) destination.y = v.x;
+        if (zmask) destination.z = v.x;
+        if (wmask) destination.w = v.x;
+
+    2.14.1.10.19  RCC: Reciprocal Clamped
+
+    The RCC instruction inverts the value of the source scalar, clamps
+    the result as described below, and stores the clamped result into
+    the destination register.  The reciprocal of exactly 1.0 must be
+    exactly 1.0.
+
+    Additionally (before clamping) the reciprocal of negative infinity
+    gives [-0.0, -0.0, -0.0, -0.0]; the reciprocal of negative zero gives
+    [-Inf, -Inf, -Inf, -Inf]; the reciprocal of positive zero gives
+    [+Inf, +Inf, +Inf, +Inf]; and the reciprocal of positive infinity
+    gives [0.0, 0.0, 0.0, 0.0].
+
+        t.x = source0.c;
+        if (negate0) {
+          t.x = -t.x;
+        }
+        if (t.x == 1.0f) {
+          u.x = 1.0f;
+        } else {
+          u.x = 1.0f / t.x;
+        }
+        if (Positive(u.x)) {
+          if (u.x > 1.84467e+019) {
+            u.x = 1.84467e+019;   // the IEEE 32-bit binary value 0x5F800000
+          } else if (u.x < 5.42101e-020) {
+            u.x = 5.42101e-020;    // the IEEE 32-bit bindary value 0x1F800000
+          }
+        } else {
+          if (u.x < -1.84467e+019) {
+            u.x = -1.84467e+019;  // the IEEE 32-bit binary value 0xDF800000
+          } else if (u.x > -5.42101e-020) {
+            u.x = -5.42101e-020;   // the IEEE 32-bit binary value 0x9F800000
+          }
+        }
+        if (xmask) destination.x = u.x;
+        if (ymask) destination.y = u.x;
+        if (zmask) destination.z = u.x;
+        if (wmask) destination.w = u.x;
+
+    where Positive(x) is true for +0 and other positive values and false
+    for -0 and other negative values; and
+
+        | u.x - IEEE(1.0f/t.x) | < 1.0f/(2^22)
+
+    for 1.0f <= t.x <= 2.0f.  The intent of this precision requirement is
+    that this amount of relative precision apply over all values of t.x."
+
+    2.14.1.10.20  SUB: Subtract
+
+    The SUB instruction subtracts the values of the one source vector
+    from another source vector and stores the result into the destination
+    register.
+
+        t.x = source0.c***;
+        t.y = source0.*c**;
+        t.z = source0.**c*;
+        t.w = source0.***c;
+        if (negate0) {
+          t.x = -t.x;
+          t.y = -t.y;
+          t.z = -t.z;
+          t.w = -t.w;
+        }
+        u.x = source1.c***;
+        u.y = source1.*c**;
+        u.z = source1.**c*;
+        u.w = source1.***c;
+        if (negate1) {
+          u.x = -u.x;
+          u.y = -u.y;
+          u.z = -u.z;
+          u.w = -u.w;
+        }
+        if (xmask) destination.x = t.x - u.x;
+        if (ymask) destination.y = t.y - u.y;
+        if (zmask) destination.z = t.z - u.z;
+        if (wmask) destination.w = t.w - u.w;
+
+    2.14.1.10.21  ABS: Absolute Value
+
+    The ABS instruction assigns the component-wise absolute value of a
+    source vector into the destination register.
+
+        t.x = source0.c***;
+        t.y = source0.*c**;
+        t.z = source0.**c*;
+        t.w = source0.***c;
+        if (xmask) destination.x = (t.x >= 0) ? t.x : -t.x;
+        if (ymask) destination.y = (t.y >= 0) ? t.y : -t.y;
+        if (zmask) destination.z = (t.z >= 0) ? t.z : -t.z;
+        if (wmask) destination.w = (t.w >= 0) ? t.w : -t.w;
+
+    Insert sections 2.14.A and 2.14.B after section 2.14.4
+
+    "2.14.A  Version 1.1 Vertex Programs
+
+    Version 1.1 vertex programs provide support for the DPH, RCC, SUB,
+    and ABS instructions (see sections 2.14.1.10.18 through 2.14.1.10.21).
+
+    Version 1.1 vertex programs are loaded with the LoadProgramNV command
+    (see section 2.14.1.7).  The target must be VERTEX_PROGRAM_NV to
+    load a version 1.1 vertex program.  The initial "!!VP1.1" token
+    designates the program should be parsed and treated as a version 1.1
+    vertex program.
+
+    Version 1.1 programs must conform to a more expanded grammar than
+    the grammar for vertex programs.  The version 1.1 vertex program
+    grammar for syntactically valid sequences is the same as the grammar
+    defined in section 2.14.1.7 with the following modified rules:
+
+    <program>              ::= "!!VP1.1" <optionSequence> <instructionSequence> "END"
+
+    <optionSequence>       ::= <optionSequence> <option>
+                             | ""
+
+    <option>               ::= "OPTION" "NV_position_invariant" ";"
+
+    <VECTORop>             ::= "MOV"
+                             | "LIT"
+                             | "ABS"
+
+    <SCALARop>             ::= "RCP"
+                             | "RSQ"
+                             | "EXP"
+                             | "LOG"
+                             | "RCC"
+
+    <BINop>                ::= "MUL"
+                             | "ADD"
+                             | "DP3"
+                             | "DP4"
+                             | "DST"
+                             | "MIN"
+                             | "MAX"
+                             | "SLT"
+                             | "SGE"
+                             | "DPH"
+                             | "SUB"
+
+    <optionalSign>         ::= "-"
+                             | "+"
+                             | ""
+
+    Except for supporting the additional DPH, RCC, SUB, and ABS
+    instructions, version 1.1 vertex programs with no options specified
+    otherwise behave in the same manner as version 1.0 vertex programs.
+
+    2.14.B  Position-invariant Vertex Program Option
+
+    By default, vertex programs are _not_ guaranteed to be
+    position-invariant because there is no guarantee made that the
+    way a vertex program might compute its homogenous position is
+    exactly identical to the way conventional OpenGL transformation
+    computes its homogenous positions.  However in a position-invariant
+    vertex program, the homogeneous position (HPOS) is not output by
+    the program.  Instead, the OpenGL implementation is expected to
+    compute the HPOS for position-invariant vertex programs in a manner
+    exactly identical to how the homogenous position and window position
+    are computed for a vertex by conventional OpenGL transformation
+    (assuming vertex weighting and vertex blending are disabled).  In this
+    way position-invariant vertex programs guarantee correct multi-pass
+    rendering semantics in cases where multiple passes are rendered with
+    conventional OpenGL transformation and position-invariant vertex
+    programs and the second and subsequent passes use a EQUAL depth test.
+
+    If an <option> with the identifier "NV_position_invariant" is
+    encountered during the parsing of the program, the specified program
+    is presumed to be position-invariant.
+
+    When a position-invariant vertex program is specified, the
+    <vertexResultRegName> rule is replaced with the following rule
+    (that does not provide "HPOS"):
+
+    <vertexResultRegName>  ::= "COL0"
+                             | "COL1"
+                             | "BFC0"
+                             | "BFC1"
+                             | "FOGC"
+                             | "PSIZ"
+                             | "TEX0"
+                             | "TEX1"
+                             | "TEX2"
+                             | "TEX3"
+                             | "TEX4"
+                             | "TEX5"
+                             | "TEX6"
+                             | "TEX7"
+
+    While position-invariant version 1.1 vertex programs provide
+    position-invariance, such programs do not provide support for
+    relative program parameter addressing.  The <relProgParamReg> rule
+    for version 1.1 position-invariant vertex programs is replaced by
+    (eliminating the relative addressing cases):
+
+    <relProgParamReg>      ::= "c" "[" <addrReg> "]"
+
+    Note that while the ARL instruction is still available to
+    position-invariant version 1.1 vertex programs, it provides no
+    meaningful functionality without support for relative addressing.
+
+    The semantic restriction for vertex program instruction length is
+    changed in the case of position-invariant vertex programs to the
+    following: A position-invariant vertex program fails to load if it
+    contains more than 124 instructions.
+
+    "
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Framebuffer) 
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions) 
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors 
+
+    None
+
+New State
+
+    None
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ----------------------------------------
+      8   03/04/14 mjk        RCC decimal value corrections

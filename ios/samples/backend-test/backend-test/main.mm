@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 #elif FILAMENT_APP_USE_OPENGL
         test::Backend backend = test::Backend::OPENGL;
 #endif
-        test::initTests(backend, true, argc, argv);
+        test::initTests(backend, test::OperatingSystem::APPLE, true, argc, argv);
         return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
     }
 }

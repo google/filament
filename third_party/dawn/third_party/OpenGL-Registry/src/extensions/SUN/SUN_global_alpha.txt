@@ -1,0 +1,214 @@
+Name
+
+    SUN_global_alpha
+
+
+Name Strings
+
+    GL_SUN_global_alpha
+
+Contact
+
+    Jack Middleton, Sun (Jack.Middleton 'at' eng.sun.com)
+
+Status
+
+    Shipping
+
+Version
+
+    $Date: 1999/12/28 01:40:37 $ $Revision: 1.4 $
+    SUN Date: 99/06/25 13:05:48  Revision: 1.7
+
+Number
+
+   164
+
+Dependencies
+
+    OpenGL 1.2 is required
+
+
+Overview
+
+    Transparency is done in OpenGL using alpha blending. An alpha value
+    of 0.0 is used for fully transparent objects, while an alpha value
+    of 1.0 is used for fully opaque objects.  A value of 0.25 is 75%
+    transparent, and so on.
+
+    OpenGL defines alpha as a component of the vertex color state.
+    Whenever a color is set, the alpha component is set along with the
+    red, green, and blue components.  This means that transparency
+    can't be changed for primitives with per-vertex colors without
+    modifying the color of each vertex, replacing the old alpha
+    component with the new alpha component.  This can be very expensive
+    for objects that are drawn using vertex arrays; it all but
+    precludes the use of display lists.
+
+    This extension defines a new global alpha attribute that can be
+    used to specify an alpha factor that is independent from the alpha
+    component of the color value.  The global alpha factor is
+    multiplied by the fragment's alpha value after primitive
+    rasterization and prior to texture mapping, replacing the
+    fragment's alpha value.  The global alpha extension is only
+    specified in RGBA mode and must be applied prior to any texture
+    mapping operation.  It is enabled by a new GLOBAL_ALPHA flag.
+
+
+New Procedures and Functions
+
+    void GlobalAlphaFactorbSUN(byte factor);
+
+    void GlobalAlphaFactorsSUN(short factor);
+
+    void GlobalAlphaFactoriSUN(int factor);
+
+    void GlobalAlphaFactorfSUN(float factor);
+
+    void GlobalAlphaFactordSUN(double factor);
+
+    void GlobalAlphaFactorubSUN(ubyte factor);
+
+    void GlobalAlphaFactorusSUN(ushort factor);
+
+    void GlobalAlphaFactoruiSUN(uint factor);
+
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled:
+
+	GLOBAL_ALPHA_SUN		0x81D9
+
+    Accepted by the by the <pname> parameter of GetBooleanv,
+    GetIntegerv, GetFloatv, and GetDoublev:
+
+	GLOBAL_ALPHA_FACTOR_SUN		0x81DA
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Global alpha processing is a new stage in the rasterization
+    pipeline that occurs after primitive rasterization (including
+    pixel rectangles and bitmaps) and before any texture mapping
+    operations.  Global alpha processing is only done in RGBA mode.
+    It has no effect in color index mode.
+
+    Global alpha processing is enabled or disabled with the Enable and
+    Disable commands using the symbolic constant GLOBAL_ALPHA_SUN.
+    The global alpha factor is set using one of the GlobalAlphaFactor*SUN
+    commands listed above.
+
+    If global alpha processing is enabled, then the global alpha factor
+    is multiplied by the incoming fragment's alpha value.  This
+    product replaces the fragment's alpha value and is passed to
+    subsequent stages in the pipeline.
+
+    Note that for geometric primitives, a functionally equivalent
+    method to that of performing a multiplication for each
+    fragment is to multiply the alpha values at each vertex of the
+    primitive by the global alpha factor prior to the primitive
+    rasterization step.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+
+Additions to the GLX / WGL / AGL Specifications
+ 
+
+    None
+
+
+GLX Protocol
+
+    Eight rendering commands are sent to the server as part of
+    the glXRender request:
+
+        GlobalAlphaFactorbSUN
+	  2		8		rendering command length
+	  2		16391		rendering command opcode
+	  1		INT8		code
+	  1		INT8		pad
+	  2		INT16		pad
+
+        GlobalAlphaFactorsSUN
+	  2		8		rendering command length
+	  2		16392		rendering command opcode
+	  2		INT16		code
+	  2		INT16		pad
+
+        GlobalAlphaFactoriSUN
+	  2		8		rendering command length
+	  2		16393		rendering command opcode
+	  4		INT32		code
+
+        GlobalAlphaFactorfSUN
+	  2		8		rendering command length
+	  2		16394		rendering command opcode
+	  4		FLOAT32		code
+
+        GlobalAlphaFactordSUN
+	  2		12		rendering command length
+	  2		16395		rendering command opcode
+	  8		FLOAT64		code
+
+        GlobalAlphaFactorubSUN
+	  2		8		rendering command length
+	  2		16396		rendering command opcode
+	  1		CARD8		code
+	  1		CARD8		pad
+  	  2		CARD16		pad
+
+        GlobalAlphaFactorusSUN
+	  2		8		rendering command length
+	  2		16397		rendering command opcode
+	  2		CARD16		code
+	  2		CARD16		pad
+
+        GlobalAlphaFactoruiSUN
+	  2		8		rendering command length
+	  2		16398		rendering command opcode
+	  4		CARD32		code
+
+
+Errors
+
+    None
+
+
+New State
+
+    Get Value				Get Command	Type	Initial Value
+    ---------				-----------	----	-------------
+    GLOBAL_ALPHA_FACTOR_SUN		GetIntegerv,	C	1
+					GetFloatv
+    GLOBAL_ALPHA_SUN			IsEnabled	B	False
+
+    Get Value				Attribute
+    ---------				---------
+    GLOBAL_ALPHA_FACTOR_SUN		color-buffer
+    GLOBAL_ALPHA_SUN			color-buffer/enable
+
+
+Revision History
+
+    6/25/99 Added fields from the new extension template.

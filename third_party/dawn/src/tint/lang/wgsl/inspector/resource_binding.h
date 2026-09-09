@@ -145,30 +145,30 @@ struct ResourceBinding {
     };
 
     /// Type of resource that is bound.
-    ResourceType resource_type;
+    ResourceType resource_type = ResourceType::kUniformBuffer;
     /// Bind group the binding belongs
-    uint32_t bind_group;
+    uint32_t bind_group = 0;
     /// Identifier to identify this binding within the bind group
-    uint32_t binding;
+    uint32_t binding = 0;
     /// Input attachment index. Only available for input attachments.
-    uint32_t input_attachment_index;
+    uint32_t input_attachment_index = 0;
     /// Size for this binding, in bytes, if defined.
-    uint64_t size;
+    uint64_t size = 0;
     /// The array_size, if the binding is in a binding_array
-    std::optional<uint32_t> array_size;
+    std::optional<uint32_t> array_size = std::nullopt;
     /// Size for this binding without trailing structure padding, in bytes, if
     /// defined.
-    uint64_t size_no_padding;
+    uint64_t size_no_padding = 0;
     /// Dimensionality of this binding, if defined.
-    TextureDimension dim;
+    TextureDimension dim = TextureDimension::kNone;
     /// Kind of data being sampled, if defined.
-    SampledKind sampled_kind;
+    SampledKind sampled_kind = SampledKind::kFloat;
     /// Sampler information, if defined
-    SamplerType sampler_type;
+    SamplerType sampler_type = SamplerType::kFiltering;
     /// Format of data, if defined.
-    TexelFormat image_format;
+    TexelFormat image_format = TexelFormat::kNone;
     /// Variable name of the binding.
-    std::string variable_name;
+    std::string variable_name = "";
 };
 
 /// Convert from internal core::type::TextureDimension to public

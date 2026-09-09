@@ -1,0 +1,8 @@
+// /Fd implies /Qstrip_debug
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Zi /Fd %t.fd /Fo %t.dxo
+// RUN:FileCheck --input-file=%t.fd %s --check-prefix=FD | %dxc -dumpbin %t.dxo | FileCheck %s --check-prefix=FO
+
+// Make sure FD not empty.
+// FD:{{.+}}
+// FO:shader debug name: {{.*}}fd_strip_dbg.test.tmp.fd
+// FO-not:DICompileUnit

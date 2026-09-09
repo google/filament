@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_ENUMMASKITERATOR_H_
 #define SRC_DAWN_NATIVE_ENUMMASKITERATOR_H_
 
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/EnumClassBitmasks.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/EnumClassBitmasks.h"
 
 namespace dawn::native {
 
@@ -42,8 +42,9 @@ class EnumMaskIterator final {
 
   public:
     explicit EnumMaskIterator(const T& mask) : mBitSet(static_cast<U>(mask)) {
-        // If you hit this DAWN_ASSERT it means that you forgot to update EnumBitmaskSize<T>::value;
-        DAWN_ASSERT(U(mask) == 0 || Log2(uint64_t(U(mask))) < N);
+        // If you hit this DAWN_RELEASE_ASSUME it means that you forgot to update
+        // EnumBitmaskSize<T>::value;
+        DAWN_RELEASE_ASSUME(U(mask) == 0 || Log2(uint64_t(U(mask))) < N);
     }
 
     class Iterator final {

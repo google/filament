@@ -34,8 +34,29 @@
 #                       Do not modify this file directly
 ################################################################################
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//src/tint:flags.bzl", "COPTS")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+
+exports_files(glob(["*.def", "*.tmpl"], allow_empty = True))
+
+proto_library(
+  name = "ir_proto",
+  srcs = [
+    "ir.proto",
+  ],
+  deps = [
+  ],
+  visibility = ["//visibility:public"],
+)
+
+cc_proto_library(
+  name = "proto",
+  deps = [":ir_proto"],
+  visibility = ["//visibility:public"],
+)
 
 alias(
   name = "tint_build_ir_binary",

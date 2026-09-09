@@ -25,23 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "src/dawn/tests/unittests/native/mocks/DeviceMock.h"
 
 #include <utility>
 
-#include "dawn/tests/unittests/native/mocks/BindGroupLayoutMock.h"
-#include "dawn/tests/unittests/native/mocks/BindGroupMock.h"
-#include "dawn/tests/unittests/native/mocks/BufferMock.h"
-#include "dawn/tests/unittests/native/mocks/CommandBufferMock.h"
-#include "dawn/tests/unittests/native/mocks/ComputePipelineMock.h"
-#include "dawn/tests/unittests/native/mocks/ExternalTextureMock.h"
-#include "dawn/tests/unittests/native/mocks/PipelineLayoutMock.h"
-#include "dawn/tests/unittests/native/mocks/QuerySetMock.h"
-#include "dawn/tests/unittests/native/mocks/QueueMock.h"
-#include "dawn/tests/unittests/native/mocks/RenderPipelineMock.h"
-#include "dawn/tests/unittests/native/mocks/SamplerMock.h"
-#include "dawn/tests/unittests/native/mocks/ShaderModuleMock.h"
-#include "dawn/tests/unittests/native/mocks/TextureMock.h"
+#include "src/dawn/tests/unittests/native/mocks/BindGroupLayoutMock.h"
+#include "src/dawn/tests/unittests/native/mocks/BindGroupMock.h"
+#include "src/dawn/tests/unittests/native/mocks/BufferMock.h"
+#include "src/dawn/tests/unittests/native/mocks/CommandBufferMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ComputePipelineMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ExternalTextureMock.h"
+#include "src/dawn/tests/unittests/native/mocks/PipelineLayoutMock.h"
+#include "src/dawn/tests/unittests/native/mocks/QuerySetMock.h"
+#include "src/dawn/tests/unittests/native/mocks/QueueMock.h"
+#include "src/dawn/tests/unittests/native/mocks/RenderPipelineMock.h"
+#include "src/dawn/tests/unittests/native/mocks/SamplerMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ShaderModuleMock.h"
+#include "src/dawn/tests/unittests/native/mocks/TextureMock.h"
 
 namespace dawn::native {
 
@@ -129,7 +129,6 @@ DeviceMock::DeviceMock(AdapterBase* adapter,
     QueueDescriptor desc = {};
     EXPECT_FALSE(
         Initialize(descriptor, AcquireRef(new NiceMock<QueueMock>(this, &desc))).IsError());
-    GetInstance()->GetEventManager()->TrackEvent(mLostEvent);
 }
 
 DeviceMock::~DeviceMock() = default;

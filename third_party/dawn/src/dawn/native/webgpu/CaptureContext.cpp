@@ -30,18 +30,21 @@
 #include <concepts>
 #include <vector>
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/QuerySetWGPU.h"
-#include "dawn/native/webgpu/QueueWGPU.h"
-#include "dawn/native/webgpu/Serialization.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/Surface.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/QuerySetWGPU.h"
+#include "src/dawn/native/webgpu/QueueWGPU.h"
+#include "src/dawn/native/webgpu/Serialization.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::webgpu {
 
@@ -53,7 +56,7 @@ CaptureContext::ScopedContentWriter::~ScopedContentWriter() {
     if (offset) {
         static char zero[3] = {0};
         uint64_t paddingNeeded = 4 - offset;
-        mContext->WriteContentBytes(zero, paddingNeeded);
+        mContext->WriteContentBytes(zero, checked_cast<size_t>(paddingNeeded));
     }
 }
 
@@ -78,15 +81,152 @@ MaybeError CaptureContext::CaptureCreation(schema::ObjectId id,
     return object->CaptureCreationParameters(*this);
 }
 
+template <>
+void CaptureContext::CaptureSetLabel(Device* object, const std::string& label) {
+    schema::RootCommandSetLabelCmd data{{
+        .data{{
+            .id = schema::kDeviceId,
+            .type = schema::ObjectType::Device,
+            .label = label,
+        }},
+    }};
+    Serialize(*this, data);
+}
+
+template <>
+void CaptureContext::CaptureSetLabel(Surface* object, const std::string& label) {
+    schema::ObjectId surfaceId = AddResourceAndGetId(object);
+    if (surfaceId == 0) {
+        return;
+    }
+    schema::RootCommandSetLabelCmd data{{
+        .data{{
+            .id = surfaceId,
+            .type = schema::ObjectType::Surface,
+            .label = label,
+        }},
+    }};
+    Serialize(*this, data);
+}
+
+void CaptureContext::CaptureSurfaceConfigure(Surface* surface, const SurfaceConfiguration* config) {
+    schema::ObjectId surfaceId = AddResourceAndGetId(surface);
+    if (surfaceId == 0) {
+        return;
+    }
+
+    std::vector<wgpu::TextureFormat> viewFormats{config->viewFormats.begin(),
+                                                 config->viewFormats.end()};
+    schema::RootCommandSurfaceConfigureCmd cmd{{
+        .data = {{
+            .surfaceId = surfaceId,
+            .config = {{
+                .deviceId = schema::kDeviceId,
+                .format = config->format,
+                .usage = config->usage,
+                .viewFormats = viewFormats,
+                .alphaMode = config->alphaMode,
+                .width = config->width,
+                .height = config->height,
+                .presentMode = config->presentMode,
+            }},
+        }},
+    }};
+    Serialize(*this, cmd);
+}
+
+void CaptureContext::CaptureSurfaceUnconfigure(Surface* surface) {
+    schema::ObjectId surfaceId = AddResourceAndGetId(surface);
+    if (surfaceId == 0) {
+        return;
+    }
+    schema::RootCommandSurfaceUnconfigureCmd cmd{{
+        .data = {{
+            .surfaceId = surfaceId,
+        }},
+    }};
+    Serialize(*this, cmd);
+}
+
+void CaptureContext::CaptureSurfacePresent(Surface* surface) {
+    schema::ObjectId surfaceId = AddResourceAndGetId(surface);
+    if (surfaceId == 0) {
+        return;
+    }
+
+    schema::RootCommandSurfacePresentCmd cmd{{
+        .data = {{
+            .surfaceId = surfaceId,
+        }},
+    }};
+    Serialize(*this, cmd);
+}
+
+MaybeError CaptureContext::CaptureSurfaceGetCurrentTexture(Surface* surface, Texture* texture) {
+    schema::ObjectId surfaceId = AddResourceAndGetId(surface);
+    if (surfaceId == 0) {
+        return {};
+    }
+    schema::ObjectId textureId;
+    DAWN_TRY_ASSIGN(textureId, AddResourceAndGetId(texture));
+    if (textureId == 0) {
+        return {};
+    }
+
+    schema::RootCommandSurfaceGetCurrentTextureCmd cmd{{
+        .data = {{
+            .surfaceId = surfaceId,
+            .textureId = textureId,
+        }},
+    }};
+    Serialize(*this, cmd);
+    return {};
+}
+
+schema::ObjectId CaptureContext::AddResourceAndGetId(Surface* surface) {
+    DAWN_ASSERT(surface != nullptr);
+    Ref<Surface> ref(surface);
+    auto it = mSurfaceIds.find(ref);
+    if (it == mSurfaceIds.end()) {
+        schema::ObjectId id = mNextObjectId++;
+        mSurfaceIds[std::move(ref)] = id;
+        return id;
+    }
+    return it->second;
+}
+
+schema::ObjectId CaptureContext::GetId(Surface* surface) {
+    if (surface == nullptr) {
+        return 0;
+    }
+
+    auto it = mSurfaceIds.find(Ref<Surface>(surface));
+    DAWN_ASSERT(it != mSurfaceIds.end());
+    return it->second;
+}
+
 CaptureContext::CaptureContext(Device* device,
                                std::ostream& commandStream,
                                std::ostream& contentStream)
     : mDevice(device), mCommandStream(commandStream), mContentStream(contentStream) {}
 
-CaptureContext::~CaptureContext() {
-    if (mCopyBuffer) {
-        mDevice->wgpu->bufferDestroy(mCopyBuffer);
+void CaptureContext::ReleaseReferences() {
+    mObjectIds.clear();
+    mSurfaceIds.clear();
+
+    if (mDevice) {
+        auto& wgpu = mDevice->wgpu;
+        if (mCopyBuffer) {
+            wgpu->bufferDestroy(mCopyBuffer);
+            wgpu->bufferRelease(mCopyBuffer);
+        }
+
+        mDevice = nullptr;
     }
+}
+
+CaptureContext::~CaptureContext() {
+    ReleaseReferences();
 }
 
 WGPUBuffer CaptureContext::GetCopyBuffer() {
@@ -102,36 +242,34 @@ WGPUBuffer CaptureContext::GetCopyBuffer() {
 }
 
 void CaptureContext::WriteContentBytes(const void* data, size_t size) {
-    mContentStream->write(reinterpret_cast<const char*>(data), size);
+    mContentStream->write(reinterpret_cast<const char*>(data), sign_cast(size));
 }
 
 void CaptureContext::WriteCommandBytes(const void* data, size_t size) {
-    mCommandStream->write(reinterpret_cast<const char*>(data), size);
+    mCommandStream->write(reinterpret_cast<const char*>(data), sign_cast(size));
     mCommandBytesWritten += size;
 }
 
 MaybeError CaptureContext::CaptureQueueWriteBuffer(Buffer* buffer,
                                                    uint64_t bufferOffset,
-                                                   const void* data,
-                                                   size_t size) {
+                                                   Span<const std::byte> data) {
     schema::ObjectId id;
     DAWN_TRY_ASSIGN(id, AddResourceAndGetId(buffer));
     schema::RootCommandWriteBufferCmd cmd{{
         .data = {{
             .bufferId = id,
             .bufferOffset = bufferOffset,
-            .size = size,
+            .size = data.size(),
         }},
     }};
 
     Serialize(*this, cmd);
-    WriteContentBytes(data, size);
+    WriteContentBytes(data.data(), data.size());
     return {};
 }
 
 MaybeError CaptureContext::CaptureQueueWriteTexture(const TexelCopyTextureInfo& destination,
-                                                    const void* data,
-                                                    size_t dataSize,
+                                                    Span<const std::byte> data,
                                                     const TexelCopyBufferLayout& dataLayout,
                                                     const TexelExtent3D& writeSizePixel) {
     DAWN_TRY(AddResource(ToBackend(destination.texture)));
@@ -140,13 +278,13 @@ MaybeError CaptureContext::CaptureQueueWriteTexture(const TexelCopyTextureInfo& 
             .destination = ToSchema(*this, destination),
             .layout = ToSchema(dataLayout),
             .size = ToSchema(writeSizePixel),
-            .dataSize = dataSize,
+            .dataSize = data.size(),
         }},
     }};
     Serialize(*this, cmd);
 
     CaptureContext::ScopedContentWriter writer(*this);
-    writer.WriteContentBytes(data, dataSize);
+    writer.WriteContentBytes(data.data(), data.size());
     return {};
 }
 
@@ -169,9 +307,9 @@ wgpu::TextureAspect ToDawn(const Aspect aspect) {
 
 schema::Origin3D ToSchema(const TexelOrigin3D& origin) {
     return {{
-        .x = static_cast<uint32_t>(origin.x),
-        .y = static_cast<uint32_t>(origin.y),
-        .z = static_cast<uint32_t>(origin.z),
+        .x = dchecked_cast<uint32_t>(origin.x),
+        .y = dchecked_cast<uint32_t>(origin.y),
+        .z = dchecked_cast<uint32_t>(origin.z),
     }};
 }
 
@@ -184,9 +322,9 @@ schema::Origin2D ToSchema(const Origin2D& origin) {
 
 schema::Extent3D ToSchema(const TexelExtent3D& extent) {
     return {{
-        .width = static_cast<uint32_t>(extent.width),
-        .height = static_cast<uint32_t>(extent.height),
-        .depthOrArrayLayers = static_cast<uint32_t>(extent.depthOrArrayLayers),
+        .width = dchecked_cast<uint32_t>(extent.width),
+        .height = dchecked_cast<uint32_t>(extent.height),
+        .depthOrArrayLayers = dchecked_cast<uint32_t>(extent.depthOrArrayLayers),
     }};
 }
 
@@ -211,7 +349,7 @@ schema::TexelCopyBufferLayout ToSchema(const BufferCopy& bufferCopy,
     return {{
         .offset = bufferCopy.offset,
         .bytesPerRow = static_cast<uint32_t>(blockInfo.ToBytes(bufferCopy.blocksPerRow)),
-        .rowsPerImage = static_cast<uint32_t>(bufferCopy.rowsPerImage),
+        .rowsPerImage = dchecked_cast<uint32_t>(bufferCopy.rowsPerImage),
     }};
 }
 
@@ -256,8 +394,8 @@ schema::TimestampWrites ToSchema(CaptureContext& captureContext,
                                  const TimestampWrites& timestampWrites) {
     return {{
         .querySetId = captureContext.GetId(timestampWrites.querySet),
-        .beginningOfPassWriteIndex = timestampWrites.beginningOfPassWriteIndex,
-        .endOfPassWriteIndex = timestampWrites.endOfPassWriteIndex,
+        .beginningOfPassWriteIndex = uint32_t{timestampWrites.beginningOfPassWriteIndex},
+        .endOfPassWriteIndex = uint32_t{timestampWrites.endOfPassWriteIndex},
     }};
 }
 

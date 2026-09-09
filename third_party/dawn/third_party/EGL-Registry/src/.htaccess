@@ -1,0 +1,12 @@
+RewriteEngine on
+
+# Avoid redirect loops
+RewriteCond %{ENV:REDIRECT_STATUS} 200
+RewriteRule ^ - [L]
+
+# Old versioned-by-date EGL specs redirected to the single per-version copy
+RewriteRule ^specs/eglspec.1.1.02.pdf https://www.khronos.org/registry/EGL/specs/eglspec.1.1.pdf [L,R=301]
+RewriteRule ^specs/eglspec.1.4.([0-9]+).pdf https://www.khronos.org/registry/EGL/specs/eglspec.1.4.pdf [L,R=301]
+RewriteRule ^specs/eglspec.1.4.withchanges.([0-9]+).pdf https://www.khronos.org/registry/EGL/specs/eglspec.1.4.withchanges.pdf [L,R=301]
+
+# RewriteRule ^xhtml/(.*)\.xml https://www.khronos.org/opengles/sdk/docs/man3/html/$1.xhtml [L,R=301]

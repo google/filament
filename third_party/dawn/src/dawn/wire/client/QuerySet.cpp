@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/client/QuerySet.h"
+#include "src/dawn/wire/client/QuerySet.h"
 
-#include "dawn/wire/client/Client.h"
-#include "dawn/wire/client/Device.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/dawn/wire/client/Device.h"
 
 namespace dawn::wire::client {
 
 QuerySet::QuerySet(const ObjectBaseParams& params, const WGPUQuerySetDescriptor* descriptor)
-    : ObjectBase(params), mType(descriptor->type), mCount(descriptor->count) {}
+    : ObjectBase(params), mType(FromAPI(descriptor->type)), mCount(descriptor->count) {}
 
 QuerySet::~QuerySet() = default;
 
@@ -41,7 +41,7 @@ ObjectType QuerySet::GetObjectType() const {
     return ObjectType::QuerySet;
 }
 
-WGPUQueryType QuerySet::APIGetType() const {
+wgpu::QueryType QuerySet::APIGetType() const {
     return mType;
 }
 

@@ -25,19 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/ComputePipelineWGPU.h"
+#include "src/dawn/native/webgpu/ComputePipelineWGPU.h"
 
 #include <string>
 #include <vector>
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/TintUtils.h"
-#include "dawn/native/webgpu/BindGroupLayoutWGPU.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/PipelineLayoutWGPU.h"
-#include "dawn/native/webgpu/ShaderModuleWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/TintUtils.h"
+#include "src/dawn/native/webgpu/BindGroupLayoutWGPU.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/PipelineLayoutWGPU.h"
+#include "src/dawn/native/webgpu/ShaderModuleWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
 #include "tint/tint.h"
 
 namespace dawn::native::webgpu {

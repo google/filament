@@ -25,41 +25,39 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/client/ObjectStore.h"
+#include "src/dawn/wire/client/ObjectStore.h"
 
 #include <limits>
 #include <utility>
 
 namespace dawn::wire::client {
 
-ObjectStore::ObjectStore() {
-    // ID 0 is nullptr
-    mObjects.emplace_back(nullptr);
-    mCurrentId = 1;
-}
-
 ObjectHandle ObjectStore::ReserveHandle() {
-    if (mFreeHandles.empty()) {
-        return {mCurrentId++, 0};
-    }
-    ObjectHandle handle = mFreeHandles.back();
-    mFreeHandles.pop_back();
-    return handle;
+    return mState.Use([](auto state) -> ObjectHandle {
+        if (state->freeHandles.empty()) {
+            return {state->currentId++, 0};
+        }
+        ObjectHandle handle = state->freeHandles.back();
+        state->freeHandles.pop_back();
+        return handle;
+    });
 }
 
 void ObjectStore::Insert(ObjectBase* obj, const ClientBase* forClient) {
     ObjectHandle handle = obj->GetWireHandle(forClient);
 
-    if (handle.id >= mObjects.size()) {
-        DAWN_ASSERT(handle.id == mObjects.size());
-        mObjects.emplace_back(obj);
-    } else {
-        // The generation should never overflow. We don't recycle ObjectIds that would
-        // overflow their next generation.
-        DAWN_ASSERT(handle.generation != 0);
-        DAWN_ASSERT(mObjects[handle.id] == nullptr);
-        mObjects[handle.id] = obj;
-    }
+    mState.Use([&](auto state) {
+        if (handle.id >= state->objects.size()) {
+            DAWN_ASSERT(handle.id == state->objects.size());
+            state->objects.emplace_back(obj);
+        } else {
+            // The generation should never overflow. We don't recycle ObjectIds that would
+            // overflow their next generation.
+            DAWN_ASSERT(handle.generation != 0);
+            DAWN_ASSERT(state->objects[handle.id] == nullptr);
+            state->objects[handle.id] = obj;
+        }
+    });
 }
 
 void ObjectStore::Remove(ObjectBase* obj, const ClientBase* forClient) {
@@ -68,21 +66,26 @@ void ObjectStore::Remove(ObjectBase* obj, const ClientBase* forClient) {
     // already reused, each handle also has a generation that's increment by one on each reuse.
     // Avoid overflows by only reusing the ID if the increment of the generation won't overflow.
     const ObjectHandle& currentHandle = obj->GetWireHandle(forClient);
-    if (currentHandle.generation != std::numeric_limits<ObjectGeneration>::max()) [[likely]] {
-        mFreeHandles.push_back({currentHandle.id, currentHandle.generation + 1});
-    }
-    mObjects[currentHandle.id] = nullptr;
+    mState.Use([&](auto state) {
+        if (currentHandle.generation != std::numeric_limits<ObjectGeneration>::max()) [[likely]] {
+            state->freeHandles.push_back({currentHandle.id, currentHandle.generation + 1});
+        }
+        state->objects[currentHandle.id] = nullptr;
+    });
 }
 
-const std::vector<raw_ptr<ObjectBase>>& ObjectStore::GetAllObjects() const {
-    return mObjects;
+std::vector<raw_ptr<ObjectBase>> ObjectStore::GetAllObjects() const {
+    return mState.Use(
+        [](auto state) -> std::vector<raw_ptr<ObjectBase>> { return state->objects; });
 }
 
 ObjectBase* ObjectStore::Get(ObjectId id) const {
-    if (id >= mObjects.size()) {
-        return nullptr;
-    }
-    return mObjects[id];
+    return mState.ConstUse([&](auto state) -> ObjectBase* {
+        if (id >= state->objects.size()) {
+            return nullptr;
+        }
+        return state->objects[id];
+    });
 }
 
 }  // namespace dawn::wire::client

@@ -5,4 +5,4 @@
 [main]\
 [FOCUSED_SPOT](index.md)
 
-Physically correct spot light.
+Physically correct spotlight.

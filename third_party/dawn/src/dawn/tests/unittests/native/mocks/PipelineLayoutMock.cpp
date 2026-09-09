@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/native/mocks/PipelineLayoutMock.h"
+#include "src/dawn/tests/unittests/native/mocks/PipelineLayoutMock.h"
 
-#include "dawn/native/ChainUtils.h"
+#include "src/dawn/native/ChainUtils.h"
 
 namespace dawn::native {
 

@@ -1,0 +1,10 @@
+LIBRARY d3dcompiler_dxc_bridge
+
+EXPORTS
+    D3DCompile=BridgeD3DCompile
+    D3DCompile2=BridgeD3DCompile2
+    D3DCompileFromFile=BridgeD3DCompileFromFile
+    D3DDisassemble=BridgeD3DDisassemble
+    D3DReflect=BridgeD3DReflect
+    D3DReadFileToBlob=BridgeReadFileToBlob
+    D3DPreprocess=BridgeD3DPreprocess

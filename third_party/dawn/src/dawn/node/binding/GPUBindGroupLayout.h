@@ -45,6 +45,7 @@ class GPUBindGroupLayout final : public interop::GPUBindGroupLayout {
     GPUBindGroupLayout(const wgpu::BindGroupLayoutDescriptor& desc, wgpu::BindGroupLayout layout);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::BindGroupLayout&() const { return layout_; }
 
     // interop::GPUBindGroupLayout interface compliance

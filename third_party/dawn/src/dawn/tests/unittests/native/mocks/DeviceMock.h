@@ -31,12 +31,12 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/native/Device.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/RenderPipeline.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/tests/unittests/native/mocks/QueueMock.h"
 #include "gmock/gmock.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/tests/unittests/native/mocks/QueueMock.h"
 
 namespace dawn::native {
 

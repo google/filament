@@ -46,6 +46,7 @@ class GPURenderPipeline final : public interop::GPURenderPipeline {
     GPURenderPipeline(wgpu::RenderPipeline pipeline, std::string label);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::RenderPipeline&() const { return pipeline_; }
 
     // interop::GPURenderPipeline interface compliance

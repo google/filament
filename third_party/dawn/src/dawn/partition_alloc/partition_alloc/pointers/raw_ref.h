@@ -38,8 +38,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "dawn/common/Compiler.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Compiler.h"  // nogncheck
 
 namespace partition_alloc::internal {
 

@@ -27,8 +27,10 @@
 
 #include "src/tint/lang/core/ir/binary/decode.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -36,6 +38,7 @@
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/control_instruction.h"
 #include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/ir/type/array_count.h"
 #include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/builtin_structs.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
@@ -68,10 +71,11 @@ namespace {
 
 struct Decoder {
     const pb::Module& mod_in_;
+    const DecoderOptions& options_;
 
     Module mod_out_{};
     Vector<ir::Block*, 32> blocks_{};
-    Vector<const type::Type*, 32> types_{};
+    Vector<const core::type::Type*, 32> types_{};
     Vector<const core::constant::Value*, 32> constant_values_{};
     Vector<ir::Value*, 32> values_{};
     Builder b{mod_out_};
@@ -86,7 +90,13 @@ struct Decoder {
     std::stringstream err_{};
     Hashset<std::string, 4> struct_names_{};
 
+    uint32_t entry_point_count = 0;
+
     Result<Module> Decode() {
+        // Values are decoded lazily as needed by other objects, since they both use types and
+        // are used by types.
+        values_.Resize(static_cast<size_t>(mod_in_.values().size()));
+
         {
             const size_t n = static_cast<size_t>(mod_in_.types().size());
             types_.Reserve(n);
@@ -119,13 +129,6 @@ struct Decoder {
             constant_values_.Reserve(n);
             for (auto& value_in : mod_in_.constant_values()) {
                 constant_values_.Push(CreateConstantValue(value_in));
-            }
-        }
-        {
-            const size_t n = static_cast<size_t>(mod_in_.values().size());
-            values_.Reserve(n);
-            for (auto& value_in : mod_in_.values()) {
-                values_.Push(CreateValue(value_in));
             }
         }
         for (size_t i = 0, n = static_cast<size_t>(mod_in_.functions().size()); i < n; i++) {
@@ -162,6 +165,11 @@ struct Decoder {
             }
         }
 
+        // Set properties that are used by the decoded module.
+        if (entry_point_count > 1) {
+            mod_out_.properties.Add(core::ir::Property::kAllowMultipleEntryPoints);
+        }
+
         err = err_.str();
         if (!err.empty()) {
             return Failure{err};
@@ -181,19 +189,67 @@ struct Decoder {
     }
 
     /// Checks that the given @p name is valid.
-    /// @returns true if the name is valid.
-    bool CheckName(const std::string& name, const char* kind) {
+    /// @returns the name if valid, otherwise nullopt.
+    std::optional<std::string> CheckName(std::string name, const char* kind) {
         if (DAWN_UNLIKELY(name.find('\0') != std::string::npos)) {
-            err_ << kind << " '" << name << "' contains '\\0' before end of the string\n";
-            return false;
+            if (!options_.strip_invalid_identifiers) {
+                err_ << kind << " '" << name << "' contains '\\0' before end of the string\n";
+            }
+            return std::nullopt;
         }
 
         // Reject excessively long names as they cause problems in some backends.
         if (DAWN_UNLIKELY(name.length() > 16384)) {
-            err_ << kind << " '" << name << "' is longer than 16384 characters\n";
-            return false;
+            if (!options_.strip_invalid_identifiers) {
+                err_ << kind << " '" << name << "' is longer than 16384 characters\n";
+            }
+            return std::nullopt;
         }
-        return true;
+
+        if (DAWN_UNLIKELY(!tint::utf8::IsWGSLIdentifier(name))) {
+            // Check if this is an internal frexp or modf result identifier.
+            auto builtin = core::ParseBuiltinType(name);
+            if (builtin != core::BuiltinType::kUndefined) {
+                switch (builtin) {
+                    case core::BuiltinType::kAtomicCompareExchangeResultI32:
+                    case core::BuiltinType::kAtomicCompareExchangeResultU32:
+                    case core::BuiltinType::kFrexpResultAbstract:
+                    case core::BuiltinType::kFrexpResultF16:
+                    case core::BuiltinType::kFrexpResultF32:
+                    case core::BuiltinType::kFrexpResultVec2Abstract:
+                    case core::BuiltinType::kFrexpResultVec2F16:
+                    case core::BuiltinType::kFrexpResultVec2F32:
+                    case core::BuiltinType::kFrexpResultVec3Abstract:
+                    case core::BuiltinType::kFrexpResultVec3F16:
+                    case core::BuiltinType::kFrexpResultVec3F32:
+                    case core::BuiltinType::kFrexpResultVec4Abstract:
+                    case core::BuiltinType::kFrexpResultVec4F16:
+                    case core::BuiltinType::kFrexpResultVec4F32:
+                    case core::BuiltinType::kModfResultAbstract:
+                    case core::BuiltinType::kModfResultF16:
+                    case core::BuiltinType::kModfResultF32:
+                    case core::BuiltinType::kModfResultVec2Abstract:
+                    case core::BuiltinType::kModfResultVec2F16:
+                    case core::BuiltinType::kModfResultVec2F32:
+                    case core::BuiltinType::kModfResultVec3Abstract:
+                    case core::BuiltinType::kModfResultVec3F16:
+                    case core::BuiltinType::kModfResultVec3F32:
+                    case core::BuiltinType::kModfResultVec4Abstract:
+                    case core::BuiltinType::kModfResultVec4F16:
+                    case core::BuiltinType::kModfResultVec4F32:
+                        return name;
+                    default:
+                        break;
+                }
+            }
+
+            if (!options_.strip_invalid_identifiers) {
+                err_ << kind << " '" << name << "' is not a valid WGSL identifier\n";
+            }
+            return std::nullopt;
+        }
+
+        return name;
     }
 
     /// @returns true if all blocks are reachable, acyclic nesting depth is less than or equal to
@@ -263,14 +319,15 @@ struct Decoder {
 
     void PopulateFunction(ir::Function* fn_out, const pb::Function& fn_in) {
         if (!fn_in.name().empty()) {
-            if (CheckName(fn_in.name(), "function name")) {
-                mod_out_.SetName(fn_out, fn_in.name());
+            if (auto name = CheckName(fn_in.name(), "function name")) {
+                mod_out_.SetName(fn_out, *name);
             }
         }
         fn_out->SetReturnType(Type(fn_in.return_type()));
         if (fn_in.has_pipeline_stage()) {
             if (PipelineStage_IsValid(fn_in.pipeline_stage())) {
                 fn_out->SetStage(PipelineStage(fn_in.pipeline_stage()));
+                entry_point_count++;
             } else {
                 err_ << "invalid pipe line state, " << std::to_string(fn_in.pipeline_stage())
                      << "\n";
@@ -278,8 +335,6 @@ struct Decoder {
         }
         if (fn_in.has_workgroup_size()) {
             auto& wg_size_in = fn_in.workgroup_size();
-            // TODO(dsinclair): When overrides are supported we should add support for generating
-            // override expressions here.
             fn_out->SetWorkgroupSize(Value(wg_size_in.x()), Value(wg_size_in.y()),
                                      Value(wg_size_in.z()));
         }
@@ -396,6 +451,9 @@ struct Decoder {
             case pb::Instruction::KindCase::kBuiltinCall:
                 inst_out = CreateInstructionBuiltinCall(inst_in.builtin_call());
                 break;
+            case pb::Instruction::KindCase::kConstExprIf:
+                inst_out = CreateInstructionConstExprIf(inst_in.const_expr_if());
+                break;
             case pb::Instruction::KindCase::kConstruct:
                 inst_out = CreateInstructionConstruct(inst_in.construct());
                 break;
@@ -434,6 +492,9 @@ struct Decoder {
                 break;
             case pb::Instruction::KindCase::kNextIteration:
                 inst_out = CreateInstructionNextIteration(inst_in.next_iteration());
+                break;
+            case pb::Instruction::KindCase::kOverride:
+                inst_out = CreateInstructionOverride(inst_in.override());
                 break;
             case pb::Instruction::KindCase::kReturn:
                 inst_out = CreateInstructionReturn(inst_in.return_());
@@ -484,6 +545,10 @@ struct Decoder {
         }
         inst_out->SetResults(std::move(results));
 
+        if (inst_in.has_alignment()) {
+            inst_out->SetAlignment(inst_in.alignment());
+        }
+
         if (inst_in.has_break_if()) {
             auto num_next_iter_values = inst_in.break_if().num_next_iter_values();
             bool is_valid =
@@ -523,9 +588,9 @@ struct Decoder {
     ir::CoreBuiltinCall* CreateInstructionBuiltinCall(const pb::InstructionBuiltinCall& call_in) {
         auto* call_out = mod_out_.CreateInstruction<ir::CoreBuiltinCall>();
         call_out->SetFunc(BuiltinFn(call_in.builtin()));
-        Vector<const core::type::Type*, 1> params;
-        for (auto param : call_in.explicit_template_params()) {
-            params.Push(Type(param));
+        Vector<TemplateParameter, 1> params;
+        for (auto param : call_in.explicit_template_parameters()) {
+            params.Push(CreateTemplateParameter(param));
         }
         call_out->SetExplicitTemplateParams(params);
         return call_out;
@@ -574,6 +639,13 @@ struct Decoder {
         return if_out;
     }
 
+    ir::If* CreateInstructionConstExprIf(const pb::InstructionConstExprIf& if_in) {
+        auto* if_out = mod_out_.CreateInstruction<ir::ConstExprIf>();
+        if_out->SetTrue(if_in.has_true_() ? Block(if_in.true_()) : b.Block());
+        if_out->SetFalse(if_in.has_false_() ? Block(if_in.false_()) : b.Block());
+        return if_out;
+    }
+
     ir::Let* CreateInstructionLet(const pb::InstructionLet&) {
         return mod_out_.CreateInstruction<ir::Let>();
     }
@@ -588,12 +660,19 @@ struct Decoder {
     }
 
     ir::Loop* CreateInstructionLoop(const pb::InstructionLoop& loop_in) {
-        auto* loop_out = mod_out_.CreateInstruction<ir::Loop>();
+        ir::Block* initializer = nullptr;
         if (loop_in.has_initializer()) {
-            loop_out->SetInitializer(Block(loop_in.initializer()));
+            initializer = Block(loop_in.initializer());
+            if (initializer->Is<ir::MultiInBlock>()) {
+                err_ << "loop initializer must not be a multi-in block\n";
+                return nullptr;
+            }
         } else {
-            loop_out->SetInitializer(b.Block());
+            initializer = b.Block();
         }
+
+        auto* loop_out = mod_out_.CreateInstruction<ir::Loop>();
+        loop_out->SetInitializer(initializer);
         loop_out->SetBody(BlockAs<ir::MultiInBlock>(loop_in.body()));
         if (loop_in.has_continuing()) {
             loop_out->SetContinuing(BlockAs<ir::MultiInBlock>(loop_in.continuing()));
@@ -607,6 +686,16 @@ struct Decoder {
         auto* next_it_out = mod_out_.CreateInstruction<ir::NextIteration>();
         next_iterations_.Push(next_it_out);
         return next_it_out;
+    }
+
+    ir::Override* CreateInstructionOverride(const pb::InstructionOverride& override_in) {
+        auto* override_out = mod_out_.CreateInstruction<ir::Override>();
+        if (override_in.has_override_id()) {
+            override_out->SetOverrideId(
+                OverrideId{static_cast<uint16_t>(override_in.override_id())});
+        }
+        mod_out_.properties.Add(core::ir::Property::kAllowOverrides);
+        return override_out;
     }
 
     ir::Return* CreateInstructionReturn(const pb::InstructionReturn&) {
@@ -685,7 +774,7 @@ struct Decoder {
     ////////////////////////////////////////////////////////////////////////////
     // Types
     ////////////////////////////////////////////////////////////////////////////
-    const type::Type* CreateType(const pb::Type type_in) {
+    const core::type::Type* CreateType(const pb::Type type_in) {
         switch (type_in.kind_case()) {
             case pb::Type::KindCase::kBasic:
                 return CreateTypeBasic(type_in.basic());
@@ -742,7 +831,7 @@ struct Decoder {
         return mod_out_.Types().invalid();
     }
 
-    const type::Type* CreateTypeBasic(pb::TypeBasic basic_in) {
+    const core::type::Type* CreateTypeBasic(pb::TypeBasic basic_in) {
         if (!TypeBasic_IsValid(basic_in)) {
             err_ << "invalid basic type, " << std::to_string(basic_in) << "\n";
             return mod_out_.Types().invalid();
@@ -760,6 +849,7 @@ struct Decoder {
             case pb::TypeBasic::f32:
                 return mod_out_.Types().f32();
             case pb::TypeBasic::f16:
+                mod_out_.properties.Add(core::ir::Property::kAllow16BitFloats);
                 return mod_out_.Types().f16();
             case pb::TypeBasic::i8:
                 return mod_out_.Types().i8();
@@ -777,7 +867,7 @@ struct Decoder {
         return mod_out_.Types().invalid();
     }
 
-    const type::Type* CreateTypeVector(const pb::TypeVector& vector_in) {
+    const core::type::Type* CreateTypeVector(const pb::TypeVector& vector_in) {
         const auto width = vector_in.width();
         if (DAWN_UNLIKELY(width < 2 || width > 4)) {
             err_ << "invalid vector width\n";
@@ -791,7 +881,7 @@ struct Decoder {
         return mod_out_.Types().vec(el_ty, vector_in.width());
     }
 
-    const type::Type* CreateTypeMatrix(const pb::TypeMatrix& matrix_in) {
+    const core::type::Type* CreateTypeMatrix(const pb::TypeMatrix& matrix_in) {
         const auto rows = matrix_in.num_rows();
         const auto cols = matrix_in.num_columns();
         if (DAWN_UNLIKELY(rows < 2 || rows > 4 || cols < 2 || cols > 4)) {
@@ -807,7 +897,7 @@ struct Decoder {
         return mod_out_.Types().mat(column_ty, matrix_in.num_columns());
     }
 
-    const type::Type* CreateTypePointer(const pb::TypePointer& pointer_in) {
+    const core::type::Type* CreateTypePointer(const pb::TypePointer& pointer_in) {
         auto address_space = AddressSpace(pointer_in.address_space());
         auto* store_ty = Type(pointer_in.store_type());
         if (!store_ty) {
@@ -819,39 +909,45 @@ struct Decoder {
         return mod_out_.Types().ptr(address_space, store_ty, access);
     }
 
-    const type::Type* CreateTypeStruct(const pb::TypeStruct& struct_in) {
-        auto struct_name = struct_in.name();
-        if (DAWN_UNLIKELY(struct_name.empty())) {
+    const core::type::Type* CreateTypeStruct(const pb::TypeStruct& struct_in) {
+        auto struct_name_in = struct_in.name();
+        if (DAWN_UNLIKELY(struct_name_in.empty())) {
             err_ << "struct must have a name\n";
             return mod_out_.Types().invalid();
         }
 
-        if (!CheckName(struct_name, "struct name")) {
-            return mod_out_.Types().invalid();
-        }
-
-        if (!struct_names_.Add(struct_name)) {
-            err_ << "duplicate struct name: " << struct_name << "\n";
+        auto struct_name = CheckName(struct_name_in, "struct name");
+        if (!struct_name) {
+            if (!options_.strip_invalid_identifiers) {
+                return mod_out_.Types().invalid();
+            }
+        } else if (!struct_names_.Add(*struct_name)) {
+            err_ << "duplicate struct name: " << *struct_name << "\n";
             return mod_out_.Types().invalid();
         }
 
         Vector<const core::type::StructMember*, 8> members_out;
         uint32_t offset = 0;
         for (auto& member_in : struct_in.member()) {
-            auto member_name = member_in.name();
-            if (DAWN_UNLIKELY(member_name.empty())) {
+            auto member_name_in = member_in.name();
+            if (DAWN_UNLIKELY(member_name_in.empty())) {
                 err_ << "struct member must have a name\n";
                 return mod_out_.Types().invalid();
             }
 
-            if (!CheckName(member_name, "member name")) {
-                return mod_out_.Types().invalid();
+            auto member_name = CheckName(member_name_in, "member name");
+            if (!member_name) {
+                if (!options_.strip_invalid_identifiers) {
+                    return mod_out_.Types().invalid();
+                }
             }
 
-            auto symbol = mod_out_.symbols.Register(member_name);
+            auto symbol =
+                member_name ? mod_out_.symbols.Register(*member_name) : mod_out_.symbols.New();
             auto* type = Type(member_in.type());
             if (type == nullptr) {
-                err_ << "struct member '" << member_name << "' type  is invalid\n";
+                err_ << "struct member '" << (member_name ? *member_name : "<stripped>")
+                     << "' type  is invalid\n";
                 return mod_out_.Types().invalid();
             }
 
@@ -889,11 +985,11 @@ struct Decoder {
             err_ << "struct requires at least one member\n";
             return mod_out_.Types().invalid();
         }
-        auto name = mod_out_.symbols.Register(struct_name);
+        auto name = struct_name ? mod_out_.symbols.Register(*struct_name) : mod_out_.symbols.New();
         return mod_out_.Types().Struct(name, std::move(members_out));
     }
 
-    const type::Type* CreateTypeAtomic(const pb::TypeAtomic& atomic_in) {
+    const core::type::Type* CreateTypeAtomic(const pb::TypeAtomic& atomic_in) {
         const auto* el_ty = Type(atomic_in.type());
         if (el_ty == nullptr) {
             err_ << "invalid atomic element type\n";
@@ -902,16 +998,38 @@ struct Decoder {
         return mod_out_.Types().atomic(el_ty);
     }
 
-    const type::Type* CreateTypeArray(const pb::TypeArray& array_in) {
+    const core::type::Type* CreateTypeArray(const pb::TypeArray& array_in) {
         auto* element = Type(array_in.element());
+
+        if (element == nullptr) {
+            err_ << "array element type is invalid\n";
+            return mod_out_.Types().invalid();
+        }
+
+        // If present, the array count kind determines how the count field should be interpreted.
+        // If the kind is not present, a zero count means runtime sized, and non-zero is a constant.
+        // TODO(422199551): If we do a v2 we can make the kind required and avoid this fork.
         uint32_t count = array_in.count();
+        if (array_in.has_count_kind()) {
+            switch (array_in.count_kind()) {
+                case pb::Runtime:
+                case pb::Constant:
+                    // Handled below to avoid duplicating the check for the count limit.
+                    break;
+                case pb::Override: {
+                    auto* value_count =
+                        mod_out_.Types().Get<core::ir::type::ValueArrayCount>(Value(count));
+                    return mod_out_.Types().Get<core::type::Array>(element, value_count, 0u);
+                }
+                case pb::ArrayCountKind_INT_MIN_SENTINEL_DO_NOT_USE_:
+                case pb::ArrayCountKind_INT_MAX_SENTINEL_DO_NOT_USE_:
+                    TINT_UNREACHABLE();
+            }
+        }
+
         if (count >= internal_limits::kMaxArrayElementCount) {
             err_ << "array count (" << count << ") must be less than "
                  << internal_limits::kMaxArrayElementCount << "\n";
-            return mod_out_.Types().invalid();
-        }
-        if (element == nullptr) {
-            err_ << "array element type is invalid\n";
             return mod_out_.Types().invalid();
         }
 
@@ -919,7 +1037,7 @@ struct Decoder {
                          : mod_out_.Types().runtime_array(element);
     }
 
-    const type::Type* CreateTypeBindingArray(const pb::TypeBindingArray& array_in) {
+    const core::type::Type* CreateTypeBindingArray(const pb::TypeBindingArray& array_in) {
         auto* element = Type(array_in.element());
         uint32_t count = array_in.count();
 
@@ -936,27 +1054,27 @@ struct Decoder {
         return mod_out_.Types().binding_array(element, count);
     }
 
-    const type::Type* CreateTypeDepthTexture(const pb::TypeDepthTexture& texture_in) {
+    const core::type::Type* CreateTypeDepthTexture(const pb::TypeDepthTexture& texture_in) {
         auto dimension = TextureDimension(texture_in.dimension());
-        if (!type::DepthTexture::IsValidDimension(dimension)) {
+        if (!core::type::DepthTexture::IsValidDimension(dimension)) {
             err_ << "invalid DepthTexture dimension\n";
             return mod_out_.Types().invalid();
         }
         return mod_out_.Types().depth_texture(dimension);
     }
 
-    const type::Type* CreateTypeSampledTexture(const pb::TypeSampledTexture& texture_in) {
+    const core::type::Type* CreateTypeSampledTexture(const pb::TypeSampledTexture& texture_in) {
         auto dimension = TextureDimension(texture_in.dimension());
-        auto filterable = TextureFilterable(texture_in.filterable());
         auto sub_type = Type(texture_in.sub_type());
         if (!sub_type) {
             err_ << "invalid Sampled texture subtype\n";
             return mod_out_.Types().invalid();
         }
-        return mod_out_.Types().sampled_texture(dimension, sub_type, filterable);
+        return mod_out_.Types().sampled_texture(dimension, sub_type);
     }
 
-    const type::Type* CreateTypeMultisampledTexture(const pb::TypeMultisampledTexture& texture_in) {
+    const core::type::Type* CreateTypeMultisampledTexture(
+        const pb::TypeMultisampledTexture& texture_in) {
         auto dimension = TextureDimension(texture_in.dimension());
         auto sub_type = Type(texture_in.sub_type());
         if (!sub_type) {
@@ -966,17 +1084,17 @@ struct Decoder {
         return mod_out_.Types().multisampled_texture(dimension, sub_type);
     }
 
-    const type::Type* CreateTypeDepthMultisampledTexture(
+    const core::type::Type* CreateTypeDepthMultisampledTexture(
         const pb::TypeDepthMultisampledTexture& texture_in) {
         auto dimension = TextureDimension(texture_in.dimension());
-        if (!type::DepthMultisampledTexture::IsValidDimension(dimension)) {
+        if (!core::type::DepthMultisampledTexture::IsValidDimension(dimension)) {
             err_ << "invalid DepthMultisampledTexture dimension\n";
             return mod_out_.Types().invalid();
         }
         return mod_out_.Types().depth_multisampled_texture(dimension);
     }
 
-    const type::Type* CreateTypeStorageTexture(const pb::TypeStorageTexture& texture_in) {
+    const core::type::Type* CreateTypeStorageTexture(const pb::TypeStorageTexture& texture_in) {
         auto dimension = TextureDimension(texture_in.dimension());
         auto texel_format = TexelFormat(texture_in.texel_format());
         auto sub_ty = mod_out_.Types().SubtypeFor(texel_format);
@@ -989,7 +1107,7 @@ struct Decoder {
         return mod_out_.Types().storage_texture(dimension, texel_format, access);
     }
 
-    const type::Type* CreateTypeTexelBuffer(const pb::TypeTexelBuffer& buffer_in) {
+    const core::type::Type* CreateTypeTexelBuffer(const pb::TypeTexelBuffer& buffer_in) {
         auto texel_format = TexelFormat(buffer_in.texel_format());
         auto sub_ty = mod_out_.Types().SubtypeFor(texel_format);
         if (!sub_ty) {
@@ -1001,25 +1119,21 @@ struct Decoder {
         return mod_out_.Types().texel_buffer(texel_format, access);
     }
 
-    const type::ExternalTexture* CreateTypeExternalTexture(const pb::TypeExternalTexture&) {
+    const core::type::ExternalTexture* CreateTypeExternalTexture(const pb::TypeExternalTexture&) {
         return mod_out_.Types().external_texture();
     }
 
-    const type::Sampler* CreateTypeSampler(const pb::TypeSampler& sampler_in) {
+    const core::type::Sampler* CreateTypeSampler(const pb::TypeSampler& sampler_in) {
         if (!SamplerKind_IsValid(sampler_in.kind())) {
             err_ << "invalid sampler kind, " << std::to_string(sampler_in.kind()) << "\n";
             return nullptr;
         }
 
         auto kind = SamplerKind(sampler_in.kind());
-        if (kind == core::type::SamplerKind::kSampler) {
-            auto filtering = SamplerFiltering(sampler_in.filtering());
-            return mod_out_.Types().Get<type::Sampler>(kind, filtering);
-        }
-        return mod_out_.Types().Get<type::Sampler>(kind);
+        return mod_out_.Types().Get<core::type::Sampler>(kind);
     }
 
-    const type::Type* CreateTypeInputAttachment(const pb::TypeInputAttachment& input_in) {
+    const core::type::Type* CreateTypeInputAttachment(const pb::TypeInputAttachment& input_in) {
         auto sub_type = Type(input_in.sub_type());
         if (!sub_type) {
             err_ << "invalid Input attachment subtype\n";
@@ -1028,8 +1142,9 @@ struct Decoder {
         return mod_out_.Types().input_attachment(sub_type);
     }
 
-    const type::Type* CreateTypeSubgroupMatrix(SubgroupMatrixKind kind,
-                                               const pb::TypeSubgroupMatrix& subgroup_matrix) {
+    const core::type::Type* CreateTypeSubgroupMatrix(
+        SubgroupMatrixKind kind,
+        const pb::TypeSubgroupMatrix& subgroup_matrix) {
         const auto el_ty = Type(subgroup_matrix.sub_type());
         if (el_ty == nullptr) {
             err_ << "invalid subtype for subgroup matrix\n";
@@ -1039,12 +1154,34 @@ struct Decoder {
                                                 subgroup_matrix.rows());
     }
 
-    const type::Type* CreateTypeBuffer(const pb::TypeBuffer&) {
-        err_ << "buffer types are not supported\n";
-        return mod_out_.Types().invalid();
+    const core::type::Type* CreateTypeBuffer(const pb::TypeBuffer& buffer) {
+        mod_out_.properties.Add(core::ir::Property::kAllowBufferTypes);
+        auto size = buffer.size();
+        switch (buffer.size_kind()) {
+            case pb::Runtime:
+            case pb::Constant:
+                // Handled below to avoid duplicating the check for the size limit.
+                break;
+            case pb::Override: {
+                auto* value_size =
+                    mod_out_.Types().Get<core::ir::type::ValueArrayCount>(Value(size));
+                return mod_out_.Types().Get<core::type::Buffer>(value_size);
+            }
+            case pb::ArrayCountKind_INT_MIN_SENTINEL_DO_NOT_USE_:
+            case pb::ArrayCountKind_INT_MAX_SENTINEL_DO_NOT_USE_:
+                TINT_UNREACHABLE();
+        }
+
+        if (size >= internal_limits::kMaxArrayElementCount) {
+            err_ << "buffer size (" << size << ") must be less than "
+                 << internal_limits::kMaxArrayElementCount << "\n";
+            return mod_out_.Types().invalid();
+        }
+
+        return size > 0 ? mod_out_.Types().buffer(size) : mod_out_.Types().unsized_buffer();
     }
 
-    const type::Type* CreateTypeBuiltinStruct(pb::TypeBuiltinStruct builtin_struct_in) {
+    const core::type::Type* CreateTypeBuiltinStruct(pb::TypeBuiltinStruct builtin_struct_in) {
         if (!TypeBuiltinStruct_IsValid(builtin_struct_in)) {
             err_ << "invalid builtin struct type, " << std::to_string(builtin_struct_in) << "\n";
             return mod_out_.Types().invalid();
@@ -1054,58 +1191,58 @@ struct Decoder {
         const core::type::Struct* res = nullptr;
         switch (builtin_struct_in) {
             case pb::TypeBuiltinStruct::AtomicCompareExchangeResultI32:
-                res = type::CreateAtomicCompareExchangeResult(ty, mod_out_.symbols, ty.i32());
+                res = core::type::CreateAtomicCompareExchangeResult(ty, mod_out_.symbols, ty.i32());
                 break;
             case pb::TypeBuiltinStruct::AtomicCompareExchangeResultU32:
-                res = type::CreateAtomicCompareExchangeResult(ty, mod_out_.symbols, ty.u32());
+                res = core::type::CreateAtomicCompareExchangeResult(ty, mod_out_.symbols, ty.u32());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultF16:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.f16());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.f16());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultF32:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.f32());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.f32());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultVec2F16:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec2h());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec2h());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultVec2F32:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec2f());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec2f());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultVec3F16:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec3h());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec3h());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultVec3F32:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec3f());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec3f());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultVec4F16:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec4h());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec4h());
                 break;
             case pb::TypeBuiltinStruct::FrexpResultVec4F32:
-                res = type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec4f());
+                res = core::type::CreateFrexpResult(ty, mod_out_.symbols, ty.vec4f());
                 break;
             case pb::TypeBuiltinStruct::ModfResultF16:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.f16());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.f16());
                 break;
             case pb::TypeBuiltinStruct::ModfResultF32:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.f32());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.f32());
                 break;
             case pb::TypeBuiltinStruct::ModfResultVec2F16:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
                 break;
             case pb::TypeBuiltinStruct::ModfResultVec2F32:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.vec2f());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2f());
                 break;
             case pb::TypeBuiltinStruct::ModfResultVec3F16:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
                 break;
             case pb::TypeBuiltinStruct::ModfResultVec3F32:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.vec3f());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec3f());
                 break;
             case pb::TypeBuiltinStruct::ModfResultVec4F16:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec2h());
                 break;
             case pb::TypeBuiltinStruct::ModfResultVec4F32:
-                res = type::CreateModfResult(ty, mod_out_.symbols, ty.vec4f());
+                res = core::type::CreateModfResult(ty, mod_out_.symbols, ty.vec4f());
                 break;
 
             case pb::TypeBuiltinStruct::TypeBuiltinStruct_INT_MIN_SENTINEL_DO_NOT_USE_:
@@ -1127,7 +1264,7 @@ struct Decoder {
         return res;
     }
 
-    const type::Type* Type(size_t id) {
+    const core::type::Type* Type(size_t id) {
         if (DAWN_UNLIKELY(id >= types_.Length())) {
             err_ << "type id " << id << " out of range\n";
             return mod_out_.Types().invalid();
@@ -1168,6 +1305,20 @@ struct Decoder {
         return value_out;
     }
 
+    ir::TemplateParameter CreateTemplateParameter(const pb::TemplateParameter& value_in) {
+        switch (value_in.kind_case()) {
+            case pb::TemplateParameter::KindCase::kType:
+                return Type(value_in.type());
+            case pb::TemplateParameter::KindCase::kMajorness:
+                return Majorness(value_in.majorness());
+            case pb::TemplateParameter::KindCase::KIND_NOT_SET:
+                break;
+        }
+
+        err_ << "invalid template parameter kind: " << std::to_string(value_in.kind_case()) << "\n";
+        return mod_out_.Types().invalid();
+    }
+
     ir::InstructionResult* InstructionResult(const pb::InstructionResult& res_in) {
         auto* type = Type(res_in.type());
         if (type == nullptr || type->Is<core::type::Invalid>()) {
@@ -1176,10 +1327,11 @@ struct Decoder {
         }
         auto* res_out = b.InstructionResult(type);
         if (!res_in.name().empty()) {
-            if (!CheckName(res_in.name(), "result name")) {
+            if (auto name = CheckName(res_in.name(), "result name")) {
+                mod_out_.SetName(res_out, *name);
+            } else if (!options_.strip_invalid_identifiers) {
                 return nullptr;
             }
-            mod_out_.SetName(res_out, res_in.name());
         }
         return res_out;
     }
@@ -1192,10 +1344,11 @@ struct Decoder {
         }
         auto* param_out = b.FunctionParam(type);
         if (!param_in.name().empty()) {
-            if (!CheckName(param_in.name(), "param name")) {
+            if (auto name = CheckName(param_in.name(), "param name")) {
+                mod_out_.SetName(param_out, *name);
+            } else if (!options_.strip_invalid_identifiers) {
                 return nullptr;
             }
-            mod_out_.SetName(param_out, param_in.name());
         }
 
         if (param_in.has_attributes()) {
@@ -1232,10 +1385,11 @@ struct Decoder {
         }
         auto* param_out = b.BlockParam(type);
         if (!param_in.name().empty()) {
-            if (!CheckName(param_in.name(), "param name")) {
+            if (auto name = CheckName(param_in.name(), "param name")) {
+                mod_out_.SetName(param_out, *name);
+            } else if (!options_.strip_invalid_identifiers) {
                 return nullptr;
             }
-            mod_out_.SetName(param_out, param_in.name());
         }
         return param_out;
     }
@@ -1247,7 +1401,16 @@ struct Decoder {
             err_ << "value id " << id << " out of range\n";
             return nullptr;
         }
-        return id > 0 ? values_[id - 1] : nullptr;
+        if (id == 0) {
+            return nullptr;
+        }
+
+        // Create the value if this is the first time we have needed it.
+        uint32_t idx = id - 1;
+        if (values_[idx] == nullptr) {
+            values_[idx] = CreateValue(mod_in_.values()[static_cast<int>(idx)]);
+        }
+        return values_[idx];
     }
 
     template <typename T>
@@ -1442,6 +1605,18 @@ struct Decoder {
         TINT_ICE() << "invalid Access: " << in;
     }
 
+    core::Majorness Majorness(pb::Majorness in) {
+        switch (in) {
+            case pb::Majorness::row_major:
+                return core::Majorness::kRowMajor;
+            case pb::Majorness::col_major:
+                return core::Majorness::kColMajor;
+            default:
+                break;
+        }
+        TINT_ICE() << "invalid majorness: " << in;
+    }
+
     core::UnaryOp UnaryOp(pb::UnaryOp in) {
         switch (in) {
             case pb::UnaryOp::complement:
@@ -1632,50 +1807,6 @@ struct Decoder {
         TINT_ICE() << "invalid TexelFormat: " << in;
     }
 
-    core::TextureFilterable TextureFilterable(pb::TextureFilterable in) {
-        if (!TextureFilterable_IsValid(in)) {
-            err_ << "invalid texture filterability, " << std::to_string(in) << "\n";
-            return core::TextureFilterable::kUndefined;
-        }
-
-        switch (in) {
-            case pb::TextureFilterable::filterable_undefined:
-                return core::TextureFilterable::kUndefined;
-            case pb::TextureFilterable::filterable:
-                return core::TextureFilterable::kFilterable;
-            case pb::TextureFilterable::unfilterable:
-                return core::TextureFilterable::kUnfilterable;
-
-            case pb::TextureFilterable::TextureFilterable_INT_MIN_SENTINEL_DO_NOT_USE_:
-            case pb::TextureFilterable::TextureFilterable_INT_MAX_SENTINEL_DO_NOT_USE_:
-                break;
-        }
-
-        TINT_ICE() << "invalid SamplerFiltering: " << in;
-    }
-
-    core::SamplerFiltering SamplerFiltering(pb::SamplerFiltering in) {
-        if (!SamplerFiltering_IsValid(in)) {
-            err_ << "invalid sampler filtering, " << std::to_string(in) << "\n";
-            return core::SamplerFiltering::kUndefined;
-        }
-
-        switch (in) {
-            case pb::SamplerFiltering::filtering_undefined:
-                return core::SamplerFiltering::kUndefined;
-            case pb::SamplerFiltering::filtering:
-                return core::SamplerFiltering::kFiltering;
-            case pb::SamplerFiltering::non_filtering:
-                return core::SamplerFiltering::kNonFiltering;
-
-            case pb::SamplerFiltering::SamplerFiltering_INT_MIN_SENTINEL_DO_NOT_USE_:
-            case pb::SamplerFiltering::SamplerFiltering_INT_MAX_SENTINEL_DO_NOT_USE_:
-                break;
-        }
-
-        TINT_ICE() << "invalid SamplerFiltering: " << in;
-    }
-
     core::type::SamplerKind SamplerKind(pb::SamplerKind in) {
         switch (in) {
             case pb::SamplerKind::sampler:
@@ -1810,6 +1941,8 @@ struct Decoder {
                 return core::BuiltinFn::kAcos;
             case pb::BuiltinFn::acosh:
                 return core::BuiltinFn::kAcosh;
+            case pb::BuiltinFn::add_sat:
+                return core::BuiltinFn::kAddSat;
             case pb::BuiltinFn::all:
                 return core::BuiltinFn::kAll;
             case pb::BuiltinFn::any:
@@ -2137,7 +2270,7 @@ struct Decoder {
 
 }  // namespace
 
-Result<Module> Decode(std::span<const std::byte> encoded) {
+Result<Module> Decode(std::span<const std::byte> encoded, const DecoderOptions& options) {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     pb::Module mod_in;
@@ -2145,11 +2278,11 @@ Result<Module> Decode(std::span<const std::byte> encoded) {
         return Failure{"failed to deserialize protobuf"};
     }
 
-    return Decode(mod_in);
+    return Decode(mod_in, options);
 }
 
-Result<Module> Decode(const pb::Module& mod_in) {
-    return Decoder{mod_in}.Decode();
+Result<Module> Decode(const pb::Module& mod_in, const DecoderOptions& options) {
+    return Decoder{mod_in, options}.Decode();
 }
 
 }  // namespace tint::core::ir::binary

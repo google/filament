@@ -25,19 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/external_semaphore/SemaphoreService.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreService.h"
 
-#include "dawn/native/vulkan/VulkanFunctions.h"
-#include "dawn/native/vulkan/VulkanInfo.h"
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
+#include "src/dawn/native/vulkan/VulkanFunctions.h"
+#include "src/dawn/native/vulkan/VulkanInfo.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
 
 #if DAWN_PLATFORM_IS(FUCHSIA)
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.h"
 #endif  // DAWN_PLATFORM_IS(FUCHSIA)
 
 // Android, ChromeOS and Linux
 #if DAWN_PLATFORM_IS(LINUX)
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.h"
 #endif  // DAWN_PLATFORM_IS(LINUX)
 
 namespace dawn::native::vulkan::external_semaphore {

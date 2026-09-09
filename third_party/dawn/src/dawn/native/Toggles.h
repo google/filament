@@ -33,9 +33,9 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/ityp_bitset.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Serializable.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/Serializable.h"
 
 namespace dawn::native {
 
@@ -107,8 +107,8 @@ enum class Toggle {
     MetalPolyfillUnpack2x16snorm,
     MetalPolyfillUnpack2x16unorm,
     MetalPolyfillTanhF16,
-    VulkanPolyfillF32Negation,
-    VulkanPolyfillF32Abs,
+    VulkanPolyfillFloatNegation,
+    VulkanPolyfillFloatAbs,
     MetalFillEmptyOcclusionQueriesWithZero,
     UseBlitForBufferToDepthTextureCopy,
     UseBlitForBufferToStencilTextureCopy,
@@ -126,6 +126,7 @@ enum class Toggle {
     UseBlitForFloat32TextureCopy,
     UseBlitForT2B,
     UseBlitForB2T,
+    VulkanSplitBufferTextureCopyForArrayLayers,
     GLUseArrayLengthFromUniform,
     D3D11DisableCPUUploadBuffers,
     UseT2B2TForSRGBTextureCopy,
@@ -152,8 +153,8 @@ enum class Toggle {
     ScalarizeMaxMinClamp,
     SaturateAsMinMaxF16,
     MetalPolyfillClampFloat,
-    SubgroupShuffleClamped,
     VulkanSampleCompareDepthCubeArrayWorkaround,
+    VulkanSampleCompare2DWorkaround,
     MetalDisableModuleConstantF16,
     EnableImmediateErrorHandling,
     VulkanUseStorageInputOutput16,
@@ -177,6 +178,8 @@ enum class Toggle {
     EnableShaderPrint,
     BlobCacheHashValidation,
     DecomposeUniformBuffers,
+    D3D12DecomposeWorkgroupAccess,
+    CollapseSubgroupMinMax,
     VulkanEnableF16OnNvidia,
     EnableRenderDocProcessInjection,
     VulkanUseDynamicRendering,
@@ -185,10 +188,21 @@ enum class Toggle {
     MetalReplaceWorkgroupBoolWithU32,
     VulkanCooperativeMatrixStrideIsMatrixElements,
     VulkanUseExtendedDynamicState,
+    VulkanUseRasterizationOrderAttachmentAccess,
     VulkanForceStaticSamplersForExternalTextures,
+    D3D12UseHLSL2021,
+    MetalFixU32DivMod,
+    VulkanSleepAfterLostDeviceWait,
+    UseSpirvReconvergenceMode,
+    VulkanReplaceWorkgroupAtomicStoreWithExchange,
+    VulkanDisallowNPOTDepthStencilMipmaps,
+    VulkanReplaceUnsignedCompareZero,
 
     // Once all backends have been updated to be thread safe for waiting, we can remove this toggle.
     WaitIsThreadSafe,
+
+    // If/when all backends support spontaneous queue events, we can then remove this toggle.
+    SpontaneousQueueEvents,
 
     // Unresolved issues.
     NoWorkaroundSampleMaskBecomesZeroForAllButLastColorTarget,
@@ -206,9 +220,9 @@ enum class Toggle {
     IgnoreImportedAHardwareBufferVulkanImageSize,
     GLAllowContextOnMultiThreads,
     GLDefer,
-    ShadowCopyMapWrite,
     DisableTransientAttachment,
     AutoMapBackendBuffer,
+    MetalPolyfillBoolVecDynamicStore,
 
     EnumCount,
     InvalidEnum = EnumCount,

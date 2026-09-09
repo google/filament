@@ -30,9 +30,9 @@
 
 #include <vector>
 
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/d3d/SwapChainD3D.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/d3d/SwapChainD3D.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 
@@ -68,7 +68,7 @@ class SwapChain final : public d3d::SwapChain {
     struct Buffer {
         ComPtr<ID3D12Resource> resource;
         // Pretend all the buffers were last used at the beginning of time.
-        ExecutionSerial lastUsed = ExecutionSerial(0);
+        ExecutionSerial lastUsed = ExecutionSerial(0u);
         // SwapChain textures are as if in the COMMON state when first queried.
         // We need to keep the state and not always assume COMMON because when a swapchain is
         // reused, the underlying resource might have been transitioned when wrapped in the

@@ -30,10 +30,10 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/NSRef.h"
-#include "dawn/common/SlabAllocator.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/common/SlabAllocator.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
 
 namespace dawn::native::metal {
 

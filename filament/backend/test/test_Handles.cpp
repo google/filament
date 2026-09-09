@@ -27,14 +27,22 @@ using namespace filament::backend;
 // FIXME: consider making this constant non-private so we can use it in tests.
 static constexpr uint32_t HANDLE_HEAP_FLAG = 0x80000000u;
 static constexpr size_t POOL_SIZE_BYTES = 8 * 1024U * 1024U;
-// NOTE: actual count may be lower due to alignment requirements
-#if defined(FILAMENT_DEBUG_MUTEX) || defined(UTILS_DEBUG_MUTEX)
-constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / (32 + 96 + 312);
-#define HandleAllocatorTest  HandleAllocator<32,  96, 312>
+// The allocator must be an instantiation that exists in the backend library:
+// HandleAllocatorGL normally, or HandleAllocatorMTL on Metal-only builds
+// (e.g. an iOS build with the OpenGL backend disabled).
+#if defined(FILAMENT_SUPPORTS_OPENGL)
+#define HandleAllocatorTest  HandleAllocatorGL
+#elif defined(FILAMENT_SUPPORTS_METAL)
+#define HandleAllocatorTest  HandleAllocatorMTL
+#elif defined(FILAMENT_SUPPORTS_VULKAN)
+#define HandleAllocatorTest  HandleAllocatorVK
+#elif defined(FILAMENT_SUPPORTS_WEBGPU)
+#define HandleAllocatorTest  HandleAllocatorWGPU
 #else
-constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / (32 + 96 + 184); // 31775
-#define HandleAllocatorTest  HandleAllocator<32,  96, 184>    // ~4520 / pool / MiB
+#error test_Handles requires at least one backend
 #endif
+// NOTE: actual count may be lower due to alignment requirements
+constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / HandleAllocatorTest::bucketSizesSum;
 
 struct MyHandle {
 };

@@ -30,9 +30,9 @@
 
 #include <vector>
 
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/opengl/PipelineGL.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/opengl/PipelineGL.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 

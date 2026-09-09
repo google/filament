@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/X11Functions.h"
+#include "src/dawn/native/X11Functions.h"
 
 #include <memory>
 
-#include "dawn/common/Log.h"
+#include "src/utils/force_crash.h"
+#include "src/utils/log.h"
 
 namespace dawn::native {
 
@@ -75,7 +76,7 @@ struct DebugX11 {
     static int HandleError(Display* d, XErrorEvent* e) {
         dawn::ErrorLog()
             << "An X11 error happened, triggering a breakpoint, the culprit will be in the stack.";
-        dawn::BreakPoint();
+        DAWN_FORCE_CRASH();
 
         int result = sDebug->previousHandler(d, e);
         return result;

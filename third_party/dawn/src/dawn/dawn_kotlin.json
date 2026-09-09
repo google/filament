@@ -37,6 +37,7 @@
         "double": "jdouble",
         "float": "jfloat",
         "size_t": "jlong",
+        "int": "jint",
         "int32_t": "jint",
         "uint16_t": "jshort",
         "uint32_t": "jint",
@@ -50,6 +51,7 @@
         "bool": "Z",
         "double": "D",
         "float": "F",
+        "int": "I",
         "int16_t": "S",
         "int32_t": "I",
         "int64_t": "J",
@@ -110,6 +112,31 @@
             },
             "future wait info": {
                 "omitted": true
+            },
+            "external texture descriptor": {
+                "exclude_members": [
+                    "plane 0",
+                    "apparent size",
+                    "src transfer function parameters",
+                    "dst transfer function parameters",
+                    "gamut conversion matrix",
+                    "do yuv to rgb conversion only",
+                    "yuv to rgb conversion matrix"
+                ],
+                "additional_members": [
+                    {
+                        "name": "srcColorSpace",
+                        "type": "color space dawn",
+                        "category": "structure",
+                        "optional": false
+                    },
+                    {
+                        "name": "dstColorSpace",
+                        "type": "predefined color space",
+                        "category": "kotlin type",
+                        "optional": false
+                    }
+                ]
             }
         },
         "enums": {

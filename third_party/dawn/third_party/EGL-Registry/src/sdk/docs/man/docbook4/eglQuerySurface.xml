@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglQuerySurface">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglQuerySurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglQuerySurface</refname>
+        <refpurpose>
+            return <acronym>EGL</acronym> surface information
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglQuerySurface</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+                <paramdef>EGLint <parameter>attribute</parameter></paramdef>
+                <paramdef>EGLint * <parameter>value</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface to query.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attribute</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface attribute to be returned.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>value</parameter></term>
+                <listitem>
+                    <para>
+                        Returns the requested value.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglQuerySurface</function> returns in
+            <parameter>value</parameter> the value of
+            <parameter>attribute</parameter> for <parameter>surface</parameter>.
+            <parameter>attribute</parameter> can be one of the following:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_CONFIG_ID</constant></term>
+                <listitem><para>
+                    Returns the ID of the EGL frame buffer configuration
+                    with respect to which the surface was created.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_HEIGHT</constant></term>
+                <listitem><para>
+                    Returns the height of the surface in pixels.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_HORIZONTAL_RESOLUTION</constant></term>
+                <listitem><para>
+                    Returns the horizontal dot pitch of the display on
+                    which a window surface is visible. The value
+                    returned is equal to the actual dot pitch, in
+                    pixels/meter, multiplied by the constant value
+                    <constant>EGL_DISPLAY_SCALING</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_LARGEST_PBUFFER</constant></term>
+                <listitem><para>
+                    Returns the same attribute value specified when the
+                    surface was created with
+                    <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>.
+                    For a window or pixmap surface,
+                    <parameter>value</parameter> is not modified.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MIPMAP_LEVEL</constant></term>
+                <listitem><para>
+                    Returns which level of the mipmap to render to, if
+                    texture has mipmaps.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MIPMAP_TEXTURE</constant></term>
+                <listitem><para>
+                    Returns <constant>EGL_TRUE</constant> if texture has
+                    mipmaps, <constant>EGL_FALSE</constant> otherwise.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MULTISAMPLE_RESOLVE</constant></term>
+                <listitem>
+                <para>
+                    Returns the filter used when resolving the
+                    multisample buffer. The filter may be either
+                    <constant>EGL_MULTISAMPLE_RESOLVE_DEFAULT</constant>
+                    or <constant>EGL_MULTISAMPLE_RESOLVE_BOX</constant>,
+                    as described for
+                    <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_PIXEL_ASPECT_RATIO</constant></term>
+                <listitem><para>
+                    Returns the aspect ratio of an individual pixel (the
+                    ratio of a pixel's width to its height). The value
+                    returned is equal to the actual aspect ratio
+                    multiplied by the constant value
+                    <constant>EGL_DISPLAY_SCALING</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_RENDER_BUFFER</constant></term>
+                <listitem><para>
+                    Returns the buffer which client API rendering is
+                    requested to use. For a window surface, this is the
+                    same attribute value specified when the surface was
+                    created. For a pbuffer surface, it is always
+                    <constant>EGL_BACK_BUFFER</constant>. For a pixmap
+                    surface, it is always
+                    <constant>EGL_SINGLE_BUFFER</constant>. To determine
+                    the actual buffer being rendered to by a context,
+                    call
+                    <citerefentry><refentrytitle>eglQueryContext</refentrytitle></citerefentry>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SWAP_BEHAVIOR</constant></term>
+                <listitem><para>
+                    Returns the effect on the color buffer when posting
+                    a surface with
+                    <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry>.
+                    Swap behavior may be either
+                    <constant>EGL_BUFFER_PRESERVED</constant> or
+                    <constant>EGL_BUFFER_DESTROYED</constant>, as
+                    described for
+                    <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TEXTURE_FORMAT</constant></term>
+                <listitem><para>
+                    Returns format of texture. Possible values are
+                    <constant>EGL_NO_TEXTURE</constant>,
+                    <constant>EGL_TEXTURE_RGB</constant>, and
+                    <constant>EGL_TEXTURE_RGBA</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_TEXTURE_TARGET</constant></term>
+                <listitem><para>
+                    Returns type of texture. Possible values are
+                    <constant>EGL_NO_TEXTURE</constant>, or
+                    <constant>EGL_TEXTURE_2D</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VERTICAL_RESOLUTION</constant></term>
+                <listitem><para>
+                    Returns the vertical dot pitch of the display on
+                    which a window surface is visible. The value
+                    returned is equal to the actual dot pitch, in
+                    pixels/meter, multiplied by the constant value
+                    <constant>EGL_DISPLAY_SCALING</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_WIDTH</constant></term>
+                <listitem><para>
+                    Returns the width of the surface in pixels.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            Attribute <constant>EGL_MULTISAMPLE_RESOLVE</constant> is
+            supported only if the EGL version is 1.4 or greater.
+        </para>
+        <para>
+            Attributes <constant>EGL_DISPLAY_SCALING</constant>.
+            <constant>EGL_HORIZONTAL_RESOLUTION</constant>,
+            <constant>EGL_PIXEL_ASPECT_RATIO</constant>,
+            <constant>EGL_RENDER_BUFFER</constant>,
+            <constant>EGL_SWAP_BEHAVIOR</constant>, and
+            <constant>EGL_VERTICAL_RESOLUTION</constant> are supported
+            only if the EGL version is 1.2 or greater.
+        </para>
+        <para>
+            Querying attributes <constant>EGL_TEXTURE_FORMAT</constant>,
+            <constant>EGL_TEXTURE_TARGET</constant>,
+            <constant>EGL_MIPMAP_TEXTURE</constant>, or
+            <constant>EGL_MIPMAP_LEVEL</constant> for a non-pbuffer
+            surface is not an error, but <parameter>value</parameter> is
+            not modified.
+        </para>
+        <para>
+            <constant>EGL_DISPLAY_SCALING</constant> is the constant
+            value 10000. Floating-point values such as resolution and
+            pixel aspect ratio are scaled by this value before being
+            returned as integers so that sufficient precision to be
+            meaningful will be retained in the returned value.
+        </para>
+        <para>
+            For an offscreen (pbuffer or pixmap) surface, or a surface
+            whose pixel dot pitch or aspect ratio are unknown, querying
+            <constant>EGL_HORIZONTAL_RESOLUTION</constant>,
+            <constant>EGL_PIXEL_ASPECT_RATIO</constant>, or
+            <constant>EGL_VERTICAL_RESOLUTION</constant> will return the
+            constant value <constant>EGL_UNKNOWN</constant> (-1).
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise.
+            <parameter>value</parameter> is not modified when
+            <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL surface.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attribute</parameter> is not a valid surface attribute.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSurfaceAttrib</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

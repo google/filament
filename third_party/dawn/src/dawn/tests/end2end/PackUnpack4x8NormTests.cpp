@@ -28,8 +28,8 @@
 #include <limits>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -177,7 +177,7 @@ TEST_P(PackUnpack4x8NormTests, Unpack4x8Unorm) {
     static uint32_t kNumTests = 7;
 
     wgpu::BufferDescriptor bufferDesc;
-    bufferDesc.size = kNumTests * 4 * sizeof(float);
+    bufferDesc.size = static_cast<uint64_t>(kNumTests) * 4 * sizeof(float);
     bufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
     wgpu::Buffer bufferOut = device.CreateBuffer(&bufferDesc);
 
@@ -247,7 +247,7 @@ TEST_P(PackUnpack4x8NormTests, Unpack4x8Snorm) {
     static uint32_t kNumTests = 8;
 
     wgpu::BufferDescriptor bufferDesc;
-    bufferDesc.size = kNumTests * 4 * sizeof(float);
+    bufferDesc.size = static_cast<uint64_t>(kNumTests) * 4 * sizeof(float);
     bufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
     wgpu::Buffer bufferOut = device.CreateBuffer(&bufferDesc);
 

@@ -15,6 +15,9 @@ config("warnings") {
       # when it does raw printing.
       "-Wno-unused-result",
     ]
+    if (is_ubsan_any) {
+      cflags += [ "-fno-sanitize=pointer-overflow" ]
+    }
   }
 }
 

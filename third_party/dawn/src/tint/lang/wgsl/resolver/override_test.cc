@@ -63,7 +63,7 @@ TEST_F(ResolverOverrideTest, NonOverridable) {
 }
 
 TEST_F(ResolverOverrideTest, WithId) {
-    auto* a = Override("a", ty.f32(), Expr(1_f), Id(7_u));
+    auto* a = Override("a", ty.f32(), Expr(1_f), Vector{Id(7_u)});
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 
@@ -83,10 +83,10 @@ TEST_F(ResolverOverrideTest, WithAndWithoutIds) {
 
     auto* a = Override("a", ty.f32(), Expr(1_f));
     auto* b = Override("b", ty.f16(), Expr(1_h));
-    auto* c = Override("c", ty.i32(), Expr(1_i), Id(2_u));
-    auto* d = Override("d", ty.u32(), Expr(1_u), Id(4_u));
+    auto* c = Override("c", ty.i32(), Expr(1_i), Vector{Id(2_u)});
+    auto* d = Override("d", ty.u32(), Expr(1_u), Vector{Id(4_u)});
     auto* e = Override("e", ty.f32(), Expr(1_f));
-    auto* f = Override("f", ty.f32(), Expr(1_f), Id(1_u));
+    auto* f = Override("f", ty.f32(), Expr(1_f), Vector{Id(1_u)});
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 
@@ -100,8 +100,8 @@ TEST_F(ResolverOverrideTest, WithAndWithoutIds) {
 }
 
 TEST_F(ResolverOverrideTest, DuplicateIds) {
-    Override("a", ty.f32(), Expr(1_f), Id(Source{{12, 34}}, 7_u));
-    Override("b", ty.f32(), Expr(1_f), Id(Source{{56, 78}}, 7_u));
+    Override("a", ty.f32(), Expr(1_f), Vector{Id(Source{{12, 34}}, 7_u)});
+    Override("b", ty.f32(), Expr(1_f), Vector{Id(Source{{56, 78}}, 7_u)});
 
     EXPECT_FALSE(r()->Resolve());
 
@@ -110,7 +110,7 @@ TEST_F(ResolverOverrideTest, DuplicateIds) {
 }
 
 TEST_F(ResolverOverrideTest, IdTooLarge) {
-    Override("a", ty.f32(), Expr(1_f), Id(Source{{12, 34}}, 65536_u));
+    Override("a", ty.f32(), Expr(1_f), Vector{Id(Source{{12, 34}}, 65536_u)});
 
     EXPECT_FALSE(r()->Resolve());
 

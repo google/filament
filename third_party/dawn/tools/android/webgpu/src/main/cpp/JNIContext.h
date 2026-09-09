@@ -34,7 +34,7 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/NonMovable.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn::kotlin_api {
 
@@ -62,7 +62,7 @@ class JNIContext : dawn::NonMovable {
         static_assert(std::is_trivially_destructible_v<T>);
         static_assert(std::is_trivially_constructible_v<T>);
         T* alloc = new T();
-        mAllocationsToFree.push_back(alloc);
+        mAllocationsToFree.push_back({alloc, [](void* p) { delete static_cast<T*>(p); }});
         return alloc;
     }
 
@@ -71,15 +71,19 @@ class JNIContext : dawn::NonMovable {
         static_assert(std::is_trivially_destructible_v<T>);
         static_assert(std::is_trivially_constructible_v<T>);
         T* alloc = new T[count]();
-        mArrayAllocationsToFree.push_back(alloc);
+        mAllocationsToFree.push_back({alloc, [](void* p) { delete[] static_cast<T*>(p); }});
         return alloc;
     }
 
   private:
+    struct Allocation {
+        void* ptr;
+        void (*deleter)(void*);
+    };
+
     std::vector<std::pair<jstring, const char*>> mStringsToRelease;
     std::vector<std::pair<jintArray, jint*>> mIntArraysToRelease;
-    std::vector<void*> mAllocationsToFree;
-    std::vector<void*> mArrayAllocationsToFree;
+    std::vector<Allocation> mAllocationsToFree;
 };
 
 }  // namespace dawn::kotlin_api

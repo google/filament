@@ -32,6 +32,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include "src/utils/compiler.h"
+
 namespace wgpu::binding {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -124,7 +126,7 @@ GPUAdapterInfo::GPUAdapterInfo(const wgpu::AdapterInfo& info)
             auto* configs = static_cast<wgpu::AdapterPropertiesSubgroupMatrixConfigs*>(next);
             subgroup_matrix_configs_.reserve(configs->configCount);
             for (uint32_t i = 0; i < configs->configCount; i++) {
-                subgroup_matrix_configs_.push_back(configs->configs[i]);
+                DAWN_UNSAFE_TODO(subgroup_matrix_configs_.push_back(configs->configs[i]));
             }
         }
         next = next->nextInChain;

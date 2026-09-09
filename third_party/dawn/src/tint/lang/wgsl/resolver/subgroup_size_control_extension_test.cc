@@ -41,17 +41,17 @@ using SubgroupSizeControlExtensionTest = ResolverTest;
 TEST_F(SubgroupSizeControlExtensionTest,
        UseSubgroupSizeControlExtensionWithSubgroupsExtensionError) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
     EXPECT_TRUE(r()->Resolve());
 }
 
 TEST_F(SubgroupSizeControlExtensionTest,
        UseSubgroupSizeControlExtensionWithoutSubgroupsExtensionError) {
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(error: extension 'chromium_experimental_subgroup_size_control' cannot be used without extension 'subgroups')");
+        R"(error: extension 'subgroup_size_control' cannot be used without extension 'subgroups')");
 }
 
 TEST_F(SubgroupSizeControlExtensionTest, RequiresExtension) {
@@ -67,12 +67,12 @@ TEST_F(SubgroupSizeControlExtensionTest, RequiresExtension) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(12:34 error: use of '@subgroup_size' requires enabling extension 'chromium_experimental_subgroup_size_control')");
+        R"(12:34 error: use of '@subgroup_size' requires enabling extension 'subgroup_size_control')");
 }
 
 TEST_F(SubgroupSizeControlExtensionTest, ValidWithExtension) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -86,7 +86,7 @@ TEST_F(SubgroupSizeControlExtensionTest, ValidWithExtension) {
 
 TEST_F(SubgroupSizeControlExtensionTest, NotAnEntryPoint) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -99,7 +99,7 @@ TEST_F(SubgroupSizeControlExtensionTest, NotAnEntryPoint) {
 
 TEST_F(SubgroupSizeControlExtensionTest, NotAComputeShader) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -113,7 +113,7 @@ TEST_F(SubgroupSizeControlExtensionTest, NotAComputeShader) {
 
 TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_Negative) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -128,7 +128,7 @@ TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_Negative) {
 
 TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_Zero) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -143,7 +143,7 @@ TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_Zero) {
 
 TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_NotAPowerOfTwo) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -158,7 +158,7 @@ TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_NotAPowerOfTwo) {
 
 TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_Float) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{
@@ -175,7 +175,7 @@ TEST_F(SubgroupSizeControlExtensionTest, InvalidValue_Float) {
 
 TEST_F(SubgroupSizeControlExtensionTest, DuplicateAttribute) {
     Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+    Enable(wgsl::Extension::kSubgroupSizeControl);
 
     Func("main", tint::Empty, ty.void_(), tint::Empty,
          Vector{

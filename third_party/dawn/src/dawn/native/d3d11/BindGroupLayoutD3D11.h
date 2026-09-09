@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_BINDGROUPLAYOUTD3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_BINDGROUPLAYOUTD3D11_H_
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SlabAllocator.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/d3d11/BindGroupD3D11.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SlabAllocator.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/d3d11/BindGroupD3D11.h"
 
 namespace dawn::native::d3d11 {
 

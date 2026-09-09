@@ -31,6 +31,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <type_traits>
 
 namespace dawn {
@@ -40,7 +41,7 @@ namespace dawn {
 // string of bits it is in the order defined for S in FIPS 202. When accessed as a state,
 // A[x, y, z] is the z-th bit of element x + 5y.
 using Sha3Lane = uint64_t;
-static_assert(25 * 8 * sizeof(Sha3Lane) == 1600);
+static_assert(25ULL * 8 * sizeof(Sha3Lane) == 1600);
 using Sha3State = std::array<Sha3Lane, 25>;
 static_assert(sizeof(Sha3State) == 25 * sizeof(Sha3Lane), "Sha3State must be packed.");
 
@@ -65,8 +66,9 @@ class Sha3 {
 
     Output Finalize();
 
-    // Helper function to compute the hash directly.
+    // Helper functions to compute the hash directly.
     static Output Hash(const void* data, size_t size);
+    static Output Hash(std::span<const std::byte> data);
 
   private:
     static_assert(BitOutputLength == 224 || BitOutputLength == 256 || BitOutputLength == 384 ||

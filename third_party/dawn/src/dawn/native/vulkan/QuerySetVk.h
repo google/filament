@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_QUERYSETVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_QUERYSETVK_H_
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/QuerySet.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/QuerySet.h"
 
 namespace dawn::native::vulkan {
 

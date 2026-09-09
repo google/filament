@@ -1,0 +1,114 @@
+Name
+
+    GLX_OML_swap_method
+
+Name Strings
+
+    GLX_OML_swap_method
+
+Contact
+
+    Jon Leech, SGI (ljp 'at' sgi.com)
+
+Status
+
+    Complete. Approved by the Khronos SIG on July 19, 2001.
+
+Version
+
+    Last Modified Date: 07/23/2001
+    Revision: $Header: //depot/main/doc/registry/extensions/OML/glx_swap_method.spec#4 $
+
+Number
+
+    237
+
+Dependencies
+
+    GLX 1.3 is required.
+
+Overview
+
+    This extension adds a new attribute, GLX_SWAP_METHOD, for a
+    GLXFBConfig. The GLX_SWAP_METHOD indicates how front and back
+    buffers are swapped when the GLXFBConfig is double-buffered.
+
+IP Status
+
+    No known issues.
+
+Issues and Notes
+
+  * Some hardware supports different swap methods in full screen mode
+    vs. windowed mode. How should this be handled? This is not handled
+    by this extension. GLX does not support the notion of fullscreen vs.
+    windowed mode. A separate extension is required to properly support
+    fullscreen mode.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted in the <attrib_list> parameter array of glXChooseFBConfig
+    and as the <attribute> parameter for glXGetFBConfigAttrib:
+
+	GLX_SWAP_METHOD_OML		    0x8060
+
+Accepted as a value in the <attrib_list> parameter of glXChooseFBConfig
+and returned in the <value> parameter of glXGetFBConfig:
+
+	GLX_SWAP_EXCHANGE_OML		    0x8061
+	GLX_SWAP_COPY_OML		    0x8062
+	GLX_SWAP_UNDEFINED_OML		    0x8063
+
+Additions to the OpenGL 1.2.1 Specification
+
+    None
+
+Additions to the GLX 1.3 Specification
+
+  - (3.3.3, p. ?? "Configuration Management")
+
+    Add to table 3.1:
+
+    Attribute		 Type Notes
+    ---------		 ---- -----
+    GLX_SWAP_METHOD_OML  enum method used to swap front and back color buffers
+
+
+    The GLX_SWAP_METHOD_OML attribute may be set to one of the following
+    values: GLX_SWAP_EXCHANGE_OML, GLX_SWAP_COPY_OML or
+    GLX_SWAP_UNDEFINED_OML. If this attribute is set to
+    GLX_SWAP_EXCHANGE_OML then swapping exchanges the front and back
+    buffer contents; if the attribute is set to GLX_SWAP_COPY_OML then
+    swapping copies the back buffer contents to the front buffer,
+    preserving the back buffer contents; if it is set to
+    GLX_SWAP_UNDEFINED_OML then the back buffer contents are copied to
+    the front buffer but the back buffer contents are undefined after
+    the operation. If the GLXFBConfig does not support a back buffer,
+    then the value of GLX_SWAP_METHOD_OML is set to
+    GLX_SWAP_UNDEFINED_OML.
+
+    Add to table 3.4:
+
+    Attribute		Default		Selection and Sorting	Sort Priority
+					Criteria
+    ---------		-------		---------------------	-------------
+    GLX_SWAP_METHOD_OML GLX_DONT_CARE	Exact			???
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Revision 4, 07/24/2001 - Finalized Status for OpenML 1.0.
+    Revision 3, 07/11/2001 - Assign enum values.
+    Revision 2, 07/11/2001 - Assign extension numbers for the registry.
+    Revision 1 - change Paula's draft to use OML affix.

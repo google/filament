@@ -40,14 +40,6 @@ namespace tint::spirv::writer::raise {
 
 namespace {
 
-// The capabilities that the transform can support.
-const core::ir::Capabilities kMergeReturnCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-};
-
 /// PIMPL state for the transform, for a single function.
 struct State {
     /// The IR module.
@@ -271,7 +263,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> MergeReturn(core::ir::Module& ir) {
-    core::ir::AssertValid(ir, kMergeReturnCapabilities, "before spirv.MergeReturn");
+    core::ir::AssertValid(ir, "before spirv.MergeReturn");
 
     // Process each function.
     for (auto& fn : ir.functions) {

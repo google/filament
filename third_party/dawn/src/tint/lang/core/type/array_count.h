@@ -80,7 +80,7 @@ class ConstantArrayCount final : public Castable<ConstantArrayCount, ArrayCount>
     ConstantArrayCount* Clone(CloneContext& ctx) const override;
 
     /// The array count constant-expression value.
-    uint32_t value;
+    uint32_t value = 0;
 };
 
 /// The variant of an ArrayCount when the array is runtime-sized.

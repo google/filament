@@ -1,0 +1,349 @@
+Name
+
+    NV_framebuffer_multisample_coverage
+
+Name Strings
+
+    GL_NV_framebuffer_multisample_coverage
+
+Contact
+
+    Mike Strauss, NVIDIA Corporation (mstrauss 'at' nvidia.com)
+
+Status
+
+    Shipping in NVIDIA Release 95 drivers (November 2006)
+
+    Functionality supported by GeForce 8800
+
+Version
+
+    Last Modified Date:  May 31, 2008
+    Revision #9
+
+Number
+
+    336
+
+Dependencies
+
+    Requires GL_EXT_framebuffer_object.
+
+    Requires GL_EXT_framebuffer_blit.
+
+    Requires GL_EXT_framebuffer_multisample.
+
+    Written based on the wording of the OpenGL 1.5 specification.
+
+Overview
+
+    This extension extends the EXT_framebuffer_multisample 
+    specification by providing a new function,
+    RenderBufferStorageMultisampleCoverageNV, that distinguishes 
+    between color samples and coverage samples.
+
+    EXT_framebuffer_multisample introduced the function 
+    RenderbufferStorageMultisampleEXT as a method of defining the 
+    storage parameters for a multisample render buffer.  This function 
+    takes a <samples> parameter.  Using rules provided by the 
+    specification, the <samples> parameter is resolved to an actual 
+    number of samples that is supported by the underlying hardware.  
+    EXT_framebuffer_multisample does not specify whether <samples>
+    refers to coverage samples or color samples.
+
+    This extension adds the function 
+    RenderbufferStorageMultisamplCoverageNV, which takes a 
+    <coverageSamples> parameter as well as a <colorSamples> parameter.  
+    These two parameters give developers more fine grained control over
+    the quality of multisampled images.
+
+IP Status
+    
+    No known IP issues.
+
+New Procedures and Functions
+
+    void RenderbufferStorageMultisampleCoverageNV(
+             enum target, sizei coverageSamples, 
+             sizei colorSamples, enum internalformat,
+             sizei width, sizei height);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetRenderbufferParameterivEXT:
+
+        RENDERBUFFER_COVERAGE_SAMPLES_NV         0x8CAB
+        RENDERBUFFER_COLOR_SAMPLES_NV            0x8E10
+
+
+    Accepted by the <pname> parameter of GetIntegerv:
+
+        MAX_MULTISAMPLE_COVERAGE_MODES_NV        0x8E11
+        MULTISAMPLE_COVERAGE_MODES_NV            0x8E12
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modification to 4.4.2.1 (Renderbuffer Objects)
+
+    Add, just above the definition of RenderbufferStorageMultisampleEXT:
+
+    "The command
+
+        void RenderbufferStorageMultisampleCoverageNV(
+            enum target, sizei coverageSamples, 
+            sizei colorSamples, enum internalformat,
+            sizei width, sizei height);
+
+    establishes the data storage, format, dimensions, number of coverage
+    samples, and number of color samples of a renderbuffer object's 
+    image.  <target> must be RENDERBUFFER_EXT.  <internalformat> must be
+    RGB, RGBA, DEPTH_COMPONENT, STENCIL_INDEX, or one of the internal 
+    formats from table 3.16 or table 2.nnn that has a base internal 
+    format of RGB, RGBA, DEPTH_COMPONENT, or STENCIL_INDEX.  <width> 
+    and <height> are the dimensions in pixels of the renderbuffer.  If 
+    either <width> or <height> is greater than 
+    MAX_RENDERBUFFER_SIZE_EXT, the error INVALID_VALUE is generated.  If
+    the GL is unable to create a data store of the requested size, the 
+    error OUT_OF_MEMORY is generated.
+
+    Upon success, RenderbufferStorageMultisampleCoverageNV deletes any 
+    existing data store for the renderbuffer image and the contents of 
+    the data store after calling 
+    RenderbufferStorageMultisampleCoverageNV are undefined.  
+    RENDERBUFFER_WIDTH_EXT is set to <width>, RENDERBUFFER_HEIGHT_EXT 
+    is set to <height>, and RENDERBUFFER_INTERNAL_FORMAT_EXT is set to 
+    <internalformat>.
+
+    If <coverageSamples> is zero, then RENDERBUFFER_COVERAGE_SAMPLES_NV 
+    is set to zero.  Otherwise <coverageSamples> represents a request 
+    for a desired minimum number of coverage samples. Since different 
+    implementations may support different coverage sample counts for 
+    multisampled rendering, the actual number of coverage samples 
+    allocated for the renderbuffer image is implementation dependent.  
+    However, the resulting value for RENDERBUFFER_COVERAGE_SAMPLES_NV is
+    guaranteed to be greater than or equal to <coverageSamples> and no 
+    more than the next larger coverage sample count supported by the 
+    implementation.
+
+    If <colorSamples> is zero then RENDERBUFFER_COLOR_SAMPLES_NV is set
+    to zero.  Otherwise, <colorSamples> represents a request for a 
+    desired minimum number of colors samples.  Since different 
+    implementations may support different color sample counts for 
+    multisampled rendering, the actual number of color samples 
+    allocated for the renderbuffer image is implementation dependent.
+    Furthermore, a given implementation may support different color 
+    sample counts for each supported coverage sample count.  The
+    resulting value for RENDERBUFFER_COLOR_SAMPLES_NV is determined
+    after resolving the value for RENDERBUFFER_COVERAGE_SAMPLES_NV.
+    If the requested color sample count exceeds the maximum number of
+    color samples supported by the implementation given the value of
+    RENDERBUFFER_COVERAGE_SAMPLES_NV, the implementation will set
+    RENDERBUFFER_COLOR_SAMPLES_NV to the highest supported value.  
+    Otherwise, the resulting value for RENDERBUFFER_COLOR_SAMPLES_NV is
+    guaranteed to be greater than or equal to <colorSamples> and no 
+    more than the next larger color sample count supported by the 
+    implementation given the value of RENDERBUFFER_COVERAGE_SAMPLES_NV.
+
+    If <colorSamples> is greater than <coverageSamples>, the error
+    INVALID_VALUE is generated.
+
+    If <coverageSamples> or <colorSamples> is greater than 
+    MAX_SAMPLES_EXT, the error INVALID_VALUE is generated.
+
+    If <coverageSamples> is greater than zero, and <colorSamples> is
+    zero, RENDERBUFFER_COLOR_SAMPLES_NV is set to an implementation
+    dependent value based on RENDERBUFFER_COVERAGE_SAMPLES_NV.
+
+    An implementation may only support a subset of the possible
+    combinations of coverage samples and color samples.  Requests for
+    combinations not supported by the implementation are resolved to
+    a supported combination using the rules above.  The number of 
+    supported combinations is MAX_MULTISAMPLE_COVERAGE_MODES_NV.
+    MULTISAMPLE_COVERAGE_MODES_NV is an array of 
+    MAX_MULTISAMPLE_COVERAGE_MODES_NV pairs of integers representing
+    the combinations of coverage samples and color samples supported
+    by the implementation.  The first integer in each pair corresponds
+    to coverage samples, while the second corresponds to color samples.
+
+    Modify the definition of RenderbufferStorageMultisampleEXT as
+    follows:
+
+    "The command
+
+        void RenderbufferStorageMultisampleEXT(
+            enum target, sizei samples,
+            enum internalformat,
+            sizei width, sizei height);
+
+    is equivalent to calling
+
+        RenderbufferStorageMultisampleCoverageNV(target, samples, 0,
+            internalforamt, width, height).
+
+    Modification to 4.4.4.2 (Framebuffer Completeness)
+
+    Modify the RENDERBUFFER_SAMPLES_EXT entry in the bullet list:
+
+    * The value of RENDERBUFFER_COVERAGE_SAMPLES_NV is the same for all
+      attached images.
+      { FRAMEBUFFER_INCOMPLETE_MULTISAMPLE }  
+
+    Add an entry to the bullet list:
+
+    * The value of RENDERBUFFER_COLOR_SAMPLES_NV is the same for all
+      attached images.
+      { FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT }
+    
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+   None.
+
+Errors
+
+   The error INVALID_OPERATION is generated if 
+   RenderbufferStorageMultisampleCoverageNV is called and 
+   <colorSamples> is greater than <coverageSamples>
+
+   The error INVALID_VALUE is generated if
+   RenderbufferStorageMultisampleCoverageNV is called and 
+   <coverageSamples> is greater than MAX_SAMPLES_EXT.
+
+   The error INVALID_VALUE is generated if
+   RenderbufferStorageMultisampleCoverageNV is called and 
+   <colorSamples> is greater than MAX_SAMPLES_EXT.
+
+New State
+
+(add to table 8.nnn, "Renderbuffers (state per renderbuffer object)")
+
+                                                                           Initial
+    Get Value                         Type  Get Command                    Value    Description          Section       Attribute
+    --------------------------------  ----  -----------------------------  -------  -------------------  ------------  ---------
+    RENDERBUFFER_COVERAGE_SAMPLES_NV   Z+   GetRenderbufferParameterivEXT  0        Number of coverage   4.4.2.1           - 
+                                                                                    samples used by the
+                                                                                    renderbuffer
+    RENDERBUFFER_COLOR_SAMPLES_NV      Z+   GetRenderbufferParameterivEXT  0        Number of color      4.4.2.1           - 
+                                                                                    samples used by the
+                                                                                    renderbuffer
+
+(modify RENDERBUFFER_SAMPLES_EXT entry in table 8.nnn)
+
+                                                                   Initial
+    Get Value                 Type  Get Command                    Value   Description          Section       Attribute
+    ------------------------  ----  -----------------------------  ------  -------------------  ------------  ---------
+    RENDERBUFFER_SAMPLES_EXT    Z+  GetRenderbufferParameterivEXT  0       Alias for            4.4.2.1           - 
+                                                                           RENDERBUFFER_-
+                                                                           COVERAGE_SAMPLES_NV
+
+New Implementation Dependent State
+
+                                                                Minimum
+    Get Value                          Type        Get Command  Value    Description                           Section  Attribute
+    ---------------------------------  ---------   -----------  -------  ------------------------------------  -------  ---------
+    MAX_MULTISAMPLE_COVERAGE_MODES_NV    Z+        GetIntegerv        0  Number of unique combinations of      4.4.2.1      -
+                                                                         <coverageSamples> and <colorSamples>
+                                                                         supported by the implementation.
+    MULTISAMPLE_COVERAGE_MODES_NV      n * 2 x Z+  GetIntegerv     -     MAX_MULTISAMPLE_COVERAGE_MODES_NV (n)  4.4.2.1      -
+                                                                         pairs of integers.  Each pair is
+                                                                         a unique combination of 
+                                                                         <coverageSamples> and <colorSamples>
+                                                                         supported by the implementation.
+
+Issues
+
+    (1)  How should RenderbufferStorageMultisampleEXT be layered on top
+         of RenderbufferStorageMultisampleCoverageNV?
+
+         RESOLVED.  NVIDIA will expose this extension at the same time
+         that EXT_framebuffer_multisample is exposed, so there will not
+         be any issues with backward compatibility.  However, some 
+         developers choose not to use vendor specific extensions.  These
+         developers should be able to make use of current and future
+         hardware that differentiates between color and coverage 
+         samples.  Since color samples are a subset of coverage samples,
+         the <samples> parameter to RenderbufferStorageMultisampleEXT
+         should be treated as a request for coverage samples.  The 
+         implementation is free to choose the number of color samples
+         used by the renderbuffer.
+
+    (2)  <coverageSamples> is rounded up to the next highest
+         number of samples supported by the implementation.  How
+         should <colorSamples> be rounded given that an implementation
+         may not support all combinations of <coverageSamples> and
+         <colorSamples>?
+
+         RESOLVED:  It is a requirement that <coverageSamples> be 
+         compatible with the <samples> parameter to 
+         RenderbufferStorageMultisampleEXT.  While it is desirable for
+         <colorSamples> to resolve the same way as <coverageSamples>, 
+         this may not always be possible.  An implementation may support 
+         a different maximum number of color samples for each coverage
+         sample count.  It would be confusing to set an error when 
+         <colorSamples> exceeds the maximum supported number of color 
+         samples for a given coverage sample count, because there 
+         is no mechanism to query or predict this behavior.  Therefore,
+         the implementation should round <colorSamples> down when it
+         exceeds the maximum number of color samples supported with the
+         given coverage sample count.  Otherwise, <colorSamples> is
+         rounded up to the next highest number of color samples
+         supported by the implementation.
+         
+   (3)   EXT_framebuffer_multisample provides a way to query the maximum
+         number of samples supported by an implementation.  Should a new
+         query mechanism be added so that an application can determine 
+         the maximum number of color samples supported with a given
+         number of coverage samples?
+
+         RESOLVED:  Yes.  An application can use GetIntegerv to query 
+         MAX_MULTISAMPLE_COVERAGE_MODES_NV.  The result is the number of
+         unique combinations of <coverageSamples> and <colorSamples> that
+         are supported by the implementation.  GetIntegerv can be used
+         with MULTISAMPLE_COVERAGE_MODES_NV to query these combinations.
+         The integer array is populated with 
+         MAX_MULTISAMPLE_COVERAGE_MODES_NV pairs of integers, where each
+         pair describes a unique multisample coverage mode.  The first
+         integer in each pair is the number of coverage samples and the
+         second integer is the number of color samples.  An example is
+         below:
+
+             // Get the number of unique multisample coverage modes
+             glGetIntegerv(GL_MAX_MULTISAMPLE_COVERAGE_MODES_NV, &numModes);
+
+             // Allocate enough memory to store the array of modes
+             GLint *modes = (GLint*)malloc(2*numModes*sizeof(GLint));
+
+             // Get the list of modes
+             glGetIntegerv(GL_MULTISAMPLE_COVERAGE_MODES_NV, modes);
+
+             // Print out all of the modes
+             for (i = 0; i < numModes; i++) {
+                 printf("%d coverage samples, %d color samples\n",
+                        modes[i*2+0],   // coverage samples for mode i
+                        modes[i*2+1]);  // color samples for mode i
+             }
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+    7-9   05/31/08  mjk       Miscellaneous typo fixes.
+
+     6              mstrauss  Internal spec development.

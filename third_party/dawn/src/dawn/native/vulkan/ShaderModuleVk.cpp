@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/ShaderModuleVk.h"
+#include "src/dawn/native/vulkan/ShaderModuleVk.h"
 
 #include <cstdint>
 #include <string>
@@ -34,37 +34,39 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/HashUtils.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/Ref.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/CacheRequest.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/ResourceTableDefaultResources.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/TintUtils.h"
-#include "dawn/native/utils/WGPUHelpers.h"
-#include "dawn/native/vulkan/BindGroupLayoutVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/PipelineLayoutVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
 #include "dawn/native/wgpu_structs_autogen.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
-#include "dawn/platform/tracing/TraceEvent.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/CacheRequest.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/ResourceTable.h"
+#include "src/dawn/native/ResourceTableDefaultResources.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/TintUtils.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/native/vulkan/BindGroupLayoutVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/ImmediatesLayoutVk.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/PipelineLayoutVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/numeric.h"
 #include "tint/tint.h"
 
 #ifdef DAWN_ENABLE_SPIRV_VALIDATION
-#include "dawn/native/SpirvValidation.h"
+#include "src/dawn/native/SpirvValidation.h"
 #endif
 
 namespace dawn::native::vulkan {
@@ -113,8 +115,7 @@ ShaderModule::~ShaderModule() = default;
     X(LimitsForCompilationRequest, limits)                                           \
     X(UnsafeUnserializedValue<LimitsForCompilationRequest>, adapterSupportedLimits)  \
     X(uint32_t, maxSubgroupSize)                                                     \
-    X(uint32_t, minExplicitComputeSubgroupSize)                                      \
-    X(uint32_t, maxExplicitComputeSubgroupSize)                                      \
+    X(uint32_t, minSubgroupSize)                                                     \
     X(uint32_t, maxComputeWorkgroupSubgroups)                                        \
     X(bool, usesSubgroupMatrix)                                                      \
     X(std::vector<SubgroupMatrixConfig>, subgroupMatrixConfig)                       \
@@ -128,24 +129,27 @@ DAWN_MAKE_CACHE_REQUEST(SpirvCompilationRequest, SPIRV_COMPILATION_REQUEST_MEMBE
 
 ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
     const CompileParameters& in) {
-    TRACE_EVENT0(GetDevice()->GetPlatform(), General, "ShaderModuleVk::GetHandleAndSpirv");
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "ShaderModuleVk::GetHandleAndSpirv");
 
 #if TINT_BUILD_SPV_WRITER
     // Creation of module and spirv is deferred to this point when using tint generator
 
-    // The first VkDescriptorSetLayout is the one for the resource table if needed and pushes the
-    // bindings for all other bindgroups by 1.
-    BindGroupIndex startOfBindGroups{0};
-    std::optional<tint::ResourceTableConfig> resourceTableConfig = std::nullopt;
-    if (in.layout->UsesResourceTable()) {
-        startOfBindGroups = BindGroupIndex(1);
+    // The first VkDescriptorSetLayout is the one for the framebuffer fetch and/or resource table if
+    // needed and pushes the bindings for all other bindgroups.
+    BindGroupIndex startOfBindGroups{0u};
 
-        auto bindingTypeOrder = ResourceTableDefaultResources::GetOrder();
-        resourceTableConfig = tint::ResourceTableConfig{
-            .resource_table_binding = tint::BindingPoint(0, 1),
-            .storage_buffer_binding = tint::BindingPoint(0, 0),
-            .default_binding_type_order = {bindingTypeOrder.begin(), bindingTypeOrder.end()},
-        };
+    std::unordered_map<uint32_t, tint::BindingPoint> framebuffer_fetch_bindings;
+    if (in.pipelineUsesFramebufferFetch) {
+        if (in.stage->metadata->fragmentInputMask.any()) {
+            for (uint32_t i = 0; i < kMaxColorAttachments; ++i) {
+                framebuffer_fetch_bindings[i] = {static_cast<uint32_t>(startOfBindGroups), i};
+            }
+        }
+        startOfBindGroups = startOfBindGroups + BindGroupIndex(1u);
+    }
+
+    if (in.layout->UsesResourceTable()) {
+        startOfBindGroups = BindGroupIndex(1u);
     }
 
     auto ToWGSLBindPoint = [](BindGroupIndex group, BindingNumber binding) -> tint::BindingPoint {
@@ -160,6 +164,20 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
             .binding = uint32_t{index},
         };
     };
+
+    std::optional<tint::ResourceTableConfig> resourceTableConfig = std::nullopt;
+    if (in.layout->UsesResourceTable()) {
+        auto binding_to_resource_type = GenerateBindingToResourceType(in.layout, ToSPIRVBindPoint);
+
+        auto bindingTypeOrder = ResourceTableDefaultResources::GetOrder();
+        resourceTableConfig = tint::ResourceTableConfig{
+            .resource_table_binding = tint::BindingPoint(0, 1),
+            .storage_buffer_binding = tint::BindingPoint(0, 0),
+            .default_binding_type_order = {bindingTypeOrder.begin(), bindingTypeOrder.end()},
+            .binding_to_resource_type = binding_to_resource_type,
+        };
+    }
+
     tint::Bindings bindings =
         GenerateBindingRemapping(in.layout, in.stage->metadata->stage, ToSPIRVBindPoint);
 
@@ -249,20 +267,21 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
     };
     req.tintOptions.bindings = std::move(bindings);
     req.tintOptions.resource_table = std::move(resourceTableConfig);
+    req.tintOptions.colour_index_to_binding_point = std::move(framebuffer_fetch_bindings);
 
     req.tintOptions.disable_robustness = !GetDevice()->IsRobustnessEnabled();
     req.tintOptions.disable_workgroup_init =
         GetDevice()->IsToggleEnabled(Toggle::DisableWorkgroupInit);
 
-    req.tintOptions.workarounds.polyfill_unary_f32_negation =
-        GetDevice()->IsToggleEnabled(Toggle::VulkanPolyfillF32Negation);
+    req.tintOptions.workarounds.polyfill_float_negation =
+        GetDevice()->IsToggleEnabled(Toggle::VulkanPolyfillFloatNegation);
 
     // These polyfills all relate to incorrect backend optimization of fabs.
     // See: crbug.com/93692702
-    if (GetDevice()->IsToggleEnabled(Toggle::VulkanPolyfillF32Abs)) {
-        req.tintOptions.workarounds.polyfill_f32_abs = true;
-        req.tintOptions.workarounds.polyfill_length_scalar_f32 = true;
-        req.tintOptions.workarounds.polyfill_distance_scalar_f32 = true;
+    if (GetDevice()->IsToggleEnabled(Toggle::VulkanPolyfillFloatAbs)) {
+        req.tintOptions.workarounds.polyfill_float_abs = true;
+        req.tintOptions.workarounds.polyfill_length_scalar_float = true;
+        req.tintOptions.workarounds.polyfill_distance_scalar_float = true;
     }
 
     req.tintOptions.disable_polyfill_integer_div_mod =
@@ -299,10 +318,26 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
     req.tintOptions.extensions.use_uniform_buffers =
         !GetDevice()->IsToggleEnabled(Toggle::DecomposeUniformBuffers);
 
-    req.tintOptions.workarounds.subgroup_shuffle_clamped =
-        GetDevice()->IsToggleEnabled(Toggle::SubgroupShuffleClamped);
+    // Maximal reconvergence takes precedence over subgroup uniform control flow in the SPIR-V
+    // backend so just try to turn both on.
+    if (GetDevice()->IsToggleEnabled(Toggle::UseSpirvReconvergenceMode)) {
+        req.tintOptions.extensions.use_maximal_reconvergence =
+            ToBackend(GetDevice())->GetDeviceInfo().HasExt(DeviceExt::MaximalReconvergence) &&
+            ToBackend(GetDevice())
+                    ->GetDeviceInfo()
+                    .shaderMaximalReconvergenceFeatures.shaderMaximalReconvergence == VK_TRUE;
+        req.tintOptions.extensions.use_subgroup_uniform_control_flow =
+            ToBackend(GetDevice())->GetDeviceInfo().HasExt(DeviceExt::SubgroupUniformControlFlow) &&
+            ToBackend(GetDevice())
+                    ->GetDeviceInfo()
+                    .shaderSubgroupUniformControlFlowFeatures.shaderSubgroupUniformControlFlow ==
+                VK_TRUE;
+    }
+
     req.tintOptions.workarounds.texture_sample_compare_depth_cube_array =
         GetDevice()->IsToggleEnabled(Toggle::VulkanSampleCompareDepthCubeArrayWorkaround);
+    req.tintOptions.workarounds.texture_sample_compare_2d_polyfill =
+        GetDevice()->IsToggleEnabled(Toggle::VulkanSampleCompare2DWorkaround);
     req.tintOptions.workarounds.polyfill_pack_unpack_4x8_norm =
         GetDevice()->IsToggleEnabled(Toggle::PolyfillPackUnpack4x8Norm);
     req.tintOptions.workarounds.polyfill_case_switch =
@@ -317,8 +352,14 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
         GetDevice()->IsToggleEnabled(Toggle::VulkanDirectVariableAccessTransformHandle);
     req.tintOptions.workarounds.polyfill_subgroup_broadcast_f16 =
         GetDevice()->IsToggleEnabled(Toggle::EnableSubgroupsIntelGen9);
+    req.tintOptions.workarounds.collapse_subgroup_min_max =
+        GetDevice()->IsToggleEnabled(Toggle::CollapseSubgroupMinMax);
     req.tintOptions.workarounds.cooperative_matrix_stride_is_matrix_elements =
         GetDevice()->IsToggleEnabled(Toggle::VulkanCooperativeMatrixStrideIsMatrixElements);
+    req.tintOptions.workarounds.replace_workgroup_atomic_store_with_exchange =
+        GetDevice()->IsToggleEnabled(Toggle::VulkanReplaceWorkgroupAtomicStoreWithExchange);
+    req.tintOptions.workarounds.replace_unsigned_compare_zero =
+        GetDevice()->IsToggleEnabled(Toggle::VulkanReplaceUnsignedCompareZero);
 
     // Pass matrices to user functions by pointer on Qualcomm devices to workaround a known bug.
     // See crbug.com/tint/2045.
@@ -326,32 +367,35 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
         req.tintOptions.workarounds.pass_matrix_by_pointer = true;
     }
 
-    // Set internal immediate constant offsets
-    if (HasImmediateConstants(&RenderImmediateConstants::clampFragDepth, in.immediateMask)) {
-        uint32_t offsetStartBytes = GetImmediateByteOffsetInPipeline(
-            &RenderImmediateConstants::clampFragDepth, in.immediateMask);
-        req.tintOptions.depth_range_offsets = {
-            offsetStartBytes, offsetStartBytes + kImmediateConstantElementByteSize};
+    // Set internal immediate offsets
+    // Size the immediate block to the pipeline's used slots so the decomposed array matches the
+    // push constant range reserved by the pipeline layout (see ToPushConstantBytes).
+    req.tintOptions.minimum_immediate_size =
+        checked_cast<uint32_t>(in.immediateMask.count() * kImmediateElementByteSize);
+    if (HasImmediates(&RenderImmediates::clampFragDepth, in.immediateMask)) {
+        uint32_t offsetStartBytes =
+            GetImmediateByteOffsetInPipeline(&RenderImmediates::clampFragDepth, in.immediateMask);
+        req.tintOptions.depth_range_offsets = {offsetStartBytes,
+                                               offsetStartBytes + kImmediateElementByteSize};
     }
 
     req.limits = LimitsForCompilationRequest::Create(GetDevice()->GetLimits().v1);
     req.adapterSupportedLimits = UnsafeUnserializedValue(
         LimitsForCompilationRequest::Create(GetDevice()->GetAdapter()->GetLimits().v1));
     req.maxSubgroupSize = GetDevice()->GetAdapter()->GetPhysicalDevice()->GetSubgroupMaxSize();
-    if (GetDevice()->HasFeature(Feature::ChromiumExperimentalSubgroupSizeControl)) {
-        req.minExplicitComputeSubgroupSize =
-            GetDevice()->GetAdapter()->GetPhysicalDevice()->GetMinExplicitComputeSubgroupSize();
-        req.maxExplicitComputeSubgroupSize =
-            GetDevice()->GetAdapter()->GetPhysicalDevice()->GetMaxExplicitComputeSubgroupSize();
+
+    if (GetDevice()->HasFeature(Feature::SubgroupSizeControl)) {
+        const auto& subgroupSizeInfo = ToBackend(GetDevice()->GetPhysicalDevice())->GetDeviceInfo();
+        req.minSubgroupSize = subgroupSizeInfo.subgroupSizeControlProperties.minSubgroupSize;
         req.maxComputeWorkgroupSubgroups =
-            GetDevice()->GetAdapter()->GetPhysicalDevice()->GetMaxComputeWorkgroupSubgroups();
+            subgroupSizeInfo.subgroupSizeControlProperties.maxComputeWorkgroupSubgroups;
     }
 
     CacheResult<CompiledSpirv> compilation;
     DAWN_TRY_LOAD_OR_RUN(
         compilation, GetDevice(), std::move(req), CompiledSpirv::FromValidatedBlob,
         [](SpirvCompilationRequest r) -> ResultOrError<CompiledSpirv> {
-            TRACE_EVENT0(r.platform.UnsafeGetValue(), General, "tint::spirv::writer::Generate()");
+            TRACE_EVENT(DAWN_TRACE_CATEGORY(), "tint::spirv::writer::Generate()");
 
             // Requires Tint Program here right before actual using.
             auto shaderModule = r.inputProgram.UnsafeGetValue();
@@ -394,9 +438,31 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
                     _, ValidateComputeStageWorkgroupSize(
                            tintResult->workgroup_info, r.usesSubgroupMatrix, r.maxSubgroupSize,
                            r.limits, r.adapterSupportedLimits.UnsafeGetValue()));
-                DAWN_TRY(ValidateExplicitComputeSubgroupSize(
-                    tintResult->workgroup_info, r.minExplicitComputeSubgroupSize,
-                    r.maxExplicitComputeSubgroupSize, r.maxComputeWorkgroupSubgroups));
+
+                if (tintResult->workgroup_info.subgroup_size.has_value()) {
+                    const uint32_t explicitSubgroupSize =
+                        tintResult->workgroup_info.subgroup_size.value();
+                    DAWN_INVALID_IF(explicitSubgroupSize < r.minSubgroupSize ||
+                                        explicitSubgroupSize > r.maxSubgroupSize,
+                                    "The subgroup_size attribute (%u) is not in the allowed range "
+                                    "([%u, %u]).",
+                                    explicitSubgroupSize, r.minSubgroupSize, r.maxSubgroupSize);
+                }
+
+                if (tintResult->workgroup_info.subgroup_size.has_value()) {
+                    uint32_t explicitSubgroupSize =
+                        tintResult->workgroup_info.subgroup_size.value();
+                    // `numInvocations` is guaranteed to fit in a uint32_t because it was
+                    // validated in ValidateComputeStageWorkgroupSize.
+                    uint32_t numInvocations = tintResult->workgroup_info.x *
+                                              tintResult->workgroup_info.y *
+                                              tintResult->workgroup_info.z;
+                    uint32_t subgroupCount = numInvocations / explicitSubgroupSize;
+                    DAWN_INVALID_IF(
+                        subgroupCount > r.maxComputeWorkgroupSubgroups,
+                        "The number of subgroups per workgroup (%u) exceeds the maximum (%u).",
+                        subgroupCount, r.maxComputeWorkgroupSubgroups);
+                }
             }
 
             DAWN_TRY(ValidateSubgroupMatrixConfiguration(tintResult->subgroup_matrix_info,
@@ -413,7 +479,7 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
 
 #ifdef DAWN_ENABLE_SPIRV_VALIDATION
     if (GetDevice()->IsToggleEnabled(Toggle::DumpShaders)) {
-        DumpSpirv(GetDevice(), compilation->spirv.data(), compilation->spirv.size());
+        DumpSpirv(GetDevice(), compilation->spirv);
     }
 
     if (GetDevice()->IsToggleEnabled(Toggle::EnableSpirvValidation)) {
@@ -421,8 +487,7 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
 
         // Validate and if required dump the compiled SPIR-V code.
         const bool spv14 = GetDevice()->IsToggleEnabled(Toggle::UseSpirv14);
-        DAWN_TRY(ValidateSpirv(GetDevice(), compilation->spirv.data(), compilation->spirv.size(),
-                               spv14));
+        DAWN_TRY(ValidateSpirv(GetDevice(), compilation->spirv, spv14));
     }
 #endif
 
@@ -438,7 +503,7 @@ ResultOrError<ShaderModule::ModuleAndSpirv> ShaderModule::GetHandleAndSpirv(
     VkShaderModule newHandle = VK_NULL_HANDLE;
     {
         SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(GetDevice()->GetPlatform(), "Vulkan.CreateShaderModule");
-        TRACE_EVENT0(GetDevice()->GetPlatform(), General, "vkCreateShaderModule");
+        TRACE_EVENT(DAWN_TRACE_CATEGORY(), "vkCreateShaderModule");
         DAWN_TRY(CheckVkSuccess(
             device->fn.CreateShaderModule(device->GetVkDevice(), &createInfo, nullptr, &*newHandle),
             "CreateShaderModule"));

@@ -25,8 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/server/ObjectStorage.h"
-#include "dawn/wire/server/Server.h"
+#include "src/dawn/wire/server/ObjectStorage.h"
+#include "src/dawn/wire/server/Server.h"
 
 namespace dawn::wire::server {
 
@@ -40,14 +40,14 @@ WireResult Server::DoSurfaceGetCurrentTexture(Known<WGPUSurface> surface,
     mProcs->surfaceGetCurrentTexture(surface->handle, &surfaceTexture);
 
     if (surfaceTexture.texture != nullptr) {
-        return FillReservation(texture.id, surfaceTexture.texture);
+        return FillReservation(textureHandle, surfaceTexture.texture);
     } else {
         // The client always assumes that a texture will be associated with the reservation, so
         // create an error texture on the configured device.
         WGPUTextureDescriptor desc = WGPU_TEXTURE_DESCRIPTOR_INIT;
         WGPUTexture errorTexture =
             mProcs->deviceCreateErrorTexture(configuredDevice->handle, &desc);
-        return FillReservation(texture.id, errorTexture);
+        return FillReservation(textureHandle, errorTexture);
     }
 }
 

@@ -32,9 +32,9 @@
 #include <thread>
 #include <vector>
 
-#include "dawn/common/ContentLessObjectCache.h"
-#include "dawn/utils/BinarySemaphore.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/ContentLessObjectCache.h"
+#include "src/dawn/utils/BinarySemaphore.h"
 
 namespace dawn {
 namespace {

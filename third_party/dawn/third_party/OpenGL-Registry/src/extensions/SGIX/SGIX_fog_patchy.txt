@@ -1,0 +1,149 @@
+Name
+
+    SGIX_fog_patchy
+
+Name Strings
+
+    GL_SGIX_fog_patchy
+
+Version
+
+    $Date: 1999/03/30 23:13:46 $ $Revision: 1.3 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    OpenGL 1.2 is required
+
+Overview
+
+    Patchy fog is a fog in which intermittent areas of dense fog may
+    be encoutered. This extension explains how the patchy fog
+    extension is supported. Patchy fog is needed because both 
+    uniform fog density and fog layers can only specify a constant
+    density at a given elevation. The SGIX_fog_texture openGL
+    extension gives a mean to specify a patchy fog texture that will 
+    modulate the fog density at a given elevation. The goal of this
+    document is to describe the modulation fuction and the fog
+    equation when patchy fog is enabled. No tokens, states, or 
+    procedures are introduced in this extension.
+
+New Procedures and Functions
+
+    None
+
+Issues
+
+    - Since there is no API introduction is this extension the
+    good way to present things?
+
+    - Should we introduce a glEnable for patchy fog?
+
+    - We should move the description of the patchy fog equation
+    up to the overview but we do not want to disclose it for the
+    moment.
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    3.10 Fog
+
+    In addition to uniform fog density and fog layers, patchy fog can
+    be specified. The patchy fog extension gives a mean to modulate
+    the fog density with a texture.
+
+                                  _____      _____
+                density (d)   ___|     |    |     | 
+                                 |  *  |____|  *  |__ To fog equation
+                               __|     |  __|     |   (d*p*r)
+                              |  |_____| |  |_____|
+                              |          |
+                              |          |
+                              |          |
+    patchy fog texture (p)  __|          |
+                                         |
+                                         |
+    range (r) ---------------------------|
+
+    
+    The product (d*p*r) is used in the computation of the fog blending
+    factor (f). If the patchy fog texture is not enabled in SGIX_fog_texture, 
+    then the patchy fog texture has no effect (p = 1.0).
+
+    The computation of the fog equation when patchy fog is enabled
+    requires multiple passes. It is hereby described as a 2-pass
+    approach. If there are more than one patchy fog layer or more
+    than one patchy fog color, the second pass will be repeated
+    multiple times.
+
+    1) In the first pass: compute an intermediate color at a given
+    fragment using the fog blending equation. In this first pass,
+    the fog patchiness is ignored (p=1).
+
+	[RGBl] = f1 x [RGBs] + (1-f1) x  [RGBfog]
+
+    where,
+      - [RGBl] is the intermediate color stored in the frame buffer.
+      - f1 is the fog blending factor. It is a function of the fog
+        density (d) and the distance between the viewpoint and the
+        fragment in eye space (r).
+      - [RGBs] is the input fragment that is coming out from fragment
+        lighting in the rasterization pipeline.
+      - [RGBfog] is the fog color.
+
+    2) In the second pass: compute the final fragment color using the 
+    result of the previous pass. In the second pass, the fog
+    patchiness is taken into account (p=patchy fog texture)
+ 
+	Destination = f2 * [RGBl] + (1-f2) * [RGBcloud],
+
+    where,
+      - Destination is the final fragment color
+      - f2 is the fog blending factor. It is a function of the fog
+	density (d), the distance between the viewpoint and the fragment in eye
+	space (r), and the patchy fog texture (p). In the hardware, the density
+	is first multiplied by the patchy fog texture and then
+	multiplied by the range r.
+      - [RGBl] is the intermediate color. Color that we would get
+	without patchy fog.
+      - [RGBcloud] is the patchy fog color.
+  
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

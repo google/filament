@@ -33,8 +33,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace tint {
-namespace {
+namespace tint::core {
 
 struct Animal : public Castable<Animal> {};
 struct Amphibian : public Castable<Amphibian, Animal> {};
@@ -45,6 +44,8 @@ struct Bear : public Castable<Bear, Mammal> {};
 struct Lizard : public Castable<Lizard, Reptile> {};
 struct Gecko : public Castable<Gecko, Lizard> {};
 struct Iguana : public Castable<Iguana, Lizard> {};
+
+namespace {
 
 TEST(Castable, SwitchNoDefault) {
     std::unique_ptr<Animal> frog = std::make_unique<Frog>();
@@ -239,7 +240,8 @@ TEST(CastableDeathTest, SwitchMustMatch_NoMatchWithoutReturnValue) {
                 [&](Mammal*) {},   //
                 TINT_ICE_ON_NO_MATCH);
         },
-        testing::HasSubstr("internal compiler error: Switch() matched no cases. Type: Frog"));
+        testing::HasSubstr(
+            "internal compiler error: Switch() matched no cases. Type: tint::core::Frog"));
 }
 
 TEST(CastableDeathTest, SwitchMustMatch_NoMatchWithReturnValue) {
@@ -253,7 +255,8 @@ TEST(CastableDeathTest, SwitchMustMatch_NoMatchWithReturnValue) {
                 TINT_ICE_ON_NO_MATCH);
             ASSERT_EQ(res, 0);
         },
-        testing::HasSubstr("internal compiler error: Switch() matched no cases. Type: Frog"));
+        testing::HasSubstr(
+            "internal compiler error: Switch() matched no cases. Type: tint::core::Frog"));
 }
 
 TEST(CastableDeathTest, SwitchMustMatch_NullptrWithoutReturnValue) {
@@ -668,14 +671,13 @@ TEST(Castable, SwitchReturnNoDefaultInitializer) {
 }
 
 }  // namespace
+}  // namespace tint::core
 
-TINT_INSTANTIATE_TYPEINFO(Animal);
-TINT_INSTANTIATE_TYPEINFO(Amphibian);
-TINT_INSTANTIATE_TYPEINFO(Mammal);
-TINT_INSTANTIATE_TYPEINFO(Reptile);
-TINT_INSTANTIATE_TYPEINFO(Frog);
-TINT_INSTANTIATE_TYPEINFO(Bear);
-TINT_INSTANTIATE_TYPEINFO(Lizard);
-TINT_INSTANTIATE_TYPEINFO(Gecko);
-
-}  // namespace tint
+TINT_INSTANTIATE_TYPEINFO(tint::core::Animal);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Amphibian);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Mammal);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Reptile);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Frog);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Bear);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Lizard);
+TINT_INSTANTIATE_TYPEINFO(tint::core::Gecko);

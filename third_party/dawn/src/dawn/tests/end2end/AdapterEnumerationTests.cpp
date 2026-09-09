@@ -30,15 +30,18 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/StringViewUtils.h"
 #include "dawn/dawn_proc.h"
 #include "dawn/native/DawnNative.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/utils/compiler.h"
 
 #if defined(DAWN_ENABLE_BACKEND_VULKAN)
 // This must be above VulkanBackend.h otherwise vulkan.h will be included before we can wrap it with
 // vulkan_platform.h.
-#include "dawn/common/vulkan_platform.h"
+#include "src/dawn/common/vulkan_platform.h"
+
+// After vulkan_platform
 #include "dawn/native/VulkanBackend.h"
 #endif  // defined(DAWN_ENABLE_BACKEND_VULKAN)
 
@@ -355,7 +358,8 @@ TEST_F(AdapterEnumerationTests, WebGPUBackend) {
             adapter.GetInfo(&info);
 
             EXPECT_EQ(info.backendType, wgpu::BackendType::WebGPU);
-            EXPECT_NE(std::string_view(info.device.data, info.device.length).find("Vulkan"),
+            EXPECT_NE(DAWN_UNSAFE_TODO(std::string_view(info.device.data, info.device.length))
+                          .find("Vulkan"),
                       std::string_view::npos);
         }
     }
@@ -371,7 +375,8 @@ TEST_F(AdapterEnumerationTests, WebGPUBackend) {
             adapter.GetInfo(&info);
 
             EXPECT_EQ(info.backendType, wgpu::BackendType::WebGPU);
-            EXPECT_NE(std::string_view(info.device.data, info.device.length).find("SwiftShader"),
+            EXPECT_NE(DAWN_UNSAFE_TODO(std::string_view(info.device.data, info.device.length))
+                          .find("SwiftShader"),
                       std::string_view::npos);
         }
     }
@@ -420,9 +425,10 @@ TEST_F(AdapterEnumerationTests, WebGPUBackendToggles) {
 
             // Validate toggles state.
             auto togglesUsed = native::GetTogglesUsed(adapter);
-            EXPECT_TRUE(std::find_if(togglesUsed.begin(), togglesUsed.end(), [](const char* name) {
-                            return strcmp(kAllowUnsafeAPIToggle, name) == 0;
-                        }) != togglesUsed.end());
+            DAWN_UNSAFE_TODO(EXPECT_TRUE(
+                std::find_if(togglesUsed.begin(), togglesUsed.end(), [](const char* name) {
+                    return strcmp(kAllowUnsafeAPIToggle, name) == 0;
+                }) != togglesUsed.end()));
         }
     };
 

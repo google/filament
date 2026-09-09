@@ -30,7 +30,7 @@
 
 #include <webgpu/webgpu.h>
 
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/wire/client/ObjectBase.h"
 
 namespace dawn::wire::client {
 
@@ -38,12 +38,12 @@ class Device;
 
 class Texture final : public ObjectBase {
   public:
-    static WGPUTexture Create(Device* device, const WGPUTextureDescriptor* descriptor);
-    static WGPUTexture CreateError(Device* device, const WGPUTextureDescriptor* descriptor);
+    static Texture* Create(Device* device, const TextureDescriptor* descriptor);
+    static Texture* CreateError(Device* device, const TextureDescriptor* descriptor);
 
     Texture(const ObjectBaseParams& params,
             const Device* device,
-            const WGPUTextureDescriptor* descriptor);
+            const TextureDescriptor* descriptor);
     ~Texture() override;
 
     ObjectType GetObjectType() const override;
@@ -54,19 +54,19 @@ class Texture final : public ObjectBase {
     uint32_t APIGetDepthOrArrayLayers() const;
     uint32_t APIGetMipLevelCount() const;
     uint32_t APIGetSampleCount() const;
-    WGPUTextureDimension APIGetDimension() const;
-    WGPUTextureFormat APIGetFormat() const;
-    WGPUTextureUsage APIGetUsage() const;
-    WGPUTextureViewDimension APIGetTextureBindingViewDimension() const;
+    wgpu::TextureDimension APIGetDimension() const;
+    wgpu::TextureFormat APIGetFormat() const;
+    wgpu::TextureUsage APIGetUsage() const;
+    wgpu::TextureViewDimension APIGetTextureBindingViewDimension() const;
 
   private:
-    WGPUExtent3D mSize;
+    Extent3D mSize;
     uint32_t mMipLevelCount;
     uint32_t mSampleCount;
-    WGPUTextureDimension mDimension;
-    WGPUTextureFormat mFormat;
-    WGPUTextureUsage mUsage;
-    WGPUTextureViewDimension mTextureBindingViewDimension;
+    wgpu::TextureDimension mDimension;
+    wgpu::TextureFormat mFormat;
+    wgpu::TextureUsage mUsage;
+    wgpu::TextureViewDimension mTextureBindingViewDimension;
 };
 
 }  // namespace dawn::wire::client

@@ -1,0 +1,360 @@
+Name
+
+    OML_subsample
+
+Name Strings
+
+    GL_OML_subsample
+
+Contact
+
+    Jon Leech, Silicon Graphics (ljp 'at' sgi.com)
+
+Status
+
+    Complete. Approved by the Khronos SIG on July 19, 2001.
+
+Version
+
+    Last Modified Date: 07/23/2001
+    Author Revision: $Header: //depot/main/doc/registry/extensions/OML/subsample.spec#10 $
+
+Number
+
+    240
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification,
+
+Overview
+
+    Many video image formats and compression techniques utilize various
+    component subsamplings, so it is necessary to provide a mechanism to
+    specify the up- and down-sampling of components as pixel data is
+    drawn from and read back to the client. Though subsampled components
+    are normally associated with the video color space, YCrCb, use of
+    subsampling in OpenGL does not imply a specific color space. Color
+    space conversion may be performed using other extensions or core
+    capabilities such as the color matrix.
+
+    This extension defines two new pixel storage formats representing
+    subsampled data on the client. It is loosely based on the
+    SGIX_subsample extension, but specifies subsampling with the data
+    format parameter rather than pixel packing parameters. It also
+    adds support for CYA subsampled data.
+
+    When pixel data is received from the client and an unpacking
+    upsampling mode other than PIXEL_SUBSAMPLE_NONE_OML is specified,
+    upsampling is performed via replication, unless otherwise specified
+    by UNPACK_RESAMPLE_OML.
+
+    Similarly, when pixel data is read back to the client and a packing
+    downsampling mode other than PIXEL_SUBSAMPLE_NONE_OML is specified,
+    downsampling is performed via simple component decimation (point
+    sampling), unless otherwise specified by PACK_RESAMPLE_OML.
+
+Issues
+
+  * Which subsampled component orderings should be supported?
+
+    Only CY and CYA component ordering, since this matches contemporary
+    video hardware. YC and YCA ordering will require a separate
+    extension defining new formats.
+
+  * The new enumerant naming scheme gives the component frequencies in
+    the same order as the components themselves; that is,
+    FORMAT_SUBSAMPLE_24_24_OML corresponds to CY 4:2:2, and
+    FORMAT_SUBSAMPLE_244_244_OML corresponds to CYA 4:2:2:4. This makes
+    naming YC and YCA orderings easier.
+
+  * Should subsampling be specified with new pixel storage parameters,
+    like the SGIX_subsample extension, or with new formats, like the
+    EXT_422 extension?
+
+    With new formats. There are many invalid format/type combinations
+    when specifying subsampling with a pixel storage parameter. Also,
+    there's an ambiguity when doing this because the <format> parameter
+    represents the after-upsampling data format, not the host format.
+
+  * Because subsampled data is inherently pixel / texture oriented, this
+    extension only supports the new formats for pixel and texture
+    operations; it does not support them for convolution filters,
+    histograms, minmax, or color tables.
+
+  * The only packed pixel type supported is 10_10_10_2, since this is
+    needed for video data interoperability. It would be possible to
+    support many other packed pixel formats, but most are unused in
+    practice.
+
+    Is support for other packed pixels types, particularly
+    2_10_10_10_REV, required?
+
+  * Should readbacks of non-even widths be allowed when downsampling?
+
+    No. This is not consistent with draw operations, where this
+    constraint already exists. It also makes OML_resample more complex
+    when using an AVERAGE filter, since the edge cases may also apply to
+    even pixel coordinates. The spec may need to be more explicit about
+    this restriction.
+
+IP Status
+
+    No known issues.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, and GetTexImage
+
+	FORMAT_SUBSAMPLE_24_24_OML	    0x8982
+	FORMAT_SUBSAMPLE_244_244_OML	    0x8983
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+  - (3.6.4, p. 88 "Rasterization of Pixel Rectangles")
+
+    Add prior to the "Unpacking" subsection on page 90:
+
+    If <format> is FORMAT_SUBSAMPLE_24_24_OML or
+    FORMAT_SUBSAMPLE_244_244_OML, and <type> is one of the packed pixel
+    formats in table 3.8 other than UNSIGNED_INT_10_10_10_2, then the
+    error INVALID_OPERATION occurs; if <width> is not a multiple of 2
+    pixels, or if the value of the UNPACK_SKIP_PIXELS or
+    UNPACK_ROW_LENGTH parameters is not a multiple of 2 pixels, then the
+    error INVALID_OPERATION occurs.
+
+  - Add new entries to table 3.6:
+
+    Format Name			    Element Meaning and Order	Target Buffer
+    -----------			    -------------------------	-------------
+    FORMAT_SUBSAMPLE_24_24_OML	    CbY / CrY			Color
+    FORMAT_SUBSAMPLE_244_244_OML    CbYA / CrYA			Color
+
+  - Append to the caption of table 3.6:
+
+    Subsampled formats yield components that are further modified during
+    conversion to uniform sampling. The subsampled components are
+    denoted as Cb, Y, Cr, and A, although subsampled data is not defined
+    to be in any specific color space.
+
+  - Modify table 3.8:
+
+    <type> Parameter	    GL Data Number of  Matching
+    Token Name		    Type    Components Pixel Formats
+    ----------------------- ------- ---------- -------------
+    UNSIGNED_INT_10_10_10_2 uint    2, 3, 4    RGBA, BGRA,
+					       FORMAT_SUBSAMPLE_24_24_OML,
+					       FORMAT_SUBSAMPLE_244_244_OML
+
+  - Append to the caption of table 3.8:
+
+    Subsampled formats may pack components from multiple groups into a
+    single uint.
+
+  - Modify table 3.11's UNSIGNED_INT_10_10_10_2 entry:
+
+    UNSIGNED_INT_10_10_10_2, <format>s RGBA and BGRA:
+
+	(use existing 4-component diagram)
+
+    UNSIGNED_INT_10_10_10_2, <format> SUBSAMPLE_24_24_OML:
+
+	 31		22 21		  12 11		     2 1  0
+	| pixel 0/comp. 0 | pixel 0/comp. 1 | pixel 1/comp. 0 | xx |
+	| pixel 1/comp. 1 | pixel 2/comp. 0 | pixel 2/comp. 1 | xx |
+
+    UNSIGNED_INT_10_10_10_2, <format> SUBSAMPLE_244_244_OML:
+
+	 31		22 21		  12 11		     2 1  0
+	| 1st comp.	  | 2nd comp.	    | 3rd comp.       | xx |
+
+  - Change caption of table 3.11:
+
+    Table 3.11: UNSIGNED_INT formats. Subsampled formats are packed into
+    words, so components from a group may lie in different words. ``xx''
+    fields are unused.
+
+  - Add new subsection before "Conversion to RGB" on page 99:
+
+    Conversion to Uniform Sampling
+
+    This step is applied only to subsampled data. If <format> is
+    FORMAT_SUBSAMPLE_24_24_OML, then the number of components per pixel
+    is increased from two to three. If <format> is
+    FORMAT_SUBSAMPLE_244_244_OML. then the number of components per
+    pixel is increased from three to four.
+
+    After conversion to uniform sampling (see figure 3.9). pixels are
+    thereafter treated as though they were RGB (three component) or RGBA
+    (four component) format.
+
+    In the remainder of this section, the j'th component of the i'th
+    pixel in a row is denoted by S_i,j (for source pixels in client
+    memory) and D_i,j (for destination pixels in the color buffer).
+
+    Destination component values are defined as:
+
+    For even pixels ((i mod 2) == 0):
+
+	D_i,0 = S_i,0
+	D_i,1 = S_i,1
+	D_i,2 = S_i+1,0
+	D_i,3 = S_i,2
+
+    For odd pixels ((i mod 2) == 1):
+
+	D_i,0 = S_i-1,0
+	D_i,1 = S_i,1
+	D_i,2 = S_i,0
+	D_i,3 = S_i,2
+
+  - Add new figure 3.9 (renumber following figures):
+
+    FORMAT_SUBSAMPLE_24_24_OML:
+    <Cb0,Y0>	 <Cr0,Y1>     <Cb2,Y2>	  <Cr2, Y3>
+      |  |	  |   |        |   |	    |	|
+      |  |   ____/ \__|__      |   |   ____/ \__|__
+      |  |  /	      |  \     |   |  /		|  \
+      |\_|__|_____    |  |     |\__|__|_____	|  |
+      |  |  |	  \   |  |     |   |  |     \	|  |
+      V  V  V	  V   V  V     V   V  V     V	V  V
+    <Cb0,Y0,Cr0> <Cb0,Y1,Cr0> <Cb2,Y2,Cr2> <Cb2,Y3,Cr2>
+    < R0,G0,B1 > < R0,G1,B1 > < R2,G2,B3 > < R2,G3,B3 >
+
+    FORMAT_SUBSAMPLE_244_244_OML:
+    <Cb0,Y0,A0>     <Cr0,Y1,A1>     <Cb2,Y2,A2>     <Cr2,Y3,A3>
+      |  |   \	     |	 |   \	     |	 |   \	     |	 |   \
+      |  |   _\_____/ \__|__  \      |	 |   _\_____/ \__|__  \
+      |  |  /  \	 |  \  \     |	 |  /  \	 |  \  \
+      |\_|__|___\____	 |  |	\    |\__|__|___\____	 |  |	\
+      |  |  |	|    \	 |  |	|    |	 |  |	|    \	 |  |	|
+      V  V  V	V    V	 V  V	V    V	 V  V	V    V	 V  V	V
+    <Cb0,Y0,Cr0,A0> <Cb0,Y1,Cr0,A1> <Cb2,Y2,Cr2,A2> <Cb2,Y3,Cr2,A3>
+    < R0,G0,B1,A0 > < R0,G1,B1,A1 > < R2,G2,B3,A2 > < R2,G3,B3,A3 >
+
+    Figure 3.9: Upsampling with component replication of subsampled data
+    from client memory to form RGB or RGBA pixels.
+
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    4.3.2 Reading Pixels
+
+  - Add new subsection before "Final Conversion" on page 160:
+
+    Conversion to Subsampled Form
+
+    This step is applied only if <format> is FORMAT_SUBSAMPLE_24_24_OML
+    or FORMAT_SUBSAMPLE_244_244_OML.
+
+    In the remainder of this section, the j'th component of the i'th
+    pixel in a row is denoted by S_i,j (for source pixels in the color
+    buffer) and D_i,j (for destination pixels in client memory).
+
+    If <format> is FORMAT_SUBSAMPLE_24_24_OML, then the resulting pixels
+    have 2 components; if <format> is FORMAT_SUBSAMPLE_244_244_OML, then
+    the resulting pixels have 3 components (see figure 4.3). Destination
+    component values are defined as:
+
+    For even pixels ((i mod 2) == 0):
+
+	D_i,0 = S_i,0
+	D_i,1 = S_i,1
+	D_i,2 = S_i,3	(only for FORMAT_SUBSAMPLE_244_244_OML)
+
+    For odd pixels ((i mod 2) == 1):
+
+	D_i,0 = S_i-1,2
+	D_i,1 = S_i,1
+	D_i,2 = S_i,3	(only for FORMAT_SUBSAMPLE_244_244_OML)
+
+  - Add new figure 4.3 (renumber following figures):
+
+    FORMAT_SUBSAMPLE_24_24_OML:
+    <R0,G0,B0,A0> <R1,G1,B1,A1> <R2,G2,B2,A2> <R3,G3,B3,A3>
+      |  | |   |   |  |  |  |	 |  |  |  |    |  |  |	|
+      |  |  \  *   *  |  *  *	 |  |	\ *    *  |  *	*
+      |  |   |	      |		 |  |	 |	  |
+      V  V   V	      V		 V  V	 V	  V
+    <Cb0,Y0><Cr0,     Y1>	<Cb2,Y2><Cr2,	  Y3>
+    <--- pixel pair ---->	<--- pixel pair ---->
+
+    FORMAT_SUBSAMPLE_244_244_OML:
+    <R0,G0,B0,A0> <R1,G1,B1,A1> <R2,G2,B2,A2> <R3,G3,B3,A3>
+      |  |  |  |   |   |  |  |	  |  |	|  |   |   |  |  |
+      |  |  \__|__ *   |  *  |	  |  |	\__|__ *   |  *  |
+      |  |     |  \    |     |	  |  |	   |  \    |	 |
+      |  |    /    |   |    /	  |  |	  /    |   |	/
+      V  V   V	   V   V   V	  V  V	 V     V   V   V
+    <Cb0,Y0,A0>   <Cr0,Y1,A1>	<Cb2,Y2,A2>   <Cr2,Y3,A3>
+    <--- pixel pair ---->	<--- pixel pair ---->
+
+    Figure 4.3: Downsampling of RGB or RGBA pixels to form subsampled
+    data in host memory.
+
+
+  - Add prior to the last sentence of subsection "Placement in Client
+    Memory" on page 162:
+
+    If <format> is FORMAT_SUBSAMPLE_24_24_OML, then only the
+    corresponding two elements (first two components of each group) are
+    written. If <format> is FORMAT_SUBSAMPLE_244_244_OML, then only the
+    corresponding three elements (first three components of each group)
+    are written.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX 1.3 Specification
+
+    TBD. Discussion of image formats in the GLX Protocol Specification
+    may need to be expanded.
+
+Errors
+
+    See above.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Revision History
+
+  * Revision 10, 07/24/2001 - Finalized Status for OpenML 1.0.
+  * Revision 9, 07/16/2001 - Fix label in 24_24 packed pixel diagram.
+  * Revisions 7-8, 07/11/2001 - Assign enum values and extension number
+    for the registry.
+  * Revision 6 - Correct errors in the equations describing subsampling.
+  * Revision 5 - formatting changes for OpenML Specification
+  * Revision 4 - Rewrite to use the <format> parameter, rather than a
+    pixel storage mode, to specify subsampled data. Specify which
+    format/type combinations are allowed for subsampled data, and define
+    the representation of 10-bit component subsampled packed pixel data.
+  * Revision 3 - Removed support for YC component orders. Renamed CY and
+    CYA enumerants more sensibly. Changed text descriptions of sampling
+    to equations. Made enum values undefined until we've determined if
+    this extension is backwards compatible with SGIX_subsample.
+  * Revision 2 - corrected 4224 upsampling and downsampling figures.
+    Moved discussion of errors for non-even image widths from the
+    OML_resample specification.
+  * Revision 1 - derived from SGIX_subsample.

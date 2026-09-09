@@ -27,7 +27,7 @@
 
 #include "dawn/wire/WireServer.h"
 
-#include "dawn/wire/server/Server.h"
+#include "src/dawn/wire/server/Server.h"
 
 namespace dawn::wire {
 
@@ -41,8 +41,8 @@ WireServer::~WireServer() {
     mImpl.reset();
 }
 
-const volatile char* WireServer::HandleCommands(const volatile char* commands, size_t size) {
-    return mImpl->HandleCommands(commands, size);
+bool WireServer::HandleCommands(std::span<const volatile std::byte> commands) {
+    return mImpl->HandleCommands(commands);
 }
 
 bool WireServer::InjectBuffer(WGPUBuffer buffer, const Handle& handle, const Handle& deviceHandle) {
@@ -73,30 +73,18 @@ bool WireServer::IsDeviceKnown(WGPUDevice device) const {
     return mImpl->IsDeviceKnown(device);
 }
 
+server::Server* WireServer::GetImplForTesting() {
+    return mImpl.get();
+}
+
 namespace server {
 MemoryTransferService::MemoryTransferService() = default;
 
 MemoryTransferService::~MemoryTransferService() = default;
 
-MemoryTransferService::ReadHandle::ReadHandle() = default;
+MemoryTransferService::MemoryHandle::MemoryHandle() = default;
 
-MemoryTransferService::ReadHandle::~ReadHandle() = default;
-
-MemoryTransferService::WriteHandle::WriteHandle() = default;
-
-MemoryTransferService::WriteHandle::~WriteHandle() = default;
-
-void MemoryTransferService::WriteHandle::SetTarget(void* data) {
-    mTargetData = static_cast<uint8_t*>(data);
-}
-void MemoryTransferService::WriteHandle::SetDataLength(size_t dataLength) {
-    mDataLength = dataLength;
-}
-std::span<uint8_t> MemoryTransferService::WriteHandle::GetTarget() const {
-    DAWN_ASSERT(mTargetData != nullptr);
-    return std::span<uint8_t>(mTargetData, mDataLength);
-}
-
+MemoryTransferService::MemoryHandle::~MemoryHandle() = default;
 }  // namespace server
 
 }  // namespace dawn::wire

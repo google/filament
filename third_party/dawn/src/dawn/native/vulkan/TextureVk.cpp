@@ -25,33 +25,35 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
 
 #include <iostream>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/DynamicLib.h"
-#include "dawn/common/Math.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/Error.h"
 #include "dawn/native/VulkanBackend.h"
-#include "dawn/native/utils/RenderDoc.h"
-#include "dawn/native/vulkan/BufferVk.h"
-#include "dawn/native/vulkan/CommandBufferVk.h"
-#include "dawn/native/vulkan/CommandRecordingContextVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/QueueVk.h"
-#include "dawn/native/vulkan/ResourceHeapVk.h"
-#include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
-#include "dawn/native/vulkan/SamplerVk.h"
-#include "dawn/native/vulkan/SharedFenceVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/utils/RenderDoc.h"
+#include "src/dawn/native/vulkan/BufferVk.h"
+#include "src/dawn/native/vulkan/CommandBufferVk.h"
+#include "src/dawn/native/vulkan/CommandRecordingContextVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/QueueVk.h"
+#include "src/dawn/native/vulkan/ResourceHeapVk.h"
+#include "src/dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "src/dawn/native/vulkan/SamplerVk.h"
+#include "src/dawn/native/vulkan/SharedFenceVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::vulkan {
 
@@ -323,8 +325,8 @@ VkImageMemoryBarrier BuildMemoryBarrier(const Texture* texture,
     barrier.pNext = nullptr;
     barrier.srcAccessMask = VulkanAccessFlags(lastUsage, format);
     barrier.dstAccessMask = VulkanAccessFlags(usage, format);
-    barrier.oldLayout = VulkanImageLayout(format, lastUsage);
-    barrier.newLayout = VulkanImageLayout(format, usage);
+    barrier.oldLayout = texture->VulkanImageLayout(lastUsage);
+    barrier.newLayout = texture->VulkanImageLayout(usage);
     barrier.image = texture->GetHandle();
     barrier.subresourceRange.aspectMask = VulkanAspectMask(range.aspects);
     barrier.subresourceRange.baseMipLevel = range.baseMipLevel;
@@ -412,6 +414,7 @@ VkComponentSwizzle VulkanComponentSwizzle(wgpu::ComponentSwizzle swizzle) {
         case wgpu::ComponentSwizzle::Undefined:
             DAWN_UNREACHABLE();
     }
+    DAWN_UNREACHABLE();
 }
 
 void MaybeConvertDepthStencilSwizzleOneToAlpha(bool isDepthOrStencilFormat,
@@ -678,10 +681,13 @@ VkImageUsageFlags VulkanImageUsage(const DeviceBase* device,
             flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         } else {
             flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-            if (!format.IsMultiPlanar() && (usage & wgpu::TextureUsage::TextureBinding) &&
-                device->HasFeature(Feature::DawnLoadResolveTexture)) {
-                // Automatically set "input attachment" usage so that the texture would be
-                // used in ExpandResolveTexture subpass.
+
+            // Automatically set "input attachment" usage so that the texture can be used in
+            // ExpandResolveTexture subpass or with framebuffer fetch.
+            bool mayNeedToExpandTexture = !format.IsMultiPlanar() &&
+                                          usage & wgpu::TextureUsage::TextureBinding &&
+                                          device->HasFeature(Feature::DawnLoadResolveTexture);
+            if (mayNeedToExpandTexture || device->HasFeature(Feature::FramebufferFetch)) {
                 flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
             }
         }
@@ -697,34 +703,44 @@ VkImageUsageFlags VulkanImageUsage(const DeviceBase* device,
     return flags;
 }
 
+VkImageCreateFlags VulkanImageCreateFlags(const DeviceBase* device,
+                                          wgpu::TextureUsage usage,
+                                          const Format& format,
+                                          uint32_t sampleCount) {
+    VkImageCreateFlags vkCreateFlags = 0;
+
+    // If the MSAARenderToSingleSampled feature is enabled, textures with RenderAttachment usage
+    // need to have the VK_IMAGE_CREATE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_BIT_EXT flag set so
+    // that they can be used as a render target with an implicit sample count. syoussefi@ has
+    // confirmed that this is expected to be cheap or no cost on hardware with the extension.
+    if (device->HasFeature(Feature::MSAARenderToSingleSampled) &&
+        (usage & wgpu::TextureUsage::RenderAttachment) && sampleCount == 1 &&
+        !format.HasDepthOrStencil()) {
+        vkCreateFlags |= VK_IMAGE_CREATE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_BIT_EXT;
+    }
+
+    return vkCreateFlags;
+}
+
 // Chooses which Vulkan image layout should be used for the given Dawn usage. Note that this
 // layout must match the layout given to various Vulkan operations as well as the layout given
 // to descriptor set writes.
-VkImageLayout VulkanImageLayout(const Format& format, wgpu::TextureUsage usage) {
-    if (usage == wgpu::TextureUsage::None) {
-        return VK_IMAGE_LAYOUT_UNDEFINED;
+VkImageLayout VulkanImageLayout(const Format& format,
+                                wgpu::TextureUsage usage,
+                                wgpu::TextureUsage allowedUsage = wgpu::TextureUsage::None) {
+    if (allowedUsage == wgpu::TextureUsage::None) {
+        allowedUsage = usage;
     }
 
-    if (!wgpu::HasZeroOrOneBits(usage)) {
-        // sampled | (some sort of readonly depth-stencil aspect) is the only possible multi-bit
-        // usage, if more appear we will need additional special-casing.
-        DAWN_ASSERT(IsSubset(
-            usage, wgpu::TextureUsage::TextureBinding | kDepthReadOnlyStencilWritableAttachment |
-                       kDepthWritableStencilReadOnlyAttachment | kReadOnlyRenderAttachment));
-
-        if (IsSubset(kDepthReadOnlyStencilWritableAttachment, usage)) {
-            return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
-        } else if (IsSubset(kDepthWritableStencilReadOnlyAttachment, usage)) {
-            return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
-        } else {
-            DAWN_ASSERT(
-                IsSubset(usage, kReadOnlyRenderAttachment | wgpu::TextureUsage::TextureBinding));
-            return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        }
-    }
-
-    // Usage has a single bit so we can switch on its value directly.
+    // Note some of these cases have one bit, others have multiple bits.
+#if DAWN_COMPILER_IS(CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch"
+#endif
     switch (usage) {
+        case wgpu::TextureUsage::None:
+            return VK_IMAGE_LAYOUT_UNDEFINED;
+
         case wgpu::TextureUsage::CopyDst:
             return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
@@ -736,6 +752,12 @@ VkImageLayout VulkanImageLayout(const Format& format, wgpu::TextureUsage usage) 
             // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL.
             if (format.HasDepthOrStencil() && format.IsRenderable()) {
                 return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            }
+            // Sampled textures can be used simultaneously as read only storage. If storage usage is
+            // allowed fall back to VK_IMAGE_LAYOUT_GENERAL.
+            // TODO(crbug.com/392121643): Investigate potential optimizations.
+            if (allowedUsage & (wgpu::TextureUsage::StorageBinding | kReadOnlyStorageTexture)) {
+                return VK_IMAGE_LAYOUT_GENERAL;
             }
             return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -752,6 +774,7 @@ VkImageLayout VulkanImageLayout(const Format& format, wgpu::TextureUsage usage) 
             // VK_IMAGE_LAYOUT_GENERAL layout.
         case wgpu::TextureUsage::StorageBinding:
         case kReadOnlyStorageTexture:
+        case kReadOnlyStorageTexture | wgpu::TextureUsage::TextureBinding:
         case kWriteOnlyStorageTexture:
             return VK_IMAGE_LAYOUT_GENERAL;
 
@@ -762,7 +785,14 @@ VkImageLayout VulkanImageLayout(const Format& format, wgpu::TextureUsage usage) 
                 return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             }
 
+        case kDepthReadOnlyStencilWritableAttachment:
+        case kDepthReadOnlyStencilWritableAttachment | wgpu::TextureUsage::TextureBinding:
+            return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+        case kDepthWritableStencilReadOnlyAttachment:
+        case kDepthWritableStencilReadOnlyAttachment | wgpu::TextureUsage::TextureBinding:
+            return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
         case kReadOnlyRenderAttachment:
+        case kReadOnlyRenderAttachment | wgpu::TextureUsage::TextureBinding:
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
         case kPresentReleaseTextureUsage:
@@ -782,10 +812,10 @@ VkImageLayout VulkanImageLayout(const Format& format, wgpu::TextureUsage usage) 
         case wgpu::TextureUsage::StorageAttachment:
             // TODO(dawn:1704): Support PLS on Vulkan.
             DAWN_UNREACHABLE();
-
-        case wgpu::TextureUsage::None:
-            break;
     }
+#if DAWN_COMPILER_IS(CLANG)
+#pragma clang diagnostic pop
+#endif
     DAWN_UNREACHABLE();
 }
 
@@ -883,18 +913,23 @@ void Texture::NotifySwapChainPresent() {
     // into the GPU process at startup. We start capturing all frames right away. The user has
     // to kill the process or stop it from rendering (e.g. close or change tabs in Chrome).
     if (auto renderDocApi = dawn::native::utils::GetRenderDocApi(device)) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast) - C cast in C header macro.
         void* renderDocDevicePtr = RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(device->GetVkInstance());
 
         // We signal the end of the current frame and the start of the next.
         // This means we miss capturing the very first frame.
-        renderDocApi->EndFrameCapture(renderDocDevicePtr, NULL);
-        renderDocApi->StartFrameCapture(renderDocDevicePtr, NULL);
+        renderDocApi->EndFrameCapture(renderDocDevicePtr, nullptr);
+        renderDocApi->StartFrameCapture(renderDocDevicePtr, nullptr);
     }
 #endif
 }
 
 void Texture::SetIsExternalSwapchainTexture(bool isSwapChainTexture) {
     mIsExternalSwapChainTexture = isSwapChainTexture;
+}
+
+VkImageLayout Texture::VulkanImageLayout(wgpu::TextureUsage usage) const {
+    return dawn::native::vulkan::VulkanImageLayout(GetFormat(), usage, GetUsage());
 }
 
 void Texture::SetLabelImpl() {
@@ -1014,6 +1049,7 @@ void Texture::TransitionUsageForPassImpl(
         }
 
         imageBarriers->push_back(BuildMemoryBarrier(this, lastSyncInfo->usage, newUsage, range));
+        MarkDirtyInResourceTables();
 
         allLastUsages |= lastSyncInfo->usage;
         allNewUsages |= newUsage;
@@ -1062,7 +1098,8 @@ void Texture::TransitionUsageNow(CommandRecordingContext* recordingContext,
         DAWN_ASSERT(srcStages != 0 && dstStages != 0);
         ToBackend(GetDevice())
             ->fn.CmdPipelineBarrier(recordingContext->commandBuffer, srcStages, dstStages, 0, 0,
-                                    nullptr, 0, nullptr, barriers.size(), barriers.data());
+                                    nullptr, 0, nullptr, checked_cast<uint32_t>(barriers.size()),
+                                    barriers.data());
     }
 }
 
@@ -1123,6 +1160,7 @@ void Texture::TransitionUsageAndGetResourceBarrierImpl(
             }
 
             imageBarriers->push_back(BuildMemoryBarrier(this, lastSyncInfo->usage, usage, range));
+            MarkDirtyInResourceTables();
 
             allLastUsages |= lastSyncInfo->usage;
             allLastShaderStages |= lastSyncInfo->shaderStages;
@@ -1151,6 +1189,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
     const bool isZero = clearValue == TextureBase::ClearValue::Zero;
     uint32_t uClearColor = isZero ? 0 : 1;
     float fClearColor = isZero ? 0.f : 1.f;
+    double dClearColor = double{fClearColor};
 
     VkImageSubresourceRange imageRange = {};
     imageRange.levelCount = 1;
@@ -1213,7 +1252,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
                 // Inherit wgpu::TextureUsage::RenderAttachment, which may be an internal usage.
                 viewDesc.usage = wgpu::TextureUsage::None;
 
-                ColorAttachmentIndex ca0(uint8_t(0));
+                ColorAttachmentIndex ca0(uint8_t{0});
                 DAWN_TRY_ASSIGN(beginCmd.colorAttachments[ca0].view,
                                 device->CreateTextureView(this, &viewDesc));
 
@@ -1221,15 +1260,14 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
                 colorAttachment.view = beginCmd.colorAttachments[ca0].view.Get();
 
                 beginCmd.colorAttachments[ca0].clearColor = colorAttachment.clearValue = {
-                    fClearColor, fClearColor, fClearColor, fClearColor};
+                    dClearColor, dClearColor, dClearColor, dClearColor};
                 beginCmd.colorAttachments[ca0].loadOp = colorAttachment.loadOp =
                     wgpu::LoadOp::Clear;
                 beginCmd.colorAttachments[ca0].storeOp = colorAttachment.storeOp =
                     wgpu::StoreOp::Store;
 
                 RenderPassDescriptor passDesc{};
-                passDesc.colorAttachmentCount = 1u;
-                passDesc.colorAttachments = &colorAttachment;
+                passDesc.colorAttachments = SpanFromRef<ColorAttachmentIndex>(colorAttachment);
 
                 for (uint32_t depthSlice = 0; depthSlice < depthSliceCount; ++depthSlice) {
                     beginCmd.colorAttachments[ca0].depthSlice = colorAttachment.depthSlice =
@@ -1305,7 +1343,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
 
         DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
             uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
-                memset(reservation.mappedPointer, uClearColor, uploadSize);
+                std::ranges::fill(reservation.mappedData, std::byte(uClearColor));
 
                 std::vector<VkBufferImageCopy> regions;
                 for (uint32_t level = range.baseMipLevel;
@@ -1330,7 +1368,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
                         TextureCopy textureCopy;
                         textureCopy.aspect = range.aspects;
                         textureCopy.mipLevel = level;
-                        textureCopy.origin = {TexelCount{0}, TexelCount{0}, TexelCount{layer}};
+                        textureCopy.origin = {TexelCount{0u}, TexelCount{0u}, TexelCount{layer}};
                         textureCopy.texture = this;
 
                         regions.push_back(
@@ -1338,10 +1376,10 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
                     }
                 }
 
-                device->fn.CmdCopyBufferToImage(recordingContext->commandBuffer,
-                                                ToBackend(reservation.buffer)->GetHandle(),
-                                                GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                                regions.size(), regions.data());
+                device->fn.CmdCopyBufferToImage(
+                    recordingContext->commandBuffer, ToBackend(reservation.buffer)->GetHandle(),
+                    GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    checked_cast<uint32_t>(regions.size()), regions.data());
                 return {};
             }));
     }
@@ -1353,32 +1391,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
     return {};
 }
 
-MaybeError Texture::PinImpl(wgpu::TextureUsage usage) {
-    // Pinning means that until unpinned, the texture will have specific usage and can be used
-    // freely in shaders without any further check or memory barrier tracking. Ensure all
-    // subresources are cleared and transitioned to the usage.
-    DAWN_ASSERT(!HasPinnedUsage());
-    SubresourceRange pinnedSubresources = GetAllSubresources();
 
-    CommandRecordingContext* recordingContext =
-        ToBackend(GetDevice()->GetQueue())->GetPendingRecordingContext(Queue::SubmitMode::Passive);
-    DAWN_TRY(EnsureSubresourceContentInitialized(recordingContext, pinnedSubresources));
-
-    TransitionUsageNow(recordingContext, usage, kAllStages, pinnedSubresources);
-
-    // TODO(https://issues.chromium.org/473444516): Investigate what to do for imported textures.
-    // Should we consider a pin/unpin pair similar to an access on a queue such that we need to
-    // wait on fences or export them?
-    return {};
-}
-
-void Texture::UnpinImpl() {
-    DAWN_ASSERT(HasPinnedUsage());
-
-    // TODO(https://issues.chromium.org/473444516): Investigate what to do for imported textures.
-    // Should we consider a pin/unpin pair similar to an access on a queue such that we need to
-    // wait on fences or export them?
-}
 
 MaybeError Texture::EnsureSubresourceContentInitialized(CommandRecordingContext* recordingContext,
                                                         const SubresourceRange& range) {
@@ -1397,8 +1410,7 @@ VkImageLayout Texture::GetCurrentLayout(Aspect aspect,
                                         uint32_t arrayLayer,
                                         uint32_t mipLevel) const {
     DAWN_ASSERT(GetFormat().aspects == Aspect::Color);
-    return VulkanImageLayout(GetFormat(),
-                             mSubresourceLastSyncInfos.Get(aspect, arrayLayer, mipLevel).usage);
+    return VulkanImageLayout(mSubresourceLastSyncInfos.Get(aspect, arrayLayer, mipLevel).usage);
 }
 
 bool Texture::UseCombinedAspects() const {
@@ -1457,6 +1469,8 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
     createInfo.usage = VulkanImageUsage(device, GetInternalUsage(), GetFormat()) | extraUsages;
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    createInfo.flags =
+        VulkanImageCreateFlags(device, GetInternalUsage(), GetFormat(), GetSampleCount());
 
     std::vector<VkFormat> viewFormats;
     bool requiresViewFormatsList = GetViewFormats().any();
@@ -1479,17 +1493,6 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
         createInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
     }
 
-    // If the MSAARenderToSingleSampled feature is enabled, textures with RenderAttachment
-    // usage need to have VK_IMAGE_CREATE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_BIT_EXT set
-    // so that they can be used as a render target with an implicit sample count. syoussefi@
-    // has confirmed that this is expected to be very cheap or no cost on hardware that
-    // supports the extension.
-    if (device->HasFeature(Feature::MSAARenderToSingleSampled) &&
-        (GetInternalUsage() & wgpu::TextureUsage::RenderAttachment) && GetSampleCount() == 1 &&
-        !GetFormat().HasDepthOrStencil()) {
-        createInfo.flags |= VK_IMAGE_CREATE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_BIT_EXT;
-    }
-
     // Add the view format list only when the usage does not have storage. Otherwise, the VVL will
     // say creation of the texture is invalid.
     // See https://github.com/gpuweb/gpuweb/issues/4426.
@@ -1504,7 +1507,7 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
             viewFormats.push_back(VulkanImageFormat(device, viewFormat.format));
         }
 
-        imageFormatListInfo.viewFormatCount = viewFormats.size();
+        imageFormatListInfo.viewFormatCount = checked_cast<uint32_t>(viewFormats.size());
         imageFormatListInfo.pViewFormats = viewFormats.data();
     }
 
@@ -1552,7 +1555,7 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
         "BindImageMemory"));
 
     // crbug.com/1361662
-    // This works around an Intel Gen12 mesa bug due to CCS ambiguates stomping on each other.
+    // This works around an Intel Gen12 Mesa bug due to CCS ambiguates stomping on each other.
     // https://gitlab.freedesktop.org/mesa/mesa/-/issues/7301#note_1826367
     if (device->IsToggleEnabled(Toggle::VulkanClearGen12TextureWithCCSAmbiguateOnCreation)) {
         auto format = GetFormat().format;
@@ -1852,6 +1855,9 @@ MaybeError ImportedTextureBase::OnAfterSubmit() {
     // The submit succeeded, we can replace the previous external semaphore with the pending one.
     if (mExternalSemaphoreHandle != kNullExternalSemaphoreHandle) {
         device->GetExternalSemaphoreService()->CloseHandle(mExternalSemaphoreHandle);
+        // Set the handle to null after it's been closed so that we don't accidentally attempt to
+        // use or close it again if the ExportSemaphore() below fails.
+        mExternalSemaphoreHandle = kNullExternalSemaphoreHandle;
     }
 
     DAWN_TRY_ASSIGN(mExternalSemaphoreHandle,
@@ -1951,7 +1957,7 @@ MaybeError ExternalVkImageTexture::Initialize(const ExternalImageDescriptorVk* d
                 viewFormats.push_back(VulkanImageFormat(device, viewFormat.format));
             }
 
-            imageFormatListInfo.viewFormatCount = viewFormats.size();
+            imageFormatListInfo.viewFormatCount = checked_cast<uint32_t>(viewFormats.size());
             imageFormatListInfo.pViewFormats = viewFormats.data();
         }
     }
@@ -2122,7 +2128,7 @@ MaybeError TextureView::Initialize(const UnpackedPtr<TextureViewDescriptor>& des
             // feature.
             DAWN_ASSERT(device->HasFeature(Feature::YCbCrVulkanSamplers));
 
-            yCbCr = yCbCrVkDescriptor->WithTrivialFrontendDefaults();
+            yCbCr = WithTrivialFrontendDefaults(*yCbCrVkDescriptor);
             yCbCr.nextInChain = nullptr;
         } else {
             // When using OpaqueYCbCrAndroidForExternalTexture, the YCbCr conversion is the same one
@@ -2289,6 +2295,10 @@ ResultOrError<VkImageView> TextureView::GetOrCreate2DViewOn3D(uint32_t depthSlic
 bool TextureView::IsYCbCrFilterable() const {
     DAWN_ASSERT(IsYCbCr());
     return mIsYCbCrFilterable;
+}
+
+VkImageLayout TextureView::VulkanImageLayout(wgpu::TextureUsage usage) const {
+    return dawn::native::vulkan::VulkanImageLayout(GetFormat(), usage, GetUsage());
 }
 
 void TextureView::SetLabelImpl() {

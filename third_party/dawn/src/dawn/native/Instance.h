@@ -36,20 +36,21 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/BackendConnection.h"
-#include "dawn/native/ErrorSink.h"
-#include "dawn/native/EventManager.h"
-#include "dawn/native/Features.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/Toggles.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/BackendConnection.h"
+#include "src/dawn/native/ErrorSink.h"
+#include "src/dawn/native/EventManager.h"
+#include "src/dawn/native/Features.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/Toggles.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/span.h"
 #include "tint/tint.h"
 
 namespace dawn::platform {
@@ -125,7 +126,7 @@ class InstanceBase final : public ErrorSink, public RefCounted {
 
     // Testing only API that is NOT thread-safe.
     uint64_t GetDeprecationWarningCountForTesting();
-    void EmitDeprecationWarning(const std::string& warning);
+    void EmitDeprecationWarning(const std::string& message);
 
     uint64_t GetDeviceCountForTesting() const;
     void AddDevice(DeviceBase* device);
@@ -149,9 +150,7 @@ class InstanceBase final : public ErrorSink, public RefCounted {
     // Dawn API
     Surface* APICreateSurface(const SurfaceDescriptor* descriptor);
     void APIProcessEvents();
-    [[nodiscard]] wgpu::WaitStatus APIWaitAny(size_t count,
-                                              FutureWaitInfo* futures,
-                                              uint64_t timeoutNS);
+    [[nodiscard]] wgpu::WaitStatus APIWaitAny(Span<FutureWaitInfo> futures, uint64_t timeoutNS);
     bool APIHasWGSLLanguageFeature(wgpu::WGSLLanguageFeatureName feature) const;
     void APIGetWGSLLanguageFeatures(SupportedWGSLLanguageFeatures* features) const;
 

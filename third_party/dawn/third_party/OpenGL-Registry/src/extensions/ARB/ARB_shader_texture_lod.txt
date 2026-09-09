@@ -1,0 +1,561 @@
+Name
+
+    ARB_shader_texture_lod
+
+Name Strings
+
+    GL_ARB_shader_texture_lod
+
+Contributors
+
+    Bill Licea-Kane
+    Evan Hart
+
+    and contributors to the arb-gl2 working groups, the product
+    of which provided the basis for this spec.
+
+Contact
+
+    Bill Licea-Kane, ATI Research (bill 'at' ati.com)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    No known IP issues.
+
+Status
+
+    Complete. Approved by the ARB on May 13, 2009.
+
+Version
+
+    Last Modified Date: April 13, 2011
+    Revision: 11
+
+Number
+
+    ARB Extension #60
+
+Dependencies
+
+    This extension is written against the OpenGL 2.0 Specification.
+
+    This extension is written against The OpenGL Shading Language,
+    Language Version 1.10, Document Revision 59.
+
+    ARB_shader_objects is required.
+
+    This extension interacts with ATI_shader_texture_lod.
+
+    This extension interacts with ARB_texture_rectangle.
+
+    This extension interacts with EXT_texture_filter_anisotropic.
+
+Overview
+
+    This extension adds additional texture functions to the
+    OpenGL Shading Language which provide the shader writer
+    with explicit control of LOD.
+
+    Mipmap texture fetches and anisotropic texture fetches
+    require an implicit derivatives to calculate rho, lambda
+    and/or the line of anisotropy.  These implicit derivatives
+    will be undefined for texture fetches occurring inside
+    non-uniform control flow or for vertex shader texture
+    fetches, resulting in undefined texels.
+
+    The additional texture functions introduced with
+    this extension provide explict control of LOD
+    (isotropic texture functions) or provide explicit
+    derivatives (anisotropic texture functions).
+
+    Anisotropic texture functions return defined texels
+    for mipmap texture fetches or anisotropic texture fetches,
+    even inside non-uniform control flow.  Isotropic texture
+    functions return defined texels for mipmap texture fetches,
+    even inside non-uniform control flow.  However, isotropic
+    texture functions return undefined texels for anisotropic
+    texture fetches.
+
+    The existing isotropic vertex texture functions:
+
+        texture1DLod,   texture1DProjLod,
+        texture2DLod,   texture2DProjLod,
+        texture3DLod,   texture3DProjLod,
+        textureCubeLod,
+        shadow1DLod,    shadow1DProjLod,
+        shadow2DLod,    shadow2DProjLod,
+
+    are added to the built-in functions for fragment shaders.
+
+    New anisotropic texture functions, providing explicit
+    derivatives:
+
+        texture1DGradARB(         sampler1D sampler,
+                                  float P, float dPdx, float dPdy );
+        texture1DProjGradARB(     sampler1D sampler,
+                                  vec2  P, float dPdx, float dPdy );
+        texture1DProjGradARB(     sampler1D sampler,
+                                  vec4  P, float dPdx, float dPdy );
+
+        texture2DGradARB(         sampler2D sampler,
+                                  vec2  P, vec2  dPdx, vec2  dPdy );
+        texture2DProjGradARB(     sampler2D sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        texture2DProjGradARB(     sampler2D sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+        texture3DGradARB(         sampler3D sampler,
+                                  vec3  P, vec3  dPdx, vec3  dPdy );
+        texture3DProjGradARB(     sampler3D sampler,
+                                  vec4  P, vec3  dPdx, vec3  dPdy );
+
+        textureCubeGradARB(       samplerCube sampler,
+                                  vec3  P, vec3  dPdx, vec3  dPdy );
+
+        shadow1DGradARB(          sampler1DShadow sampler,
+                                  vec3  P, float dPdx, float dPdy );
+        shadow1DProjGradARB(      sampler1DShadow sampler,
+                                  vec4  P, float dPdx, float dPdy );
+
+        shadow2DGradARB(          sampler2DShadow sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        shadow2DProjGradARB(      sampler2DShadow sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+
+        texture2DRectGradARB(     sampler2DRect sampler,
+                                  vec2  P, vec2  dPdx, vec2  dPdy );
+        texture2DRectProjGradARB( sampler2DRect sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        texture2DRectProjGradARB( sampler2DRect sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+        shadow2DRectGradARB(      sampler2DRectShadow sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        shadow2DRectProjGradARB(  sampler2DRectShadow sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+     are added to the built-in functions for vertex shaders
+     and fragment shaders.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    In Section 3.8.8, replace the final paragraph on p. 171 with:
+
+    "Let s(x, y) be the function that associates an s texture coordinate
+    with each set of window coordinates (x, y) that lie within a
+    primitive;  define t(x, y) and r(x, y) analogously.  For a
+    one-dimensional texture, define t(x, y) = 0 and r(x, y) = 0; for a
+    two-dimensional texture, define r(x, y) = 0.
+
+    Let u(x, y) = wt * s(x, y), v(x, y) = ht * t(x, y), and
+    w(x, y) = dt * r(x, y), where wt, ht, and dt are as defined by equations
+    3.15, 3.16, and 3.17 with ws, hs, and ds equal to the width, height,
+    and depth of the image array whose level is levelbase.  However, for
+    rectangular textures let u(x, y) = s(x, y), v(x, y) = t(x, y), and
+    w(x, y) = r(x, y)."
+
+    Let
+        dUdx = wt*dSdx; dUdy = wt*dSdy;
+        dVdx = ht*dTdx; dVdy = ht*dTdy;
+        dWdx = dt*dRdx; dWdy = dt*dRdx;                       (3.21a)
+
+    where dSdx indicates the derivative of s with respect to window x,
+    and similarly for the other derivatives, and
+
+    For a rectangular texture, let
+        dUdx = dSdx; dUdy = dSdy;
+        dVdx = dTdx; dVdy = dTdy;
+        dWdx = 0.0;                                           (3.21b)
+
+    For a polygon, rho is given at a fragment with window coordinates
+    (x, y) by
+
+        rho = max (
+              sqrt(dUdx*dUdx + dVdx*dVdx + dWdx*dWdx),
+              sqrt(dUdy*dUdy + dVdy*dVdy + dWdy*dWdy)
+              );                                              (3.21c)"
+
+
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+
+Additions to version 1.10.59 of the OpenGL Shading Language Specification
+
+    "A new preprocessor #define is added to the OpenGL Shading Language:
+
+        #define GL_ARB_shader_texture_lod 1
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_ARB_shader_texture_lod : <behavior>
+
+    Where <behavior> is as specified in section 3.3."
+
+
+Additions to Chapter 8 of version 1.10.59 of the OpenGL Shading Language
+Specification
+
+
+    8.7  Texture Lookup Functions
+
+    Delete the last paragraph, and replace with:
+
+    "For the "Lod" functions, lod specifies lambda_base (see equation 3.18 in
+    The OpenGL 2.0 Specification) and specifies dSdx, dTdx, dRdx = 0 and
+    dSdy, dTdy, and dRdy = 0 (see equation 3.21a and 3.21b. in The OpenGL
+    2.0 Specification).  The "Lod" functions are allowed in a vertex shader.
+    If enabled by the preprocessor directive #extension, the "Lod" functions
+    are also allowed in a fragment shader.
+
+    For the "Grad" functions, dPdx is the explicit derivative of P with respect
+    to window x, and similarly dPdy with respect to window y. For the “ProjGrad”
+    functions, dPdx is the explicit derivative of the projected P with respect
+    to window x, and similarly for dPdy with respect to window y.  For a
+    one-dimensional texture, dPdx and dPdy are float.  For a two-dimensional
+    texture, dPdx and dPdy are vec2.  Otherwise, dPdx and dPdy are vec3.
+
+
+
+    Let
+
+        dSdx = dPdx.s;
+        dSdy = dPdy.s;
+
+    and
+
+                / 0.0;    for one-dimensional texture
+        dTdx = (
+                \ dPdx.t; otherwise
+
+                / 0.0;    for one-dimensional texture
+        dTdy = (
+                \ dPdy.t; otherwise
+
+    and
+                / 0.0;    for one-dimenstional or two-dimensional texture
+        dRdx = (          (including rectangular texture)
+                \ dPdx.p; otherwise
+                          (including cubemap texture)
+
+                / 0.0;    for one dimensional or two-dimensional texture
+        dRdy = (          (including rectangular texture)
+                \ dPdy.p; otherwise
+                          (including cubemap texture)
+
+    (See equation 3.21a and 3.21b in  The OpenGL 2.0 Specification).
+
+    If enabled by the preprocessor directive #extension, the "Grad" functions
+    are allowed in vertex and fragment shaders.
+
+    All other texture functions may require implicit derivatives.  Implicit
+    derivatives are undefined within non-uniform control flow or for vertex
+    shader texture fetches."
+
+    Add the following entries to the texture function table:
+
+        texture1DGradARB(         sampler1D sampler,
+                                  float P, float dPdx, float dPdy );
+        texture1DProjGradARB(     sampler1D sampler,
+                                  vec2  P, float dPdx, float dPdy );
+        texture1DProjGradARB(     sampler1D sampler,
+                                  vec4  P, float dPdx, float dPdy );
+
+        texture2DGradARB(         sampler2D sampler,
+                                  vec2  P, vec2  dPdx, vec2  dPdy );
+        texture2DProjGradARB(     sampler2D sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        texture2DProjGradARB(     sampler2D sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+        texture3DGradARB(         sampler3D sampler,
+                                  vec3  P, vec3  dPdx, vec3  dPdy );
+        texture3DProjGradARB(     sampler3D sampler,
+                                  vec4  P, vec3  dPdx, vec3  dPdy );
+
+        textureCubeGradARB(       samplerCube sampler,
+                                  vec3  P, vec3  dPdx, vec3  dPdy );
+
+        shadow1DGradARB(          sampler1DShadow sampler,
+                                  vec3  P, float dPdx, float dPdy );
+        shadow1DProjGradARB(      sampler1DShadow sampler,
+                                  vec4  P, float dPdx, float dPdy );
+
+        shadow2DGradARB(          sampler2DShadow sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        shadow2DProjGradARB(      sampler2DShadow sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+
+        texture2DRectGradARB(     sampler2DRect sampler,
+                                  vec2  P, vec2  dPdx, vec2  dPdy );
+        texture2DRectProjGradARB( sampler2DRect sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        texture2DRectProjGradARB( sampler2DRect sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+        shadow2DRectGradARB(      sampler2DRectShadow sampler,
+                                  vec3  P, vec2  dPdx, vec2  dPdy );
+        shadow2DRectProjGradARB(  sampler2DRectShadow sampler,
+                                  vec4  P, vec2  dPdx, vec2  dPdy );
+
+
+Interactions with ATI_texture_shader_lod
+
+    Each texture function added to the texture function table
+    by ATI_texture_shader_lod is suffixed with "_ATI".
+
+    The equivalent texture functions added to the texture
+    function table by this extension are suffixed with "GradARB".
+
+    It is anticipated that this extension might get promoted
+    to core.  The promoted texture functions added to the
+    texture function table would then be suffixed with "Grad".
+
+    Note that ATI_texture_shader_lod does not contain the
+    interactions with ARB_texture_rectangle and EXT_texture_anisotropic.
+    Nor does it overload the texture2DRect and shadow2DRect functions.
+    This extension is a slight superset of ATI_texture_shader_lod.
+
+Interactions with ARB_texture_rectangle
+
+    If ARB_texture_rectangle is not supported, delete references
+    to rectangular textures and references to equation 3.21b.
+
+Interactions with EXT_texture_anisotropic
+
+    The Lod functions set the derivatives ds/dx, dt/dx, dr/dx,
+    dx/dy, dt/dy, and dr/dy = 0.  Therefore Rhox and Rhoy = 0
+    0, Rhomax and Rhomin = 0.
+
+Issues
+
+    (1) What should this extension be called?
+
+    RESOLVED:  ARB_shader_texture_lod
+
+    (2) There are several existing built-in functions we
+    could use.  Should we use them, and do we need to
+    name decorate them with suffix _ARB?
+
+    It makes sense to use the existing built-ins suffixed
+    with "Lod."  We will simply drop the restriction that
+    they are allowed only in the vertex shader.
+
+    Since this extension simply extends the scope of
+    the functions, I don't think we need to suffix with _ARB.
+
+    RESOLVED:  Yes, use existing "Lod" built-in names without
+    an _ARB suffix.
+
+
+    (3) Should we add additional texture functions with derivative
+    built-ins?
+
+    There are two approaches.
+
+    Existing texture functions could be overloaded to
+    accept optional derivatives.  (Similar to the Lod bias
+    texture functions.)  These names *should* probably
+    be name decorated with the suffix ARB."
+
+    New texture functions suffixed with GradARB
+    could be added.
+
+    The advantage of overloading the existing functions
+    is it reduces the plethora of texture function names.
+
+    The disadvantage of overloading the existing functions
+    is that not all of the existing texture functions
+    make sense with explicit derivatives.  (Example,
+    projective texture fetch with explict derivatives.)
+
+    We have two sets of precedent here.  The existing absolute
+    LOD texture functions use explicit name decoration.
+    The existing LOD bias texture functions use overloading.
+
+    RESOLVED:  We will use existing built-in texture functions
+    suffixed with "Lod" *WITHOUT* name decoration for absolute
+    LOD functions.
+
+    We will use existing built-in texture functions suffixed with
+    GradARB for derivatives.
+
+    We establish a precedent that new texture functions
+    will have explicit names.  The existing LOD bias texture
+    functions are exceptions to the precedent.
+
+    (4) What is done with the vec3 dPdx and vec3 dPdy for
+    cube map texture fetches?
+
+    For cube maps, it is incorrect to simply say "dPdx
+    specificies ds/dx, dt/dx, and dr/dx, and dPdy specifies
+    ds/dy, dt/dy and dr/dy (see equation 3.21a in The
+    OpenGL 2.0 Specification)."
+
+    This is currently tough to specify given the core specification.
+
+    3.8.6 covers cube map face selection and transformation of
+    the incoming rx, ry, rz to s and t.
+
+    3.8.8 covers derivatives, and states:
+
+    "Let s(x, y) be the function that associates an s texture
+    coordinate with each set of window coordinates (x, y) that
+    lie within a primitive; define t(x, y) and r(x, y) analogously."
+
+    Because of the cube mape face selection of 3.8.6, s(x, y)
+    and t(x, y) may be discontinuous within a primitive.  A discontinuous
+    function has undefined derivatives at the discontinuity.  (This
+    discontinuity occurs at the cube map edges.)
+
+    The core spec is silent on how this discontinuity may be resolved.
+    Nor does the core spec provide an alternative method for calculating
+    rho given the continuous original rx, ry, rz, and their well
+    specified derivatives (dPdx and dPdy).
+
+    The changes required to the core spec are substantial and may
+    require much discussion on the tradeoffs between tightly
+    specifying a method and providing sufficient freedom for implementers.
+
+    RESOLVED:  For now, we will leave this as unspecified.
+    Implementors are cautioned to take sufficient steps so
+    that the calculation of rho based on explicit dPdx
+    and dPdy provides comparable quality to the existing
+    implicit derivative methods.
+
+    (5) Should the projective versions of the anisotropic texture
+    functions be added?
+
+    ATI_shader_texture_lod resolved issue 3 to use overloaded
+    functions (opposite of the way issue 3 is resolved here),
+    including overloading the projective texture functions.
+    We have insufficient feedback to permit removing them in this
+    extension.  We err on the side of caution and keep them.
+    This extension is therefore a functional equivalent to
+    ATI_shader_texture_lod.  (Slight superset, see issue 6.)
+
+    RESOLVED:  Add them since ATI_shader_texture_lod introduced
+    overloaded versions.
+
+    (6) Should anisotropic rectangular texture functions be added?
+
+    Even though derivatives are not required for Lod selection
+    for rectangular textures (there is only the baselevel for
+    rectangular textures) the derivatives are required for
+    anisotropic texture fetches.  (Perhaps
+    ARB_texture_rectangle should have an interaction with
+    EXT_texture_anisotropic clarifying this.)
+
+    ATI_shader_texture_lod is silent on these interactions.
+    Adding the interactions and functions makes this extension
+    a slight superset of ATI_shader_texture_lod.
+
+    RESOLVED:  Add them.
+
+    (7) How are ProjGrad functions handled?
+
+    The dPdx and dPdy derivatives are of the projected P.  The shader
+    writer is responsible for this projection.  That is, for a 2D
+    texture, dPdx = dFdx( P.st/P.q );  dPdy = dFdy( P.st/P.q );
+
+Revision History:
+
+10 - 2011-04-13 (Jon Leech)
+    * Remove nonexistent textureCubProjLod from list of existing
+      isotropic vertex texture functions (Khronos Bug 7205).
+
+9 - 2010-12-09 (Jon Leech)
+    * Corrected typos where 1D texture functions were specified
+      as taking sampler2D parameters (Khronos Bug 7008).
+
+8 - 2009-05-24 (Jon Leech)
+    * Added to the Registry
+    * Corrected minor typos
+
+7 - 2007-08-22
+    * Shipping status.
+
+6 - 2006-07-06
+    * Clarified ProjGrad.
+    * Added issue 7.
+    * Clarified cubemap.
+
+5 - 2006-06-08
+    * u(x,y),v(x,y) and w(x,y) are used for wrap calculations.
+      Their definitions (with ARB_texture_rectangle interaction)
+      are restored.
+    * Clean up defined/undefined language of functions in
+      overview.
+
+4 - 2006-05-25
+    * Follow ASCII conventions.  See examples in core
+      spec equations 3.23, 3.24, & 3.25 and EXT_texture_3D.
+
+3 - 2006-05-25
+    * Add #extension and #define
+    * Explicitly reference page/paragraph in core edits.
+    * Rework texture function descriptions.  Add language
+      to shading language spec that makes it clear that the
+      extension must be enabled for the functions to be
+      available.
+
+2 - 2006-05-25
+    * Name changes.
+    * Added interaction with ARB_texture_rectangle.
+    * Added interaction with EXT_texture_anisotropic.
+    * Clarified that implicit derivatives are undefined
+      within non-uniform control flow and the vertex shader.
+    * Relocated issues to the tail of the spec.
+
+1 - 2006-05-17
+    Initial ARB version

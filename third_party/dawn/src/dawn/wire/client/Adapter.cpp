@@ -25,23 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/wire/client/Adapter.h"
+#include "src/dawn/wire/client/Adapter.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 
 #include "absl/types/span.h"  // TODO(343500108): Use std::span when we have C++20.
-#include "dawn/common/Log.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/wire/client/Client.h"
 #include "dawn/wire/client/webgpu.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/utils/compiler.h"
+#include "src/utils/log.h"
 
 namespace dawn::wire::client {
 namespace {
@@ -63,14 +59,13 @@ class RequestDeviceEvent : public TrackedEvent {
                          WGPURequestDeviceStatus status,
                          WGPUStringView message,
                          const WGPULimits* limits,
-                         uint32_t featuresCount,
-                         const WGPUFeatureName* features) {
+                         Span<const WGPUFeatureName> features) {
         DAWN_ASSERT(mDevice != nullptr);
         mStatus = status;
         mMessage = ToString(message);
         if (status == WGPURequestDeviceStatus_Success) {
-            mDevice->SetLimits(limits);
-            mDevice->SetFeatures(features, featuresCount);
+            mDevice->SetLimits(FromAPI(limits));
+            mDevice->SetFeatures(FromAPI(features));
         }
         return WireResult::Success;
     }
@@ -129,181 +124,142 @@ ObjectType Adapter::GetObjectType() const {
     return ObjectType::Adapter;
 }
 
-WGPUStatus Adapter::APIGetLimits(WGPULimits* limits) const {
+wgpu::Status Adapter::APIGetLimits(Limits* limits) const {
     return mLimitsAndFeatures.GetLimits(limits);
 }
 
-bool Adapter::APIHasFeature(WGPUFeatureName feature) const {
+bool Adapter::APIHasFeature(wgpu::FeatureName feature) const {
     return mLimitsAndFeatures.HasFeature(feature);
 }
 
-void Adapter::APIGetFeatures(WGPUSupportedFeatures* features) const {
+void Adapter::APIGetFeatures(SupportedFeatures* features) const {
     mLimitsAndFeatures.ToSupportedFeatures(features);
 }
 
-void Adapter::SetLimits(const WGPULimits* limits) {
+void Adapter::SetLimits(const Limits* limits) {
     return mLimitsAndFeatures.SetLimits(limits);
 }
 
-void Adapter::SetFeatures(const WGPUFeatureName* features, uint32_t featuresCount) {
-    return mLimitsAndFeatures.SetFeatures(features, featuresCount);
+void Adapter::SetFeatures(Span<const wgpu::FeatureName> features) {
+    return mLimitsAndFeatures.SetFeatures(features);
 }
 
-void Adapter::SetInfo(const WGPUAdapterInfo* info) {
-    mInfo = *info;
+void Adapter::SetInfo(const AdapterInfo* info) {
+    mInfo.backendType = info->backendType;
+    mInfo.adapterType = info->adapterType;
+    mInfo.vendorID = info->vendorID;
+    mInfo.deviceID = info->deviceID;
+    mInfo.subgroupMinSize = info->subgroupMinSize;
+    mInfo.subgroupMaxSize = info->subgroupMaxSize;
 
     // Deep copy the string pointed out by info. StringViews are all explicitly sized by the wire.
-    mVendor = ToString(info->vendor);
-    mInfo.vendor = ToOutputStringView(mVendor);
-    mArchitecture = ToString(info->architecture);
-    mInfo.architecture = ToOutputStringView(mArchitecture);
-    mDeviceName = ToString(info->device);
-    mInfo.device = ToOutputStringView(mDeviceName);
-    mDescription = ToString(info->description);
-    mInfo.description = ToOutputStringView(mDescription);
+    mVendor = info->vendor;
+    mArchitecture = info->architecture;
+    mDeviceName = info->device;
+    mDescription = info->description;
 
     mInfo.nextInChain = nullptr;
 
     // Loop through the chained struct.
-    WGPUChainedStruct* chain = info->nextInChain;
-    while (chain != nullptr) {
+    for (const auto* chain = info->nextInChain; chain; chain = chain->nextInChain) {
         switch (chain->sType) {
-            case WGPUSType_AdapterPropertiesMemoryHeaps: {
+            case wgpu::SType::AdapterPropertiesMemoryHeaps: {
                 // Make a copy of the heap info in `mMemoryHeapInfo`.
                 const auto* memoryHeapProperties =
-                    reinterpret_cast<const WGPUAdapterPropertiesMemoryHeaps*>(chain);
-                mMemoryHeapInfo = {
-                    memoryHeapProperties->heapInfo,
-                    memoryHeapProperties->heapInfo + memoryHeapProperties->heapCount};
+                    reinterpret_cast<const AdapterPropertiesMemoryHeaps*>(chain);
+                mMemoryHeapInfo.assign(memoryHeapProperties->heapInfo.begin(),
+                                       memoryHeapProperties->heapInfo.end());
                 break;
             }
-            case WGPUSType_AdapterPropertiesD3D: {
-                auto* d3dProperties = reinterpret_cast<WGPUAdapterPropertiesD3D*>(chain);
+            case wgpu::SType::AdapterPropertiesD3D: {
+                const auto* d3dProperties = reinterpret_cast<const AdapterPropertiesD3D*>(chain);
                 mD3DProperties.shaderModel = d3dProperties->shaderModel;
                 break;
             }
-            case WGPUSType_AdapterPropertiesVk: {
-                auto* vkProperties = reinterpret_cast<WGPUAdapterPropertiesVk*>(chain);
+            case wgpu::SType::AdapterPropertiesVk: {
+                const auto* vkProperties = reinterpret_cast<const AdapterPropertiesVk*>(chain);
                 mVkProperties.driverVersion = vkProperties->driverVersion;
                 break;
             }
-            case WGPUSType_AdapterPropertiesSubgroupMatrixConfigs: {
+            case wgpu::SType::AdapterPropertiesSubgroupMatrixConfigs: {
                 // Make a copy of the heap info in `mSubgroupMatrixConfigs`.
                 const auto* subgroupMatrixConfigs =
-                    reinterpret_cast<const WGPUAdapterPropertiesSubgroupMatrixConfigs*>(chain);
-                mSubgroupMatrixConfigs = {
-                    subgroupMatrixConfigs->configs,
-                    subgroupMatrixConfigs->configs + subgroupMatrixConfigs->configCount};
+                    reinterpret_cast<const AdapterPropertiesSubgroupMatrixConfigs*>(chain);
+                mSubgroupMatrixConfigs.assign(subgroupMatrixConfigs->configs.begin(),
+                                              subgroupMatrixConfigs->configs.end());
                 break;
             }
-            case WGPUSType_DawnAdapterPropertiesPowerPreference: {
-                auto* powerProperties =
-                    reinterpret_cast<WGPUDawnAdapterPropertiesPowerPreference*>(chain);
+            case wgpu::SType::DawnAdapterPropertiesPowerPreference: {
+                const auto* powerProperties =
+                    reinterpret_cast<const DawnAdapterPropertiesPowerPreference*>(chain);
                 mPowerProperties.powerPreference = powerProperties->powerPreference;
-                break;
-            }
-            case WGPUSType_AdapterPropertiesExplicitComputeSubgroupSizeConfigs: {
-                auto* subgroupSizeConfigs =
-                    reinterpret_cast<WGPUAdapterPropertiesExplicitComputeSubgroupSizeConfigs*>(
-                        chain);
-                mExplicitComputeSubgroupSizeConfigs.minExplicitComputeSubgroupSize =
-                    subgroupSizeConfigs->minExplicitComputeSubgroupSize;
-                mExplicitComputeSubgroupSizeConfigs.maxExplicitComputeSubgroupSize =
-                    subgroupSizeConfigs->maxExplicitComputeSubgroupSize;
-                mExplicitComputeSubgroupSizeConfigs.maxComputeWorkgroupSubgroups =
-                    subgroupSizeConfigs->maxComputeWorkgroupSubgroups;
                 break;
             }
             default:
                 DAWN_UNREACHABLE();
                 break;
         }
-        chain = chain->next;
     }
 }
 
-WGPUStatus Adapter::APIGetInfo(WGPUAdapterInfo* info) const {
+wgpu::Status Adapter::APIGetInfo(AdapterInfo* info) const {
     // Loop through the chained struct.
-    WGPUChainedStruct* chain = info->nextInChain;
-    while (chain != nullptr) {
+    for (auto* chain = info->nextInChain; chain; chain = chain->nextInChain) {
         switch (chain->sType) {
-            case WGPUSType_AdapterPropertiesMemoryHeaps: {
+            case wgpu::SType::AdapterPropertiesMemoryHeaps: {
                 // Copy `mMemoryHeapInfo` into a new allocation.
-                auto* memoryHeapProperties =
-                    reinterpret_cast<WGPUAdapterPropertiesMemoryHeaps*>(chain);
-                size_t heapCount = mMemoryHeapInfo.size();
-                auto* heapInfo = new WGPUMemoryHeapInfo[heapCount];
-                memcpy(heapInfo, mMemoryHeapInfo.data(), sizeof(WGPUMemoryHeapInfo) * heapCount);
-                // Write out the pointer and count to the heap properties out-struct.
-                memoryHeapProperties->heapCount = heapCount;
-                memoryHeapProperties->heapInfo = heapInfo;
+                auto* memoryHeapProperties = reinterpret_cast<AdapterPropertiesMemoryHeaps*>(chain);
+                memoryHeapProperties->heapInfo = HeapArrayFrom(mMemoryHeapInfo).MoveToSpan();
                 break;
             }
-            case WGPUSType_AdapterPropertiesD3D: {
-                auto* d3dProperties = reinterpret_cast<WGPUAdapterPropertiesD3D*>(chain);
+            case wgpu::SType::AdapterPropertiesD3D: {
+                auto* d3dProperties = reinterpret_cast<AdapterPropertiesD3D*>(chain);
                 d3dProperties->shaderModel = mD3DProperties.shaderModel;
                 break;
             }
-            case WGPUSType_AdapterPropertiesVk: {
-                auto* vkProperties = reinterpret_cast<WGPUAdapterPropertiesVk*>(chain);
+            case wgpu::SType::AdapterPropertiesVk: {
+                auto* vkProperties = reinterpret_cast<AdapterPropertiesVk*>(chain);
                 vkProperties->driverVersion = mVkProperties.driverVersion;
                 break;
             }
-            case WGPUSType_AdapterPropertiesSubgroupMatrixConfigs: {
-                if (!APIHasFeature(WGPUFeatureName_ChromiumExperimentalSubgroupMatrix)) {
-                    return WGPUStatus_Error;
+            case wgpu::SType::AdapterPropertiesSubgroupMatrixConfigs: {
+                if (!APIHasFeature(wgpu::FeatureName::ChromiumExperimentalSubgroupMatrix)) {
+                    return wgpu::Status::Error;
                 }
 
                 // Copy `mSubgroupMatrixConfigs` into a new allocation.
                 auto* subgroupMatrixConfigs =
-                    reinterpret_cast<WGPUAdapterPropertiesSubgroupMatrixConfigs*>(chain);
-                size_t configCount = mSubgroupMatrixConfigs.size();
-                auto* configs = new WGPUSubgroupMatrixConfig[configCount];
-                memcpy(configs, mSubgroupMatrixConfigs.data(),
-                       sizeof(WGPUSubgroupMatrixConfig) * configCount);
-                // Write out the pointer and count to the subgroup matrix configs out-struct.
-                subgroupMatrixConfigs->configCount = configCount;
-                subgroupMatrixConfigs->configs = configs;
+                    reinterpret_cast<AdapterPropertiesSubgroupMatrixConfigs*>(chain);
+                subgroupMatrixConfigs->configs = HeapArrayFrom(mSubgroupMatrixConfigs).MoveToSpan();
                 break;
             }
-            case WGPUSType_DawnAdapterPropertiesPowerPreference: {
+            case wgpu::SType::DawnAdapterPropertiesPowerPreference: {
                 auto* powerProperties =
-                    reinterpret_cast<WGPUDawnAdapterPropertiesPowerPreference*>(chain);
+                    reinterpret_cast<DawnAdapterPropertiesPowerPreference*>(chain);
                 powerProperties->powerPreference = mPowerProperties.powerPreference;
                 break;
             }
-            case WGPUSType_AdapterPropertiesExplicitComputeSubgroupSizeConfigs: {
-                if (!APIHasFeature(WGPUFeatureName_ChromiumExperimentalSubgroupSizeControl)) {
-                    return WGPUStatus_Error;
-                }
-                auto* explicitComputeSubgroupSizeConfigs =
-                    reinterpret_cast<WGPUAdapterPropertiesExplicitComputeSubgroupSizeConfigs*>(
-                        chain);
-                explicitComputeSubgroupSizeConfigs->minExplicitComputeSubgroupSize =
-                    mExplicitComputeSubgroupSizeConfigs.minExplicitComputeSubgroupSize;
-                explicitComputeSubgroupSizeConfigs->maxExplicitComputeSubgroupSize =
-                    mExplicitComputeSubgroupSizeConfigs.maxExplicitComputeSubgroupSize;
-                explicitComputeSubgroupSizeConfigs->maxComputeWorkgroupSubgroups =
-                    mExplicitComputeSubgroupSizeConfigs.maxComputeWorkgroupSubgroups;
-                break;
-            }
-
             default:
                 break;
         }
-        chain = chain->next;
     }
 
-    *info = mInfo;
+    info->backendType = mInfo.backendType;
+    info->adapterType = mInfo.adapterType;
+    info->vendorID = mInfo.vendorID;
+    info->deviceID = mInfo.deviceID;
+    info->subgroupMinSize = mInfo.subgroupMinSize;
+    info->subgroupMaxSize = mInfo.subgroupMaxSize;
 
     // Allocate space for all strings.
     size_t allocSize =
         mVendor.length() + mArchitecture.length() + mDeviceName.length() + mDescription.length();
-    absl::Span<char> outBuffer{new char[allocSize], allocSize};
+    // SAFETY: The data in the buffer will be initialized by AddString below.
+    Span<char> outBuffer = DAWN_UNSAFE_BUFFERS(HeapArray<char>::Uninit(allocSize).MoveToSpan());
 
-    auto AddString = [&](const std::string& in, WGPUStringView* out) {
-        DAWN_ASSERT(in.length() <= outBuffer.length());
-        memcpy(outBuffer.data(), in.data(), in.length());
+    auto AddString = [&](const std::string& in, StringView* out) {
+        DAWN_ASSERT(in.length() <= outBuffer.size());
+        outBuffer.CopyPrefixFrom(in);
         *out = {outBuffer.data(), in.length()};
         outBuffer = outBuffer.subspan(in.length());
     };
@@ -314,13 +270,13 @@ WGPUStatus Adapter::APIGetInfo(WGPUAdapterInfo* info) const {
     AddString(mDescription, &info->description);
     DAWN_ASSERT(outBuffer.empty());
 
-    return WGPUStatus_Success;
+    return wgpu::Status::Success;
 }
 
-WGPUFuture Adapter::APIRequestDevice(const WGPUDeviceDescriptor* descriptor,
-                                     const WGPURequestDeviceCallbackInfo& callbackInfo) {
+Future Adapter::APIRequestDevice(const DeviceDescriptor* descriptor,
+                                 const WGPURequestDeviceCallbackInfo& callbackInfo) {
     Client* client = GetClient();
-    Ref<Device> device = client->Make<Device>(GetEventManagerHandle(), this, descriptor);
+    Ref<Device> device = client->Make<Device>(GetInstance(), this, descriptor);
     auto [futureIDInternal, tracked] =
         GetEventManager().TrackEvent(AcquireRef(new RequestDeviceEvent(callbackInfo, device)));
     if (!tracked) {
@@ -329,7 +285,7 @@ WGPUFuture Adapter::APIRequestDevice(const WGPUDeviceDescriptor* descriptor,
 
     // Ensure callbacks are not serialized as part of the command, as they cannot be passed between
     // processes.
-    WGPUDeviceDescriptor wireDescriptor = {};
+    DeviceDescriptor wireDescriptor = {};
     if (descriptor) {
         wireDescriptor = *descriptor;
         wireDescriptor.deviceLostCallbackInfo = {};
@@ -338,61 +294,62 @@ WGPUFuture Adapter::APIRequestDevice(const WGPUDeviceDescriptor* descriptor,
 
     AdapterRequestDeviceCmd cmd;
     cmd.adapterId = GetWireHandle(client).id;
-    cmd.eventManagerHandle = GetEventManagerHandle();
+    cmd.instanceId = GetInstance()->GetWireHandle(client).id;
     cmd.future = {futureIDInternal};
     cmd.deviceObjectHandle = device->GetWireHandle(client);
-    cmd.deviceLostFuture = device->APIGetLostFuture();
-    cmd.descriptor = &wireDescriptor;
+    cmd.deviceLostFuture = ToAPI(device->APIGetLostFuture());
+    cmd.descriptor = ToAPI(&wireDescriptor);
 
     client->SerializeCommand(cmd);
     return {futureIDInternal};
 }
 
-WireResult Client::DoAdapterRequestDeviceCallback(ObjectHandle eventManager,
+WireResult Client::DoAdapterRequestDeviceCallback(ObjectId instanceId,
                                                   WGPUFuture future,
                                                   WGPURequestDeviceStatus status,
                                                   WGPUStringView message,
                                                   const WGPULimits* limits,
-                                                  uint32_t featuresCount,
-                                                  const WGPUFeatureName* features) {
-    return SetFutureReady<RequestDeviceEvent>(eventManager, future.id, status, message, limits,
-                                              featuresCount, features);
+                                                  Span<const WGPUFeatureName> features) {
+    return SetFutureReady<RequestDeviceEvent>(instanceId, future.id, status, message, limits,
+                                              features);
 }
 
-WGPUInstance Adapter::APIGetInstance() const {
-    dawn::ErrorLog() << "adapter.GetInstance not supported with dawn_wire.";
-    return nullptr;
+Instance* Adapter::APIGetInstance() const {
+    Ref<Instance> instance = GetInstance();
+    return ReturnToAPI2(std::move(instance));
 }
 
-WGPUDevice Adapter::APICreateDevice(const WGPUDeviceDescriptor*) {
+Device* Adapter::APICreateDevice(const DeviceDescriptor*) {
     dawn::ErrorLog() << "adapter.CreateDevice not supported with dawn_wire.";
     return nullptr;
 }
 
-WGPUStatus Adapter::APIGetFormatCapabilities(WGPUTextureFormat format,
-                                             WGPUDawnFormatCapabilities* capabilities) {
+wgpu::Status Adapter::APIGetFormatCapabilities(wgpu::TextureFormat format,
+                                               DawnFormatCapabilities* capabilities) {
     dawn::ErrorLog() << "adapter.GetFormatCapabilities not supported with dawn_wire.";
-    return WGPUStatus_Error;
+    return wgpu::Status::Error;
 }
 
-void APIFreeMembers(WGPUAdapterInfo info) {
+void APIAdapterInfoFreeMembers(WGPUAdapterInfo info) {
     // This single delete is enough because everything is a single allocation.
     delete[] info.vendor.data;
 }
 
-void APIFreeMembers(WGPUAdapterPropertiesMemoryHeaps memoryHeapProperties) {
+void APIAdapterPropertiesMemoryHeapsFreeMembers(
+    WGPUAdapterPropertiesMemoryHeaps memoryHeapProperties) {
     delete[] memoryHeapProperties.heapInfo;
 }
 
-void APIFreeMembers(WGPUDawnDrmFormatCapabilities capabilities) {
+void APIDawnDrmFormatCapabilitiesFreeMembers(WGPUDawnDrmFormatCapabilities capabilities) {
     delete[] capabilities.properties;
 }
 
-void APIFreeMembers(WGPUSupportedFeatures supportedFeatures) {
+void APISupportedFeaturesFreeMembers(WGPUSupportedFeatures supportedFeatures) {
     delete[] supportedFeatures.features;
 }
 
-void APIFreeMembers(WGPUAdapterPropertiesSubgroupMatrixConfigs subgroupMatrixConfigs) {
+void APIAdapterPropertiesSubgroupMatrixConfigsFreeMembers(
+    WGPUAdapterPropertiesSubgroupMatrixConfigs subgroupMatrixConfigs) {
     delete[] subgroupMatrixConfigs.configs;
 }
 

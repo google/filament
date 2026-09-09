@@ -49,12 +49,12 @@ if (tint_build_unittests) {
     sources = [ "main_test.cc" ]
     deps = [
       "${dawn_root}/src/utils",
+      "${dawn_root}/src/utils:crash_handler",
       "${dawn_root}/src/utils/chromium_test_compat",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api",
       "${tint_src_dir}/api:unittests",
       "${tint_src_dir}/api/common:unittests",
-      "${tint_src_dir}/cmd/fuzz/ir/helpers:unittests",
       "${tint_src_dir}/lang/core:unittests",
       "${tint_src_dir}/lang/core/constant:unittests",
       "${tint_src_dir}/lang/core/intrinsic:unittests",
@@ -62,27 +62,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/core/ir/analysis:unittests",
       "${tint_src_dir}/lang/core/ir/transform:unittests",
       "${tint_src_dir}/lang/core/type:unittests",
-      "${tint_src_dir}/lang/glsl/ir:unittests",
-      "${tint_src_dir}/lang/hlsl/ir:unittests",
-      "${tint_src_dir}/lang/hlsl/type:unittests",
-      "${tint_src_dir}/lang/hlsl/writer/common:unittests",
-      "${tint_src_dir}/lang/hlsl/writer/raise:unittests",
-      "${tint_src_dir}/lang/msl/ir:unittests",
-      "${tint_src_dir}/lang/msl/type:unittests",
-      "${tint_src_dir}/lang/spirv/ir:unittests",
-      "${tint_src_dir}/lang/spirv/reader/lower:unittests",
-      "${tint_src_dir}/lang/spirv/type:unittests",
-      "${tint_src_dir}/lang/spirv/writer/analysis:unittests",
-      "${tint_src_dir}/lang/wgsl",
-      "${tint_src_dir}/lang/wgsl:unittests",
-      "${tint_src_dir}/lang/wgsl/ast:unittests",
-      "${tint_src_dir}/lang/wgsl/ir:unittests",
-      "${tint_src_dir}/lang/wgsl/program:unittests",
-      "${tint_src_dir}/lang/wgsl/reader/lower:unittests",
-      "${tint_src_dir}/lang/wgsl/sem:unittests",
-      "${tint_src_dir}/lang/wgsl/writer/common",
-      "${tint_src_dir}/lang/wgsl/writer/ir_to_program:unittests",
-      "${tint_src_dir}/lang/wgsl/writer/raise:unittests",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils:unittests",
       "${tint_src_dir}/utils/bytes:unittests",
@@ -100,6 +79,8 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/math:unittests",
       "${tint_src_dir}/utils/memory",
       "${tint_src_dir}/utils/memory:unittests",
+      "${tint_src_dir}/utils/reflection",
+      "${tint_src_dir}/utils/reflection:unittests",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/rtti:unittests",
       "${tint_src_dir}/utils/strconv:unittests",
@@ -108,19 +89,26 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/text:unittests",
     ]
 
+    if (tint_build_glsl_validator && tint_build_glsl_writer) {
+      deps += [ "${tint_src_dir}/lang/glsl/writer:unittests" ]
+    }
+
     if (tint_build_glsl_writer) {
       deps += [
+        "${tint_src_dir}/lang/glsl/ir:unittests",
         "${tint_src_dir}/lang/glsl/writer/common:unittests",
         "${tint_src_dir}/lang/glsl/writer/raise:unittests",
       ]
     }
 
-    if (tint_build_glsl_writer && tint_build_glsl_validator) {
-      deps += [ "${tint_src_dir}/lang/glsl/writer:unittests" ]
-    }
-
     if (tint_build_hlsl_writer) {
-      deps += [ "${tint_src_dir}/lang/hlsl/writer:unittests" ]
+      deps += [
+        "${tint_src_dir}/lang/hlsl/ir:unittests",
+        "${tint_src_dir}/lang/hlsl/type:unittests",
+        "${tint_src_dir}/lang/hlsl/writer:unittests",
+        "${tint_src_dir}/lang/hlsl/writer/common:unittests",
+        "${tint_src_dir}/lang/hlsl/writer/raise:unittests",
+      ]
     }
 
     if (tint_build_ir_binary) {
@@ -129,6 +117,8 @@ if (tint_build_unittests) {
 
     if (tint_build_msl_writer) {
       deps += [
+        "${tint_src_dir}/lang/msl/ir:unittests",
+        "${tint_src_dir}/lang/msl/type:unittests",
         "${tint_src_dir}/lang/msl/writer:unittests",
         "${tint_src_dir}/lang/msl/writer/common:unittests",
         "${tint_src_dir}/lang/msl/writer/raise:unittests",
@@ -139,24 +129,26 @@ if (tint_build_unittests) {
       deps += [
         "${tint_src_dir}/lang/spirv/reader:unittests",
         "${tint_src_dir}/lang/spirv/reader/common:unittests",
+        "${tint_src_dir}/lang/spirv/reader/lower:unittests",
         "${tint_src_dir}/lang/spirv/reader/parser:unittests",
       ]
     }
 
     if (tint_build_spv_reader || tint_build_spv_writer) {
-      deps += [ "${tint_src_dir}/lang/spirv/validate:unittests" ]
+      deps += [
+        "${tint_src_dir}/lang/spirv/ir:unittests",
+        "${tint_src_dir}/lang/spirv/type:unittests",
+        "${tint_src_dir}/lang/spirv/validate:unittests",
+      ]
     }
 
     if (tint_build_spv_writer) {
       deps += [
         "${tint_src_dir}/lang/spirv/writer:unittests",
+        "${tint_src_dir}/lang/spirv/writer/analysis:unittests",
         "${tint_src_dir}/lang/spirv/writer/common:unittests",
         "${tint_src_dir}/lang/spirv/writer/raise:unittests",
       ]
-    }
-
-    if (tint_build_tintd && tint_build_wgsl_reader) {
-      deps += [ "${tint_src_dir}/lang/wgsl/ls:unittests" ]
     }
 
     if (tint_build_wgsl_reader) {
@@ -164,9 +156,21 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/wgsl/inspector:unittests",
         "${tint_src_dir}/lang/wgsl/intrinsic:unittests",
         "${tint_src_dir}/lang/wgsl/reader:unittests",
+        "${tint_src_dir}/lang/wgsl/reader/lower:unittests",
         "${tint_src_dir}/lang/wgsl/reader/parser:unittests",
         "${tint_src_dir}/lang/wgsl/reader/program_to_ir:unittests",
         "${tint_src_dir}/lang/wgsl/resolver:unittests",
+      ]
+    }
+
+    if (tint_build_wgsl_reader || tint_build_wgsl_writer) {
+      deps += [
+        "${tint_src_dir}/lang/wgsl",
+        "${tint_src_dir}/lang/wgsl:unittests",
+        "${tint_src_dir}/lang/wgsl/ast:unittests",
+        "${tint_src_dir}/lang/wgsl/ir:unittests",
+        "${tint_src_dir}/lang/wgsl/program:unittests",
+        "${tint_src_dir}/lang/wgsl/sem:unittests",
       ]
     }
 
@@ -174,6 +178,9 @@ if (tint_build_unittests) {
       deps += [
         "${tint_src_dir}/lang/wgsl/writer:unittests",
         "${tint_src_dir}/lang/wgsl/writer/ast_printer:unittests",
+        "${tint_src_dir}/lang/wgsl/writer/common",
+        "${tint_src_dir}/lang/wgsl/writer/ir_to_program:unittests",
+        "${tint_src_dir}/lang/wgsl/writer/raise:unittests",
       ]
     }
     configs += [ "${tint_src_dir}:tint_unittests_config" ]

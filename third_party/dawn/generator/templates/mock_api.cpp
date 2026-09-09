@@ -26,8 +26,13 @@
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 {% set api = metadata.api.lower() %}
-#include "dawn/common/Log.h"
 #include "mock_{{api}}.h"
+
+#include <algorithm>
+
+#include "dawn/dawn_version.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
 
 using namespace testing;
 
@@ -55,8 +60,14 @@ namespace {
 ProcTableAsClass::~ProcTableAsClass() {
 }
 
+WGPUFuture ProcTableAsClass::GetLastFuture() {
+    return {mNextFutureID - 1};
+}
+
 {% set Prefix = metadata.proc_table_prefix %}
 void ProcTableAsClass::GetProcTable({{Prefix}}ProcTable* table) {
+    std::ranges::copy(dawn::kDawnVersion, table->version);
+
     {% for type in by_category["object"] %}
         {% for method in c_methods(type) %}
             table->{{as_varName(type.name, method.name)}} = reinterpret_cast<{{as_cProc(type.name, method.name)}}>(Forward{{as_MethodSuffix(type.name, method.name)}});
@@ -77,7 +88,7 @@ void ProcTableAsClass::GetProcTable({{Prefix}}ProcTable* table) {
 {% for type in by_category["object"] %}
     {% for method in type.methods %}
         {% set Suffix = as_CppMethodSuffix(type.name, method.name) %}
-        {% if has_callbackInfoStruct(method) %}
+        {% if has_callbackInfoStruct(method.arguments) %}
             {{as_annotated_cType(method.returns)}} ProcTableAsClass::{{Suffix}}(
                 {{-as_cType(type.name)}} {{as_varName(type.name)}}
                 {%- for arg in method.arguments -%}
@@ -85,18 +96,28 @@ void ProcTableAsClass::GetProcTable({{Prefix}}ProcTable* table) {
                 {%- endfor -%}
             ) {
                 ProcTableAsClass::Object* object = reinterpret_cast<ProcTableAsClass::Object*>({{as_varName(type.name)}});
-                object->m{{Suffix}}Callback = callbackInfo.callback;
-                object->m{{Suffix}}Userdata1 = callbackInfo.userdata1;
-                object->m{{Suffix}}Userdata2 = callbackInfo.userdata2;
-
-                On{{Suffix}}(
-                    {{-as_varName(type.name)}}
-                    {%- for arg in method.arguments -%}
-                        , {{as_varName(arg.name)}}
-                    {%- endfor -%}
-                );
                 {% if method.returns and method.returns.type.name.get() == "future" %}
-                    return {mNextFutureID++};
+                    dawn::FutureID futureID = mNextFutureID++;
+                    object->m{{Suffix}}Requests[futureID] = {callbackInfo.callback, callbackInfo.userdata1, callbackInfo.userdata2};
+
+                    On{{Suffix}}(
+                        {{-as_varName(type.name)}}
+                        {%- for arg in method.arguments -%}
+                            , {{as_varName(arg.name)}}
+                        {%- endfor -%}
+                    );
+                    return {futureID};
+                {% else %}
+                    object->m{{Suffix}}Callback = callbackInfo.callback;
+                    object->m{{Suffix}}Userdata1 = callbackInfo.userdata1;
+                    object->m{{Suffix}}Userdata2 = callbackInfo.userdata2;
+
+                    On{{Suffix}}(
+                        {{-as_varName(type.name)}}
+                        {%- for arg in method.arguments -%}
+                            , {{as_varName(arg.name)}}
+                        {%- endfor -%}
+                    );
                 {% endif %}
             }
             {% set CallbackInfoType = (method.arguments|last).type %}
@@ -106,13 +127,44 @@ void ProcTableAsClass::GetProcTable({{Prefix}}ProcTable* table) {
                 {%- for arg in CallbackType.arguments -%}
                     , {{as_annotated_cType(arg)}}
                 {%- endfor -%}
+                {%- if method.returns and method.returns.type.name.get() == "future" -%}
+                    , WGPUFuture future
+                {%- endif -%}
             ) {
                 ProcTableAsClass::Object* object = reinterpret_cast<ProcTableAsClass::Object*>({{as_varName(type.name)}});
-                object->m{{Suffix}}Callback(
-                    {%- for arg in CallbackType.arguments -%}
-                        {{as_varName(arg.name)}}{{", "}}
-                    {%- endfor -%}
-                    object->m{{Suffix}}Userdata1, object->m{{Suffix}}Userdata2);
+                {% if method.returns and method.returns.type.name.get() == "future" %}
+                    if (future.id == dawn::kNullFutureID) {
+                        // TODO(crbug.com/514400091): We provide this default version for emulating
+                        // callbacks to avoid breaking existing tests that only ever have one
+                        // outstanding pending callback at a time. Consider updating all tests,
+                        // and/or adding better utility functions to make this process easier.
+                        DAWN_ASSERT(object->m{{Suffix}}Requests.size() == 1);
+                        auto it = object->m{{Suffix}}Requests.begin();
+                        auto data = it->second;
+                        object->m{{Suffix}}Requests.erase(it);
+                        data.callback(
+                            {%- for arg in CallbackType.arguments -%}
+                                {{as_varName(arg.name)}}{{", "}}
+                            {%- endfor -%}
+                            data.userdata1, data.userdata2);
+                    } else {
+                        auto it = object->m{{Suffix}}Requests.find(future.id);
+                        DAWN_ASSERT(it != object->m{{Suffix}}Requests.end());
+                        auto data = it->second;
+                        object->m{{Suffix}}Requests.erase(it);
+                        data.callback(
+                            {%- for arg in CallbackType.arguments -%}
+                                {{as_varName(arg.name)}}{{", "}}
+                            {%- endfor -%}
+                            data.userdata1, data.userdata2);
+                    }
+                {% else %}
+                    object->m{{Suffix}}Callback(
+                        {%- for arg in CallbackType.arguments -%}
+                            {{as_varName(arg.name)}}{{", "}}
+                        {%- endfor -%}
+                        object->m{{Suffix}}Userdata1, object->m{{Suffix}}Userdata2);
+                {% endif %}
             }
         {% endif %}
     {% endfor %}

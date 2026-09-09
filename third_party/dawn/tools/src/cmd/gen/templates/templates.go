@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -49,59 +49,66 @@ import (
 )
 
 func init() {
-	common.Register(&Cmd{})
+	common.Register(&CmdSources{})
+	common.Register(&CmdTests{})
 }
 
-type Cmd struct {
+// CmdSources implements the "sources" command.
+type CmdSources struct{}
+
+func (c *CmdSources) Name() string { return "sources" }
+
+func (c *CmdSources) Desc() string {
+	return `sources generates files from <file>.tmpl files found in the Tint source directory`
 }
 
-func (c *Cmd) Name() string {
-	return "templates"
-}
-
-func (c *Cmd) Desc() string {
-	return `templates generates files from <file>.tmpl files found in the Tint source and test directories`
-}
-
-func (c *Cmd) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, error) {
+func (c *CmdSources) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, error) {
 	return nil, nil
 }
 
-// TODO(crbug.com/344014313): Add unittest coverage.
-func (c *Cmd) Run(ctx context.Context, cfg *common.Config) error {
-	staleFiles := common.StaleFiles{}
-	projectRoot := fileutils.DawnRoot(cfg.OsWrapper)
+func (c *CmdSources) Run(ctx context.Context, cfg *common.Config) error {
+	args := flag.Args()
+	outputDir := ""
+	if len(args) == 1 {
+		outputDir = args[0]
+	} else if len(args) > 1 {
+		return fmt.Errorf("too many arguments")
+	}
+	return runTemplates(ctx, cfg, "src/tint", outputDir)
+}
 
-	files := flag.Args()
-	if len(files) == 0 {
-		// Recursively find all the template files in the <dawn>/src/tint and
-		// <dawn>/test/tint and directories
-		var err error
-		files, err = glob.Scan(projectRoot, glob.MustParseConfig(`{
-			"paths": [{"include": [
-				"src/tint/**.tmpl",
-				"test/tint/**.tmpl"
-			]}]
-		}`), cfg.OsWrapper)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Make all template file paths project-relative
-		for i, f := range files {
-			abs, err := filepath.Abs(f)
-			if err != nil {
-				return fmt.Errorf("failed to get absolute file path for '%v': %w", f, err)
-			}
-			if !strings.HasPrefix(abs, projectRoot) {
-				return fmt.Errorf("template '%v' is not under project root '%v'", abs, projectRoot)
-			}
-			rel, err := filepath.Rel(projectRoot, abs)
-			if err != nil {
-				return fmt.Errorf("failed to get project relative file path for '%v': %w", f, err)
-			}
-			files[i] = rel
-		}
+// CmdTests implements the "tests" command.
+type CmdTests struct{}
+
+func (c *CmdTests) Name() string { return "tests" }
+
+func (c *CmdTests) Desc() string {
+	return `tests generates files from <file>.tmpl files found in the Tint test directory`
+}
+
+func (c *CmdTests) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, error) {
+	return nil, nil
+}
+
+func (c *CmdTests) Run(ctx context.Context, cfg *common.Config) error {
+	if len(flag.Args()) > 0 {
+		return fmt.Errorf("arguments are not supported")
+	}
+	return runTemplates(ctx, cfg, "test/tint", "")
+}
+
+// TODO(crbug.com/344014313): Add unittest coverage.
+// runTemplates executes the templates matching the defaultIncludes patterns.
+func runTemplates(ctx context.Context, cfg *common.Config, dirPrefix string, outputDir string) error {
+	staleFiles := common.StaleFiles{}
+	projectRoot := filepath.Join(fileutils.DawnRoot(cfg.OsWrapper), dirPrefix)
+
+	configStr := `{
+		"paths": [{"include": ["**.tmpl"]}]
+	}`
+	files, err := glob.Scan(projectRoot, glob.MustParseConfig(configStr), cfg.OsWrapper)
+	if err != nil {
+		return err
 	}
 
 	cache := &genCache{
@@ -126,7 +133,12 @@ func (c *Cmd) Run(ctx context.Context, cfg *common.Config) error {
 				return nil
 			}
 
-			outPath := filepath.Join(tmplDir, relPath)
+			var outPath string
+			if outputDir != "" {
+				outPath = filepath.Join(outputDir, dirPrefix, filepath.Dir(relTmplPath), relPath)
+			} else {
+				outPath = filepath.Join(tmplDir, relPath)
+			}
 
 			// Load the old file
 			existing, err := cfg.OsWrapper.ReadFile(outPath)
@@ -139,7 +151,7 @@ func (c *Cmd) Run(ctx context.Context, cfg *common.Config) error {
 				fmt.Println("  writing", outPath)
 			}
 			sb := strings.Builder{}
-			sb.WriteString(common.Header(string(existing), filepath.ToSlash(relTmplPath), commentPrefix))
+			sb.WriteString(common.Header(string(existing), filepath.ToSlash(filepath.Join(dirPrefix, relTmplPath)), commentPrefix))
 			sb.WriteString("\n")
 			sb.WriteString(body)
 			oldContent, newContent := string(existing), sb.String()

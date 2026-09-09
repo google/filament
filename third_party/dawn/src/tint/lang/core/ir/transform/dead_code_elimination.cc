@@ -105,9 +105,11 @@ struct State {
 }  // namespace
 
 Result<SuccessType> DeadCodeElimination(Module& ir) {
-    core::ir::AssertValid(ir, kDeadCodeEliminationCapabilities, "before core.DeadCodeElimination");
+    core::ir::AssertValid(ir, "before core.DeadCodeElimination");
 
     State{ir}.Process();
+
+    ir.properties.Remove(Property::kAllowUnannotatedModuleIOVariables);
 
     return Success;
 }

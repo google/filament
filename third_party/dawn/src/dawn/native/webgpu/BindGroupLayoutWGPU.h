@@ -28,12 +28,12 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_BINDGROUPLAYOUTWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_BINDGROUPLAYOUTWGPU_H_
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SlabAllocator.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/webgpu/BindGroupWGPU.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SlabAllocator.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/webgpu/BindGroupWGPU.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

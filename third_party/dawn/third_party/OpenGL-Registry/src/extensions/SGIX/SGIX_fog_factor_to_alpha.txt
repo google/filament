@@ -1,0 +1,102 @@
+
+Name
+
+    SGIX_fog_factor_to_alpha
+
+Name Strings
+
+    GL_SGIX_fog_factor_to_alpha
+
+Version
+
+    $Date: 1999/02/19 17:04:27 $ $Revision: 1.4 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    OpenGL 1.2 is required
+
+Overview
+
+    This extension defines a mechanism that allows to replace the
+    alpha component by the fog blending factor after the input
+    fragment has been blent with the fog color. This feature is
+    particularly useful for multipass fog when we want to use the
+    the framebuffer blend function in conjunction with the fog blend
+    function.
+
+New Procedures and Functions
+
+    None
+
+Issues
+
+    - Is that ok as a stand alone extension? Should we include it
+      somewhere else?
+
+    - Should we make additions to the chapter 4, section 4.1.3 Alpha
+      test and 4.1.6 Blending?
+
+    - Does this spec need to reference the earlier fog_blend.spec
+      that allows for the fragment alpha component to be blended
+      with the fog color?
+
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled
+
+    GL_FOG_FACTOR_TO_ALPHA_SGIX                       	0xXXXX
+
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    3.10 Fog
+
+    ... (The rasterized fragment's A value is not changed by fog blending.)...
+    is removed and replaced by.
+
+    The rasterized fragment alpha value is not changed by fog blending,
+    unless specified otherwise by enabling it with the GL_FACTOR_TO_ALPHA_SGIX
+    parameter in which case the A value is replaced by the fog
+    blending factor. This substitution occurs after the alpha test is
+    performed. If fog is disabled but fog-factor-to-alpha is enabled, the
+    fragment alpha coming out of the fog-factor-to-alpha in undefined.
+	
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    Get Value			Get Command		Type		Initial Value	Attribute
+    ---------			-----------		----		-------------	---------
+    FOG_FACTOR_TO_ALPHA_SGIX	IsEnabled		B		FALSE		fog

@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_TOBACKEND_H_
 #define SRC_DAWN_NATIVE_TOBACKEND_H_
 
-#include "dawn/native/Forward.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Forward.h"
 
 namespace dawn::native {
 

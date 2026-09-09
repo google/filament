@@ -1,0 +1,14 @@
+// HLSL Version
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl  /HV 2016
+// RUN: not %dxc /T ps_6_0 %S/Inputs/smoke.hlsl  /HV 2015 > %t 2>&1
+// RUN: FileCheck --input-file=%t %s
+// CHECK:HLSL Version 2015 is only supported for language services
+
+// dxc.exe shader model version promtion warning
+// RUN: %dxc  %S/Inputs/smoke.hlsl /Emain /Tps_5_0 2>%t.version.err
+// RUN: FileCheck --input-file=%t.version.err %s --check-prefix=VERSION_WARNING
+
+// RUN: %dxc  %S/Inputs/smoke.hlsl /Emain /Tps_5_1 2>%t.version2.err
+// RUN: FileCheck --input-file=%t.version2.err %s --check-prefix=VERSION_WARNING
+
+// VERSION_WARNING:warning: Promoting older shader model profile to 6.0 version

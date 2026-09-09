@@ -75,6 +75,8 @@ private:
 template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator : public DebugTag {
 public:
+    static constexpr size_t bucketSizesSum = P0 + P1 + P2;
+
     HandleAllocator(const char* name, size_t size);
     HandleAllocator(const char* name, size_t size,
             bool disableUseAfterFreeCheck, bool disableHeapHandleTags);

@@ -103,7 +103,8 @@ class BuiltinFn final : public Castable<BuiltinFn, CallTarget> {
     bool IsResourceTable() const;
 
     /// @returns the required language feature of this builtin function. Returns
-    /// wgsl::LanguageFeature::kUndefined if no language feature is required.
+    /// wgsl::LanguageFeature::kUndefined if no language feature is required, or if the language
+    /// feature has been fully shipped.
     wgsl::LanguageFeature RequiredLanguageFeature() const;
 
     /// @returns the builtin table overload info

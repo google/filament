@@ -40,7 +40,10 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using IR_BuiltinScalarizeTest = TransformTest;
+struct IR_BuiltinScalarizeTest : public TransformTest {
+  protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
+};
 
 TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_Scalarize) {
     auto* x = b.FunctionParam("x", ty.vec2f());
@@ -81,10 +84,11 @@ TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_Scalarize) {
 }
 )";
 
-    BuiltinScalarizeConfig config{.scalarize_clamp = true};
+    BuiltinScalarizeConfig config{.scalarize_min_max_clamp = true};
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_TRUE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_AlreadyScalarize) {
@@ -118,10 +122,11 @@ TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_AlreadyScalarize) {
 }
 )";
 
-    BuiltinScalarizeConfig config{.scalarize_clamp = true};
+    BuiltinScalarizeConfig config{.scalarize_min_max_clamp = true};
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_TRUE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_LeaveVectorized) {
@@ -159,6 +164,7 @@ TEST_F(IR_BuiltinScalarizeTest, Clamp_VectorOperands_LeaveVectorized) {
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_FALSE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_Scalarize) {
@@ -200,10 +206,11 @@ TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_Scalarize) {
 }
 )";
 
-    BuiltinScalarizeConfig config{.scalarize_max = true};
+    BuiltinScalarizeConfig config{.scalarize_min_max_clamp = true};
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_TRUE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_LeaveVectorized) {
@@ -240,6 +247,7 @@ TEST_F(IR_BuiltinScalarizeTest, Max_VectorOperands_LeaveVectorized) {
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_FALSE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_Scalarize) {
@@ -284,10 +292,11 @@ TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_Scalarize) {
 }
 )";
 
-    BuiltinScalarizeConfig config{.scalarize_min = true};
+    BuiltinScalarizeConfig config{.scalarize_min_max_clamp = true};
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_TRUE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_LeaveVectorized) {
@@ -324,6 +333,7 @@ TEST_F(IR_BuiltinScalarizeTest, Min_VectorOperands_LeaveVectorized) {
     Run(BuiltinScalarize, config);
 
     EXPECT_EQ(expect, str());
+    EXPECT_FALSE(mod.properties.Contains(Property::kDisallowVectorMinMaxClamp));
 }
 
 }  // namespace

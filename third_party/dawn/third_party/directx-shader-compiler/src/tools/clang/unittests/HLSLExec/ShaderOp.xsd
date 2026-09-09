@@ -1,0 +1,310 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/test/ShaderOp" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:t="http://schemas.microsoft.com/test/ShaderOp">
+  <xs:simpleType name="TDXGI_FORMAT">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="UNKNOWN" />
+      <xs:enumeration value="R32G32B32A32_TYPELESS" />
+      <xs:enumeration value="R32G32B32A32_FLOAT" />
+      <xs:enumeration value="R32G32B32A32_UINT" />
+      <xs:enumeration value="R32G32B32A32_SINT" />
+      <xs:enumeration value="R32G32B32_TYPELESS" />
+      <xs:enumeration value="R32G32B32_FLOAT" />
+      <xs:enumeration value="R32G32B32_UINT" />
+      <xs:enumeration value="R32G32B32_SINT" />
+      <xs:enumeration value="R16G16B16A16_TYPELESS" />
+      <xs:enumeration value="R16G16B16A16_FLOAT" />
+      <xs:enumeration value="R16G16B16A16_UNORM" />
+      <xs:enumeration value="R16G16B16A16_UINT" />
+      <xs:enumeration value="R16G16B16A16_SNORM" />
+      <xs:enumeration value="R16G16B16A16_SINT" />
+      <xs:enumeration value="R32G32_TYPELESS" />
+      <xs:enumeration value="R32G32_FLOAT" />
+      <xs:enumeration value="R32G32_UINT" />
+      <xs:enumeration value="R32G32_SINT" />
+      <xs:enumeration value="R32G8X24_TYPELESS" />
+      <xs:enumeration value="D32_FLOAT_S8X24_UINT" />
+      <xs:enumeration value="R32_FLOAT_X8X24_TYPELESS" />
+      <xs:enumeration value="X32_TYPELESS_G8X24_UINT" />
+      <xs:enumeration value="R10G10B10A2_TYPELESS" />
+      <xs:enumeration value="R10G10B10A2_UNORM" />
+      <xs:enumeration value="R10G10B10A2_UINT" />
+      <xs:enumeration value="R11G11B10_FLOAT" />
+      <xs:enumeration value="R8G8B8A8_TYPELESS" />
+      <xs:enumeration value="R8G8B8A8_UNORM" />
+      <xs:enumeration value="R8G8B8A8_UNORM_SRGB" />
+      <xs:enumeration value="R8G8B8A8_UINT" />
+      <xs:enumeration value="R8G8B8A8_SNORM" />
+      <xs:enumeration value="R8G8B8A8_SINT" />
+      <xs:enumeration value="R16G16_TYPELESS" />
+      <xs:enumeration value="R16G16_FLOAT" />
+      <xs:enumeration value="R16G16_UNORM" />
+      <xs:enumeration value="R16G16_UINT" />
+      <xs:enumeration value="R16G16_SNORM" />
+      <xs:enumeration value="R16G16_SINT" />
+      <xs:enumeration value="R32_TYPELESS" />
+      <xs:enumeration value="D32_FLOAT" />
+      <xs:enumeration value="R32_FLOAT" />
+      <xs:enumeration value="R32_UINT" />
+      <xs:enumeration value="R32_SINT" />
+      <xs:enumeration value="R24G8_TYPELESS" />
+      <xs:enumeration value="D24_UNORM_S8_UINT" />
+      <xs:enumeration value="R24_UNORM_X8_TYPELESS" />
+      <xs:enumeration value="X24_TYPELESS_G8_UINT" />
+      <xs:enumeration value="R8G8_TYPELESS" />
+      <xs:enumeration value="R8G8_UNORM" />
+      <xs:enumeration value="R8G8_UINT" />
+      <xs:enumeration value="R8G8_SNORM" />
+      <xs:enumeration value="R8G8_SINT" />
+      <xs:enumeration value="R16_TYPELESS" />
+      <xs:enumeration value="R16_FLOAT" />
+      <xs:enumeration value="D16_UNORM" />
+      <xs:enumeration value="R16_UNORM" />
+      <xs:enumeration value="R16_UINT" />
+      <xs:enumeration value="R16_SNORM" />
+      <xs:enumeration value="R16_SINT" />
+      <xs:enumeration value="R8_TYPELESS" />
+      <xs:enumeration value="R8_UNORM" />
+      <xs:enumeration value="R8_UINT" />
+      <xs:enumeration value="R8_SNORM" />
+      <xs:enumeration value="R8_SINT" />
+      <xs:enumeration value="A8_UNORM" />
+      <xs:enumeration value="R1_UNORM" />
+      <xs:enumeration value="R9G9B9E5_SHAREDEXP" />
+      <xs:enumeration value="R8G8_B8G8_UNORM" />
+      <xs:enumeration value="G8R8_G8B8_UNORM" />
+      <xs:enumeration value="BC1_TYPELESS" />
+      <xs:enumeration value="BC1_UNORM" />
+      <xs:enumeration value="BC1_UNORM_SRGB" />
+      <xs:enumeration value="BC2_TYPELESS" />
+      <xs:enumeration value="BC2_UNORM" />
+      <xs:enumeration value="BC2_UNORM_SRGB" />
+      <xs:enumeration value="BC3_TYPELESS" />
+      <xs:enumeration value="BC3_UNORM" />
+      <xs:enumeration value="BC3_UNORM_SRGB" />
+      <xs:enumeration value="BC4_TYPELESS" />
+      <xs:enumeration value="BC4_UNORM" />
+      <xs:enumeration value="BC4_SNORM" />
+      <xs:enumeration value="BC5_TYPELESS" />
+      <xs:enumeration value="BC5_UNORM" />
+      <xs:enumeration value="BC5_SNORM" />
+      <xs:enumeration value="B5G6R5_UNORM" />
+      <xs:enumeration value="B5G5R5A1_UNORM" />
+      <xs:enumeration value="B8G8R8A8_UNORM" />
+      <xs:enumeration value="B8G8R8X8_UNORM" />
+      <xs:enumeration value="R10G10B10_XR_BIAS_A2_UNORM" />
+      <xs:enumeration value="B8G8R8A8_TYPELESS" />
+      <xs:enumeration value="B8G8R8A8_UNORM_SRGB" />
+      <xs:enumeration value="B8G8R8X8_TYPELESS" />
+      <xs:enumeration value="B8G8R8X8_UNORM_SRGB" />
+      <xs:enumeration value="BC6H_TYPELESS" />
+      <xs:enumeration value="BC6H_UF16" />
+      <xs:enumeration value="BC6H_SF16" />
+      <xs:enumeration value="BC7_TYPELESS" />
+      <xs:enumeration value="BC7_UNORM" />
+      <xs:enumeration value="BC7_UNORM_SRGB" />
+      <xs:enumeration value="AYUV" />
+      <xs:enumeration value="Y410" />
+      <xs:enumeration value="Y416" />
+      <xs:enumeration value="NV12" />
+      <xs:enumeration value="P010" />
+      <xs:enumeration value="P016" />
+      <xs:enumeration value="420_OPAQUE" />
+      <xs:enumeration value="YUY2" />
+      <xs:enumeration value="Y210" />
+      <xs:enumeration value="Y216" />
+      <xs:enumeration value="NV11" />
+      <xs:enumeration value="AI44" />
+      <xs:enumeration value="IA44" />
+      <xs:enumeration value="P8" />
+      <xs:enumeration value="A8P8" />
+      <xs:enumeration value="B4G4R4A4_UNORM" />
+      <xs:enumeration value="P208" />
+      <xs:enumeration value="V208" />
+      <xs:enumeration value="V408" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TD3D12_RESOURCE_DIMENSION">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="BUFFER" />
+      <xs:enumeration value="TEXTURE1D" />
+      <xs:enumeration value="TEXTURE2D" />
+      <xs:enumeration value="TEXTURE3D" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TD3D12_RESOURCE_FLAG">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NONE" />
+      <xs:enumeration value="ALLOW_RENDER_TARGET" />
+      <xs:enumeration value="ALLOW_DEPTH_STENCIL" />
+      <xs:enumeration value="ALLOW_UNORDERED_ACCESS" />
+      <xs:enumeration value="DENY_SHADER_RESOURCE" />
+      <xs:enumeration value="ALLOW_CROSS_ADAPTER" />
+      <xs:enumeration value="ALLOW_SIMULTANEOUS_ACCESS" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TD3D12_HEAP_FLAG">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NONE" />
+      <xs:enumeration value="SHARED" />
+      <xs:enumeration value="DENY_BUFFERS" />
+      <xs:enumeration value="ALLOW_DISPLAY" />
+      <xs:enumeration value="SHARED_CROSS_ADAPTER" />
+      <xs:enumeration value="DENY_RT_DS_TEXTURES" />
+      <xs:enumeration value="DENY_NON_RT_DS_TEXTURES" />
+      <xs:enumeration value="ALLOW_ALL_BUFFERS_AND_TEXTURES" />
+      <xs:enumeration value="ALLOW_ONLY_BUFFERS" />
+      <xs:enumeration value="ALLOW_ONLY_NON_RT_DS_TEXTURES" />
+      <xs:enumeration value="ALLOW_ONLY_RT_DS_TEXTURES" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="THEAP_TYPE">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="DEFAULT" />
+      <xs:enumeration value="UPLOAD" />
+      <xs:enumeration value="READBACK" />
+      <xs:enumeration value="CUSTOM" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TRESOURCE_STATE">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="COMMON" />
+      <xs:enumeration value="VERTEX_AND_CONSTANT_BUFFER" />
+      <xs:enumeration value="INDEX_BUFFER" />
+      <xs:enumeration value="RENDER_TARGET" />
+      <xs:enumeration value="UNORDERED_ACCESS" />
+      <xs:enumeration value="DEPTH_WRITE" />
+      <xs:enumeration value="DEPTH_READ" />
+      <xs:enumeration value="NON_PIXEL_SHADER_RESOURCE" />
+      <xs:enumeration value="PIXEL_SHADER_RESOURCE" />
+      <xs:enumeration value="STREAM_OUT" />
+      <xs:enumeration value="INDIRECT_ARGUMENT" />
+      <xs:enumeration value="COPY_DEST" />
+      <xs:enumeration value="COPY_SOURCE" />
+      <xs:enumeration value="RESOLVE_DEST" />
+      <xs:enumeration value="RESOLVE_SOURCE" />
+      <xs:enumeration value="GENERIC_READ" />
+      <xs:enumeration value="PRESENT" />
+      <xs:enumeration value="PREDICATION" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ShaderOpSet">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ShaderOp" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="RootSignature" type="xs:string" />
+              <xs:element minOccurs="0" maxOccurs="unbounded" name="Resource">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute name="Name" type="xs:string" use="required" />
+                      <xs:attribute name="Dimension" type="t:TD3D12_RESOURCE_DIMENSION" use="optional" />
+                      <xs:attribute name="Format" type="t:TDXGI_FORMAT" use="optional" />
+                      <xs:attribute name="Flags" type="t:TD3D12_RESOURCE_FLAG" use="optional" />
+                      <xs:attribute name="Width" type="xs:string" use="required" />
+                      <xs:attribute name="Height" type="xs:string" use="optional" />
+                      <xs:attribute name="HeapType" type="t:THEAP_TYPE" use="optional" />
+                      <xs:attribute name="HeapFlags" type="t:TD3D12_HEAP_FLAG" use="optional" />
+                      <xs:attribute name="InitialResourceState" type="t:TRESOURCE_STATE" use="optional" />
+                      <xs:attribute name="Init" type="xs:string" use="optional" />
+                      <xs:attribute name="ReadBack" type="xs:boolean" use="optional" />
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" maxOccurs="unbounded" name="DescriptorHeap">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element maxOccurs="unbounded" name="Descriptor">
+                      <xs:complexType>
+                        <xs:attribute name="Name" type="xs:string" use="optional" />
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="Name" type="xs:string" use="optional" />
+                  <xs:attribute name="Type" type="xs:string" use="optional" />
+                  <xs:attribute name="NodeMask" type="xs:string" use="optional" />
+                  <xs:attribute name="NumDescriptors" type="xs:string" use="optional" />
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" maxOccurs="1" name="RootValues">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="RootValue">
+                      <xs:complexType>
+                        <xs:attribute name="Index" type="xs:int" use="optional" />
+                        <xs:attribute name="ResName" type="xs:string" use="optional" />
+                        <xs:attribute name="TransitionTo" type="t:TRESOURCE_STATE" use="optional" />
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" maxOccurs="1" name="InputElements">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="InputElement">
+                      <xs:complexType>
+                        <xs:attribute name="SemanticName" type="xs:string" use="optional" />
+                        <xs:attribute name="SemanticIndex" type="xs:int" use="optional" />
+                        <xs:attribute name="Format" type="t:TDXGI_FORMAT" use="optional" />
+                        <xs:attribute name="InputSlot" type="xs:int" use="optional" />
+                        <xs:attribute name="AlignedByteOffset" type="xs:int" use="optional" />
+                        <xs:attribute name="InputSlotClass" type="xs:string" use="optional" />
+                        <xs:attribute name="InstanceDataStepRate" type="xs:int" use="optional" />
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" maxOccurs="1" name="RenderTargets">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="RenderTarget">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element minOccurs="0" maxOccurs="1" name="Viewport" >
+                            <xs:complexType>
+                              <xs:attribute name="TopLeftX" type="xs:float" use="optional" />
+                              <xs:attribute name="TopLeftY" type="xs:float" use="optional" />
+                              <xs:attribute name="Width" type="xs:float" use="optional" />
+                              <xs:attribute name="Height" type="xs:float" use="optional" />
+                              <xs:attribute name="MinDepth" type="xs:float" use="optional" />
+                              <xs:attribute name="MaxDepth" type="xs:float" use="optional" />
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="Name" type="xs:string" use="required" />
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" maxOccurs="unbounded" name="Shader">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute name="Name" type="xs:string" use="required" />
+                      <xs:attribute name="Target" type="xs:string" use="required" />
+                      <xs:attribute name="EntryPoint" type="xs:string" use="optional" />
+                      <xs:attribute name="Text" type="xs:string" use="optional" />
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="Name" type="xs:string" use="optional" />
+            <xs:attribute name="CS" type="xs:string" use="optional" />
+            <xs:attribute name="VS" type="xs:string" use="optional" />
+            <xs:attribute name="PS" type="xs:string" use="optional" />
+            <xs:attribute name="DispatchX" type="xs:unsignedByte" use="optional" default="1" />
+            <xs:attribute name="DispatchY" type="xs:unsignedByte" use="optional" default="1" />
+            <xs:attribute name="DispatchZ" type="xs:unsignedByte" use="optional" default="1" />
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

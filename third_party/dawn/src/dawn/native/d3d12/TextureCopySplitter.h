@@ -30,9 +30,9 @@
 
 #include <array>
 
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 

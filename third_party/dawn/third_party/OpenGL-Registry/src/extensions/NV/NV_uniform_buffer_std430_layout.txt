@@ -1,0 +1,220 @@
+Name
+
+    NV_uniform_buffer_std430_layout
+
+Name Strings
+
+    GL_NV_uniform_buffer_std430_layout
+
+Contact
+
+    Mark Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown
+    Ashwin Lele
+    Ryan Jennings
+    Piers Daniell
+
+Status
+
+    Complete.
+
+Version
+    
+    Last Modified Date: July 12, 2023
+    Revision: #2
+
+Number
+
+    559
+
+Dependencies
+
+    OpenGL 4.3 or ARB_enhanced_layouts is required.
+
+    Written based on the wording of the OpenGL Shading Language 4.6 specification.
+
+Overview
+    
+    OpenGL 4.3 (and ARB_enhanced_layouts) provide an enhanced layout
+    qualifier syntax for aligning members of uniform and shader storage
+    blocks.  The std430 enhanced layout qualifier is advantageous,
+    compared with std140, because it provides a more space-efficient
+    layout of arrays that more easily matches the data layout in C/C++
+    structures stored in CPU memory.
+
+    However OpenGL 4.3 precluded using the std430 layout qualifier for
+    uniform blocks (by mandating a compilation error be generated).
+
+    This extension makes std430 a legal layout qualifier for uniform
+    blocks in GLSL when the extension's GLSL #extension functionality
+    is enabled or required.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL 4.6 Specification:
+
+    None.
+
+Additions to Chapter 4 of the OpenGL Shading Language, Version 4.60.5:
+
+    Modify section 4.4.5 (Uniform and Shader Storage Block Layout
+    Qualifiers), page 83, discussing std430 support to read:
+
+    "The std430 qualifier is supported for shader storage blocks.
+    The std430 qualifier is supported for uniform blocks only when the
+    NV_uniform_buffer_std430_layout extension is enabled or required;
+    otherwise a shader using the std430 qualifier on a uniform block
+    will fail to compile."
+
+Additions to the OpenGL Shading Language
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_NV_uniform_buffer_std430_layout : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+        #define GL_NV_uniform_buffer_std430_layout 1
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    No new API errors.
+
+Examples
+
+    // Enable std430 for uniform buffers
+    #extension GL_NV_uniform_buffer_std430_layout : enable
+
+    // Require std430 for uniform buffers
+    #extension GL_NV_uniform_buffer_std430_layout : require
+
+    // Specify default uniform layouts established at global scope;
+    // subsequent unspecified uniform blocks will use most-recent default
+    // layout.
+    layout(std430) uniform;  // Unspecified initial matrix layout is column_major.
+    layout(std430, row_major) uniform;
+    layout(std430, column_major) uniform;
+
+    layout(std430) uniform block {
+        vec4 a;
+        layout(offset = 20) vec3 b; // b takes offsets 20-31
+        layout(offset = 28) vec2 c; // ERROR, lies within previous member
+        layout(offset = 36) vec2 d; // d takes offsets 36-43
+        layout(align = 16) float e; // e takes offsets 48-51
+        layout(align = 2) double f; // f takes offsets 56-63
+        layout(align = 6) double g; // ERROR, 6 is not a power of 2
+        layout(offset = 68) float h; // h takes offsets 64-71
+        layout(align = 16) dvec3 i;  // i takes offsets 80-103
+        layout(offset = 105, align = 4) float i; // i takes offsets 108-111
+    };
+
+    layout(binding = 1, std430) uniform Block2 {
+        layout(offset = 0) uint batman;
+        layout(offset = 64) uint robin;
+    };
+
+    layout(binding=2,std430) uniform Block {
+        uint batman;
+        layout(align = 32) uint robin;
+        layout(offset = 60, align = 8) uint joker;
+    };
+
+    struct S {
+        uint16_t   x;     // rule 1:  align = 2, takes offsets 0-1
+        u16vec2    y;     // rule 2:  align = 4, takes offsets 4-7
+        u16vec3    z;     // rule 3:  align = 8, takes offsets 8-13
+    };
+
+    // Assuming #extension GL_NV_gpu_shader5 : enable
+    layout(row_major, std430) uniform B2 {
+        float16_t  o;     // rule 1:  align = 2, takes offsets 0-1
+        f16vec2    p;     // rule 2:  align = 4, takes offsets 4-7
+        f16vec3    q;     // rule 3:  align = 8, takes offsets 8-13
+        float16_t  r[2];  // rule 4:  align = 2, array stride = 2, takes
+                          //          offsets 14-17
+        S          u;     // rule 9:  align = 8, u.x takes offsets
+                          //          24-25, u.y takes offsets 28-31, u.z
+                          //          takes offsets 32-37
+        S          v[2];  // rule 10: align = 8, array stride = 16, v[0]
+                          //          takes offsets 40-55, v[1] takes
+                          //          offsets 56-71
+    };
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1)  What should this extension be called?
+
+        RESOLVED:  NV_uniform_buffer_std430_layout
+
+    2)  Must the layout of a std430 shader storage block match that of
+        a std430 uniform block?
+
+        RESOLVED:  Yes.
+
+    3)  Do the align and offset layout qualifiers apply using the std430
+        layout with a uniform block?
+
+        RESOLVED:  Yes.
+
+    4)  Does Direct3D's HLSL provide comparable functionality?
+
+        RESOLVED:  Sort of.  Direct3D provides "Packing Rules for Constant
+        Variables" that apply to Direct3D's cbuffer equivalent to an
+        OpenGL uniform buffer.  See:
+
+          https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-packing-rules
+
+        HLSL provides syntax for "casting" an array of one size and type
+        to a different size and type to accomplish packing comparable
+        to a std430 layout.  Example HLSL syntax for casting "float4
+        array[16]" to a float2 array:
+
+          static float2 aggressivePackArray[32] = (float2[32])array;  
+
+    5)  How can this extension be so minimal in its specification language?
+
+        RESOLVED:  The OpenGL Shading Language 4.30 specification provides
+        all the syntax for specifying the std430 layout qualifier for
+        uniform blocks; however using the syntax is specified to be an
+        error.  So this extension needs minimal specification language
+        changes as it simply makes legal what was previously an error
+        when this extension is enabled or required.  The layout rules for
+        std430 simply apply "as written" when qualifying a uniform block.
+
+Revision History
+
+    #01    04/27/2022    Mark Kilgard           First draft.
+    #02    07/12/2023    Mark Kilgard           Grammar fixes
+

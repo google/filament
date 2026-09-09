@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/WGPUDeviceCallbackInfos.h"
+#include "src/dawn/common/WGPUDeviceCallbackInfos.h"
 
-#include "dawn/common/Log.h"
+#include "src/utils/log.h"
 
 namespace dawn {
 namespace {
@@ -60,9 +60,9 @@ static constexpr WGPULoggingCallbackInfo kDefaultLoggingCallbackInfo = {
     [](WGPULoggingType, WGPUStringView, void*, void*) {
         static std::once_flag flag;
         std::call_once(flag, []() {
-            dawn::WarningLog() << "No Dawn device logging callback callback was set. This is "
-                                  "probably not intended. If you really want to ignore logs "
-                                  "and suppress this message, set the callback explicitly.";
+            dawn::WarningLog() << "No Dawn device logging callback was set. This is probably not "
+                                  "intended. If you really want to ignore logs and suppress this "
+                                  "message, set the callback explicitly.";
         });
     },
     nullptr, nullptr};
@@ -161,8 +161,12 @@ void WGPUDeviceCallbackInfos::CallLoggingCallback(WGPULoggingType type, WGPUStri
 }
 
 void WGPUDeviceCallbackInfos::SetLoggingCallbackInfo(const WGPULoggingCallbackInfo& callbackInfo) {
-    mCallbackInfos.Use<NotifyType::None>(
-        [&](auto callbackInfos) { callbackInfos->logging = callbackInfo; });
+    mCallbackInfos.Use<NotifyType::None>([&](auto callbackInfos) {
+        // Wait until the callbacks are not in flight before setting the logging callback. This also
+        // ensures that it is safe to deallocate the original callback after this call.
+        callbackInfos.Wait([](auto& x) { return x.semaphore == 0; });
+        callbackInfos->logging = callbackInfo;
+    });
 }
 
 void WGPUDeviceCallbackInfos::Clear() {

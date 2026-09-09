@@ -3518,5 +3518,49 @@ $B1: {  # root
 )");
 }
 
+TEST_F(SpirvParserTest, UnsupportedBuiltin) {
+    auto result = Run(R"(
+               OpCapability Shader
+               OpCapability Geometry
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpDecorate %var BuiltIn Layer
+        %void = OpTypeVoid
+         %u32 = OpTypeInt 32 0
+     %u32_ptr = OpTypePointer Input %u32
+     %ep_type = OpTypeFunction %void
+        %var = OpVariable %u32_ptr Input
+        %main = OpFunction %void None %ep_type
+  %main_start = OpLabel
+                OpReturn
+                OpFunctionEnd
+)");
+    EXPECT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr("unhandled SPIR-V BuiltIn: Layer (val = 9)"));
+}
+
+TEST_F(SpirvParserTest, Var_UnhandledDecoration) {
+    auto result = Run(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpDecorate %var Volatile
+       %void = OpTypeVoid
+        %u32 = OpTypeInt 32 0
+    %u32_ptr = OpTypePointer Function %u32
+    %ep_type = OpTypeFunction %void
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+        %var = OpVariable %u32_ptr Function
+               OpReturn
+               OpFunctionEnd
+)");
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, "unhandled decoration 21");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

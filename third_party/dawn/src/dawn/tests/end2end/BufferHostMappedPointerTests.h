@@ -31,12 +31,14 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 
 class BufferHostMappedPointerTestBackend {
   public:
+    virtual ~BufferHostMappedPointerTestBackend() = default;
+
     // The name used in gtest parameterization.
     virtual const char* Name() const = 0;
 

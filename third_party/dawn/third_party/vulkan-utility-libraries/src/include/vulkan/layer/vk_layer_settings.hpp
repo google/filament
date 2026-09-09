@@ -57,12 +57,6 @@ VkResult vkuGetLayerSettingValue(VkuLayerSettingSet layerSettingSet, const char 
 VkResult vkuGetLayerSettingValues(VkuLayerSettingSet layerSettingSet, const char *pSettingName,
                                   std::vector<VkuFrameset> &settingValues);
 
-// Required by vk_safe_struct
-typedef std::pair<uint32_t, uint32_t> VkuCustomSTypeInfo;
-
-VkResult vkuGetLayerSettingValues(VkuLayerSettingSet layerSettingSet, const char *pSettingName,
-                                  std::vector<VkuCustomSTypeInfo> &settingValues);
-
 // Return the list of Unknown setting in all VkLayerSettingsCreateInfoEXT
 VkResult vkuGetUnknownSettings(VkuLayerSettingSet layerSettingSet, uint32_t layerSettingsCount, const char **pLayerSettings,
                                const VkLayerSettingsCreateInfoEXT *pFirstCreateInfo, std::vector<const char *> &unknownSettings);

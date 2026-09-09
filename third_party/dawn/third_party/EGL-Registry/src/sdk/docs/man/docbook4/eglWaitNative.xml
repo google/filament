@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglWaitNative">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglWaitNative</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglWaitNative</refname>
+        <refpurpose>
+            complete native execution prior to subsequent GL rendering calls
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglWaitNative</function></funcdef>
+                <paramdef>EGLint <parameter>engine</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>engine</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies a particular marking engine to be waited on.
+                        Must be <constant>EGL_CORE_NATIVE_ENGINE</constant>.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            Native rendering calls made prior to <function>eglWaitNative</function>
+            are guaranteed to be executed before GL rendering calls made after
+            <function>eglWaitNative</function>.
+        </para>
+        <para>
+            <function>eglWaitNative</function>
+            is ignored if there is no current
+            <acronym>EGL</acronym>
+            rendering context.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>engine</parameter> is not a recognized marking engine.
+        </para>
+        <para>
+            <constant>EGL_BAD_CURRENT_SURFACE</constant>
+            is generated if the surface associated with the current context has a
+            native window or pixmap, and that window or pixmap is no longer valid.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>glFlush</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitClient</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitGL</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

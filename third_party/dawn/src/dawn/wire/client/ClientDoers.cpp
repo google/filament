@@ -27,9 +27,9 @@
 
 #include <limits>
 
-#include "dawn/common/Assert.h"
-#include "dawn/wire/client/Client.h"
-#include "dawn/wire/client/Device.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/dawn/wire/client/Device.h"
+#include "src/utils/assert.h"
 
 namespace dawn::wire::client {
 

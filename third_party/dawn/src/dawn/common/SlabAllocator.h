@@ -31,14 +31,19 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
-#include "dawn/common/Numeric.h"
-#include "dawn/common/PlacementAllocated.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Numeric.h"
+#include "src/dawn/common/PlacementAllocated.h"
+#include "src/utils/heap_array.h"
+#include "src/utils/numeric.h"
 
 namespace dawn {
+
+class MemoryBlockAllocator;
 
 // The SlabAllocator allocates objects out of one or more fixed-size contiguous "slabs" of memory.
 // This makes it very quick to allocate and deallocate fixed-size objects because the allocator only
@@ -106,13 +111,13 @@ class SlabAllocatorImpl {
         // | ---------- allocation --------- |
         // | pad | Slab | data ------------> |
         Slab();
-        Slab(char allocation[], IndexLinkNode* head);
+        Slab(HeapArray<std::byte> allocation, IndexLinkNode* head);
         Slab(Slab&& rhs);
 
         // Extract the Slab from the linked list.
         void Splice();
 
-        raw_ptr<char> allocation = nullptr;
+        HeapArray<std::byte> allocation;
         raw_ptr<IndexLinkNode> freeList = nullptr;
 
         raw_ptr<Slab> prev = nullptr;
@@ -173,6 +178,9 @@ class SlabAllocatorImpl {
     const Index mBlocksPerSlab;  // The total number of blocks in a slab.
 
     const size_t mTotalAllocationSize;
+    // TODO(crbug.com/398193014): Reuse Device's MemoryBlockAllocator across multiple
+    // SlabAllocators.
+    std::unique_ptr<MemoryBlockAllocator> mMemoryBlockAllocator;
 
     struct SentinelSlab : Slab {
         SentinelSlab();
@@ -180,6 +188,7 @@ class SlabAllocatorImpl {
 
         SentinelSlab(SentinelSlab&& rhs);
 
+        void Destroy(MemoryBlockAllocator* allocator);
         void Prepend(Slab* slab);
     };
 
@@ -192,10 +201,10 @@ class SlabAllocatorImpl {
 template <typename T>
 class SlabAllocator : public SlabAllocatorImpl {
   public:
-    SlabAllocator(size_t totalObjectBytes,
-                  uint32_t objectSize = u32_sizeof<T>,
-                  uint32_t objectAlignment = u32_alignof<T>)
-        : SlabAllocatorImpl(std::max(totalObjectBytes / objectSize, size_t{1}),
+    explicit SlabAllocator(size_t totalObjectBytes,
+                           uint32_t objectSize = u32_sizeof<T>,
+                           uint32_t objectAlignment = u32_alignof<T>)
+        : SlabAllocatorImpl(checked_cast<Index>(std::max(totalObjectBytes / objectSize, size_t{1})),
                             objectSize,
                             objectAlignment) {}
 

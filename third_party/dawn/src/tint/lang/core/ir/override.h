@@ -45,6 +45,9 @@ class Override final : public Castable<Override, OperandInstruction<1, 1>> {
     /// The fixed number of results returned by this instruction
     static constexpr size_t kNumResults = 1;
 
+    /// The fixed number of operands expected by this instruction
+    static constexpr size_t kNumOperands = 1;
+
     /// Constructor (no results, no operands)
     /// @param id the instruction id
     explicit Override(Id id);

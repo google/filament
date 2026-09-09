@@ -42,7 +42,7 @@ namespace wgpu::binding {
 // GPU is an implementation of interop::GPU that wraps a dawn::native::Instance.
 class GPU final : public interop::GPU {
   public:
-    GPU(Flags flags);
+    explicit GPU(Flags flags);
 
     // interop::GPU interface compliance
     interop::Promise<std::optional<interop::Interface<interop::GPUAdapter>>> requestAdapter(

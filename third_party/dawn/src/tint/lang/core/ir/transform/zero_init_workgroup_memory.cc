@@ -157,7 +157,7 @@ struct State {
                         auto* arr_ty = ty.array(ele_ty, count);
                         store.buffer_view =
                             b.CallExplicit(ty.ptr(workgroup, arr_ty), core::BuiltinFn::kBufferView,
-                                           Vector{arr_ty}, store.var, 0_u);
+                                           Vector<TemplateParameter, 1>{arr_ty}, store.var, 0_u);
                     }
                 }
 
@@ -350,7 +350,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ZeroInitWorkgroupMemory(Module& ir) {
-    AssertValid(ir, kZeroInitWorkgroupMemoryCapabilities, "before core.ZeroInitWorkgroupMemory");
+    AssertValid(ir, "before core.ZeroInitWorkgroupMemory");
 
     State{ir}.Process();
 

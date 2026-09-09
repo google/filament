@@ -1,0 +1,113 @@
+Name
+
+    EXT_swap_control
+
+Name Strings
+
+    WGL_EXT_swap_control
+
+Version
+
+    Date: 9/23/1999   Revision: 1.5
+
+Number
+
+    172
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+
+Overview
+
+    This extension allows an application to specify a minimum periodicity
+    of color buffer swaps, measured in video frame periods.
+
+New Procedures and Functions
+
+    BOOL wglSwapIntervalEXT(int interval)
+
+    int wglGetSwapIntervalEXT(void)
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.2 GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 GL Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    wglSwapIntervalEXT specifies the minimum number of video frame periods
+    per buffer swap for the window associated with the current context.
+    The interval takes effect when SwapBuffers or wglSwapLayerBuffer
+    is first called subsequent to the wglSwapIntervalEXT call.
+
+    The parameter <interval> specifies the minimum number of video frames
+    that are displayed before a buffer swap will occur.
+
+    A video frame period is the time required by the monitor to display a 
+    full frame of video data.  In the case of an interlaced monitor,
+    this is typically the time required to display both the even and odd 
+    fields of a frame of video data.  An interval set to a value of 2
+    means that the color buffers will be swapped at most every other video
+    frame.
+
+    If <interval> is set to a value of 0, buffer swaps are not synchron-
+    ized to a video frame.  The <interval> value is silently clamped to
+    the maximum implementation-dependent value supported before being
+    stored.
+
+    The swap interval is not part of the render context state.  It cannot
+    be pushed or popped.  The current swap interval for the window
+    associated with the current context can be obtained by calling
+    wglGetSwapIntervalEXT.  The default swap interval is 1.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+    For historical reasons, GL_EXT_SWAP_CONTROL is also included in the
+    GL_EXTENSIONS string as return from glGetString.
+
+Errors
+
+    If the function succeeds, the return value is TRUE. If the function
+    fails, the return value is FALSE.  To get extended error information,
+    call GetLastError.
+
+       ERROR_INVALID_DATA      The <interval> parameter is negative.
+
+       ERROR_DC_NOT_FOUND      An RC was not current to the calling
+                               thread; therefore, no DC could be
+                               obtained.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

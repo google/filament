@@ -1,0 +1,630 @@
+Name
+
+    NV_explicit_multisample
+
+Name Strings
+
+    GL_NV_explicit_multisample
+
+Contributors
+
+    Eric Werness, NVIDIA Corporation
+    Pat Brown, NVIDIA Corporation
+    Jamie Gennis, NVIDIA Corporation
+    Nacho Sanz-Pastor, Aechelon
+    Mark Kilgard, NVIDIA Corporation
+
+Contact
+
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping in NVIDIA's Release 180 drivers (October 2008)
+
+Version
+
+    Last Modified Date:         10/27/08
+    Revision:                   1
+
+Number
+
+    357
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    ARB_multisample is required.
+
+    EXT_framebuffer_multisample affects the definition of this extension.
+
+    NV_gpu_program4 affects the definition of this extension.
+
+    EXT_gpu_shader4 affects the definition of this extension.
+
+    EXT_timer_query affects the definition of this extension.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+Overview
+
+    In traditional multisample specs, the API only allows access to the samples
+    indirectly through methods such as coverage values and downsampled
+    readbacks. NV_explicit_multisample adds a set of new capabilities to allow
+    more precise control over the use of multisamples. Specifically, it adds:
+
+     * A query in the API to query the location of samples within the pixel
+
+     * An explicit control for the multisample sample mask to augment the
+       control provided by SampleCoverage
+
+     * A new texture target to wrap a renderbuffer and allow a restricted class
+       of accesses to the samples
+
+     * The ability to fetch a specific sample from a multisampled texture from
+       within a shader
+
+     * A program option to enable the new behavior
+
+New Procedures and Functions
+
+    void GetBooleanIndexedvEXT(enum value, uint index, boolean *data);
+
+    void GetIntegerIndexedvEXT(enum value, uint index, int *data);
+
+    void GetMultisamplefvNV(enum pname, uint index, float *val);
+
+    void SampleMaskIndexedNV(uint index, bitfield mask);
+
+    void TexRenderbufferNV(enum target, uint renderbuffer);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetMultisamplefvNV:
+    
+        SAMPLE_POSITION_NV                          0x8E50
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        SAMPLE_MASK_NV                              0x8E51
+
+    Accepted by the <pname> parameter of GetBooleanIndexedvEXT and
+    GetIntegerIndexedvEXT:
+
+        SAMPLE_MASK_VALUE_NV                        0x8E52
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv,
+    and GetFloatv:
+
+        TEXTURE_BINDING_RENDERBUFFER_NV             0x8E53
+        TEXTURE_RENDERBUFFER_DATA_STORE_BINDING_NV  0x8E54
+        MAX_SAMPLE_MASK_WORDS_NV                    0x8E59
+
+    Accepted by the <target> parameter of BindTexture, and TexRenderbufferNV:
+
+        TEXTURE_RENDERBUFFER_NV                     0x8E55
+
+    Returned by the <type> parameter of GetActiveUniform:
+
+        SAMPLER_RENDERBUFFER_NV                     0x8E56
+        INT_SAMPLER_RENDERBUFFER_NV                 0x8E57
+        UNSIGNED_INT_SAMPLER_RENDERBUFFER_NV        0x8E58
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify Section 2.X.2, Program Grammar
+
+    If a program specifies the NV_explicit_multisample program option, the
+    <texTarget> rule is modified to add the texture target RENDERBUFFER and the
+    <TEXop> rule is modified to add the instruction TXFMS.
+
+    Add to section 2.15.4.1, Shader Only Texturing
+
+    Multisample Texel Fetches
+
+    Multisample texel fetches are very similar to standard texel fetches. Since
+    multisample buffers can't have mipmaps, there is no LOD parameter. Instead,
+    there is an integer parameter which selects the sample number to be fetched
+    from the buffer. The number identifying the sample is the same as the value
+    used to query the sample location using GetMultisamplefvNV.
+
+    Additionally, this fetch may only be performed on a texture renderbuffer
+    sampler. No other sample or fetch commands may be performed on a texture
+    renderbuffer sampler.
+
+    Add to section 2.X.4.4, Program Texture Access
+
+    Add row to table X.17
+
+                                                     coordinates used
+      texTarget          Texture Type               s t r  layer  shadow
+      ----------------   ---------------------      -----  -----  ------
+      RENDERBUFFER       TEXTURE_RENDERBUFFER_NV      <not supported>
+
+
+    Add row to table X.18
+
+                                      coordinates used
+      texTarget          supported      i j k  layer  lod
+      ----------------   ---------      -----  -----  ---
+      RENDERBUFFER          no          - - -    -     -
+
+    Add after the discussion of TexelFetch
+
+    The TXFMS instruction provides the ability to extract a single sample from a
+    specified RENDERBUFFER texture image using the function
+
+      result_t_vec TexelFetchMultisample(int_vec coord, int_vec offset);
+
+    The extracted texel is converted to an (R,G,B,A) vector according to Table
+    3.21.  The result vector is interpreted as floating-point, signed integer,
+    or unsigned integer, according to the data type modifier of the
+    instruction.  If the internal format of the texture is not compatible with
+    the instruction's data type modifier, the extracted texel value is
+    undefined.
+
+    <coord> is a four-component signed integer vector used to identify the
+    single sample accessed. Since a renderbuffer must be 2D with no mipmaps, the
+    x and y components are always used to select the pixel and the fourth
+    component is used to select the sample. All of the restrictions of
+    TexelFetch apply to TexelFetchMultisample, with the additional requirement
+    that it must be called on a RENDERBUFFER texture target. If the sample number
+    is greater than or equal to the value of SAMPLES for the render buffer
+    associated with the renderbuffer texture, the results are undefined. 
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    (Insert into section 3.2.1, Multisampling after the discussion of the query
+    for SAMPLES)
+
+    To query the location of a given sample, the function
+
+        void GetMultisamplefvNV(enum pname, uint index, float *val);
+
+    is used with a pname of SAMPLE_POSITION_NV and an index corresponding to the
+    sample for which the location should be returned. The sample location is
+    returned as two floating point values each between 0 and 1 corresponding to
+    the x and y locations respectively in GL pixel space of that sample. The
+    error INVALID_OPERATION is generated if <index> is greater than or equal to
+    the value of SAMPLES.
+
+    (Insert new Section 3.8.4, Renderbuffer Textures.  Renumber subsequent
+    sections.)
+
+    In addition to one-, two-, and three-dimensional and cube map textures
+    described in previous sections, one additional type of texture is supported.
+    A renderbuffer texture is similar to a two-dimensional texture.  However,
+    unlike other texture types, the texel array is not stored as part of the
+    texture.  Instead, a renderbuffer object is attached to a renderbuffer
+    texture and the texel array is taken from the data store of the attached
+    renderbuffer object.  When the contents of a renderbuffer are modified,
+    those changes are reflected in the contents of any renderbuffer texture to
+    which the buffer object is attached.  Also unlike other textures,
+    renderbuffer textures do not have multiple image levels; only a single data
+    store is available.
+
+    The command
+
+      void TexRenderbufferNV(enum target, uint renderbuffer);
+
+    attaches the renderbuffer object named <renderbuffer> to the active
+    renderbuffer texture. If <renderbuffer> is zero, any renderbuffer object
+    attached to the buffer texture is detached, and no new renderbuffer object
+    is attached.  If <renderbuffer> is non-zero, but is not the name of an
+    existing renderbuffer object, the error INVALID_OPERATION is generated.
+    <target> must be TEXTURE_RENDERBUFFER_NV.  The name of the renderbuffer
+    object that is bound as the data store of the active renderbuffer texture
+    can be queried by calling GetIntegerv with <value> set to
+    TEXTURE_RENDERBUFFER_DATA_STORE_BINDING_NV.
+
+    When a renderbuffer texture is accessed in a shader, the access takes one
+    vector of integers describing which pixel to fetch and an integer
+    corresponding to the sample numbers described in section 3.2.1 describing
+    which sample within the pixel to fetch. No standard sampling instructions
+    are allowed to the renderbuffer texture target.
+
+    Modify Section 3.8.10, Texture Completeness (p. 177)
+
+    (insert after second paragraph of section, p.177)
+
+    For renderbuffer textures, a texture is <complete> if a renderbuffer object
+    is attached to it, and each dimension of that renderbuffer is positive.
+
+    Modify Section 3.8.11, Texture State and Proxy State (p. 178)
+
+    (insert into the first paragraph of the section, p. 178) ... a zero
+    compressed size, and zero-sized components).  The renderbuffer texture
+    target contains an integer identifying the renderbuffer object that
+    provides the data store for the texture, initially zero.  Next, there are
+    the two sets of texture properties; ...
+
+    Modify Section 3.8.12, Texture Objects (p. 180)
+
+    (modify first paragraphs of section, p. 180, simply adding references to
+     renderbuffer textures, which are treated as texture objects)
+
+    In addition to the default textures TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, and TEXTURE_RENDERBUFFER_NV, named one-, two-, and
+    three-dimensional, cube map, and renderbuffer texture objects can be created
+    and operated upon. The name space for texture objects is the unsigned
+    integers, with zero reserved by the GL.
+
+    A texture object is created by binding an unused name to TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or TEXTURE_RENDERBUFFER_NV. The
+    binding is effected by calling
+
+      void BindTexture( enum target, uint texture );
+
+    with target set to the desired texture target and texture set to the unused
+    name.  The resulting texture object is a new state vector, comprising all
+    the state values listed in section 3.8.11, set to the same initial
+    values. If the new texture object is bound to TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_CUBE_MAP, or TEXTURE_RENDERBUFFER_NV, it is and remains
+    a one-, two-, three-dimensional, cube map, or renderbuffer texture
+    respectively until it is deleted.
+
+    BindTexture may also be used to bind an existing texture object to either
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or
+    TEXTURE_RENDERBUFFER_NV. The error INVALID_OPERATION is generated if an
+    attempt is made to bind a texture object of different dimensionality than
+    the specified target. If the bind is successful no change is made to the
+    state of the bound texture object, and any previous binding to target is
+    broken.
+
+    ...
+
+    In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP,
+    and TEXTURE_RENDERBUFFER_NV have one-, two-, three-dimensional, cube map,
+    and renderbuffer texture state vectors respectively associated with them. In
+    order that access to these initial textures not be lost, they are treated as
+    texture objects all of whose names are 0. The initial one-, two-,
+    three-dimensional, cube map, and renderbuffer texture is therefore operated
+    upon, queried, and applied as TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, or TEXTURE_RENDERBUFFER_NV respectively while 0 is bound
+    to the corresponding targets.
+
+    Texture objects are deleted by calling
+
+      void DeleteTextures( sizei n, uint *textures );
+
+    textures contains n names of texture objects to be deleted. After a texture
+    object is deleted, it has no contents or dimensionality, and its name is
+    again unused. If a texture that is currently bound to one of the targets
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, or
+    TEXTURE_RENDERBUFFER_NV is deleted, it is as though BindTexture had been
+    executed with the same target and texture zero. Unused names in textures are
+    silently ignored, as is the value zero.
+
+    (modify second paragraph, p. 182, adding buffer textures, plus cube map
+    textures, which is an oversight in the core specification)
+
+    The texture object name space, including the initial one-, two-, and
+    three-dimensional, cube map, and renderbuffer texture objects, is shared
+    among all texture units. A texture object may be bound to more than one
+    texture unit simultaneously. After a texture object is bound, any GL
+    operations on that target object affect any other texture units to which the
+    same texture object is bound.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    Modify Section 4.1.3, Multisample Fragment Operations
+
+    Modify the first paragraph to include SAMPLE_MASK and SAMPLE_MASK_VALUE on
+    the list of values the coverage value is modified based on.
+
+    Modify the discussion of SAMPLE_COVERAGE to start with "Next" instead of
+    "Finally"
+
+    Add after the discussion of SAMPLE_COVERAGE:
+
+    Finally, if SAMPLE_MASK is enabled, the fragment coverage is ANDed with the
+    coverage value SAMPLE_MASK_VALUE. The value of SAMPLE_MASK_VALUE is
+    specified using
+
+        void SampleMaskIndexedNV(GLuint index, GLbitfield mask);
+    
+    with <mask> set to the desired mask for <maskNumber>. SAMPLE_MASK_VALUE is
+    queried by calling GetIntegerIndexedv with <pname> set to SAMPLE_MASK_VALUE
+    and the index set to <maskNumber>. Bit B of mask M corresponds to sample
+    32*M+B as described in Section 3.2.1. The error INVALID_OPERATION is
+    generated if the mask word indexed is greater than or equal to
+    MAX_SAMPLE_MASK_WORDS.
+
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    On p. 241, add the following to the list of commands not compiled into a
+    display list: GetMultisamplefvNV, TexRenderbufferNV.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify the second paragraph of section 6.1.1 (Simple Queries)
+    p244 to read as follows:
+
+    ...<data> is a pointer to a scalar or array of the indicated
+    type in which to place the returned data.
+
+        void GetBooleanIndexedvEXT(enum target, uint index, boolean *data);
+        void GetIntegerIndexedvEXT(enum target, uint index, int *data);
+
+    are used to query indexed state.  <target> is the name of 
+    the indexed state and <index> is the index of the particular
+    element being queried.  <data> is a pointer to a scalar or array
+    of the indicated type in which to place the returned data. In addition ...
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    The following rendering command is sent to the server as part of
+    a glXRender request:
+
+    SampleMaskIndexedNV
+
+        2      12              rendering command length
+        2      XXXX            rendering command opcode
+        4      CARD32          index
+        4      BITFIELD        mask
+
+    TexRenderbufferNV
+
+        2      12              rendering command length
+        2      XXXX            rendering command opcode
+        4      ENUM            target
+        4      CARD32          renderbuffer
+   
+        
+    The following new non-rendering commands are added:
+
+    GetMultisamplefvNV
+
+        1      CARD8           opcode(X assigned)                                    
+        1      XXX             GLX opcode
+        2      4               request length
+        4      GLX_CONTEXT_TAG context tag      
+        4      ENUM            pname
+        4      CARD32          index
+    =>  
+        1      1               reply
+        1                      unused
+        2      CARD16          sequence number
+        4      0               reply length
+        8                      unused
+        4      FLOAT32         val[0]
+        4      FLOAT32         val[1]
+        8                      unused
+  
+  
+       
+Dependencies on EXT_framebuffer_multisample
+
+    If EXT_framebuffer_multisample is not available, all discussion involving
+    textures and renderbuffers is deleted. This only leaves the ability to query
+    the sample parameters of the current framebuffer.
+
+Dependencies on EXT_timer_query
+
+    If EXT_timer_query is not available, include its discussion of int64EXT and
+    uint64EXT.
+
+Dependencies on NV_gpu_program4 and EXT_gpu_shader4
+
+    If NV_gpu_program4 and EXT_gpu_shader4 are not supported, and no other
+    mechanism is provided to perform texture lookups into renderbuffer textures,
+    this extension is pointless, given that it provides no fixed-function
+    mechanism to access renderbuffer textures.
+
+    If EXT_gpu_shader4 is supported, the language below describes the
+    modifications to the shading language to support renderbuffer textures. If
+    not, the language below and in Chapter 2 should be removed.
+
+Errors
+
+    The error INVALID_VALUE is generated by GetBooleanIndexedvEXT and
+    GetIntegerIndexedvEXT if target is SAMPLE_MASK_VALUE_NV and index is greater
+    than or equal to MAX_SAMPLE_MASK_WORDS_NV.
+
+    The error INVALID_VALUE is generated by SampleMaskIndexedNV if index is greater
+    than or equal to MAX_SAMPLE_MASK_WORDS_NV.
+
+
+New State
+
+    Get Value                       Get Command    Type    Initial Value    Attribute
+    ---------                       -----------    ----    -------------    ---------
+    SAMPLE_MASK_NV                  IsEnabled      B       FALSE            multisample/enable
+    SAMPLE_MASK_VALUE_NV            GetInteger-    nxZ+    ~0               multisample
+                                    IndexedvEXT
+
+    Where n is the number of sample mask words (the value of
+    MAX_SAMPLE_MASK_WORDS_NV) the implementation supports.
+
+    (add to table 6.15, Texture State Per Texture Unit/Binding Point p. 276)
+
+                                                            Initial
+    Get Value                           Type    Get Command  Value  Description                 Sec.    Attribute
+    ---------------------------------   ----    ----------- ------- --------------------------- ------  ---------
+    TEXTURE_BINDING_RENDERBUFFER_NV     2*xZ+   GetIntegerv    0    Texture object bound to     3.8.12  texture
+                                                                    TEXTURE_RENDERBUFFER_EXT
+
+    (add to table 6.16, Texture State Per Texture Object, p. 276)
+
+                                                            Initial
+    Get Value                           Type    Get Command  Value  Description                 Sec.    Attribute
+    ---------------------------------   ----    ----------- ------- --------------------------- ------  ---------
+    TEXTURE_RENDERBUFFER_DATA_STORE_    nxZ+    GetIntegerv    0    Renderbuffer object bound   3.8.4   texture
+      BINDING_NV                                                    as the data store for the
+                                                                    active image unit's
+                                                                    renderbuffer texture
+
+    (add to table 9.nnn "Framebuffer dependent Values" introduced by
+    the EXT_framebuffer_object specification)
+
+                                                        Initial
+    Get Value           Type        Get Command         Value           Description      Sec.    Attribute
+    ------------------  ----------  ------------------  --------------  ---------------  ------  ---------
+    SAMPLE_POSITION_NV  N*2*R[0,1]  GetMultisamplefvNV  implementation  Explicit sample  3.2.1   -
+                                                        dependent       positions
+
+    Where N is the number of samples (the value of SAMPLES) the framebuffer supports.
+
+New Implementation Dependent State
+
+                                                      Minimum
+    Get Value                    Type    Get Command  Value   Description       Sec.    Attribute
+    ---------                    ------- -----------  ------- ----------------  ------  ---------
+    MAX_SAMPLE_MASK_WORDS_NV     Z       GetIntegerv  1       maximum number    x.x.x   -
+                                                              of sample mask
+                                                              words
+
+Modifications to the OpenGL Shading Language Specification, Version 1.10.59
+
+    Including the following line in a shader can be used to control the language
+    featured described in this extension:
+
+      #extension GL_NV_explicit_multisample : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_NV_explicit_multisample 1
+
+    Add to section 3.6 "Keywords"
+
+    The following new sampler types are added:
+
+      samplerRenderbuffer, isamplerRenderbuffer, usamplerRenderbuffer
+
+    Add to section 4.1 "Basic Types"
+
+    Add the following sampler type to the "default sampler types" table:
+
+      samplerRenderbuffer        handle for accessing a renderbuffer texture
+
+    Add the following sampler type to the "unsigned integer sampler types"
+    table:
+
+      isamplerRenderbuffer       handle for accessing an integer renderbuffer texture
+
+    Add the following sampler type to the "integer sampler types" table:
+
+      usamplerRenderbuffer       handle for accessing an unsigned integer renderbuffer texture
+
+    Add to section 8.7 "Texture Lookup Functions"
+
+    Add new functions to the set of allowed texture lookup functions:
+
+    Syntax:
+
+      vec4 texelFetchRenderbuffer(samplerRenderbuffer sampler, ivec2 coord, int sample)
+
+    Description:
+
+      Use integer texture coordinate <coord> to lookup a single sample <sample>
+      on the texture bound to <sampler> as described in section 2.15.4.1 of the
+      OpenGL specification "Multisample Texel Fetches".
+
+    Syntax:
+
+      ivec2 textureSizeRenderbuffer(samplerRenderbuffer sampler)
+      ivec2 textureSizeRenderbuffer(isamplerRenderbuffer sampler)
+      ivec2 textureSizeRenderbuffer(usamplerRenderbuffer sampler)
+
+    Description:
+
+      Returns the dimensions, width and height of level 0 for the texture bound
+      to <sampler>, as described in section 2.15.4.1 of the OpenGL specification
+      section "Texture Size Query".
+
+Examples
+
+Issues
+
+    (1) Should the NUMBER_OF_SAMPLES parameter reuse an existing enum?
+
+      RESOLVED. Just use SAMPLES_ARB.
+
+    (2) How should we deal with sample patterns of more than
+        sizeof(GLbitfield)*8 bits for the sample mask?
+
+      RESOLVED. The API uses indexed calls to allow indefinite extension of the
+      number of samples exposed.
+
+    (3) What's the interaction between sample mask, sample coverage, and alpha
+        to coverage?
+
+      UNRESOLVED. In the hardware there's just one method for doing overall
+      coverage, so we can combine the two API states into the methods as we see
+      fit. The more interesting question is the interaction between the shader
+      sample mask from GPU_program4_1 and the API-level masks, which we should
+      try to keep similar to the API-level interface.
+
+    (4) Should we expose the CSAA weights in this API?
+
+      RESOLVED. Not in this extension. For now, only maskable samples can be
+      queried. A future extension can allow this functionality.
+
+    (5) What should the default value of SAMPLE_MASK be? 0? ~0?
+
+      RESOLVED. ~0 to match with other state like stencil mask. 
+
+    (6) Should the sample position query work for non-multisample?
+      
+      RESOLVED. The value of SAMPLES for non-multisample is zero, so the sample
+      position query will return an error for all index values in this case.
+
+    (7) Integer/unsigned integer renderbuffer sampler types?
+     
+      RESOLVED. There are integer/unsigned integer renderbuffer sampler types.
+
+    (8) Do we need a program option to enable the new behavior?
+
+      RESOLVED. Yes.
+
+    (9) What should TEXTURE_RENDERBUFFER_DATA_STORE_BINDING_NV be if the
+        renderbuffer object it refers to has been deleted?
+
+      RESOLVED.  TEXTURE_RENDERBUFFER_DATA_STORE_BINDING_NV remains unchanged
+      when the renderbuffer is deleted.
+
+    (10) Do renderbuffer textures support texture parameters
+         (TexParameter) or queries (GetTexParameter,
+         GetTexLevelParameter, GetTexImage)?
+
+      RESOLVED: No.  None of the existing parameters apply to renderbuffer
+      textures, and this extension doesn't introduce the need for any new ones.
+      Renderbuffer textures have no levels, and the size in texels is implicit
+      (based on the data store).  Given that the texels themselves are obtained
+      from a renderbuffer object, it seems more appropriate to retrieve such
+      data with renderbuffer queries.
+
+      Note that the spec edits above don't add explicit error language for any
+      of these cases.  That is because each of the functions enumerate the set
+      of valid <target> parameters.  Not editing the spec to allow
+      TEXTURE_RENDERBUFFER_NV in these cases means that target is not legal, and
+      an INVALID_ENUM error should be generated.
+
+    (11) What is the behavior of TexelFetchMultisample when given an
+         out-of-bounds value?
+
+      RESOLVED: Undefined. This spec explicitly lists the behavior as undefined
+      when given a sample number greater than SAMPLES-1 and inherits the
+      undefined behavior specified for TexelFetch when the normal
+      two-dimensional coordinate is outside the range of the texture.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+
+    1     7/22/08   ewerness  First revision.

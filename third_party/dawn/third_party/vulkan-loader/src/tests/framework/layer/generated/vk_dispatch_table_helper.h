@@ -450,6 +450,18 @@ static inline void layer_init_device_dispatch_table(VkDevice device, VkLayerDisp
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
     table->GetMemoryAndroidHardwareBufferANDROID = (PFN_vkGetMemoryAndroidHardwareBufferANDROID)gpa(device, "vkGetMemoryAndroidHardwareBufferANDROID");
 #endif  // VK_USE_PLATFORM_ANDROID_KHR
+    table->CreateGpaSessionAMD = (PFN_vkCreateGpaSessionAMD)gpa(device, "vkCreateGpaSessionAMD");
+    table->DestroyGpaSessionAMD = (PFN_vkDestroyGpaSessionAMD)gpa(device, "vkDestroyGpaSessionAMD");
+    table->SetGpaDeviceClockModeAMD = (PFN_vkSetGpaDeviceClockModeAMD)gpa(device, "vkSetGpaDeviceClockModeAMD");
+    table->GetGpaDeviceClockInfoAMD = (PFN_vkGetGpaDeviceClockInfoAMD)gpa(device, "vkGetGpaDeviceClockInfoAMD");
+    table->CmdBeginGpaSessionAMD = (PFN_vkCmdBeginGpaSessionAMD)gpa(device, "vkCmdBeginGpaSessionAMD");
+    table->CmdEndGpaSessionAMD = (PFN_vkCmdEndGpaSessionAMD)gpa(device, "vkCmdEndGpaSessionAMD");
+    table->CmdBeginGpaSampleAMD = (PFN_vkCmdBeginGpaSampleAMD)gpa(device, "vkCmdBeginGpaSampleAMD");
+    table->CmdEndGpaSampleAMD = (PFN_vkCmdEndGpaSampleAMD)gpa(device, "vkCmdEndGpaSampleAMD");
+    table->GetGpaSessionStatusAMD = (PFN_vkGetGpaSessionStatusAMD)gpa(device, "vkGetGpaSessionStatusAMD");
+    table->GetGpaSessionResultsAMD = (PFN_vkGetGpaSessionResultsAMD)gpa(device, "vkGetGpaSessionResultsAMD");
+    table->ResetGpaSessionAMD = (PFN_vkResetGpaSessionAMD)gpa(device, "vkResetGpaSessionAMD");
+    table->CmdCopyGpaSessionResultsAMD = (PFN_vkCmdCopyGpaSessionResultsAMD)gpa(device, "vkCmdCopyGpaSessionResultsAMD");
 #if defined(VK_ENABLE_BETA_EXTENSIONS)
     table->CreateExecutionGraphPipelinesAMDX = (PFN_vkCreateExecutionGraphPipelinesAMDX)gpa(device, "vkCreateExecutionGraphPipelinesAMDX");
 #endif  // VK_ENABLE_BETA_EXTENSIONS
@@ -591,6 +603,13 @@ static inline void layer_init_device_dispatch_table(VkDevice device, VkLayerDisp
     table->CmdDispatchTileQCOM = (PFN_vkCmdDispatchTileQCOM)gpa(device, "vkCmdDispatchTileQCOM");
     table->CmdBeginPerTileExecutionQCOM = (PFN_vkCmdBeginPerTileExecutionQCOM)gpa(device, "vkCmdBeginPerTileExecutionQCOM");
     table->CmdEndPerTileExecutionQCOM = (PFN_vkCmdEndPerTileExecutionQCOM)gpa(device, "vkCmdEndPerTileExecutionQCOM");
+    table->SetLatencySleepModeLegacyNV = (PFN_vkSetLatencySleepModeLegacyNV)gpa(device, "vkSetLatencySleepModeLegacyNV");
+    table->LatencySleepLegacyNV = (PFN_vkLatencySleepLegacyNV)gpa(device, "vkLatencySleepLegacyNV");
+    table->SetLatencyMarkerLegacyNV = (PFN_vkSetLatencyMarkerLegacyNV)gpa(device, "vkSetLatencyMarkerLegacyNV");
+    table->GetLatencyTimingsLegacyNV = (PFN_vkGetLatencyTimingsLegacyNV)gpa(device, "vkGetLatencyTimingsLegacyNV");
+    table->QueueNotifyOutOfBandLegacyNV = (PFN_vkQueueNotifyOutOfBandLegacyNV)gpa(device, "vkQueueNotifyOutOfBandLegacyNV");
+    table->GetSleepStatusLegacyNV = (PFN_vkGetSleepStatusLegacyNV)gpa(device, "vkGetSleepStatusLegacyNV");
+    table->ShutdownLatencyDeviceLegacyNV = (PFN_vkShutdownLatencyDeviceLegacyNV)gpa(device, "vkShutdownLatencyDeviceLegacyNV");
 #if defined(VK_USE_PLATFORM_METAL_EXT)
     table->ExportMetalObjectsEXT = (PFN_vkExportMetalObjectsEXT)gpa(device, "vkExportMetalObjectsEXT");
 #endif  // VK_USE_PLATFORM_METAL_EXT
@@ -994,6 +1013,7 @@ static inline void layer_init_instance_dispatch_table(VkInstance instance, VkLay
     table->EnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM = (PFN_vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM)gpa(instance, "vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM");
     table->EnumeratePhysicalDeviceShaderInstrumentationMetricsARM = (PFN_vkEnumeratePhysicalDeviceShaderInstrumentationMetricsARM)gpa(instance, "vkEnumeratePhysicalDeviceShaderInstrumentationMetricsARM");
     table->GetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM = (PFN_vkGetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM)gpa(instance, "vkGetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM");
+    table->GetPhysicalDeviceCooperativeMatrixProperties2EXT = (PFN_vkGetPhysicalDeviceCooperativeMatrixProperties2EXT)gpa(instance, "vkGetPhysicalDeviceCooperativeMatrixProperties2EXT");
 #if defined(VK_USE_PLATFORM_UBM_SEC)
     table->CreateUbmSurfaceSEC = (PFN_vkCreateUbmSurfaceSEC)gpa(instance, "vkCreateUbmSurfaceSEC");
 #endif  // VK_USE_PLATFORM_UBM_SEC

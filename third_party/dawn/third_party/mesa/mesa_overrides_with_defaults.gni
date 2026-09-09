@@ -28,11 +28,17 @@
 import("//build_overrides/mesa.gni")
 
 declare_args() {
+  if (!defined(mesa_src_dir)) {
+    mesa_src_dir = "//third_party/mesa"
+  }
+
   if (!defined(mesa_meson_dir)) {
     mesa_meson_dir = "//third_party/meson"
   }
+}
 
+declare_args() {
   if (!defined(mesa_options)) {
-    mesa_options = []
+    mesa_options = read_file("${mesa_src_dir}/mesa_options.txt", "list lines")
   }
 }

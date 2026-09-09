@@ -1,0 +1,328 @@
+Name
+
+    WGL_ARB_buffer_region
+
+Name Strings
+
+    WGL_ARB_buffer_region
+
+Contact
+
+    Dale Kirkland, NVIDIA (dkirkland 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 1999-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on 12/8/1999
+
+Version
+
+    Last Modified Date: March 12, 2002
+    Revision: 1.1
+
+Number
+
+    ARB Extension #4
+
+Dependencies
+
+    The extension is written against the OpenGL 1.2.1 Specification
+    although it should work on any previous OpenGL specification.
+
+    The WGL_EXT_extensions_string extension is required.
+
+Overview
+
+    The buffer region extension is a mechanism that allows an area of
+    an OpenGL window to be saved in off-screen memory for quick
+    restores.  The off-screen memory can either be frame buffer memory
+    or system memory, although frame buffer memory might offer optimal
+    performance.
+
+    A buffer region can be created for the front color, back color,
+    depth, and/or stencil buffer.  Multiple buffer regions for the same
+    buffer type can exist.
+
+IP Status
+
+    None
+
+Issues
+
+    1. Do we need the glBufferRegionEnabled call that is in the
+       Kinetix extensions?
+
+       The reason behind this function was so that a single driver
+       could be used on adapters with various amounts of memory -- the
+       extension would always be present but its use would depend on a
+       separate call.  The same functionality could be achieved by not
+       advertising this extension or always returning a value of NULL
+       from wglCreateBufferRegionARB.
+
+    2. Should the width/height be specified on the create.
+
+       Because applications create regions that are not used, it would
+       be better to leave the size as a parameter on the save.
+
+    3. Should information be added to the create to allow for layer
+       support?
+
+       Layer support has been added.
+
+    4. Which DC gets used for buffer region operations?
+
+       The DC that was allocated on the CreateBufferRegionARB call is
+       saved and used for subsequent save and restore operations.  It
+       must remain valid during the life of the buffer region.  This is
+       analogous to the RC method for handling the DC.
+
+    5. Does the driver do a flush before the save and restore?
+
+       In keeping with the same paradigm as SwapBuffers, a flush will
+       be made by the driver for the RC bound to the calling thread
+       before the save and restore operations.
+
+    6. Which coordinate system is used?
+
+       The KTX_buffer_region and WIN_swap_hint extensions specify the
+       (x,y) origin as the lower left corner of the rectangle.  This
+       extension adopts the same philosophy.
+
+
+New Procedures and Functions
+
+    HANDLE wglCreateBufferRegionARB(HDC hDC,
+                                    int iLayerPlane,
+                                    UINT uType)
+
+    VOID wglDeleteBufferRegionARB(HANDLE hRegion)
+
+    BOOL wglSaveBufferRegionARB(HANDLE hRegion,
+                                int x,
+                                int y,
+                                int width,
+                                int height)
+
+    BOOL wglRestoreBufferRegionARB(HANDLE hRegion,
+                                   int x,
+                                   int y,
+                                   int width,
+                                   int height,
+                                   int xSrc,
+                                   int ySrc)
+
+
+New Tokens
+
+    Accepted by the <uType> parameter of wglCreateBufferRegionARB is the
+    bitwise OR of any of the following values:
+
+      WGL_FRONT_COLOR_BUFFER_BIT_ARB          0x00000001
+      WGL_BACK_COLOR_BUFFER_BIT_ARB           0x00000002
+      WGL_DEPTH_BUFFER_BIT_ARB                0x00000004
+      WGL_STENCIL_BUFFER_BIT_ARB              0x00000008
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Additions to the WGL Specification
+
+    A buffer region can be created with wglCreateBufferRegionARB
+    which returns a handle associated with the buffer region.
+
+      HANDLE wglCreateBufferRegionARB(HDC hDC,
+                                      INT iLayerPlane,
+                                      UINT uType)
+
+    <hDC> specifies a device context for the device on which the buffer
+    region is created. <iLayerPlane> specifies the layer.  Positive
+    values identify overlay planes, negative values identify underlay
+    planes.  A value of 0 identifies the main plane.
+
+    <uType> is a bitwise OR of any of the following values indicating
+    which buffers can be saved or restored.  Multiple bits can be set
+    and may result in better performance if multiple buffers are saved
+    or restored.
+
+        WGL_FRONT_COLOR_BUFFER_BIT_ARB
+        WGL_BACK_COLOR_BUFFER_BIT_ARB
+        WGL_DEPTH_BUFFER_BIT_ARB
+        WGL_STENCIL_BUFFER_BIT_ARB
+
+    For stereo windows, WGL_FRONT_COLOR_BUFFER_BIT_ARB implies both the
+    left and right front buffers, and WGL_BACK_COLOR_BUFFER_BIT_ARB
+    implies both the left and right back buffers.
+
+    When wglCreateBufferRegionARB fails to create a buffer region, a
+    value of NULL is returned.  To get extended error information, call
+    GetLastError.
+
+    Image, depth, and stencil data can be saved into the buffer region
+    by calling wglSaveBufferRegionARB.
+
+      BOOL wglSaveBufferRegionARB(HANDLE hRegion,
+                                  int x,
+                                  int y,
+                                  int width,
+                                  int height)
+
+    <hRegion> is a handle to a buffer region previously created with
+    wglCreateBufferRegionARB.  The DC specified when the region was
+    created is used as the device context specifying the window.
+
+    <x> and <y> specify the window position for the source rectangle.
+    <width> and <height> specify the width and height of the source
+    rectangle.  Data outside the window for the specified rectangle is
+    undefined.  The OpenGL coordinate system is used for specifying the
+    rectangle (<x> and <y> specify the lower-left corner of the
+    rectangle).
+
+    If an RC is current to the calling thread, a flush will occur
+    before the save operation.
+
+    The saved buffer region area can be freed by calling
+    wglSaveBufferRegionARB with <width> or <height> set to a value
+    of 0.
+
+    If the call to wglSaveBufferRegionARB is successful, a value of
+    TRUE is returned.  Otherwise, a value of FALSE is returned.  To
+    get extended error information, call GetLastError.
+
+    A previously saved region can be restored (multiple times) with
+    the wglRestoreBufferRegionARB function.
+
+      BOOL wglRestoreBufferRegionARB(HANDLE hRegion,
+                                     int x,
+                                     int y,
+                                     int width,
+                                     int height,
+                                     int xSrc,
+                                     int ySrc)
+
+    <hRegion> is a handle to a buffer region previously created with
+    wglCreateBufferRegionARB.  The DC specified when the region was
+    created is used as the device context specifying the window.
+
+    <x> and <y> specify the window position for the destination
+    rectangle.  <width> and <height> specify the width and height of
+    the destination rectangle.  The OpenGL coordinate system is used
+    for specifying the rectangle (<x> and <y> specify the lower-left
+    corner of the rectangle).
+
+    <xSrc> and <ySrc> specify the position in the buffer region for
+    the source of the data.  Any portion of the rectangle outside of
+    the saved region is ignored.
+
+    If an RC is current to the calling thread, a flush will occur
+    before the restore operation.
+
+    If the call to wglRestoreBufferRegionARB is successful, a value of
+    TRUE is returned.  Otherwise, a value of FALSE is returned.  To
+    get extended error information, call GetLastError.
+
+    The buffer region can be deleted with wglDeleteBufferRegionARB.
+
+      VOID wglDeleteBufferRegionARB(HANDLE hRegion)
+
+    <hRegion> is a handle to a buffer region previously created with
+    wglCreateBufferRegionARB.  Any saved data associated with <hRegion>
+    is discarded.  The DC used to create the region must still be valid
+    for the delete to work.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    ERROR_NO_SYSTEM_RESOURCES is generated if memory cannot be
+    allocated for storing the saved data.
+
+    ERROR_INVALID_HANDLE is generated if <hRegion> is not a valid
+    handle that was previously returned by wglCreateBufferRegionARB.
+
+    ERROR_INVALID_DATA is generated if <uType> is zero or includes
+    an undefined bit.
+
+    ERROR_INVALID_DATA is generated if <width> or <height> is negative.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Conformance Test
+
+    1. Clear the window to blue.
+    2. Save an area of the window using wglSaveBufferRegionARB.
+    3. Clear the window to red.
+    4. Restore the area of the window using wglRestoreBufferRegionARB.
+    5. Verify that the area was restored.
+    6. Repeat for the depth buffer.
+    7. Repeat for the stencil buffer.
+    8. Repeat for image and depth buffer.
+
+Revision History
+
+    12/10/99  1.0  ARB extension - based on the wgl_buffer_region
+                   extension.
+    03/12/02  1.1  Updated contact information.

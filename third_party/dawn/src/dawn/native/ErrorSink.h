@@ -31,8 +31,8 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ErrorData.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ErrorData.h"
 
 namespace dawn::native {
 

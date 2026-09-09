@@ -30,7 +30,7 @@
 
 #include <memory>
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 

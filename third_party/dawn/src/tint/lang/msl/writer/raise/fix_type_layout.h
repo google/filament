@@ -38,7 +38,7 @@ class Module;
 namespace tint::msl::writer::raise {
 
 /// Configuration options for the FixTypeLayout transform.
-struct FixTypeLayoutOptions {
+struct FixTypeLayoutConfig {
     /// If `true`, replace bool types in workgroup storage with u32.
     bool replace_bool_with_u32 = false;
 };
@@ -60,7 +60,7 @@ struct FixTypeLayoutOptions {
 /// @param ir the module to transform
 /// @param options the transform options
 /// @returns success or failure
-Result<SuccessType> FixTypeLayout(core::ir::Module& ir, const FixTypeLayoutOptions& options);
+Result<SuccessType> FixTypeLayout(core::ir::Module& ir, const FixTypeLayoutConfig& options);
 
 }  // namespace tint::msl::writer::raise
 

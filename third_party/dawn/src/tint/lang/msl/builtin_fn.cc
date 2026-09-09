@@ -134,6 +134,8 @@ const char* str(BuiltinFn i) {
             return "os_log";
         case BuiltinFn::kPointerOffset:
             return "pointer_offset";
+        case BuiltinFn::kVolatileZero:
+            return "volatile_zero";
     }
     return "<unknown>";
 }
@@ -192,6 +194,7 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kMakeFilledSimdgroupMatrix:
         case BuiltinFn::kOsLog:
         case BuiltinFn::kPointerOffset:
+        case BuiltinFn::kVolatileZero:
             break;
     }
     return core::ir::Instruction::Accesses{};

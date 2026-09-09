@@ -25,20 +25,22 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/RenderPassWorkaroundsHelper.h"
+#include "src/dawn/native/RenderPassWorkaroundsHelper.h"
 
 #include <utility>
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/Assert.h"
-#include "dawn/native/AttachmentState.h"
-#include "dawn/native/BlitColorToColorWithDraw.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/Texture.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/native/AttachmentState.h"
+#include "src/dawn/native/BlitColorToColorWithDraw.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/Texture.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
@@ -89,8 +91,7 @@ void ResolveWithRenderPass(CommandEncoder* encoder,
     attachment.storeOp = storeOp;
 
     RenderPassDescriptor resolvePass = {};
-    resolvePass.colorAttachmentCount = 1;
-    resolvePass.colorAttachments = &attachment;
+    resolvePass.colorAttachments = SpanFromRef<ColorAttachmentIndex>(attachment);
 
     // Begin and end an empty render pass to force the resolve.
     Ref<RenderPassEncoder> rpEncoder = encoder->BeginRenderPass(&resolvePass);
@@ -117,9 +118,7 @@ MaybeError RenderPassWorkaroundsHelper::Initialize(
     // temporary attachment into the given attachment when the render pass ends. (Handled in
     // Apply())
     if (device->IsToggleEnabled(Toggle::AlwaysResolveIntoZeroLevelAndLayer)) {
-        for (uint8_t i = 0; i < renderPassDescriptor->colorAttachmentCount; ++i) {
-            ColorAttachmentIndex colorIdx(i);
-            const auto& colorAttachment = renderPassDescriptor->colorAttachments[i];
+        for (auto [i, colorAttachment] : Enumerate(renderPassDescriptor->colorAttachments)) {
             TextureViewBase* resolveTarget = colorAttachment.resolveTarget;
 
             if (resolveTarget != nullptr && (resolveTarget->GetBaseMipLevel() != 0 ||
@@ -159,10 +158,10 @@ MaybeError RenderPassWorkaroundsHelper::Initialize(
                     }
                 }
 
-                mTempResolveTargets[colorIdx] = {std::move(temporaryResolveTexture),
-                                                 std::move(temporaryResolveView)};
+                mTempResolveTargets[i] = {std::move(temporaryResolveTexture),
+                                          std::move(temporaryResolveView)};
 
-                mTempResolveTargetsMask.set(colorIdx);
+                mTempResolveTargetsMask.set(i);
             }
         }
     }

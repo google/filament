@@ -33,12 +33,12 @@
 #include <thread>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Compiler.h"
-#include "dawn/common/NonCopyable.h"
-#include "dawn/common/NonMovable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/utils/assert.h"
+#include "src/utils/non_copyable.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn {
 
@@ -97,7 +97,7 @@ class DAWN_MUTEX_CAPABILITY MutexBase : public RefCounted, NonCopyable {
         return mOwner.load(std::memory_order_acquire) == std::this_thread::get_id();
 #else
         // This is not supported.
-        DAWN_CHECK(false);
+        DAWN_UNREACHABLE();
 #endif
     }
 

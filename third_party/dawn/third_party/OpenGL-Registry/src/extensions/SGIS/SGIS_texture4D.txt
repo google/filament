@@ -1,0 +1,387 @@
+XXX - not complete yet!
+
+Name
+
+    SGIS_texture4D
+
+Name Strings
+
+    GL_SGIS_texture4D
+
+Version
+
+    $Date: 1997/03/15 02:52:10 $ $Revision: 1.25 $
+
+Number
+
+    16
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+    EXT_texture3D is required
+    EXT_subtexture affects the definition of this extension
+
+Overview
+
+    This extension defines 4-dimensional texture mapping.  If EXT_subtexture
+    is supported, this extension also defines a mechanism to redefine a
+    portion of an existing 4-dimensional texture image.  Because
+    EXT_texture3D is required, this extension utilizes the 3-dimensional
+    image support defined in by EXT_texture3D as a base for 4-dimensional
+    image manipulation.
+    
+    The 4th dimension has an abstract, rather than physical, reference
+    and will be called "extent", since the definition of extent is "that which
+    specifies the range or magnitude of an area or volume."
+
+    Four-dimensional texture mapping is more constrained than its one, two,
+    and three-dimensional counterparts.  Mipmapping is not supported, so
+    only the level-zero 4-dimensional texture image can be defined.  Cubic
+    filtering is not supported, so the border width must be either zero or
+    one.
+
+    Four-dimensional textures are used primarily as color lookup tables for
+    color conversion.
+
+New Procedures and Functions
+
+    void TexImage4DSGIS(enum target,
+		        int level,
+		        enum internalformat,
+		        sizei width,
+		        sizei height,
+		        sizei depth,
+		        sizei extent,
+		        int border,
+		        enum format,
+		        enum type,
+		        const void* pixels);
+
+    void TexSubImage4DSGIS(enum target,
+		 	   int level,
+			   int xoffset,
+		 	   int yoffset,
+			   int zoffset,
+			   int woffset,
+			   sizei width,
+			   sizei height,
+			   sizei depth,
+			   sizei extent,
+			   enum format,
+			   enum type,
+			   const void* pixels);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev, and by the <pname> parameter of PixelStore:
+
+	PACK_SKIP_VOLUMES_SGIS
+	PACK_IMAGE_DEPTH_SGIS
+	UNPACK_SKIP_VOLUMES_SGIS
+	UNPACK_IMAGE_DEPTH_SGIS
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of TexImage4DSGIS, GetTexImage,
+    GetTexLevelParameteriv, GetTexLevelParameterfv, GetTexParameteriv, and
+    GetTexParameterfv:
+
+	TEXTURE_4D_SGIS
+
+    Accepted by the <target> parameter of TexImage4DSGIS,
+    GetTexLevelParameteriv, and GetTexLevelParameterfv:
+
+	PROXY_TEXTURE_4D_SGIS
+
+    Accepted by the <pname> parameter of GetTexLevelParameteriv and
+    GetTexLevelParameterfv:
+
+	TEXTURE_4DSIZE_SGIS
+
+    Accepted by the <pname> parameter of TexParameteriv, TexParameterfv,
+    GetTexParameteriv, and GetTexParameterfv:
+
+	TEXTURE_WRAP_Q_SGIS
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	MAX_4D_TEXTURE_SIZE_SGIS
+	TEXTURE_4D_BINDING_SGIS
+
+
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    XXX - not written yet.  Be sure to handle the null image case.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    TexImage4DSGIS with a proxy target is not included in display
+    lists, but is instead executed immediately.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    4-dimensional texture images are queried using GetTexImage with its
+    <target> parameter set to TEXTURE_4D_SGIS.  The assignment of texel
+    component values to the initial R, G, B, and A components of a pixel
+    group is described in EXT_texture.  Pixel transfer and pixel storage
+    operations are applied as if the image were 3-dimensional, except that
+    the additional pixel storage state values PACK_IMAGE_DEPTH_SGIS and
+    PACK_SKIP_VOLUMES_SGIS affect the storage of the image into memory.  The
+    correspondence of texels to memory locations is as defined for
+    TexImage4DSGIS above, substituting PACK* state for UNPACK* state in all
+    occurrences.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. This command contains pixel data;
+    thus it is sent to the server either as part of a glXRender request
+    or as part of a glXRenderLarge request:
+
+        TexImage4DSGIS
+            2           84+n+p          rendering command length
+            2           2057            rendering command opcode
+ 	    1		BOOL		swap_bytes
+	    1		BOOL		lsb_first
+	    2 				unused
+	    4		CARD32		row_length
+	    4		CARD32		image_height
+	    4		CARD32		image_depth
+	    4		CARD32		skip_rows
+	    4		CARD32		skip_images
+	    4		CARD32		skip_volumes
+	    4		CARD32		skip_pixels
+	    4		CARD32		alignment
+            4		ENUM		target
+	    4		INT32		level
+            4		ENUM		internalformat
+            4		INT32		width
+            4		INT32		height
+            4		INT32		depth
+            4		INT32		size4d
+            4		INT32		border
+            4		ENUM		format
+            4		ENUM		type
+	    4		CARD32		null_image
+            n           LISTofBYTE      pixels
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the command 
+            opcode and command length fields above are expanded to 4 bytes each:
+
+	    4           88+n+p          rendering command length
+            4           2057            rendering command opcode
+
+	If <width> < 0, <height> < 0, <depth> < 0, <size4d> < 0, <format> is invalid i
+	or <type> is invalid, then the command is erroneous and n=0.
+
+        <pixels> is arranged as a sequence of adjacent volumes. Each volume is a
+        3-dimensional image, whose structure is determined by the image depth and the 
+        parameters <image_height>, <swap_bytes>, <lsb_first>, <row_length>, <skip_rows>,
+	<skip_pixels>, <alignment>, <width>, <format>, and <type> given in the request. 
+	If <image_depth> is not positive then the number of images (i.e., the image 
+	depth) is <depth>; otherwise the number of images is <image_depth>.
+
+        <skip_volumes> allows a sub-piece of the 4-dimensional image to be selected.
+        If <skip_volumes> is positive, then the pointer is advanced by <skip_volumes> 
+        times the number of elements in one 3-dimensional image. Then <size4d> 
+        3-dimensional images are read, each having a subimage extracted in the 
+        manner described in Appendix A of the GLX Protocol Specification.
+
+        TexSubImage4DSGIS
+            2           88+n+p          rendering command length
+            2           2058            rendering command opcode
+            1           BOOL            swap_bytes
+            1           BOOL            lsb_first
+            2                           unused
+            4           CARD32          row_length
+            4           CARD32          image_height
+            4           CARD32          image_depth
+            4           CARD32          skip_rows
+            4           CARD32          skip_images
+            4           CARD32          skip_volumes
+            4           CARD32          skip_pixels
+            4           CARD32          alignment
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           yoffset
+            4           INT32           zoffset
+            4           INT32           woffset
+            4           INT32           width
+            4           INT32           height
+            4           INT32           depth
+            4           INT32           size4d
+            4           ENUM            format
+            4           ENUM            type
+            4           CARD32		unused
+            n           LISTofBYTE      image
+            p                           unused, p=pad(n)
+
+            If the command is encoded in a glXRenderLarge request, the command
+            opcode and command length fields above are expanded to 4 bytes each:
+
+            4           92+n+p          rendering command length
+            4           2058            rendering command opcode
+
+	If <width> < 0, <height> < 0, <depth> < 0, <size4d>, <format> is invalid 
+	or <type> is invalid, then the command is erroneous and n=0.
+
+        <pixels> is arranged as a sequence of adjacent volumes. Each volume is a
+        3-dimensional image, whose structure is determined by the image height, image 
+	depth and the parameters <swap_bytes>, <lsb_first>, <row_length>, <skip_rows>, 
+	<skip_pixels>, <alignment>, <width>, <format>, and <type> given in the request. 
+	If <image_depth> is not positive then the number of 2Dimages (i.e., the volume
+	depth) is <depth>; otherwise the number of 2Dimages is <image_depth>.
+
+        <skip_volumes> allows a sub-volume of the 4-dimensional image to be selected.
+        If <skip_volumes> is positive, then the pointer is advanced by <skip_volumes>
+        times the number of elements in one 3-dimensional image. Then <size4d>
+        3-dimensional images are read, each having a subimage extracted in the
+        manner described in Appendix A of the GLX Protocol Specification.
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is supported, the <format> parameter of TexImage4DSGIS
+    accepts ABGR_EXT.  Otherwise it does not.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  All of the <components> tokens defined by
+    EXT_texture are accepted by the <internalformat> parameter of
+    TexImage4DSGIS, with the same semantics that are defined by EXT_texture.
+
+    The query and error extensions defined by EXT_texture are extended in
+    this document.
+
+Dependencies on EXT_texture3D
+
+    EXT_texture3D is required, because the 3-dimensional image support that
+    it defines is used by this extension, and because it doesn't make sense
+    to support 4D textures if 3D textures are not supported.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not supported, this extension does not define
+    TexSubImage4DSGIS.  All discussion of replacing a subset of the image of
+    an existing 4-dimensional texture is void.
+
+Errors
+
+    INVALID_ENUM is generated if TexImage4DSGIS parameter <target> is not
+    TEXTURE_4D_SGIS.
+
+    INVALID_VALUE is generated if TexImage4DSGIS parameter <level> is less
+    than zero.
+
+    INVALID_ENUM is generated if TexImage4DSGIS parameter <internalformat> is
+    not ALPHA, RGB, RGBA, LUMINANCE, LUMINANCE_ALPHA, or one of the tokens
+    defined by the EXT_texture extension.  (Values 1, 2, 3, and 4 are not
+    accepted as internal formats by TexImage4DSGIS).
+
+    INVALID_VALUE is generated if TexImage4DSGIS parameter <width>, <height>,
+    or <depth> is less than zero, or cannot be represented as
+    2**k + 2*border for some integer k.
+
+    INVALID_VALUE is generated if TexImage4DSGIS parameter <border> is not 0
+    or 1.
+
+    INVALID_ENUM is generated if TexImage4DSGIS parameter <format> is not
+    COLOR_INDEX, RED, GREEN, BLUE, ALPHA, RGB, RGBA, LUMINANCE, or
+    LUMINANCE_ALPHA (or ABGR_EXT if EXT_abgr is supported).
+
+    INVALID_ENUM is generated if TexImage4DSGIS parameter <type> is not
+    UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_OPERATION is generated if TexImage4DSGIS is called between
+    execution of Begin and the corresponding execution of End.
+
+    TEXTURE_TOO_LARGE_SGI is generated if the texture as specified cannot be
+    accommodated by the implementation.  This error will not occur if none
+    of <width>, <height>, or <depth> is greater than MAX_4D_TEXTURE_SIZE_SGIS.
+
+    INVALID_ENUM is generated by TexSubImage4DSGIS if its <target> parameter
+    is not TEXTURE_4D_SGIS.
+
+    INVALID_VALUE is generated by TexSubImage4DSGIS if the specified texture
+    array has not been defined by a previous TexImage4DSGIS operation.
+
+    INVALID_VALUE is generated if TexSubImage4DSGIS parameter <level> is not
+    equal to zero.
+
+    INVALID_VALUE is generated if TexSubImage4DSGIS parameter <width>,
+    <height>, <depth>, or <extent> is negative.
+    
+    INVALID_VALUE is generated if TexSubImage4DSGIS parameter <xoffset>,
+    <yoffset>, <zoffset>, or <woffset> is less than -TEXTURE_BORDER.
+
+    INVALID_VALUE is generated by TexSubImage4DSGIS if
+	(xoffset + width) > (TEXTURE_WIDTH - TEXTURE_BORDER), or if
+	(yoffset + height) > (TEXTURE_HEIGHT - TEXTURE_BORDER), or if
+	(zoffset + depth) > (TEXTURE_DEPTH_EXT - TEXTURE_BORDER), or if
+	(woffset + extent) > (TEXTURE_4DSIZE_SGIS - TEXTURE_BORDER).
+
+    INVALID_ENUM is generated if TexSubImage4DSGIS parameter <format> is not
+    COLOR_INDEX, RED, GREEN, BLUE, ALPHA, RGB, RGBA, LUMINANCE, or
+    LUMINANCE_ALPHA (or ABGR_EXT if EXT_abgr is supported).
+
+    INVALID_ENUM is generated if TexSubImage4DSGIS parameter <type> is not
+    UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_OPERATION is generated if TexSubImage4DSGIS is called between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value				Get Command		Type			Initial Value		Attribute
+    ---------				-----------		----			-------------		---------
+    UNPACK_SKIP_VOLUMES_SGIS		GetIntegerv		Z+			0			    -
+    UNPACK_IMAGE_DEPTH_SGIS		GetIntegerv		Z+			0			    -
+    PACK_SKIP_VOLUMES_SGIS		GetIntegerv		Z+			0			    -
+    PACK_IMAGE_DEPTH_SGIS		GetIntegerv		Z+			0			    -
+    TEXTURE_4D_SGIS			IsEnabled		B			FALSE			texture/enable
+    TEXTURE_WRAP_Q_SGIS			GetTexParameteriv	1 x Z2			REPEAT			texture
+    TEXTURE_4DSIZE_SGIS			GetTexLevelParameteriv	1 x 2 x Z+		0			    -
+
+    TEXTURE				GetTexImage		4 x 1 x levels x I	null			    -
+    TEXTURE_RED_SIZE_EXT		GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_GREEN_SIZE_EXT		GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_BLUE_SIZE_EXT		GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_ALPHA_SIZE_EXT		GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_LUMINANCE_SIZE_EXT		GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_INTENSITY_SIZE_EXT		GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_WIDTH			GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_HEIGHT			GetTexLevelParameteriv	3 x 2 x levels x Z+	0			    -
+    TEXTURE_DEPTH_EXT			GetTexLevelParameteriv	2 x 2 x levels x Z+	0			    -
+    TEXTURE_BORDER			GetTexLevelParameteriv	4 x 2 x levels x Z+	0			    -
+    TEXTURE_COMPONENTS (1D and 2D)	GetTexLevelParameteriv	2 x 2 x levels x Z42	1			    -
+    TEXTURE_COMPONENTS (3D and 4D)	GetTexLevelParameteriv	2 x 2 x levels x Z38	LUMINANCE		    -
+    TEXTURE_BORDER_COLOR		GetTexParameteriv	4 x C			0, 0, 0, 0		texture
+    TEXTURE_MIN_FILTER			GetTexParameteriv	4 x Z7			NEAREST_MIPMAP_LINEAR	texture
+    TEXTURE_MAG_FILTER			GetTexParameteriv	4 x Z3			LINEAR			texture
+    TEXTURE_WRAP_S			GetTexParameteriv	4 x Z2			REPEAT			texture
+    TEXTURE_WRAP_T			GetTexParameteriv	3 x Z2			REPEAT			texture
+    TEXTURE_WRAP_R_EXT			GetTexParameteriv	2 x Z2			REPEAT			texture
+
+New Implementation Dependent State
+
+    Get Value			Get Command	Type		Minimum Value
+    ---------			-----------	----		-------------
+    MAX_4D_TEXTURE_SIZE_SGIS	GetIntegerv	Z+		16

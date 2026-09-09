@@ -41,6 +41,7 @@
 #include "src/tint/lang/spirv/writer/common/option_helpers.h"
 #include "src/tint/lang/spirv/writer/printer/printer.h"
 #include "src/tint/lang/spirv/writer/raise/raise.h"
+#include "src/tint/utils/internal_limits.h"
 
 // Included by 'ast_printer.h', included again here for './tools/run gen' track the dependency.
 #include "spirv/unified1/spirv.h"  // IWYU pragma: export
@@ -67,11 +68,11 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
                 return Failure("using subgroup matrices requires the Vulkan Memory Model");
             }
         }
-        if (ty->Is<core::type::Buffer>()) {
-            return Failure("buffers are not supported by the SPIR-V backend");
-        }
-        if (ty->Is<core::type::U16>()) {
-            return Failure("16-bit unsigned integers are not supported by the SPIR-V backend");
+        if (auto* str = ty->As<core::type::Struct>()) {
+            auto res = str->PaddingWithinLimit();
+            if (res != Success) {
+                return res.Failure();
+            }
         }
     }
 
@@ -100,11 +101,11 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     }
 
     // Check for unsupported shader IO attributes.
-    auto check_input_attributes = [&](const core::type::Type* ty,
-                                      const core::IOAttributes& attributes) -> Result<SuccessType> {
-        if (attributes.color.has_value() && ty->DeepestElement()->Is<core::type::F16>()) {
-            return Failure(
-                "@color attribute on f16 type is not supported by the Vulkan SPIR-V backend");
+    auto check_io_attributes = [&](const core::IOAttributes& attributes) -> Result<SuccessType> {
+        if (attributes.location.has_value() &&
+            attributes.location.value() >= tint::internal_limits::kMaxLocations) {
+            return Failure("location(" + std::to_string(attributes.location.value()) +
+                           ") exceeds the maximum allowed value of '4095'");
         }
         return Success;
     };
@@ -113,11 +114,20 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     for (auto* param : ep_func->Params()) {
         if (auto* str = param->Type()->As<core::type::Struct>()) {
             for (auto* member : str->Members()) {
-                TINT_CHECK_RESULT(check_input_attributes(member->Type(), member->Attributes()));
+                TINT_CHECK_RESULT(check_io_attributes(member->Attributes()));
             }
         } else {
-            TINT_CHECK_RESULT(check_input_attributes(param->Type(), param->Attributes()));
+            TINT_CHECK_RESULT(check_io_attributes(param->Attributes()));
         }
+    }
+
+    // Check output attributes.
+    if (auto* str = ep_func->ReturnType()->As<core::type::Struct>()) {
+        for (auto* member : str->Members()) {
+            TINT_CHECK_RESULT(check_io_attributes(member->Attributes()));
+        }
+    } else {
+        TINT_CHECK_RESULT(check_io_attributes(ep_func->ReturnAttributes()));
     }
 
     core::ir::ReferencedModuleVars<const core::ir::Module> referenced_module_vars{ir};

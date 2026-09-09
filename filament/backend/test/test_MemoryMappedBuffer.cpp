@@ -154,7 +154,8 @@ protected:
     void runOffsetRenderTest(size_t const mapOffset,
             size_t const copyOffset,
             const math::float4& color,
-            const char* screenshotName) {
+            const char* screenshotName,
+            uint32_t const expectedHash) {
 
         auto& api = getDriverApi();
 
@@ -208,7 +209,8 @@ protected:
 
         render(3, 0, swapChain, renderTarget, renderPrimitive, descset, state);
 
-        EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), screenshotName, 0));
+        EXPECT_IMAGE(renderTarget,
+                ScreenshotParams(screenWidth(), screenHeight(), screenshotName, expectedHash));
     }
 };
 
@@ -243,19 +245,19 @@ TEST_F(MemoryMappedTest, MapCopyUnmap) {
 }
 
 TEST_F(MemoryMappedTest, WriteAndRender) {
-    runOffsetRenderTest(0, 0, {1, 0, 0, 1}, "WriteAndRender");
+    runOffsetRenderTest(0, 0, {1, 0, 0, 1}, "WriteAndRender", 3224160495u);
 }
 
 TEST_F(MemoryMappedTest, MapWithOffset) {
-    runOffsetRenderTest(16, 0, {0, 1, 0, 1}, "MapWithOffset");
+    runOffsetRenderTest(16, 0, {0, 1, 0, 1}, "MapWithOffset", 2908798678u);
 }
 
 TEST_F(MemoryMappedTest, CopyWithOffset) {
-    runOffsetRenderTest(0, 16, {0, 0, 1, 1}, "CopyWithOffset");
+    runOffsetRenderTest(0, 16, {0, 0, 1, 1}, "CopyWithOffset", 196318579u);
 }
 
 TEST_F(MemoryMappedTest, MapAndCopyWithOffsets) {
-    runOffsetRenderTest(16, 32, {1, 0, 1, 1}, "MapAndCopyWithOffsets");
+    runOffsetRenderTest(16, 32, {1, 0, 1, 1}, "MapAndCopyWithOffsets", 4268607108u);
 }
 
 TEST_F(MemoryMappedTest, MultipleCopies) {
@@ -305,7 +307,7 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
 
     render(9, 0, swapChain, renderTarget, renderPrimitive, descset, state);
 
-    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "MultipleCopies", 0));
+    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "MultipleCopies", 2864936839u));
 }
 
 TEST_F(MemoryMappedTest, UpdatePartial) {
@@ -359,7 +361,7 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
 
     render(9, 0, swapChain, renderTarget, renderPrimitive, descset, state);
 
-    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "UpdatePartial_before", 0));
+    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "UpdatePartial_before", 2864936839u));
 
     // Now, update the middle triangle
     constexpr std::array<math::float2, 3> triangle2_updated = {{{0.5f, -0.5f}, {0.2f, -0.8f}, {0.8f, -0.8f}}};
@@ -382,7 +384,7 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     // Second render, after update
     render(9, 1, swapChain, renderTarget, renderPrimitive, descset, state);
 
-    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "UpdatePartial_after", 0));
+    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "UpdatePartial_after", 3584399517u));
 }
 
 } // namespace test

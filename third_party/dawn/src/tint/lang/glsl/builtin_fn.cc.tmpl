@@ -55,13 +55,16 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
 
         case BuiltinFn::kImageStore:
+        case BuiltinFn::kUaddCarry:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kLength:
         case BuiltinFn::kFloatBitsToInt:
         case BuiltinFn::kFloatBitsToUint:
+        case BuiltinFn::kFloat16BitsToUint16:
         case BuiltinFn::kIntBitsToFloat:
         case BuiltinFn::kUintBitsToFloat:
+        case BuiltinFn::kUint16BitsToFloat16:
         case BuiltinFn::kBitCount:
         case BuiltinFn::kBitfieldExtract:
         case BuiltinFn::kBitfieldInsert:

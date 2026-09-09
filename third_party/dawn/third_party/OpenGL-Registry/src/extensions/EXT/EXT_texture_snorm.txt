@@ -1,0 +1,317 @@
+Name
+
+     EXT_texture_snorm
+
+Name Strings
+
+     GL_EXT_texture_snorm
+
+Contributors
+
+     Bill Licea-Kane, AMD
+     Jon Leech, Khronos
+     Mais Alnasser, AMD
+     Nick Haemel, AMD
+
+Contact
+
+     Bill Licea-Kane, (bill.licea-kane 'at' amd.com)
+
+Status
+
+     Draft for OpenGL 3.1
+
+Version
+
+     Last Modified Date:  2009-07-10
+     Revision:            5
+
+Number
+
+     365
+
+Dependencies
+
+     OpenGL 3.0 is required.
+
+     This extension is written against the OpenGL 3.0 specification.
+
+Overview
+
+     Fixed-point textures in unextended OpenGL have integer components,
+     but those values are taken to represent floating-point values in
+     the range [0.0,1.0]. These integer components are considered
+     "unsigned normalized" integers. When such a texture is accessed by
+     a shader or by fixed-function fragment processing, floating-point
+     values are returned in the range [0.0,1.0].
+
+     This extension provides a set of new "signed normalized" integer
+     texture formats. These are taken to represent a floating-point
+     value in the range [-1.0,1.0] with an exact 0.0.
+
+New Procedures and Functions
+
+     None
+
+New Tokens
+
+
+     Accepted by the <internalFormat> parameter of TexImage1D,
+     TexImage2D, and TexImage3D:
+
+       base internal formats
+         RED_SNORM                               0x8F90
+         RG_SNORM                                0x8F91
+         RGB_SNORM                               0x8F92
+         RGBA_SNORM                              0x8F93
+         ALPHA_SNORM                             0x9010
+         LUMINANCE_SNORM                         0x9011
+         LUMINANCE_ALPHA_SNORM                   0x9012
+         INTENSITY_SNORM                         0x9013
+
+
+       sized internal formats
+         R8_SNORM                                0x8F94
+         RG8_SNORM                               0x8F95
+         RGB8_SNORM                              0x8F96
+         RGBA8_SNORM                             0x8F97
+         ALPHA8_SNORM                            0x9014
+         LUMINANCE8_SNORM                        0x9015
+         LUMINANCE8_ALPHA8_SNORM                 0x9016
+         INTENSITY8_SNORM                        0x9017
+
+         R16_SNORM                               0x8F98
+         RG16_SNORM                              0x8F99
+         RGB16_SNORM                             0x8F9A
+         RGBA16_SNORM                            0x8F9B
+         ALPHA16_SNORM                           0x9018                           
+         LUMINANCE16_SNORM                       0x9019
+         LUMINANCE16_ALPHA16_SNORM               0x901A
+         INTENSITY16_SNORM                       0x901B
+
+     Returned by GetTexLevelParmeter
+
+         SIGNED_NORMALIZED                       0x8F9C
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+     Modify Section 2.19 Colors and Coloring, p. 74
+
+     Replace Table 2.10:  Component Conversions:
+
+         GL Type of <c> Conversion to internal floating-point
+                        unsigned normalized, signed normalized
+         -------------- -------------------------------------
+         ubyte          <c>/(2^8-1),       <c>/(2^7-1)
+         byte           (2<c>+1)/(2^8-1),  max ( <c>/(2^7-1), -1.0 )
+         ushort         <c>/(2^16-1),      <c>/(2^15-1)
+         short          (2<c>+1)/(2^16-1), max ( <c>/(2^15-1), -1.0 )
+         uint           <c>/(2^32-1),      <c>/(2^31-1)
+         int            (2<c>+1)/(2^32-1), max ( <c>/(2^31-1), -1.0 )
+         half           <c>
+         float          <c>
+         double         <c>
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+     Modify Section 3.9 (Texturing), p. 175
+
+     Modify second paragraph:
+
+     The internal data type of a texture may be signed normalized
+     fixed-point, unsigned normalized fixed-point, floating-point,
+     signed integer or unsigned integer, depending on the internal
+     format of the texture. The correspondence between internal format
+     and the internal data type is given in tables 3.16-3.18.
+     Fixed-point and floating-point textures return a floating-point
+     value and integer textures return signed or unsigned integer
+     values. When a fragment shader is active, the shader is responsible
+     for interpreting the result of a texture lookup as the correct data
+     type, otherwise the result is undefined. When not using a fragment
+     shader, unsigned floating-point texture values are assumed, and the
+     results of using either signed normalized fixed-point or integer
+     textures in this case are undefined.
+
+     Modify Section 3.9.1 (Texture Image Specification), p. 176
+
+     (modify last paragraph beginning p. 176):
+
+     The selected groups are processed exactly as for DrawPixels,
+     stopping just before final conversion. If the <internalformat> of
+     the texture is integer, the components are clamped to the
+     representable range of the internal format: for signed formats,
+     this is [-2^(n-1), 2^(n-1)-1] where n is the number of bits per
+     component; for unsigned formats, the range is [0, 2^n-1]. For R, G,
+     B, and A, if the <internalformat> of the texture is fixed-point,
+     the components are clamped to the representable range of the
+     internal format: for signed normalized formats, this is [-1.0,
+     1.0]; for unsigned normalized formats, this is [0.0, 1.0].
+     Otherwise, the components are not modified.
+
+
+     (add the following required Color formats (texture-only), p. 179)
+
+     - R16_SNORM, RG16_SNORM, RGB16_SNORM, RGBA16_SNORM,
+       R8_SNORM,  RG8_SNORM,  RGB8_SNORM,  RGBA8_SNORM
+
+     (add the following to table 3.16, beginning p. 181)
+
+     Sized                     Base                        R    G    B    A    L    I
+     Internal Format           Internal Format          bits bits bits bits bits bits
+     -----------------------   ---------------------    ---- ---- ---- ---- ---- ----
+     R8_SNORM                  R_SNORM                     8
+     RG8_SNORM                 RG_SNORM                    8    8
+     RGB8_SNORM                RGB_SNORM                   8    8    8
+     RGBA8_SNORM               RGBA_SNORM                  8    8    8    8
+     ALPHA8_SNORM              ALPHA8_SNORM                               8
+     LUMINANCE8_SNORM          LUMINANCE8_SNORM                                8
+     LUMINANCE8_ALPHA8_SNORM   LUMINANCE8_ALPHA8_SNORM                    8    8
+     INTENSITY8_SNORM          INTENSITY8_SNORM                                     8   
+
+     R16_SNORM                 R_SNORM                    16
+     RG16_SNORM                RG_SNORM                   16   16
+     RGB16_SNORM               RGB_SNORm                  16   16   16
+     RGBA16_SNORM              RGBA_SNORM                 16   16   16   16
+     ALPHA8_SNORM              ALPHA8_SNORM                              16
+     LUMINANCE16_SNORM         LUMINANCE16_SNORM                              16
+     LUMINANCE16_ALPHA16_SNORM LUMINANCE16_ALPHA16_SNORM                 16   16
+     INTENSITY16_SNORM         INTENSITY16_SNORM                                   16  
+
+     Table 3.16: Correspondence of sized internal formats to base
+     internal formats, internal data type and desired component
+     resolutions for each sized internal format. The component
+     resolution prefix indicates the internal data type: <f> is floating
+     point, <i> is signed integer, <ui> is unsigned integer, and no
+     prefix is signed or unsigned normalized fixed-point.
+
+     Modify Section 3.12.2 Shader Execution
+
+     (modify Shader Outputs paragraph, p. 234)
+
+     XXXXX - Is this section broken?
+
+     The OpenGL Shading Language specification describes the values that
+     may be output by a fragment shader. These outputs are split into
+     two categories, user-defined varying out variables and built-in
+     variables. The built-in variables are gl_FragColor, gl_FragData[n],
+     and gl_FragDepth. If fragment color clamping is enabled and the
+     color buffer has a unsigned normalized fixed-point format, signed
+     normalized fixed-point format, or floating-point format, the final
+     fragment color, fragment data, or varying out variable values
+     written by a fragment shader are clamped to the range [0, 1] and
+     are optionally converted to normalized fixed-point as described in
+     section 2.19.9.
+
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+     Modify Chapter 4 Introduction, (p. 239)
+
+     (modify second paragraph, p. 239)
+
+     Each pixel in a color buffer consists of either a single unsigned
+     integer color index or up to four color components. The four color
+     components are named R, G, B, and A, in that order; color buffers
+     are not required to have all four color components. R, G, B, and A
+     components may be represented as unsigned normalized fixed-point,
+     signed normalized fixed-point, floating-point, signed integer, or
+     unsigned integer values; all components must have the same
+     representation....
+
+
+     XXXX - Clear section needs changing?
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+     Modify Section 6.1.3 (Enumerated Queries), p. 318
+
+     (Modify beginning paragraph starting on p. 318)
+
+      For texture images with uncompressed internal formats, queries of
+      value of TEXTURE_RED_TYPE, TEXTURE_GREEN_TYPE, TEXTURE_BLUE_TYPE,
+      TEXTURE_ALPHA_TYPE, TEXTURE_LUMINANCE_TYPE, TEXTURE_DEPTH_TYPE,
+      and TEXTURE_INTENSITY_TYPE return the data type used to store the
+      component. Types NONE, UNSIGNED_NORMALIZED, SIGNED_NORMALIZED,
+      FLOAT, INT,and UNSIGNED_INT respectively indicate missing,
+      unsigned normalized integer, signed normalized integer,
+      floating-point, signed unnormalized integer, and unsigned
+      unnormalized integer components....
+
+GLX Protocol
+
+     TBD
+
+Errors
+
+
+Issues
+
+     1 - Should the internalformat enums contain an underscore?
+
+         RESOLVED: Yes.  _SNORM internal format modifier is nearly
+         unreadable without it.  (Especially for sized formats.)
+
+     2 - What are the required signed normalized formats?
+
+         RESOLVED: We require 8 and 16 bit R, RG, RGB, RGBA texturing.
+         It follows that these are filterable.
+
+         We are silent about requiring R, RG, RBA and RGBA rendering.
+         This is an implementation choice. Note that some "OpenGL 3.0
+         target hardware" (multiple implementations) have blending
+         limitations with signed normalized color formats. We are
+         restricted to "OpenGL 3.0 target hardware" for 3.1 candidates.
+
+     3 - Shader outputs broken?
+
+         Final color processing (Chapter 2), Clamping (Several) and
+         conversion to framebuffer are intertwined at several places
+         in the spec now.  Some of the statements in this section
+         appear to conflict with statements in other sections.
+
+     4 - Clear?
+
+         Do we need to be able to clear a signed normalized fixed-point
+         buffer to the full range of [-1.0,1.0]?  If so, any changes
+         needed here?
+
+     5 - Should this "extension spec" be updated to accurately reflect the
+         final 3.0 -> 3.1 deltas?
+
+         Resolved - Ideally, but not now.  Jon made many major structural
+         changes to the core spec in 3.0 -> 3.1.  See the core 3.1 spec
+         with differences tracked for details.
+
+
+Revision History:
+
+   Date: 2009-07-10
+   Revision: 5 (Jon Leech)
+         Assign extension number, minor formatting cleanups for registry.
+
+   Date: 2009-04-29
+   Revision: 4 (gsellers)
+         Add contributors.
+ 
+   Date: 2009-04-22
+   Revision: 3 (wwlk)
+         Add token values, for R,RG,RGB, RGBA and for "legacy" formats
+         alpha, luminace, luminance alpha and intensity.
+         Added unsigned conversions.
+         Fixed typos in enums:
+         LUMINANCE_ALPHA8_SNORM -> LUMINANCE8_ALPHA8_SNORM
+         LUMINANCE_ALPHA16_SNORM -> LUMINANCE16_ALPHA16_SNORM
+
+   Date: 2009-03-17
+   Revision: 2 (wwlk)
+         Fixed enum inconsistencies
+
+   Date: 2008-10-30
+   Revision: 1 (wwlk)
+         Initial version
+
+
+ 

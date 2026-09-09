@@ -1,0 +1,85 @@
+Name
+
+    EXT_EGL_sync
+
+Name Strings
+
+    GL_EXT_EGL_sync
+
+Contact
+
+    Heinrich Fink, DAQRI (heinrich.fink 'at' daqri.com)
+
+Contributors
+
+    Heinrich Fink, DAQRI
+    Daniel Stone, Collabora
+    Marek Olšák, AMD
+
+Status
+
+    Proposal
+
+Version
+
+    Version 4, Sept 11, 2019
+
+Number
+
+    OpenGL Extension #546
+
+Dependencies
+
+    EGL_KHR_fence_sync is required.
+
+    This extension is written against the EGL 1.2 Specification, as modified by
+    the EGL_KHR_fence_sync extension.
+
+Overview
+
+    This extension extends EGL_KHR_fence_sync with client API support for
+    OpenGL (compatibility or core profiles) as an EXT extension.
+
+    The "GL_EXT_EGL_sync" string indicates that a fence sync object can be
+    created in association with a fence command placed in the command stream
+    of a bound OpenGL context.
+
+IP Status
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 3 of the EGL 1.2 Specification (EGL Functions and Errors)
+
+    Modify Section 3.8.1 Sync Objects, page 43
+
+    After "Each client API which supports..." add a new paragraph:
+
+    If the GL_EXT_EGL_sync extension is supported by OpenGL (compatibility or
+    core profile), a fence sync object may be created when the currently bound API
+    is OpenGL.
+
+Errors
+
+    None
+
+Revision History
+
+    Version 4, Sept 11th, 2019
+        Change scope from MESA to EXT on request by James Jones (NVIDIA)
+
+    Version 3, Sept 6th, 2019
+        Update extension no
+
+    Version 2, July 29th, 2019
+        Update extension no in draft
+
+    Version 1, June 5th, 2019
+        Initial draft (Heinrich Fink)

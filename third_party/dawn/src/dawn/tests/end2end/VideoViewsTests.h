@@ -32,7 +32,7 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 
@@ -47,8 +47,7 @@ class VideoViewsTestBackend {
 
     virtual ~VideoViewsTestBackend();
 
-    virtual void OnSetUp(const wgpu::Device& device) = 0;
-    virtual void OnTearDown() {}
+    virtual bool Initialize(const wgpu::Device& device) = 0;
 
     class PlatformTexture {
       public:

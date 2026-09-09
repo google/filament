@@ -349,6 +349,8 @@ TEST(ThreadWorker, DestroyAfterTerminate) {
 // Destroying a worker without calling `terminate()` first is a programming error, and the process
 // must die on it. In debug builds `~ThreadWorker()` asserts, in release builds the assert is
 // compiled out but `std::thread`'s destructor still calls `std::terminate()` on a joinable thread.
+// Death tests are unavailable on iOS-family platforms.
+#if defined(GTEST_HAS_DEATH_TEST) && GTEST_HAS_DEATH_TEST
 TEST(ThreadWorkerDeathTest, DestroyWithoutTerminateAborts) {
 #ifdef NDEBUG
     // `std::terminate()`'s message is toolchain-specific, so only the death itself is checked.
@@ -369,3 +371,4 @@ TEST(ThreadWorkerDeathTest, DestroyWithoutTerminateAborts) {
 
     GTEST_FLAG_SET(death_test_style, previousStyle);
 }
+#endif

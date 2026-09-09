@@ -87,7 +87,7 @@ bool GetRandomBool(RandomEngine* random, size_t n = 2) {
 }
 
 bool IsProto3SimpleField(const FieldDescriptor& field) {
-  return !field.is_repeated() && !field.has_presence();
+  return !field.is_repeated() && !HasPresence(field);
 }
 
 struct CreateDefaultField : public FieldFunction<CreateDefaultField> {
@@ -380,13 +380,13 @@ std::unique_ptr<Message> UnpackAny(const Any& any) {
 }
 
 const Any* CastToAny(const Message* message) {
-  return Any::GetDescriptor() == message->GetDescriptor()
+  return Any::descriptor() == message->GetDescriptor()
              ? protobuf::DownCastMessage<Any>(message)
              : nullptr;
 }
 
 Any* CastToAny(Message* message) {
-  return Any::GetDescriptor() == message->GetDescriptor()
+  return Any::descriptor() == message->GetDescriptor()
              ? protobuf::DownCastMessage<Any>(message)
              : nullptr;
 }
@@ -482,7 +482,7 @@ class PostProcessing {
           Run(It->second.get(), max_depth);
           std::string value;
           It->second->SerializePartialToString(&value);
-          *any->mutable_value() = value;
+          *any->mutable_value() = std::move(value);
         }
       }
     }
@@ -801,7 +801,7 @@ std::string Mutator::MutateUtf8String(const std::string& value,
 
 bool Mutator::IsInitialized(const Message& message) const {
   if (!keep_initialized_ || message.IsInitialized()) return true;
-  std::cerr << "Uninitialized: " << absl::StrCat(message) << "\n";
+  std::cerr << "Uninitialized: " << message.DebugString() << "\n";
   return false;
 }
 

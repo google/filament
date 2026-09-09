@@ -66,7 +66,7 @@ void BreakIf::Destroy() {
     if (loop_) {
         loop_->Body()->RemoveInboundSiblingBranch(this);
     }
-    Instruction::Destroy();
+    Base::Destroy();
 }
 
 BreakIf* BreakIf::Clone(CloneContext& ctx) {

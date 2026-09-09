@@ -1,0 +1,218 @@
+Name
+
+    AMD_shader_explicit_vertex_parameter
+
+Name Strings
+
+    GL_AMD_shader_explicit_vertex_parameter
+
+Contact
+
+    Qun Lin, AMD (Quentin.Lin 'at' amd.com)
+
+Contributors
+
+    Qun Lin, AMD
+    Graham Sellers, AMD
+    Daniel Rakos, AMD
+    Dominik Witczak, AMD
+
+Status
+
+    Pending
+
+Version
+
+    Last Modified Date:         04/21/2016
+    Author Revision:            2
+
+Number
+
+    OpenGL Extension #485
+
+Dependencies
+
+    OpenGL 2.0 or ARB_shader_objects is required.
+
+    This extension is written against the OpenGL Shading Language
+    Specification, Version 4.50.
+
+Overview
+
+    Unextended GLSL provides a set of fixed function interpolation modes and
+    even those are limited to certain types of interpolants (for example,
+    interpolation of integer and double isn't supported).
+
+    This extension introduces new built-in functions allowing access to vertex
+    parameters explicitly in  the fragment shader. It also exposes barycentric
+    coordinates as new built-in variables, which can be used to implement
+    custom interpolation algorithms using shader code.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_AMD_shader_explicit_vertex_parameter : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_AMD_shader_explicit_vertex_parameter 1
+
+Additions to Chapter 3 of the OpenGL Shading Language (GLSL) Specification,
+version 4.50, (Basics)
+
+    Modify section 3.6, Keywords p. 17
+
+    (Add __explicitInterpAMD to the list of keywords)
+    ...smooth noperspective __explicitInterpAMD
+
+Additions to Chapter 4 of the OpenGL Shading Language (GLSL) Specification,
+version 4.50, (Variables and Types)
+
+    Modify section 4.5, Interpolation Qualifiers  p.81
+
+    (Add explicitInterpAMD to interpolation qualifier list)
+
+    +-------------------+------------------------------------------------+
+    | Qualifier         | Meaning                                        |
+    +-------------------+------------------------------------------------+
+    | explicitInterpAMD | Explicit interpolation                         |
+    +-------------------+------------------------------------------------+
+
+    (Add a new paragraph after the description of noperspective)
+
+    A variable qualified as __explicitInterpAMD can only be used as the
+    parameter of the built-in function interpolateAtVertex in fragment shader,
+    and it cannot be qualified with any other auxiliary storage qualifiers.
+
+Additions to Chapter 7 of the OpenGL Shading Language (GLSL) Specification,
+version 4.50 (Built-in variables)
+
+
+    Modify Section 7.1, Built-in Languages Variable, p. 110
+
+    (Add to the list of built-in variables for the fragment languages)
+
+    In the fragment language, built-in variables are intrinsically declared as:
+
+      in vec2 gl_BaryCoordNoPerspAMD;
+      in vec2 gl_BaryCoordNoPerspCentroidAMD;
+      in vec2 gl_BaryCoordNoPerspSampleAMD;
+      in vec2 gl_BaryCoordSmoothAMD;
+      in vec2 gl_BaryCoordSmoothCentroidAMD;
+      in vec2 gl_BaryCoordSmoothSampleAMD;
+      in vec3 gl_BaryCoordPullModelAMD
+
+    The built-in variables <gl_BaryCoord??AMD> are fragment shader input
+    variables. Except the <gl_BaryCoordPullModelAMD>, the variables provide
+    the (I,J) pair of the barycentric coordinates interpolated at a fixed
+    location within the pixel. The K coordinate can be derived given the
+    identity I+J+K=1.0.
+
+    <gl_BaryCoordPullModelAMD> returns (1/W, 1/I, 1/J) at the pixel center and
+    the shader can use it to calculate gradients and to interpolate I, J, and
+    W to any desired sample location.
+
+    The interpolation mode of gl_BaryCoord??AMD variables are as follows
+    +---------------------------------+-----------------------------------------------------------+
+    | Variable name                   | Description                                               |
+    +---------------------------------+-----------------------------------------------------------+
+    | gl_BaryCoordNoPerspAMD          | Linear interpolation evaluated at the pixel's center      |
+    | gl_BaryCoordNoPerspCentroidAMD  | Linear interpolation evaluated at the centroid            |
+    | gl_BaryCoordNoPerspSampleAMD    | Linear interpolation evaluated at each covered sample     |
+    | gl_BaryCoordSmoothAMD           | Perspective interpolation evaluated at the pixel's center |
+    | gl_BaryCoordSmoothCentroidAMD   | Perspective interpolation evaluated at the centroid       |
+    | gl_BaryCoordSmoothSampleAMD     | Perspective interpolation evaluated at each covered sample|
+    +---------------------------------+-----------------------------------------------------------+
+
+Additions to Chapter 8 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30 (Built-in functions)
+
+    Modify Section 8.13.2, "Interpolation Functions", p. 180
+
+    (Add to the end of last paragraph in this page)
+    The return value of the functions interpolateAtCentroid,
+    interpolateAtSample, and interpolateAtOffset is undefined if <interpolant>
+    is declared with __explicitInterpAMD.
+
+    add to the table of functions, p.181:
+
+    +----------------------------------------------------+--------------------------------------------------------+
+    | Syntax                                             | Description                                            |
+    +----------------------------------------------------+--------------------------------------------------------+
+    | genType interpolateAtVertexAMD(genType             | Returns the value of the input <interpolant> without   |
+    |  interpolant, uint vertexIdx)                      | any interpolation. i.e. the raw output value of        |
+    | genIType interpolateAtVertexAMD(genIType           | previous shader stage. <vertexIdx> selects for which   |
+    |  interpolant, uint vertexIdx)                      | vertex of the primitive the value of <interpolant> is  |
+    | genUType interpolateAtVertexAMD(genUType           | returned.                                              |
+    |  interpolant, uint vertexIdx)                      | This return value is equivalent with interpolating     |
+    |                                                    | the input <interpolant> using the following            |
+    |                                                    | set of barycentric coordinates, depending on           |
+    |                                                    | the value of <vertexIdx>:                              |
+    |                                                    |                                                        |
+    |                                                    |  vertexIdx    Barycentric coordinates                  |
+    |                                                    |  0            I=0, J=0, K=1                            |
+    |                                                    |  1            I=1, J=0, K=0                            |
+    |                                                    |  2            I=0, J=1, K=0                            |
+    |                                                    |                                                        |
+    |                                                    | However this order has no association with the vertex  |
+    |                                                    | order specified by the application in the originating  |
+    |                                                    | draw.                                                  |
+    |                                                    | The value of <vertexIdx> must be constant integer      |
+    |                                                    | expression with a value in the range [0, 2].           |
+    +----------------------------------------------------+--------------------------------------------------------+
+
+Additions to Chapter 9 of the OpenGL Shading Language (GLSL) Specification,
+version 4.30, (Shading Language Grammar)
+
+    Modify Chapter 9, Shading Language Grammar for Core Profile, p. 187
+
+    (Add new token __EXPLICITINTERPAMD to list)
+    ... NOPERSPECTIVE FLAT SMOOTH __EXPLICITINTERPAMD
+
+    Modify Chapter 9, Shading Language Grammar for Core Profile, p. 194
+
+    (Add __EXPLICITINTERPAMD to grammar interpolation_qualifier)
+
+    interpolation_qualifier:
+         SMOOTH
+         FLAT
+         NOPERSPECTIVE
+         __EXPLICITINTERPAMD
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+Issues
+
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+    2     05/19/2016  dwitczak  Minor update.
+    1     04/21/2016  qlin      Internal revisions.

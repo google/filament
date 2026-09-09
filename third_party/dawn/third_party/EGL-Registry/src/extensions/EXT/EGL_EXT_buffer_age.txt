@@ -1,0 +1,329 @@
+Name
+
+    EXT_buffer_age
+
+Name Strings
+
+    EGL_EXT_buffer_age
+
+Notice
+
+    Copyright 2011,2012 Intel Cooperation
+
+IP Status
+
+    No known IP claims.
+
+Contributors
+
+    Robert Bragg
+    Neil Roberts
+    Tapani Pälli
+    Kristian Høgsberg
+    Acorn Pooley
+    James Jones
+
+Contacts
+
+    Robert Bragg, Intel (robert.bragg 'at' intel.com)
+
+Status
+
+    Complete.
+
+Version
+
+    12 - June 13, 2013
+
+Number
+
+    EGL Extension #52
+
+Dependencies
+
+    Requires EGL 1.4
+
+    This extension is written against the wording of the EGL 1.4 
+    Specification.
+
+Overview
+
+    The aim of this extension is to expose enough information to
+    applications about how the driver manages the set of front and
+    back buffers associated with a given surface to allow applications
+    to re-use the contents of old frames and minimize how much must be
+    redrawn for the next frame.
+
+    There are lots of different ways for a driver to manage these
+    buffers, from double buffering, different styles of triple
+    buffering and even n-buffering or simply single buffer rendering.
+    We also need to consider that power management events or memory
+    pressure events might also result in some of the buffers not
+    currently in-use being freed.
+
+    This extension lets applications query the age of the back buffer
+    contents for an EGL surface as the number of frames elapsed since
+    the contents were most recently defined. The back buffer can
+    either be reported as invalid (has an age of 0) or it may be
+    reported to contain the contents from n frames prior to the
+    current frame.
+
+    Once the application has queried the buffer age, the age of
+    contents remains valid until the end of the frame for all pixels
+    that continue to pass the pixel ownership test.
+
+    For many use-cases this extension can provide an efficient
+    alternative to using the EGL_BUFFER_PRESERVED swap behaviour. The
+    EGL_BUFFER_PRESERVED swap behaviour adds a direct dependency for
+    any frame n on frame n - 1 which can affect the pipelining of
+    multiple frames but also implies a costly copy-back of data to
+    initialize the back-buffer at the start of each frame.
+
+    For example if you consider a double buffered application drawing
+    a small spinning icon, but everything else in the scene is static.
+    If we know that 2 buffers are continuously being recycled each
+    time eglSwapBuffers is called then even though 100s of frames may
+    need to be drawn to animate the icon it can be seen that the two
+    buffers are remaining unchanged except within the bounds of the
+    icon. In this scenario ideally the application would simply
+    perform an incremental update of the old buffer instead of
+    redundantly redrawing all the static parts of the scene. The
+    problem up until now though has been that EGL doesn't report how
+    buffers may be recycled so it wasn't safe for applications to try
+    and reuse their contents. Now applications can keep track of all
+    the regions that have changed over the last n frames and by
+    knowing the age of the buffer they know how to efficiently repair
+    buffers that are re-cycled instead of redrawing the entire scene.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    EGL_BUFFER_AGE_EXT    0x313D
+
+Additions to Section 2.2 of the EGL 1.4 Specification (Rendering
+Contexts and drawing surfaces)
+
+    Add the following text to a new subsection titled "Pixel
+    Ownership Test" after the subsection titled "Interaction With
+    Native Rendering":
+
+            A fragment produced by a client api through rasterization
+        with windows coordinates (x, y) only modifies the pixel in the
+        rendering surface at that location if it passes the pixel
+        ownership test defined by the native window system.
+
+        The pixel ownership test determines if the pixel at location
+        (x, y) in a rendering surface is currently owned by the client
+        api (more precisely, by this its context). If it is not, the
+        native window system decides the fate of the incoming
+        fragment. Possible results are that the fragment is discarded
+        or that some subset of the subsequent per-fragment operations
+        are applied to the fragment. This test allows the window
+        system to control the client api behavior, for instance, when
+        a window surface is obscured.
+
+        The pixel ownership test can only fail for window surfaces,
+        not for pixmap surfaces or pbuffer surfaces.
+
+        Most native window systems will be able to guarantee that no
+        fragment will ever fail the pixel ownership test, but a
+        notable exception to this is the X11 window system where,
+        depending on the driver, the pixel ownership test may fail
+        when portions of a window are obscured.
+
+Additions to Section 3.5 of the EGL 1.4 Specification (Rendering Surfaces)
+
+    Add the following to the table of "Queryable surface attributes
+    and types":
+
+      +----------------------+---------+-----------------------------+
+      | Attribute            | Type    | Description                 |
+      +----------------------+---------+-----------------------------+
+      | EGL_BUFFER_AGE_EXT   | Integer | Age of back-buffer contents |
+      +----------------------+---------+-----------------------------+
+        Table aaa: Queryable surface attributes and types.
+
+
+    Add the following text to the subsection titled "Surface
+    Attributes" in the description for eglQuerySurface
+
+            Querying EGL_BUFFER_AGE_EXT returns the age of the color
+        contents of the current back-buffer as the number of frames
+        elapsed since it was most recently defined. Applications can,
+        under certain conditions described below, use this age to
+        safely rely on the contents of old back- buffers to
+        potentially reduce the amount of redrawing they do each frame.
+        A frame is the period between calls to any of the functions in
+        table 3.X, hereafter referred to as "frame boundaries."
+
+        Function name
+        --------------------
+        eglSwapBuffers
+
+        Table 3.X, Frame Boundary Functions
+
+        Buffers' ages are initialized to 0 at buffer creation time.
+        When a frame boundary is reached, the following occurs before
+        any exchanging or copying of color buffers:
+
+            * The current back buffer's age is set to 1.
+            * Any other color buffers' ages are incremented by 1 if
+              their age was previously greater than 0.
+
+        For the purposes of buffer age tracking, a buffer's content
+        is considered defined when its age is a value greater than 0.
+
+        For example, with a double buffered surface and an
+        implementation that swaps via buffer exchanges, the age would
+        usually be 2. With a triple buffered surface the age would
+        usually be 3. An age of 1 means the previous swap was
+        implemented as a copy. An age of 0 means the buffer has only
+        just been initialized and the contents are undefined. Single
+        buffered surfaces have no frame boundaries and therefore
+        always have an age of 0.
+
+        Frame boundaries are the only events that can set a buffer's
+        age to a positive value. Once EGL_BUFFER_AGE_EXT has been
+        queried then it can be assumed that the age will remain valid
+        until the next frame boundary. EGL implementations are
+        permitted, but not required, to reset the buffer age in
+        response to pixel ownership test changes for any pixels within
+        the drawable, or if new pixels are added to or removed from
+        the drawable, i.e., the drawable is resized. A reset of this
+        nature does not affect the age of content for pixels that pass
+        the pixel ownership test before and after the event that
+        caused the reset.  In other words, applications can assume
+        that no event will invalidate the content of pixels that
+        continuously pass the pixel ownership test between when the
+        buffer age was queried and the following frame boundary.
+
+        It is up to applications to track pixel ownership using data
+        collected from relevant window system events, such as
+        configuration and expose events on X11.
+
+        If the EGL implementation decides to free un-used back-buffers
+        when the system is under memory pressure or in response to
+        power-management events then EGL will return an age of 0 when
+        it allocates a new buffer at the start of a new frame.
+
+        If the EGL_BUFFER_PRESERVED swap behaviour is in use then
+        it can be assumed that the age will always be 1. It is
+        recommended where possible though that the
+        EGL_BUFFER_PRESERVED swap behaviour not be used since it can
+        have severe performance consequences. Keeping track of the
+        buffer age and the regions that have changed over the last 2
+        or 3 frames instead can often replace the need for using
+        EGL_BUFFER_PRESERVED.
+
+        EGL_BUFFER_AGE_EXT state is a property of the EGL surface that
+        owns the buffers and lives in the address space of the
+        application.  That is, if an EGL surface has been created from
+        a native window or pixmap that may be shared between
+        processes, the buffer age is not guaranteed to be synchronized
+        across the processes. Binding and unbinding a surface to and
+        from one or more contexts in the same address space will not
+        affect the ages of any buffers in that surface.
+
+    Add the following text to last paragraph of the subsection titled
+    "Surface Attributes" in the description for eglQuerySurface
+    errors.
+        
+        If querying EGL_BUFFER_AGE_EXT and <surface> is not bound as
+        the draw surface to the calling threads current context
+        an EGL_BAD_SURFACE error is generated.
+
+Dependencies on OpenGL ES
+
+    None
+
+Dependencies on OpenVG
+
+    None
+
+Issues
+
+    1) What are the semantics if EGL_BUFFER_PRESERVED is in use
+
+        RESOLVED: The age will always be 1 in this case. More
+        clarification about this was added along with the
+        recommendation to use the buffer age to reuse buffers instead
+        of EGL_BUFFER_PRESERVED when possible to avoid the
+        in-efficiencies of introducing a dependency for each frame on
+        the previous frame.
+
+    2) How can an application know that all pixels of a re-usable
+       buffer were originally owned by the current context?
+
+        RESOLVED: It is up to the application to track pixel ownership
+        using existing window system specific events, such as X11
+        expose or configure notify events.
+
+    3) What are the semantics if the buffer age attribute is queried for
+       a surface that isn't bound to the calling thread's context as the
+       draw surface?
+       
+        RESOLVED: we report an EGL_BAD_SURFACE error as is similarly
+        done when calling eglSwapBuffers for such a surface.
+
+    4) What is the buffer age of a single buffered surface?
+
+        RESOLVED: 0.  This falls out implicitly from the buffer age
+        calculations, which dictate that a buffer's age starts at 0,
+        and is only incremented by frame boundaries.  Since frame
+        boundary functions do not affect single buffered surfaces,
+        their age will always be 0.
+
+    5) What guarantees are provided after querying the buffer age?
+
+        RESOLVED: The buffer age of pixels which continue to pass the
+        pixel ownership test must remain valid until the next frame
+        boundary otherwise applications can't be absolutely sure of
+        the consistency of their rendered content.  Implementations
+        may reset the queryable age of the buffer when pixel ownership
+        changes occur.  This is further clarified in section 3.5
+
+Revision History
+
+    Version 1, 25/07/2011
+      - First draft
+    Version 2, 03/08/2011
+      - Clarified semantics for using EGL_BUFFER_PRESERVED
+    Version 3, 01/09/2011
+      - Fixed a prototype inconsistency
+    Version 4, 03/11/2011
+      - Split out the buffer age parts from EGL_INTEL_start_frame
+    Version 5, 20/03/2012
+      - Document that once the age is queried it remains valid until
+        the end of the frame so we can remove the need for a separate
+        EGL_EXT_start_frame extension.
+    Version 6, 20/03/2012
+      - Clarify that only buffers who's contents were fully owned by
+        the context are tracked.
+    Version 7, 20/03/2012
+      - Document that an error will be generated if querying the age
+        for a surface not bound to the current context.
+    Version 8, 25/08/2012
+      - Update in line with changes made to the GLX_EXT_buffer_age draft spec
+        including more relaxed pixel ownership requirements and explicit
+        clarification of the buffer age calculation.
+    Version 9 20/09/2012
+      - Update in line with changes made to the EGL_EXT_buffer age
+        draft space
+    Version 10 29/11/2012
+      - Add pixel ownership test section and other minor
+        clarifications
+    Version 11 13/12/2012
+      - Allocated enumerant and marked complete.
+    Version 12, 13/06/2013, Chad Versace <chad.versace@intel.com>
+      - Remove the "all rights reserved" clause from the copyright notice. The
+        removal does not change the copyright notice's semantics, since the
+        clause is already implied by any unadorned copyright notice. But, the
+        removal does diminish the likelihood of unwarranted caution in readers
+        of the spec.
+      - Add "IP Status" section to explicitly state that this extension has no
+        knonw IP claims.
+    Version 13, 14/10/2021, Guanzhong Chen
+      - Fix an incorrect token name

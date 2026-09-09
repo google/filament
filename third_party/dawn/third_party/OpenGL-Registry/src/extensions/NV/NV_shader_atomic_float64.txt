@@ -1,0 +1,193 @@
+Name
+
+    NV_shader_atomic_float64
+
+Name Strings
+
+    GL_NV_shader_atomic_float64
+
+Contact
+
+    Kedarnath Thangudu, NVIDIA Corporation (kthangudu 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+
+Status
+
+    Shipping in NVIDIA release 367.XX drivers and up.
+
+Version
+
+    Last Modified Date:         October 15, 2014
+    NVIDIA Revision:            1
+
+Number
+
+    OpenGL Extension #488
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 (Compatibility Profile)
+    Specification.
+
+    This extension is written against version 4.50 (revision 3) of the OpenGL
+    Shading Language Specification.
+
+    This extension requires ARB_gpu_shader_fp64 or NV_gpu_program_fp64.
+
+    This extension interacts with NV_shader_buffer_store, NV_gpu_shader5,
+    ARB_shader_storage_buffer_object, and ARB_compute_shader.
+
+    This extension interacts with NV_gpu_program5.
+
+Overview
+
+    This extension provides GLSL built-in functions and assembly opcodes
+    allowing shaders to perform atomic read-modify-write operations to buffer
+    or shared memory with double-precision floating-point components.  The set
+    of atomic operations provided by this extension is limited to adds and
+    exchanges. Providing atomic add support allows shaders to atomically
+    accumulate the sum of double-precision floating-point values into buffer
+    memory across multiple (possibly concurrent) shader invocations.
+
+    This extension provides GLSL support for atomics targeting double-precision
+    floating-point pointers (if NV_gpu_shader5 is supported).
+    Additionally, assembly opcodes for these operations are also provided if
+    NV_gpu_program5 is supported.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the OpenGL 4.5 (Compatibility Profile) Specification
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+(revision 3)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_NV_shader_atomic_float64 : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_NV_shader_atomic_float64         1
+
+    Modify Section 8.11, Atomic Memory Functions (p. 172)
+
+    (add to "atomicAdd" table cell, p. 173)
+
+      double atomicAdd(coherent inout double mem, double data)
+
+    (add to "atomicExchange" table cell, p. 173)
+
+      double atomicExchange(coherent inout double mem, double data)
+
+
+Dependencies on NV_shader_buffer_store, NV_gpu_shader5,
+ARB_shader_storage_buffer_object, and ARB_compute_shader
+
+    If NV_shader_buffer_store and NV_gpu_shader5 are supported, the following
+    functions should be added to the "Section 8.Y, Shader Memory Functions"
+    language in the NV_shader_buffer_store specification:
+
+      double atomicAdd(double *address, double data);
+      double atomicExchange(double *address, double data);
+
+    If ARB_shader_storage_buffer_object or ARB_compute_shader are supported,
+    make similar edits to the functions documented in the
+    ARB_shader_storage_buffer object extension.
+
+    These functions are available if and only if GL_NV_shader_atomic_float64 is
+    enabled via the "#extension" directive.
+
+Dependencies on NV_gpu_program5
+
+    If NV_gpu_program5 is supported and "OPTION NV_shader_atomic_float64" is
+    specified in an assembly program, "F64" should be allowed as a storage
+    modifier to the ATOM instruction for the atomic operations "ADD" and
+    "EXCH".
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+    as extended by NV_gpu_program5:)
+
+      + Double-precision Floating-Point Atomic Operations (NV_shader_atomic_float64)
+
+      If a program specifies the "NV_shader_atomic_float64" option, it may use
+      "F64" storage modifier with the "ATOM" opcode to perform atomic double-
+      precision floating-point add or exchange operations.
+
+    (Add to the table in "Section 2.X.8.Z, ATOM" in NV_gpu_program5:)
+
+      atomic     storage
+      modifier   modifiers                 operation
+      --------   -----------------------   ---------------------------------
+       ADD       U32, S32, U64, F32, F64   compute a sum
+                 F16X2, F16X4
+       ...
+       EXCH      U32, S32, U64, F32, F64   exchange memory with operand
+                 F16X2, F16X4
+
+    Note:
+      Storage modifier U64 is provided by NV_shader_atomic_int64
+      Storage modifier F32 is provided by NV_shader_atomic_float
+      Storage modifiers F16X2 and F16X4 are provided by NV_shader_atomic_fp16_vector
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) What double-precision floating-point targets are supported for
+    atomic operations?
+
+      RESOLVED: This extension only supports atomic operations on double-
+      precision floating-point buffer memory. Atomic operation on double-
+      precision texture memory are not supported since OpenGL provides
+      no pixel/texture formats with double-precision components.
+
+    (2) What atomic operations should we support for double-precision
+    floating-point targets?
+
+      RESOLVED:  Double-precision floating-point atomic addition is the main
+      functionality targeted by this extension.  We provide exchanges because
+      the operation needs no special hardware support.
+
+      We chose not to provide support for bitwise operations (AND/OR/XOR);
+      it's possible to support these by casting a pointer or aliasing an image
+      if required.  Minimum, maximum, and compare-and-swap make sense, but the
+      underlying atomic hardware targeted by this extension does not support
+      floating-point comparisons.
+
+Revision History
+
+    Revision 1
+      - Internal revisions.
+

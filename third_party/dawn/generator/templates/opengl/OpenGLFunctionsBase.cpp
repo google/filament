@@ -27,6 +27,8 @@
 
 #include "dawn/native/opengl/OpenGLFunctionsBase_autogen.h"
 
+#include "src/utils/numeric.h"
+
 namespace dawn::native::opengl {
 
 template<typename T>
@@ -96,7 +98,7 @@ void OpenGLFunctionsBase::InitializeSupportedGLExtensions() {
     int32_t numExtensions;
     GetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
 
-    for (int32_t i = 0; i < numExtensions; ++i) {
+    for (uint32_t i = 0; i < sign_cast(numExtensions); ++i) {
         const char* extensionName = reinterpret_cast<const char*>(GetStringi(GL_EXTENSIONS, i));
         mSupportedGLExtensionsSet.insert(extensionName);
     }

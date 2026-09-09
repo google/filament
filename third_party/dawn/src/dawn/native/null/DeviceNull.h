@@ -31,27 +31,28 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/ResourceTable.h"
-#include "dawn/native/RingBufferAllocator.h"
-#include "dawn/native/Sampler.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/SwapChain.h"
-#include "dawn/native/Texture.h"
-#include "dawn/native/ToBackend.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/ResourceTable.h"
+#include "src/dawn/native/RingBufferAllocator.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/SwapChain.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/ToBackend.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/heap_array.h"
 
 namespace dawn::native::null {
 
@@ -180,7 +181,7 @@ class Device final : public DeviceBase {
 
     std::vector<std::unique_ptr<PendingOperation>> mPendingOperations;
 
-    static constexpr uint64_t kMaxMemoryUsage = 512 * 1024 * 1024;
+    static constexpr uint64_t kMaxMemoryUsage = 512ULL * 1024 * 1024;
     size_t mMemoryUsage = 0;
 };
 
@@ -235,7 +236,7 @@ class BindGroupDataHolder {
     explicit BindGroupDataHolder(size_t size);
     ~BindGroupDataHolder();
 
-    raw_ptr<void> mBindingDataAllocation;
+    HeapArray<std::byte> mBindingDataAllocation;
 };
 
 // We don't have the complexity of placement-allocation of bind group data in
@@ -267,7 +268,7 @@ class Buffer final : public BufferBase {
                          uint64_t destinationOffset,
                          uint64_t size);
 
-    void DoWriteBuffer(uint64_t bufferOffset, const void* data, size_t size);
+    void DoWriteBuffer(uint64_t bufferOffset, Span<const std::byte> data);
 
   private:
     MaybeError MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) override;
@@ -276,9 +277,9 @@ class Buffer final : public BufferBase {
     void DestroyImpl(DestroyReason reason) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointerImpl() override;
+    Span<std::byte> GetMappedRangeImpl(size_t offset, size_t size) override;
 
-    std::unique_ptr<uint8_t[]> mBackingData;
+    HeapArray<std::byte> mBackingData;
 };
 
 class CommandBuffer final : public CommandBufferBase {
@@ -297,11 +298,10 @@ class Queue final : public QueueBase {
 
   private:
     ~Queue() override;
-    MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
+    MaybeError SubmitImpl(Span<CommandBufferBase* const> commands) override;
     MaybeError WriteBufferImpl(BufferBase* buffer,
                                uint64_t bufferOffset,
-                               const void* data,
-                               size_t size) override;
+                               Span<const std::byte> data) override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;
     bool HasPendingCommands() const override;
@@ -360,10 +360,6 @@ class SwapChain final : public SwapChainBase {
 class Texture : public TextureBase {
   public:
     Texture(DeviceBase* device, const UnpackedPtr<TextureDescriptor>& descriptor);
-
-  private:
-    MaybeError PinImpl(wgpu::TextureUsage usage) override;
-    void UnpinImpl() override;
 };
 
 }  // namespace dawn::native::null

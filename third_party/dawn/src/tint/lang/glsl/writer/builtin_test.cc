@@ -38,6 +38,7 @@
 #include "src/tint/lang/core/type/sampler_kind.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
+#include "src/tint/lang/glsl/ir/builtin_call.h"
 #include "src/tint/lang/glsl/writer/helper_test.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
@@ -570,12 +571,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_I32ToVec2F16) {
 precision highp float;
 precision highp int;
 
-f16vec2 tint_bitcast_to_f16(int src) {
+f16vec2 tint_bitcast_to_16bit(int src) {
   return unpackFloat2x16(uint(src));
 }
 void main() {
   int a = 1;
-  f16vec2 x = tint_bitcast_to_f16(a);
+  f16vec2 x = tint_bitcast_to_16bit(a);
 }
 )");
 }
@@ -594,12 +595,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec2F16ToI32) {
 precision highp float;
 precision highp int;
 
-int tint_bitcast_from_f16(f16vec2 src) {
+int tint_bitcast_from_16bit(f16vec2 src) {
   return int(packFloat2x16(src));
 }
 void main() {
   f16vec2 a = f16vec2(1.0hf, 2.0hf);
-  int x = tint_bitcast_from_f16(a);
+  int x = tint_bitcast_from_16bit(a);
 }
 )");
 }
@@ -618,12 +619,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_U32ToVec2F16) {
 precision highp float;
 precision highp int;
 
-f16vec2 tint_bitcast_to_f16(uint src) {
+f16vec2 tint_bitcast_to_16bit(uint src) {
   return unpackFloat2x16(src);
 }
 void main() {
   uint a = 1u;
-  f16vec2 x = tint_bitcast_to_f16(a);
+  f16vec2 x = tint_bitcast_to_16bit(a);
 }
 )");
 }
@@ -642,12 +643,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec2F16ToU32) {
 precision highp float;
 precision highp int;
 
-uint tint_bitcast_from_f16(f16vec2 src) {
+uint tint_bitcast_from_16bit(f16vec2 src) {
   return packFloat2x16(src);
 }
 void main() {
   f16vec2 a = f16vec2(1.0hf, 2.0hf);
-  uint x = tint_bitcast_from_f16(a);
+  uint x = tint_bitcast_from_16bit(a);
 }
 )");
 }
@@ -666,12 +667,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_F32ToVec2F16) {
 precision highp float;
 precision highp int;
 
-f16vec2 tint_bitcast_to_f16(float src) {
+f16vec2 tint_bitcast_to_16bit(float src) {
   return unpackFloat2x16(floatBitsToUint(src));
 }
 void main() {
   float a = 1.0f;
-  f16vec2 x = tint_bitcast_to_f16(a);
+  f16vec2 x = tint_bitcast_to_16bit(a);
 }
 )");
 }
@@ -690,12 +691,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec2F16ToF32) {
 precision highp float;
 precision highp int;
 
-float tint_bitcast_from_f16(f16vec2 src) {
+float tint_bitcast_from_16bit(f16vec2 src) {
   return uintBitsToFloat(packFloat2x16(src));
 }
 void main() {
   f16vec2 a = f16vec2(1.0hf, 2.0hf);
-  float x = tint_bitcast_from_f16(a);
+  float x = tint_bitcast_from_16bit(a);
 }
 )");
 }
@@ -714,13 +715,13 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec2I32ToVec4F16) {
 precision highp float;
 precision highp int;
 
-f16vec4 tint_bitcast_to_f16(ivec2 src) {
+f16vec4 tint_bitcast_to_16bit(ivec2 src) {
   uvec2 v = uvec2(src);
   return f16vec4(unpackFloat2x16(v.x), unpackFloat2x16(v.y));
 }
 void main() {
   ivec2 a = ivec2(1, 2);
-  f16vec4 x = tint_bitcast_to_f16(a);
+  f16vec4 x = tint_bitcast_to_16bit(a);
 }
 )");
 }
@@ -739,12 +740,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec4F16ToVec2I32) {
 precision highp float;
 precision highp int;
 
-ivec2 tint_bitcast_from_f16(f16vec4 src) {
+ivec2 tint_bitcast_from_16bit(f16vec4 src) {
   return ivec2(uvec2(packFloat2x16(src.xy), packFloat2x16(src.zw)));
 }
 void main() {
   f16vec4 a = f16vec4(1.0hf, 2.0hf, 3.0hf, 4.0hf);
-  ivec2 x = tint_bitcast_from_f16(a);
+  ivec2 x = tint_bitcast_from_16bit(a);
 }
 )");
 }
@@ -763,12 +764,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec2U32ToVec4F16) {
 precision highp float;
 precision highp int;
 
-f16vec4 tint_bitcast_to_f16(uvec2 src) {
+f16vec4 tint_bitcast_to_16bit(uvec2 src) {
   return f16vec4(unpackFloat2x16(src.x), unpackFloat2x16(src.y));
 }
 void main() {
   uvec2 a = uvec2(1u, 2u);
-  f16vec4 x = tint_bitcast_to_f16(a);
+  f16vec4 x = tint_bitcast_to_16bit(a);
 }
 )");
 }
@@ -787,12 +788,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec4F16ToVec2U32) {
 precision highp float;
 precision highp int;
 
-uvec2 tint_bitcast_from_f16(f16vec4 src) {
+uvec2 tint_bitcast_from_16bit(f16vec4 src) {
   return uvec2(packFloat2x16(src.xy), packFloat2x16(src.zw));
 }
 void main() {
   f16vec4 a = f16vec4(1.0hf, 2.0hf, 3.0hf, 4.0hf);
-  uvec2 x = tint_bitcast_from_f16(a);
+  uvec2 x = tint_bitcast_from_16bit(a);
 }
 )");
 }
@@ -811,12 +812,13 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec2F32ToVec4F16) {
 precision highp float;
 precision highp int;
 
-f16vec4 tint_bitcast_to_f16(vec2 src) {
-  return f16vec4(unpackFloat2x16(floatBitsToUint(src).x), unpackFloat2x16(floatBitsToUint(src).y));
+f16vec4 tint_bitcast_to_16bit(vec2 src) {
+  uvec2 v = floatBitsToUint(src);
+  return f16vec4(unpackFloat2x16(v.x), unpackFloat2x16(v.y));
 }
 void main() {
   vec2 a = vec2(1.0f, 2.0f);
-  f16vec4 x = tint_bitcast_to_f16(a);
+  f16vec4 x = tint_bitcast_to_16bit(a);
 }
 )");
 }
@@ -835,12 +837,12 @@ TEST_F(GlslWriterTest, BuiltinBitcast_Vec4F16ToVec2F32) {
 precision highp float;
 precision highp int;
 
-vec2 tint_bitcast_from_f16(f16vec4 src) {
+vec2 tint_bitcast_from_16bit(f16vec4 src) {
   return uintBitsToFloat(uvec2(packFloat2x16(src.xy), packFloat2x16(src.zw)));
 }
 void main() {
   f16vec4 a = f16vec4(1.0hf, 2.0hf, 3.0hf, 4.0hf);
-  vec2 x = tint_bitcast_from_f16(a);
+  vec2 x = tint_bitcast_from_16bit(a);
 }
 )");
 }
@@ -1034,8 +1036,9 @@ TEST_F(GlslWriterTest, ExtractBits) {
 precision highp int;
 
 void main() {
-  int v = int(min(2u, 32u));
-  uint x = bitfieldExtract(1u, v, int(min(3u, (32u - min(2u, 32u)))));
+  uint v = min(2u, 32u);
+  int v_1 = int(v);
+  uint x = bitfieldExtract(1u, v_1, int(min(3u, (32u - v))));
 }
 )");
 }
@@ -1053,8 +1056,9 @@ TEST_F(GlslWriterTest, InsertBits) {
 precision highp int;
 
 void main() {
-  int v = int(min(3u, 32u));
-  uint x = bitfieldInsert(1u, 2u, v, int(min(4u, (32u - min(3u, 32u)))));
+  uint v = min(3u, 32u);
+  int v_1 = int(v);
+  uint x = bitfieldInsert(1u, 2u, v_1, int(min(4u, (32u - v))));
 }
 )");
 }
@@ -2749,7 +2753,7 @@ TEST_F(GlslWriterTest, BuiltinTextureSample_Depth2d_Array_Offset) {
         b.Return(func);
     });
 
-    auto result = Generate({}, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
@@ -4032,7 +4036,7 @@ TEST_F(GlslWriterTest, BuiltinTextureSampleCompare_2d_Array_Offset) {
         b.Return(func);
     });
 
-    auto result = Generate({}, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
@@ -4342,6 +4346,71 @@ uniform highp samplerCubeArrayShadow f_t_s;
 void main() {
   vec3 v = vec3(1.0f, 2.0f, 3.0f);
   float x = texture(f_t_s, vec4(v, float(4u)), 3.0f);
+}
+)");
+}
+
+TEST_F(GlslWriterTest, AddSat) {
+    auto* foo = b.Function("foo", ty.void_());
+    auto* lhs = b.FunctionParam("a", ty.u32());
+    auto* rhs = b.FunctionParam("b", ty.u32());
+    foo->SetParams({lhs, rhs});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.Call(ty.u32(), core::BuiltinFn::kAddSat, lhs, rhs);
+        b.Let("res", call);
+        b.Return(foo);
+    });
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Call(ty.void_(), foo, 0_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.glsl;
+    EXPECT_EQ(output_.glsl, GlslHeader() + R"(
+void foo(uint a, uint b) {
+  uint v = 0u;
+  uint v_1 = uaddCarry(a, b, v);
+  uint res = mix(4294967295u, v_1, (v == 0u));
+}
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main() {
+  foo(0u, 1u);
+}
+)");
+}
+TEST_F(GlslWriterTest, AddSat_SideEffects) {
+    auto* foo = b.Function("foo", ty.void_());
+    auto* lhs = b.FunctionParam("a", ty.u32());
+    auto* rhs = b.FunctionParam("b", ty.u32());
+    foo->SetParams({lhs, rhs});
+    b.Append(foo->Block(), [&] {
+        auto* out = b.Var<function, u32>();
+        auto* call =
+            b.Call<glsl::ir::BuiltinCall>(ty.u32(), glsl::BuiltinFn::kUaddCarry, lhs, rhs, out);
+        b.Let("load_out_after_call", b.Load(out));
+        b.Let("res", call);
+        b.Return(foo);
+    });
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Call(ty.void_(), foo, 0_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.glsl;
+    EXPECT_EQ(output_.glsl, GlslHeader() + R"(
+void foo(uint a, uint b) {
+  uint v = 0u;
+  uint v_1 = uaddCarry(a, b, v);
+  uint load_out_after_call = v;
+  uint res = v_1;
+}
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main() {
+  foo(0u, 1u);
 }
 )");
 }

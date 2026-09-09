@@ -41,8 +41,9 @@
 #define TINT_DISABLE_WARNING_CONSTANT_OVERFLOW __pragma(warning(disable : 4756))
 #define TINT_DISABLE_WARNING_DEPRECATED __pragma(warning(disable : 4996))
 #define TINT_DISABLE_WARNING_DESTRUCTOR_NEVER_RETURNS __pragma(warning(disable : 4722))
-#define TINT_DISABLE_WARNING_EXTRA_SEMICOLON /* currently no-op */
-#define TINT_DISABLE_WARNING_FLOAT_EQUAL     /* currently no-op */
+#define TINT_DISABLE_WARNING_EXTRA_SEMICOLON              /* currently no-op */
+#define TINT_DISABLE_WARNING_FLOAT_EQUAL                  /* currently no-op */
+#define TINT_DISABLE_WARNING_LIFETIME_SAFETY_INVALIDATION /* currently no-op */
 #define TINT_DISABLE_WARNING_MAYBE_UNINITIALIZED __pragma(warning(disable : 4701))
 #define TINT_DISABLE_WARNING_MISSING_DESTRUCTOR_OVERRIDE /* currently no-op */
 #define TINT_DISABLE_WARNING_NEWLINE_EOF                 /* currently no-op */
@@ -55,7 +56,7 @@
 #define TINT_DISABLE_WARNING_SIGN_CONVERSION             /* currently no-op */
 #define TINT_DISABLE_WARNING_UNDEFINED_REINTERPRET_CAST  /* currently no-op */
 #define TINT_DISABLE_WARNING_UNREACHABLE_CODE __pragma(warning(disable : 4702))
-#define TINT_DISABLE_WARNING_UNSAFE_BUFFER_USAGE /* currently no-op */
+#define TINT_DISABLE_WARNING_UNSAFE_BUFFER_USAGE              /* currently no-op */
 #define TINT_DISABLE_WARNING_UNSAFE_BUFFER_USAGE_IN_CONTAINER /* currently no-op */
 #define TINT_DISABLE_WARNING_UNUSED_PARAMETER __pragma(warning(disable : 4100))
 #define TINT_DISABLE_WARNING_UNSUED_VARIABLE __pragma(warning(disable : 4189))
@@ -108,6 +109,8 @@
 #define TINT_DISABLE_WARNING_EXTRA_SEMICOLON \
     _Pragma("clang diagnostic ignored \"-Wextra-semi-stmt\"")
 #define TINT_DISABLE_WARNING_FLOAT_EQUAL _Pragma("clang diagnostic ignored \"-Wfloat-equal\"")
+#define TINT_DISABLE_WARNING_LIFETIME_SAFETY_INVALIDATION \
+    _Pragma("clang diagnostic ignored \"-Wlifetime-safety-invalidation\"")
 #define TINT_DISABLE_WARNING_MAYBE_UNINITIALIZED \
     _Pragma("clang diagnostic ignored \"-Wconditional-uninitialized\"")
 #define TINT_DISABLE_WARNING_MISSING_DESTRUCTOR_OVERRIDE                  \
@@ -184,25 +187,25 @@
 // GCC
 ////////////////////////////////////////////////////////////////////////////////
 #define TINT_BUILD_IS_GCC 1
-#define TINT_DISABLE_WARNING_CONSTANT_OVERFLOW        /* currently no-op */
-#define TINT_DISABLE_WARNING_DEPRECATED               /* currently no-op */
-#define TINT_DISABLE_WARNING_DESTRUCTOR_NEVER_RETURNS /* currently no-op */
-#define TINT_DISABLE_WARNING_EXTRA_SEMICOLON          /* currently no-op */
-#define TINT_DISABLE_WARNING_FLOAT_EQUAL              /* currently no-op */
-#define TINT_DISABLE_WARNING_MAYBE_UNINITIALIZED \
-    _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-#define TINT_DISABLE_WARNING_MISSING_DESTRUCTOR_OVERRIDE /* currently no-op */
-#define TINT_DISABLE_WARNING_NEWLINE_EOF                 /* currently no-op */
-#define TINT_DISABLE_WARNING_OLD_STYLE_CAST              /* currently no-op */
+#define TINT_DISABLE_WARNING_CONSTANT_OVERFLOW            /* currently no-op */
+#define TINT_DISABLE_WARNING_DEPRECATED                   /* currently no-op */
+#define TINT_DISABLE_WARNING_DESTRUCTOR_NEVER_RETURNS     /* currently no-op */
+#define TINT_DISABLE_WARNING_EXTRA_SEMICOLON              /* currently no-op */
+#define TINT_DISABLE_WARNING_FLOAT_EQUAL                  /* currently no-op */
+#define TINT_DISABLE_WARNING_LIFETIME_SAFETY_INVALIDATION /* currently no-op */
+#define TINT_DISABLE_WARNING_MAYBE_UNINITIALIZED          /* currently no-op */
+#define TINT_DISABLE_WARNING_MISSING_DESTRUCTOR_OVERRIDE  /* currently no-op */
+#define TINT_DISABLE_WARNING_NEWLINE_EOF                  /* currently no-op */
+#define TINT_DISABLE_WARNING_OLD_STYLE_CAST               /* currently no-op */
 #define TINT_DISABLE_WARNING_PEDANTIC _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
-#define TINT_DISABLE_WARNING_REDUNDANT_PARENS            /* currently no-op */
-#define TINT_DISABLE_WARNING_RESERVED_IDENTIFIER         /* currently no-op */
-#define TINT_DISABLE_WARNING_RESERVED_MACRO_IDENTIFIER   /* currently no-op */
-#define TINT_DISABLE_WARNING_SHADOW_FIELD_IN_CONSTRUCTOR /* currently no-op */
-#define TINT_DISABLE_WARNING_SIGN_CONVERSION             /* currently no-op */
-#define TINT_DISABLE_WARNING_UNDEFINED_REINTERPRET_CAST  /* currently no-op */
-#define TINT_DISABLE_WARNING_UNREACHABLE_CODE            /* currently no-op */
-#define TINT_DISABLE_WARNING_UNSAFE_BUFFER_USAGE         /* currently no-op */
+#define TINT_DISABLE_WARNING_REDUNDANT_PARENS                 /* currently no-op */
+#define TINT_DISABLE_WARNING_RESERVED_IDENTIFIER              /* currently no-op */
+#define TINT_DISABLE_WARNING_RESERVED_MACRO_IDENTIFIER        /* currently no-op */
+#define TINT_DISABLE_WARNING_SHADOW_FIELD_IN_CONSTRUCTOR      /* currently no-op */
+#define TINT_DISABLE_WARNING_SIGN_CONVERSION                  /* currently no-op */
+#define TINT_DISABLE_WARNING_UNDEFINED_REINTERPRET_CAST       /* currently no-op */
+#define TINT_DISABLE_WARNING_UNREACHABLE_CODE                 /* currently no-op */
+#define TINT_DISABLE_WARNING_UNSAFE_BUFFER_USAGE              /* currently no-op */
 #define TINT_DISABLE_WARNING_UNSAFE_BUFFER_USAGE_IN_CONTAINER /* currently no-op */
 #define TINT_DISABLE_WARNING_UNUSED_PARAMETER \
     _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -237,6 +240,7 @@
     TINT_DISABLE_WARNING_UNREACHABLE_CODE             \
     TINT_DISABLE_WARNING_WEAK_VTABLES                 \
     TINT_DISABLE_WARNING_FLOAT_EQUAL                  \
+    TINT_DISABLE_WARNING_LIFETIME_SAFETY_INVALIDATION \
     TINT_DISABLE_WARNING_DEPRECATED                   \
     TINT_DISABLE_WARNING_REDUNDANT_PARENS             \
     TINT_DISABLE_WARNING_RESERVED_IDENTIFIER          \

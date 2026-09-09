@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
 
 #include <algorithm>
 #include <limits>
@@ -33,38 +33,39 @@
 #include <sstream>
 #include <utility>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/native/ChainUtils.h"
 #include "dawn/native/D3D12Backend.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/KeyedMutex.h"
-#include "dawn/native/d3d12/BackendD3D12.h"
-#include "dawn/native/d3d12/BindGroupD3D12.h"
-#include "dawn/native/d3d12/BindGroupLayoutD3D12.h"
-#include "dawn/native/d3d12/CommandBufferD3D12.h"
-#include "dawn/native/d3d12/ComputePipelineD3D12.h"
-#include "dawn/native/d3d12/PhysicalDeviceD3D12.h"
-#include "dawn/native/d3d12/PipelineLayoutD3D12.h"
-#include "dawn/native/d3d12/PlatformFunctionsD3D12.h"
-#include "dawn/native/d3d12/QuerySetD3D12.h"
-#include "dawn/native/d3d12/QueueD3D12.h"
-#include "dawn/native/d3d12/RenderPipelineD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
-#include "dawn/native/d3d12/ResourceTableD3D12.h"
-#include "dawn/native/d3d12/SamplerD3D12.h"
-#include "dawn/native/d3d12/SamplerHeapCacheD3D12.h"
-#include "dawn/native/d3d12/ShaderModuleD3D12.h"
-#include "dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
-#include "dawn/native/d3d12/SharedBufferMemoryD3D12.h"
-#include "dawn/native/d3d12/SharedFenceD3D12.h"
-#include "dawn/native/d3d12/SharedTextureMemoryD3D12.h"
-#include "dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
-#include "dawn/native/d3d12/SwapChainD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/KeyedMutex.h"
+#include "src/dawn/native/d3d12/BackendD3D12.h"
+#include "src/dawn/native/d3d12/BindGroupD3D12.h"
+#include "src/dawn/native/d3d12/BindGroupLayoutD3D12.h"
+#include "src/dawn/native/d3d12/CommandBufferD3D12.h"
+#include "src/dawn/native/d3d12/ComputePipelineD3D12.h"
+#include "src/dawn/native/d3d12/PhysicalDeviceD3D12.h"
+#include "src/dawn/native/d3d12/PipelineLayoutD3D12.h"
+#include "src/dawn/native/d3d12/PlatformFunctionsD3D12.h"
+#include "src/dawn/native/d3d12/QuerySetD3D12.h"
+#include "src/dawn/native/d3d12/QueueD3D12.h"
+#include "src/dawn/native/d3d12/RenderPipelineD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/native/d3d12/ResourceTableD3D12.h"
+#include "src/dawn/native/d3d12/SamplerD3D12.h"
+#include "src/dawn/native/d3d12/SamplerHeapCacheD3D12.h"
+#include "src/dawn/native/d3d12/ShaderModuleD3D12.h"
+#include "src/dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/SharedBufferMemoryD3D12.h"
+#include "src/dawn/native/d3d12/SharedFenceD3D12.h"
+#include "src/dawn/native/d3d12/SharedTextureMemoryD3D12.h"
+#include "src/dawn/native/d3d12/StagingDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/SwapChainD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d12 {
 namespace {
@@ -73,7 +74,7 @@ static constexpr uint16_t kShaderVisibleDescriptorHeapSize = 1024;
 static constexpr uint8_t kAttachmentDescriptorHeapSize = 64;
 
 // Value may change in the future to better accommodate large clears.
-static constexpr uint64_t kZeroBufferSize = 1024 * 1024 * 4;  // 4 Mb
+static constexpr uint64_t kZeroBufferSize = 1024ULL * 1024 * 4;  // 4 Mb
 
 static constexpr uint64_t kMaxDebugMessagesToPrint = 5;
 }  // namespace
@@ -114,7 +115,7 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
         DAWN_TRY(CheckHRESULT(queue->GetCommandQueue()->GetTimestampFrequency(&frequency),
                               "D3D12 get timestamp frequency"));
         // Calculate the period in nanoseconds by the frequency.
-        mTimestampPeriod = static_cast<float>(1e9) / frequency;
+        mTimestampPeriod = static_cast<float>(1e9 / static_cast<double>(frequency));
     }
 
     // Initialize backend services
@@ -135,15 +136,16 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
     }
 
     mRenderTargetViewAllocator = std::make_unique<MutexProtected<StagingDescriptorAllocator>>(
-        this, 1, kAttachmentDescriptorHeapSize, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        this, 1u, kAttachmentDescriptorHeapSize, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     mDepthStencilViewAllocator = std::make_unique<MutexProtected<StagingDescriptorAllocator>>(
-        this, 1, kAttachmentDescriptorHeapSize, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+        this, 1u, kAttachmentDescriptorHeapSize, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
     mSamplerHeapCache = std::make_unique<SamplerHeapCache>(this);
 
     mResidencyManager = std::make_unique<MutexProtected<ResidencyManager>>(this);
-    mResourceAllocatorManager = std::make_unique<MutexProtected<ResourceAllocatorManager>>(this);
+    mResourceAllocatorManager =
+        std::make_unique<MutexProtected<ResourceAllocatorManager>>(this, queue.Get());
 
     // ShaderVisibleDescriptorAllocators use the ResidencyManager and must be initialized after.
     DAWN_TRY_ASSIGN(
@@ -185,13 +187,23 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
     if (IsToggleEnabled(Toggle::UseDXC)) {
         uint32_t appliedShaderModel =
             ToBackend(GetPhysicalDevice())->GetAppliedShaderModelUnderToggles(GetTogglesState());
-        uint32_t shaderModelMajor = appliedShaderModel / 10;
-        uint32_t shaderModelMinor = appliedShaderModel % 10;
+
+        uint32_t shaderModelMajor = 0;
+        uint32_t shaderModelMinor = 0;
+
+        // TODO(crbug.com/513251803): Don't use shader model as decimal value
+        DAWN_ASSERT(appliedShaderModel <= 76);
+        if (appliedShaderModel >= 70 && appliedShaderModel <= 76) {
+            shaderModelMajor = 6;
+            shaderModelMinor = appliedShaderModel - 60;
+        } else {
+            shaderModelMajor = appliedShaderModel / 10;
+            shaderModelMinor = appliedShaderModel % 10;
+        }
+
         // Profiles are always <stage>s_<minor>_<major> so we build the s_<minor>_major and add
         // it to each of the stage's suffix.
-        std::wstring profileSuffix = L"s_M_n";
-        profileSuffix[2] = wchar_t('0' + shaderModelMajor);
-        profileSuffix[4] = wchar_t('0' + shaderModelMinor);
+        std::wstring profileSuffix = std::format(L"s_{}_{}", shaderModelMajor, shaderModelMinor);
         mDxcShaderProfiles[SingleShaderStage::Vertex] = L"v" + profileSuffix;
         mDxcShaderProfiles[SingleShaderStage::Fragment] = L"p" + profileSuffix;
         mDxcShaderProfiles[SingleShaderStage::Compute] = L"c" + profileSuffix;
@@ -317,10 +329,7 @@ MaybeError Device::CreateZeroBuffer() {
         zeroBufferDescriptor.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::MapWrite;
 
         DAWN_TRY_ASSIGN(zeroBufferBase, CreateBuffer(&zeroBufferDescriptor));
-
-        void* mappedPointer = zeroBufferBase->GetMappedPointer();
-        DAWN_ASSERT(mappedPointer != nullptr);
-        memset(mappedPointer, 0, zeroBufferBase->GetAllocatedSize());
+        std::ranges::fill(zeroBufferBase->GetMappedRange(), std::byte{0});
         DAWN_TRY(zeroBufferBase->Unmap());
     } else {
         zeroBufferDescriptor.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
@@ -334,8 +343,7 @@ MaybeError Device::CreateZeroBuffer() {
         DAWN_TRY(GetDynamicUploader()->WithUploadReservation(
             kZeroBufferSize, kCopyBufferToBufferOffsetAlignment,
             [&](UploadReservation reservation) -> MaybeError {
-                memset(reservation.mappedPointer, 0u, kZeroBufferSize);
-
+                std::ranges::fill(reservation.mappedData, std::byte{0u});
                 CopyFromStagingToBufferHelper(commandContext, reservation.buffer.Get(),
                                               reservation.offsetInBuffer, zeroBufferBase.Get(), 0,
                                               kZeroBufferSize);
@@ -465,10 +473,9 @@ ResultOrError<Ref<SharedBufferMemoryBase>> Device::ImportSharedBufferMemoryImpl(
     DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(descriptor));
 
     wgpu::SType type;
-    DAWN_TRY_ASSIGN(type,
-                    (unpacked.ValidateBranches<
-                        Branch<SharedBufferMemoryD3D12ResourceDescriptor>,
-                        Branch<SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor>>()));
+    DAWN_TRY_ASSIGN(
+        type, (unpacked.ValidateBranches<Branch<SharedBufferMemoryD3D12ResourceDescriptor>,
+                                         Branch<SharedBufferMemoryFromWindowsHandleDescriptor>>()));
 
     switch (type) {
         case wgpu::SType::SharedBufferMemoryD3D12ResourceDescriptor:
@@ -477,14 +484,13 @@ ResultOrError<Ref<SharedBufferMemoryBase>> Device::ImportSharedBufferMemoryImpl(
                             wgpu::FeatureName::SharedBufferMemoryD3D12Resource);
             return SharedBufferMemory::Create(
                 this, descriptor->label, unpacked.Get<SharedBufferMemoryD3D12ResourceDescriptor>());
-        case wgpu::SType::SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor:
-            DAWN_INVALID_IF(
-                !HasFeature(Feature::SharedBufferMemoryD3D12SharedMemoryFileMappingHandle),
-                "%s is not enabled.",
-                wgpu::FeatureName::SharedBufferMemoryD3D12SharedMemoryFileMappingHandle);
+        case wgpu::SType::SharedBufferMemoryFromWindowsHandleDescriptor:
+            DAWN_INVALID_IF(!HasFeature(Feature::SharedBufferMemoryFromWindowsHandle),
+                            "%s is not enabled.",
+                            wgpu::FeatureName::SharedBufferMemoryFromWindowsHandle);
             return SharedBufferMemory::Create(
                 this, descriptor->label,
-                unpacked.Get<SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor>());
+                unpacked.Get<SharedBufferMemoryFromWindowsHandleDescriptor>());
         default:
             DAWN_UNREACHABLE();
     }
@@ -697,8 +703,8 @@ void AppendDebugLayerMessagesToError(ID3D12InfoQueue* infoQueue,
             continue;
         }
 
-        std::unique_ptr<uint8_t[]> messageData(new uint8_t[messageLength]);
-        D3D12_MESSAGE* message = reinterpret_cast<D3D12_MESSAGE*>(messageData.get());
+        HeapArray<uint8_t> messageData(messageLength);
+        D3D12_MESSAGE* message = reinterpret_cast<D3D12_MESSAGE*>(messageData.data());
         hr = infoQueue->GetMessage(i, message, &messageLength);
         if (FAILED(hr)) {
             messageStream << " ID3D12InfoQueue::GetMessage failed with " << hr;
@@ -872,7 +878,7 @@ bool Device::MayRequireDuplicationOfIndirectParameters() const {
 
 bool Device::ShouldDuplicateParametersForDrawIndirect(
     const RenderPipelineBase* renderPipelineBase) const {
-    return ToBackend(renderPipelineBase)->UsesVertexOrInstanceIndex();
+    return renderPipelineBase->UsesVertexIndex() || renderPipelineBase->UsesInstanceIndex();
 }
 
 uint64_t Device::GetBufferCopyOffsetAlignmentForDepthStencil() const {
@@ -898,6 +904,15 @@ ComPtr<IDxcCompiler3> Device::GetDxcCompiler() const {
 
 const PerStage<std::wstring>& Device::GetDxcShaderProfiles() const {
     return mDxcShaderProfiles;
+}
+
+AllocatorMemoryInfo Device::GetAllocatorMemoryInfo() const {
+    DAWN_ASSERT(IsLockedByCurrentThreadIfNeeded());
+    AllocatorMemoryInfo info = {};
+    info.totalAllocatedMemory = (*mResourceAllocatorManager)->GetTotalAllocatedMemory();
+    info.totalUsedMemory = (*mResourceAllocatorManager)->GetTotalUsedMemory();
+    // D3D12 has no lazy memory concept, leave lazy fields as zero.
+    return info;
 }
 
 }  // namespace dawn::native::d3d12

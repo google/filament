@@ -47,6 +47,7 @@ struct Type {
 
     /// Implicit conversion operator to the type's expression
     /// @return #expr
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator const IdentifierExpression*() const { return expr; }
 };
 

@@ -27,15 +27,14 @@
 
 #include <memory>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
 #include "gmock/gmock.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
 
 namespace dawn {
 namespace {
 
-using testing::_;
 using testing::EmptySizedString;
 using testing::InSequence;
 using testing::MockCppCallback;

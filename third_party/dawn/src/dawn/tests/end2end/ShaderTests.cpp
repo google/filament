@@ -30,9 +30,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -1073,6 +1074,9 @@ struct Buf {
 // Draw a triangle covering the render target, with vertex position and color values from
 // overridable constants
 TEST_P(ShaderTests, OverridableConstantsRenderPipeline) {
+    // TODO(crbug.com/523211963): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
 @id(1111) override xright: f32;
 @id(2222) override ytop: f32;
@@ -1226,9 +1230,174 @@ TEST_P(ShaderTests, ShaderOverridingRobustnessBuiltins) {
     EXPECT_BUFFER_U32_EQ(2, buf, 0);
 }
 
+// Test for an MSL miscompile that produces incorrect results for a certain pattern of unsigned
+// integer arithmetic instructions whose intermediate results overflow.
+// See https://crbug.com/517225032
+TEST_P(ShaderTests, MetalMulShiftModOverflowBug) {
+    wgpu::ComputePipelineDescriptor cDesc;
+    cDesc.compute.module = utils::CreateShaderModule(device, R"(
+        @group(0) @binding(0)
+        var<storage, read_write> value: u32;
+
+        @compute @workgroup_size(1u)
+        fn main() {
+            let input = value;
+            value = ((input * input) >> 16u) % 3u;
+        }
+    )");
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&cDesc);
+
+    wgpu::BufferDescriptor bufDesc;
+    bufDesc.size = 4;
+    bufDesc.usage =
+        wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+    wgpu::Buffer buf = device.CreateBuffer(&bufDesc);
+
+    // Write 0x10004 to the buffer.
+    uint32_t inputVal = 0x10004;
+    queue.WriteBuffer(buf, 0, &inputVal, sizeof(inputVal));
+
+    wgpu::BindGroup bg = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, buf}});
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bg);
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // We expect output to be 2:
+    //   0x10004 * 0x10004 = 0x100080010 = 0x80010 (mod 2^32)
+    //   0x80010 >> 16 = 0x8
+    //   0x8 % 3 = 2
+    EXPECT_BUFFER_U32_EQ(2, buf, 0);
+}
+
+// Test for an MSL miscompile that produces incorrect results for a certain pattern of unsigned
+// integer arithmetic instructions whose intermediate results overflow.
+// See https://crbug.com/517225032
+TEST_P(ShaderTests, MetalMulShiftModOverflowBug_Vector) {
+    wgpu::ComputePipelineDescriptor cDesc;
+    cDesc.compute.module = utils::CreateShaderModule(device, R"(
+        @group(0) @binding(0)
+        var<storage, read_write> value: vec4u;
+
+        @compute @workgroup_size(1u)
+        fn main() {
+            let input = value;
+            value = ((input * input) >> vec4u(16u)) % 3u;
+        }
+    )");
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&cDesc);
+
+    wgpu::BufferDescriptor bufDesc;
+    bufDesc.size = 4 * sizeof(uint32_t);
+    bufDesc.usage =
+        wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+    wgpu::Buffer buf = device.CreateBuffer(&bufDesc);
+
+    // Write 0x10004 to the buffer.
+    uint32_t inputValues[] = {0x10004, 0x10004, 0x10004, 0x10004};
+    queue.WriteBuffer(buf, 0, inputValues, 4 * sizeof(uint32_t));
+
+    wgpu::BindGroup bg = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, buf}});
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bg);
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // We expect output to be 2:
+    //   0x10004 * 0x10004 = 0x100080010 = 0x80010 (mod 2^32)
+    //   0x80010 >> 16 = 0x8
+    //   0x8 % 3 = 2
+    EXPECT_BUFFER_U32_EQ(2, buf, 0);
+    EXPECT_BUFFER_U32_EQ(2, buf, 4);
+    EXPECT_BUFFER_U32_EQ(2, buf, 8);
+    EXPECT_BUFFER_U32_EQ(2, buf, 12);
+}
+
+// Regression test for the compiler crash reported in https://crbug.com/520781436
+TEST_P(ShaderTests, GenerateInstructionsBP_Crash) {
+    // The crash is fixed from Android 17 onwards.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec() && IsVulkan() && IsAndroidOlderThan(17));
+
+    wgpu::ComputePipelineDescriptor cDesc;
+    cDesc.compute.module = utils::CreateShaderModule(device, R"(
+@group(0) @binding(0)
+var<storage, read_write> data: i32;
+
+var<private> loop_stop: array<u32, 3>;
+
+fn foo() -> i32 {
+    switch (clamp(vec3i(), sign(vec3i(3i & data)), vec3i(3i, 0i, 0i)).x) {
+        case 4i: {}
+        case 5000i: {}
+        default: {
+            return data;
+        }
+    }
+    loop {
+        if (loop_stop[0u] >= 1u) { break; }
+        loop_stop[0u]++;
+    }
+    loop {
+        if (loop_stop[1u] >= 1u) { break; }
+        loop_stop[1u]++;
+    }
+    loop {
+        if (loop_stop[2u] >= 1u) { break; }
+        loop_stop[2u]++;
+    }
+    return 0i;
+}
+
+@compute @workgroup_size(1u)
+fn main() {
+    data = abs(vec2(foo(), 1i)).y;
+}
+    )");
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&cDesc);
+
+    wgpu::BufferDescriptor bufDesc;
+    bufDesc.size = 4;
+    bufDesc.usage =
+        wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+    wgpu::Buffer buf = device.CreateBuffer(&bufDesc);
+
+    // Write 2i to the buffer.
+    uint32_t inputVal = 2;
+    queue.WriteBuffer(buf, 0, &inputVal, sizeof(inputVal));
+
+    wgpu::BindGroup bg = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, buf}});
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bg);
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_EQ(1, buf, 0);
+}
+
 // Test that when fragment input is a subset of the vertex output, the render pipeline should be
 // valid.
 TEST_P(ShaderTests, FragmentInputIsSubsetOfVertexOutput) {
+    // TODO(crbug.com/523211963): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
 struct ShaderIO {
     @location(1) var1: f32,
@@ -1292,6 +1461,9 @@ struct ShaderIO {
 // Test that when fragment input is a subset of the vertex output and the order of them is
 // different, the render pipeline should be valid.
 TEST_P(ShaderTests, FragmentInputIsSubsetOfVertexOutputWithDifferentOrder) {
+    // TODO(crbug.com/523211963): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
 struct ShaderIO {
     @location(5) @align(16) var5: f32,
@@ -1356,6 +1528,9 @@ struct ShaderIO {
 // Test that when fragment input is a subset of the vertex output and that when the builtin
 // interstage variables may mess up with the order, the render pipeline should be valid.
 TEST_P(ShaderTests, FragmentInputIsSubsetOfVertexOutputBuiltinOrder) {
+    // TODO(crbug.com/523211963): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
 struct ShaderIO {
     @location(1) var1: f32,
@@ -3347,7 +3522,7 @@ fn main(in : FSIn) -> @location(0) vec4f {
         float mat1[3];
         float mat2[3];
     };
-    static_assert(sizeof(Vertex) == 136, "");
+    static_assert(sizeof(Vertex) == 136);
 
     std::vector<Vertex> vertexData = {
         {/*cornerID*/ 0,
@@ -3545,12 +3720,71 @@ fn main(in : FSIn) -> @location(0) vec4f {
     const OutputData* data =
         reinterpret_cast<const OutputData*>(readbackBuffer.GetConstMappedRange());
     for (int i = 0; i < 3; ++i) {
-        EXPECT_GT(data[i].sk_Position[0], 0.0f);
-        EXPECT_LT(data[i].sk_Position[0], 1.0f);
-        EXPECT_GT(data[i].sk_Position[1], 0.0f);
-        EXPECT_LT(data[i].sk_Position[1], 1.0f);
+        DAWN_UNSAFE_TODO(EXPECT_GT(data[i].sk_Position[0], 0.0f));
+        DAWN_UNSAFE_TODO(EXPECT_LT(data[i].sk_Position[0], 1.0f));
+        DAWN_UNSAFE_TODO(EXPECT_GT(data[i].sk_Position[1], 0.0f));
+        DAWN_UNSAFE_TODO(EXPECT_LT(data[i].sk_Position[1], 1.0f));
     }
     readbackBuffer.Unmap();
+}
+
+// Regression test for a bug on Xclipse GPUs that affects certain combinations of bitwise operations
+// and select builtins.
+// https://crbug.com/542268656
+TEST_P(ShaderTests, XclipseBitwiseAndSelectBuiltinBug) {
+    wgpu::ComputePipelineDescriptor pDesc;
+    pDesc.compute.module = utils::CreateShaderModule(device, R"(
+@group(0) @binding(0) var<storage> inputs: array<u32>;
+@group(0) @binding(1) var<storage, read_write> outputs: array<u32>;
+
+@compute @workgroup_size(16)
+fn main(@builtin(global_invocation_id) global_invocation_id: vec3u) {
+    let in_index = global_invocation_id.x;
+    if (in_index >= 3) {
+        return;
+    }
+
+    let value = (inputs[in_index] >> 24u) & 0xff;
+    let edge = value & 0xfu;
+
+    let out_index = select(
+      select(0u, 1u, edge == 0u),
+      2u,
+      edge == 8u
+    );
+
+    outputs[out_index] = in_index;
+}
+)");
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&pDesc);
+
+    std::vector<uint32_t> inputValues = {
+        0u << 24u,  // edge=0 -> out_index=1 -> writes 0 at outputs[1]
+        3u << 24u,  // edge=3 -> out_index=0 -> writes 1 at outputs[0]
+        8u << 24u,  // edge=8 -> out_index=2 -> writes 2 at outputs[2]
+    };
+    wgpu::Buffer inputBuffer = utils::CreateBufferFromData(device, inputValues.data(),
+                                                           inputValues.size() * sizeof(uint32_t),
+                                                           wgpu::BufferUsage::Storage);
+
+    wgpu::Buffer outputBuffer = CreateBuffer(inputValues.size());
+
+    wgpu::BindGroup bg = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                              {{0, inputBuffer}, {1, outputBuffer}});
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetBindGroup(0, bg);
+    pass.SetPipeline(pipeline);
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_EQ(1u, outputBuffer, 0);
+    EXPECT_BUFFER_U32_EQ(0u, outputBuffer, 4);
+    EXPECT_BUFFER_U32_EQ(2u, outputBuffer, 8);
 }
 
 DAWN_INSTANTIATE_TEST(ShaderTests,

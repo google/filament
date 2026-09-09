@@ -58,6 +58,9 @@ tint_target_add_dependencies(tint_lang_glsl_writer lib
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_type
+  tint_lang_glsl_writer_common
+  tint_lang_glsl_writer_printer
+  tint_lang_glsl_writer_raise
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -65,6 +68,7 @@ tint_target_add_dependencies(tint_lang_glsl_writer lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -74,20 +78,12 @@ tint_target_add_external_dependencies(tint_lang_glsl_writer lib
   "src_utils"
 )
 
-if(TINT_BUILD_GLSL_WRITER)
-  tint_target_add_dependencies(tint_lang_glsl_writer lib
-    tint_lang_glsl_writer_common
-    tint_lang_glsl_writer_printer
-    tint_lang_glsl_writer_raise
-  )
 endif(TINT_BUILD_GLSL_WRITER)
-
-endif(TINT_BUILD_GLSL_WRITER)
-if(TINT_BUILD_GLSL_WRITER AND TINT_BUILD_GLSL_VALIDATOR)
+if(TINT_BUILD_GLSL_VALIDATOR AND TINT_BUILD_GLSL_WRITER)
 ################################################################################
 # Target:    tint_lang_glsl_writer_test
 # Kind:      test
-# Condition: TINT_BUILD_GLSL_WRITER AND TINT_BUILD_GLSL_VALIDATOR
+# Condition: TINT_BUILD_GLSL_VALIDATOR AND TINT_BUILD_GLSL_WRITER
 ################################################################################
 tint_add_target(tint_lang_glsl_writer_test test
   lang/glsl/writer/access_test.cc
@@ -98,6 +94,7 @@ tint_add_target(tint_lang_glsl_writer_test test
   lang/glsl/writer/constructor_test.cc
   lang/glsl/writer/convert_test.cc
   lang/glsl/writer/function_test.cc
+  lang/glsl/writer/helper_test.h
   lang/glsl/writer/if_test.cc
   lang/glsl/writer/loop_test.cc
   lang/glsl/writer/switch_test.cc
@@ -114,6 +111,12 @@ tint_target_add_dependencies(tint_lang_glsl_writer_test test
   tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_type
+  tint_lang_glsl
+  tint_lang_glsl_intrinsic
+  tint_lang_glsl_ir
+  tint_lang_glsl_validate
+  tint_lang_glsl_writer
+  tint_lang_glsl_writer_common
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -121,6 +124,7 @@ tint_target_add_dependencies(tint_lang_glsl_writer_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -131,28 +135,12 @@ tint_target_add_external_dependencies(tint_lang_glsl_writer_test test
   "src_utils"
 )
 
-if(TINT_BUILD_GLSL_VALIDATOR)
-  tint_target_add_sources(tint_lang_glsl_writer_test test
-    "lang/glsl/writer/helper_test.h"
-  )
-  tint_target_add_dependencies(tint_lang_glsl_writer_test test
-    tint_lang_glsl_validate
-  )
-endif(TINT_BUILD_GLSL_VALIDATOR)
-
-if(TINT_BUILD_GLSL_WRITER)
-  tint_target_add_dependencies(tint_lang_glsl_writer_test test
-    tint_lang_glsl_writer
-    tint_lang_glsl_writer_common
-  )
-endif(TINT_BUILD_GLSL_WRITER)
-
-endif(TINT_BUILD_GLSL_WRITER AND TINT_BUILD_GLSL_VALIDATOR)
-if(TINT_BUILD_GLSL_WRITER)
+endif(TINT_BUILD_GLSL_VALIDATOR AND TINT_BUILD_GLSL_WRITER)
+if(TINT_BUILD_FUZZERS AND TINT_BUILD_GLSL_WRITER)
 ################################################################################
 # Target:    tint_lang_glsl_writer_fuzz
 # Kind:      fuzz
-# Condition: TINT_BUILD_GLSL_WRITER
+# Condition: TINT_BUILD_FUZZERS AND TINT_BUILD_GLSL_WRITER
 ################################################################################
 tint_add_target(tint_lang_glsl_writer_fuzz fuzz
   lang/glsl/writer/writer_fuzz.cc
@@ -160,12 +148,16 @@ tint_add_target(tint_lang_glsl_writer_fuzz fuzz
 
 tint_target_add_dependencies(tint_lang_glsl_writer_fuzz fuzz
   tint_api_common
-  tint_cmd_fuzz_ir_fuzz
+  tint_cmd_fuzz_common
   tint_lang_core
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_type
+  tint_lang_glsl_writer
+  tint_lang_glsl_writer_common
+  tint_lang_glsl_writer_helpers
+  tint_lang_glsl_writer_printer
   tint_utils
   tint_utils_bytes
   tint_utils_containers
@@ -174,6 +166,7 @@ tint_target_add_dependencies(tint_lang_glsl_writer_fuzz fuzz
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -183,13 +176,4 @@ tint_target_add_external_dependencies(tint_lang_glsl_writer_fuzz fuzz
   "src_utils"
 )
 
-if(TINT_BUILD_GLSL_WRITER)
-  tint_target_add_dependencies(tint_lang_glsl_writer_fuzz fuzz
-    tint_lang_glsl_writer
-    tint_lang_glsl_writer_common
-    tint_lang_glsl_writer_helpers
-    tint_lang_glsl_writer_printer
-  )
-endif(TINT_BUILD_GLSL_WRITER)
-
-endif(TINT_BUILD_GLSL_WRITER)
+endif(TINT_BUILD_FUZZERS AND TINT_BUILD_GLSL_WRITER)

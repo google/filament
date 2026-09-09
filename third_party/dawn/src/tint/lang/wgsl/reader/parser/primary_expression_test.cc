@@ -162,7 +162,7 @@ TEST_F(WGSLParserTest, PrimaryExpression_TypeDecl_StructInitializer_NotEmpty) {
               ast::IntLiteralExpression::Suffix::kU);
 
     ASSERT_TRUE(call->args[1]->Is<ast::FloatLiteralExpression>());
-    EXPECT_EQ(call->args[1]->As<ast::FloatLiteralExpression>()->value, 2.f);
+    EXPECT_EQ(call->args[1]->As<ast::FloatLiteralExpression>()->value, 2.0);
 }
 
 TEST_F(WGSLParserTest, PrimaryExpression_ConstLiteral_True) {

@@ -34,16 +34,14 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::type::Sampler);
 
 namespace tint::core::type {
 
-Sampler::Sampler(SamplerKind kind, SamplerFiltering filtering)
-    : Base(Hash(tint::TypeCode::Of<Sampler>().bits, kind, filtering), core::type::Flags{}),
-      kind_(kind),
-      filtering_(filtering) {}
+Sampler::Sampler(SamplerKind kind)
+    : Base(Hash(tint::TypeCode::Of<Sampler>().bits, kind), core::type::Flags{}), kind_(kind) {}
 
 Sampler::~Sampler() = default;
 
 bool Sampler::Equals(const UniqueNode& other) const {
     if (auto* o = other.As<Sampler>()) {
-        return o->kind_ == kind_ && o->filtering_ == filtering_;
+        return o->kind_ == kind_;
     }
     return false;
 }
@@ -56,14 +54,11 @@ std::string Sampler::FriendlyName() const {
     if (kind_ == SamplerKind::kComparisonSampler) {
         return "sampler_comparison";
     }
-    if (filtering_ == SamplerFiltering::kUndefined) {
-        return "sampler";
-    }
-    return "sampler<" + std::string(ToString(filtering_)) + ">";
+    return "sampler";
 }
 
 Sampler* Sampler::Clone(CloneContext& ctx) const {
-    return ctx.dst.mgr->Get<Sampler>(kind_, filtering_);
+    return ctx.dst.mgr->Get<Sampler>(kind_);
 }
 
 }  // namespace tint::core::type

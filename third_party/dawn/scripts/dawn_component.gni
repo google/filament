@@ -93,7 +93,8 @@ template("dawn_component") {
   }
 
   shared_library("${prefix}shared") {
-    # The "tool" for creating shared libraries will automatically add the "lib" prefix
+    # The "tool" for creating shared libraries will automatically add the "lib"
+    # prefix
     output_name = "dawn_${name}"
 
     # Copy all variables except "configs", which has a default value
@@ -132,7 +133,7 @@ template("dawn_component") {
     # all symbols except JNI ones. Remove this config so that our
     # shared_library symbols are visible. This matches what Chromium's
     # component template does.
-    if (build_with_chromium && is_android) {
+    if (is_android) {
       configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
     }
   }

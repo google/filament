@@ -1,0 +1,932 @@
+Name
+
+    NV_present_video
+
+Name Strings
+
+    GL_NV_present_video
+    GLX_NV_present_video
+    WGL_NV_present_video
+
+Contributors
+
+    James Jones
+    Jeff Juliano
+    Robert Morell
+    Aaron Plattner
+    Andy Ritger
+    Thomas True
+    Ian Williams
+
+Contact
+
+    James Jones, NVIDIA (jajones 'at' nvidia.com)
+
+Status
+
+    Implemented in 165.33 driver for NVIDIA SDI devices.
+
+Version
+
+    Last Modified Date: July 8, 2011
+    Author Revision: 8
+    $Date$ $Revision$
+
+Number
+
+    347
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    ARB_occlusion_query is required.
+    EXT_timer_query is required.
+    ARB_texture_compression affects the definition of this extension.
+    ARB_texture_float affects the definition of this extension.
+    GLX_NV_video_out affects the definition of this extension.
+    EXT_framebuffer_object affects the definition of this extension.
+    WGL_ARB_extensions_string affects the definition of this extension.
+    WGL_NV_video_out affects the definition of this extension.
+
+    This extension is written against the OpenGL 2.1 Specification
+    and the GLX 1.4 Specification.
+
+Overview
+
+    This extension provides a mechanism for displaying textures and
+    renderbuffers on auxiliary video output devices.  It allows an
+    application to specify separate buffers for the individual
+    fields used with interlaced output.  It also provides a way
+    to present frames or field pairs simultaneously in two separate
+    video streams.  It also allows an application to request when images
+    should be displayed, and to obtain feedback on exactly when images
+    are actually first displayed.
+
+    This specification attempts to avoid language that would tie it to
+    any particular hardware or vendor.  However, it should be noted that
+    it has been designed specifically for use with NVIDIA SDI products
+    and the features and limitations of the spec compliment those of
+    NVIDIA's line of SDI video output devices.
+
+New Procedures and Functions
+
+    void PresentFrameKeyedNV(uint video_slot,
+                             uint64EXT minPresentTime,
+                             uint beginPresentTimeId,
+                             uint presentDurationId,
+                             enum type,
+                             enum target0, uint fill0, uint key0,
+                             enum target1, uint fill1, uint key1);
+
+    void PresentFrameDualFillNV(uint video_slot,
+                                uint64EXT minPresentTime,
+                                uint beginPresentTimeId,
+                                uint presentDurationId,
+                                enum type,
+                                enum target0, uint fill0,
+                                enum target1, uint fill1,
+                                enum target2, uint fill2,
+                                enum target3, uint fill3);
+
+    void GetVideoivNV(uint video_slot, enum pname, int *params);
+    void GetVideouivNV(uint video_slot, enum pname, uint *params);
+    void GetVideoi64vNV(uint video_slot, enum pname, int64EXT *params);
+    void GetVideoui64vNV(uint video_slot, enum pname,
+                         uint64EXT *params);
+
+
+    unsigned int *glXEnumerateVideoDevicesNV(Display *dpy, int screen,
+                                             int *nelements);
+    int glXBindVideoDeviceNV(Display *dpy, unsigned int video_slot,
+                             unsigned int video_device,
+                             const int *attrib_list);
+
+
+    DECLARE_HANDLE(HVIDEOOUTPUTDEVICENV);
+
+    int wglEnumerateVideoDevicesNV(HDC hDc,
+                                   HVIDEOOUTPUTDEVICENV *phDeviceList);
+    BOOL wglBindVideoDeviceNV(HDC hDc, unsigned int uVideoSlot,
+                              HVIDEOOUTPUTDEVICENV hVideoDevice,
+                              const int *piAttribList);
+    BOOL wglQueryCurrentContextNV(int iAttribute, int *piValue);
+
+New Tokens
+
+    Accepted by the <type> parameter of PresentFrameKeyedNV and
+    PresentFrameDualFillNV:
+
+        FRAME_NV                        0x8E26
+        FIELDS_NV                       0x8E27
+
+    Accepted by the <pname> parameter of GetVideoivNV, GetVideouivNV,
+    GetVideoi64vNV, GetVideoui64vNV:
+
+        CURRENT_TIME_NV                 0x8E28
+        NUM_FILL_STREAMS_NV             0x8E29
+
+    Accepted by the <target> parameter of GetQueryiv:
+
+        PRESENT_TIME_NV                 0x8E2A
+        PRESENT_DURATION_NV             0x8E2B
+
+    Accepted by the <attribute> parameter of glXQueryContext:
+
+        GLX_NUM_VIDEO_SLOTS_NV          0x20F0
+
+    Accepted by the <iAttribute> parameter of wglQueryCurrentContextNV:
+
+        WGL_NUM_VIDEO_SLOTS_NV          0x20F0
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment Operations and the Framebuffer)
+
+    Add a new section after Section 4.4:
+
+    "4.5 Displaying Buffers
+
+    "To queue the display of a set of textures or renderbuffers on one
+    of the current video output devices, call one of:
+
+        void PresentFrameKeyedNV(uint video_slot,
+                                 uint64EXT minPresentTime,
+                                 uint beginPresentTimeId,
+                                 uint presentDurationId,
+                                 enum type,
+                                 enum target0, uint fill0, uint key0,
+                                 enum target1, uint fill1, uint key1);
+
+        void PresentFrameDualFillNV(uint video_slot,
+                                    uint64EXT minPresentTime,
+                                    uint beginPresentTimeId,
+                                    uint presentDurationId,
+                                    enum type,
+                                    enum target0, uint fill0,
+                                    enum target1, uint fill1,
+                                    enum target2, uint fill2,
+                                    enum target3, uint fill3);
+
+    "PresentFrameKeyedNV can only be used when one output stream
+    is being used for color data.  Key data will be presented on the
+    second output stream.  PresentFrameDualFillNV can be used only when
+    two output streams are being used for color data.  It will present
+    separate color images on each stream simultaneously.
+
+    "The <video_slot> parameter specifies which video output slot
+    in the current context this frame should be presented on.  If no
+    video output device is bound at <video_slot> at the time of the
+    call, INVALID_OPERATION is generated.
+
+    "The value of <minPresentTime> can be set to either the earliest
+    time in nanoseconds that the frame should become visible, or the
+    special value 0.  Frame presentation is always queued until the
+    video output's vertical blanking period.  At that time, the video
+    output device will consume the frames in the queue in the order
+    they were queued until it finds a frame qualified for display.  A
+    frame is qualified if it meets one of the following criteria:
+
+       1) The frame's minimum presentation time is the special value
+          zero.
+
+       2) The frame's minimum presentation time is less than or equal
+          to the current time and the next queued frame, if it exists,
+          has a minimum presentation time greater than the current time.
+
+    Any consumed frames not displayed are discarded.  If no qualified
+    frames are found, the current frame continues to display.
+
+    "If <beginPresentTimeId> or <presentDurationId> are non-zero, they
+    must name valid query objects (see section 4.1.7, Asynchronous
+    Queries).  The actual time at which the video output device began
+    displaying this frame will be stored in the object referred to by
+    <beginPresentTimeId>.  The present frame operations will implicitly
+    perform the equivalent of:
+
+        BeginQuery(PRESENT_TIME_NV, <beginPresentTimeId>);
+        BeginQuery(PRESENT_DURATION_NV, <presentDurationId>);
+
+    when the respective query object names are valid, followed by the
+    actual present operation, then an implicit EndQuery() for each
+    query started.  The result can then be obtained asynchronously via
+    the GetQueryObject calls with a <target> of PRESENT_TIME_NV or
+    PRESENT_DURATION_NV.  The results of a query on the PRESENT_TIME_NV
+    target will be the time in nanoseconds when the frame was first
+    started scanning out, and will become available at that time.  The
+    results of a query on the PRESENT_DURATION_NV target will be the
+    number of times this frame was fully scanned out by the video output
+    device and will become available when the subsequent frame begins
+    scanning out.
+
+    "If the frame was removed from the queue without being displayed,
+    the present duration will be zero, and the present time will refer
+    to the time in nanoseconds when the first subsequent frame that was
+    not skipped began scanning out.
+
+    "The query targets PRESENT_TIME_NV and PRESENT_DURATION_NV may not
+    be explicitly used with BeginQuery or EndQuery.  Attempting to do
+    so will generate INVALID_ENUM.
+
+    "The parameters <type>, <target0>, <fill0>, <key0>, <target1>,
+    <fill1>, and <key1> define the data to be displayed on the first
+    video output stream.  Valid values for <type> are FIELDS_NV or
+    FRAME_NV.  Other values will generate INVALID_ENUM.  The <target0>
+    and <target1> parameters can each be one of TEXTURE_2D,
+    TEXTURE_RECTANGLE, RENDERBUFFER_EXT, or NONE.  Other values will
+    generate INVALID_ENUM.  The <fill0> and <fill1> parameters then name
+    an object of the corresponding type from which the color data will
+    be read.  Similarly, <key0> and <key1> name an object from which key
+    channel data will be read.  If <type> is FIELDS_NV <target0> and
+    <target1> can not be NONE and <fill0>, and <fill1> must both name
+    valid image objects or INVALID_VALUE is generated.  If <type> is
+    FRAME_NV <target0> can not be NONE and <fill0> must name a valid
+    object or INVALID_VALUE is generated.  Additionally, <target1> must
+    be NONE or INVALID_ENUM is generated.  The values of <fill1> and
+    <key1> are ignored.
+
+    "A texture object is considered a valid color image object only if
+    it is consistent and has a supported internal format.  A
+    renderbuffer object is considered a valid image object if its
+    internal format has been specified as one of those supported.
+    Implementations must support at least the following internal formats
+    for presenting color buffers:
+
+        RGB
+        RGBA
+        RGB16F_ARB
+        RGBA16F_ARB
+        RGB32F_ARB
+        RGBA32F_ARB
+        LUMINANCE
+        LUMINANCE_AlPHA
+
+    If no separate key object is specified when using a key output
+    stream, the key data is taken from the alpha channel of the color
+    object if it is present, or is set to 1.0 otherwise.
+    Implementations must support at least the following internal formats
+    when presenting key stream buffers:
+
+        RGBA
+        RGBA16F_ARB
+        RGBA32F_ARB
+        LUMINANCE_AlPHA
+        DEPTH_COMPONENT
+
+    "The key values are read from the alpha channel unless a depth
+    format is used.  For depth formats, the key value is the depth
+    value.
+
+    "It is legal to use the same image for more than one of <fill0>,
+    <fill1>, <key0>, and <key1>.
+
+    "In the following section, which discusses image dimension
+    requirements, the image objects named by <fill0> and <key0> are
+    collectively referred to as 'image 0' and the image objects named by
+    <fill1> and <key1> are collectively referred to as 'image 1'.  The
+    dimensions of a pair of fill and key images must be equal.  If using
+    PresentFrameDualFillNV, 'image 0' refers only to <fill0>, and
+    'image 1' refers only to <fill1>.
+
+    "If <type> is FRAME_NV image 1 must have a height equal to the
+    number of lines displayed per frame on the output device and a width
+    equal to the number of pixels per line on the output device or
+    INVALID_VALUE will be generated.  Each line in the image will
+    correspond to a line displayed on the output device.
+
+    "If <type> is FIELDS_NV, the way in which lines from the image are
+    displayed depends on the image's size.  If progressive output is in
+    use, image 0 and image 1 must either both have a height equal to the
+    number of lines displayed per frame, or both have a height equal to
+    the ceiling of half the number of lines displayed per frame.  If an
+    interlaced output is in use, the images must either both have a
+    height equal to the number of lines displayed per frame, or image 0
+    must have a height equal to the number of lines in field one and
+    image 1 must have a height equal to the number of lines in field
+    two.  The images must both have a width equal to the number of
+    pixels per line on the output device.  If any of these conditions
+    are not met, INVALID_VALUE is generated.
+
+    "If progressive output is used, the lines are displayed as follows:
+    If the images are the same height as a frame, the resulting frame
+    displayed is comprised of the first line of image 0, followed by
+    the second line of image 1, followed by the third line of image 0,
+    and so on until all the lines of a frame have been displayed.  If
+    the images are half the height of the frame, the resulting frame
+    displayed is comprised of the first line of image 0, followed by the
+    first line of image 1, followed by the second line of image 0, and
+    so on until the number of lines per frame has been displayed.
+
+    "If interlaced output is used and the images are the same height as
+    a frame, the order in which lines are chosen from the images
+    depends on the video output mode in use.  If the video output mode
+    specifies field 1 as containing the first line of the display, the
+    first line of field 1 will come from the first line of image 0,
+    followed by the third line from image 0, and so on until the entire
+    first field has been displayed.  The first line of field 2 will come
+    from the second line of image 1, followed by the fourth line of
+    image 1, and so on until the entire second field is displayed.  If
+    the mode specifies field 1 as containing the second line of the
+    display, the first line of field 1 will come from the second line of
+    image 0, followed by the fourth line of image 0, and so on until the
+    entire first field is displayed.  The first line of field 2 will
+    come from the first line of image 1, followed by the third line of
+    image 1, and so on until the entire second field is displayed.
+
+    "If interlaced output is used and the images are the same height as
+    individual fields, the order of lines used does not depend on the
+    mode in use.  Regardless of the mode used the first line of the
+    first field will come from the first line of image 0, followed by
+    the second line of image 0, and so on until the entire first field
+    has been displayed.  The first line of the second field will come
+    from the first line of image 1, followed by the second line of
+    image 1, and so on until the entire second field has been displayed.
+
+    "The parameters <target2>, <fill2>, <target3>, and <fill3> are used
+    identically to <target0>, <fill0>, <target1>, and <fill1>
+    respectively, but they operate on the second color video output
+    stream.
+
+    "If the implementation requires a copy as part of the present frame
+    operation, the copy will be transparent to the user and as such will
+    bypass the fragment pipeline completely and will not alter any GL
+    state."
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special Functions)
+
+    (Add to section 5.4, "Display Lists", page 244, in the list of
+    commands that are not compiled into display lists)
+
+    "Display commands: PresentFrameKeyedNV, PresentFrameDualFillNV
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and
+State Requests)
+
+    (In section 6.1.12, Asynchronous Queries, add the following after
+    paragraph 6, p. 254)
+
+    For present time queries (PRESENT_TIME_NV), if the minimum number of
+    bits is non-zero, it must be at least 64.
+
+    For present duration queries (PRESENT_DURATION_NV, if the minimum
+    number of bits is non-zero, it must be at least 1.
+
+
+    (Replace section 6.1.15, Saving and Restoring State, p. 264)
+
+    Section 6.1.15, Video Output Queries
+
+    Information about a video slot can be queried with the commands
+
+        void GetVideoivNV(uint video_slot enum pname, int *params);
+        void GetVideouivNV(uint video_slot enum pname, uint *params);
+        void GetVideoi64vNV(uint video_slot enum pname,
+                            int64EXT *params);
+        void GetVideoui64vNV(uint video_slot enum pname,
+                             uint64EXT *params);
+
+    If <video_slot> is not a valid video slot in the current context or
+    no video output device is currently bound at <video_slot> an
+    INVALID_OPERATION is generated.  If <pname> is CURRENT_TIME_NV, the
+    current time on the video output device in nanoseconds is returned
+    in <params>.  If the time value can not be expressed without using
+    more bits than are available in <params>, the value is truncated.
+    If <pname> is NUM_FILL_STREAMS_NV, the number of active video output
+    streams is returned in <params>.
+
+Additions to Appendix A of the OpenGL 2.1 Specification (Invariance)
+
+    None
+
+Additions to the WGL Specification
+
+    Add a new section "Video Output Devices"
+
+    "WGL video output devices can be used to display images with more
+    fine-grained control over the presentation than wglSwapBuffers
+    allows.  Use
+
+        int wglEnumerateVideoDevicesNV(HDC hDc,
+                                       HVIDEOOUTPUTDEVICENV *phDeviceList);
+
+    to enumerate the available video output devices.
+
+    "This call returns the number of video devices available on <hDC>.
+    If <phDeviceList> is non-NULL, an array of valid device handles
+    will be returned in it.  The function will assume <phDeviceList> is
+    large enough to hold all available handles so the application should
+    take care to first query the number of devices present and allocate
+    an appropriate amount of memory.
+
+    "To bind a video output device to the current context, use
+
+        BOOL wglBindVideoDeviceNV(HDC hDc, unsigned int uVideoSlot,
+                                  HVIDEOOUTPUTDEVICENV hVideoDevice,
+                                  const int *piAttribList);
+
+    "wglBindVideoDeviceNV binds the video output device specified by
+    <hVideoDevice> to one of the context's available video output slots
+    specified by <uVideoSlot>.  <piAttribList> is a set of attribute
+    name-value pairs that affects the bind operation.  Currently there
+    are no valid attributes so <piAttribList> must be either NULL or an
+    empty list.  To release a video device without binding another
+    device to the same slot, call wglBindVideoDeviceNV with
+    <hVideoDevice> set to NULL.  The bound video output device will be
+    enabled before wglBindVideoDeviceNV returns.  It will display black
+    until the first image is presented on it.  The previously bound
+    video device, if any, will also be deactivated before
+    wglBindVIdeoDeviceNV resturns.  Video slot 0 is reserved for the GL.
+    If wglBindVideoDeviceNV is called with <uVideoSlot> less than 1 or
+    greater than the maximum number of video slots supported by the
+    current context, if <hVideoDevice> does not refer to a valid video
+    output device, or if there is no current context, FALSE will be
+    returned.  A return value of TRUE indicates a video device has
+    successfully been bound to the video slot.
+
+
+    Add section "Querying WGL context attributes"
+
+    To query an attribute associated with the current WGL context, use
+
+        BOOL wglQueryCurrentContextNV(int iAttribute, int *piValue);
+
+    wglQueryCurrentContextNV will place the value of the attribute named
+    by <iAttribute> in the memory pointed to by <piValue>.  If there is
+    no context current or <iAttribute> does not name a valid attribute,
+    FALSE will be returned and the memory pointed to by <piValue> will
+    not be changed.  Currently the only valid attribute name is
+    WGL_NUM_VIDEO_SLOTS_NV.  This attribute contains the number of valid
+    video output slots in the current context.
+
+
+Additions to Chapter 2 of the GLX 1.4 Specification (GLX Operation)
+
+    None
+
+Additions to Chapter 3 of the GLX 1.4 Specification (Functions and Errors)
+
+    Modify table 3.5:
+
+    Attribute               Type  Description
+    ----------------------  ----  ------------------------------------------
+    GLX_FBCONFIG_ID         XID   XID of GLXFBConfig associated with context
+    GLX_RENDER_TYPE         int   type of rendering supported
+    GLX_SCREEN              int   screen number
+    GLX_NUM_VIDEO_SLOTS_NV  int   number of video output slots this context supports
+
+
+    Add a section between Sections 3.3.10 and 3.3.11:
+
+    3.3.10a  Video Output Devices
+
+    "GLX video output devices can be used to display images with more
+    fine-grained control over the presentation than glXSwapBuffers
+    allows.  Use
+
+        unsigned int *glXEnumerateVideoDevicesNV(Display *dpy,
+                                                 int screen,
+                                                 int *nElements);
+
+    to enumerate the available video output devices.
+
+    "This call returns an array of unsigned ints.  The number of
+    elements in the array is returned in nElements.  Each entry in the
+    array names a valid video output device.  Use XFree to free the
+    memory returned by glXEnumerateVideoDevicesNV.
+
+    "To bind a video output device to the current context, use
+
+        Bool glXBindVideoDeviceNV(Display *dpy,
+                                  unsigned int video_slot,
+                                  unsigned int video_device,
+                                  const int *attrib_list);
+
+    "glXBindVideoDeviceNV binds the video output device specified
+    by <video_device> to one of the context's available video
+    output slots specified by <video_slot>.  <attrib_list> is a
+    set of attribute name-value pairs that affects the bind
+    operation.  Currently there are no valid attributes so <attrib_list>
+    must be either NULL or an empty list.  To release a video device
+    without binding another device to the same slot, call
+    glXBindVideoDeviceNV with <video_device> set to "0".  Video slot 0
+    is reserved for the GL.  The bound video output device will be
+    enabled before glXBindVideoDeviceNV returns.  It will display black
+    until the first image is presented on it.  The previously bound
+    video device, if any, will also be deactivated before
+    glXBindVIdeoDeviceNV resturns.  If glXBindVideoDeviceNV is called
+    with <video_slot> less than 1 or greater than the maximum number of
+    video slots supported by the current context, BadValue is generated.
+    If <video_device> does not refer to a valid video output device,
+    BadValue is generated.  If <attrib_list> contains an invalid
+    attribute or an invalid attribute value, BadValue is generated.  If
+    glXBindVideoDeviceNV is called without a current context,
+    GLXBadContext is generated.
+
+
+Additions to Chapter 4 of the GLX 1.4 Specification (Encoding on the X
+Byte Stream)
+
+    None
+
+Additions to Chapter 5 of the GLX 1.4 Specification (Extending OpenGL)
+
+    None
+
+Additions to Chapter 6 of the GLX 1.4 Specification (GLX Versions)
+
+    None
+
+GLX Protocol
+
+    BindVideoDeviceNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       6+n                     request length
+        4       1332                    vendor specific opcode
+        4       CARD32                  context tag
+        4       CARD32                  video_slot
+        4       CARD32                  video_device
+        4       CARD32                  num_attribs
+        4*n     LISTofATTRIBUTE_PAIR    attribute, value pairs
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       0                       reply length
+        4       CARD32                  status
+        20                              unused
+
+    EnumerateVideoDevicesNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1333                    vendor specific opcode
+        4                               unused
+        4       CARD32                  screen
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       n                       reply length
+        4       CARD32                  num_devices
+        4*n     LISTofCARD32            device names
+
+    PresentFrameKeyedNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       15                      request length
+        4       1334                    vendor specific opcode
+        4       CARD32                  context tag
+        8       CARD64                  minPresentTime
+        4       CARD32                  video_slot
+        4       CARD32                  beginPresentTimeId
+        4       CARD32                  presentDurationId
+        4       CARD32                  type
+        4       CARD32                  target0
+        4       CARD32                  fill0
+        4       CARD32                  key0
+        4       CARD32                  target1
+        4       CARD32                  fill1
+        4       CARD32                  key1
+
+    PresentFrameDualFillNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       17                      request length
+        4       1335                    vendor specific opcode
+        4       CARD32                  context tag
+        8       CARD64                  minPresentTime
+        4       CARD32                  video_slot
+        4       CARD32                  beginPresentTimeId
+        4       CARD32                  presentDurationId
+        4       CARD32                  type
+        4       CARD32                  target0
+        4       CARD32                  fill0
+        4       CARD32                  target1
+        4       CARD32                  fill1
+        4       CARD32                  target2
+        4       CARD32                  fill2
+        4       CARD32                  target3
+        4       CARD32                  fill3
+
+    GetVideoivNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1336                    vendor specific opcode
+        4       CARD32                  context tag
+        4       CARD32                  video_slot
+        4       CARD32                  pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+
+        if (n=1) this follows:
+
+        4       INT32                   params
+        12                              unused
+
+        otherwise this follows:
+
+        16                              unused
+        n*4     LISTofINT32             params
+
+    GetVideouivNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1337                    vendor specific opcode
+        4       CARD32                  context tag
+        4       CARD32                  video_slot
+        4       CARD32                  pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+
+        if (n=1) this follows:
+
+        4       CARD32                  params
+        12                              unused
+
+        otherwise this follows:
+
+        16                              unused
+        n*4     LISTofCARD32            params
+
+    GetVideoi64vNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1338                    vendor specific opcode
+        4       CARD32                  context tag
+        4       CARD32                  video_slot
+        4       CARD32                  pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+
+        if (n=1) this follows:
+
+        8       INT64                   params
+        8                               unused
+
+        otherwise this follows:
+
+        16                              unused
+        n*8     LISTofINT64EXT          params
+
+    GetVideoui64vNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1339                    vendor specific opcode
+        4       CARD32                  context tag
+        4       CARD32                  video_slot
+        4       CARD32                  pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+
+        if (n=1) this follows:
+
+        8       CARD64                  params
+        8                               unused
+
+        otherwise this follows:
+
+        16                              unused
+        n*8     LISTofCARD64            params
+
+
+Dependencies on ARB_occlusion_query:
+
+    The generic query objects introduced in ARB_occlusion_query are
+    used as a method to asynchronously deliver timing data to the
+    application.  The language describing BeginQueryARB and
+    EndQueryARB API is also relevant as the same operations are
+    implicitly performed by PresentFrameKeyedNV and
+    PresentFrameDualFillNV.
+
+Dependencies on EXT_timer_query:
+
+    The 64-bit types introduced in EXT_timer_query are used in this
+    extension to specify time values with nanosecond accuracy.
+
+Dependencies on ARB_texture_float
+
+    If ARB_texture_float is not supported, the floating point internal
+    formats are removed from the list of internal formats required to be
+    supported by the PresentFrame functions.
+
+Dependencies on EXT_framebuffer_object:
+
+    If EXT_framebuffer_object is not supported, all references to
+    targets of type RENDERBUFFER_EXT should be removed from the spec
+    language.
+
+Dependencies on GLX_NV_video_out:
+
+    Video output resources can not be used simultaneously with this
+    extension and GLX_NV_video_out.  If an application on the system has
+    obtained a video device handle from GLX_NV_video_out, no other
+    application may bind any video out devices using this spec until all
+    GLX_NV_video_out devices have been released.  Similarly, if an
+    application has bound a video out device using this spec, no other
+    applications on the system can obtain a GLX_NV_video_out device
+    handle until all devices have been unbound.
+
+Dependencies on WGL_ARB_extensions_string:
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  The WGL extension string is not included in the
+    GL_EXTENSIONS string.  Its existence can be determined with the
+    WGL_ARB_extensions_string extension.
+
+Dependencies on WGL_NV_video_out:
+
+    Video output resources can not be used simultaneously with this
+    extension and WGL_NV_video_out.  If an application on the system has
+    obtained a video device handle from WGL_NV_video_out, no other
+    application may bind any video out devices using this spec until all
+    WGL_NV_video_out devices have been released.  Similarly, if an
+    application has bound a video out device using this spec, no other
+    applications on the system can obtain a WGL_NV_video_out device
+    handle until all devices have been unbound.
+
+
+Errors
+
+    
+
+New State
+
+    Get Value                   Type  Get Command       Init. Value    Description                Sec    Attribute
+    --------------------------  ----  ----------------  -------------  -------------------------  -----  ---------
+    CURRENT_QUERY               4xZ+  GetQueryiv        0              Active query object name   4.1.7  -
+                                                                         (occlusion, timer,
+                                                                          present time, and
+                                                                          present duration)
+    QUERY_RESULT                4xZ+  GetQueryObjectiv  0              Query object result        4.1.7  -
+                                                                         (samples passed,
+                                                                          time elapsed,
+                                                                          present time, or
+                                                                          present duration)
+    QUERY_RESULT_AVAILABLE      4xB   GetQueryObjectiv  TRUE           Query object result        4.1.7  -
+                                                                         available?
+    CURRENT_TIME_NV             1xZ   GetVideoui64vNV   0              Video device timer         4.4    -
+
+
+New Implementation Dependent state
+
+    Get Value               Type  Get Command       Minimum Value   Description                 Sec    Attribute
+    ----------------------  ----  ----------------  --------------  --------------------------  -----  ---------
+    NUM_FILL_STREAMS_NV     1xZ   GetVideouivNV     0               Number of video streams     4.4    -
+                                                                      active on a video slot
+    NUM_VIDEO_SLOTS_NV      1xZ   GetIntegerv       1               Number of video slots a     4.4    -
+                                                                      context supports.
+    QUERY_COUNTER_BITS      4xZ+  GetQueryiv        see 6.1.12      Asynchronous query counter  6.1.12 -
+                                                                      bits (occlusion, timer,
+                                                                      present time and present
+                                                                      duration queries)
+
+
+Issues
+
+    1) How does the user enumerate video devices?
+
+        RESOLVED: There will be OS-specific functions that
+        will enumerate OS-specific identifiers that refer to video
+        devices.  On WGL, this will likely be tied to an hDC.  GPU
+        affinity can then be used to enumerate SDI devices even on GPUs
+        that are not used as part of the windows desktop.  On GLX,
+        SDI devices can be enumerated per X screen.
+
+    2) How does the user specify data for the second output?
+
+        RESOLVED:  There will be a separate entry point that accepts up
+        to 4 buffers total.
+
+    3) When is SDI output actually enabled?
+
+        RESOLVED: The BindVideoDevice functions will enable and disable
+        SDI output.
+
+    4) Should the PresentFrame functions return the frame
+       count/identifier?
+
+        RESOLVED: No.  PresentFrame will instead accept two query
+        object IDs and will implicitly begin and end a query on each
+        of these objects.  The first object's query target will be
+        PRESENT_TIME_EXT.  Its result will be the time in nanoseconds
+        when the frame was first displayed, and will become available
+        when the frame begins displaying or when a subsequent frame
+        begins displaying if this frame be skipped.  The second
+        object's query target will be PRESENT_LENGTH_EXT.  The result
+        will be the number of full-frame vblanks that occurred while
+        the frame was displayed.  This result will become available when
+        the next frame begins displaying.  If the frame was skipped,
+        this value will be 0 and the PRESENT_TIME_EXT result will refer
+        to the time when the first subsequent frame that was not skipped
+        began displaying.
+
+    5) Should there be any other queryable video output device
+       attributes?
+
+        RESOLVED: There are none.  The glXQueryVideoDeviceNV and
+        wglQueryVideoDeviceNV calls have been removed from this
+        specification.  They can be added in a separate extension if
+        they are ever needed.
+
+    6) Should this spec require a timed present mechanism?
+
+        RESOLVED: Yes, this spec will include a mechanism for presenting
+        frames at a specified absolute time and a method for querying
+        when frames were displayed to allow apps to adjust their
+        rendering time.  Leaving this out would weaken the PresentFrame
+        mechanism considerably.
+
+    7) Should this specification allow downsampling as part of the
+       present operation.
+
+        RESOLVED: No, this functionality can retroactively be added to
+        the PresentFrame functions as part of a later spec if necessary.
+
+    8) What happens when two outputs are enabled but only one output's
+       worth of buffers are specified?
+
+        RESOLVED: This will be an invalid operation.  If two outputs are
+        enabled, data must be presented on both of them for every frame.
+
+    9) What section of the spec should the PresentFrame functions be in?
+
+        RESOLVED: A new section has been added to Chapter 4 to describe
+        functions that control the displaying of buffers.
+
+    10) What should this extension be called?
+
+        RESOLVED: The original name for this specification was
+        NV_video_framebuffer because the motivation for creating this
+        extension came from the need to expose a method for sending
+        framebuffer objects to an SDI video output device.  However, it
+        has grown beyond that purpose and no longer even requires
+        EXT_framebuffer_object to function.  For these reasons, it has
+        been renamed NV_present_video.
+
+    11) Should a "stacked fields" mode be added to allow the application
+        to specify two fields vertically concatenated in one buffer?
+
+        RESOLVED: No.  The stacked fields in previous extensions were a
+        workaround to allow the application to specify two fields at
+        once with an API that only accepted one image at a time.  Since
+        this extension requires all buffers that make up a frame to be
+        specified simultaneously, stacked fields are not needed.
+
+    12) Should there be a separate function for presenting output data
+        for one stream?
+
+        RESOLVED: Yes.  To clarify the different types of data needed
+        for single and dual stream modes, two separate entry points are
+        provided.
+
+    13) Should we allow users to override the mode-defined mapping
+        between frame-height buffer lines and field lines?
+
+        RESOLVED: No.  Not only does this seem unnecessary, it is also
+        impractical.  If a mode has an odd number of lines, the
+        application would need to specify incorrectly sized buffers to
+        satisfy the line choosing rules as they are specified currently.
+
+Revision History
+
+    Revision 8, 2011/7/8
+        -Fix wglBindVideoDeviceNV specification to match implemented
+         behavior.
+
+    Revision 7, 2009/2/20
+        -Remove unused VideoParameterivNV command.
+
+    Revision 6, 2008/2/20
+        -Public specification

@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -170,6 +170,18 @@ TEST_F(OcclusionQueryValidationTest, InvalidOcclusionQuerySet) {
         wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
         pass.BeginOcclusionQuery(0);
         pass.EndOcclusionQuery();
+        pass.End();
+        wgpu::CommandBuffer commands = encoder.Finish();
+        wgpu::Queue queue = device.GetQueue();
+        occlusionQuerySet.Destroy();
+        ASSERT_DEVICE_ERROR(queue.Submit(1, &commands));
+    }
+
+    // Fail to submit occlusion query with a destroyed query set, even if no query is used on it.
+    {
+        renderPass.occlusionQuerySet = occlusionQuerySet;
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
         pass.End();
         wgpu::CommandBuffer commands = encoder.Finish();
         wgpu::Queue queue = device.GetQueue();

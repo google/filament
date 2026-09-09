@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -107,7 +107,7 @@ func New(ctx context.Context, opts auth.Options, url string) (*Gerrit, error) {
 		return nil, fmt.Errorf("couldn't create gerrit client: %w", err)
 	}
 
-	client, err := gerrit.NewClient(url, http)
+	client, err := gerrit.NewClient(ctx, url, http)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create gerrit client: %w", err)
 	}
@@ -126,7 +126,7 @@ type QueryExtraData struct {
 
 // QueryChanges returns the changes that match the given query strings.
 // See: https://gerrit-review.googlesource.com/Documentation/user-search.html#search-operators
-func (g *Gerrit) QueryChangesWith(extras QueryExtraData, queries ...string) (changes []gerrit.ChangeInfo, query string, err error) {
+func (g *Gerrit) QueryChangesWith(ctx context.Context, extras QueryExtraData, queries ...string) (changes []gerrit.ChangeInfo, query string, err error) {
 	changes = []gerrit.ChangeInfo{}
 	query = strings.Join(queries, "+")
 
@@ -148,7 +148,7 @@ func (g *Gerrit) QueryChangesWith(extras QueryExtraData, queries ...string) (cha
 	}
 
 	for {
-		batch, _, err := g.client.Changes.QueryChanges(&gerrit.QueryChangeOptions{
+		batch, _, err := g.client.Changes.QueryChanges(ctx, &gerrit.QueryChangeOptions{
 			QueryOptions:  gerrit.QueryOptions{Query: []string{query}},
 			Skip:          len(changes),
 			ChangeOptions: changeOpts,
@@ -167,24 +167,24 @@ func (g *Gerrit) QueryChangesWith(extras QueryExtraData, queries ...string) (cha
 
 // QueryChanges returns the changes that match the given query strings.
 // See: https://gerrit-review.googlesource.com/Documentation/user-search.html#search-operators
-func (g *Gerrit) QueryChanges(queries ...string) (changes []gerrit.ChangeInfo, query string, err error) {
-	return g.QueryChangesWith(QueryExtraData{}, queries...)
+func (g *Gerrit) QueryChanges(ctx context.Context, queries ...string) (changes []gerrit.ChangeInfo, query string, err error) {
+	return g.QueryChangesWith(ctx, QueryExtraData{}, queries...)
 }
 
 // ChangesSubmittedTogether returns the changes that want to be submitted together
 // See: https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#submitted-together
-func (g *Gerrit) ChangesSubmittedTogether(changeID string) (changes []gerrit.ChangeInfo, err error) {
-	info, _, err := g.client.Changes.ChangesSubmittedTogether(changeID)
+func (g *Gerrit) ChangesSubmittedTogether(ctx context.Context, changeID string) (changes []gerrit.ChangeInfo, err error) {
+	info, _, err := g.client.Changes.ChangesSubmittedTogether(ctx, changeID)
 	if err != nil {
 		return nil, err
 	}
 	return *info, nil
 }
 
-func (g *Gerrit) AddLabel(changeID, revisionID, message, label string, value int) error {
-	_, _, err := g.client.Changes.SetReview(changeID, revisionID, &gerrit.ReviewInput{
+func (g *Gerrit) AddLabel(ctx context.Context, changeID, revisionID, message, label string, value int) error {
+	_, _, err := g.client.Changes.SetReview(ctx, changeID, revisionID, &gerrit.ReviewInput{
 		Message: message,
-		Labels:  map[string]string{label: fmt.Sprint(value)},
+		Labels:  map[string]int{label: value},
 	})
 	if err != nil {
 		return err
@@ -193,8 +193,8 @@ func (g *Gerrit) AddLabel(changeID, revisionID, message, label string, value int
 }
 
 // Abandon abandons the change with the given changeID.
-func (g *Gerrit) Abandon(changeID string) error {
-	_, _, err := g.client.Changes.AbandonChange(changeID, &gerrit.AbandonInput{})
+func (g *Gerrit) Abandon(ctx context.Context, changeID string) error {
+	_, _, err := g.client.Changes.AbandonChange(ctx, changeID, &gerrit.AbandonInput{})
 	if err != nil {
 		return err
 	}
@@ -204,8 +204,8 @@ func (g *Gerrit) Abandon(changeID string) error {
 // CreateChange creates a new change in the given project and branch, with the
 // given subject. If wip is true, then the change is constructed as
 // Work-In-Progress.
-func (g *Gerrit) CreateChange(project, branch, subject string, wip bool) (*ChangeInfo, error) {
-	change, _, err := g.client.Changes.CreateChange(&gerrit.ChangeInput{
+func (g *Gerrit) CreateChange(ctx context.Context, project, branch, subject string, wip bool) (*ChangeInfo, error) {
+	change, _, err := g.client.Changes.CreateChange(ctx, &gerrit.ChangeInput{
 		Project:        project,
 		Branch:         branch,
 		Subject:        subject,
@@ -224,9 +224,9 @@ func (g *Gerrit) CreateChange(project, branch, subject string, wip bool) (*Chang
 // EditFiles replaces the content of the files in the given change. It deletes deletedFiles.
 // If newCommitMsg is not an empty string, then the commit message is replaced
 // with the string value.
-func (g *Gerrit) EditFiles(changeID, newCommitMsg string, files map[string]string, deletedFiles []string) (Patchset, error) {
+func (g *Gerrit) EditFiles(ctx context.Context, changeID, newCommitMsg string, files map[string]string, deletedFiles []string) (Patchset, error) {
 	if newCommitMsg != "" {
-		resp, err := g.client.Changes.ChangeCommitMessageInChangeEdit(changeID, &gerrit.ChangeEditMessageInput{
+		resp, err := g.client.Changes.ChangeCommitMessageInChangeEdit(ctx, changeID, &gerrit.ChangeEditMessageInput{
 			Message: newCommitMsg,
 		})
 		if err != nil && resp.StatusCode != 409 { // 409 no changes were made
@@ -234,29 +234,29 @@ func (g *Gerrit) EditFiles(changeID, newCommitMsg string, files map[string]strin
 		}
 	}
 	for path, content := range files {
-		resp, err := g.client.Changes.ChangeFileContentInChangeEdit(changeID, path, content)
+		resp, err := g.client.Changes.ChangeFileContentInChangeEdit(ctx, changeID, path, content)
 		if err != nil && resp.StatusCode != 409 { // 409 no changes were made
 			return Patchset{}, err
 		}
 	}
 	for _, path := range deletedFiles {
-		resp, err := g.client.Changes.DeleteFileInChangeEdit(changeID, path)
+		resp, err := g.client.Changes.DeleteFileInChangeEdit(ctx, changeID, path)
 		if err != nil && resp.StatusCode != 409 { // 409 no changes were made
 			return Patchset{}, err
 		}
 	}
 
-	resp, err := g.client.Changes.PublishChangeEdit(changeID, "NONE")
+	resp, err := g.client.Changes.PublishChangeEdit(ctx, changeID, "NONE")
 	if err != nil && resp.StatusCode != 409 { // 409 no changes were made
 		return Patchset{}, err
 	}
 
-	return g.LatestPatchset(changeID)
+	return g.LatestPatchset(ctx, changeID)
 }
 
 // LatestPatchset returns the latest patchset for the change.
-func (g *Gerrit) LatestPatchset(changeID string) (Patchset, error) {
-	change, _, err := g.client.Changes.GetChange(changeID, &gerrit.ChangeOptions{
+func (g *Gerrit) LatestPatchset(ctx context.Context, changeID string) (Patchset, error) {
+	change, _, err := g.client.Changes.GetChange(ctx, changeID, &gerrit.ChangeOptions{
 		AdditionalFields: []string{"CURRENT_REVISION"},
 	})
 	if err != nil {
@@ -272,8 +272,8 @@ func (g *Gerrit) LatestPatchset(changeID string) (Patchset, error) {
 }
 
 // AddHashtags adds the given hashtags to the change
-func (g *Gerrit) AddHashtags(changeID string, tags container.Set[string]) error {
-	_, resp, err := g.client.Changes.SetHashtags(changeID, &gerrit.HashtagsInput{
+func (g *Gerrit) AddHashtags(ctx context.Context, changeID string, tags container.Set[string]) error {
+	_, resp, err := g.client.Changes.SetHashtags(ctx, changeID, &gerrit.HashtagsInput{
 		Add: tags.List(),
 	})
 	if err != nil && resp.StatusCode != 409 { // 409: already ready
@@ -303,7 +303,7 @@ type FileComment struct {
 
 // Comment posts a review comment on the given patchset.
 // If comments is an optional list of file-comments to include in the comment.
-func (g *Gerrit) Comment(ps Patchset, msg string, comments []FileComment) error {
+func (g *Gerrit) Comment(ctx context.Context, ps Patchset, msg string, comments []FileComment) error {
 	input := &gerrit.ReviewInput{
 		Message: msg,
 	}
@@ -323,7 +323,7 @@ func (g *Gerrit) Comment(ps Patchset, msg string, comments []FileComment) error 
 			input.Comments[c.Path] = append(input.Comments[c.Path], ci)
 		}
 	}
-	_, _, err := g.client.Changes.SetReview(strconv.Itoa(ps.Change), strconv.Itoa(ps.Patchset), input)
+	_, _, err := g.client.Changes.SetReview(ctx, strconv.Itoa(ps.Change), strconv.Itoa(ps.Patchset), input)
 	if err != nil {
 		return err
 	}
@@ -331,8 +331,8 @@ func (g *Gerrit) Comment(ps Patchset, msg string, comments []FileComment) error 
 }
 
 // SetReadyForReview marks the change as ready for review.
-func (g *Gerrit) SetReadyForReview(changeID, message, reviewer string) error {
-	resp, err := g.client.Changes.SetReadyForReview(changeID, &gerrit.ReadyForReviewInput{
+func (g *Gerrit) SetReadyForReview(ctx context.Context, changeID, message, reviewer string) error {
+	resp, err := g.client.Changes.SetReadyForReview(ctx, changeID, &gerrit.ReadyForReviewInput{
 		Message: message,
 	})
 	if err != nil && resp.StatusCode != 409 { // 409: already ready
@@ -340,7 +340,7 @@ func (g *Gerrit) SetReadyForReview(changeID, message, reviewer string) error {
 	}
 	if reviewer != "" {
 		log.Printf("Got reviewer %s", reviewer)
-		_, resp, err = g.client.Changes.AddReviewer(changeID, &gerrit.ReviewerInput{
+		_, resp, err = g.client.Changes.AddReviewer(ctx, changeID, &gerrit.ReviewerInput{
 			Reviewer: reviewer,
 		})
 		if err != nil && resp.StatusCode != 409 { // 409: already ready
@@ -358,7 +358,7 @@ func (g *Gerrit) ListAccessRights(
 	listOptions := gerrit.ListAccessRightsOptions{
 		Project: projects,
 	}
-	accessInfo, _, err := g.client.Access.ListAccessRights(&listOptions)
+	accessInfo, _, err := g.client.Access.ListAccessRights(ctx, &listOptions)
 	if err != nil {
 		return nil, err
 	}

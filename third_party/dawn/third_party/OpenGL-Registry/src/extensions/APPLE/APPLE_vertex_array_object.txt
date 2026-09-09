@@ -1,0 +1,245 @@
+Name
+
+    APPLE_vertex_array_object
+
+Name Strings
+
+    GL_APPLE_vertex_array_object
+
+Contact
+
+    Bob Beretta, Apple Computer (beretta 'at' apple.com)
+
+Status
+
+    Complete
+
+Version
+
+    $Date: 2002/09/23 04:37:25 $ $Revision: 1.9 $
+
+Number
+
+    273
+
+Dependencies
+
+    APPLE_vertex_array_range affects the definition of this extension.
+
+    APPLE_element_array affects the definition of this extension.
+
+    ARB_vertex_program affects the definition of this extension.
+
+    EXT_secondary_color affects the definition of this extension.
+    
+    EXT_fog_coord affects the definition of this extension.
+
+    ARB_vertex_blend affects the definition of this extension.
+
+Overview
+
+    This extension introduces named vertex array objects which encapsulate
+    vertex array state on the client side. The main purpose of these 
+    objects is to keep pointers to static vertex data and provide a name 
+    for different sets of static vertex data.  
+    
+    By extending vertex array range functionality this extension allows multiple
+    vertex array ranges to exist at one time, including their complete sets of
+    state, in manner analogous to texture objects. 
+    
+    GenVertexArraysAPPLE creates a list of n number of vertex array object
+    names.  After creating a name, BindVertexArrayAPPLE associates the name with
+    a vertex array object and selects this vertex array and its associated
+    state as current.  To get back to the default vertex array and its
+    associated state the client should bind to vertex array named 0.
+
+    Once a client is done using a vertex array object it can be deleted with
+    DeleteVertexArraysAPPLE.  The client is responsible for allocating and
+    deallocating the memory used by the vertex array data, while the
+    DeleteVertexArraysAPPLE command deletes vertex array object names and
+    associated state only.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    void BindVertexArrayAPPLE(uint array);
+
+    void DeleteVertexArraysAPPLE(sizei n, const uint *arrays);
+
+    void GenVertexArraysAPPLE(sizei n, const uint *arrays);
+
+    boolean IsVertexArrayAPPLE(uint array);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    VERTEX_ARRAY_BINDING_APPLE                 0x85B5
+
+Additions to Chapter 2, 3, 4 of the 1.1 Specification (OpenGL Operation,
+    Rasterization, Per-Fragment Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    A vertex array object is created by binding an unused name. This binding is
+    accomplished by calling BindVertexArrayAPPLE with id set to the name of the
+    new vertex array object.
+    
+    The state encapsulated by a vertex array object immediately after it is
+    first bound is equivalent to the default vertex array state at GL
+    initialization.  Subsequent bindings of a vertex array object have no effect
+    on its encapsulated state unless changed explicitly.
+    
+    When an OpenGL context is created, there is set of default vertex array
+    state associated with the context. In order that the access to this default
+    state is not lost, this extension treats the default state as if its name
+    was zero. Unlike other vertex array objects, the zero named object cannot be
+    deleted.
+    
+    GenVertexArraysAPPLE returns a list of <n> unused vertex array object names
+    in <arrays>.  Only names that were not in use immediately prior to the call
+    to GenVertexArraysAPPLE are included in the returned list.  Names returned
+    by GenVertexArraysAPPLE are marked as used, so that they are not returned by
+    subsequent calls to GenVertexArraysAPPLE, but they are associated with a
+    vertex array object only after they are first bound (just as if the name
+    were unused).
+
+    Vertex array objects are deleted by calling DeleteVertexArraysAPPLE with
+    <arrays> specifying a list of <n> names to be deleted.  Once a vertex array
+    object is deleted it has no contents and its name is freed.  If a vertex
+    array object that is currently bound is deleted, the binding for that object
+    reverts to zero and the default vertex array becomes current.
+    DeleteVertexArraysAPPLE ignores names that do not correspond to existing
+    vertex array objects, including zero.
+    
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    IsVertexArrayAPPLE returns TRUE if <id> is the name of a valid vertex array
+    object.  If <id> is zero, or is a non-zero value that is not the name of a
+    vertex array object, or if an error condition occurs, IsVertexArrayAPPLE
+    returns FALSE.  A name that has been returned GenVertexArraysAPPLE but never
+    bound with BindVertexArrayAPPLE is not the name of a vertex array object.
+    
+    The name of the currently bound vertex array object is returned in <params>
+    when GetIntegerv is called with <pname> set to  VERTEX_ARRAY_BINDING_APPLE.
+    If the default vertex array object is currently bound, zero is returned.
+    
+    A vertex array object comprises vertex array pointers, the size, type, and
+    stride information for each array, the corresponding enable flags and the
+    range of static data for each array. More explicitly, the state list
+
+    VERTEX_ARRAY
+    VERTEX_ARRAY_SIZE
+    VERTEX_ARRAY_TYPE
+    VERTEX_ARRAY_STRIDE
+    VERTEX_ARRAY_POINTER
+    NORMAL_ARRAY
+    NORMAL_ARRAY_TYPE
+    NORMAL_ARRAY_STRIDE
+    NORMAL_ARRAY_POINTER
+    COLOR_ARRAY
+    COLOR_ARRAY_SIZE
+    COLOR_ARRAY_TYPE
+    COLOR_ARRAY_STRIDE
+    COLOR_ARRAY_POINTER
+    INDEX_ARRAY
+    INDEX_ARRAY_TYPE
+    INDEX_ARRAY_STRIDE
+    INDEX_ARRAY_POINTER
+    TEXTURE_COORD_ARRAY
+    TEXTURE_COORD_ARRAY_SIZE
+    TEXTURE_COORD_ARRAY_TYPE
+    TEXTURE_COORD_ARRAY_STRIDE
+    TEXTURE_COORD_ARRAY_POINTER
+    EDGE_FLAG_ARRAY
+    EDGE_FLAG_ARRAY_STRIDE
+    EDGE_FLAG_ARRAY_POINTER
+
+    composes a single vertex array object.
+
+    Additionally, if APPLE_vertex_array_range is supported the state list also
+    includes
+
+    VERTEX_ARRAY_RANGE_POINTER_APPLE
+    VERTEX_ARRAY_RANGE_LENGTH_APPLE
+
+    Additionally, if ARB_vertex_program is supported the state list also
+    includes
+
+    VERTEX_ATTRIB_ARRAY_ARB
+    VERTEX_ATTRIB_ARRAY_SIZE_ARB
+    VERTEX_ATTRIB_ARRAY_TYPE_ARB
+    VERTEX_ATTRIB_ARRAY_STRIDE_ARB
+    VERTEX_ATTRIB_ARRAY_POINTER_ARB
+    
+    Additionally, if EXT_secondary_color is supported the state list also
+    includes
+
+    SECONDARY_COLOR_ARRAY_EXT
+    SECONDARY_COLOR_ARRAY_SIZE_EXT
+    SECONDARY_COLOR_ARRAY_TYPE_EXT
+    SECONDARY_COLOR_ARRAY_STRIDE_EXT
+    SECONDARY_COLOR_ARRAY_POINTER_EXT
+    
+    Additionally, if EXT_fog_coord is supported the state list also includes
+
+    FOG_COORDINATE_ARRAY_EXT
+    FOG_COORDINATE_ARRAY_TYPE_EXT
+    FOG_COORDINATE_ARRAY_STRIDE_EXT
+    FOG_COORDINATE_ARRAY_POINTER_EXT
+    
+    Additionally, if ARB_vertex_blend is supported the state list also includes
+
+    WEIGHT_ARRAY_ARB
+    WEIGHT_ARRAY_SIZE_ARB
+    WEIGHT_ARRAY_TYPE_ARB
+    WEIGHT_ARRAY_STRIDE_ARB
+    WEIGHT_ARRAY_POINTER_ARB
+
+    Additionally, if APPLE_element_array is supported the state list also
+    includes
+
+    ELEMENT_ARRAY_APPLE
+    ELEMENT_ARRAY_TYPE_APPLE
+    ELEMENT_ARRAY_POINTER_APPLE
+
+    When PushClientAttrib is called with CLIENT_VERTEX_ARRAY_BIT enabled, the
+    array pointers, types, size and stride are pushed, as well as array pointer
+    enables and the current vertex array object binding. When the attribute set
+    that includes vertex array information is popped, the binding is first
+    restored to its pushed value and then the enables and the array pointers,
+    types, size and stride are restored to their pushed values.
+
+Additions to the GLX Specification
+
+    No change is made to the GLX API.
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_OPERATION is generated if any of the commands defined in this
+    extension is executed between the execution of Begin and the corresponding
+    execution of End.
+
+New State
+
+    Get Value                    Get Command Type    Value   Attrib
+    ---------                    ----------- ----    ------- ------
+    VERTEX_ARRAY_BINDING_APPLE   GetIntegerv Z+      0       vertex-array
+
+New Implementation Dependent State
+    
+    None
+
+Revision History
+
+    None

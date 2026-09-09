@@ -33,7 +33,7 @@ if (tint_build_unittests || tint_build_benchmarks) {
 */ -}}
 {{- define "TargetIfNotEmpty"}}
 {{-   if $}}
-{{-     if len $.SourceFiles}}{{Eval "Target" $}}{{end}}
+{{-     if or (len $.SourceFiles) (len $.GeneratedSourcePaths.List)}}{{Eval "Target" $}}{{end}}
 {{-   end}}
 {{- end}}
 
@@ -83,19 +83,40 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
 {{- end}}
   sources = [
 {{- range $File := $.UnconditionalSourceFiles}}
+{{-   if not ($.IsGeneratedSource $File.Path)}}
     "{{TrimPrefix $File.Name $.Directory.Path}}",
+{{-   end}}
+{{- end}}
+{{- range $Path := $.GeneratedSourcePaths.List}}
+    "${root_gen_dir}/src/tint/{{$Path}}",
 {{- end}}
   ]
+{{- $public_deps := List}}
+{{- if $.Dependencies.ContainsExternal "abseil"}}
+  {{- $public_deps = Append $public_deps "${dawn_abseil_dir}:absl"}}
+{{- end}}
+{{- if $public_deps}}
+  public_deps = [
+{{-   range $Dep := $public_deps}}
+    "{{$Dep}}",
+{{-   end}}
+  ]
+{{- end}}
   deps = [
+{{- if and (not $.Kind.IsProto) $.GeneratedSourcePaths.List}}
+    "${tint_src_dir}:generate_sources",
+{{- end}}
 
 {{- /* Emit unconditional internal dependencies */}}
-{{- range $Dep := $.Dependencies.UnconditionalInternal}}
+{{- range $Dep := $.UnconditionalInternalDependencies}}
     "{{Eval "Dependency" $Dep}}",
 {{- end}}
 
 {{- /* Emit unconditional external dependencies */}}
-{{- range $Dep := $.Dependencies.UnconditionalExternal}}
+{{- range $Dep := $.UnconditionalExternalDependencies}}
+{{-   if ne $Dep.Name "abseil"}}
     {{Eval "ExternalDependencyTargets" $Dep}}
+{{-   end}}
 {{- end}}
   ]
 
@@ -116,7 +137,9 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
       "{{Eval "Dependency" $Dep}}",
 {{-       end}}
 {{-       range $Dep := $Cond.ExternalDependencies}}
+{{-         if ne $Dep.Name "abseil"}}
       {{Eval "ExternalDependencyTargets" $Dep}}
+{{-         end}}
 {{-       end}}
     ]
 {{-     end}}
@@ -165,7 +188,7 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
 --------------------------------------------------------------------------------
 */ -}}
 {{- define "ExternalDependencyTargets"}}
-{{-        if eq $.Name "abseil"                         -}}"${dawn_root}:abseil",
+{{-        if eq $.Name "abseil"                         -}}"${dawn_abseil_dir}:absl",
 {{-   else if eq $.Name "dl"                             -}}"${tint_src_dir}:dl",
 {{-   else if eq $.Name "dxc-include"                    -}}"${tint_src_dir}:dxc-include",
 {{-   else if eq $.Name "dxcompiler-for-fuzzer"          -}}"${tint_src_dir}:dxcompiler-for-fuzzer",
@@ -173,8 +196,6 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
 {{-   else if eq $.Name "glslang"                        -}}"${tint_glslang_dir}:glslang_lib_sources",
 {{-   else if eq $.Name "google-benchmark"               -}}"${tint_src_dir}:google_benchmark",
 {{-   else if eq $.Name "gtest"                          -}}"${tint_src_dir}:gmock_and_gtest",
-{{-   else if eq $.Name "jsoncpp"                        -}}"${tint_src_dir}:jsoncpp",
-{{-   else if eq $.Name "langsvr"                        -}}"${tint_src_dir}:langsvr",
 {{-   else if eq $.Name "libprotobuf-mutator"            -}}"${tint_lpm_dir}:libprotobuf-mutator",
 {{-   else if eq $.Name "mesa"                           -}}"${tint_mesa_dir}:mesa",
 {{-   else if eq $.Name "metal"                          -}}"${tint_src_dir}:metal",
@@ -185,6 +206,7 @@ tint_fuzzer_test("{{$.Directory.Name}}") {
 {{-   else if eq $.Name "vulkan-headers"                 -}}"${dawn_vulkan_headers_dir}:vulkan_headers",
 {{-   else if eq $.Name "libvulkan"                      -}}"${dawn_vulkan_loader_dir}:libvulkan",
 {{-   else if eq $.Name "winsock"                        -}}"${tint_src_dir}:winsock",
+{{-   else if eq $.Name "src_utils_crash_handler"        -}}"${dawn_root}/src/utils:crash_handler",
 {{-   else if eq $.Name "src_utils"                      -}}"${dawn_root}/src/utils:utils",
 {{-   else if eq $.Name "src_utils_chromium_test_compat" -}}"${dawn_root}/src/utils/chromium_test_compat:chromium_test_compat",
 {{-   else                                      -}}{{Error (printf "unhandled external dependency '%v'" $.Name)}}

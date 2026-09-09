@@ -69,9 +69,6 @@ Extension ParseExtension(std::string_view str) {
     if (str == "chromium_experimental_subgroup_matrix") {
         return Extension::kChromiumExperimentalSubgroupMatrix;
     }
-    if (str == "chromium_experimental_subgroup_size_control") {
-        return Extension::kChromiumExperimentalSubgroupSizeControl;
-    }
     if (str == "chromium_internal_input_attachments") {
         return Extension::kChromiumInternalInputAttachments;
     }
@@ -86,6 +83,9 @@ Extension ParseExtension(std::string_view str) {
     }
     if (str == "primitive_index") {
         return Extension::kPrimitiveIndex;
+    }
+    if (str == "subgroup_size_control") {
+        return Extension::kSubgroupSizeControl;
     }
     if (str == "subgroups") {
         return Extension::kSubgroups;
@@ -110,8 +110,6 @@ std::string_view ToString(Extension value) {
             return "chromium_experimental_resource_table";
         case Extension::kChromiumExperimentalSubgroupMatrix:
             return "chromium_experimental_subgroup_matrix";
-        case Extension::kChromiumExperimentalSubgroupSizeControl:
-            return "chromium_experimental_subgroup_size_control";
         case Extension::kChromiumInternalInputAttachments:
             return "chromium_internal_input_attachments";
         case Extension::kClipDistances:
@@ -122,6 +120,8 @@ std::string_view ToString(Extension value) {
             return "f16";
         case Extension::kPrimitiveIndex:
             return "primitive_index";
+        case Extension::kSubgroupSizeControl:
+            return "subgroup_size_control";
         case Extension::kSubgroups:
             return "subgroups";
     }
@@ -201,9 +201,6 @@ LanguageFeature ParseLanguageFeature(std::string_view str) {
     if (str == "chromium_testing_unsafe_experimental") {
         return LanguageFeature::kChromiumTestingUnsafeExperimental;
     }
-    if (str == "filtering_parameters") {
-        return LanguageFeature::kFilteringParameters;
-    }
     if (str == "fragment_depth") {
         return LanguageFeature::kFragmentDepth;
     }
@@ -269,8 +266,6 @@ std::string_view ToString(LanguageFeature value) {
             return "chromium_testing_unimplemented";
         case LanguageFeature::kChromiumTestingUnsafeExperimental:
             return "chromium_testing_unsafe_experimental";
-        case LanguageFeature::kFilteringParameters:
-            return "filtering_parameters";
         case LanguageFeature::kFragmentDepth:
             return "fragment_depth";
         case LanguageFeature::kImmediateAddressSpace:

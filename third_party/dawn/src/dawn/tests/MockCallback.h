@@ -33,9 +33,9 @@
 #include <tuple>
 #include <utility>
 
-#include "dawn/common/Assert.h"
 #include "gmock/gmock.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/utils/assert.h"
 
 namespace testing {
 

@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglSurfaceAttrib">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglSurfaceAttrib</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglSurfaceAttrib</refname>
+        <refpurpose>
+            set an <acronym>EGL</acronym> surface attribute
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglSurfaceAttrib</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+                <paramdef>EGLint <parameter>attribute</parameter></paramdef>
+                <paramdef>EGLint <parameter>value</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attribute</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface attribute to set.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>value</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the attributes required value.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglSurfaceAttrib</function> sets the value of
+            <parameter>attribute</parameter> for
+            <parameter>surface</parameter> to
+            <parameter>value</parameter>.
+            <parameter>attribute</parameter> can be one of the
+            following:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_MIPMAP_LEVEL</constant></term>
+                <listitem><para>
+                    For mipmap textures, the
+                    <constant>EGL_MIPMAP_LEVEL</constant> attribute
+                    indicates which level of the mipmap should be
+                    rendered. If the value of this attribute is outside
+                    the range of supported mipmap levels, the closest
+                    valid mipmap level is selected for rendering. The
+                    default value is <constant>0</constant>.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_MULTISAMPLE_RESOLVE</constant></term>
+                <listitem>
+                <para>
+                    Specifies the filter to use when resolving the
+                    multisample buffer (this may occur when swapping or
+                    copying the surface, or when changing the client API
+                    context bound to the surface). A
+                    <parameter>value</parameter> of
+                    <constant>EGL_MULTISAMPLE_RESOLVE_DEFAULT</constant>
+                    chooses the default implementation-defined filtering
+                    method, while
+                    <constant>EGL_MULTISAMPLE_RESOLVE_BOX</constant>
+                    chooses a one-pixel wide box filter placing equal
+                    weighting on all multisample values.
+                </para>
+                <para>
+                    The initial value of
+                    <constant>EGL_MULTISAMPLE_RESOLVE</constant> is
+                    <constant>EGL_MULTISAMPLE_RESOLVE_DEFAULT</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SWAP_BEHAVIOR</constant></term>
+                <listitem>
+                <para>
+                    Specifies the effect on the color buffer of posting
+                    a surface with
+                    <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry>.
+                    A <parameter>value</parameter> of
+                    <constant>EGL_BUFFER_PRESERVED</constant> indicates
+                    that color buffer contents are unaffected, while
+                    <constant>EGL_BUFFER_DESTROYED</constant> indicates
+                    that color buffer contents may be destroyed or
+                    changed by the operation.
+                </para>
+                <para>
+                    The initial value of
+                    <constant>EGL_SWAP_BEHAVIOR</constant> is chosen by
+                    the implementation.
+                </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            Attribute <constant>EGL_MULTISAMPLE_RESOLVE</constant> is
+            supported only if the EGL version is 1.4 or greater.
+        </para>
+        <para>
+            Attribute <constant>EGL_SWAP_BEHAVIOR</constant> is
+            supported only if the EGL version is 1.2 or greater.
+        </para>
+        <para>
+            If the value of pbuffer attribute
+            <constant>EGL_TEXTURE_FORMAT</constant> is
+            <constant>EGL_NO_TEXTURE</constant>, the value of attribute
+            <constant>EGL_TEXTURE_TARGET</constant> is
+            <constant>EGL_NO_TEXTURE</constant>, or
+            <parameter>surface</parameter> is not a pbuffer, then
+            attribute <constant>EGL_MIPMAP_LEVEL</constant> may be set,
+            but has no effect.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>attribute</parameter> is
+            <constant>EGL_MULTISAMPLE_RESOLVE</constant>,
+            <parameter>value</parameter> is
+            <constant>EGL_MULTISAMPLE_RESOLVE_BOX</constant>, and the
+            <constant>EGL_SURFACE_TYPE</constant> attribute of the
+            <type>EGLConfig</type> used to create
+            <parameter>surface</parameter> does not contain
+            <constant>EGL_MULTISAMPLE_RESOLVE_BOX_BIT</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>attribute</parameter> is
+            <constant>EGL_SWAP_BEHAVIOR</constant>,
+            <parameter>value</parameter> is
+            <constant>EGL_BUFFER_PRESERVED</constant>, and the
+            <constant>EGL_SURFACE_TYPE</constant> attribute of the
+            <type>EGLConfig</type> used to create
+            <parameter>surface</parameter> does not contain
+            <constant>EGL_SWAP_BEHAVIOR_PRESERVED_BIT</constant>.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL surface.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attribute</parameter> is not a valid surface attribute.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

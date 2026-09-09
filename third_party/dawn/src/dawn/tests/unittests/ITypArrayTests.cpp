@@ -25,10 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <gtest/gtest.h>
+#include <ranges>
 
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/utils/gtest.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn {
 namespace {
@@ -41,35 +42,38 @@ class ITypArrayTest : public testing::Test {
 
     // Test that the expected array methods can be constexpr
     struct ConstexprTest {
-        static constexpr Array kArr = {Val(0), Val(1), Val(2), Val(3), Val(4),
-                                       Val(5), Val(6), Val(7), Val(8), Val(9)};
+        static constexpr Array kArr = {Val(0u), Val(1u), Val(2u), Val(3u), Val(4u),
+                                       Val(5u), Val(6u), Val(7u), Val(8u), Val(9u)};
 
-        static_assert(kArr[Key(3)] == Val(3));
-        static_assert(kArr.at(Key(7)) == Val(7));
-        static_assert(kArr.size() == Key(10));
+        static_assert(kArr[Key(3u)] == Val(3u));
+        static_assert(kArr.at(Key(7u)) == Val(7u));
+        static_assert(kArr.size() == Key(10u));
     };
+
+    // Check that ityp::array can be used as a range.
+    static_assert(std::ranges::contiguous_range<Array>);
 };
 
 // Test that values can be set at an index and retrieved from the same index.
 TEST_F(ITypArrayTest, Indexing) {
     Array arr;
     {
-        arr[Key(2)] = Val(5);
-        arr[Key(1)] = Val(9);
-        arr[Key(9)] = Val(2);
+        arr[Key(2u)] = Val(5u);
+        arr[Key(1u)] = Val(9u);
+        arr[Key(9u)] = Val(2u);
 
-        ASSERT_EQ(arr[Key(2)], Val(5));
-        ASSERT_EQ(arr[Key(1)], Val(9));
-        ASSERT_EQ(arr[Key(9)], Val(2));
+        ASSERT_EQ(arr[Key(2u)], Val(5u));
+        ASSERT_EQ(arr[Key(1u)], Val(9u));
+        ASSERT_EQ(arr[Key(9u)], Val(2u));
     }
     {
-        arr.at(Key(4)) = Val(5);
-        arr.at(Key(3)) = Val(8);
-        arr.at(Key(1)) = Val(7);
+        arr.at(Key(4u)) = Val(5u);
+        arr.at(Key(3u)) = Val(8u);
+        arr.at(Key(1u)) = Val(7u);
 
-        ASSERT_EQ(arr.at(Key(4)), Val(5));
-        ASSERT_EQ(arr.at(Key(3)), Val(8));
-        ASSERT_EQ(arr.at(Key(1)), Val(7));
+        ASSERT_EQ(arr.at(Key(4u)), Val(5u));
+        ASSERT_EQ(arr.at(Key(3u)), Val(8u));
+        ASSERT_EQ(arr.at(Key(1u)), Val(7u));
     }
 }
 
@@ -95,15 +99,15 @@ TEST_F(ITypArrayTest, BeginEndFrontBackData) {
     Array arr;
 
     // non-const versions
-    ASSERT_EQ(&arr.front(), &arr[Key(0)]);
-    ASSERT_EQ(&arr.back(), &arr[Key(9)]);
-    ASSERT_EQ(arr.data(), &arr[Key(0)]);
+    ASSERT_EQ(&arr.front(), &arr[Key(0u)]);
+    ASSERT_EQ(&arr.back(), &arr[Key(9u)]);
+    ASSERT_EQ(arr.data(), &arr[Key(0u)]);
 
     // const versions
     const Array& constArr = arr;
-    ASSERT_EQ(&constArr.front(), &constArr[Key(0)]);
-    ASSERT_EQ(&constArr.back(), &constArr[Key(9)]);
-    ASSERT_EQ(constArr.data(), &constArr[Key(0)]);
+    ASSERT_EQ(&constArr.front(), &constArr[Key(0u)]);
+    ASSERT_EQ(&constArr.back(), &constArr[Key(9u)]);
+    ASSERT_EQ(constArr.data(), &constArr[Key(0u)]);
 }
 
 // Name "*DeathTest" per https://google.github.io/googletest/advanced.html#death-test-naming
@@ -118,12 +122,33 @@ TEST_F(ITypArrayDeathTest, OutOfBounds) {
     }
 
     Array arr;
-    EXPECT_DEATH(arr[Key(10)], "");
-    EXPECT_DEATH(arr.at(Key(10)), "");
+    EXPECT_DEATH_IF_SUPPORTED(arr[Key(10u)], "");
+    EXPECT_DEATH_IF_SUPPORTED(arr.at(Key(10u)), "");
 
     const Array& constArr = arr;
-    EXPECT_DEATH(constArr[Key(10)], "");
-    EXPECT_DEATH(constArr.at(Key(10)), "");
+    EXPECT_DEATH_IF_SUPPORTED(constArr[Key(10u)], "");
+    EXPECT_DEATH_IF_SUPPORTED(constArr.at(Key(10u)), "");
+}
+
+// If the index/size is 64-bit, it needs to be narrowed to size_t. Verify that's checked correctly.
+TEST_F(ITypArrayDeathTest, OversizedIndex) {
+    // These tests are only relevant on 32-bit builds.
+    if constexpr (sizeof(size_t) > sizeof(uint32_t)) {
+        GTEST_SKIP();
+    }
+
+    using Key64 = TypedInteger<struct Key64T, uint64_t>;
+    static constexpr Key64 kHugeKey64{0x1'0000'0000LLU};
+
+    ityp::array<Key64, Val, 10> vec;
+
+    vec[Key64(9u)];
+    // Regular out-of-bounds.
+    EXPECT_DEATH_IF_SUPPORTED(vec[Key64(10u)], "");
+
+    vec[Key64(0u)];
+    // If this were cast to a 32-bit size_t without a check, it would be in-bounds.
+    EXPECT_DEATH_IF_SUPPORTED(vec[kHugeKey64], "");
 }
 
 }  // anonymous namespace

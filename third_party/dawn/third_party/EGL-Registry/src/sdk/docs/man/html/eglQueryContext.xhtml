@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglQueryContext - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglQueryContext">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglQueryContext — 
+            return <abbr class="acronym">EGL</abbr> rendering context information
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglQueryContext</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLContext <var class="pdparam">context</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">attribute</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint * <var class="pdparam">value</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL display connection.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>context</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL rendering context to query.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attribute</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL rendering context attribute to be returned.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>value</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Returns the requested value.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglQueryContext</code> returns in
+            <em class="parameter"><code>value</code></em> the value of
+            <em class="parameter"><code>attribute</code></em> for <em class="parameter"><code>context</code></em>.
+            <em class="parameter"><code>attribute</code></em> can be one of the following:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONFIG_ID</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the ID of the EGL frame buffer configuration
+                    with respect to which the context was created.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_CLIENT_TYPE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the type of client API which the context
+                    supports (one of
+                    <code class="constant">EGL_OPENGL_API</code>,
+                    <code class="constant">EGL_OPENGL_ES_API</code>, or
+                    <code class="constant">EGL_OPENVG_API</code>).
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_CLIENT_VERSION</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the version of the client API which the
+                    context supports, as specified at context creation
+                    time. The resulting value is only meaningful for an
+                    OpenGL ES context.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_RENDER_BUFFER</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Returns the buffer which client API rendering
+                        via the context will use. The value returned
+                        depends on properties of both the context, and
+                        the surface to which the context is bound:
+                    </p>
+              <div class="itemizedlist">
+                <ul style="list-style-type: disc; " class="itemizedlist">
+                  <li class="listitem">
+                    <p>
+                        If the context is bound to a pixmap surface,
+                        then <code class="constant">EGL_SINGLE_BUFFER</code> will
+                        be returned.
+                    </p>
+                  </li>
+                  <li class="listitem">
+                    <p>
+                        If the context is bound to a pbuffer surface,
+                        then <code class="constant">EGL_BACK_BUFFER</code> will
+                        be returned.
+                    </p>
+                  </li>
+                  <li class="listitem">
+                    <p>
+                        If the context is bound to a window surface,
+                        then either <code class="constant">EGL_BACK_BUFFER</code>
+                        or <code class="constant">EGL_SINGLE_BUFFER</code> may be
+                        returned. The value returned depends on both the
+                        buffer requested by the setting of the
+                        <code class="constant">EGL_RENDER_BUFFER</code> property
+                        of the surface (which may be queried by calling
+                        <code class="function">eglQuerySurface</code>), and on
+                        the client API (not all client APIs support
+                        single-buffer rendering to window surfaces).
+                    </p>
+                  </li>
+                  <li class="listitem">
+                    <p>
+                        If the context is not bound to a surface, such
+                        as an OpenGL ES context bound to a framebuffer
+                        object, then <code class="constant">EGL_NONE</code> will
+                        be returned.
+                    </p>
+                  </li>
+                </ul>
+              </div>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            Attributes <code class="constant">EGL_CONTEXT_CLIENT_TYPE</code> and
+            <code class="constant">EGL_RENDER_BUFFER</code> are supported only if
+            the EGL version is 1.2 or greater.
+        </p>
+        <p>
+            Attribute <code class="constant">EGL_CONTEXT_CLIENT_VERSION</code> is
+            supported only if the EGL version is 1.3 or greater.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure,
+            <code class="constant">EGL_TRUE</code> otherwise.
+            <em class="parameter"><code>value</code></em> is not modified when
+            <code class="constant">EGL_FALSE</code> is returned.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> has not been initialized.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_CONTEXT</code> is generated if
+            <em class="parameter"><code>context</code></em> is not an EGL rendering context.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> is generated if
+            <em class="parameter"><code>attribute</code></em> is not a valid context attribute.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglCreateContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateContext</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

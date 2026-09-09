@@ -55,7 +55,7 @@ TEST_F(IR_WgslBuiltinCallTest, Clone) {
 
 TEST_F(IR_WgslBuiltinCallTest, CloneWithExplicitParams) {
     auto* builtin = b.Call<BuiltinCall>(mod.Types().void_(), BuiltinFn::kAbs, 1_i);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<core::ir::TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());

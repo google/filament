@@ -31,13 +31,13 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
 
 namespace dawn::native {
 class BufferBase;
@@ -46,13 +46,13 @@ class RenderPassEncoder;
 struct RenderPassDescriptor;
 
 struct KeyOfApplyClearColorValueWithDrawPipelines {
-    uint8_t colorAttachmentCount = 0;
+    ColorAttachmentIndex colorAttachmentCount{};
     PerColorAttachment<wgpu::TextureFormat> colorTargetFormats;
     ColorAttachmentMask colorTargetsToApplyClearColorValue;
     uint32_t sampleCount = 0;
     wgpu::TextureFormat depthStencilFormat = wgpu::TextureFormat::Undefined;
     bool hasPLS = false;
-    uint64_t totalPixelLocalStorageSize;
+    uint64_t totalPixelLocalStorageSize = 0;
     std::vector<wgpu::PipelineLayoutStorageAttachment> plsAttachments;
 };
 

@@ -59,6 +59,9 @@ class WireHelper {
         const wgpu::InstanceDescriptor* nativeDesc = nullptr,
         const wgpu::InstanceDescriptor* wireDesc = nullptr);
 
+    // Helper that returns a handle to the native Device.
+    virtual WGPUDevice GetBackendDevice(const wgpu::Device& device) = 0;
+
     virtual void BeginWireTrace(const char* name) = 0;
 
     virtual bool FlushClient() = 0;

@@ -1,0 +1,122 @@
+Name
+
+    3DFX_tbuffer
+
+Name Strings
+
+    GL_3DFX_tbuffer
+
+Contact
+
+    Paula Womack, 3dfx Interactive (paulaw 'at' 3dfx.com)
+
+Status
+
+    Complete
+
+Version
+
+    Date: April 13, 2000; Revision: 1.0
+
+Number
+
+    208
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    Either SGIS_multisample or 3DFX_multisample is required.
+    This specification is written against OpenGL 1.2.
+
+Overview
+
+    This extension allows a write mask to be defined for the fragment
+    mask which is created during multisample rendering. This can be used
+    to create effects such as motion blur and depth of field.
+
+IP Status
+
+    3DFX has filed for patent protection for some of the techniques
+    described in this extension document.
+
+Issues
+
+    None.
+
+New Procedures and Functions
+
+    void TbufferMask3DFX(uint mask);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    The value of TBUFFER_WRITE_MASK_3DFX is specified by calling
+    TbufferMask3DFX, with mask set to the desired mask value. If
+    multisample rendering is enabled then the n least significant bits
+    of TBUFFER_WRITE_MASK_3DFX are bitwise ANDed with the fragment
+    sample mask, where n is equal to SAMPLES_3DFX.
+
+Additions to 3.3.2 Point Multisample Rasterization:
+
+    Following the sentence "Mask bits that correspond to sample points
+    that intersect the circular region are 1, other mask bits are 0."
+    add "The fragment mask thus computed, is then bitwise ANDed with the
+    SAMPLES_3DFX least significant bits of TBUFFER_WRITE_MASK_3DFX.
+
+Additions to 3.4.4 Line Multisample Rasterization:
+
+    Following the sentence "Mask bits that correspond to sample points
+    that intersect a retained rectangle are 1, other mask bits are 0."
+    add "The fragment mask thus computed, is then bitwise ANDed with the
+    SAMPLES_3DFX least significant bits of TBUFFER_WRITE_MASK_3DFX.
+
+Additions to 3.5.6 Polygon Multisample Rasterization:
+
+    Following the sentence "Mask bits that correspond to sample points
+    that satisfy the point sampling criteria are 1, other mask bits are
+    0." add "The fragment mask thus computed, is then bitwise ANDed with
+    the SAMPLES_3DFX least significant bits of TBUFFER_WRITE_MASK_3DFX.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations and
+the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    An additional group of multisample state variables is defined by the
+    SGIS_multitexture and 3DFX_multitexture extensions. When PushAttrib
+    is called with bit MULTISAMPLE_BIT_SGIS or MULTISAMPLE_BIT_3DFX set,
+    the multisample group of state variables is pushed onto the
+    attribute stack. When PopAttrib is called, these state variables are
+    restored to their previous values if they were pushed. This
+    extension adds state to the multisample group of state variables.
+
+Additions to the GLX Specification
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated if TbufferWriteMask3DFX is called
+    between the execution of Begin and the execution of the
+    corresponding End.
+
+New State
+
+    Get Value		    Get Command Type	Initial Value	Attribute
+    ---------		    ----------- ----	-------------	---------
+    TBUFFER_WRITE_MASK_3DFX GetIntegerv Z+	1's		multisample
+
+Revision History

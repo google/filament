@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_RESOURCEHEAP_H_
 #define SRC_DAWN_NATIVE_RESOURCEHEAP_H_
 
-#include "dawn/native/Error.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native {
 

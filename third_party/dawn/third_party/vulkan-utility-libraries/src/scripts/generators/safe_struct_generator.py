@@ -37,10 +37,6 @@ class SafeStructOutputGenerator(BaseGenerator):
             # This needs to know if we're doing a host or device build, logic becomes complex and very specialized
             'VkAccelerationStructureBuildGeometryInfoKHR',
             'VkAccelerationStructureGeometryKHR',
-            # Have a pUsageCounts and ppUsageCounts that is not currently handled in the generated code
-            'VkMicromapBuildInfoEXT',
-            'VkAccelerationStructureTrianglesOpacityMicromapEXT',
-            'VkAccelerationStructureTrianglesDisplacementMicromapNV',
              # Special case because its pointers may be non-null but ignored
             'VkGraphicsPipelineCreateInfo',
             # Special case because it has custom construct parameters
@@ -82,12 +78,6 @@ class SafeStructOutputGenerator(BaseGenerator):
             # vku::safe::AccelerationStructureGeometryKHR needs to know if we're doing a host or device build
             'VkAccelerationStructureGeometryKHR' :
                 ', const bool is_host, const VkAccelerationStructureBuildRangeInfoKHR *build_range_info',
-        }
-
-        # TODO: Hook this up to the member deprecation in the XML so it can be automatically updated
-        self.unused_params = {
-            'VkDeviceCreateInfo':
-                ['ppEnabledLayerNames', 'enabledLayerCount'],
         }
 
     def isInPnextChain(self, struct: Struct) -> bool:
@@ -187,10 +177,6 @@ class SafeStructOutputGenerator(BaseGenerator):
             #include <vulkan/utility/vk_safe_struct_utils.hpp>
 
             namespace vku {
-
-            // Mapping of unknown stype codes to structure lengths. This should be set up by the application
-            // before vkCreateInstance() and not modified afterwards.
-            std::vector<std::pair<uint32_t, uint32_t>>& GetCustomStypeInfo();
             \n''')
 
         guard_helper = PlatformGuardHelper()
@@ -333,21 +319,16 @@ void *SafePnextCopy(const void *pNext, PNextCopyState* copy_state) {
         out.extend(guard_helper.add_guard(None))
 
         out.append('''
-            default: // Encountered an unknown sType -- skip (do not copy) this entry in the chain
-                // If sType is in custom list, construct blind copy
-                for (auto item : GetCustomStypeInfo()) {
-                    if (item.first == static_cast<uint32_t>(header->sType)) {
-                        safe_pNext = malloc(item.second);
-                        memcpy(safe_pNext, header, item.second);
-                    }
-                }
+            default:
                 break;
         }
         if (!first_pNext) {
             first_pNext = safe_pNext;
         }
         pNext = header->pNext;
-        if (prev_pNext && safe_pNext) {
+        // need to make sure pass through a private struct
+        // https://github.com/KhronosGroup/Vulkan-Utility-Libraries/pull/385#issuecomment-4490691826
+        if (prev_pNext) {
             prev_pNext->pNext = (VkBaseOutStructure*)safe_pNext;
         }
         if (safe_pNext) {
@@ -389,14 +370,7 @@ void FreePnextChain(const void *pNext) {
         out.extend(guard_helper.add_guard(None))
 
         out.append('''
-        default: // Encountered an unknown sType
-            // If sType is in custom list, free custom struct memory and clean up
-            for (auto item : GetCustomStypeInfo()   ) {
-                if (item.first == static_cast<uint32_t>(header->sType)) {
-                    free(current);
-                    break;
-                }
-            }
+        default:
             break;
         }
         current = next;
@@ -582,9 +556,9 @@ void FreePnextChain(const void *pNext) {
                 m_type_safe = False
                 m_shallow_copy = False
 
-                if member.pointer and ('PFN_' in member.type or member.name in self.unused_params.get(struct.name, [])):
+                if member.pointer and 'PFN_' in member.type:
                     m_shallow_copy = True
-                
+
                 if member.name == 'pNext':
                     copy_pnext = 'pNext = SafePnextCopy(in_struct->pNext, copy_state);\n'
                     copy_pnext_if = '''
@@ -603,11 +577,16 @@ void FreePnextChain(const void *pNext) {
                                 # Create deep copies of strings
                                 if member.length:
                                     copy_strings += f'''
-                                        char **tmp_{member.name} = new char *[in_struct->{member.length}];
-                                        for (uint32_t i = 0; i < {member.length}; ++i) {{
-                                            tmp_{member.name}[i] = SafeStringCopy(in_struct->{member.name}[i]);
+                                        if (in_struct->{member.length} > 0) {{ 
+                                            char **tmp_{member.name} = new char *[in_struct->{member.length}];
+                                            for (uint32_t i = 0; i < {member.length}; ++i) {{
+                                                tmp_{member.name}[i] = SafeStringCopy(in_struct->{member.name}[i]);
+                                            }}
+                                            {member.name} = tmp_{member.name};
+                                        }} else {{
+                                            {member.name} = nullptr;
                                         }}
-                                        {member.name} = tmp_{member.name};'''
+                                        '''
 
                                     destruct_txt += f'''
                                         if ({member.name}) {{
@@ -641,6 +620,31 @@ void FreePnextChain(const void *pNext) {
                                     init_list += f'\n{member.name}(in_struct->{member.name}),'
                                     init_func_txt += f'{member.name} = in_struct->{member.name};\n'
                         default_init_list += f'\n{member.name}(nullptr),'
+                    elif member.name == 'ppUsageCounts':
+                        # This is the same issue above, but instead of void/char* we have custom Vulkan types
+                        # Currently just search for 'ppUsageCounts' until something that isn't also needs this, then make it more general
+                        default_init_list += f'\n{member.name}(nullptr),'
+                        init_list += f'\n{member.name}(nullptr),'
+                        init_func_txt += f'{member.name} = nullptr;\n'
+
+                        construct_txt += f'''
+                                    if (in_struct->{member.name}) {{
+                                        {m_type}** pointer_array = new {m_type}*[in_struct->usageCountsCount];
+                                        for (uint32_t i = 0; i < in_struct->usageCountsCount; ++i) {{
+                                            pointer_array[i] = new {m_type}(*in_struct->{member.name}[i]);
+                                        }}
+                                        {member.name} = pointer_array;
+                                    }}
+                                    '''
+
+                        destruct_txt += f'''
+                                    if ({member.name}) {{
+                                        for (uint32_t i = 0; i < usageCountsCount; ++i) {{
+                                            delete {member.name}[i];
+                                        }}
+                                        delete[] {member.name};
+                                    }}
+                                    '''
                     else:
                         default_init_list += f'\n{member.name}(nullptr),'
                         init_list += f'\n{member.name}(nullptr),'

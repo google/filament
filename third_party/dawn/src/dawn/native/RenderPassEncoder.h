@@ -28,9 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_RENDERPASSENCODER_H_
 #define SRC_DAWN_NATIVE_RENDERPASSENCODER_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/RenderEncoderBase.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/RenderEncoderBase.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -71,7 +72,8 @@ class RenderPassEncoder final : public RenderEncoderBase {
                         float minDepth,
                         float maxDepth);
     void APISetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-    void APIExecuteBundles(uint32_t count, RenderBundleBase* const* renderBundles);
+    void APISetResourceTable(ResourceTableBase* table);
+    void APIExecuteBundles(Span<RenderBundleBase* const> renderBundles);
 
     void APIBeginOcclusionQuery(uint32_t queryIndex);
     void APIEndOcclusionQuery();
@@ -104,8 +106,6 @@ class RenderPassEncoder final : public RenderEncoderBase {
   private:
     void DestroyImpl(DestroyReason reason) override;
 
-    void TrackQueryAvailability(QuerySetBase* querySet, uint32_t queryIndex);
-
     // For render and compute passes, the encoding context is borrowed from the command encoder.
     // Keep a reference to the encoder to make sure the context isn't freed.
     Ref<CommandEncoder> mCommandEncoder;
@@ -114,7 +114,7 @@ class RenderPassEncoder final : public RenderEncoderBase {
 
     // The resources for occlusion query
     Ref<QuerySetBase> mOcclusionQuerySet;
-    uint32_t mCurrentOcclusionQueryIndex = 0;
+    QueryIndex mCurrentOcclusionQueryIndex = QueryIndex(0u);
     bool mOcclusionQueryActive = false;
 
     // This is the hardcoded value in the WebGPU spec.

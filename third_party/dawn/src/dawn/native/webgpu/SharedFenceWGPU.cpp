@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/SharedFenceWGPU.h"
+#include "src/dawn/native/webgpu/SharedFenceWGPU.h"
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
 
 namespace dawn::native::webgpu {
 

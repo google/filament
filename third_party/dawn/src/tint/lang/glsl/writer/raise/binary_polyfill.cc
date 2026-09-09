@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/glsl/writer/raise/binary_polyfill.h"
 
+#include <vector>
+
 #include "src/tint/lang/core/fluent_types.h"  // IWYU pragma: export
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
@@ -57,61 +59,46 @@ struct State {
     /// Process the module.
     void Process() {
         // Find the binary instructions that need replacing.
-        Vector<core::ir::Binary*, 4> binary_worklist;
+        std::vector<std::function<void()>> worklist;
+        worklist.reserve(128);
+
         for (auto* inst : ir.Instructions()) {
-            if (auto* binary = inst->As<core::ir::Binary>()) {
-                switch (binary->Op()) {
-                    case core::BinaryOp::kAnd:
-                    case core::BinaryOp::kOr: {
-                        if (binary->LHS()->Type()->IsBoolScalarOrVector()) {
-                            binary_worklist.Push(binary);
-                        }
-                        break;
-                    }
-                    case core::BinaryOp::kModulo: {
-                        if (binary->LHS()->Type()->IsFloatScalarOrVector()) {
-                            binary_worklist.Push(binary);
-                        }
-                        break;
-                    }
-                    case core::BinaryOp::kEqual:
-                    case core::BinaryOp::kNotEqual:
-                    case core::BinaryOp::kLessThan:
-                    case core::BinaryOp::kGreaterThan:
-                    case core::BinaryOp::kLessThanEqual:
-                    case core::BinaryOp::kGreaterThanEqual:
-                        if (!binary->LHS()->Type()->Is<core::type::Scalar>()) {
-                            binary_worklist.Push(binary);
-                        }
-                        break;
-                    default:
-                        break;
-                }
+            core::ir::Binary* binary = inst->As<core::ir::Binary>();
+            if (binary == nullptr) {
                 continue;
             }
-        }
 
-        // Replace the binary calls
-        for (auto* binary : binary_worklist) {
             switch (binary->Op()) {
                 case core::BinaryOp::kAnd:
-                case core::BinaryOp::kOr:
-                    BitwiseBoolean(binary);
+                case core::BinaryOp::kOr: {
+                    if (binary->LHS()->Type()->IsBoolScalarOrVector()) {
+                        worklist.push_back([this, binary] { BitwiseBoolean(binary); });
+                    }
                     break;
-                case core::BinaryOp::kModulo:
-                    FloatModulo(binary);
+                }
+                case core::BinaryOp::kModulo: {
+                    if (binary->LHS()->Type()->IsFloatScalarOrVector()) {
+                        worklist.push_back([this, binary] { FloatModulo(binary); });
+                    }
                     break;
+                }
                 case core::BinaryOp::kEqual:
                 case core::BinaryOp::kNotEqual:
                 case core::BinaryOp::kLessThan:
                 case core::BinaryOp::kGreaterThan:
                 case core::BinaryOp::kLessThanEqual:
                 case core::BinaryOp::kGreaterThanEqual:
-                    ConvertRelational(binary);
+                    if (!binary->LHS()->Type()->Is<core::type::Scalar>()) {
+                        worklist.push_back([this, binary] { ConvertRelational(binary); });
+                    }
                     break;
                 default:
-                    TINT_IR_UNIMPLEMENTED(ir);
+                    break;
             }
+        }
+
+        for (auto& cb : worklist) {
+            cb();
         }
     }
 
@@ -216,8 +203,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(core::ir::Module& ir) {
-    core::ir::AssertValid(ir, core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings},
-                          "before glsl.BinaryPolyfill");
+    core::ir::AssertValid(ir, "before glsl.BinaryPolyfill");
 
     State{ir}.Process();
 

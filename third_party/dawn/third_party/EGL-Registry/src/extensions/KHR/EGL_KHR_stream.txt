@@ -1,0 +1,1091 @@
+Name
+
+    KHR_stream
+    KHR_stream_attrib
+
+Name Strings
+
+    EGL_KHR_stream
+    EGL_KHR_stream_attrib
+
+Contributors
+
+    Marcus Lorentzon
+    Acorn Pooley
+    Robert Palmer
+    Greg Prisament
+    Daniel Kartch
+    Miguel A. Vico Moya
+
+Contacts
+
+    Acorn Pooley, NVIDIA  (apooley 'at' nvidia.com)
+    Marcus Lorentzon, ST-Ericsson AB (marcus.xm.lorentzon 'at' stericsson.com)
+    Daniel Kartch, NVIDIA (dkartch 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2009-2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete.
+    Approved by the Khronos Board of Promoters on December 2, 2011.
+
+Version
+
+    Version 27 - May 23, 2016
+
+Number
+
+    EGL Extension #32
+
+Dependencies
+
+    EGL_KHR_stream requires EGL 1.2.
+
+    EGL_KHR_stream_attrib requires EGL_KHR_stream and EGL 1.5.
+
+    EGL_KHR_stream_attrib interacts with
+    EGL_KHR_stream_consumer_gltexture.
+
+    This extension is written based on the wording of the EGL 1.2
+    specification.
+
+Overview
+
+    This extension defines a new object, the EGLStream, that can be
+    used to efficiently transfer a sequence of image frames from one
+    API to another.  The EGLStream has mechanisms that can help keep
+    audio data synchronized to video data.
+
+    Each EGLStream is associated with a "producer" that generates
+    image frames and inserts them into the EGLStream.  The producer is
+    responsible for inserting each image frame into the EGLStream at
+    the correct time so that the consumer can display the image frame
+    for the appropriate period of time.
+
+    Each EGLStream is also associated with a "consumer" that
+    retrieves image frames from the EGLStream.  The consumer is
+    responsible for noticing that an image frame is available and
+    displaying it (or otherwise consuming it).  The consumer is also
+    responsible for indicating the latency when that is possible (the
+    latency is the time that elapses between the time it is retrieved
+    from the EGLStream until the time it is displayed to the user).
+
+    Some APIs are stream oriented (examples: OpenMAX IL, OpenMAX AL).
+    These APIs may be connected directly to an EGLStream as a producer
+    or consumer.  Once a stream oriented producer is "connected" to an
+    EGLStream and "started" it may insert image frames into the
+    EGLStream automatically with no further interaction from the
+    application. Likewise, once a stream oriented consumer is
+    "connected" to an EGLStream and "started" it may retrieve image
+    frames from the EGLStream automatically with no further interaction
+    from the application.
+
+    Some APIs are rendering oriented and require interaction with the
+    application during the rendering of each frame (examples: OpenGL,
+    OpenGL ES, OpenVG).  These APIs will not automatically insert or
+    retrieve image frames into/from the EGLStream.  Instead the
+    application must take explicit action to cause a rendering
+    oriented producer to insert an image frame or to cause a rendering
+    oriented consumer to retrieve an image frame.
+
+    The EGLStream conceptually operates as a mailbox.  When the
+    producer has a new image frame it empties the mailbox (discards
+    the old contents) and inserts the new image frame into the
+    mailbox.  The consumer retrieves the image frame from the mailbox
+    and examines it.  When the consumer is finished examining the
+    image frame it is either placed back in the mailbox (if the
+    mailbox is empty) or discarded (if the mailbox is not empty).
+
+    Timing is mainly controlled by the producer.  The consumer
+    operated with a fixed latency that it indicates to the producer
+    through the EGL_CONSUMER_LATENCY_USEC_KHR attribute.  The consumer
+    is expected to notice when a new image frame is available in the
+    EGLStream, retrieve it, and display it to the user in the time
+    indicated by EGL_CONSUMER_LATENCY_USEC_KHR.  The producer controls
+    when the image frame will be displayed by inserting it into the
+    stream at time
+        T - EGL_CONSUMER_LATENCY_USEC_KHR
+    where T is the time that the image frame is intended to appear to
+    the user.
+
+    This extension does not cover the details of how a producer or a
+    consumer works or is "connected" to an EGLStream.  Different kinds
+    of producers and consumers work differently and are described in
+    additional extension specifications.  (Examples of producer
+    specifications:
+       EGL_KHR_stream_producer_eglsurface
+       EGL_KHR_stream_producer_aldatalocator
+       OpenMAX_AL_EGLStream_DataLocator
+    Example of consumer extension specification:
+       EGL_KHR_stream_consumer_gltexture
+    )
+
+
+Glossary
+
+    EGLStream
+    An EGL object that transfers a sequence of image frames from one
+    API to another (e.g. video frames from OpenMAX AL to OpenGL ES).
+
+    Image frame
+    A single image in a sequence of images.  The sequence may be
+    frames of video data decoded from a video file, images output by a
+    camera sensor, surfaces rendered using OpenGL ES commands, or
+    generated in some other manner.  An image frame has a period of
+    time during which it is intended to be displayed on the screen
+    (starting with the "Image Frame Display Time" and ending with the
+    "Image Frame Display Time" of the next image frame in the
+    sequence).
+
+    Image Frame Insertion Time
+    The point in time when the producer inserts the image frame into
+    the EGLStream.  This is the "Image Frame Intended Display Time"
+    minus the "Consumer Latency".
+
+    Image Frame Intended Display Time
+    The point in time when the user should first see the image frame
+    on the display screen.
+
+    Image Frame Actual Display Time
+    The point in time when the user actually first sees the image frame
+    on the display screen.
+
+    Consumer Latency
+    The elapsed time between an image frame's "Image Frame Insertion
+    Time" and its "Image Frame Actual Display Time".  The consumer is
+    responsible for predicting this and indicating its value to the
+    EGLStream.  The producer is responsible for using this value to
+    calculate the "Image Frame Insertion Time" for each image frame.
+    The application has access to this value through the
+    EGL_CONSUMER_LATENCY_USEC attribute.
+
+    Producer
+    The entity that inserts image frames into the EGLStream.  The
+    producer is responsible for timing: it must insert image frames at
+    a point in time equal to the "Image Frame Intended Display Time"
+    minus the "Consumer Latency".
+
+    Consumer
+    The entity that retrieves image frames from the EGLStream.  When
+    the image frames are to be displayed to the user the consumer is
+    responsible for calculating the "Consumer Latency" and reporting
+    it to the EGLSteam.
+
+    State (stream state)
+    At any given time an EGLStream is in one of several states.  See
+    section "3.10.4.3 EGL_STREAM_STATE_KHR Attribute" in this
+    extension for a description of the states and what transitions
+    occur between them.
+
+New Types
+
+    This is the type of a handle that represents an EGLStream object.
+
+    typedef void* EGLStreamKHR;
+
+    This is a 64 bit unsigned integer.
+
+    typedef khronos_uint64_t EGLuint64KHR;
+
+New functions defined by EGL_KHR_stream
+
+    EGLStreamKHR eglCreateStreamKHR(
+        EGLDisplay    dpy,
+        const EGLint *attrib_list);
+
+    EGLBoolean eglDestroyStreamKHR(
+        EGLDisplay   dpy,
+        EGLStreamKHR stream);
+
+    EGLBoolean eglStreamAttribKHR(
+        EGLDisplay   dpy,
+        EGLStreamKHR stream,
+        EGLenum      attribute,
+        EGLint       value);
+
+    EGLBoolean eglQueryStreamKHR(
+        EGLDisplay   dpy,
+        EGLStreamKHR stream,
+        EGLenum      attribute,
+        EGLint      *value);
+
+    EGLBoolean eglQueryStreamu64KHR(
+        EGLDisplay   dpy,
+        EGLStreamKHR stream,
+        EGLenum      attribute,
+        EGLuint64KHR *value);
+
+New functions defined by EGL_KHR_stream_attrib
+
+    EGLStreamKHR eglCreateStreamAttribKHR(
+        EGLDisplay       dpy,
+        const EGLAttrib *attrib_list);
+
+    EGLBoolean eglSetStreamAttribKHR(
+        EGLDisplay       dpy,
+        EGLStreamKHR     stream,
+        EGLenum          attribute,
+        EGLAttrib        value);
+
+    EGLBoolean eglQueryStreamAttribKHR(
+        EGLDisplay       dpy,
+        EGLStreamKHR     stream,
+        EGLenum          attribute,
+        EGLAttrib       *value);
+
+    EGLBoolean eglStreamConsumerAcquireAttribKHR(
+        EGLDisplay       dpy,
+        EGLStreamKHR     stream
+        const EGLAttrib *attrib_list);
+
+    EGLBoolean eglStreamConsumerReleaseAttribKHR(
+        EGLDisplay       dpy,
+        EGLStreamKHR     stream,
+        const EGLAttrib *attrib_list);
+
+New Tokens
+
+    This value is returned from eglCreateStreamKHR in the case of an
+    error. It is an error to attempt to use this value as a parameter
+    to any EGL or client API function.
+
+    EGL_NO_STREAM_KHR                           ((EGLStreamKHR)0)
+
+    This enum is accepted as an attribute in the <attrib_list> parameter
+    of eglCreateStreamKHR and as the <attribute> parameter of
+    eglStreamAttribKHR, eglSetStreamAttribKHR, eglQueryStreamKHR and
+    eglQueryStreamAttribKHR.
+
+    EGL_CONSUMER_LATENCY_USEC_KHR               0x3210
+
+    These enums are accepted as the <attribute> parameter of
+    eglQueryStreamu64KHR.
+
+    EGL_PRODUCER_FRAME_KHR                      0x3212
+    EGL_CONSUMER_FRAME_KHR                      0x3213
+
+    This enum is accepted as the <attribute> parameter of
+    eglQueryStreamKHR and eglQueryStreamAttribKHR.
+
+    EGL_STREAM_STATE_KHR                        0x3214
+
+    Returned in the <value> parameter of eglQueryStreamKHR or
+    eglQueryStreamAttribKHR when <attribute> is EGL_STREAM_STATE.
+
+    EGL_STREAM_STATE_CREATED_KHR                0x3215
+    EGL_STREAM_STATE_CONNECTING_KHR             0x3216
+    EGL_STREAM_STATE_EMPTY_KHR                  0x3217
+    EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR    0x3218
+    EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR    0x3219
+    EGL_STREAM_STATE_DISCONNECTED_KHR           0x321A
+
+    These errors may be generated by EGLStream calls.
+
+    EGL_BAD_STREAM_KHR                          0x321B
+    EGL_BAD_STATE_KHR                           0x321C
+
+Add a new section "2.5 Streams" after section "2.4 Shared State"
+
+    EGL allows efficient interoperation between APIs through the
+    EGLStream object.  An EGLStream represents a sequence of image
+    frames.
+
+    Each EGLStream is associated with a producer that generates image
+    frames and inserts them into the EGLStream.  Each EGLStream is
+    also associated with a consumer that retrieves image frames from
+    the EGLStream.
+
+Add a new section "3.10 EGLStreams" after section "3.9 Posting the
+Color Buffer"
+
+    3.10 EGLStreams
+
+    EGL provides functions to create and destroy EGLStreams, for
+    querying and setting attributes of EGLStreams, and for connecting
+    EGLStreams to producers and consumers.
+
+    Each EGLStream may be connected to only one producer and one
+    consumer.  Once an EGLStream is connected to a consumer, it will
+    be connected to that consumer until the EGLStream is destroyed.
+    Likewise, once an EGLStream is connected to a producer it will be
+    connected to that producer until the EGLStream is destroyed.
+    Further semantics are described for each type of consumer and
+    producer that can be connected.
+
+Add subsection 3.10.1 to section "3.10 EGLStreams"
+
+    3.10.1 Creating an EGLStream
+
+    Call
+
+        EGLStreamKHR eglCreateStreamKHR(
+            EGLDisplay    dpy,
+            const EGLint *attrib_list);
+
+    to create a new EGLStream. <dpy> specifies the EGLDisplay used for
+    this operation. The function returns a handle to the created
+    EGLStream.
+
+    The EGLStream cannot be used until it has been connected to a
+    consumer and then to a producer (refer to section "3.10.2
+    Connecting an EGLStream to a consumer" and section "3.10.3
+    Connecting an EGLStream to a producer").  It must be connected to
+    a consumer before being connected to a producer.
+
+    There is no way for the application to query the size,
+    colorformat, or number of buffers used in the EGLStream (although
+    these attributes may be available from the producer's API or the
+    consumer's API depending on what type of producer/consumer is
+    connected to the EGLStream).
+
+    The parameter <attrib_list> contains a list of attributes and
+    values to set for the EGLStream.  Attributes not in the list are
+    set to default values.  EGLStream attributes are described in
+    section "3.10.4 EGLStream Attributes".
+
+    If an error occurs eglCreateStreamKHR will return
+    EGL_NO_STREAM_KHR and generate an error.
+
+        - EGL_BAD_ATTRIBUTE is generated if any of the parameters in
+          attrib_list is not a valid EGLStream attribute.
+
+        - EGL_BAD_ACCESS is generated if any of the parameters in
+          attrib_list is read only.
+
+        - EGL_BAD_PARAMETER is generated if any of the values in
+          attrib_list is outside the valid range for the attribute.
+
+        - EGL_BAD_ALLOC is generated if not enough resources are
+          available to create the EGLStream.
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid,
+          initialized EGLDisplay.
+
+If EGL_KHR_stream_attrib is present, add to the end of this section
+
+    Streams may also be created by calling
+
+        EGLStreamKHR eglCreateStreamAttribKHR(
+            EGLDisplay       dpy,
+            const EGLAttrib *attrib_list);
+
+    This is equivalent to eglCreateStreamKHR, but allows pointer
+    and handle attributes to be provided on 64-bit systems.
+
+Add section 3.10.2 to section "3.10 EGLStreams"
+
+    3.10.2 Connecting an EGLStream to a consumer.
+
+    Before using an EGLStream it must be connected to a consumer.
+
+    Refer to sections 3.10.2.1 and following for different ways to
+    connect a consumer to an EGLStream.
+
+    Once an EGLStream is connected to a consumer it will remain
+    connected to the same consumer until the EGLStream is destroyed.
+
+    If the consumer is destroyed then the EGLStream's state will
+    become EGL_STREAM_STATE_DISCONNECTED_KHR.
+
+    Any attempt to connect an EGLStream which is not in state
+    EGL_STREAM_STATE_CREATED_KHR will fail and generate an
+    EGL_BAD_STATE_KHR error.
+
+    When an EGLStream is connected to a consumer its state becomes
+    EGL_STREAM_STATE_CONNECTING_KHR.
+
+    3.10.2.1 No way to connect consumer to EGLStream
+
+    EGL does not currently define any mechanisms to connect a consumer
+    to an EGLStream.  These will be added via additional extensions.
+
+    (Example: See extension specification
+    EGL_KHR_stream_consumer_gltexture)
+
+If EGL_KHR_stream_attrib is present, add to the end of this section
+
+    3.10.2.2 Acquiring and releasing consumer frames
+
+    Methods for acquiring frames from a stream and releasing them back
+    to a stream are dependent on the type of consumer. Some consumers
+    support calling
+
+        EGLBoolean eglStreamConsumerAcquireAttribKHR(
+            EGLDisplay       dpy,
+            EGLStreamKHR     stream
+            const EGLAttrib *attrib_list);
+
+    to acquire the next available frame in <stream> and
+
+        EGLBoolean eglStreamConsumerReleaseAttribKHR(
+            EGLDisplay       dpy,
+            EGLStreamKHR     stream,
+            const EGLAttrib *attrib_list);
+
+    to release a frame back to the stream.
+
+    Not all consumers are required to support either or both of these
+    functions. Where supported, the specific behavior is defined by the
+    consumer type, and may be affected by the contents of <attrib_list>.
+    <attrib_list> must either be NULL or a pointer to a list of
+    name/value pairs terminated by EGL_NONE. Valid attributes are
+    listed in tables 3.10.2.1 and 3.10.2.2.
+
+    Attribute                 Type        Section
+    ------------------------  ----------  -------
+    Currently no acquire attributes are defined
+
+    Table 3.10.2.1 EGLStream Consumer Acquire Attributes
+
+    Attribute                 Type        Section
+    ------------------------  ----------  -------
+    Currently no release attributes are defined
+
+    Table 3.10.2.2 EGLStream Consumer Release Attributes
+
+    If no new image frame is available in the stream, 
+    eglStreamConsumerAcquireAtrribKHR may block, retrieve an old frame,
+    or return an error, as defined by the type of consumer. If one or
+    more image frames are already acquired by the consumer when
+    eglStreamConsumerAcquireAttribKHR is called, the behavior is
+    determined by the type of consumer.
+    
+    If successful, eglStreamConsumerAcquireAttribKHR returns EGL_TRUE
+    and an image frame from <stream> will be bound into the address
+    space of the consumer as defined for its type.
+
+    On failure, the function returns EGL_FALSE and generates an error.
+    Additionally, image objects in the consumer's address space may
+    become invalid, as determined by the consumer type.
+
+        - EGL_BAD_ACCESS is generated if the consumer of <stream> does
+          not support acquiring frames through
+          eglStreamConsumerAcquireAttribKHR.
+
+        - EGL_BAD_STATE_KHR is no frame is available for acquisition
+          after any timeout determined by the consumer.
+
+        - EGL_BAD_ATTRIBUTE is generated if an attribute name in
+          <attrib_list> is not recognized or is not supported by the
+          consumer.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStream created for <dpy>.
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid
+          EGLDisplay.
+
+        - EGL_NOT_INITIALIZED is generated if <dpy> is not initialized.
+
+    Calling eglStreamConsumerReleaseAttribKHR will release a frame held
+    by the consumer back to the stream. If more than one frame is held
+    by the consumer, the frame returned is determined by the consumer
+    type and the contents of <attrib_list>. If no frames are currently
+    held, the behavior is determined by the consumer type. Once
+    returned, the consumer may no longer access the contents of the
+    frame, and attempts to do so will result in errors as determined by
+    the consumer type. Upon success, eglStreamConsumerReleaseAttribKHR
+    returns EGL_TRUE.
+
+    If eglStreamConsumerReleaseAttribKHR fails, EGL_FALSE is returned
+    and an error is generated.
+
+        - EGL_BAD_ACCESS is generated if the consumer of <stream> does
+          not support releasing frames through
+          eglStreamConsumerReleaseAttribKHR.
+
+        - EGL_BAD_STATE_KHR is generated if <stream> is not in state
+          EGL_STREAM_STATE_EMPTY_KHR,
+          EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR or
+          EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR.
+
+        - EGL_BAD_ATTRIBUTE is generated if an attribute name in
+          <attrib_list> is not recognized or is not supported by the
+          consumer.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStream created for <dpy>.
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid
+          EGLDisplay.
+
+        - EGL_NOT_INITIALIZED is generated if <dpy> is not initialized.
+
+If EGL_KHR_stream_consumer_gltexture is present in addition to
+EGL_KHR_stream_attrib, the eglStreamConsumerAcquireKHR function is
+equivalent to eglStreamConsumerAcquireAttribKHR with <attrib_list> set
+to NULL, the eglStreamConsumerReleaseKHR function is equivalent to
+eglStreamConsumerReleaseAttribKHR with <attrib_list> set to NULL, and
+the definitions provided for those functions define their behavior for
+a GL texture consumer.
+
+Add section 3.10.3 to section "3.10 EGLStreams"
+
+    3.10.3 Connecting an EGLStream to a producer.
+
+    Before using an EGLStream it must be connected to a producer.  The
+    EGLStream must be connected to a consumer before it may be
+    connected to a producer.
+
+    The size and colorformat of the images in the EGLStream are
+    determined by the EGL implementation based on the requirements of
+    the producer and the consumer.  The EGL implementation may
+    determine these at the time the producer is connected to the
+    EGLStream, at the time that the first image frame is inserted into
+    the EGLStream, or any time in between (this is left up to the
+    implementation).
+
+    It is the responsibility of the producer to convert the images to
+    a form that the consumer can consume.  The producer may negotiate
+    with the consumer as to what formats and sizes the consumer is
+    able to consume, but this negotiation (whether it occurs and how
+    it works) is an implementation detail.  If the producer is unable
+    to convert the images to a form that the consumer can consume then
+    the attempt to connect the producer to the EGLStream will fail and
+    generate an EGL_BAD_MATCH error.
+
+    Refer to sections 3.10.3.1 and following for different ways to
+    connect a producer to an EGLStream.
+
+    Once an EGLStream is connected to a producer it will remain
+    connected to the same producer until the EGLStream is destroyed.
+    If the producer is destroyed then the EGLStream's state will
+    become EGL_STREAM_STATE_DISCONNECTED_KHR (refer to "3.10.4.3
+    EGL_STREAM_STATE_KHR Attribute").
+
+    Any attempt to connect an EGLStream which is not in state
+    EGL_STREAM_STATE_CONNECTING_KHR will fail and generate an
+    EGL_BAD_STATE_KHR error.
+
+    When an EGLStream is connected to a producer its state becomes
+    EGL_STREAM_STATE_EMPTY_KHR.  At this point the producer may begin
+    inserting image frames and the consumer may begin consuming image
+    frames, so the state may immediately change to
+    EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR and/or
+    EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR.
+
+    3.10.3.1 No way to connect producer to EGLStream
+
+    EGL does not currently define any mechanisms to connect a producer
+    to an EGLStream.  These will be added via additional extensions.
+
+    (For example see extension specifications
+       EGL_KHR_stream_producer_eglsurface
+       EGL_KHR_stream_producer_aldatalocator
+       OpenMAX_AL_EGLStream_DataLocator
+    .)
+
+Add section 3.10.4 to section "3.10 EGLStreams"
+
+    3.10.4 EGLStream Attributes
+
+    Each EGLStream contains a set of attributes and values as
+    described in table 3.10.4.4.  Each attribute has a type and a
+    value and is either read-only (ro), read/write (rw) or initialize
+    only (io - meaning it may be set in the attrib_list but not
+    changed once the EGLStream is created).
+
+        Attribute                   Read/Write   Type          Section
+        --------------------------  ----------   ------        --------
+        EGL_STREAM_STATE_KHR            ro       EGLint        3.10.4.3
+        EGL_PRODUCER_FRAME_KHR          ro       EGLuint64KHR  3.10.4.4
+        EGL_CONSUMER_FRAME_KHR          ro       EGLuint64KHR  3.10.4.5
+        EGL_CONSUMER_LATENCY_USEC_KHR   rw       EGLint        3.10.4.6
+
+        Table 3.10.4.4 EGLStream Attributes
+
+    3.10.4.1 Setting EGLStream Attributes
+
+    Call
+
+        EGLBoolean eglStreamAttribKHR(
+            EGLDisplay   dpy,
+            EGLStreamKHR stream,
+            EGLint       attribute,
+            EGLint       value);
+
+    to set the value of an attribute for an EGLStream.  The <value> is
+    the new value for <attribute>.  Only read/write (rw) attributes
+    with type EGLint may be set with eglStreamAttribKHR (see "Table
+    3.10.4.4 EGLStream Attributes").
+
+    If an error occurs, EGL_FALSE is returned and an error is
+    generated.
+
+        - EGL_BAD_STATE_KHR is generated if <stream> is in
+          EGL_STREAM_STATE_DISCONNECTED_KHR state.
+
+        - EGL_BAD_ATTRIBUTE is generated if <attribute> is not a valid
+          EGLStream attribute.
+
+        - EGL_BAD_ACCESS is generated if <attribute> is read only.
+
+        - EGL_BAD_PARAMETER is generated if value is outside the valid
+          range for <attribute>.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStream created for <dpy>.
+
+        - EGL_BAD_DISPLAY is generated if <dpy> is not a valid,
+          initialized EGLDisplay.
+
+    3.10.4.2 Querying EGLStream Attributes
+
+    Call
+
+        EGLBoolean eglQueryStreamKHR(
+            EGLDisplay   dpy,
+            EGLStreamKHR stream,
+            EGLint       attribute,
+            EGLint      *value);
+
+    to query the value of an EGLStream's attribute with type EGLint
+    and call
+
+        EGLBoolean eglQueryStreamu64KHR(
+            EGLDisplay   dpy,
+            EGLStreamKHR stream,
+            EGLenum      attribute,
+            EGLuint64KHR *value);
+
+    to query the value of an EGLStream's attribute with type
+    EGLuint64KHR.
+
+    If an error occurs EGL_FALSE is returned and an error is
+    generated.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStream created for <dpy>.
+
+        - EGL_BAD_ATTRIBUTE is generated by eglQueryStreamKHR if
+          <attribute> is not a valid EGLStream attribute with type
+          EGLint.
+
+        - EGL_BAD_ATTRIBUTE is generated by eglQueryStreamu64KHR if
+          <attribute> is not a valid EGLStream attribute with type
+          EGLuint64KHR.
+
+    3.10.4.3 EGL_STREAM_STATE_KHR Attribute
+
+    The EGL_STREAM_STATE_KHR attribute is read only.  It indicates the
+    state of the EGLStream.  The EGLStream may be in one of the
+    following states:
+
+        - EGL_STREAM_STATE_CREATED_KHR - The EGLStream has been created
+          but not yet connected to a producer or a consumer.
+
+        - EGL_STREAM_STATE_CONNECTING_KHR - The EGLStream has been
+          connected to a consumer but not yet connected to a producer.
+
+        - EGL_STREAM_STATE_EMPTY_KHR - the EGLStream has been connected
+          to a consumer and a producer, but the producer has not yet
+          inserted any image frames.
+
+        - EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR - the producer has
+          inserted at least one image frame that the consumer has not
+          yet retrieved.
+
+        - EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR - the producer has
+          inserted at least one image frame, and the consumer has
+          already retrieved the most recently inserted image frame.
+
+        - EGL_STREAM_STATE_DISCONNECTED_KHR - either the producer or the
+          consumer (or both) are no longer connected to the EGLStream
+          (e.g.  because they have been destroyed).  Once the
+          EGLStream is in this state it will remain in this state
+          until the EGLStream is destroyed.  In this state only
+          eglQueryStreamKHR and eglDestroyStreamKHR are valid
+          operations.
+
+    Only the following state transitions may occur:
+
+        -> EGL_STREAM_STATE_CREATED_KHR
+        A new EGLStream is created in this state.
+
+        EGL_STREAM_STATE_CREATED_KHR ->
+        EGL_STREAM_STATE_CONNECTING_KHR
+        Occurs when a consumer is connected to the EGLStream.
+
+        EGL_STREAM_STATE_CONNECTING_KHR ->
+        EGL_STREAM_STATE_EMPTY_KHR
+        Occurs when a producer is connected to the EGLStream.
+
+        EGL_STREAM_STATE_EMPTY_KHR ->
+        EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR
+        Occurs the first time the producer inserts an image frame.
+
+        EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR ->
+        EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR
+        Occurs when the consumer begins examining a newly inserted
+        image frame.
+
+        EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR ->
+        EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR
+        Occurs when the producer inserts a new image frame.
+
+        * ->
+        EGL_STREAM_STATE_DISCONNECTED_KHR
+        Occurs when the producer or consumer is destroyed or is
+        otherwise unable to function normally.
+
+
+    3.10.4.4 EGL_PRODUCER_FRAME_KHR Attribute
+
+    The EGL_PRODUCER_FRAME_KHR attribute indicates how many image
+    frames have been inserted into the EGLStream by the producer.
+    This is also known as the "frame number" of the most recently
+    inserted frame (where the first frame inserted has a frame number
+    of 1).  When EGL_STREAM_STATE_KHR is EGL_STREAM_STATE_CREATED_KHR,
+    EGL_STREAM_STATE_CONNECTING_KHR, or EGL_STREAM_STATE_EMPTY_KHR
+    then this value is 0.  This value will wrap back to 0 after
+    about 10 million millennia.
+
+    3.10.4.4 EGL_CONSUMER_FRAME_KHR Attribute
+
+    The EGL_CONSUMER_FRAME_KHR attribute indicates the frame number of
+    the image frame that the consumer most recently retrieved.  This is
+    the value that EGL_PRODUCER_FRAME_KHR contained just after this
+    image frame was inserted into the EGLStream.
+
+    3.10.4.5 EGL_CONSUMER_LATENCY_USEC_KHR Attribute
+
+    This attribute indicates the number of microseconds that elapse (on
+    average) from the time that an image frame is inserted into the
+    EGLStream by the producer until the image frame is visible to the
+    user.
+
+    It is the responsibility of the consumer to set this value.  Some
+    types of consumers may simply set this value to zero or an
+    implementation constant value.  Other consumers may adjust this
+    value dynamically as conditions change.
+
+    It is the responsibility of the producer to use this information to
+    insert image frames into the EGLStream at an appropriate time.
+    The producer should insert each image frame into the stream at the
+    time that frame should appear to the user MINUS the
+    EGL_CONSUMER_LATENCY_USEC_KHR value.  Some types of producers may
+    ignore this value.
+
+    The application may modify this value to adjust the timing of the
+    stream (e.g. to make video frames coincide with an audio track
+    under direction from a user).  However the value set by the
+    application may be overridden by some consumers that dynamically
+    adjust the value.  This will be noted in the description of
+    consumers which do this.
+
+If EGL_KHR_stream_attrib is present, add to the end of section "3.10.4.1
+Setting EGLStream Attributes"
+
+    Attributes may also be set by calling
+
+        EGLBoolean eglSetStreamAttribKHR(
+            EGLDisplay   dpy,
+            EGLStreamKHR stream,
+            EGLenum      attribute,
+            EGLAttrib    value);
+
+     This is equivalent to eglStreamAttribKHR, but allows attributes
+     with pointer and handle types, in addition to EGLint.
+
+If EGL_KHR_stream_attrib is present, add to the end of section "3.10.4.2
+Querying EGLStream Attributes"
+
+    Attributes may also be queried by calling
+
+        EGLBoolean eglQueryStreamAttribKHR(
+            EGLDisplay       dpy,
+            EGLStreamKHR     stream,
+            EGLenum          attribute,
+            EGLAttrib       *value);
+
+    This is equivalent to eglQueryStreamKHR, but allows attributes with
+    pointer and handle types, in addition to EGLint.
+
+Add sections 3.10.5 and 3.10.6 to section "3.10 EGLStreams"
+
+    3.10.5 EGLStream operation
+
+    3.10.5.1 EGLStream operation in mailbox mode
+
+    The EGLStream conceptually operates as a mailbox.
+
+    When the producer has a new image frame it empties the mailbox and
+    inserts the new image frame into the mailbox.  If the image frame
+    is intended to be displayed at time T then the producer must
+    insert it into the EGLStream at time
+        T - EGL_CONSUMER_LATENCY_USEC_KHR
+
+    The consumer retrieves the image frame from the mailbox and
+    examines it.  When the consumer is finished examining the image
+    frame it is either placed back in the mailbox (if the mailbox is
+    empty) or discarded (if the mailbox is not empty).
+
+    This operation implies 2 things:
+
+        - If the consumer consumes frames slower than the producer
+          inserts frames, then some frames may be lost (never seen by
+          the consumer).
+
+        - If the consumer consumes frames faster than the producer
+          inserts frames, then the consumer may see some frames more
+          than once.
+
+    Some details of EGLStream operation are dependent on the type of
+    producer and consumer that are connected to it.  Refer to the
+    documentation for the producer and consumer for more details
+    (section 3.10.2.* and 3.10.3.*).
+
+
+    3.10.6 Destroying an EGLStream
+
+    Call
+
+        EGLBoolean eglDestroyStreamKHR(
+          EGLDisplay   dpy,
+          EGLStreamKHR stream);
+
+    to mark an EGLStream for deletion.  After this call returns the
+    <stream> will no longer be a valid stream handle.  The resources
+    associated with the EGLStream may not be deleted until the
+    producer and consumer have released their references to the
+    resources (if any).  Exactly how this is done is dependent on the
+    type of consumer and producer that is connected to the EGLStream.
+
+    If an error occurs, EGL_FALSE is returned and an error is
+    generated.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStream created for <dpy>.
+
+
+Issues
+    1.  Are EGL_WIDTH and EGL_HEIGHT parameters needed?
+
+        RESOLVED: No.  The width and height of images managed by the
+        stream are determined by the producer.  No application access
+        to the size is currently required.
+
+    2.  Is EGL_BUFFER_SHOW_ALL_KHR required, or should the stream always
+        act as EGL_BUFFER_REPLACE_KHR?
+
+        RESOLVED: this has been removed.  The old
+        EGL_BUFFER_SHOW_ALL_KHR behavior is described in a separate
+        extension: EGL_KHR_stream_fifo
+
+    3.  What are the exact semantics of the producer?
+
+        RESOLVED:  The exact semantics vary depending on the type of
+        producer.  Refer to the extension that defines the type of
+        producer for more information.
+
+        In general, the producer is responsible for inserting image
+        frames into the EGLStream at the correct time.  The correct
+        time depends on how the image frames are being created and on
+        the value of EGL_CONSUMER_LATENCY_USEC_KHR.
+
+    4.  What are the exact semantics of the consumer?
+
+        RESOLVED:  The exact semantics vary depending on the type of
+        consumer.  Refer to the extension that defines the type of
+        consumer for more information.
+
+        In general, the consumer is responsible for retrieving image
+        frames from the EGLStream when they become available.  The
+        consumer is also responsible for setting the
+        EGL_CONSUMER_LATENCY_USEC_KHR when that is possible.
+
+    5.  When will the EGLStream resources be deleted?
+
+        RESOLVED: this depends on the type of consumer and producer.
+        Refer to the description of the consumer and producer (e.g. in
+        the extension that describes them).
+
+    6.  How does A/V sync work?
+
+        RESOLVED: The producer is responsible for A/V sync, but the
+        consumer needs to help.  The consumer indicates the latency
+        (the average time that it takes the consumer to retrieve an
+        image from the EGLStream and place it on the display screen)
+        by setting the EGL_CONSUMER_LATENCY_USEC_KHR.  The producer
+        uses knowledge about the audio stream to determine the correct
+        time to display an image frame, and inserts the image frame at
+        that time MINUS the EGL_CONSUMER_LATENCY_USEC_KHR.
+
+    7.  What if the consumer cannot determine the latency?
+
+        RESOLVED: If the consumer does not set the
+        EGL_CONSUMER_LATENCY_USEC_KHR attribute then its default value
+        will be used.  This default value is implementation defined
+        and may be zero.  See the description of the specific type of
+        consumer you are using (e.g. the extension that defines it)
+        for more details related to that consumer.
+
+    8.  What colorformats are supported by EGLStream
+
+        RESOLVED: No specific formats are required, but it is expected
+        that this work with the main YUV formats supported by the
+        platform's video HW and the main RGB(A) formats supported by
+        the platform's OpenGL (ES) hardware.  It is the responsibility
+        of the producer to negotiate a format that will work with the
+        consumer.  If the internal formats supported by the producer
+        do not coincide with the internal formats supported by the
+        consumer then the producer may choose to convert to a format
+        that the consumer understands, or it may choose to fail and
+        generate an error when an attempt is made to connect it to the
+        EGLStream.  Exactly which it does for which formats is further
+        discussed in the producer endpoint documentation (refer to the
+        extension that describes the producer endpoint).
+
+    9.  Is any EGLImage extension required by this extension?
+
+        RESOLVED: No. This extension may be implemented using some of
+        the same code that is used to implement EGLImages, but there
+        is no dependency on EGLImages.
+
+    10. Why describe the "io" attribute type if no attributes use it.
+
+        RESOLVED: Future extensions will add attributes of "io" type
+        (initialize only - meaning they can be set in the attribute
+        list when creating the EGLStream, but not modified once the
+        EGLStream is created).  Rather than requiring each such
+        extension to describe the "io" type (and possibly getting
+        slightly different definitions or types in different
+        extensions) the "io" type is defined here so that other
+        extensions can easily use it.  This helps layered
+        extensions to all use the same language.
+
+
+Revision History
+
+    #27 (May 23, 2016) Daniel Kartch
+        - For compatibility with EGL 1.5 and support of 64-bit
+          platforms, add EGL_KHR_stream_attrib extension with variants
+          of original functions that accept attributes of type
+          EGLAttrib.
+        - Corrected line length violations.
+
+    #26 (July 12, 2012) Acorn Pooley
+        - Fix error in description of consumer latency.
+
+    #25 (October 12, 2011) Acorn Pooley
+        - Add issue 10
+
+    #24 (October 11, 2011) Acorn Pooley
+        - add error condition to eglDestroyStreamKHR
+
+    #23 (October 5, 2011) Acorn Pooley
+        - refer to related EGL_KHR_... extension specs rather than
+          EGL_NV_... ones.
+
+    #22 (September 27, 2011) Acorn Pooley
+        - Fix enum value for EGL_STREAM_STATE_KHR (bug 8064)
+
+    #21 (September 27, 2011) Acorn Pooley
+        - Assign enum values (bug 8064)
+
+    #20 (September 23, 2011) Acorn Pooley
+        - Rename EGL_NO_IMAGE_STREAM_KHR to EGL_NO_STREAM_KHR
+
+    #19 (Aug 3, 2011) Acorn Pooley
+        - fix some error conditions
+
+    #18 (Aug 2, 2011) Acorn Pooley
+        - Add eglQueryStreamu64KHR
+        - add EGLuint64KHR
+        - make EGL_PRODUCER_FRAME_KHR and EGL_CONSUMER_FRAME_KHR 64
+          bit.
+
+    #17 (Aug 2, 2011) Acorn Pooley
+        - fix grammar
+
+    #16 (July 6, 2011) Acorn Pooley
+        - rename from EGL_KHR_image_stream to EGL_KHR_stream
+
+    #15 (June 29, 2011) Acorn Pooley
+        - major re-write
+        - remove EGL_SWAP_MODE_KHR and EGL_BUFFER_SHOW_ALL_KHR
+        - add new functions:
+            eglStreamAttribKHR
+            eglQueryStreamKHR
+        - add new attributes:
+            EGL_CONSUMER_LATENCY_USEC_KHR
+            EGL_PRODUCER_FRAME_KHR
+            EGL_CONSUMER_FRAME_KHR
+            EGL_STREAM_STATE_KHR
+        - add concept of EGL_STREAM_STATE_KHR
+        - add new error:
+            EGL_BAD_STATE_KHR
+        - add more thorough overview section
+        - add description of buffering
+        - place the functions in section 3 of the spec (were in
+          section 2)
+        - mention some of the consumer and producer specs that may be
+          needed to make use of this extension.
+        - remove very old issues that no longer make any sense
+        - add new issues and resolutions
+
+    #14 (June 4, 2010) Greg Prisament
+        - fix minor typo
+
+    #13 (June 2, 2010) Marcus Lorentzon
+        - add EGL enum values
+
+    #12 (May 21, 2010) Marcus Lorentzon
+        - add clarifications on swap modes
+
+    #11 (April 13, 2010) Marcus Lorentzon
+        - fix tyops
+        - make eglDestroyStream return EGLBoolean, not void
+
+    #10 (March 17, 2010) Marcus Lorentzon
+        - fix typo
+        - remove obsolete text
+        - update issue 2 resolution
+
+    #9  (December 15, 2009) Marcus Lorentzon
+        - move EGL_IMAGE_USE_* attributes to the endpoint extension
+        - resolved issue 5
+
+    #8  (December 6, 2009) Marcus Lorentzon
+        - remove EGL_INIT_COLOR_KHR
+        - relax the definition of the Producer to allow not only video
+          frames to be generated
+        - clean up the language of recently produced, supplied, pending
+          images
+
+    #7  (October 19, 2009) Acorn Pooley
+        - Update based on comments from Robert and Bruce
+        - remove mention of OpenWF
+        - make EGL_BUFFER_REPLACE_KHR be the default EGL_SWAP_MODE_KHR
+        - add issue 5
+        - remove EGLAPI and EGLAPIENTRY
+
+    #6  (September 16, 2009) Acorn Pooley
+        - remove EGL_WIDTH and EGL_HEIGHT parameters
+        - add issue 4
+        - clarify swap modes
+        - other clarifications and simplifications
+
+    #5  (July 2, 2009) Acorn Pooley
+        - remove reference to no-longer-existing <images> parameter.
+        - mention dependancy on EGL_KHR_image_uses extension.
+        - add description of EGL_IMAGE_USE_AS_* enums.
+
+    #4  (June 3, 2009) Acorn Pooley
+        - Fix typos: change old EGLImageStream occurances to EGLStream
+
+    #3  (April 22, 2009) Marcus Lorentzon
+        - Updated revide comments
+        - Removed external image support
+
+    #2  (March 30, 2009) Marcus Lorentzon
+        - Replaced image surface with image stream
+
+    #1  (February 21, 2009) Marcus Lorentzon
+        - Initial draft
+
+# vim:ai:ts=4:sts=4:expandtab:textwidth=70

@@ -53,7 +53,7 @@ namespace wgpu {
 namespace interop {
 
 struct Constructors : public ManualConstructors {
-  Constructors(Napi::Env env) : ManualConstructors(env) {}
+  explicit Constructors(Napi::Env env) : ManualConstructors(env) {}
 {{   range $ := .Declarations}}
 {{-     if and (IsInterfaceOrNamespace $) (not (HasAnnotation $ "ManualImplementation"))}}
   Napi::FunctionReference {{$.Name}}_ctor;
@@ -149,7 +149,11 @@ public:
     return Bind(env, std::make_unique<T>(std::forward<ARGS>(args)...));
   }
 {{-  end}}
-  virtual ~{{$.Name}}() {{- if $.Inherits }} override{{end}};
+{{-  if $.Inherits}}
+  ~{{$.Name}}() override;
+{{-  else}}
+  virtual ~{{$.Name}}();
+{{-  end}}
   {{$.Name}}();
 {{-  if $s := SetlikeOf $}}
 {{-    template "InterfaceSetlike" $s}}

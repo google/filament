@@ -26,9 +26,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -53,6 +53,9 @@ TEST_P(ClipDistancesTest, UseClipDistances) {
 
     // TODO(chromium:358408571): Investigate why the tests fail on Vulkan Android Pixel 4 bot
     DAWN_SUPPRESS_TEST_IF(IsVulkan() && IsAndroid() && IsQualcomm());
+
+    // TODO(crbug.com/518857260): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
 
     // Draw a square with two triangles (top-right and bottom left), whose vertices have different
     // clip distances values. (Top Left: -1, Bottom Right: 1 Top Right & Bottom Left: 0)

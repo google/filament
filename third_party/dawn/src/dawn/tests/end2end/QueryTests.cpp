@@ -27,15 +27,16 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
 
 // Clear the content of the result buffer into 0xFFFFFFFF.
-constexpr static uint64_t kSentinelValue = ~uint64_t(0u);
+constexpr static uint64_t kSentinelValue = ~uint64_t{0};
 constexpr static uint64_t kZero = 0u;
 constexpr static unsigned int kRTSize = 4;
 constexpr uint64_t kMinDestinationOffset = kQueryResolveAlignment;
@@ -74,16 +75,17 @@ class OcclusionExpectation : public detail::Expectation {
         DAWN_ASSERT(size % sizeof(uint64_t) == 0);
         const uint64_t* actual = static_cast<const uint64_t*>(data);
         for (size_t i = 0; i < size / sizeof(uint64_t); i++) {
-            if (actual[i] == kSentinelValue) {
+            if (DAWN_UNSAFE_TODO(actual[i]) == kSentinelValue) {
                 return testing::AssertionFailure()
                        << "Data[" << i << "] was not written (it kept the sentinel value of "
                        << kSentinelValue << ").\n";
             }
-            if (mExpected == Result::Zero && actual[i] != 0) {
+            if (mExpected == Result::Zero && DAWN_UNSAFE_TODO(actual[i]) != 0) {
                 return testing::AssertionFailure()
-                       << "Expected data[" << i << "] to be zero, actual: " << actual[i] << ".\n";
+                       << "Expected data[" << i
+                       << "] to be zero, actual: " << DAWN_UNSAFE_TODO(actual[i]) << ".\n";
             }
-            if (mExpected == Result::NonZero && actual[i] == 0) {
+            if (mExpected == Result::NonZero && DAWN_UNSAFE_TODO(actual[i]) == 0) {
                 return testing::AssertionFailure()
                        << "Expected data[" << i << "] to be non-zero.\n";
             }
@@ -399,6 +401,46 @@ TEST_P(OcclusionQueryTests, ResolveWithoutWritten) {
     EXPECT_BUFFER_U64_RANGE_EQ(&kZero, destination, 0, 1);
 }
 
+// Test that if an encoder records a query but is discarded (not submitted), the query remains
+// unavailable and is zero-initialized during resolution.
+TEST_P(OcclusionQueryTests, UnsubmittedEncoderMarksQueryAvailable) {
+    constexpr uint32_t kQueryCount = 16;
+
+    wgpu::QuerySet querySet = CreateOcclusionQuerySet(kQueryCount);
+    wgpu::Buffer destination = CreateResolveBuffer(kQueryCount * sizeof(uint64_t));
+    // Initialize destination buffer with a sentinel value.
+    std::vector<uint64_t> sentinelValues(kQueryCount, kSentinelValue);
+    queue.WriteBuffer(destination, 0, sentinelValues.data(), kQueryCount * sizeof(uint64_t));
+
+    // 1. Create a "Phantom" encoder, record occlusion queries, but discard it.
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::Texture renderTarget = CreateRenderTexture(kColorFormat);
+        utils::ComboRenderPassDescriptor renderPass({renderTarget.CreateView()});
+        renderPass.occlusionQuerySet = querySet;
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        for (uint32_t i = 0; i < kQueryCount; ++i) {
+            pass.BeginOcclusionQuery(i);
+            pass.EndOcclusionQuery();
+        }
+        pass.End();
+        encoder.Finish();
+        // Encoder is discarded here without being submitted.
+    }
+
+    // 2. Create a "Resolving" encoder and resolve the query set.
+    // Even though queries were "recorded" in the phantom encoder, it was never submitted.
+    // Dawn should see them as unavailable and zero-initialize them during resolution.
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    encoder.ResolveQuerySet(querySet, 0, kQueryCount, destination, 0);
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // 3. Verify that the destination buffer contains 0.
+    std::vector<uint64_t> expectedZeros(kQueryCount, 0);
+    EXPECT_BUFFER_U64_RANGE_EQ(expectedZeros.data(), destination, 0, kQueryCount);
+}
+
 // Test setting an occlusion query to non-zero, then rewriting it without drawing, resolves to 0.
 TEST_P(OcclusionQueryTests, RewriteNoDrawToZero) {
     // TODO(dawn:1870): D3D11_QUERY_OCCLUSION_PREDICATE doesn't work on Intel Gen12.
@@ -627,6 +669,66 @@ TEST_P(OcclusionQueryTests, ResolveToBufferWithOffset) {
     }
 }
 
+// Test that resolving with firstQuery != 0 works as expected.
+TEST_P(OcclusionQueryTests, ResolveWithFirstQuery) {
+    // TODO(crbug.com/523134900): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && (IsVulkan() || IsOpenGLES()));
+
+    // Create a query set for 2 queries, the second of which will be resolved in the buffer.
+    constexpr uint32_t kQueryCount = 2;
+    wgpu::QuerySet querySet = CreateOcclusionQuerySet(kQueryCount);
+    wgpu::Buffer destination = CreateResolveBuffer(sizeof(uint64_t));
+
+    // Fill occlusion query 1 with some data.
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
+    renderPass.renderPassInfo.occlusionQuerySet = querySet;
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass.renderPassInfo);
+    pass.SetPipeline(pipeline);
+    pass.BeginOcclusionQuery(1);
+    pass.Draw(3);
+    pass.EndOcclusionQuery();
+    pass.End();
+
+    // Resolve with firstQuery = 1
+    encoder.ResolveQuerySet(querySet, 1, 1, destination, 0);
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER(destination, 0, sizeof(uint64_t),
+                  new OcclusionExpectation(OcclusionExpectation::Result::NonZero));
+}
+
+// Regression test for https://crbug.com/536641544 where the Vulkan backend does a vkCmdFillBuffer
+// of size 0 (which is not allowed) when 0 queries are resolved.
+TEST_P(OcclusionQueryTests, ResolveZeroQueries) {
+    wgpu::QuerySet querySet = CreateOcclusionQuerySet(1);
+    wgpu::Buffer destination = CreateResolveBuffer(sizeof(uint64_t));
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    encoder.ResolveQuerySet(querySet, 0, 0, destination, 0);
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+}
+
+// Regression test for https://crbug.com/541130706 where the skipping of empty resolves would
+// take a pointer to the WebGPU objects but fail to take a ref to them.
+TEST_P(OcclusionQueryTests, ResolveZeroQueriesEarlyObjectDestroy) {
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::QuerySet querySet = CreateOcclusionQuerySet(1);
+        wgpu::Buffer destination = CreateResolveBuffer(sizeof(uint64_t));
+
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        encoder.ResolveQuerySet(querySet, 0, 0, destination, 0);
+
+        commands = encoder.Finish();
+    }
+    queue.Submit(1, &commands);
+}
+
 class TimestampExpectation : public detail::Expectation {
   public:
     ~TimestampExpectation() override = default;
@@ -636,7 +738,7 @@ class TimestampExpectation : public detail::Expectation {
         DAWN_ASSERT(size % sizeof(uint64_t) == 0);
         const uint64_t* timestamps = static_cast<const uint64_t*>(data);
         for (size_t i = 0; i < size / sizeof(uint64_t); i++) {
-            if (timestamps[i] == 0) {
+            if (DAWN_UNSAFE_TODO(timestamps[i]) == 0) {
                 return testing::AssertionFailure()
                        << "Expected data[" << i << "] to be greater than 0.\n";
             }
@@ -656,6 +758,9 @@ class TimestampQueryTestsBase : public QueryTests {
 
         // TODO(crbug.com/451389800): [Capture] implement query set.
         DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
+        // TODO(crbug.com/502083482): Flakes on Windows 11/AMD RX 5500 XT.
+        DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsVulkan());
     }
 
     wgpu::QuerySet CreateQuerySetForTimestamp(uint32_t queryCount) {
@@ -673,9 +778,6 @@ class TimestampQueryTests : public TimestampQueryTestsBase {
 
         // Skip all tests if timestamp feature is not supported
         DAWN_TEST_UNSUPPORTED_IF(!SupportsFeatures({wgpu::FeatureName::TimestampQuery}));
-
-        // TODO(crbug.com/502083482): Flakes on Windows 11/AMD RX 5500 XT.
-        DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsVulkan());
 
         // Create basic compute pipeline
         wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
@@ -895,6 +997,9 @@ TEST_P(TimestampQueryTests, QuerySetCreation) {
 
 // Test calling timestamp query from command encoder
 TEST_P(TimestampQueryTests, TimestampOnCommandEncoder) {
+    // TODO (530541262): Investigate failure on macOS 26 M2.
+    DAWN_SUPPRESS_TEST_IF(IsMetal() && IsApple());
+
     constexpr uint32_t kQueryCount = 2;
 
     // Write timestamp with different query indexes
@@ -1068,6 +1173,9 @@ TEST_P(TimestampQueryTests, ResolveFromAnotherEncoder) {
 
 // Test resolving timestamp query correctly if the queries are written sparsely
 TEST_P(TimestampQueryTests, ResolveSparseQueries) {
+    // TODO (530541262): Investigate failure on macOS 26 M2.
+    DAWN_SUPPRESS_TEST_IF(IsMetal() && IsApple());
+
     constexpr uint32_t kQueryCount = 4;
 
     wgpu::QuerySet querySet = CreateQuerySetForTimestamp(kQueryCount);
@@ -1112,8 +1220,45 @@ TEST_P(TimestampQueryTests, ResolveWithoutWritten) {
     EXPECT_BUFFER_U64_RANGE_EQ(expectedZeros.data(), destination, 0, kQueryCount);
 }
 
+// Test that if an encoder records a timestamp query but is discarded (not submitted), the query
+// remains unavailable and is zero-initialized during resolution.
+TEST_P(TimestampQueryTests, UnsubmittedEncoderMarksQueryAvailable) {
+    constexpr uint32_t kQueryCount = 16;
+
+    wgpu::QuerySet querySet = CreateQuerySetForTimestamp(kQueryCount);
+    wgpu::Buffer destination = CreateResolveBuffer(kQueryCount * sizeof(uint64_t));
+    // Initialize destination buffer with a sentinel value.
+    std::vector<uint64_t> sentinelValues(kQueryCount, kSentinelValue);
+    queue.WriteBuffer(destination, 0, sentinelValues.data(), kQueryCount * sizeof(uint64_t));
+
+    // 1. Create a "Phantom" encoder, record timestamp queries, but discard it.
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        for (uint32_t i = 0; i < kQueryCount; ++i) {
+            encoder.WriteTimestamp(querySet, i);
+        }
+        encoder.Finish();
+        // Encoder is discarded here and never submitted.
+    }
+
+    // 2. Create a "Resolving" encoder and resolve the query set.
+    // Even though queries were "recorded" in the phantom encoder, it was never submitted.
+    // Dawn should see them as unavailable and zero-initialize them during resolution.
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    encoder.ResolveQuerySet(querySet, 0, kQueryCount, destination, 0);
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // 3. Verify that the destination buffer contains 0.
+    std::vector<uint64_t> expectedZeros(kQueryCount, 0);
+    EXPECT_BUFFER_U64_RANGE_EQ(expectedZeros.data(), destination, 0, kQueryCount);
+}
+
 // Test resolving timestamp query to one slot in the buffer
 TEST_P(TimestampQueryTests, ResolveToBufferWithOffset) {
+    // TODO (530541262): Investigate failure on macOS 26 M2.
+    DAWN_SUPPRESS_TEST_IF(IsMetal() && IsApple());
+
     constexpr uint32_t kQueryCount = 2;
     constexpr uint64_t kBufferSize = kQueryCount * sizeof(uint64_t) + kMinDestinationOffset;
     constexpr uint64_t kCount = kQueryCount + kMinCount;
@@ -1156,9 +1301,34 @@ TEST_P(TimestampQueryTests, ResolveToBufferWithOffset) {
     }
 }
 
+// Test that resolving with firstQuery != 0 works as expected.
+TEST_P(TimestampQueryTests, ResolveWithFirstQuery) {
+    // TODO (530541262): Investigate failure on macOS 26 M2.
+    DAWN_SUPPRESS_TEST_IF(IsMetal() && IsApple());
+
+    // Create a query set for 2 queries, the second of which will be resolved in the buffer.
+    constexpr uint32_t kQueryCount = 2;
+    wgpu::QuerySet querySet = CreateQuerySetForTimestamp(kQueryCount);
+    wgpu::Buffer destination = CreateResolveBuffer(sizeof(uint64_t));
+
+    // Fill occlusion query 1 with some data.
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    encoder.WriteTimestamp(querySet, 1);
+
+    // Resolve with firstQuery = 1
+    encoder.ResolveQuerySet(querySet, 1, 1, destination, 0);
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER(destination, 0, sizeof(uint64_t), new TimestampExpectation);
+}
+
 // Test resolving a query set twice into the same destination buffer with potentially overlapping
 // ranges
 TEST_P(TimestampQueryTests, ResolveTwiceToSameBuffer) {
+    // TODO (530541262): Investigate failure on macOS 26 M2.
+    DAWN_SUPPRESS_TEST_IF(IsMetal() && IsApple());
     constexpr uint32_t kQueryCount = kMinCount + 2;
 
     wgpu::QuerySet querySet = CreateQuerySetForTimestamp(kQueryCount);
@@ -1342,6 +1512,7 @@ DAWN_INSTANTIATE_TEST(OcclusionQueryTests,
                       OpenGLBackend(),
                       OpenGLESBackend(),
                       VulkanBackend(),
+                      VulkanBackend({"clear_buffer_before_resolve_queries"}),
                       WebGPUBackend());
 DAWN_INSTANTIATE_TEST(TimestampQueryTests,
                       D3D11Backend(),

@@ -32,19 +32,20 @@
 #include <utility>
 
 #include "src/tint/lang/core/ir/module.h"
-#include "src/tint/lang/core/ir/transform/array_length_from_immediate.h"
-#include "src/tint/lang/core/ir/transform/array_length_from_uniform.h"
+#include "src/tint/lang/core/ir/transform/array_length_from.h"
 #include "src/tint/lang/core/ir/transform/binary_polyfill.h"
 #include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/core/ir/transform/builtin_polyfill.h"
 #include "src/tint/lang/core/ir/transform/builtin_scalarize.h"
 #include "src/tint/lang/core/ir/transform/change_immediate_to_uniform.h"
+#include "src/tint/lang/core/ir/transform/collapse_subgroup_min_max.h"
 #include "src/tint/lang/core/ir/transform/conversion_polyfill.h"
 #include "src/tint/lang/core/ir/transform/decompose_access.h"
 #include "src/tint/lang/core/ir/transform/demote_to_helper.h"
 #include "src/tint/lang/core/ir/transform/direct_variable_access.h"
 #include "src/tint/lang/core/ir/transform/multiplanar_external_texture.h"
 #include "src/tint/lang/core/ir/transform/prevent_infinite_loops.h"
+#include "src/tint/lang/core/ir/transform/propagate_buffer_sizes.h"
 #include "src/tint/lang/core/ir/transform/remove_continue_in_switch.h"
 #include "src/tint/lang/core/ir/transform/remove_terminator_args.h"
 #include "src/tint/lang/core/ir/transform/rename_conflicts.h"
@@ -65,6 +66,7 @@
 #include "src/tint/lang/hlsl/writer/raise/array_offset_from_uniform.h"
 #include "src/tint/lang/hlsl/writer/raise/binary_polyfill.h"
 #include "src/tint/lang/hlsl/writer/raise/builtin_polyfill.h"
+#include "src/tint/lang/hlsl/writer/raise/decompose_snorm10_10_10_2.h"
 #include "src/tint/lang/hlsl/writer/raise/decompose_storage_access.h"
 #include "src/tint/lang/hlsl/writer/raise/extract_ternary_values.h"
 #include "src/tint/lang/hlsl/writer/raise/localize_struct_array_assignment.h"
@@ -72,8 +74,10 @@
 #include "src/tint/lang/hlsl/writer/raise/promote_initializers.h"
 #include "src/tint/lang/hlsl/writer/raise/replace_default_only_switch.h"
 #include "src/tint/lang/hlsl/writer/raise/replace_non_indexable_mat_vec_stores.h"
+#include "src/tint/lang/hlsl/writer/raise/replace_subgroup_matrix_init.h"
 #include "src/tint/lang/hlsl/writer/raise/resource_table_helper.h"
 #include "src/tint/lang/hlsl/writer/raise/shader_io.h"
+#include "src/tint/lang/hlsl/writer/raise/split_workgroup_atomics.h"
 
 namespace tint::hlsl::writer {
 
@@ -82,6 +86,8 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
 
     TINT_CHECK_RESULT(
         core::ir::transform::SubstituteOverrides(module, options.substitute_overrides_config));
+
+    TINT_CHECK_RESULT(core::ir::transform::PropagateBufferSizes(module));
 
     // PopulateBindingRelatedOptions must come before PrepareImmediateData so that
     // buffer_sizes_offset is available when configuring immediate data.
@@ -113,45 +119,46 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
     }
 
     if (options.num_workgroups_start_offset) {
+        // Store num_workgroups as a struct of three u32 members rather than a vec3<u32> so it only
+        // requires 4-byte alignment. A vec3<u32> requires 16-byte alignment, which cannot be
+        // guaranteed when the internal immediate follows a user immediate block whose size is not a
+        // multiple of 16.
+        auto* num_workgroups_type = module.Types().Struct(
+            module.symbols.New("tint_num_workgroups_struct"),
+            {
+                {module.symbols.New("num_workgroups_x"), module.Types().u32()},
+                {module.symbols.New("num_workgroups_y"), module.Types().u32()},
+                {module.symbols.New("num_workgroups_z"), module.Types().u32()},
+            });
         TINT_CHECK_RESULT(immediate_data_config.AddInternalImmediateData(
             options.num_workgroups_start_offset.value(),
-            module.symbols.New("tint_num_workgroups_start_offset"), module.Types().vec3u()));
+            module.symbols.New("tint_num_workgroups_start_offset"), num_workgroups_type));
     }
 
     if (array_length_from_uniform_options.buffer_sizes_offset) {
-        // Find the largest index declared in the map, in order to determine the number of
-        // elements needed in the array of buffer sizes. The buffer sizes will be packed into
-        // vec4s to satisfy the 16-byte alignment requirement for array elements in constant
-        // buffers.
         uint32_t max_index = 0;
         for (const auto& entry : array_length_from_uniform_options.bindpoint_to_size_index) {
             max_index = std::max(max_index, entry.second);
         }
-        buffer_sizes_array_elements_num = (max_index / 4) + 1;
+        buffer_sizes_array_elements_num = max_index + 1;
 
         TINT_CHECK_RESULT(immediate_data_config.AddInternalImmediateData(
             array_length_from_uniform_options.buffer_sizes_offset.value(),
             module.symbols.New("buffer_sizes"),
-            module.Types().array(module.Types().vec4<core::u32>(),
-                                 buffer_sizes_array_elements_num)));
+            module.Types().array(module.Types().u32(), buffer_sizes_array_elements_num)));
     }
 
     if (array_offset_from_uniform_options.buffer_offsets_offset) {
-        // Find the largest index declared in the map, in order to determine the number of
-        // elements needed in the array of buffer offsets. The buffer offsets will be packed into
-        // vec4s to satisfy the 16-byte alignment requirement for array elements in constant
-        // buffers.
         uint32_t max_index = 0;
         for (const auto& entry : array_offset_from_uniform_options.bindpoint_to_offset_index) {
             max_index = std::max(max_index, entry.second);
         }
-        buffer_offsets_array_elements_num = (max_index / 4) + 1;
+        buffer_offsets_array_elements_num = max_index + 1;
 
         TINT_CHECK_RESULT(immediate_data_config.AddInternalImmediateData(
             array_offset_from_uniform_options.buffer_offsets_offset.value(),
             module.symbols.New("buffer_offsets"),
-            module.Types().array(module.Types().vec4<core::u32>(),
-                                 buffer_offsets_array_elements_num)));
+            module.Types().array(module.Types().u32(), buffer_offsets_array_elements_num)));
     }
 
     TINT_CHECK_RESULT_UNWRAP(immediate_data_layout, core::ir::transform::PrepareImmediateData(
@@ -286,6 +293,8 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         TINT_CHECK_RESULT(raise::ShaderIO(module, config));
     }
 
+    TINT_CHECK_RESULT(raise::DecomposeSnorm10_10_10_2(module, options.snorm10_10_10_2_locations));
+
     // DemoteToHelper must come before any transform that introduces non-core instructions.
     // Run after ShaderIO to ensure the discards are added to the entry point it introduces.
     // TODO(crbug.com/42250787): This is only necessary when FXC is being used.
@@ -293,10 +302,20 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         TINT_CHECK_RESULT(core::ir::transform::DemoteToHelper(module));
     }
     TINT_CHECK_RESULT(core::ir::transform::DirectVariableAccess(
-        module, core::ir::transform::DirectVariableAccessOptions{}));
+        module, core::ir::transform::DirectVariableAccessConfig{}));
+
+    // Split workgroup variables that contain atomics into separate data and atomic variables.
+    // Must run after DirectVariableAccess and before DecomposeAccess.
+    if (options.workarounds.d3d12_decompose_workgroup_access) {
+        TINT_CHECK_RESULT(raise::SplitWorkgroupAtomics(module));
+    }
 
     // DecomposeStorageAccess must come after Robustness and DirectVariableAccess
     TINT_CHECK_RESULT(raise::DecomposeStorageAccess(module));
+
+    // DecomposeAccess must come after DecomposeStorageAccess. No address spaces enabled. Just
+    // decompose buffers.
+    TINT_CHECK_RESULT(core::ir::transform::DecomposeAccess(module, {}));
 
     // ArrayOffsetFrom* transforms must come after both DirectVariableAccess and
     // DecomposeStorageAccess, and BEFORE ChangeImmediateToUniform.
@@ -340,7 +359,10 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
 
     // DecomposeAccess must come after DecomposeStorageAccess, ChangeImmediateToUniform, and
     // ArrayOffsetFrom* transforms
-    core::ir::transform::DecomposeAccessOptions decompose_config{.uniform = true};
+    core::ir::transform::DecomposeAccessConfig decompose_config;
+    decompose_config.uniform = true;
+    decompose_config.workgroup_subgroup_matrix = true;
+    decompose_config.workgroup = options.workarounds.d3d12_decompose_workgroup_access;
     TINT_CHECK_RESULT(core::ir::transform::DecomposeAccess(module, decompose_config));
 
     // PixelLocal must run after DirectVariableAccess to avoid chasing pointer parameters.
@@ -348,6 +370,10 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         raise::PixelLocalConfig config;
         config.options = options.pixel_local;
         TINT_CHECK_RESULT(raise::PixelLocal(module, config));
+    }
+
+    if (options.workarounds.collapse_subgroup_min_max) {
+        TINT_CHECK_RESULT(core::ir::transform::CollapseSubgroupMinMax(module));
     }
 
     TINT_CHECK_RESULT(raise::BinaryPolyfill(module));
@@ -359,7 +385,12 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
 
     // BuiltinPolyfill must come after BinaryPolyfill and DecomposeStorageAccess as they add
     // builtins
-    TINT_CHECK_RESULT(raise::BuiltinPolyfill(module));
+    {
+        raise::BuiltinPolyfillConfig config;
+        config.polyfill_trunc = (options.compiler == Options::Compiler::kFXC);
+        config.use_hlsl_2021_select = (options.compiler == Options::Compiler::kDXC_2021);
+        TINT_CHECK_RESULT(raise::BuiltinPolyfill(module, config));
+    }
     TINT_CHECK_RESULT(core::ir::transform::VectorizeScalarMatrixConstructors(module));
     TINT_CHECK_RESULT(core::ir::transform::RemoveContinueInSwitch(module));
 
@@ -367,10 +398,11 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
     // ternary builtins.
     TINT_CHECK_RESULT(raise::ExtractTernaryValues(module));
 
+    TINT_CHECK_RESULT(raise::ReplaceSubgroupMatrixInit(module));
+
     core::ir::transform::BuiltinScalarizeConfig scalarize_config{
-        .scalarize_clamp = options.workarounds.scalarize_max_min_clamp,
-        .scalarize_max = options.workarounds.scalarize_max_min_clamp,
-        .scalarize_min = options.workarounds.scalarize_max_min_clamp};
+        .scalarize_min_max_clamp = options.workarounds.scalarize_max_min_clamp,
+    };
     TINT_CHECK_RESULT(core::ir::transform::BuiltinScalarize(module, scalarize_config));
 
     // These transforms need to be run last as various transforms introduce terminator arguments,
@@ -383,7 +415,7 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         TINT_CHECK_RESULT(core::ir::transform::ValueToLet(module, cfg));
     }
 
-    // Anything which runs after this needs to handle `Capabilities::kAllowModuleScopedLets`
+    // Anything which runs after this needs to handle `Property::kAllowModuleScopedLets`
     TINT_CHECK_RESULT(raise::PromoteInitializers(module));
 
     return Success;

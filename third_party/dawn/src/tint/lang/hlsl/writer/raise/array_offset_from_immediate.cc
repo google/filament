@@ -57,7 +57,7 @@ struct State {
     /// The offset in immediate block for buffer offsets array.
     uint32_t buffer_offsets_offset = 0;
 
-    /// The total number of vec4s used to store buffer offsets provided in the immediate block.
+    /// The total number of u32 elements used to store buffer offsets in the immediate block.
     uint32_t buffer_offsets_array_elements_num = 0;
 
     /// The map from binding point to the element index which holds the offset into that buffer.
@@ -73,10 +73,8 @@ struct State {
     void Process() {
         // Validate that buffer_offsets_array_elements_num is large enough
         for (const auto& [binding_point, offset_index] : bindpoint_to_offset_index) {
-            uint32_t vec4_index = offset_index / 4;
-            if (vec4_index >= buffer_offsets_array_elements_num) {
+            if (offset_index >= buffer_offsets_array_elements_num) {
                 TINT_ICE() << "ArrayOffsetFromImmediates: offset_index " << offset_index
-                           << " requires vec4 element " << vec4_index
                            << " but buffer_offsets_array_elements_num is "
                            << buffer_offsets_array_elements_num;
             }
@@ -133,6 +131,8 @@ struct State {
                         case hlsl::BuiltinFn::kInterlockedAdd:
                         case hlsl::BuiltinFn::kInterlockedMax:
                         case hlsl::BuiltinFn::kInterlockedMin:
+                        case hlsl::BuiltinFn::kInterlockedMax64:
+                        case hlsl::BuiltinFn::kInterlockedMin64:
                         case hlsl::BuiltinFn::kInterlockedAnd:
                         case hlsl::BuiltinFn::kInterlockedOr:
                         case hlsl::BuiltinFn::kInterlockedXor:
@@ -173,6 +173,11 @@ struct State {
                         case hlsl::BuiltinFn::kF32Tof16:
                         case hlsl::BuiltinFn::kF16Tof32:
                         case hlsl::BuiltinFn::kMul:
+                        case hlsl::BuiltinFn::kMultiply:
+                        case hlsl::BuiltinFn::kMultiplyAccumulate:
+                        case hlsl::BuiltinFn::kGet:
+                        case hlsl::BuiltinFn::kSet:
+                        case hlsl::BuiltinFn::kLength:
                         case hlsl::BuiltinFn::kPackU8:
                         case hlsl::BuiltinFn::kPackS8:
                         case hlsl::BuiltinFn::kPackClampS8:
@@ -186,6 +191,7 @@ struct State {
                         case hlsl::BuiltinFn::kWaveReadLaneAt:
                         case hlsl::BuiltinFn::kModf:
                         case hlsl::BuiltinFn::kFrexp:
+                        case hlsl::BuiltinFn::kSelect:
                         case hlsl::BuiltinFn::kGatherCmp:
                         case hlsl::BuiltinFn::kGather:
                         case hlsl::BuiltinFn::kGatherAlpha:
@@ -199,6 +205,8 @@ struct State {
                         case hlsl::BuiltinFn::kSampleCmpLevelZero:
                         case hlsl::BuiltinFn::kSampleGrad:
                         case hlsl::BuiltinFn::kSampleLevel:
+                        case hlsl::BuiltinFn::kSplat:
+                        case hlsl::BuiltinFn::kCast:
                         case hlsl::BuiltinFn::kNone:
                             break;
                     }
@@ -210,18 +218,12 @@ struct State {
     /// Loads the storage buffer dynamic offset from the immediate block.
     /// @returns the loaded dynamic offset value
     Value* LoadDynamicOffset(uint32_t offset_index) {
-        // Load the dynamic offset from the immediate block.
-        // The offsets are packed into vec4s to satisfy the 16-byte alignment requirement for
-        // array elements in immediate block, so we have to find the vector and element that
-        // correspond to the index that we want.
-        const uint32_t array_index = offset_index / 4;
-        const uint32_t vec_index = offset_index % 4;
         auto* buffer_offsets = b.Access(
-            ty.ptr(immediate, ty.array(ty.vec4u(), buffer_offsets_array_elements_num)),
+            ty.ptr(immediate, ty.array(ty.u32(), buffer_offsets_array_elements_num)),
             immediate_data_layout.var, u32(immediate_data_layout.IndexOf(buffer_offsets_offset)));
-        auto* vec_ptr =
-            b.Access(ty.ptr(immediate, ty.vec4u()), buffer_offsets->Result(), u32(array_index));
-        return b.LoadVectorElement(vec_ptr, u32(vec_index))->Result();
+        auto* offset_ptr =
+            b.Access(ty.ptr(immediate, ty.u32()), buffer_offsets->Result(), u32(offset_index));
+        return b.Load(offset_ptr)->Result();
     }
 };
 
@@ -233,7 +235,7 @@ Result<SuccessType> ArrayOffsetFromImmediates(
     const uint32_t buffer_offsets_offset,
     const uint32_t buffer_offsets_array_elements_num,
     const std::unordered_map<BindingPoint, uint32_t>& bindpoint_to_offset_index) {
-    AssertValid(ir, kArrayOffsetFromImmediateCapabilities, "before core.ArrayOffsetFromImmediates");
+    AssertValid(ir, "before core.ArrayOffsetFromImmediates");
 
     State state{ir, immediate_data_layout, buffer_offsets_offset, buffer_offsets_array_elements_num,
                 bindpoint_to_offset_index};

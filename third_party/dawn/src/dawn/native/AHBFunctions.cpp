@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/AHBFunctions.h"
+#include "src/dawn/native/AHBFunctions.h"
 
 namespace dawn::native {
 
@@ -120,13 +120,14 @@ bool AHBFunctions::IsValid() const {
     return mNativeWindowLib.Valid();
 }
 
-SharedTextureMemoryProperties GetAHBSharedTextureMemoryProperties(
+AHBSharedTextureMemoryProperties GetAHBSharedTextureMemoryProperties(
     const AHBFunctions* ahbFunctions,
     ::AHardwareBuffer* aHardwareBuffer) {
     AHardwareBuffer_Desc aHardwareBufferDesc{};
     ahbFunctions->Describe(aHardwareBuffer, &aHardwareBufferDesc);
 
-    SharedTextureMemoryProperties properties;
+    AHBSharedTextureMemoryProperties ahbProperties = {};
+    SharedTextureMemoryProperties& properties = ahbProperties.properties;
     properties.size = {aHardwareBufferDesc.width, aHardwareBufferDesc.height,
                        aHardwareBufferDesc.layers};
     properties.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst;
@@ -139,9 +140,12 @@ SharedTextureMemoryProperties GetAHBSharedTextureMemoryProperties(
     if (aHardwareBufferDesc.usage & AHARDWAREBUFFER_USAGE_GPU_DATA_BUFFER) {
         properties.usage |= wgpu::TextureUsage::StorageBinding;
     }
+    if (aHardwareBufferDesc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) {
+        ahbProperties.isProtected = true;
+    }
     properties.format = FormatFromAHardwareBufferFormat(aHardwareBufferDesc.format);
 
-    return properties;
+    return ahbProperties;
 }
 
 }  // namespace dawn::native

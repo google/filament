@@ -35,7 +35,6 @@
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
-using ::testing::HasSubstr;
 
 namespace tint::core::constant::test {
 namespace {
@@ -64,8 +63,10 @@ Case C(Value lhs, Value rhs, Value expected) {
 }
 
 /// Convenience overload that creates a Case with just scalars
-template <typename T, typename U, typename V, typename = std::enable_if_t<!IsValue<T>>>
-Case C(T lhs, U rhs, V expected) {
+template <typename T, typename U, typename V>
+Case C(T lhs, U rhs, V expected)
+    requires(!IsValue<T>)
+{
     return Case{Val(lhs), Val(rhs), Case::Success{Val(expected)}};
 }
 
@@ -75,8 +76,10 @@ Case E(Value lhs, Value rhs, std::string error) {
 }
 
 /// Convenience overload that creates an error Case with just scalars
-template <typename T, typename U, typename = std::enable_if_t<!IsValue<T>>>
-Case E(T lhs, U rhs, std::string error) {
+template <typename T, typename U>
+Case E(T lhs, U rhs, std::string error)
+    requires(!IsValue<T>)
+{
     return Case{Val(lhs), Val(rhs), Case::Failure{std::move(error)}};
 }
 
@@ -1135,14 +1138,7 @@ TEST_F(ConstEvalTest, BinaryAbstractAddOverflow_AFloat) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
               "1:1 error: "
-              "'17976931348623157081452742373170435679807056752584499659891747680315726078002853876"
-              "058955863276687817154045895351438246423432132688946418276846754670353751698604991057"
-              "655128207624549009038932894407586850845513394230458323690322294816580855933212334827"
-              "4797826204144723168738177180919299881250404026184124858368.0 + "
-              "179769313486231570814527423731704356798070567525844996598917476803157260780028538760"
-              "589558632766878171540458953514382464234321326889464182768467546703537516986049910576"
-              "551282076245490090389328944075868508455133942304583236903222948165808559332123348274"
-              "797826204144723168738177180919299881250404026184124858368.0' cannot be "
+              "'1.7976931348623157e+308 + 1.7976931348623157e+308' cannot be "
               "represented as 'abstract-float'");
 }
 
@@ -1151,15 +1147,7 @@ TEST_F(ConstEvalTest, BinaryAbstractAddUnderflow_AFloat) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
               "1:1 error: "
-              "'-"
-              "179769313486231570814527423731704356798070567525844996598917476803157260780028538760"
-              "589558632766878171540458953514382464234321326889464182768467546703537516986049910576"
-              "551282076245490090389328944075868508455133942304583236903222948165808559332123348274"
-              "797826204144723168738177180919299881250404026184124858368.0 + "
-              "-17976931348623157081452742373170435679807056752584499659891747680315726078002853876"
-              "058955863276687817154045895351438246423432132688946418276846754670353751698604991057"
-              "655128207624549009038932894407586850845513394230458323690322294816580855933212334827"
-              "4797826204144723168738177180919299881250404026184124858368.0' cannot be "
+              "'-1.7976931348623157e+308 + -1.7976931348623157e+308' cannot be "
               "represented as 'abstract-float'");
 }
 
@@ -1661,13 +1649,8 @@ TEST_F(ConstEvalTest, NonShortCircuit_And_Invalid_Materialize) {
     GlobalConst("result", binary);
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        "12:34 error: value "
-        "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558"
-        "632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245"
-        "490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168"
-        "738177180919299881250404026184124858368.0 cannot be represented as 'f32'");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: value 1.7976931348623157e+308 cannot be represented as 'f32'");
 }
 
 TEST_F(ConstEvalTest, ShortCircuit_And_Error_Materialize) {
@@ -1714,13 +1697,8 @@ TEST_F(ConstEvalTest, NonShortCircuit_Or_Invalid_Materialize) {
     GlobalConst("result", binary);
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        "12:34 error: value "
-        "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558"
-        "632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245"
-        "490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168"
-        "738177180919299881250404026184124858368.0 cannot be represented as 'f32'");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: value 1.7976931348623157e+308 cannot be represented as 'f32'");
 }
 
 TEST_F(ConstEvalTest, ShortCircuit_Or_Error_Materialize) {

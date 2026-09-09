@@ -7,9 +7,9 @@ open fun [computePracticalSplits](compute-practical-splits.md)(splitPositions: [
 
 Utility method to compute [cascadeSplitPositions](../-shadow-options/cascade-split-positions.md) according to a practical split scheme. 
 
- The practical split scheme uses uses a lambda value to interpolate between the logrithmic and uniform split schemes. Start with a lambda value of 0.5f and adjust for your scene. 
+ The practical split scheme uses a lambda value to interpolate between the logrithmic and uniform split schemes. Start with a lambda value of 0.5f and adjust for your scene. 
 
- See: Zhang et al 2006, &quot;Parallel-split shadow maps for large-scale virtual environments&quot;
+ See: Zhang et al. 2006, &quot;Parallel-split shadow maps for large-scale virtual environments&quot;
 
 #### Parameters
 

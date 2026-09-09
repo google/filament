@@ -31,13 +31,14 @@
 #include <array>
 #include <vector>
 
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {
 
 class Device;
 class PersistentPipelineState;
+class PipelineStateTracker;
 class ScopedSwapStateCommandRecordingContext;
 
 class RenderPipeline final : public RenderPipelineBase {
@@ -46,13 +47,11 @@ class RenderPipeline final : public RenderPipelineBase {
         Device* device,
         const UnpackedPtr<RenderPipelineDescriptor>& descriptor);
 
-    void ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext,
+    void ApplyNow(PipelineStateTracker* tracker,
                   const std::array<float, 4>& blendColor,
                   uint32_t stencilReference);
-    void ApplyBlendState(const ScopedSwapStateCommandRecordingContext* commandContext,
-                         const std::array<float, 4>& blendColor);
-    void ApplyDepthStencilState(const ScopedSwapStateCommandRecordingContext* commandContext,
-                                uint32_t stencilReference);
+    void ApplyBlendState(PipelineStateTracker* tracker, const std::array<float, 4>& blendColor);
+    void ApplyDepthStencilState(PipelineStateTracker* tracker, uint32_t stencilReference);
 
     ID3D11VertexShader* GetD3D11VertexShaderForTesting();
     ID3D11PixelShader* GetD3D11PixelShaderForTesting();

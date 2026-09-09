@@ -133,7 +133,7 @@ void foo(device tint_array<int, 1>* const param) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(device S* v [[buffer(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo((&(*tint_module_vars.v).a));
+  (foo((&(*tint_module_vars.v).a)));
 }
 )");
 }
@@ -307,16 +307,16 @@ void foo(threadgroup atomic_uint* const a) {
 
 void entry_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
   if ((tint_local_index < 1u)) {
-    atomic_store_explicit(tint_module_vars.v, 0u, memory_order_relaxed);
+    (atomic_store_explicit(tint_module_vars.v, 0u, memory_order_relaxed));
   }
-  threadgroup_barrier(mem_flags::mem_threadgroup);
-  foo(tint_module_vars.v);
+  (threadgroup_barrier(mem_flags::mem_threadgroup));
+  (foo(tint_module_vars.v));
 }
 
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&(*v_1).tint_symbol)};
-  entry_inner(tint_local_index, tint_module_vars);
+  (entry_inner(tint_local_index, tint_module_vars));
 }
 )");
 }
@@ -354,16 +354,16 @@ void foo(threadgroup atomic_int* const a) {
 
 void entry_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
   if ((tint_local_index < 1u)) {
-    atomic_store_explicit(tint_module_vars.v, 0, memory_order_relaxed);
+    (atomic_store_explicit(tint_module_vars.v, 0, memory_order_relaxed));
   }
-  threadgroup_barrier(mem_flags::mem_threadgroup);
-  foo(tint_module_vars.v);
+  (threadgroup_barrier(mem_flags::mem_threadgroup));
+  (foo(tint_module_vars.v));
 }
 
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&(*v_1).tint_symbol)};
-  entry_inner(tint_local_index, tint_module_vars);
+  (entry_inner(tint_local_index, tint_module_vars));
 }
 )");
 }
@@ -453,14 +453,14 @@ void entry_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars
   if ((tint_local_index < 1u)) {
     (*tint_module_vars.v) = 0.0f;
   }
-  threadgroup_barrier(mem_flags::mem_threadgroup);
-  foo(tint_module_vars.v);
+  (threadgroup_barrier(mem_flags::mem_threadgroup));
+  (foo(tint_module_vars.v));
 }
 
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&(*v_1).tint_symbol)};
-  entry_inner(tint_local_index, tint_module_vars);
+  (entry_inner(tint_local_index, tint_module_vars));
 }
 )");
 }
@@ -496,7 +496,7 @@ void foo(const device int* const param) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(const device int* v [[buffer(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1036,7 +1036,7 @@ S tint_load_struct_packed_vec3(device S_packed_vec3* const from) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(device S_packed_vec3* a [[buffer(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=a};
-  tint_load_struct_packed_vec3(tint_module_vars.a);
+  (tint_load_struct_packed_vec3(tint_module_vars.a));
 }
 )";
 
@@ -1174,7 +1174,7 @@ void foo(sampler a) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(sampler v [[sampler(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1210,7 +1210,7 @@ void foo(sampler a) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(sampler v [[sampler(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1249,7 +1249,7 @@ void foo(array<texture2d<float, access::sample>, 4> a) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(array<texture2d<float, access::sample>, 4> v [[texture(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1302,7 +1302,7 @@ void foo()" + params.result +
 kernel void entry()" + params.result +
                                R"( v [[texture(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1351,7 +1351,7 @@ void foo(depth2d_ms<float, access::read> a) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(depth2d_ms<float, access::read> v [[texture(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1404,7 +1404,7 @@ void foo()" + params.result +
 kernel void entry()" + params.result +
                                R"( v [[texture(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1454,7 +1454,7 @@ void foo(texture2d_ms<uint, access::read> a) {
 [[max_total_threads_per_threadgroup(1)]]
 kernel void entry(texture2d_ms<uint, access::read> v [[texture(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }
@@ -1506,7 +1506,7 @@ void foo()" + params.result +
 kernel void entry()" + params.result +
                                R"( v [[texture(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
-  foo(tint_module_vars.v);
+  (foo(tint_module_vars.v));
 }
 )");
 }

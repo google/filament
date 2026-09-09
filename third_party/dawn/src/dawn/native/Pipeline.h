@@ -34,14 +34,14 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/CachedObject.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/PerStage.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/CachedObject.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/PerStage.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -51,8 +51,7 @@ class RenderPipelineBase;
 ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* device,
                                                                 const ShaderModuleBase* module,
                                                                 StringView entryPointName,
-                                                                size_t constantCount,
-                                                                const ConstantEntry* constants,
+                                                                Span<const ConstantEntry> constants,
                                                                 const PipelineLayoutBase* layout,
                                                                 SingleShaderStage stage);
 
@@ -66,7 +65,7 @@ struct ProgrammableStage {
     PipelineConstantEntries constants;
 };
 
-uint32_t GetRawBits(ImmediateConstantMask bits);
+uint32_t GetRawBits(ImmediateMask bits);
 
 class PipelineBase : public ApiObjectBase, public CachedObject {
   public:
@@ -85,8 +84,8 @@ class PipelineBase : public ApiObjectBase, public CachedObject {
     const PerStage<ProgrammableStage>& GetAllStages() const;
     bool HasStage(SingleShaderStage stage) const;
     wgpu::ShaderStage GetStageMask() const;
-    const ImmediateConstantMask& GetImmediateMask() const;
-    virtual ImmediateConstantMask GetUserImmediateSlots() const;
+    const ImmediateMask& GetImmediateMask() const;
+    virtual ImmediateMask GetUserImmediateSlots() const;
 
     ResultOrError<Ref<BindGroupLayoutBase>> GetBindGroupLayout(uint32_t groupIndex);
 
@@ -103,9 +102,9 @@ class PipelineBase : public ApiObjectBase, public CachedObject {
     // Initialize() should only be called once by the frontend when the shaders are ready.
     MaybeError Initialize(std::optional<ScopedUseShaderPrograms> scopedUsePrograms = std::nullopt);
 
-    uint32_t GetImmediateConstantSize() const;
+    uint32_t GetImmediateSize() const;
 
-    void SetImmediateMaskForTesting(ImmediateConstantMask immediateConstantMask);
+    void SetImmediateMaskForTesting(ImmediateMask immediateMask);
 
     // Returns for each ExternalTexture bind point for this pipeline, which sampler bind point it is
     // used with (if any). If it is used with multiple samplers, only one is returned and a warning
@@ -121,8 +120,8 @@ class PipelineBase : public ApiObjectBase, public CachedObject {
                  std::vector<StageAndDescriptor> stages);
     PipelineBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
 
-    ImmediateConstantMask mImmediateMask = ImmediateConstantMask(0);
-    ImmediateConstantMask mUserImmdiateSlots = ImmediateConstantMask(0);
+    ImmediateMask mImmediateMask = ImmediateMask(0);
+    ImmediateMask mUserImmdiateSlots = ImmediateMask(0);
 
   private:
     MaybeError ValidateGetBindGroupLayout(BindGroupIndex group);

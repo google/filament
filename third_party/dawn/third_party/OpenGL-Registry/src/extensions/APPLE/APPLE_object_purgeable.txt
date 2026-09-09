@@ -1,0 +1,644 @@
+Name
+
+    APPLE_object_purgeable
+
+Name Strings
+
+    GL_APPLE_object_purgeable
+
+Contributors
+
+    Andrew Barnes
+    Bob Beretta
+    Kenneth Dyke
+    Alex Eddy
+    John Harper
+    Charlie Lao
+    Jeremy Sandmel
+
+Contact
+
+    Charlie Lao, Apple Computer Inc. (clao 'at' apple.com)
+
+Status
+
+    TBD
+
+Version
+
+    Last Modified Date: September 29, 2006
+
+Number
+
+    371
+
+Dependencies
+
+    OpenGL 1.5 is required.
+    
+    The extension is written against the OpenGL 1.5 Specification.
+
+Overview
+
+    This extension provides the ability to mark the storage of OpenGL
+    objects as "purgeable".
+
+    Many of today's modern virtual memory systems include the concept of
+    purgeability in order to avoid unnecessary paging when the object
+    contents are no longer needed.  In OpenGL, objects such as textures,
+    vertex buffers, pixel buffers, and renderbuffers all have
+    significant storage requirements.  By default, the OpenGL is
+    required to preserve the contents of these objects regardless of
+    system resource stress, such as vram shortage or physical memory
+    shortage.  Often this is accomplished by temporarily paging the
+    contents of objects that are not currently needed to some kind of
+    secondary storage area.  This paging operation can be an unnecessary
+    computational expense in the cases where the data is not going to be
+    used again or where the content can be reproduced by the application
+    with less expense than the paging operation would require.
+    
+    This extension defines a mechanism for the application to mark the
+    storage of OpenGL objects as "purgeable" in order to influence these
+    paging operations.  The application can further control the
+    semantics of making object storage "purgeable" with two options
+    ("volatile" and "released") and "unpurgeable" with two options
+    ("undefined" and "retained")
+
+    Applications that use this extension will typically follow one of
+    two operational models.  The typical model for most applications is
+    to mark an object storage as "purgeable" with the "volatile" option,
+    and then later mark the storage as "unpurgeable" with the "retained"
+    option. When this happens, the application may or may not need to
+    respecify the object contents, depending on the whether the object
+    storage was actually released.  The application can find out whether
+    the storage was released by examining the return value of the
+    function which marks the storage as "unpurgeable".  This model is
+    useful when the application does not know at the time it marks the
+    object storage as "purgeable" whether it will later need those
+    contents to be valid.
+
+    Another operational model is for an application to mark the storage
+    for an object as "purgeable" with the "released" option, and then
+    later mark the object "unpurgeable" with the "undefined" option.  In
+    this latter model, the application intends to unconditionally reload
+    the object contents later on, and so it tells the GL that it is okay
+    if the contents are "undefined" when the storage is re-allocated.
+
+    Note that in both models, it is possible for the contents to become
+    undefined since they could have actually been purged from the system
+    in either case.  The various options are still useful, however,
+    since they give more information to the GL about what the
+    application expects to happen and the GL can use this information to
+    make better predictions about which paging choices will be more
+    efficient.
+
+IP Status
+
+    No known IP claims.
+
+Issues
+
+    1. Why use two functions rather than just one? 
+    
+        The reason we chose two functions is that switching between the
+        two possible object states - purgeable and unpurgeable - might
+        be expensive.  In addition, the return values of the operation
+        may be different depending on what state the object storage is
+        in and whether it has been purged or not.  Therefore, we want to
+        enforce that the state is changed in matching pairs of function
+        calls, similar to Begin/End.  In order to enforce this behavior,
+        we require two functions.
+
+        Applications are required to call ObjectPurgeable and
+        ObjectUnpurgeable in matched pairs, otherwise INVALID_OPERATION
+        is generated.
+
+    2. What does calling ObjectUnpurgeable with <option> set to
+       UNDEFINED_APPLE really mean?
+    
+        An application calls ObjectUnpurgeable in order to change the
+        state of the object storage to unpurgeable.  This is the
+        "default" state for object storage as defined traditionally in
+        GL.
+
+        Further, by using the <option> of UNDEFINED_APPLE, the
+        application is also indicating that it does not care about the
+        previous contents of the storage, if they still exist.  This
+        gives the GL the freedom to allocate new storage or simply reuse
+        the old storage without spending time to figure out whether the
+        storage was actually freed and without having to tell the
+        application which choice was made. In addition, this allows the
+        function to return without blocking.
+
+        In contrast, calling ObjectUnpurgeable with <option> set to
+        RETAINED_APPLE requests the GL actually determine whether or not
+        it is possible to retain the original contents of the object,
+        and to restore the object storage to the previous contents, if
+        they still exist.  This operation generally requires a flush of
+        the current command stream and often involveds additional work
+        to determine the state of object.
+
+    3. What's the difference between calling ObjectPurgeable and calling
+       DeleteTextures?
+    
+        Calling ObjectPurgeable allows the GL to release all storage
+        that the GL has allocated for the object's contents, but will
+        still retain the object name and other non-content related state
+        of the object.  If the application intends to re-use the object
+        again later, it will indicate so calling ObjectUnpurgeable.
+
+        In contrast, DeleteTextures deletes the object storage, the
+        object name, and the rest of the object state.  The object can
+        never again be used.
+
+        Note that this means to set the object's name as unused and to
+        delete non-content related state of the object, the application
+        is still responsible for calling DeleteTextures.
+
+        There are some additional subtle differences though.
+
+        In general, calling ObjectPurgeable with the <option>
+        VOLATILE_APPLE requires less work of the GL than calling
+        ObjectPurgeable with the <option> set to RELEASED_APPLE.
+        Further, calling ObjectPurgeable with either option generally
+        requires less work of the GL than DeleteTextures.
+
+        Applications are encouraged, therefore, to use ObjectPurgeable
+        with the <option> set to VOLATILE_APPLE where possible and fall
+        back to ObjectPurgeable with the <option> set to RELEASED_APPLE
+        only if they prefer to have the GL do some amount of work to try
+        to release the storage.  Only if the application really requires
+        the deletion of the object itself, should the application use
+        DeleteTextures.
+
+        Finally note, though the discussion above refers to
+        DeleteTextures, the same semantics apply to all object types
+        with Delete* operations, such as DeleteBuffers,
+        DeleteRenderbuffers, etc. that support this extension.
+
+    4. What should happen when ObjectPurgeable or ObjectUnpurgeable is
+       called between Begin/End?
+    
+        This is illegal and returns INVALID_OPERATION error.
+
+    5. What should happen if ObjectPurgeable or ObjectUnpurgeable is
+       called on a currently bound texture, whether it is bound to the
+       current context or another context?
+    
+        If the current context marks the storage of a currently bound
+        object as "purgeable", then attempts to read from or write to
+        the contents of that storage will result in undefined behavior.
+
+        Considering the multiple context case, we use the precedent of
+        all other state changes made by one context to an object bound
+        by another context.  Namely, changes made to an object by
+        context A or only guaranteed to be "visible" to context B the
+        next time context B binds that object.  In the interim period
+        the results of the state change are undefined.
+
+        For this extension, this means if context A marks an object's
+        storage as purgeable and that object is also bound by context B,
+        then it is undefined as to whether the object's storage will
+        have defined contents when used by context B. Note that in the
+        case of this particular extension, the whole point is to allow
+        the contents of the storage to become undefined so this is not a
+        particularly surprising outcome.
+
+        Applications are therefore advised to assume that they can not
+        rely on validity of the contents of any object whose storage has
+        been marked purgeable by any other context.  Further, until some
+        context has marked the object storage as "unpurgeable" again and
+        the current context has re-bound the object, the current context
+        should not assume the contents are valid either.  And even then
+        the contents should be assumed to be valid if and only if the
+        contents have been respecified or ObjectUnpurgeable returned the
+        value RETAINED_APPLE.
+
+    6. What should happen if the TestObject routine from the APPLE_fence
+       extension is called on an object whose storage has been marked
+       purgeable?
+    
+        In short, it should operate "normally".
+
+        To be specific, if TestObject is called after calling
+        ObjectPurgeable with <option> set to VOLATILE_APPLE, the GL will
+        still determine if there are any pending operations using the
+        object, and TestObject will return TRUE or FALSE depending on
+        what it finds.
+
+        If TestObject is called after calling ObjectPurgeable with
+        <option> set to RELEASED_APPLE, the TestObject will generally
+        immediately return TRUE even though the object may still be in
+        use.  This is acceptable since from user's point of view, the
+        object's storage has been freed from further use by the GL.
+
+    7. How does APPLE_object_purgeable interact with the
+       APPLE_texture_range extension?
+    
+        First note that depending on the value of the storage hint
+        provided in the APPLE_texture_range extension, the GL may have
+        made multiple copies of the texture data.
+
+        In general, calling ObjectPurgeable with <option> set to
+        VOLATILE_APPLE option indicates that the GL should mark the
+        multiple copies of the storage as candidates for eviction but
+        should only release them as needed.  In contrast, using the
+        <option> RELEASED_APPLE indicates that GL should try to go ahead
+        and release the storage for as many of these copies as is
+        efficient.
+
+    8. How does APPLE_object_purgeable interact with the
+       APPLE_client_storage extension?
+    
+        For reference, APPLE_client_storage allows the application to
+        indicate that it will be responsible for allocating and
+        retaining the storage for a texture object.
+        
+        In the APPLE_object_purgeable extension it is up to the
+        implementation to determine what happens when an object's
+        storage is marked purgeable and its up to the application to
+        query to determine whether the storage has been released.  Given
+        that, the APPLE_client_storage has no real practical
+        interactions with APPLE_object_purgeable.
+
+        However, if APPLE_client_storage is supported on a platform that
+        gives the application control over the volatility of of client
+        memory, for instance via some sort of virtual memory system
+        call, then it's possible the application use the
+        platform-specific virtual memory API to mark as volatile the the
+        memory backing a texture using APPLE_client_storage for its
+        storage.  The application on such a platform would be
+        responsible for using additional virtual memory system calls to
+        determine what happened to memory that was marked purgeable when
+        it goes to access that memory later on. In this scenario, the
+        effect would be very similar to the results of using the
+        APPLE_object_purgeable to mark a texture object's storage as
+        purgeable, but there is no direct interaction between the two
+        API's.
+    
+    9. How does APPLE_object_purgeable interact with the
+       aglSurfaceTexture API?
+    
+        For reference, the aglSurfaceTexture allows the application to
+        specify an AGL drawable as the storage for a GL texture object.
+        Such a texture object is informally called a "surface texture".
+
+        Similar to the APPLE_client_storage case, it is up to the API
+        that allocated the storage object to handle the purgeability of
+        that object.  Given that, the APPLE_client_storage has no real
+        practical interactions with AGL surface textures.
+        
+
+    10. How does APPLE_object_purgeable interact with the
+        ARB_vertex_buffer_object and ARB_pixel_buffer_object extensions?
+    
+        The interactions should be analogous to those that occur with
+        texture objects.
+        
+        To mark the storage for a buffer object as purgeable or
+        unpurgeable, the application can specify BUFFER_OBJECT_APPLE as
+        the <objectType> parameter in ObjectPurgeable or 
+        ObjectUnpurgeable, respectively.  The same rules about undefined
+        results from reading from or writing to the buffer object
+        storage while PURGEABLE_APPLE is TRUE apply as well.
+
+    13. After an object's storage has been marked as purgeable, what
+        should happen if CopyTexImage{1|2}D, CopyTexSubImage{1|2}D,
+        TexSubImage{1|2|3}D, or TexImage{1|2|3}D is called on the
+        texture? What if user try to texture from it or render to it?
+        
+        After an object's storage has been marked purgeable, any usage
+        of the object is undefined until it is marked unpurgeable.
+    
+
+New Procedures and Functions
+
+    enum ObjectPurgeableAPPLE(enum objectType, uint name, enum option)
+    enum ObjectUnpurgeableAPPLE(enum objectType, uint name, enum option)
+    void GetObjectParameterivAPPLE(enum objectType, uint name, enum
+                                   pname, int* params)
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <option> parameter of ObjectPurgeable, and returned
+    by ObjectPurgeable:
+    
+    RELEASED_APPLE        0x8A19
+    VOLATILE_APPLE        0x8A1A
+
+    Accepted by the <option> parameters of ObjectUnpurgeable, and
+    returned by ObjectUnpurgeable:
+    
+    RETAINED_APPLE        0x8A1B
+    UNDEFINED_APPLE       0x8A1C
+
+    Accepted by the <pname> parameters of GetObjectParameteriv:
+    
+    PURGEABLE_APPLE        0x8A1D
+
+    Accepted by the <objectType> parameters of ObjectPurgeableAPPLE,
+    ObjectUnpurgeableAPPLE and GetObjectParameteriv:
+    
+    BUFFER_OBJECT_APPLE        0x85B3
+    
+    (Note: BUFFER_OBJECT_APPLE is also defined in APPLE_fence extension
+    with the same value.)
+	
+Additions to Chapter 2 of the OpenGL 1.5 Specification
+(OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    Additions to Chapter 3 of OpenGL 1.5 Specification (Rasterization)
+
+    (add a new section 3.8.16)
+
+    3.8.16 Purgeability
+
+    The internal data storage of a texture object, renderbuffer object,
+    or buffer object has a boolean state, PURGEABLE_APPLE that
+    influences how the object's storage is managed by the GL.  The
+    initial value of PURGEABLE_APPLE is FALSE.  The application can
+    change the value of PURGEABLE_APPLE by using the routines below.
+    
+    The routine
+ 
+      enum ObjectPurgeableAPPLE(enum objectType, uint name, enum option)
+
+    sets PURGEABLE_APPLE to TRUE for the object of type <objectType>
+    with the id <name>. <objectType> must be one of TEXTURE,
+    BUFFER_OBJECT_APPLE, or RENDERBUFFER_EXT. If ObjectPurgeableAPPLE is
+    called and PURGEABLE_APPLE is already TRUE, the error
+    INVALID_OPERATION is generated.
+    
+    While PURGEABLE_APPLE is TRUE, the GL may release the storage for
+    this object and the results of issuing any commands that read from
+    or write to the storage of that object are undefined.
+
+    <option> must be either VOLATILE_APPLE or RELEASED_APPLE.  Calling
+    ObjectPurgeableAPPLE with either option sets PURGEABLE_APPLE to
+    TRUE, but the value of <option> is used by the GL as a hint to
+    indicate the application's intended future use of the named object's
+    storage.
+    
+    By calling ObjectPurgeableAPPLE with an <option> of VOLATILE_APPLE,
+    the application is indicating that it does not know if it will want
+    to re-use the current contents of the object storage again later. 
+    Further, the application is stating that it would like the GL to do
+    only the minimal amount of work required to set PURGEABLE_APPLE to
+    TRUE. If ObjectPurgeableAPPLE is called with an <option> of
+    VOLATILE_APPLE, then ObjectPurgeableAPPLE will also return the value
+    VOLATILE_APPLE.
+
+    In contrast, by calling ObjectPurgeableAPPLE with an <option> of
+    RELEASED_APPLE, the application is indicating that it does not
+    intend to re-use the contents of the storage again.  Further, the
+    application is stating that it is acceptable for the GL to do a more
+    work to encourage the GL to actually release the storage for the
+    object. The actual mechanism for releasing the storage is
+    implementation-dependent, but it may require some level of
+    synchronization and may flush the current context.   If
+    ObjectPurgeableAPPLE is called with an <option> of RELEASED_APPLE,
+    then ObjectPurgeableAPPLE may return either the value RELEASED_APPLE
+    or the value VOLATILE_APPLE.
+
+    If ObjectPurgeableAPPLE returns the value VOLATILE_APPLE, this means
+    that the storage for the object may not have been released when
+    ObjectPurgeableAPPLE returns.  In contrast, if ObjectPurgeableAPPLE
+    returns the value RELEASED_APPLE, this means that the storage for
+    the object has been released when ObjectPurgeableAPPLE returns.
+    
+    The routine
+ 
+      enum ObjectUnpurgeableAPPLE(enum object, uint name, enum option)
+
+    sets the value of PURGEABLE_APPLE to FALSE for the object of type
+    <objectType> with the id <name>.  If ObjectUnpurgeableAPPLE is
+    called and PURGEABLE_APPLE is already FALSE, the error
+    INVALID_OPERATION is returned.
+
+    While PURGEABLE_APPLE is FALSE, the storage for an object will not
+    be released by the GL. This is the default state for object storage.
+
+    <option> must be either RETAINED_APPLE or UNDEFINED_APPLE.  Calling
+    ObjectUnpurgeableAPPLE with either option sets PURGEABLE_APPLE to
+    FALSE, but the value of <option> is used by the GL as a hint to
+    indicate the application's intended future use of the named object's
+    storage.
+
+    By calling ObjectUnpurgeableAPPLE with an <option> of
+    RETAINED_APPLE, the application is indicating that it would like to
+    re-use the contents of the storage, if the storage has not yet been
+    released.  Further, the application is stating that it is acceptable
+    for the GL to do more work to try to restore the storage the same
+    state it was in before PURGEABLE_APPLE was set to TRUE. The actual
+    mechanism for attempting to restore the storage of the object is
+    implementation-dependent, but it may require some level of
+    synchronization and may flush the current context.   If
+    ObjectUnpurgeableAPPLE is called with an <option> of RETAINED_APPLE,
+    then ObjectPurgeableAPPLE may return either the value RETAINED_APPLE
+    or the value UNDEFINED_APPLE.
+
+    In contrast, by calling ObjectUnpurgeableAPPLE with an <option> of
+    UNDEFINED_APPLE, the application is indicating that it intends to
+    recreate the contents of the storage from scratch.  Further, the
+    application is is stating that it would like the GL to do only the
+    minimal amount of work set PURGEABLE_APPLE to FALSE.   If
+    ObjectUnpurgeableAPPLE is called with the <option> set to
+    UNDEFINED_APPLE, then ObjectUnpurgeableAPPLE will return the value
+    UNDEFINED_APPLE.
+
+    If ObjectUnpurgeableAPPLE returns the value UNDEFINED_APPLE, the
+    storage is in the same state as a newly created object with
+    undefined contents. In contrast, if ObjectUnpurgeableAPPLE returns
+    the value RETAINED_APPLE, this means that the storage has the same
+    the same contents it did when PURGEABLE_APPLE was most recently set
+    to FALSE.
+
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification
+(Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and State
+Requests)
+
+    (In section 6.1.3, Enumerated Queries, in the list of state query
+    functions, add the following)
+
+        "void GetObjectParameterivAPPLE(enum  objectType,
+                                        int   name,
+                                        enum  pname,
+                                        void* params);"
+
+    (and add the following description to the end of this section)
+
+    "GetObjectParameterivAPPLE places in <params> information about the
+     object of type <objectType> with the id <name>. <objectType> must
+     be one of TEXTURE, BUFFER_OBJECT_APPLE, or RENDERBUFFER_EXT.
+     <name> must be a non-zero name of an object of type <type>.  If
+     <pname> is PURGEABLE_APPLE, then when GetObjectParameterivAPPLE
+     returns, <params> will contain the current value of PURGEABLE_APPLE
+     for the named object's storage.  Note that this query does not
+     return whether or not the object storage has been purged but simply
+     whether the state PURGEABLE_APPLE is set to TRUE or FALSE."
+
+Additions to Appendix A of the OpenGL 1.5 Specification (Invariance)
+
+    None
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if the <objectType> parameter of
+    ObjectPurgeableAPPLE or ObjectUnpurgeableAPPLE is not one of
+    TEXTURE, BUFFER_OBJECT_APPLE, RENDERBUFFER_EXT.
+
+    INVALID_ENUM is generated if the <option> parameter of
+    ObjectPurgeableAPPLE is not VOLATILE_APPLE or RELEASED_APPLE.
+
+    INVALID_ENUM is generated if the <option> parameter of
+    ObjectUnpurgeableAPPLE is not RETAINED_APPLE or UNDEFINED_APPLE.
+
+    INVALID_VALUE is generated if the <name> parameter of
+    ObjectUnpurgeableAPPLE or ObjectUnpurgeableAPPLE is zero.
+
+    INVALID_OPERATION is generated if either ObjectUnpurgeableAPPLE or
+    ObjectUnpurgeableAPPLE is called between the execution of Begin and
+    the corresponding execution of End.
+
+    INVALID_OPERATION is generated if ObjectPurgeableAPPLE is called on
+    an object with a current value of PURGEABLE set to TRUE
+
+    INVALID_OPERATION is generated if ObjectUnpurgeableAPPLE is called
+    on an object with a current value of PURGEABLE set to FALSE
+    
+    INVALID_ENUM is generated if the <objectType> parameter of
+    GetObjectParameterivAPPLE is not one of TEXTURE,
+    BUFFER_OBJECT_APPLE, or RENDERBUFFER_EXT.
+
+    INVALID_VALUE is generated if the <name> parameter of
+    GetObjectParameterivAPPLE is not the name of an existing
+    object of type <objectType>.
+
+    INVALID_VALUE is generated if the <name> parameter of
+    GetObjectParameterivAPPLE is zero.
+    
+    INVALID_ENUM is generated if the <pname> parameter of
+    GetObjectParameterivAPPLE is PURGEABLE_APPLE.
+    
+
+New State
+
+    Each object type that supports this extension has the following new
+state:
+
+    Type  Get Command        Inital Value  Description   Section       Attribute
+    ----  -----------------  ------------  ------------  -------       ---------
+    Z2    GetObjectParameter  FALSE        GL_PURGEABLE_APPLE  3.8.16       -
+
+New Implementation Dependent State
+
+    None
+
+Sample Code
+
+    A "one shot" texture is a texture specified, used once, and then
+    respecified again before it's next use.  The sample code below shows
+    how to use APPLE_object_purgeable to handle "one shot" textures:
+
+        /* First, find out if the texture is purgeable already */
+        boolean purgeable = FALSE;
+        GetObjectParameter(TEXTURE, name, &purgeable);
+        if(purgeable)
+            ObjectUnpurgeable(TEXTURE, name, UNDEFINED_APPLE);
+
+        /* Now that the texture is unpurgeable, respecify its contents
+        */
+        BindTexture(TEXTURE_2D, name);
+        Enable(TEXTURE_2D);
+        TexImage2D(TEXTURE_2D, 0, RGBA, width, height, 0, RGBA,
+                   UNSIGNED_BYTE, pixels);
+
+        /* Draw using the texture */
+        MyDrawRoutine goes here(...);
+
+        /* Now mark the texture as purgeable */
+        ObjectPurgeable(TEXTURE, name, RELEASED_APPLE);
+
+    Texture speculative caching:  A FBO is created and texture_name is
+    attached to it. The application then renders to texture and is
+    expecting to use this texture later on.  In the mean time it does
+    not want the GL to page it off because it is easy to recreate if
+    needed.
+    
+        /* during system idle time, bind the fbo and render into it */
+        BindFramebufferEXT(FRAMEBUFFER_EXT, fbo_name);
+        MyDrawRoutineToSpecifyTextureContents(...);
+
+        /* We've rendered into the texture but we don't necessarily  */
+        /* need for it to remain valid if the GL wants to release it */
+        /* so we mark it as purgeable                                */
+        ObjectPurgeable(TEXTURE, texture_name, VOLATILE_APPLE);
+    
+        /* now do some other unrelated rendering */
+        MyOtherDrawRoutineGoesHere(...);
+
+        /* Some time passes and then the application wants to        */
+        /* use the texture, so it markes the texture storage as      */
+        /* unpurgeable and indicates it would like the GL to try to  */
+        /* retain the storage if it still exists                     */
+
+        obj_state = ObjectUnpurgeable(TEXTURE,
+                                      texture_name, RETAINED_APPLE);
+        if(obj_state == RETAINED_APPLE)
+        {
+            /* object storage was retained so we can go ahead and use it
+            */
+            BindTexture(TEXTURE_2D, texture_name);
+            MyDrawRoutineThatUsesTheOriginalTexture(...);
+        }
+        else /* object storage was lost */
+        {
+            /* We must recreate the original texture contents */
+            BindFramebufferEXT(FRAMEBUFFER_EXT, fbo_name);
+            MyDrawRoutineToRespecifyTextureContents(...);
+            
+            /* object storage has been re-specified so we can go */
+            /* ahead and use it now                              */
+            BindFramebufferEXT(FRAMEBUFFER_EXT, 0);
+            BindTexture(TEXTURE_2D, texture_name);
+            MyDrawRoutineThatUsesTheOriginalTexture(...);
+        }    
+
+Revision History
+
+    Revision 2, 2006/10/20
+      - updated issue language to remove some stale resolutions
+      - revised and clarified language in terms of application intent
+        for the various <option> flags instead of implementation details
+      - replaced IsPurgeable with GetObjectParameter
+      - renamed extension "APPLE_object_purgeable" instead of
+        "APPLE_object_purgeability" to correlate with new state variable
+        GL_PURGEABLE_APPLE.
+
+    Revision 1, 2006/09/29
+      - Initial checkin.
+
+
+

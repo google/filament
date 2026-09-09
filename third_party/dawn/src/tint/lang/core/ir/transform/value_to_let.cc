@@ -135,6 +135,12 @@ struct State {
                     pending_access = Instruction::Access::kLoad;
                 }
                 inst = MaybePutInLet(inst, accesses);
+            } else if (inst->Results().Length() == 1 && inst->Result()->NumUsages() > 1) {
+                // Avoid inlining non-trivial expressions with no side effects when they are used
+                // multiple times.
+                if (!inst->IsAnyOf<Access, Let, Load, Swizzle, Var>()) {
+                    inst = PutInLet(inst->Result());
+                }
             }
         }
     }
@@ -230,7 +236,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ValueToLet(Module& ir, const ValueToLetConfig& cfg) {
-    AssertValid(ir, kValueToLetCapabilities, "before core.ValueToLet");
+    AssertValid(ir, "before core.ValueToLet");
 
     State{ir, cfg}.Process();
 

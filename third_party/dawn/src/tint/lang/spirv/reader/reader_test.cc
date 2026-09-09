@@ -824,5 +824,83 @@ $B1: {  # root
 )");
 }
 
+TEST_F(SpirvReaderTest, UniformBufferStandardLayout) {
+    auto got = Run(R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %global_invocation_id
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %array_block "inputs_block"
+               OpMemberName %array_block 0 "inner"
+               OpName %idx "idx"
+               OpName %inputs "inputs"
+               OpName %outputs "outputs"
+               OpName %main "main"
+               OpName %global_invocation_id "global_invocation_id"
+               OpMemberDecorate %array_block 0 Offset 0
+               OpDecorate %array_block Block
+               OpDecorate %inputs DescriptorSet 0
+               OpDecorate %inputs Binding 0
+               OpDecorate %inputs NonWritable
+               OpDecorate %_arr_uint_uint_16 ArrayStride 4
+               OpDecorate %outputs DescriptorSet 0
+               OpDecorate %outputs Binding 1
+               OpDecorate %outputs Coherent
+               OpDecorate %global_invocation_id BuiltIn GlobalInvocationId
+
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+    %uint_16 = OpConstant %uint 16
+%_arr_uint_uint_16 = OpTypeArray %uint %uint_16
+%array_block = OpTypeStruct %_arr_uint_uint_16
+%_ptr_Uniform_array_block = OpTypePointer Uniform %array_block
+%_ptr_StorageBuffer_array_block = OpTypePointer StorageBuffer %array_block
+          %inputs = OpVariable %_ptr_Uniform_array_block Uniform
+          %outputs = OpVariable %_ptr_StorageBuffer_array_block StorageBuffer
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%global_invocation_id = OpVariable %_ptr_Input_v3uint Input
+       %void = OpTypeVoid
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+    %void_fn = OpTypeFunction %void
+
+       %main = OpFunction %void None %void_fn
+ %main_start = OpLabel
+         %id = OpLoad %v3uint %global_invocation_id None
+        %idx = OpCompositeExtract %uint %id 0
+    %out_ptr = OpAccessChain %_ptr_StorageBuffer_uint %outputs %uint_0 %idx
+     %in_ptr = OpAccessChain %_ptr_Uniform_uint %inputs %uint_0 %idx
+      %value = OpLoad %uint %in_ptr
+               OpStore %out_ptr %value None
+               OpReturn
+               OpFunctionEnd
+
+)");
+    ASSERT_EQ(got, Success);
+    EXPECT_EQ(got, R"(
+inputs_block = struct @align(4) {
+  inner:array<u32, 16> @offset(0)
+}
+
+$B1: {  # root
+  %inputs:ptr<uniform, inputs_block, read> = var undef @binding_point(0, 0)
+  %outputs:ptr<storage, inputs_block, read_write> = var undef @binding_point(0, 1)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func(%global_invocation_id:vec3<u32> [@global_invocation_id]):void {
+  $B2: {
+    %idx:u32 = access %global_invocation_id, 0u
+    %6:ptr<storage, u32, read_write> = access %outputs, 0u, %idx
+    %7:ptr<uniform, u32, read> = access %inputs, 0u, %idx
+    %8:u32 = load %7
+    store %6, %8
+    ret
+  }
+}
+)");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

@@ -31,7 +31,7 @@
 #include <unordered_set>
 
 #include "src/tint/utils/math/hash.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint {
 
@@ -46,12 +46,12 @@ enum class SubgroupMatrixType : uint8_t {
 TINT_REFLECT_ENUM_RANGE(tint::SubgroupMatrixType, kF16, kI32);
 
 struct SubgroupMatrixMultiply {
-    uint32_t M;
-    uint32_t N;
-    uint32_t K;
+    uint32_t M = 0;
+    uint32_t N = 0;
+    uint32_t K = 0;
 
-    SubgroupMatrixType input_type;
-    SubgroupMatrixType output_type;
+    SubgroupMatrixType input_type = SubgroupMatrixType::kF32;
+    SubgroupMatrixType output_type = SubgroupMatrixType::kF32;
 
     TINT_REFLECT(SubgroupMatrixMultiply, M, N, K, input_type, output_type);
     TINT_REFLECT_HASH_CODE(SubgroupMatrixMultiply);
@@ -67,11 +67,11 @@ enum class SubgroupMatrixDirection : uint8_t {
 TINT_REFLECT_ENUM_RANGE(tint::SubgroupMatrixDirection, kLeft, kResult);
 
 struct SubgroupMatrixConfig {
-    uint32_t M;
-    uint32_t N;
-    uint32_t K;
+    uint32_t M = 0;
+    uint32_t N = 0;
+    uint32_t K = 0;
 
-    SubgroupMatrixType type;
+    SubgroupMatrixType type = SubgroupMatrixType::kF32;
     SubgroupMatrixDirection direction;
 
     TINT_REFLECT(SubgroupMatrixConfig, M, N, K, type, direction);

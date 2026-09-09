@@ -54,10 +54,6 @@ ci.defaults.set(
 
 def dawn_ci_linux_cmake_builder(**kwargs):
     kwargs = cmake_builder_defaults.apply_linux_cmake_builder_defaults(kwargs)
-
-    # TODO(crbug.com/459517292): Remove this and rely on file-wide defaults
-    # once we move Linux CMake builders into the luci.chromium.gpu.* pools.
-    kwargs.setdefault("pool", "luci.flex.ci")
     ci.builder(**kwargs)
 
 def dawn_ci_mac_cmake_builder(**kwargs):

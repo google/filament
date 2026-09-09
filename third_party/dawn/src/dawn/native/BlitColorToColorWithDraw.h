@@ -31,10 +31,10 @@
 #include <bitset>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
 
 namespace dawn::native {
 

@@ -73,6 +73,14 @@ T First(T&& first, ...) {
 /// Helper that calls `f` passing in the value of all `cs`.
 /// Calls `f` with all constants cast to the type of the first `cs` argument.
 template <typename F, typename... CONSTANTS>
+auto Dispatch_u32(F&& f, CONSTANTS&&... cs) {
+    return Switch(First(cs...)->Type(),  //
+                  [&](const core::type::U32*) { return f(cs->template ValueAs<u32>()...); });
+}
+
+/// Helper that calls `f` passing in the value of all `cs`.
+/// Calls `f` with all constants cast to the type of the first `cs` argument.
+template <typename F, typename... CONSTANTS>
 auto Dispatch_iu32(F&& f, CONSTANTS&&... cs) {
     return Switch(
         First(cs...)->Type(),  //
@@ -473,12 +481,13 @@ const Value* ConvertInternal(const Value* root_value,
 /// If `f`'s last argument is a `size_t`, then the index of the most deeply nested element inside
 /// the most deeply nested aggregate type will be passed in.
 template <typename F, typename... CONSTANTS>
-std::enable_if_t<tint::traits::IsType<size_t, tint::traits::LastParameterType<F>>, Eval::Result>
-TransformElements(Manager& mgr,
-                  const core::type::Type* composite_ty,
-                  const F& f,
-                  size_t index,
-                  CONSTANTS&&... cs) {
+Eval::Result TransformElements(Manager& mgr,
+                               const core::type::Type* composite_ty,
+                               const F& f,
+                               size_t index,
+                               CONSTANTS&&... cs)
+    requires(tint::traits::IsType<size_t, tint::traits::LastParameterType<F>>)
+{
     auto [el_ty, n] = First(cs...)->Type()->Elements();
     if (!el_ty) {
         return f(cs..., index);
@@ -1836,13 +1845,17 @@ Eval::Result Eval::ShiftLeft(const core::type::Type* ty,
                     e2u = 0;
                 }
             } else {
-                if (static_cast<size_t>(e2) >= bit_width && use_runtime_semantics_) {
+                if (static_cast<size_t>(e2) >= bit_width) {
                     // At shader/pipeline-creation time, it is an error to shift by the bit width of
-                    // the lhs or greater, which should have already been caught by the validator.
+                    // the lhs or greater. The WGSL frontend validator should have already caught
+                    // this for constant expressions, but not for overrides.
                     // At runtime, we shift by e2 % (bit width of e1).
                     AddError(source)
                         << "shift left value must be less than the bit width of the lhs, which is "
                         << bit_width;
+                    if (!use_runtime_semantics_) {
+                        return Failure();
+                    }
                     e2u = e2u % bit_width;
                 }
 
@@ -1923,13 +1936,17 @@ Eval::Result Eval::ShiftRight(const core::type::Type* ty,
                     result = signed_shift_right();
                 }
             } else {
-                if (static_cast<size_t>(e2) >= bit_width && use_runtime_semantics_) {
+                if (static_cast<size_t>(e2) >= bit_width) {
                     // At shader/pipeline-creation time, it is an error to shift by the bit width of
-                    // the lhs or greater, which should have already been caught by the validator.
+                    // the lhs or greater. The WGSL frontend validator should have already caught
+                    // this for constant expressions, but not for overrides.
                     // At runtime, we shift by e2 % (bit width of e1).
                     AddError(source)
                         << "shift right value must be less than the bit width of the lhs, which is "
                         << bit_width;
+                    if (!use_runtime_semantics_) {
+                        return Failure();
+                    }
                     e2u = e2u % bit_width;
                 }
 
@@ -1947,6 +1964,23 @@ Eval::Result Eval::ShiftRight(const core::type::Type* ty,
     TINT_ASSERT(args[1]->Type()->DeepestElement()->Is<core::type::U32>())
         << "Element type of rhs of ShiftLeft must be a u32";
 
+    return TransformBinaryElements(mgr, ty, transform, args[0], args[1]);
+}
+
+Eval::Result Eval::addSat(const core::type::Type* ty,
+                          VectorRef<const Value*> args,
+                          const Source& source) {
+    auto transform = [&](const Value* lhs, const Value* rhs) {
+        auto create = [&](auto a, auto b) {
+            using NumberT = decltype(a);
+            NumberT result = NumberT{a + b};
+            if (result < NumberT{a}) {
+                result = NumberT::Highest();
+            }
+            return CreateScalar(source, ty->DeepestElement(), result);
+        };
+        return Dispatch_u32(create, lhs, rhs);
+    };
     return TransformBinaryElements(mgr, ty, transform, args[0], args[1]);
 }
 

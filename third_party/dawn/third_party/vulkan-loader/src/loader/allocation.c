@@ -98,8 +98,9 @@ void *loader_realloc(const VkAllocationCallbacks *pAllocator, void *pMemory, siz
 #endif
     } else {
         pNewMem = realloc(pMemory, size);
-        // Clear out the newly allocated memory
-        if (size > orig_size) {
+        // Clear out the newly allocated memory. On failure realloc returns NULL and leaves the original block valid, so
+        // only write through pNewMem once we know it points at the resized allocation.
+        if (NULL != pNewMem && size > orig_size) {
             memset((uint8_t *)pNewMem + orig_size, 0, size - orig_size);
         }
     }

@@ -1,0 +1,650 @@
+Name
+
+    WGL_ARB_create_context
+    WGL_ARB_create_context_profile
+
+Name Strings
+
+    WGL_ARB_create_context
+    WGL_ARB_create_context_profile
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+    Michael Gold, NVIDIA (gold 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    No known IP claims.
+
+Status
+
+    Complete. Approved by the ARB on July 28, 2009.
+    Approved by the Khronos Board of Promoters on August 28, 2009.
+
+Version
+
+    July 28, 2009 (version 20)
+
+Number
+
+    ARB Extension #55 (WGL_ARB_create_context)
+    ARB Extension #74 (WGL_ARB_create_context_profile)
+
+Dependencies
+
+    WGL_ARB_extensions_string is required.
+
+    The presence of an OpenGL 3.2 or later implementation determines
+    whether or not WGL_ARB_create_context_profile is required.
+
+Overview
+
+    With the advent of new versions of OpenGL which deprecate features
+    and/or break backward compatibility with older versions, there is a
+    need and desire to indicate at context creation which interface will
+    be used. These extensions add a new context creation routine with
+    attributes specifying the GL version and context properties
+    requested for the context, and additionally add an attribute
+    specifying the GL profile requested for a context of OpenGL 3.2 or
+    later.
+
+New Procedures and Functions
+
+    HGLRC wglCreateContextAttribsARB(HDC hDC, HGLRC hShareContext,
+                                     const int *attribList)
+
+New Tokens
+
+    Accepted as an attribute name in <*attribList>:
+
+        WGL_CONTEXT_MAJOR_VERSION_ARB           0x2091
+        WGL_CONTEXT_MINOR_VERSION_ARB           0x2092
+        WGL_CONTEXT_LAYER_PLANE_ARB             0x2093
+        WGL_CONTEXT_FLAGS_ARB                   0x2094
+        WGL_CONTEXT_PROFILE_MASK_ARB            0x9126
+
+    Accepted as bits in the attribute value for WGL_CONTEXT_FLAGS in
+    <*attribList>:
+
+        WGL_CONTEXT_DEBUG_BIT_ARB               0x0001
+        WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB  0x0002
+
+    Accepted as bits in the attribute value for
+    WGL_CONTEXT_PROFILE_MASK_ARB in <*attribList>:
+
+        WGL_CONTEXT_CORE_PROFILE_BIT_ARB        0x00000001
+        WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+
+    New errors returned by GetLastError:
+
+        ERROR_INVALID_VERSION_ARB               0x2095
+        ERROR_INVALID_PROFILE_ARB               0x2096
+
+Additions to the OpenGL / GLX / GLX Protocol Specificaitons
+
+    None. This specification is written for WGL.
+
+Additions to the WGL specification
+
+    Context Creation
+    ----------------
+
+    To create an OpenGL rendering context, call
+
+    HGLRC wglCreateContextAttribsARB(HDC hDC, HGLRC hshareContext,
+                                     const int *attribList);
+
+    If wglCreateContextAttribsARB succeeds, it initializes the context
+    to the initial state defined by the OpenGL specification, and
+    returns a handle to it. The handle can be used (via wglMakeCurrent
+    or wglMakeContextCurrentARB) with any HDC sharing the same pixel
+    format as <hDC>, and created on the same device, subject to
+    constraints imposed by the API version.
+
+    If <hshareContext> is not 0, then all shareable data (excluding
+    OpenGL texture objects named 0) will be shared by <hshareContext>,
+    all other contexts <hshareContext> already shares with, and the
+    newly created context. An arbitrary number of contexts can share
+    data in this fashion.
+
+    <attribList> specifies a list of attributes for the context. The
+    list consists of a sequence of <name,value> pairs terminated by the
+    value 0. If an attribute is not specified in <attribList>, then the
+    default value specified below is used instead. If an attribute is
+    specified more than once, then the last value specified is used.
+
+    <attribList> may be NULL or empty (first attribute is 0), in which
+    case all attributes assume their default values as described below.
+
+    The attribute names WGL_CONTEXT_MAJOR_VERSION_ARB and
+    WGL_CONTEXT_MINOR_VERSION_ARB request an OpenGL context supporting
+    the specified version of the API. If successful, the context
+    returned must be backwards compatible with the context requested.
+    Backwards compatibility is determined as follows:
+
+    If a version less than or equal to 3.0 is requested, the context
+    returned may implement any of the following versions:
+
+      * Any version no less than that requested and no greater than 3.0.
+      * Version 3.1, if the GL_ARB_compatibility extension is also
+        implemented.
+      * The compatibility profile of version 3.2 or greater.
+
+    If version 3.1 is requested, the context returned may implement
+    any of the following versions:
+
+      * Version 3.1. The GL_ARB_compatibility extension may or may not
+        be implemented, as determined by the implementation.
+      * The core profile of version 3.2 or greater.
+
+    If version 3.2 or greater is requested, the context returned may
+    implement any of the following versions:
+
+      * The requested profile of the requested version.
+      * The requested profile of any later version, so long as no
+        features have been removed from that later version and profile.
+
+    Querying the GL_VERSION string with glGetString (or the
+    GL_MAJOR_VERSION and GL_MINOR_VERSION values with glGetIntegerv, in
+    a 3.0 or later context) will return the actual version supported by
+    a context.
+
+    The default values for WGL_CONTEXT_MAJOR_VERSION_ARB and
+    WGL_CONTEXT_MINOR_VERSION_ARB are 1 and 0 respectively. In this
+    case, implementations will typically return the most recent version
+    of OpenGL they support which is backwards compatible with OpenGL 1.0
+    (e.g. 3.0, 3.1 + GL_ARB_compatibility, or 3.2 compatibility profile)
+
+    The attribute name WGL_CONTEXT_PROFILE_MASK_ARB requests an OpenGL
+    context supporting a specific <profile> of the API. If the
+    WGL_CONTEXT_CORE_PROFILE_BIT_ARB bit is set in the attribute value,
+    then a context implementing the <core> profile of OpenGL is
+    returned. If the WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB bit is
+    set, then a context implementing the <compatibility> profile is
+    returned. If the requested OpenGL version is less than 3.2,
+    WGL_CONTEXT_PROFILE_MASK_ARB is ignored and the functionality of the
+    context is determined solely by the requested version.
+
+    Querying the value of GL_CONTEXT_PROFILE_MASK with glGetIntegerv
+    will return the profile mask used to create the context. This query
+    is only supported in an OpenGL 3.2 or later context.
+
+    The default value for WGL_CONTEXT_PROFILE_MASK_ARB is
+    WGL_CONTEXT_CORE_PROFILE_BIT_ARB. All OpenGL 3.2 implementations are
+    required to implement the core profile, but implementation of the
+    compatibility profile is optional.
+
+    If the core profile is requested, then the context returned cannot
+    implement functionality defined only by the compatibility profile.
+
+    The attribute name WGL_CONTEXT_LAYER_PLANE specifies the layer plane
+    that the rendering context is bound to. The attribute value has the
+    same meaning and allowed values as the <iLayerPlane> parameter of
+    wglCreateLayerContext. The default value for WGL_CONTEXT_LAYER_PLANE
+    is 0 (the main plane).
+
+    The attribute name WGL_CONTEXT_FLAGS_ARB specifies a set of flag
+    bits affecting the rendering context.
+
+    If the WGL_CONTEXT_DEBUG_BIT_ARB flag bit is set in
+    WGL_CONTEXT_FLAGS_ARB, then a <debug context> will be created. Debug
+    contexts are intended for use during application development, and
+    provide additional runtime checking, validation, and logging
+    functionality while possibly incurring performance penalties. The
+    additional functionality provided by debug contexts may vary
+    according to the implementation(fn). In some cases a debug context
+    may be identical to a non-debug context.
+        [fn: The ARB Ecosystem TSG is still defining the expected and
+        required features of debug contexts.]
+
+    If the WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB is set in
+    WGL_CONTEXT_FLAGS_ARB, then a <forward-compatible> context will be
+    created. Forward-compatible contexts are defined only for OpenGL
+    versions 3.0 and later. They must not support functionality marked
+    as <deprecated> by that version of the API, while a
+    non-forward-compatible context must support all functionality in
+    that version, deprecated or not.
+
+    The default value of WGL_CONTEXT_FLAGS_ARB is 0.
+
+    On failure wglCreateContextAttribsARB returns NULL. Extended error
+    information can be obtained with GetLastError. Conditions that cause
+    failure include:
+
+  * If attributes WGL_CONTEXT_MAJOR_VERSION_ARB and
+    WGL_CONTEXT_MINOR_VERSION_ARB, when considered together with
+    WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, specify an OpenGL version
+    and feature set that are not defined, then ERROR_INVALID_VERSION_ARB
+    is generated.
+
+    The defined versions of OpenGL at the time of writing are OpenGL
+    1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 2.0, 2.1, 3.0, 3.1, and 3.2. Feature
+    deprecation was introduced with OpenGL 3.0, so forward-compatible
+    contexts may only be requested for OpenGL 3.0 and above. Thus,
+    examples of invalid combinations of attributes include:
+
+      - Major version < 1 or > 3
+      - Major version == 1 and minor version < 0 or > 5
+      - Major version == 2 and minor version < 0 or > 1
+      - Major version == 3 and minor version > 2
+      - Forward-compatible flag set and major version < 3
+
+    Because the purpose of forward-compatible contexts is to allow
+    application development on a specific OpenGL version with the
+    knowledge that the app will run on a future version, context
+    creation will fail if WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB is set
+    and the context version returned cannot implement exactly the
+    requested version.
+
+  * If attribute WGL_CONTEXT_PROFILE_MASK_ARB has no bits set; has any
+    bits set other than WGL_CONTEXT_CORE_PROFILE_BIT_ARB and
+    WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB; has more than one of
+    these bits set; or if the implementation does not supported the
+    requested profile, then ERROR_INVALID_PROFILE_ARB is generated.
+
+  * If <hShareContext> is neither zero nor a valid context handle, then
+    ERROR_INVALID_OPERATION is generated.
+
+  * If <hDC> is not a valid device context handle, then
+    ERROR_DC_NOT_FOUND is generated.
+
+  * If the pixel format associated with <hDC> does not support OpenGL
+    contexts providing the requested API major and minor version,
+    forward-compatible flag, and/or debug context flag, then
+    ERROR_INVALID_PIXEL_FORMAT is generated.
+
+  * If the OpenGL server context state for <hShareContext> exists in an
+    address space that cannot be shared with the newly created context,
+    if <shareContext> was created on a different device context than the
+    one referenced by <hDC>, or if the contexts are otherwise
+    incompatible (for example, one context being associated with a
+    hardware device driver and the other with a software renderer), then
+    ERROR_INVALID_OPERATION is generated.
+
+  * If the server does not have enough resources to allocate the new
+    context, then ERROR_NO_SYSTEM_RESOURCES is generated.
+
+  * If an unrecognized attribute is present in <attribList>,
+    then ERROR_INVALID_PARAMETER is generated.
+
+    Legacy Context Creation
+    -----------------------
+
+    When this extension is supported, calling
+
+        wglCreateContext(hdc)
+
+    is equivalent to calling
+
+        wglCreateContextAttribs(hdc,0,NULL).
+
+    Calling
+
+        wglCreateLayerContext(hdc,layer)
+
+    is equivalent to calling
+
+        wglCreateContextAttribs(hdc, 0,
+                                { WGL_CONTEXT_LAYER_PLANE, layer, 0 }) .
+
+    The legacy context creation routines can only return OpenGL 3.1
+    contexts if the GL_ARB_compatibility extension is supported, and can
+    only return OpenGL 3.2 or greater contexts implementing the
+    compatibility profile. This ensures compatibility for existing
+    applications. However, 3.0-aware applications are encouraged to use
+    wglCreateContextAttribsARB instead of the legacy routines.
+
+    Binding a Context to a Surface
+    ------------------------------
+
+    (add to the description of wglMakeCurrent and
+    wglMakeContextCurrentARB)
+
+   "If the OpenGL context version of <hglrc> is 3.0 or above, and if
+    either the <hdc> parameter of wglMakeCurrent is NULL, or both of the
+    <hDrawDC> and <hReadDC> parameters of wglMakeContextCurrentARB are
+    NULL, then the context is made current, but with no default
+    framebuffer defined. The effects of having no default framebuffer on
+    the GL are defined in Chapter 4 of the OpenGL 3.0 Specification.
+
+    The first time <ctx> is made current, the viewport and scissor
+    dimensions are set to the size of the draw drawable (as though
+    glViewport(0,0,w,h) and glScissor(0,0,w,h) were called, where <w>
+    and <h> are the width and height of the drawable, respectively). If
+    the first time <ctx> is made current, it is without a default
+    framebuffer, then the viewport and scissor regions are set as though
+    glViewport(0,0,0,0) and glScissor(0,0,0,0) were called."
+    However, the viewport and scissor dimensions are not modified when
+    <ctx> is subsequently made current; it is the client's
+    responsibility to reset the viewport and scissor in this case."
+
+    Sharing Objects Between Contexts
+    --------------------------------
+
+    (add to the description of wglShareLists)
+
+    Future versions of OpenGL may only support being added to a share
+    group at context creation time. Specifying such a version of a
+    context as either the <hglrc1> or <hglrc2> arguments to
+    wglShareLists will fail. wglShareLists will return FALSE, and
+    GetLastError will return ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB.
+
+Dependencies on WGL_ARB_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress. Because this extension is a WGL extension, it is
+    not included in the GL_EXTENSIONS string. Its existence can be
+    determined with the WGL_ARB_extensions_string extension.
+
+Dependencies on WGL_ARB_create_context
+
+    If WGL_ARB_create_context_profile is supported, then
+    WGL_ARB_create_context must also be supported.
+
+Dependencies on OpenGL 3.2 and later OpenGL versions
+
+    If WGL_ARB_create_context is supported, and if the OpenGL
+    implementation supports OpenGL 3.2 or later, then
+    WGL_ARB_create_context_profile must also be supported. If the OpenGL
+    implementation does not support OpenGL 3.2 or later, then
+    WGL_ARB_create_context_profile may or may not be supported.
+
+    If WGL_ARB_create_context_profile is not supported, then the
+    WGL_CONTEXT_PROFILE_MASK_ARB attribute, the
+    WGL_CONTEXT_CORE_PROFILE_BIT_ARB and
+    WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB bits in that attribute,
+    and the ERROR_INVALID_PROFILE_ARB error are not defined, and
+    specifying the attribute in <attribList> attribute will generate an
+    error.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+   None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+ 1) Can different GL context versions share data?
+
+    PROPOSED: Yes, with restrictions as defined by the supported feature
+    sets. For example, program and shader objects cannot be shared with
+    OpenGL 1.x contexts, which do not support them.
+
+    NOTE: When the new object model is introduced, sharing must be
+    established at creation time, since the object handle namespace is
+    also shared. wglShareLists would therefore fail if either context
+    parameter to it were to be a context supporting the new object
+    model.
+
+ 2) Should we introduce a token WGL_NONE to terminate attribute lists,
+    instead of using the value 0, by analogy to GLX and EGL?
+
+    RESOLVED: No.
+
+ 3) Should all GL context versions be able to bind to all the same pixel
+    formats?
+
+    RESOLVED: unlike EGL, we don't expose the version restriction in the
+    pixel format. Instead, wglMakeCurrent may fail when binding contexts
+    to surfaces if the surface type is unrecognized by that context
+    version. No specific examples exist at present, but in a
+    hypothetical future version of the API supporting only the new
+    object model, such an API probably could not bind to pbuffer
+    surfaces.
+
+ 4) Should there be a way to make a context current without binding
+    it to a window system drawable at the same time?
+
+    RESOLVED: Yes, but only in OpenGL 3.0 and later. This results in a
+    context with an invalid default framebuffer, the meaning of which is
+    defined in the OpenGL 3.0 specification.
+
+    NOTE: Apparently on Windows, opengl32.dll makes use of the drawable
+    argument to identify the namespace of the driver, so we may not be
+    able to work around it.
+
+ 5) Should we add a token to the attrib list for pixel format selection
+    to indicate the GL context version, instead of introducing a new
+    entry point for context creation?
+
+    RESOLVED: No. We want pixel formats to be portable between
+    feature-incompatible context versions, so that drawables and GL
+    objects that make sense to share, may be shared between such
+    contexts. This is important for code migration and backward
+    compatibility.
+
+ 6) Do we need a "can be shared" parameter at context creation time?
+
+    RESOLVED: No. All contexts have potential to share objects (whether
+    they actually can share depends on context version and feature sets,
+    and the address space they're created in). Savings from saying a
+    context cannot share objects are unclear but probably minimal. Such
+    a parameter would default to TRUE if it existed.
+
+ 7) How are "debug contexts" created?
+
+    RESOLVED: by specifying the WGL_CONTEXT_DEBUG_BIT_ARB flag in the
+    WGL_CONTEXT_FLAGS_ARB attribute value.
+
+    DISCUSSION: For the most part, the behavior of debug contexts is
+    being determined by the ARB Ecosystem TSG. However, whatever their
+    behavior, it's clear that "debug contexts" may differ at a basic
+    level from regular contexts. Debug contexts might even go down a
+    completely separate driver path. So it's essential to know at
+    context creation time if a debug context is required.
+
+ 8) Is wglCreateContextVersion a good name?
+
+    Ian Romanick suggests wglCreateContextAttribs instead. Changed in
+    version 12.
+
+ 9) Should the context version be named with separate major and minor
+    number attributes, or as a single (major*100 + minor*10) number as
+    in GLSL (e.g. version == 220 <-> major = 2, minor = 2)?
+
+    John Kessenich argues for consistency with the existing GLSL naming
+    scheme.
+
+10) How are profiles specified? Why is the profile attribute a bitmask
+    rather than an enum?
+
+    RESOLVED: Profiles are specified as individual bits passed in a
+    bitmask attribute. This attribute is ignored unless the OpenGL
+    version requested defines profiles (OpenGL 3.2 and later). While
+    only a single profile can be specified today, it is not unlikely
+    that eventually there will be profiles defined than can be
+    implemented in the same context. In that case we will need to be
+    able to specify multiple profiles at context creation and in the GL
+    context profile query, for which a bitmask is appropriate.
+
+11) Why is the value of WGL_CONTEXT_PROFILE_MASK_ARB in the GL
+    core enumerant range?
+
+    RESOLVED: The token value for the context profile mask and for the
+    context profile bits should be shared by GL, GLX, and WGL to ease
+    implementation and reduce programming errors. These values are drawn
+    from the GL token ranges.
+
+12) What errors can result from requesting a profile?
+
+    RESOLVED: Only a single profile can currently be requested.
+    Requesting no profile, more than one profile, or an unrecognized
+    profile are all errors.
+
+13) How does the profile request interact with older GL versions?
+
+    RESOLVED: It does not. The profile mask is ignored unless the
+    requested GL version is >= 3.2.
+
+    DISCUSSION: Bruce had proposed using the profile mask to control
+    whether or not GL_ARB_compatibility was provided in earlier GL
+    versions, but general feeling was that apps had already had to sort
+    this out, and it's difficult to see how to define a default value
+    that can always be implemented (core profile) without changing the
+    existing behavior of wglCreateContextAttribsARB on implementations
+    which implement GL_ARB_compatibility by default when an OpenGL 3.1
+    context is requested.
+
+14) How does the profile request interact with the forward compatibility
+    bit?
+
+    RESOLVED: Nothing special need be done here. If the forward
+    compatibility bit is set, the returned context must not implement
+    deprecated functionality in that profile (nothing is deprecated
+    from the OpenGL 3.2 compatibility profile, so a forward-compatible
+    compatibility profile has exactly the same functionality as
+    a non-forward-compatible compatibility profile, while a
+    forward-compatible core profile would leave out only the handful
+    of features - wide lines and two queries - deprecated from core
+    OpenGL 3.2).
+
+15) How is context sharing between contexts of different versions
+    handled?
+
+    RESOLVED: It's up to the implementation whether or not to allow
+    this, and to define behavior when shared objects include state or
+    behaviors not described by one of the contexts sharing them (for
+    example, textures with nonzero width borders shared by 3.2 core and
+    compatibility profile contexts).
+
+16) Is the GL_ARB_compatibility extension equivalent to the
+    compatibility profile?
+
+    RESOLVED: No. The extension refers specifically to functionality
+    removed from OpenGL 3.1 and restored by this extension. The
+    compatibility profile also restores this functionality, but may
+    define additional interactions between new features in version 3.N
+    and the functionality removed in OpenGL 3.1.
+
+    In other words, the extension is a subset of the compatibility
+    profile. A context implementing the compatibility profile for OpenGL
+    3.2 or greater may (and probably will) choose to export
+    GL_ARB_compatibility, but this is not required.
+
+17) If the core profile is requested, what additional functionality
+    can be provided?
+
+    RESOLVED: Functionality defined only by the compatibility profile
+    cannot be implemented by a context supporting the core profile. For
+    example, if a 3.2 core profile is requested, that context cannot
+    implement the GL_ARB_compatibility extension. However, any desired
+    new functionality may be exposed via vendor or ARB extensions in the
+    normal fashion.
+
+
+Revision History
+
+    Version 20, 2009/07/28 - Correct issue 14 to note that the 3.2
+    compatibility profile does not deprecated anything.
+
+    Version 19, 2009/07/27 - Add profiled context creation functionality
+    (WGL_CONTEXT_PROFILE_MASK_ARB and the associated bit tokens, error
+    code, and issues 10-16). Clarify that if the core profile is
+    requested, the returned context cannot restore functionality from
+    the compatibility profile (issue 17 and corresponding spec
+    language). Add ERROR_INVALID_PARAMETER error if an unrecognized
+    attribute is specified. Specify the interdependencies between the
+    two WGL extensions defined here and OpenGL 3.2, including the
+    requirement that WGL_ARB_create_context_profile be supported if an
+    OpenGL 3.2 or later implementation is supported.
+
+    Version 18, 2009/07/24 - Specify that repeated attribute values
+    always result in the last specified value being used.
+
+    Version 17, 2009/07/23 - Update the extension to clarify
+    interactions with OpenGL 3.1 and greater, allow returning 3.0 and
+    greater contexts from the legacy context creation routines so long
+    as they're backwards compatible, and mandate that requesting a
+    forward-compatible context always return exactly the requested
+    version (bugs 5112, 5349).
+
+    Version 16, 2008/08/21 - Add initial viewport/scissor setting
+    behavior (cloned from GLX, including the case when no default
+    framebuffer is made current.
+
+    Version 15, 2008/08/10 - Assign enumerant values and extension
+    number.
+
+    Version 14, 2008/07/10 - Add trailing zero to array attributes in
+    wglCreateLayerContext example (Pat Brown).
+
+    Version 13, 2008/07/03 - Update versioning behavior so asking for <=
+    2.1 will return <= 2.1, asking for 3.0 will return 3.0, and noting
+    that we must update interactions with GL once 3.1 is defined.
+    Mandated behavior of legacy context creation APIs when this
+    extension is supported (bug 3595).
+
+    Version 12, 2008/07/02 - Rename WGL_PREVIEW_BIT to
+    WGL_CONTEXT_FORWARD_COMPATIBLE_BIT and other replace "preview
+    context" with "forward-compatible context". Rename
+    wglCreateContextVersion to wglCreateContextAttribs.
+
+    Version 11, 2008/06/12 - Use ARB suffix. Raise ERROR_INVALID_VERSION
+    instead of ERROR_INVALID_DATA on a bad version/preview combination.
+
+    Version 10, 2008/04/08 - Changed "lite" to "preview" (still open for
+    discussion however), and changed version "2.2" to "3.0" following
+    the marketing TSG recommendation. Changed definition of preview
+    contexts so that deprecated functionality *must not* be supported.
+    Added issue 10 about how to handle profiles.
+
+    Version 9, 2008/02/07 - Added version naming issue 9.
+
+    Version 8, 2008/02/07 - Added naming issue 8. Removed reference to
+    GL version 3 in "Sharing Objects Between Contexts".
+
+    Version 7, 2008/02/01 - Rewrote issues list in light of new API
+    direction, and reopened some issues. Added separate major and minor
+    version attributes and "lite" API flag.
+
+    Version 6, 2007/05/22 - Resolve issue 4, although the exact
+    mechanism is still unknown.
+
+    Version 5, 2007/04/09 - Added WGL_CONTEXT_FLAGS attribute and
+    WGL_CONTEXT_DEBUG_BIT flag, and a high-level description of the
+    concept of "debug contexts".
+
+    Version 4, 2007/02/06 - Removed CreateContextVersion error when GL2
+    and Longs Peak contexts are placed in the same share group, and
+    referred to the GL_EXT_bind_image extension in issue 1. Added issues
+    6 ("can be shared" attribute) and 7 (creation of debug contexts) per
+    discussion at the Atlanta F2F ARB meeting. Added error condition for
+    wglShareLists if passed a Longs Peak context handle.
+
+    Version 3, 2007/01/22 - added issue 5.
+
+    Version 2, 2007/01/17 - change to the same style as
+    eglCreateContext, using an attribute list. Add wglMakeCurrent
+    language disallowing current 3.x contexts bound to pbuffers, and
+    allowing current 3.x context without a window-system provided
+    framebuffer.
+
+    Version 1, 2007/1/17 - First draft

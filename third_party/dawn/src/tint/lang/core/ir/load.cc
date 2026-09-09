@@ -29,7 +29,7 @@
 
 #include "src/tint/lang/core/ir/clone_context.h"
 #include "src/tint/lang/core/ir/module.h"
-#include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/core/type/memory_view.h"
 #include "src/tint/utils/ice/ice.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::core::ir::Load);
@@ -57,7 +57,8 @@ Load* Load::Clone(CloneContext& ctx) {
 
 core::ir::Instruction::Accesses Load::GetSideEffects() const {
     // Always inline things in the `handle` address space
-    if (From()->Type()->As<core::type::Pointer>()->AddressSpace() == core::AddressSpace::kHandle) {
+    if (From()->Type()->As<core::type::MemoryView>()->AddressSpace() ==
+        core::AddressSpace::kHandle) {
         return Instruction::Accesses{};
     }
     return Instruction::Accesses{Instruction::Access::kLoad};

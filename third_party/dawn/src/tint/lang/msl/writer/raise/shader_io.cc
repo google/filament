@@ -85,7 +85,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     ~StateImpl() override {}
 
     /// @copydoc ShaderIO::BackendState::FinalizeInputs
-    Vector<core::ir::FunctionParam*, 4> FinalizeInputs() override {
+    Result<Vector<core::ir::FunctionParam*, 4>> FinalizeInputs() override {
         // The following builtin values are polyfilled using other builtin values:
         // * workgroup_index - workgroup_id and num_workgroups
         // * global_invocation_index - global_invocation_id, num_workgroups (and workgroup size)
@@ -179,7 +179,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     }
 
     /// @copydoc ShaderIO::BackendState::FinalizeOutputs
-    const core::type::Type* FinalizeOutputs() override {
+    Result<const core::type::Type*> FinalizeOutputs() override {
         // Add a fixed sample mask builtin for fragment shaders if needed.
         if (config.fixed_sample_mask != UINT32_MAX && func->IsFragment()) {
             AddFixedSampleMaskOutput();
@@ -318,17 +318,12 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir, const ShaderIOConfig& config) {
-    AssertValid(ir,
-                tint::core::ir::Capabilities{
-                    core::ir::Capability::kAllow8BitIntegers,
-                    core::ir::Capability::kAllowDuplicateBindings,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                },
-                "before msl.ShaderIO");
+    AssertValid(ir, "before msl.ShaderIO");
 
-    core::ir::transform::RunShaderIOBase(ir, [&](core::ir::Module& mod, core::ir::Function* func) {
-        return std::make_unique<StateImpl>(mod, func, config);
-    });
+    TINT_CHECK_RESULT(core::ir::transform::RunShaderIOBase(
+        ir, [&](core::ir::Module& mod, core::ir::Function* func) {
+            return std::make_unique<StateImpl>(mod, func, config);
+        }));
 
     return Success;
 }

@@ -27,15 +27,14 @@
 
 #include <utility>
 
-#include "dawn/tests/unittests/wire/WireTest.h"
 #include "dawn/wire/WireClient.h"
 #include "dawn/wire/WireServer.h"
+#include "src/dawn/tests/unittests/wire/WireTest.h"
 
 namespace dawn::wire {
 namespace {
 
 using testing::Mock;
-using testing::Return;
 
 class WireInjectBufferTests : public WireTest {
   public:

@@ -31,6 +31,19 @@
 
 set -e # Fail on any error.
 
+# Find the available Python executable
+# On Linux/Mac, it normally finds 'python3', while on Windows, it finds 'python.exe'.
+# Note that on Windows, it's advised to disable the "App execution aliases" for
+# python.exe and python3.exe.
+if command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &>/dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "Error: Python is not installed or not in PATH." >&2
+    exit 1
+fi
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
 
-python3 "${SCRIPT_DIR}/run.py" "${@:1}"
+$PYTHON_CMD "${SCRIPT_DIR}/run.py" "${@:1}"

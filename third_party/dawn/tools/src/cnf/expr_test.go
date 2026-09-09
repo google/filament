@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,6 +28,7 @@
 package cnf_test
 
 import (
+	"reflect"
 	"testing"
 
 	"dawn.googlesource.com/dawn/tools/src/cnf"
@@ -87,4 +88,44 @@ func TestAssumeTrue(t *testing.T) {
 			t.Errorf("('%v').AssumeTrue('%v') returned '%v', expected '%v'", expr, isTrue, got, test.expect)
 		}
 	}
+}
+
+func TestIsNegative(t *testing.T) {
+	test := func(expression string, expected bool) {
+		t.Run(expression, func(t *testing.T) {
+			expr, err := cnf.Parse(expression)
+			if err != nil {
+				t.Fatalf("unexpected error Parse('%v'): %v", expression, err)
+			}
+			got := expr.IsNegative()
+			if got != expected {
+				t.Errorf("IsNegative() returned %v, expected %v", got, expected)
+			}
+		})
+	}
+
+	test("!a", true)
+	test("!a && !b", true)
+	test("a", false)
+	test("!a && b", false)
+}
+
+func TestPositiveVarsOfNegative(t *testing.T) {
+	test := func(expression string, expected []string) {
+		t.Run(expression, func(t *testing.T) {
+			expr, err := cnf.Parse(expression)
+			if err != nil {
+				t.Fatalf("unexpected error Parse('%v'): %v", expression, err)
+			}
+			got := expr.PositiveVarsOfNegative()
+			if !reflect.DeepEqual(got, expected) {
+				t.Errorf("PositiveVarsOfNegative() returned %v, expected %v", got, expected)
+			}
+		})
+	}
+
+	test("!a", []string{"a"})
+	test("!a && !b", []string{"a", "b"})
+	test("a", []string{})
+	test("!a && b", []string{"a"})
 }

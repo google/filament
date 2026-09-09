@@ -34,11 +34,11 @@
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/CoreFoundationRef.h"
-#include "dawn/common/NSRef.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/SharedTextureMemory.h"
-#include "dawn/native/Subresource.h"
+#include "src/dawn/common/CoreFoundationRef.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/SharedTextureMemory.h"
+#include "src/dawn/native/Subresource.h"
 
 namespace dawn::native::metal {
 

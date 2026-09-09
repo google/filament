@@ -1,0 +1,18 @@
+// Prototypes for wrappers to TempRegLoad/TempRegStore,
+// overloaded for uint, int, and float
+// link to TempReg.dxl (assembled from TempReg.ll)
+
+#ifndef TEMPREG_H
+#define TEMPREG_H
+
+// Store values
+void sreg(uint n, uint val);
+void sreg(uint n, int val);
+void sreg(uint n, float val);
+
+// Load values
+uint ureg(uint n);
+int ireg(uint n);
+float freg(uint n);
+
+#endif // TEMPREG_H

@@ -31,6 +31,38 @@ import("${dawn_root}/generator/dawn_generator.gni")
 import("${dawn_root}/scripts/dawn_component.gni")
 
 ###############################################################################
+# Dawn version
+###############################################################################
+
+dawn_generator("dawn_version_gen") {
+  script = "${dawn_root}/generator/dawn_version_generator.py"
+  inputs = [ "${dawn_template_dir}/dawn/dawn_version.h" ]
+  args = [
+    "--dawn-dir",
+    rebase_path("${dawn_root}", root_build_dir),
+  ]
+
+  # We can use the explicit version file if it is generated instead of relying
+  # on the existence of git.
+  if (dawn_version_file != "") {
+    inputs += [ dawn_version_file ]
+    args += [
+      "--version-file",
+      rebase_path(dawn_version_file, root_build_dir),
+    ]
+  } else {
+    # Allow any file from .git to be read, they are inputs for RBE but not all
+    # are always read.
+    inputs += [ "*.git/*" ]
+  }
+
+  outputs = [
+    "include/dawn/dawn_version.h",
+    "src/dawn/common/Version_autogen.h",
+  ]
+}
+
+###############################################################################
 # Dawn C++ wrapper
 ###############################################################################
 
@@ -44,6 +76,10 @@ source_set("cpp") {
 
 dawn_json_generator("proc_gen") {
   target = "proc"
+  inputs = [
+    "${dawn_template_dir}/dawn_proc.cpp",
+    "${dawn_template_dir}/dawn_thread_dispatch_proc.cpp",
+  ]
   outputs = [
     "src/dawn/dawn_proc.cpp",
     "src/dawn/dawn_thread_dispatch_proc.cpp",
@@ -71,6 +107,10 @@ dawn_component("proc") {
 
 dawn_json_generator("webgpu_headers_gen") {
   target = "webgpu_headers"
+  inputs = [
+    "${dawn_template_dir}/api.h",
+    "${dawn_template_dir}/BSD_LICENSE",
+  ]
   outputs = [ "webgpu-headers/webgpu.h" ]
 }
 

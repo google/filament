@@ -38,7 +38,7 @@ import("../../../../../scripts/dawn_overrides_with_defaults.gni")
 import("../../../../../scripts/tint_overrides_with_defaults.gni")
 
 import("${tint_src_dir}/tint.gni")
-if (tint_build_glsl_validator) {
+if (tint_build_glsl_validator && tint_build_glsl_writer) {
   libtint_source_set("validate") {
     sources = [
       "validate.cc",
@@ -46,6 +46,8 @@ if (tint_build_glsl_validator) {
     ]
     deps = [
       "${dawn_root}/src/utils",
+      "${tint_glslang_dir}:glslang_default_resource_limits_sources",
+      "${tint_glslang_dir}:glslang_lib_sources",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
@@ -57,15 +59,9 @@ if (tint_build_glsl_validator) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/text",
     ]
-
-    if (tint_build_glsl_validator) {
-      deps += [
-        "${tint_glslang_dir}:glslang_default_resource_limits_sources",
-        "${tint_glslang_dir}:glslang_lib_sources",
-      ]
-    }
   }
 }

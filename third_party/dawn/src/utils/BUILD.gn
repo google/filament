@@ -29,18 +29,499 @@
 # Utils library
 ###############################################################################
 
+import("../../scripts/dawn_features.gni")
 import("../../scripts/dawn_overrides_with_defaults.gni")
 
+import("//build_overrides/build.gni")
+import("${dawn_root}/scripts/dawn_nocompile.gni")
+
+# Use Chromium's dcheck_always_on when available so that we respect it when
+# running tests on the GPU builders
+if (build_with_chromium) {
+  import("//build/config/dcheck_always_on.gni")
+} else {
+  dcheck_always_on = false
+}
+
+if (build_with_chromium) {
+  import("//build/config/sanitizers/sanitizers.gni")
+} else {
+  use_fuzzing_engine = false
+}
+
+# Centralized config for -Weverything and its suppressions.
+#
+# Notes:
+# - File-specific warning suppressions can't be specified as cflags in a GN
+#   target, and must be specified in warning_suppression_mappings.txt. This is
+#   due to GN's flag ordering rules which specify that configs' cflags come
+#   after target cflags:
+#   https://gn.googlesource.com/gn/+/main/docs/faq.md#What-is-the-order-of-flags-and-values-given-to-the-compiler
+# - This is not the only source of warning configs. GN also has default warning
+#   configs in //build/config/BUILDCONFIG.gn (which we include from our .gn).
+config("dawn_warnings") {
+  cflags = []
+  cflags_c = []
+  cflags_cc = []
+
+  if (dawn_weverything) {
+    assert(dawn_standalone && is_clang,
+           "dawn_weverything requires clang in a standalone build.")
+  }
+
+  # TODO(https://crbug.com/404297941): Disable warning-suppression-mappings
+  # configuration because the ICECC build doesn't distribute the
+  # warning_suppression.txt file to other ICECC nodes. As a result, the nodes
+  # cannot locate the file during target compilation. Therefore, we are
+  # disabling the warning-suppression-mappings configuration for ICECC builds
+  # for now.
+  # If we're not using Clang, then we don't touch any warning config.
+  if (is_clang && cc_wrapper != "icecc") {
+    ### In dawn_standalone, first, enable the base set of warnings.
+    if (dawn_standalone) {
+      if (dawn_weverything) {
+        cflags += [
+          "-Weverything",
+
+          # Re-enable (almost) all the warnings that are mentioned in
+          # //build/config/compiler/BUILD.gn to try to reset any disabled
+          # warnings as -Weverything won't override previous -Wno-* flags. They
+          # may be re-disabled subsequently, this is just to set a baseline.
+          "-Wbackend-plugin",
+          "-Wc++11-narrowing",
+          "-Wcast-function-type",
+          "-Wcomments",
+          "-Wdeprecated-builtins",
+          "-Wdeprecated-declarations",
+          "-Wexit-time-destructors",
+          "-Wgnu-anonymous-struct",
+          "-Wgnu-case-range",
+          "-Wgnu-conditional-omitted-operand",
+          "-Wgnu-include-next",
+          "-Wgnu-label-as-value",
+          "-Wgnu-line-marker",
+          "-Wgnu-offsetof-extensions",
+          "-Wgnu-redeclared-enum",
+          "-Wgnu-statement-expression",
+          "-Wgnu-zero-variadic-macro-arguments",
+          "-Wincompatible-pointer-types",
+          "-Wmissing-field-initializers",
+          "-Wnarrowing",
+          "-Wnonportable-include-path",
+          "-Wnontrivial-memcall",
+          "-Wpsabi",
+          "-Wthread-safety-reference-return",
+          "-Wuninitialized-const-pointer",
+          "-Wunnecessary-virtual-specifier",
+          "-Wunneeded-internal-declaration",
+          "-Wunsafe-buffer-usage-in-static-sized-array",
+          "-Wunused-but-set-global",
+          "-Wunused-but-set-variable",
+          "-Wunused-function",
+          "-Wunused-local-typedefs",
+          "-Wunused-parameter",
+          "-Wunused-variable",
+          "-Wzero-length-array",
+        ]
+
+        # Same but for things passed in cflags_cc as those will be placed on
+        # the command line after ALL the cflags.
+        cflags_cc += [
+          "-Winvalid-offsetof",
+          "-Wmodule-import-in-extern-c",
+          "-Wmodules-ambiguous-internal-linkage",
+          "-Wmodules-import-nested-redundant",
+          "-Wnarrowing",
+          "-Wtrigraphs",
+          "-Wnullability-completeness",
+          "-Wdeprecated-builtins",
+          "-Wc++98-compat-extra-semi",
+        ]
+      } else {
+        cflags = [
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+
+          # Additional warnings that are not part of -Wall or -Wextra.
+          "-Wconditional-uninitialized",
+          "-Wcstring-format-directive",
+          "-Wctad-maybe-unsupported",
+          "-Wc++11-narrowing",
+          "-Wdeprecated-copy",
+          "-Wdeprecated-copy-dtor",
+          "-Wduplicate-enum",
+          "-Wextra-semi",
+          "-Wextra-semi-stmt",
+          "-Wimplicit-fallthrough",
+          "-Winconsistent-missing-destructor-override",
+          "-Winvalid-offsetof",
+          "-Wmissing-field-initializers",
+          "-Wnon-c-typedef-for-linkage",
+          "-Wpessimizing-move",
+          "-Wrange-loop-analysis",
+          "-Wredundant-move",
+          "-Wshadow-field",
+          "-Wstrict-prototypes",
+          "-Wsuggest-destructor-override",
+          "-Wsuggest-override",
+          "-Wtautological-unsigned-zero-compare",
+          "-Wunreachable-code-aggressive",
+          "-Wunused-but-set-variable",
+          "-Wunused-macros",
+        ]
+
+        cflags_cc = []
+      }
+    }
+
+    ### Now, configure all warning suppressions (regardless of dawn_standalone).
+
+    # Use per-file warning suppressions from warning_suppression_mappings.txt
+    inputs = [ "warning_suppression_mappings.txt" ]
+    cflags +=
+        [ "--warning-suppression-mappings=" +
+          rebase_path("warning_suppression_mappings.txt", root_build_dir) ]
+
+    if (!clang_use_unsafe_buffers_plugin) {
+      # If we don't have Chromium's unsafe buffers plugin (e.g. it was
+      # disabled in GN args), disable the warning entirely. The plugin
+      # implements unsafe_buffers_paths.txt support, and probably other
+      # important things we don't want to run without.
+      cflags += [ "-Wno-unsafe-buffer-usage" ]
+    }
+
+    # TODO(https://crbug.com/523358231): Enable more warnings.
+
+    # P1. Likely to help with hardening.
+    cflags += [
+      # Thread safety (https://crbug.com/529895490)
+      "-Wno-thread-safety",
+
+      # Enums (https://crbug.com/515562283)
+      "-Wno-switch-default",
+      "-Wno-switch-enum",
+    ]
+
+    # P2. Might help with hardening.
+    cflags += [
+      "-Wno-float-equal",
+      "-Wno-undefined-func-template",
+      "-Wno-unused-parameter",
+
+      # The lifetime-safety-* warnings are part of an experimental analysis.
+      # Many individual diagnostics (like
+      # -Wlifetime-safety-lifetimebound-violation) are not yet mapped to
+      # toggleable warning flags, so we suppress the entire group and disable
+      # the analysis pass.
+      "-Wno-lifetime-safety-all",
+    ]
+
+    # P3. Checks that could be nice but probably don't help with hardening.
+    cflags += [
+      "-Wno-unused-member-function",
+      "-Wno-unused-template",
+
+      # Performance
+      "-Wno-exit-time-destructors",
+      "-Wno-global-constructors",
+      "-Wno-nrvo",
+      "-Wno-weak-vtables",
+    ]
+
+    # P4. Checks we might want to look at again someday.
+    cflags += [
+      "-Wno-documentation",
+      "-Wno-nonportable-system-include-path",
+
+      # Needed for __COUNTER__ in various Tint and platform macros.
+      "-Wno-c2y-extensions",
+
+      # Disallows `default:` in switches that appear to be covered. Our switches
+      # are rarely actually covered. Note, crbug.com/515562283 may change this.
+      "-Wno-covered-switch-default",
+
+      # Dawn codebase codebase mostly lives without any nullability checks. Few
+      # obscure cases like `std::string{[NSString UTF8String])` are not worth
+      # changing.
+      "-Wno-nullable-to-nonnull-conversion",
+
+      # Disallows multiple header file candidates.
+      # Dawn and Tint have many headers that are mirrored between the source and
+      # generated files directories while they are the same file.
+      "-Wno-shadow-header",
+    ]
+
+    # P∞. Checks we're not really interested in re-enabling.
+    cflags += [
+      # We require C++20.
+      "-Wno-c++20-extensions",
+      "-Wno-c++98-compat",
+      "-Wno-c++98-compat-pedantic",
+      "-Wno-pre-c++14-compat",
+      "-Wno-pre-c++17-compat",
+      "-Wno-pre-c++20-compat",
+
+      # Misc.
+      "-Wno-missing-designated-field-initializers",
+      "-Wno-missing-prototypes",
+      "-Wno-padded",
+
+      # Triggers on system header stuff like `stdout`.
+      "-Wno-disabled-macro-expansion",
+
+      # Needed for libc++ and GL, not really useful to us.
+      "-Wno-reserved-identifier",
+
+      # Shadow warnings that would require confusing variable renames.
+      "-Wno-shadow-field-in-constructor",
+      "-Wno-shadow-uncaptured-local",
+
+      # This warning tries to prove that the expression passed to
+      # __builtin_assume (DAWN_RELEASE_ASSUME) has no side effects, because that
+      # expression does not get executed. But its analysis is too simple to be
+      # useful - it triggers too often (e.g. on std::numeric_limits::max()).
+      # Instead we use clang-tidy's heuristic `bugprone-assert-side-effect`.
+      "-Wno-assume",
+
+      # Disallows comparison result always true. We have branches that can be
+      # always true on some platforms but not on other platforms (e.g. x86, x64)
+      "-Wno-tautological-type-limit-compare",
+
+      # WGSL uses @ as part of its attribute syntax and it vastly appears in
+      # Tint comments, while clang uses @ to mark a documentation command in the
+      # comment.
+      "-Wno-documentation-unknown-command",
+    ]
+  }
+
+  cflags_objc = cflags_c
+  cflags_objcc = cflags_cc
+}
+
+# TODO(crbug.com/523358231): Some targets pick up this config multiple times and
+# receive all of the warning flags repeatedly, for example they're repeated
+# three times in obj/src/dawn/native/sources/Device.o. Can this be avoided?
 config("internal_config") {
   include_dirs = [ "${dawn_root}" ]
+
+  defines = []
+  configs = [ ":dawn_warnings" ]
+
+  if (is_clang && dawn_standalone && !is_wasm) {
+    configs += [ ":raw_ptr_check" ]
+  }
+
+  if (dawn_always_assert || dcheck_always_on || is_debug ||
+      use_fuzzing_engine) {
+    defines += [ "DAWN_ENABLE_ASSERTS" ]
+  }
+
+  if (build_with_chromium || use_fuzzing_engine) {
+    # Does a hard abort when an assertion fails so that fuzzers catch and parse
+    # the failure. Also call abort() so chrome can dump crash stack in console.
+    defines += [ "DAWN_ABORT_ON_ASSERT" ]
+  }
+
+  if (use_fuzzing_engine) {
+    # Disable logging to make fuzzing more efficient.
+    defines += [ "DAWN_DISABLE_LOGGING" ]
+  }
+
+  # OS_CHROMEOS cannot be autodetected in runtime and
+  # cannot be detected with regular compiler macros either.
+  # Inject it from the build system
+  if (is_chromeos) {
+    defines += [ "DAWN_OS_CHROMEOS" ]
+  }
 }
 
 static_library("utils") {
   sources = [
+    "assert.cc",
+    "assert.h",
     "compiler.h",
+    "force_crash.h",
+    "heap_array.h",
+    "log.cc",
+    "log.h",
+    "non_copyable.h",
+    "non_movable.h",
     "numeric.h",
     "placeholder.cc",
+    "platform.h",
+    "span.h",
+    "typed_integer.h",
+    "underlying_type.h",
   ]
 
+  if (is_win) {
+    sources += [ "windows_with_undefs.h" ]
+  }
+
   public_configs = [ ":internal_config" ]
+}
+
+source_set("crash_handler") {
+  sources = [
+    "crash_handler.cc",
+    "crash_handler.h",
+  ]
+  public_configs = [ ":internal_config" ]
+  public_deps = [ "${dawn_abseil_dir}:absl" ]
+}
+
+dawn_nocompile_source_set("nocompile_sources") {
+  deps = [ ":utils" ]
+  sources = [
+    "heap_array_nocompile.nc",
+    "numeric_nocompile.nc",
+    "span_nocompile.nc",
+    "typed_integer_nocompile.nc",
+  ]
+  if (dawn_weverything) {
+    sources += [ "warning_nocompile.nc" ]
+  }
+}
+
+# Included in dawn_unittests.
+source_set("unittests") {
+  testonly = true
+
+  deps = [
+    ":gmock_and_gtest",
+    ":nocompile_sources",
+    ":utils",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+  ]
+
+  sources = [
+    "assert_test.cc",
+    "heap_array_test.cc",
+    "numeric_test.cc",
+    "span_tests.cc",
+    "typed_integer_tests.cc",
+    "underlying_type_tests.cc",
+  ]
+}
+
+###############################################################################
+# Gtest Gmock - Handle building inside and outside of Chromium.
+###############################################################################
+config("gtest_warnings_config") {
+  if (is_clang) {
+    cflags_cc = [
+      "-Wno-deprecated-copy-with-dtor",
+      "-Wno-sign-conversion",
+      "-Wno-ms-bitfield-padding",
+      "-Wno-zero-as-null-pointer-constant",
+    ]
+    cflags_objcc = cflags_cc
+  }
+}
+
+# When building outside of Chromium we need to define our own targets for GTest
+# and GMock. However when compiling inside of Chromium we need to reuse the
+# existing targets, both because Chromium has a special harness for swarming
+# and because otherwise the "gn check" fails.
+
+if (build_with_chromium) {
+  # When we are in Chromium we reuse its targets, and also add some deps that
+  # are needed to launch the test in swarming mode.
+  group("gmock_and_gtest_only") {
+    testonly = true
+    public_deps = [
+      "//base",
+      "//base/test:test_support",
+      "//testing/gmock",
+      "//testing/gtest",
+    ]
+  }
+} else {
+  # When we aren't in Chromium we use the targets defined in
+  # //third_party/googletest
+  group("gmock_and_gtest_only") {
+    testonly = true
+    public_deps = [
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
+    ]
+  }
+
+  group("gmock_main") {
+    testonly = true
+    public_deps = [
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gmock_main",
+    ]
+    public_configs = [ ":gtest_warnings_config" ]
+  }
+}
+
+source_set("gmock_and_gtest") {
+  testonly = true
+  public_deps = [ ":gmock_and_gtest_only" ]
+  deps = [ ":utils" ]
+
+  # Dawn's gtest utils.
+  sources = [ "gtest.h" ]
+
+  public_configs = [ ":gtest_warnings_config" ]
+}
+
+###############################################################################
+# Additional clang plugins.
+###############################################################################
+
+# Helper template to define clang plugins.
+#
+# Params:
+#   plugin: The name of the clang plugin to load.
+#   plugin_arguments: List of arguments to pass to the plugin.
+template("clang_plugin") {
+  config(target_name) {
+    # -Xclang=arg is mishandled by clang-tidy, so have to use the two-arg style.
+    cflags = [
+      "-Xclang",
+      "-add-plugin",
+      "-Xclang",
+      "${invoker.plugin}",
+    ]
+
+    foreach(flag, invoker.plugin_arguments) {
+      cflags += [
+        "-Xclang",
+        "-plugin-arg-${invoker.plugin}",
+        "-Xclang",
+        "${flag}",
+      ]
+    }
+  }
+}
+
+# Check struct/class member pointers are using raw_ptr<> where appropriate.
+clang_plugin("raw_ptr_check") {
+  # Defined in <chromium>/tools/clang/raw_ptr_plugin/RawPtrPlugin.cpp
+  plugin = "raw-ptr-plugin"
+
+  plugin_arguments = [
+    "check-raw-ptr-fields",
+    "check-raw-ptr-to-stack-allocated",
+    "check-raw-ref-fields",
+    "check-span-fields",
+  ]
+
+  _exclusions = [
+    "/include/",
+    "/src/tint/",
+    "/src/dawn/replay/",
+
+    # TODO(https://crbug.com/479743213): Enforce raw_ptr usage in dawn/node.
+    "/src/dawn/node/",
+  ]
+
+  foreach(dir, _exclusions) {
+    plugin_arguments += [ "raw-ptr-exclude-path=" +
+                          rebase_path("${dawn_root}/${dir}", root_build_dir) ]
+  }
 }

@@ -32,12 +32,13 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/tests/white_box/SharedTextureMemoryTests.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/tests/white_box/SharedTextureMemoryTests.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::vulkan {
 namespace {
@@ -83,9 +84,10 @@ auto CreateSharedTextureMemoryHelperImpl(native::vulkan::Device* deviceVk,
     VkMemoryRequirements requirements;
     deviceVk->fn.GetImageMemoryRequirements(deviceVk->GetVkDevice(), vkImage, &requirements);
 
-    int bestType = deviceVk->GetResourceMemoryAllocator()->FindBestTypeIndex(
+    auto result = deviceVk->GetResourceMemoryAllocator()->FindBestTypeIndex(
         requirements, native::vulkan::MemoryKind::DeviceLocal);
-    EXPECT_GE(bestType, 0);
+    EXPECT_TRUE(result.has_value());
+    uint32_t bestType = result.value();
 
     VkMemoryDedicatedAllocateInfo dedicatedInfo;
     dedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
@@ -102,7 +104,7 @@ auto CreateSharedTextureMemoryHelperImpl(native::vulkan::Device* deviceVk,
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.pNext = &externalAllocateInfo;
     allocateInfo.allocationSize = requirements.size;
-    allocateInfo.memoryTypeIndex = static_cast<uint32_t>(bestType);
+    allocateInfo.memoryTypeIndex = bestType;
 
     VkDeviceMemory vkDeviceMemory;
     EXPECT_EQ(deviceVk->fn.AllocateMemory(deviceVk->GetVkDevice(), &allocateInfo, nullptr,
@@ -465,7 +467,7 @@ TEST_P(SharedTextureMemoryOpaqueFDValidationTest, ViewFormatRequirements) {
         }
         {
             // Passing the second is invalid.
-            imageFormatListInfo.pViewFormats = vkFormats.data() + 1;
+            imageFormatListInfo.pViewFormats = DAWN_UNSAFE_TODO(vkFormats.data() + 1);
             imageFormatListInfo.viewFormatCount = 1;
 
             CreateSharedTextureMemoryHelperImpl(

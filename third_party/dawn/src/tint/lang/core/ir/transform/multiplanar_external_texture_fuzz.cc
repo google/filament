@@ -19,15 +19,15 @@
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 // DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
 // FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT\ OF SUBSTITUTE GOODS OR
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 // SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/transform/multiplanar_external_texture.h"
-#include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/lang/core/ir/var.h"
 
 namespace tint::core::ir::transform {
 namespace {
@@ -38,15 +38,29 @@ using BindingsMap =
 Result<SuccessType> MultiplanarExternalTextureFuzzer(Module& ir,
                                                      const fuzz::ir::Context&,
                                                      const BindingsMap& input_map) {
+    Hashset<BindingPoint, 16> existing_bindings;
+    for (auto* inst : *ir.root_block) {
+        if (auto* var = inst->As<core::ir::Var>()) {
+            if (auto bp = var->BindingPoint()) {
+                existing_bindings.Add(*bp);
+            }
+        }
+    }
+
     tint::transform::multiplanar::BindingsMap multiplanar_map;
     for (const auto& iter : input_map) {
+        if (existing_bindings.Contains(iter.second.params) ||
+            existing_bindings.Contains(iter.second.plane_1)) {
+            return Failure{"new bindings conflict with existing bindings"};
+        }
+
         multiplanar_map.emplace(iter.first, iter.second);
     }
+
     return MultiplanarExternalTexture(ir, multiplanar_map);
 }
 
 }  // namespace
 }  // namespace tint::core::ir::transform
 
-TINT_IR_MODULE_FUZZER(tint::core::ir::transform::MultiplanarExternalTextureFuzzer,
-                      tint::core::ir::transform::kMultiplanarExternalTextureCapabilities);
+TINT_IR_MODULE_FUZZER(tint::core::ir::transform::MultiplanarExternalTextureFuzzer);

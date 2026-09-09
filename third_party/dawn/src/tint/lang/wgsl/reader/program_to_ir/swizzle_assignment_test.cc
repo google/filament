@@ -210,5 +210,102 @@ TEST_F(ProgramToIRSwizzleAssignmentTest, CompoundAssignment_ChainedSwizzle) {
 )");
 }
 
+TEST_F(ProgramToIRSwizzleAssignmentTest, Assignment_SwizzleIndexedConstant) {
+    // var v : vec4<f32>;
+    // v.xyz[2] = 1.0;
+    auto* v = Var("v", ty.vec4<f32>(), core::AddressSpace::kFunction);
+    auto* assign = Assign(IndexAccessor(MemberAccessor(v, "xyz"), 2_i), 1_f);
+    WrapInFunction(v, assign);
+
+    auto m = Build();
+    ASSERT_EQ(m, Success);
+
+    EXPECT_EQ(Dis(m.Get()), R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %v:ptr<function, vec4<f32>, read_write> = var undef
+    store_vector_element %v, 2u, 1.0f
+    ret
+  }
+}
+)");
+}
+
+TEST_F(ProgramToIRSwizzleAssignmentTest, Assignment_SwizzleIndexedDynamic) {
+    // var v : vec4<f32>;
+    // var i : i32;
+    // v.zyx[i] = 1.0;
+    auto* v = Var("v", ty.vec4<f32>(), core::AddressSpace::kFunction);
+    auto* i = Var("i", ty.i32(), core::AddressSpace::kFunction);
+    auto* assign = Assign(IndexAccessor(MemberAccessor(v, "zyx"), "i"), 1_f);
+    WrapInFunction(v, i, assign);
+
+    auto m = Build();
+    ASSERT_EQ(m, Success);
+
+    EXPECT_EQ(Dis(m.Get()), R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %v:ptr<function, vec4<f32>, read_write> = var undef
+    %i:ptr<function, i32, read_write> = var undef
+    %4:i32 = load %i
+    %5:u32 = access array<u32, 3>(2u, 1u, 0u), %4
+    store_vector_element %v, %5, 1.0f
+    ret
+  }
+}
+)");
+}
+
+TEST_F(ProgramToIRSwizzleAssignmentTest, CompoundAssignment_SwizzleIndexedConstant) {
+    // var v : vec4<f32>;
+    // v.xyz[0] += 1.0;
+    auto* v = Var("v", ty.vec4<f32>(), core::AddressSpace::kFunction);
+    auto* assign =
+        CompoundAssign(IndexAccessor(MemberAccessor(v, "xyz"), 0_i), 1_f, core::BinaryOp::kAdd);
+    WrapInFunction(v, assign);
+
+    auto m = Build();
+    ASSERT_EQ(m, Success);
+
+    EXPECT_EQ(Dis(m.Get()), R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %v:ptr<function, vec4<f32>, read_write> = var undef
+    %3:f32 = load_vector_element %v, 0u
+    %4:f32 = add %3, 1.0f
+    store_vector_element %v, 0u, %4
+    ret
+  }
+}
+)");
+}
+
+TEST_F(ProgramToIRSwizzleAssignmentTest, CompoundAssignment_SwizzleIndexedDynamic) {
+    // var v : vec4<f32>;
+    // var i : i32;
+    // v.xyz[i] += 1.0;
+    auto* v = Var("v", ty.vec4<f32>(), core::AddressSpace::kFunction);
+    auto* i = Var("i", ty.i32(), core::AddressSpace::kFunction);
+    auto* assign =
+        CompoundAssign(IndexAccessor(MemberAccessor(v, "xyz"), "i"), 1_f, core::BinaryOp::kAdd);
+    WrapInFunction(v, i, assign);
+
+    auto m = Build();
+    ASSERT_EQ(m, Success);
+
+    EXPECT_EQ(Dis(m.Get()), R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %v:ptr<function, vec4<f32>, read_write> = var undef
+    %i:ptr<function, i32, read_write> = var undef
+    %4:i32 = load %i
+    %5:u32 = access array<u32, 3>(0u, 1u, 2u), %4
+    %6:f32 = load_vector_element %v, %5
+    %7:f32 = add %6, 1.0f
+    %8:u32 = access array<u32, 3>(0u, 1u, 2u), %4
+    store_vector_element %v, %8, %7
+    ret
+  }
+}
+)");
+}
+
 }  // namespace
 }  // namespace tint::wgsl::reader

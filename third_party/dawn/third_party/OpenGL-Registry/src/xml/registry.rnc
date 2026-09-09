@@ -1,0 +1,289 @@
+# Copyright 2013-2020 The Khronos Group Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Relax NG schema for Khronos Registry XML
+# See https://github.com/KhronosGroup/OpenGL-Registry
+#
+# Last modified 2013/06/14
+# This definition is subject to change (mostly in the form of additions)
+
+namespace xsd = "http://www.w3.org/2001/XMLSchema-datatypes"
+
+# Toplevel is a <registry> tag.
+# May be led by an optional <comment> tag containing e.g. copyrights.
+start = element registry {
+    (
+        element comment { text } ? |
+        Types      * |
+        Kinds      * |
+        Groups     * |
+        Enums      * |
+        Commands   * |
+        Feature    * |
+        Extensions *
+    ) *
+}
+
+# <types> defines a group of types
+Types = element types {
+    Type *
+}
+
+# <type> defines a single type. It is usually a C typedef but
+# may contain arbitrary C code.
+#   name - name of this type, if not present in the <name> tag
+#   api - matches a <feature> api attribute, if present
+#   requires - name of another type definition required by this one
+#   type - "group", if present, indicating a group of values in the
+#       corresponding <enums> definition.
+#   comment - unused
+#   <apientry /> - substitutes for an APIENTRY-style macro on output
+#   <name> - contains typename
+Type = element type {
+    attribute api { text } ? ,
+    attribute requires { text } ? ,
+    attribute name { TypeName } ? ,
+    attribute type { text } ? ,
+    Comment ? ,
+    text ,
+    element apientry { text } ? ,
+    text ,
+    element name { TypeName } ? ,
+    text
+}
+
+# <kinds> defines descriptions for kinds.
+Kinds = element kinds {
+    Kind *
+}
+
+# <kind> defines a description for a single kind.
+Kind = element kind {
+    Name ,
+    attribute desc { text }
+}
+
+# <groups> defines a group of enum groups
+Groups = element groups {
+    Group *
+}
+
+# <group> defines a single enum group. Enums may
+# be in multiple groups.
+#   name - group name
+#   comment - unused
+#   <enum name=""> - members of the group
+
+Group = element group {
+    Name ,
+    Comment ? ,
+    element enum { Name } *
+}
+
+# <enums> defines a group of enumerants
+#   namespace - identifies a numeric namespace
+#   group - identifies a functional subset of the namespace - same as group=""
+#   start, end - beginning and end of a numeric range in the namespace
+#   vendor - owner of the numeric range
+#   type - "bitmask", if present
+#   comment - unused
+Enums = element enums {
+    attribute namespace { text } ? ,
+    attribute group { text } ? ,
+    attribute type { text } ? ,
+    attribute start { Integer } ? ,
+    attribute end { Integer } ? ,
+    Vendor ? ,
+    Comment ? ,
+    (Enum | Unused) *
+}
+# <enum> defines a single enumerant
+#   value - integer (including hex) value of the enumerant
+#   api - matches a <feature> api attribute, if present
+#   type - "u" (unsigned), "ull" (uint64), or integer if not present
+#   name - enumerant name
+#   group - identifies a functional subset of the namespace
+#   alias - another enumerant this is semantically identical to
+#   comment - unused
+Enum = element enum {
+    (
+        attribute value { Integer } &
+        attribute api { text } ? &
+        attribute type { TypeSuffix } ? &
+        attribute name { text } &
+        attribute group { text } ? &
+        attribute alias { text } ? &
+        Comment ?
+    )
+}
+# <unused> defines a range of enumerants not currently being used
+#   start, end - beginning and end of an unused numeric range
+#   vendor - unused
+#   comment - unused
+Unused = element unused {
+    attribute start { Integer } ,
+    attribute end { Integer } ? ,
+    Vendor ? ,
+    Comment ?
+}
+# <commands> defines a group of commands
+#   namespace - identifies a function namespace
+Commands = element commands {
+    attribute namespace { text } ? ,
+    Command *
+}
+# <command> defines a single command
+#   <proto> is the C function prototype, including the return type
+#   <param> are function parameters, in order
+#     class - type of object name (object handle). Handles with different types are not compatible. So handle created as [class=buffer] can not be passed to [class=shader]
+#     <ptype> is a <type> name, if present
+#     <name> is the function / parameter name
+# The textual contents of <proto> and <param> should be legal C
+# for those parts of a function declaration.
+#   <alias> - denotes function aliasing
+#     name - name of aliased function
+#   <vecequiv> - denotes scalar / vector function equivalence
+#     name - name of corresponding vector form, e.g. (glColor3f -> glColor3fv)
+#   <glx> - information about GLX protocol
+#     type - "render", "single", or "vendor" for GLXRender, GLXSingle, GLXVendorPrivate{WithReply}
+#     opcode - numeric opcode of specified type for this function
+#     name - if present, protocol name (defaults to command name)
+#     comment - unused
+Command = element command {
+    Comment ? ,
+    element proto {
+        attribute group { text } ? ,
+        attribute kind { text } ? ,
+        attribute class { text } ? ,
+        text ,
+        element ptype { TypeName } ? ,
+        text ,
+        element name { text } ,
+        text
+    } ,
+    element param {
+        attribute group { text } ? ,
+        attribute kind { text } ? ,
+        attribute class { text } ? ,
+        attribute len { text } ? ,
+        text ,
+        element ptype { TypeName } ? ,
+        text ,
+        element name { text } ,
+        text
+    } * ,
+    (
+        element alias {
+            Name
+        } ? &
+        element vecequiv {
+            Name
+        } ? &
+        element glx {
+            attribute type { text } ,
+            attribute opcode { xsd:integer } ,
+            Name ? ,
+            Comment ?
+        } *
+    )
+}
+# Each <feature> defines the interface of an API version (e.g. OpenGL 1.2)
+#   api - API tag (e.g. 'gl', 'gles2', etc. - used internally, not
+#     neccessarily an actual API name
+#   name - version name (C preprocessor name, e.g. GL_VERSION_4_2)
+#   number - version number, e.g. 4.2
+#   protect - additional #ifdef symbol to place around the feature
+#   <require> / <remove> contains features to require or remove in
+#                        this version
+#     profile - only require/remove when generated profile matches
+#     comment - unused
+Feature = element feature {
+    attribute api { text } ,
+    Name ,
+    attribute number { xsd:float } ,
+    attribute protect { text } ?,
+    Comment ? ,
+    (
+        element require {
+            ProfileName ? ,
+            Comment ? ,
+            InterfaceElement *
+        } |
+        element remove {
+            ProfileName ? ,
+            Comment ? ,
+            InterfaceElement *
+        }
+    ) *
+}
+Extensions = element extensions {
+    Extension *
+}
+# Defines the interface of an API <extension>. Like a <feature>
+# tag, but with a slightly different api attribute.
+#   api - regexp pattern matching one or more API tags, indicating
+#     which APIs the extension is known to work with. The only
+#     syntax supported is <name>{|<name>}* and each name must
+#     exactly match an API being generated (implicit ^$ surrounding).
+# In addition, <require> / <remove> tags also support an
+# api attribute:
+#     api - only require/remove these features for the matching API.
+#       Not a regular expression.
+Extension = element extension {
+    Name ,
+    attribute protect { text } ?,
+    attribute supported { StringGroup } ? ,
+    Comment ? ,
+    (
+        element require {
+            attribute api { text } ? ,
+            ProfileName ? ,
+            Comment ? ,
+            InterfaceElement *
+        } |
+        element remove {
+            attribute api { text } ? ,
+            ProfileName ? ,
+            Comment ? ,
+            InterfaceElement *
+        }
+    ) *
+}
+# Contents of a <require> / <remove> tag, defining a group
+# of features to require or remove.
+#   <type> / <enum> / <command> all have attributes
+#     name - feature name which must match
+InterfaceElement =
+    element type {
+        Name ,
+        Comment ?
+    } |
+    element enum {
+        Name ,
+        Comment ?
+    } |
+    element command {
+        Name ,
+        Comment ?
+    }
+
+# Integers are allowed to be either decimal or C-hex (0x[0-9A-F]+), but
+# XML Schema types don't seem to support hex notation, so we use this
+# as a placeholder.
+Integer = text
+
+# TypeName is an argument/return value C type name
+TypeName = text
+
+# TypeSuffix is a C numeric type suffix, e.g. 'u' or 'ull'
+TypeSuffix = text
+
+# StringGroup is a regular expression with an implicit
+#   '^(' and ')$' bracketing it.
+StringGroup = text
+
+# Repeatedly used attributes
+ProfileName = attribute profile { text }
+Vendor = attribute vendor { text }
+Comment = attribute comment { text }
+Name = attribute name { text }

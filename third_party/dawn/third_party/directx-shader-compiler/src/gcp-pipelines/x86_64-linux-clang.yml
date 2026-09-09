@@ -1,0 +1,54 @@
+steps:
+  - name: gcr.io/cloud-builders/git
+    args: ['fetch', '--unshallow']
+  - name: 'gcr.io/shaderc-build/shader-compiler-team:kokoro-dxc-builder'
+    args:
+      - git
+      - submodule
+      - update
+      - '--init'
+  - name: 'gcr.io/shaderc-build/shader-compiler-team:kokoro-dxc-builder'
+    args:
+      - cmake
+      - '-Bbuild'
+      - '-GNinja'
+      - '-DCMAKE_BUILD_TYPE=Release'
+      - '-DCMAKE_CXX_COMPILER=clang++'
+      - '-DCMAKE_C_COMPILER=clang'
+      - '-DCMAKE_INSTALL_PREFIX=artifacts'
+      - '-DENABLE_SPIRV_CODEGEN=ON'
+      - '-DSPIRV_BUILD_TESTS=ON'
+      - '-DLLVM_ENABLE_WERROR=On'
+      - '-C'
+      - 'cmake/caches/PredefinedParams.cmake'
+  - name: 'gcr.io/shaderc-build/shader-compiler-team:kokoro-dxc-builder'
+    args:
+      - ninja
+      - '-C'
+      - build
+  - name: 'gcr.io/shaderc-build/shader-compiler-team:kokoro-dxc-builder'
+    args:
+      - ninja
+      - '-C'
+      - build
+      - check-all
+  - name: 'gcr.io/shaderc-build/shader-compiler-team:kokoro-dxc-builder'
+    args:
+      - ninja
+      - '-C'
+      - build
+      - install-distribution
+  - name: 'gcr.io/shaderc-build/shader-compiler-team:kokoro-dxc-builder'
+    script: |
+      #!/usr/bin/env bash
+      zip -r dxc-artifacts.zip /workspace/artifacts/*
+logsBucket: 'gs://public-github-building-logs'
+options:
+  logging: LEGACY
+  pool:
+    name: projects/shaderc-build/locations/us-central1/workerPools/dxc
+artifacts:
+  objects:
+    location: 'gs://public-directx-shader-compiler/$COMMIT_SHA'
+    paths:
+      - dxc-artifacts.zip

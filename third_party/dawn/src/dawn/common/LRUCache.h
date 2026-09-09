@@ -33,8 +33,8 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/Result.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Result.h"
 
 namespace dawn {
 

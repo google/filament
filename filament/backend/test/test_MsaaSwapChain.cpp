@@ -83,7 +83,7 @@ TEST_P(MsaaSwapChainTest, Basic) {
         api.endRenderPass();
 
         EXPECT_IMAGE(renderTarget,
-                ScreenshotParams(kRenderTargetSize, kRenderTargetSize, "MsaaSwapChain", 0));
+                ScreenshotParams(kRenderTargetSize, kRenderTargetSize, "MsaaSwapChain", 4174922509u));
 
         api.commit(swapChain);
     }

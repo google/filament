@@ -1,0 +1,462 @@
+Name
+
+    AMD_gpu_association
+
+Name Strings
+
+    GLX_AMD_gpu_association
+
+Contact
+
+    David Mao, AMD (david.mao 'at' amd.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: September 18, 2014
+    Author Revision: 2
+
+    Based on:  GLX_SGI_make_current_read specification
+               Date: 3/20/1997
+
+               EXT_framebuffer_object specification
+               Date: 2/13/2007   Revision #119
+
+Number
+
+    398
+
+Dependencies
+
+    OpenGL 1.5 is required.
+
+    GLX 1.3 is required.
+
+    GL_EXT_framebuffer_object is required.
+
+    GLX_ARB_get_proc_address is required.
+
+    This extension interacts with GLX_SGI_make_current_read.
+
+    This extension interacts with GL_EXT_framebuffer_blit.
+
+    This extension interacts with GLX_ARB_create_context.
+
+    This extension interacts with WGL_AMD_gpu_association.
+
+Overview
+
+
+    There currently is no way for applications to efficiently use GPU
+    resources in systems that contain more than one GPU. Vendors have
+    provided methods that attempt to split the workload for an
+    application among the available GPU resources. This has proven to be
+    very inefficient because most applications were never written with
+    these sorts of optimizations in mind.
+
+    This extension provides a mechanism for applications to explicitly
+    use the GPU resources on a given system individually. By providing
+    this functionality, a driver allows applications to make appropriate
+    decisions regarding where and when to distribute rendering tasks.
+
+    The set of GPUs available on a system can be queried by calling
+    glXGetGPUIDsAMD. The current GPU assigned to a specific context
+    can be determined by calling glXGetContextGPUIDAMD. Each GPU in a
+    system may have different performance characteristics in addition
+    to supporting a different version of OpenGL. The specifics of each
+    GPU can be obtained by calling glXGetGPUInfo. This will allow
+    applications to pick the most appropriate GPU for each rendering
+    task.
+
+    Once all necessary GPU information has been obtained, a context tied
+    to a specific GPU can be created with glXCreateAssociatedContextAMD.
+    These associated contexts can be made current with
+    glXMakeAssociatedContextCurrentAMD and deleted with
+    glXDeleteAssociatedContextAMD. Only one GPU associated or
+    non-associated context can be current at one time per thread.
+
+    To provide an accelerated path for blitting data from one context
+    to another, the new blit function BlitContextFramebufferAMD has
+    been added.
+
+
+
+
+New Procedures and Functions
+
+    unsigned int glXGetGPUIDsAMD(unsigned int maxCount, unsigned int *ids);
+
+    int   glXGetGPUInfoAMD(unsigned int id, int property, GLenum dataType,
+                           unsigned int size, void *data)
+
+    unsigned int glXGetContextGPUIDAMD(GLXContext ctx);
+
+    GLXContext glXCreateAssociatedContextAMD(unsigned int id,
+                                             GLXContext share_list);
+
+    GLXContext glXCreateAssociatedContextAttribsAMD(unsigned int id,
+                                                    GLXContext share_context,
+                                                    const int *attribList);
+
+    Bool glXDeleteAssociatedContextAMD(GLXContext ctx);
+
+    Bool glXMakeAssociatedContextCurrentAMD(GLXContext ctx);
+
+    GLXContext glXGetCurrentAssociatedContextAMD(void);
+
+    void glXBlitContextFramebufferAMD(GLXContext dstCtx, GLint srcX0, GLint srcY0,
+                                      GLint srcX1, GLint srcY1, GLint dstX0,
+                                      GLint dstY0, GLint dstX1, GLint dstY1,
+                                      GLbitfield mask, GLenum filter);
+
+New Tokens
+
+    Accepted by the <property> parameter of glXGetGPUInfo:
+
+      GLX_GPU_VENDOR_AMD                 0x1F00
+      GLX_GPU_RENDERER_STRING_AMD        0x1F01
+      GLX_GPU_OPENGL_VERSION_STRING_AMD  0x1F02
+      GLX_GPU_FASTEST_TARGET_GPUS_AMD    0x21A2
+      GLX_GPU_RAM_AMD                    0x21A3
+      GLX_GPU_CLOCK_AMD                  0x21A4
+      GLX_GPU_NUM_PIPES_AMD              0x21A5
+      GLX_GPU_NUM_SIMD_AMD               0x21A6
+      GLX_GPU_NUM_RB_AMD                 0x21A7
+      GLX_GPU_NUM_SPI_AMD                0x21A8
+
+    Accepted by the <dataType> argument of glXGetGPUInfoAMD:
+
+      GL_UNSIGNED_BYTE
+      GL_UNSIGNED_INT
+      GL_INT
+      GL_FLOAT
+
+    Accepted by the <mask> argument of glXBlitContextFramebufferAMD:
+
+      GL_COLOR_BUFFER_BIT
+      GL_DEPTH_BUFFER_BIT
+      GL_STENCIL_BUFFER_BIT
+
+Additions to the WGL Specification
+
+    None. This specification is written for GLX.
+
+Additions to the GLX 1.4 Specification
+
+    Add a new section in between 3.3.7 and 3.3.8 entitled "GPU
+    Associated Contexts"
+
+    GPU Associated Contexts
+
+    When multiple GPUs are present, a context can be created for
+    off-screen rendering that is associated with a specific GPU.
+    This will allow applications to achieve an app-specific
+    distributed GPU utilization.
+
+    The IDs for available GPUs can be queried with the command:
+
+        unsigned int glXGetGPUIDsAMD(unsigned int maxCount, unsigned int *ids);
+
+    where <maxCount> is the max number of IDs that can be returned and
+    <ids> is the array of returned IDs. If the function succeeds,
+    the return value is the number of total GPUs available. The
+    value 0 is returned if no GPUs are available or if the call has
+    failed. The array pointer <ids> passed into the function will be
+    populated by the smaller of maxCount or the total GPU count
+    available. The ID 0 is reserved and will not be retuned as a
+    valid GPU ID. If the array <ids> is NULL, the function will
+    only return the total number of GPUs. <ids> will be tightly packed
+    with no 0 values between valid ids.
+
+    Calling glXGetGPUIDsAMD once with <maxCount> set to zero returns
+    the total available GPU count which can be used to allocate an
+    appropriately sized id array before calling glXGetGPUIDsAMD
+    again to query the full set of supported GPUs.
+
+    Each GPU in a system may have different properties, performance
+    characteristics and different supported OpenGL versions. To
+    determine which GPU is best suited for a specific task the
+    following functions may be used:
+
+        int glXGetGPUInfoAMD(unsigned int id, int property, GLenum dataType,
+                             unsigned int size, void *data);
+
+    <id> is a GPU id obtained from calling glXGetGPUIDsAMD. The GPU ID
+    must be a valid GPU ID. The function will fail if <id> is an invalid
+    GPU ID and -1 will be returned. <property> is the information being
+    queried. <dataType> may be GL_UNSIGNED_INT, GL_INT, GL_FLOAT, or
+    GL_UNSIGNED_BYTE and signals what data type is to be returned. <size>
+    signals the size of the data buffer passed into glXGetGPUInfoAMD.
+    This is the count of the array of type <dataType>. <data> is the
+    buffer which will be filled with the requested information. For a
+    string, <size> will be the number of characters allocated and will
+    include NULL termination. For arrays of type GL_UNSIGNED_INT, GL_INT,
+    and GL_FLOAT <size> will be the array depth. If the function
+    succeeds, the number of values written will be returned. If the number
+    of values written is equal to <size>, the query should be repeated with
+    a larger <data> buffer. Strings should be queried using the
+    GL_UNSIGNED_BYTE type, are UTF-8 encoded and will be NULL terminated.
+    If the function fails, -1 will be returned.
+
+    <property> defines the GPU property to be queried, and may be one of
+    GLX_GPU_OPENGL_VERSION_STRING_AMD, GLX_GPU_RENDERER_STRING_AMD,
+    GLX_GPU_FASTEST_TARGET_GPUS_AMD, GLX_GPU_RAM_AMD, GLX_GPU_CLOCK_AMD,
+    GLX_GPU_NUM_PIPES_AMD, GLX_GPU_NUM_SIMD_AMD, GLX_GPU_NUM_RB_AMD, or
+    GLX_GPU_NUM_SPI_AMD.
+
+    If <size> is not sufficient to hold the entire value for a particular
+    property, the number of values returned will equal <size>. If
+    <dataType> is inappropriate for <property>, for instance INT for a
+    property which is a string, the function will fail and -1 will be
+    returned.
+
+    Querying GLX_GPU_OPENGL_VERSION_STRING_AMD returns the highest supported
+    OpenGL version string and GLX_GPU_RENDERER_STRING_AMD returns name
+    of the GPU. <dataType> must be GL_UNSIGNED_BYTE with the previous
+    properties. Querying GLX_GPU_FASTEST_TARGET_GPUS_AMD returns an array
+    of the IDs of GPUs with the fastest data blit rates when using
+    glXBlitContextFramebufferAMD. This list is ordered fastest
+    first. This provides a performance hint about which contexts and GPUS
+    are capable of transfering data between each other the quickest. Querying
+    GLX_GPU_RAM_AMD returns the amount of RAM available to GPU in MB. Querying
+    GLX_GPU_CLOCK_AMD returns the GPU clock speed in MHz.  Querying
+    GLX_GPU_NUM_PIPES_AMD returns the nubmer of 3D pipes. Querying
+    GLX_GPU_NUM_SIMD_AMD returns the number of SIMD ALU units in each
+    shader pipe. Querying GLX_GPU_NUM_RB_AMD returns the number of render
+    backends. Querying GLX_GPU_NUM_SPI_AMD returns the number of shader
+    parameter interpolaters. If the <parameter> being queried is not
+    applicable for the GPU specified by <id>, the value 0 will be returned.
+
+    Unassociated contexts are created by calling glXCreateNewContext.
+    Although these contexts are unassociated, their use will still be
+    tied to a single GPU in most cases. For this reason it is advantageous
+    to be able to query the GPU an existing unassociated context resides
+    on. If multiple GPUs are available, it would be undesirable
+    to use one for rendering to visible surfaces and then chose the
+    same one for off-screen rendering. Use the following command to
+    determine which GPU a context is attached to:
+
+        unsigned int glXGetContextGPUIDAMD(GLXContext ctx);
+
+    <ctx> is the context for which the GPU id will be returned. If the
+    context is invalid or if an error has occurred, glXGetContextGPUIDAMD
+    will return 0.
+
+    To create an associated context, use:
+
+        GLXContext glXCreateAssociatedContextAMD(unsigned int id,
+                                                 GLXContext share_list);
+
+    <id> must be a valid GPU id and cannot be 0. <share_list> must either
+    be NULL or that of an associated context created with the the same GPU
+    ID as <id>. If <share_list> was created using a different ID,
+    glXCreateAssociatedContextAMD will fail and return NULL. If a context was
+    successfully created the handle will be returned by
+    glXCreateAssociatedContextAMD. If a context could not be created, NULL
+    will be returned. If a context could not be created, error information
+    can be obtained by calling GetLastError. Upon successful creation,
+    no pixel format is tied to an associated context and the context is not
+    tied to a specific Display. Associated contexts are always direct contexts.
+    Associated Contexts always support only GLX_RGBA_TYPE rendering type.
+
+    glXCreateAssociatedContextAMD can generate the following errors:
+    GLXBadContext if <share_list> is neither zero nor a valid GLX rendering
+    context; BadMatch if the server context state for share list exists in
+    an address space that cannot be shared with the newly created context
+    or if share list was created on a different screen than the one
+    referenced by config; BadAlloc if the server does not have enough resources
+    to allocate the new context.
+
+    To create an associated context and request a specific GL version, use:
+
+        GLXContext glXCreateAssociatedContextAttribsAMD(unsigned int id,
+                    GLXContext share_list, const int *attribList)
+
+    All capabilities and limitations of glXCreateContextAttribsARB apply
+    to glXCreateAssociatedContextAttribsAMD. Additionally, <id> must be
+    a valid GPU ID and cannot be 0. If a context was successfully created
+    the handle will be returned by glXCreateAssociatedContextAttribsAMD.
+    If a context could not be created, NULL will be returned. Upon
+    successful creation, no pixel format is tied to an associated context.
+
+    <share_list> must either be NULL or that of an associated context created
+    with the the same GPU ID as <id>. If <share_list> was created using a
+    different ID, glXCreateAssociatedContextAttribsAMD will fail and return NULL.
+
+    glXCreateAssociatedContextAttribsAMD can generate the following errors:
+    GLXBadContext if <share_list> is neither zero nor a valid GLX rendering
+    context; BadMatch if the server context state for share list exists in
+    an address space that cannot be shared with the newly created context
+    or if share list was created on a different screen than the one
+    referenced by config; BadAlloc if the server does not have enough resources
+    to allocate the new context.
+
+    A context must be deleted once it is no longer needed. Use the
+    following call to delete an associated context:
+
+        Bool glXDeleteAssociatedContextAMD(GLXContext ctx);
+
+    If the function succeeds, TRUE will be returned, otherwise FALSE is
+    returned. <ctx> must be a valid associated context created by
+    calling glXCreateAssociatedContextAMD. If an unassociated context,
+    created by calling glXCreateNewContext, is passed into <ctx>, the
+    function will fail. An associated context cannot be deleted by calling
+    glXDestroyContext. If an associated context is passed into
+    glXDestroyContext, the result is undefiend.
+
+    To render using an associated context, it must be made the current
+    context for a thread:
+
+        Bool glXMakeAssociatedContextCurrentAMD(GLXContext ctx);
+
+    <ctx> is a context handle created by calling
+    glXCreateAssociatedContextAMD. If <ctx> was created using
+    glXCreateNewContext, the call will fail, FALSE will be returned and
+    the error BadAccess will be generated. If <ctx> is not a valid context
+    and not NULL, the call will fail, FALSE will be returned and the error
+    GLXBadContext will be generated. If the call succeeds, TRUE will be
+    returned. To detach the current associated context, pass NULL as <ctx>.
+
+    Only one type of context can be current to a thread at a time. If an
+    unassociated context is current to a thread when
+    glXMakeAssociatedContextCurrentAMD is called with a valid <ctx>, it
+    is as if glxMakeContextCurrent is called first with a ctx value of NULL.
+    If an associated context is current and glxMakeContextCurrent is called
+    with a valid context, it is as if glXMakeAssociatedContextCurrentAMD is
+    called with a ctx value of NULL.
+
+    The current associated context can be queried by calling:
+
+        GLXContext glXGetCurrentAssociatedContextAMD(void);
+
+    The current associated context is returned on a successful call to
+    this function. If no associated context is current, NULL is returned.
+    If an unassociated context is current, NULL will be returned.
+
+    An associated context can not be passed in as a parameter into
+    glXCopyContext. If an associated context is passed into glXCopyContext,
+    the error GLXBadContext will be generated.
+
+    The addresses returned from glXGetProcAddressARB are only valid for the
+    current context. It may be invalid to use proc addresses obtained from
+    a traditional context with an associated context. Furthermore, the
+    OpenGL version and extensions supported on an associated context may
+    differ. Each context should be treated seperately, proc addressses
+    should be queried for each after context creation.
+
+    Calls to glXSwapBuffers when an associated context is current will have
+    no effect.
+
+    There is no way to use pBuffers with associated contexts.
+
+    Overlays and underlays are not supported with associated contexts.
+
+    The same associated context is used for both write and read operations.
+
+    To facilitate high performance data communication between multiple
+    contexts, a new function is necessary to blit data from one context
+    to another.
+
+    VOID  glXBlitContextFramebufferAMD(GLXContext dstCtx, GLint srcX0, GLint srcY0,
+                                       GLint srcX1, GLint srcY1, GLint dstX0,
+                                       GLint dstY0, GLint dstX1, GLint dstY1,
+                                       GLbitfield mask, GLenum filter);
+
+    <dstCtx> is the context handle for the write context. <mask> is the
+    bitwise OR of a number of values indicating which buffers are to be
+    copied. The values are GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, and
+    GL_STENCIL_BUFFER_BIT, which are described in section 4.2.3.  The
+    pixels corresponding to these buffers are copied from the source
+    rectangle, bound by the locations (srcX0, srcY0) and (srcX1, srcY1),
+    to the destination rectangle, bound by the locations (dstX0, dstY0)
+    and (dstX1, dstY1).  The lower bounds of the rectangle are inclusive,
+    while the upper bounds are exclusive.
+
+    The source context is the current GL context. Specifying the current
+    GL context as the <dstCtx> will result in the error
+    GL_INVALID_OPERATION being generated. If <dstCtx> is invalid, the
+    error GL_INVALID_OPERATION will be generated. If no context is
+    current at the time of this call, the error GL_INVALID_OPERATION
+    will be generated. These errors may be queried by calling glGetError.
+    The target framebuffer will be the framebuffer bound to
+    GL_DRAW_FRAMEBUFFER_EXT  in the context <dstCtx>. The source framebuffer
+    will be the framebuffer bound to GL_READ_FRAMEBUFFER_EXT in the
+    currently bound  context.
+
+    The restrictions that apply to the source and destination rectangles
+    specified with <srcX0>, <srcY0>, <srcX1>, <srcY1>, <dstX0>, <dstY0>
+    <dstX0>, and <dstY0> are the same as those that apply for
+    glBlitFramebufferEXT. The same error conditions exist as for
+    glBlitFramebufferEXT.
+
+    When called, this function will execute immediately in the currently
+    bound context. It is up to the caller to maintain appropriate
+    synchronization between the current context and <dstCtx> to ensure
+    rendering to the appropriate surfaces has completed on the current
+    and <dstCtx> contexts.
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+Modify the beginning of section 4.4.1 as follows:
+
+    When an assoicated context is bound, the default state for an associated
+    context is invalid for rendering. Because there is no attached window,
+    there is no default framebuffer surface to render to. An app created
+    framebuffer object must be bound for rendering to be valid. If the
+    object bound to GL_FRAMEBUFFER_BINDING_EXT is 0, it is as if the
+    framebuffer is incomplete, and an
+    GL_INVALID_FRAMEBUFFER_OPERATION_EXT error will be generated
+    where rendering is attempted.
+
+
+New State
+
+    None
+
+
+Interactions with GL_EXT_framebuffer_blit
+
+    If the framebuffer blit extension is not supported, all language
+    referring to glBlitFramebufferEXT and glXBlitContextFramebufferAMD
+    is removed.
+
+Interactions with GL_EXT_framebuffer_object
+
+    If GLX_AMD_gpu_association is supported, a context created with it
+    will also support EXT_framebuffer_object.
+
+
+Interactions with GLX_SGI_make_current_read
+
+    If the make current read extension is supported, it is invalid to pass
+    an associated context handle as a parameter to
+    glXMaketCurrentReadSGI. If an associated context is passed into
+    glXMaketCurrentReadSGI, the error GLXBadContext will be generated.
+
+Interactions with GLX_create_context
+
+    If GLX_create_context is not supported, all language
+    referring to glXCreateAssociatedContextAttribsAMD is removed.
+
+
+Issues
+
+    1) Should the language for the new context creation methods be added to
+       GLX 1.4 section 3.3.7 or in a new section?
+
+       Resolved. Although it is also possible to add this exension text to
+       section 3.3.7, the resulting text would not flow well or be as coherent.
+
+
+Revision History
+
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ---------------------------------------------
+
+      2   09/18/2014  gsellers  Fixed types in function prototypes.
+                                Update contact. Minor formatting fixes.
+      0.1 11/04/2009  nickh     Initial version.

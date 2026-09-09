@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationFD.h"
 
 #include <unistd.h>
 
 #include <utility>
 
-#include "dawn/native/vulkan/BackendVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/VulkanError.h"
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/native/vulkan/BackendVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
 
 static constexpr VkExternalSemaphoreHandleTypeFlagBits kDefaultHandleType =
 #if DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(CHROMEOS)
@@ -119,7 +120,7 @@ class ServiceImplementationFD : public ServiceImplementation {
         importSemaphoreFdInfo.flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT;
         importSemaphoreFdInfo.handleType = mHandleType;
         // vkImportSemaphoreFdKHR takes ownership, so make a dup of the handle.
-        utils::SystemHandle handleCopy = utils::SystemHandle::Duplicate(handle);
+        SystemHandle handleCopy = SystemHandle::Duplicate(handle);
         importSemaphoreFdInfo.fd = handleCopy.Get();
 
         MaybeError status = CheckVkSuccess(
@@ -163,23 +164,29 @@ class ServiceImplementationFD : public ServiceImplementation {
         semaphoreGetFdInfo.semaphore = semaphore;
         semaphoreGetFdInfo.handleType = mHandleType;
 
-        int fd = -1;
+        int fd = -2;  // Invalid value (-1 is valid, see kSemaphoreFdAlreadySignaledFd)
         DAWN_TRY(CheckVkSuccess(
             mDevice->fn.GetSemaphoreFdKHR(mDevice->GetVkDevice(), &semaphoreGetFdInfo, &fd),
             "vkGetSemaphoreFdKHR"));
 
-        DAWN_ASSERT(fd >= 0);
+        DAWN_ASSERT(fd >= 0 || fd == kSemaphoreFdAlreadySignaledFd);
         return fd;
     }
 
     // Duplicate a new external handle from the given one.
     ExternalSemaphoreHandle DuplicateHandle(ExternalSemaphoreHandle handle) override {
+        if (handle == kSemaphoreFdAlreadySignaledFd) {
+            return kSemaphoreFdAlreadySignaledFd;
+        }
         int fd = dup(handle);
         DAWN_ASSERT(fd >= 0);
         return fd;
     }
 
     void CloseHandle(ExternalSemaphoreHandle handle) override {
+        if (handle == kSemaphoreFdAlreadySignaledFd) {
+            return;
+        }
         int ret = close(handle);
         DAWN_ASSERT(ret == 0);
     }

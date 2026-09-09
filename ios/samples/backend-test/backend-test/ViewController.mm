@@ -18,6 +18,8 @@
 
 #include <backend_test/PlatformRunner.h>
 
+#import <QuartzCore/CAMetalLayer.h>
+
 static test::NativeView nativeView;
 
 namespace test {
@@ -44,9 +46,18 @@ NativeView getNativeView() {
     [super viewDidAppear:animated];
 
     nativeView.ptr = (__bridge void*) self.view.layer;
-    CGRect nativeBounds = [UIScreen mainScreen].nativeBounds;
-    nativeView.height = nativeBounds.size.height;
-    nativeView.width = nativeBounds.size.width;
+    // Read the drawable size back off the layer rather than using the screen size: for Metal,
+    // FilamentView pins it to the same fixed size the desktop runners use, so that test
+    // expectations don't depend on which device the tests run on.
+#if FILAMENT_APP_USE_METAL
+    CGSize const drawableSize = ((CAMetalLayer*) self.view.layer).drawableSize;
+#elif FILAMENT_APP_USE_OPENGL
+    CALayer* const glLayer = self.view.layer;
+    CGSize const drawableSize = CGSizeMake(glLayer.bounds.size.width * glLayer.contentsScale,
+            glLayer.bounds.size.height * glLayer.contentsScale);
+#endif
+    nativeView.width = static_cast<size_t>(drawableSize.width);
+    nativeView.height = static_cast<size_t>(drawableSize.height);
 
     /*
     OpenGL doesn't have programatic debugger capture on iOS. Instead, the following can be used to initiate

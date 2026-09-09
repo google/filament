@@ -1,0 +1,1178 @@
+Name
+
+    EXT_mesh_shader
+
+Name String
+
+    GL_EXT_mesh_shader
+
+Contact
+
+    ???
+
+Contributors
+
+    Qiang Yu, AMD
+    Contributors for GL_NV_mesh_shader
+    Contributors for VK_EXT_mesh_shader
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:     July 1, 2025
+    Revision:               1
+
+Number
+
+    OpenGL Extension #1024
+    OpenGL ES Extension #1024
+
+Dependencies
+
+    This extension is written against the OpenGL 4.6 Specification
+    (Core Profile), dated May 5, 2022.
+
+    This extension requires OpenGL 4.5 or OpenGL ES 3.1.
+
+    This extension requires the EXT_mesh_shader GLSL extension.
+
+    This extension interacts with ARB_indirect_parameters and OpenGL 4.6.
+
+    This extension interacts with KHR_shader_subgroup.
+
+    This extension interacts with ARB_gl_spirv and OpenGL 4.6.
+
+    This extension interacts with ARB_spirv_extensions and OpenGL 4.6.
+
+    This extension interacts with OVR_multiview.
+
+Overview
+
+    This extension provides a new mechanism allowing applications to use two
+    new programmable shader types -- the task and mesh shader -- to generate
+    collections of geometric primitives to be processed by fixed-function
+    primitive assembly and rasterization logic.  When the task and mesh
+    shaders are drawn, they replace the standard programmable vertex
+    processing pipeline, including vertex array attribute fetching, vertex
+    shader processing, tessellation, and the geometry shader processing.
+
+New Procedures and Functions
+
+      void DrawMeshTasksEXT(uint num_groups_x,
+                            uint num_groups_y,
+                            uint num_groups_z);
+
+      void DrawMeshTasksIndirectEXT(intptr indirect);
+
+      void MultiDrawMeshTasksIndirectEXT(intptr indirect,
+                                         sizei drawcount,
+                                         sizei stride);
+
+      void MultiDrawMeshTasksIndirectCountEXT(intptr indirect,
+                                              intptr drawcount,
+                                              sizei maxdrawcount,
+                                              sizei stride);
+
+New Tokens
+
+    Accepted by the <type> parameter of CreateShader and returned by the
+    <params> parameter of GetShaderiv:
+
+        MESH_SHADER_EXT                                     0x9559
+        TASK_SHADER_EXT                                     0x955A
+
+    Accepted by the <pname> parameter of GetIntegerv:
+
+        MAX_TASK_UNIFORM_BLOCKS_EXT                         0x8E68
+        MAX_TASK_TEXTURE_IMAGE_UNITS_EXT                    0x8E69
+        MAX_TASK_IMAGE_UNIFORMS_EXT                         0x8E6A
+        MAX_TASK_UNIFORM_COMPONENTS_EXT                     0x8E6B
+        MAX_TASK_ATOMIC_COUNTER_BUFFERS_EXT                 0x8E6C
+        MAX_TASK_ATOMIC_COUNTERS_EXT                        0x8E6D
+        MAX_TASK_SHADER_STORAGE_BLOCKS_EXT                  0x8E6E
+        MAX_COMBINED_TASK_UNIFORM_COMPONENTS_EXT            0x8E6F
+
+        MAX_MESH_UNIFORM_BLOCKS_EXT                         0x8E60
+        MAX_MESH_TEXTURE_IMAGE_UNITS_EXT                    0x8E61
+        MAX_MESH_IMAGE_UNIFORMS_EXT                         0x8E62
+        MAX_MESH_UNIFORM_COMPONENTS_EXT                     0x8E63
+        MAX_MESH_ATOMIC_COUNTER_BUFFERS_EXT                 0x8E64
+        MAX_MESH_ATOMIC_COUNTERS_EXT                        0x8E65
+        MAX_MESH_SHADER_STORAGE_BLOCKS_EXT                  0x8E66
+        MAX_COMBINED_MESH_UNIFORM_COMPONENTS_EXT            0x8E67
+
+        MAX_TASK_WORK_GROUP_TOTAL_COUNT_EXT                 0x9740
+        MAX_MESH_WORK_GROUP_TOTAL_COUNT_EXT                 0x9741
+
+        MAX_MESH_WORK_GROUP_INVOCATIONS_EXT                 0x9757
+        MAX_TASK_WORK_GROUP_INVOCATIONS_EXT                 0x9759
+
+        MAX_TASK_PAYLOAD_SIZE_EXT                           0x9742
+
+        MAX_TASK_SHARED_MEMORY_SIZE_EXT                     0x9743
+        MAX_MESH_SHARED_MEMORY_SIZE_EXT                     0x9744
+
+        MAX_TASK_PAYLOAD_AND_SHARED_MEMORY_SIZE_EXT         0x9745
+        MAX_MESH_PAYLOAD_AND_SHARED_MEMORY_SIZE_EXT         0x9746
+
+        MAX_MESH_OUTPUT_MEMORY_SIZE_EXT                     0x9747
+
+        MAX_MESH_PAYLOAD_AND_OUTPUT_MEMORY_SIZE_EXT         0x9748
+
+        MAX_MESH_OUTPUT_VERTICES_EXT                        0x9538
+        MAX_MESH_OUTPUT_PRIMITIVES_EXT                      0x9756
+        MAX_MESH_OUTPUT_COMPONENTS_EXT                      0x9749
+        MAX_MESH_OUTPUT_LAYERS_EXT                          0x974A
+
+        MAX_MESH_MULTIVIEW_VIEW_COUNT_EXT                   0x9557
+
+        MESH_OUTPUT_PER_VERTEX_GRANULARITY_EXT              0x92DF
+        MESH_OUTPUT_PER_PRIMITIVE_GRANULARITY_EXT           0x9543
+
+        MAX_PREFERRED_TASK_WORK_GROUP_INVOCATIONS_EXT       0x974B
+        MAX_PREFERRED_MESH_WORK_GROUP_INVOCATIONS_EXT       0x974C
+
+    Accepted by the <pname> parameter of GetBooleanv:
+
+        MESH_PREFERS_LOCAL_INVOCATION_VERTEX_OUTPUT_EXT     0x974D
+        MESH_PREFERS_LOCAL_INVOCATION_PRIMITIVE_OUTPUT_EXT  0x974E
+
+        MESH_PREFERS_COMPACT_VERTEX_OUTPUT_EXT              0x974F
+        MESH_PREFERS_COMPACT_PRIMITIVE_OUTPUT_EXT           0x9750
+
+    Accepted by the <pname> parameter of GetIntegeri_v:
+
+        MAX_TASK_WORK_GROUP_COUNT_EXT                       0x9751
+        MAX_MESH_WORK_GROUP_COUNT_EXT                       0x9752
+
+        MAX_TASK_WORK_GROUP_SIZE_EXT                        0x975A
+        MAX_MESH_WORK_GROUP_SIZE_EXT                        0x9758
+
+    Accepted by the <pname> parameter of GetProgramiv:
+
+        TASK_WORK_GROUP_SIZE_EXT                            0x953F
+        MESH_WORK_GROUP_SIZE_EXT                            0x953E
+
+        MESH_VERTICES_OUT_EXT                               0x9579
+        MESH_PRIMITIVES_OUT_EXT                             0x957A
+        MESH_OUTPUT_TYPE_EXT                                0x957B
+
+    Accepted by the <pname> parameter of GetActiveUniformBlockiv:
+
+        UNIFORM_BLOCK_REFERENCED_BY_MESH_SHADER_EXT         0x959C
+        UNIFORM_BLOCK_REFERENCED_BY_TASK_SHADER_EXT         0x959D
+
+    Accepted by the <pname> parameter of GetActiveAtomicCounterBufferiv:
+
+        ATOMIC_COUNTER_BUFFER_REFERENCED_BY_MESH_SHADER_EXT 0x959E
+        ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TASK_SHADER_EXT 0x959F
+
+    Accepted in the <props> array of GetProgramResourceiv:
+
+        REFERENCED_BY_MESH_SHADER_EXT                       0x95A0
+        REFERENCED_BY_TASK_SHADER_EXT                       0x95A1
+
+    Accepted by the <programInterface> parameter of GetProgramInterfaceiv,
+    GetProgramResourceIndex, GetProgramResourceName, GetProgramResourceiv,
+    GetProgramResourceLocation, and GetProgramResourceLocationIndex:
+
+        MESH_SUBROUTINE_EXT                                 0x957C
+        TASK_SUBROUTINE_EXT                                 0x957D
+
+        MESH_SUBROUTINE_UNIFORM_EXT                         0x957E
+        TASK_SUBROUTINE_UNIFORM_EXT                         0x957F
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery, GetQueryiv,
+    BeginQueryIndexed, EndQueryIndexed and GetQueryIndexediv:
+
+        TASK_SHADER_INVOCATIONS_EXT                         0x9753
+        MESH_SHADER_INVOCATIONS_EXT                         0x9754
+
+        MESH_PRIMITIVES_GENERATED_EXT                       0x9755
+
+    Accepted by the <stages> parameter of UseProgramStages:
+
+        MESH_SHADER_BIT_EXT                                 0x00000040
+        TASK_SHADER_BIT_EXT                                 0x00000080
+
+Modifications to the OpenGL 4.6 Specification (Core Profile)
+
+    Modify Chapter 3, Dataflow Model, p. 33
+
+    (insert at the end of the section after Figure 3.1, p. 35)
+
+    Figure 3.2 shows a block diagram of the alternate mesh processing pipeline
+    of GL.  This pipeline produces a set of output primitives similar to the
+    primitives produced by the conventional GL vertex processing pipeline.
+
+    Work on the mesh pipeline is initiated by the application drawing a
+    set of mesh tasks via an API command.  If an optional task shader is
+    active, each task triggers the execution of a task shader work group that
+    will generate a new set of tasks upon completion.  Each of these spawned
+    tasks, or each of the original drawn tasks if no task shader is
+    present, triggers the execution of a mesh shader work group that produces
+    an output mesh with a variable-sized number of primitives assembled from
+    vertices in the output mesh.  The primitives from these output meshes are
+    processed by the rasterization, fragment shader, per-fragment-operations,
+    and framebuffer pipeline stages in the same manner as primitives produced
+    from draw calls sent to the conventional vertex processing pipeline
+    depicted in Figure 3.1.
+
+       Conventional   From Application
+         Vertex             |
+        Pipeline            v
+                       Draw Mesh Tasks     <----- Draw Indirect Buffer
+        (Fig 3.1)           |
+            |           +---+-----+
+            |           |         |
+            |           |         |
+            |           |    Task Shader ---+
+            |           |         |         |
+            |           |         v         |
+            |           |  Task Generation  |     Image Load/Store
+            |           |         |         |     Atomic Counter
+            |           +---+-----+         |<--> Shader Storage
+            |               |               |     Texture Fetch
+            |               v               |     Uniform Block
+            |         Mesh Shader ----------+
+            |               |               |
+            +-------------> +               |
+                            |               |
+                            v               |
+                       Rasterization        |
+                            |               |
+                            v               |
+                      Fragment Shader ------+
+                            |
+                            v
+                  Per-Fragment Operations
+                            |
+                            v
+                      Framebuffer
+
+      Figure 3.2, GL Mesh Processing Pipeline
+
+
+    Modify Section 4.2.1, Query Object Types and Targets, p. 42
+
+    (add to the end of the bullet list on the first paragraph)
+
+      * Mesh primitive queries with a target of MESH_PRIMITIVES_GENERATED_EXT
+        return information on the number of primitives emitted from any
+        mesh shader workgroup that is not culled by fixed function culling
+        (see section 13.Y).
+
+      * Task and mesh shader queries with a target of TASK_SHADER_INVOCATIONS_EXT
+        return information on the number of times the task shader has been invoked
+	(see section X.7).
+
+      * Task and mesh shader queries with a target of MESH_SHADER_INVOCATIONS_EXT
+        return information on the number of times the task shader has been invoked
+	(see section X.7).
+
+    Modify Section 4.2.3, Query Object Queries, p. 47
+
+    (add before the errors section for GetQueryIndexediv on p. 48)
+
+    For task and mesh shader queries (TASK_SHADER_INVOCATIONS_EXT and
+    MESH_SHADER_INVOCATIONS_EXT), if the number of bits is non-zero, the minimum
+    number of bits allowed is 32.
+
+    For mesh primitive queries (MESH_PRIMITIVES_GENERATED_EXT), if the number of
+    bits is non-zero, the minimum number of bits allowed is 32.
+
+
+    Modify Chapter 7, Programs and Shaders, p. 87
+
+    (Change the sentence starting with "Shader stages including vertex shaders")
+
+    Shader stages including vertex shaders, tessellation control shaders,
+    tessellation evaluation shaders, geometry shaders, mesh shaders, task
+    shaders, fragment shaders, and compute shaders can be created, compiled, and
+    linked into program objects
+
+    (replace the sentence starting with "A single program
+     object can contain all of these shaders, or any subset thereof.")
+
+    Mesh and Task shaders affect the assembly of primitives from
+    groups of shader invocations (see chapter X).
+    A single program object cannot mix mesh and task shader stages
+    with vertex, tessellation or geometry shader stages. Furthermore
+    a task shader stage cannot be combined with a fragment shader stage
+    when the mesh shader stage is omitted. Other combinations as well
+    as their subsets are possible.
+
+    Modify Section 7.1, Shader Objects, p. 88
+
+    (add following entries to table 7.1)
+
+        type            | Shader Stage
+       =================|===============
+       TASK_SHADER_EXT  | Task shader
+       MESH_SHADER_EXT  | Mesh shader
+
+    Modify Section 7.3, Program Objects, p.94
+
+    (add to the list of reasons why LinkProgram can fail, p. 96)
+
+    * <program> contains objects to form either a mesh or task shader (see
+      chapter X), and
+      - the program also contains objects to form vertex, tessellation
+        control, tessellation evaluation, or geometry shaders.
+
+    * <program> contains objects to form a task shader (see chapter X), and
+      - the program is not separable and contains no objects to form a mesh
+        shader.
+
+    Modify Section 7.3.1 Program Interfaces, p.102
+
+    (add to the list starting with VERTEX_SUBROUTINE, after GEOMETRY_SUBROUTINE)
+
+    TASK_SUBROUTINE_EXT, MESH_SUBROUTINE_EXT,
+
+    (add to the list starting with VERTEX_SUBROUTINE_UNIFORM, after
+    GEOMETRY_SUBROUTINE_UNIFORM)
+
+    TASK_SUBROUTINE_UNIFORM_EXT, MESH_SUBROUTINE_UNIFORM_EXT,
+
+    (add to the list of errors for GetProgramInterfaceiv, p 108,
+    after GEOMETRY_SUBROUTINE_UNIFORM)
+
+    TASK_SUBROUTINE_UNIFORM_EXT, MESH_SUBROUTINE_UNIFORM_EXT,
+
+    (modify entries for table 7.2 for GetProgramResourceiv, p. 111)
+
+      Property                          |   Supported Interfaces
+      ==================================|==================================
+      ARRAY_SIZE                        | ..., TASK_SUBROUTINE_UNIFORM_EXT,
+                                        | MESH_SUBROUTINE_UNIFORM_EXT
+      ----------------------------------|-----------------------------
+      NUM_COMPATIBLE_SUBROUTINES,       | ..., TASK_SUBROUTINE_UNIFORM_EXT,
+      COMPATIBLE_SUBROUTINES            | MESH_SUBROUTINE_UNIFORM_EXT
+      ----------------------------------|-----------------------------
+      LOCATION                          |
+      ----------------------------------|-----------------------------
+      REFERENCED_BY_VERTEX_SHADER, ...  | ATOMIC_COUNTER_BUFFER, ...
+      REFERENCED_BY_TASK_SHADER_EXT,    |
+      REFERENCED_BY_MESH_SHADER_EXT     |
+      ----------------------------------|-----------------------------
+
+    (add to list of the sentence starting with "For the properties
+    REFERENCED_BY_VERTEX_SHADER", after REFERENCED_BY_GEOMETRY_SHADER, p. 115)
+
+    REFERENCED_BY_TASK_SHADER_EXT, REFERENCED_BY_MESH_SHADER_EXT
+
+    (for the description of GetProgramResourceLocation and
+    GetProgramResourceLocationIndex, add to the list of the sentence
+    starting with "For GetProgramResourceLocation, programInterface must
+    be one of UNIFORM,", after GEOMETRY_SUBROUTINE_UNIFORM, p. 120)
+
+    TASK_SUBROUTINE_UNIFORM_EXT, MESH_SUBROUTINE_UNIFORM_EXT,
+
+    Modify Section 7.4, Program Pipeline Objects, p. 122
+
+    (modify the first paragraph, p. 124, to add new shader stage bits for mesh
+     and task shaders)
+
+    The bits set in <stages> indicate the program stages for which the program
+    object named by <program> becomes current.  These stages may include
+    compute, vertex, tessellation control, tessellation evaluation, geometry,
+    fragment, mesh, and task shaders, indicated respectively by
+    COMPUTE_SHADER_BIT, VERTEX_SHADER_BIT, TESS_CONTROL_SHADER_BIT,
+    TESS_EVALUATION_SHADER_BIT, GEOMETRY_SHADER_BIT, FRAGMENT_SHADER_BIT,
+    MESH_SHADER_BIT_EXT, and TASK_SHADER_BIT_EXT, respectively.  The constant
+    ALL_SHADER_BITS indicates <program> is to be made current for all shader
+    stages.
+
+    (modify the first error in "Errors" for UseProgramStages, p. 124 to allow
+     the use of mesh and task shader bits)
+
+      An INVALID_VALUE error is generated if stages is not the special value
+      ALL_SHADER_BITS, and has any bits set other than VERTEX_SHADER_BIT,
+      COMPUTE_SHADER_BIT, TESS_CONTROL_SHADER_BIT, TESS_EVALUATION_SHADER_BIT,
+      GEOMETRY_SHADER_BIT, FRAGMENT_SHADER_BIT, MESH_SHADER_BIT_EXT, and
+      TASK_SHADER_BIT_EXT.
+
+    Modify Section 7.4.3, Program Pipeline Object State, p. 129
+
+    (modify the first item stating with "Unsigned integers holding", p. 130)
+
+    ... geometry, fragment, compute, task and mesh stage programs...
+
+
+    Modify Section 7.6, Uniform Variables, p. 133
+
+    (add entries to table 7.4, p. 134)
+
+      Shader Stage         | pname for querying default uniform
+                           | block storage, in components
+      =====================|=====================================
+      Task (see chapter X) | MAX_TASK_UNIFORM_COMPONENTS_EXT
+      Mesh (see chapter X) | MAX_MESH_UNIFORM_COMPONENTS_EXT
+
+    (add entries to table 7.5, p. 134)
+
+      Shader Stage         | pname for querying combined uniform
+                           | block storage, in components
+      =====================|=========================================
+      Task (see chapter X) | MAX_COMBINED_TASK_UNIFORM_COMPONENTS_EXT
+      Mesh (see chapter X) | MAX_COMBINED_MESH_UNIFORM_COMPONENTS_EXT
+
+    (add entries to table 7.7, p. 139)
+
+      pname                                       | prop
+      ============================================|==============================
+      UNIFORM_BLOCK_REFERENCED_BY_TASK_SHADER_EXT | REFERENCED_BY_TASK_SHADER_EXT
+      UNIFORM_BLOCK_REFERENCED_BY_MESH_SHADER_EXT | REFERENCED_BY_MESH_SHADER_EXT
+
+    (add entries to table 7.8, p. 140)
+
+      pname                                      | prop
+      ===========================================|==============================
+      ATOMIC_COUNTER_BUFFER_REFERENCED_-         | REFERENCED_BY_TASK_SHADER_EXT
+      BY_TASK_SHADER_EXT                         |
+      -------------------------------------------|-----------------------------
+      ATOMIC_COUNTER_BUFFER_REFERENCED_-         | REFERENCED_BY_MESH_SHADER_EXT
+      BY_MESH_SHADER_EXT                         |
+
+    (modify the sentence starting with "The limits for vertex" in 7.6.2
+    Uniform Blocks, p. 144)
+    ... geometry, task, mesh, fragment...
+    MAX_GEOMETRY_UNIFORM_BLOCKS, MAX_TASK_UNIFORM_BLOCKS_EXT, MAX_MESH_UNIFORM_-
+    BLOCKS_EXT, MAX_FRAGMENT_UNIFORM_BLOCKS...
+
+    (modify the sentence starting with "The limits for vertex", in
+    7.7 Atomic Counter Buffers, p. 150)
+
+    ... geometry, task, mesh, fragment...
+    MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS, MAX_TASK_ATOMIC_COUNTER_BUFFERS_EXT,
+    MAX_MESH_ATOMIC_COUNTER_BUFFERS_EXT, MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, ...
+
+
+    Modify Section 7.8 Shader Buffer Variables and Shader Storage Blocks, p. 151
+
+    (modify the sentences starting with "The limits for vertex", p. 152)
+
+    ... geometry, task, mesh, fragment...
+    MAX_GEOMETRY_SHADER_STORAGE_BLOCKS, MAX_TASK_SHADER_STORAGE_BLOCKS_EXT,
+    MAX_MESH_SHADER_STORAGE_BLOCKS_EXT, MAX_FRAGMENT_SHADER_STORAGE_BLOCKS,...
+
+    Modify Section 7.10 Subroutine Uniform Variables, p. 154
+
+    (modify table 7.9, p. 155)
+
+      Interface           | Shader Type
+      ====================|================
+      TASK_SUBROUTINE_EXT | TASK_SHADER_EXT
+      MESH_SUBROUTINE_EXT | MESH_SHADER_EXT
+
+    (modify table 7.10, p. 155)
+
+      Interface                   | Shader Type
+      ============================|================
+      TASK_SUBROUTINE_UNIFORM_EXT | TASK_SHADER_EXT
+      MESH_SUBROUTINE_UNIFORM_EXT | MESH_SHADER_EXT
+
+
+    Modify Section 7.14 Shader, Program, and Program Pipeline Queries, p. 166
+
+    (add to the list of queries for GetProgramiv, p. 167)
+
+      If <pname> is TASK_WORK_GROUP_SIZE_EXT, an array of three integers
+    containing the local work group size of the task shader
+    (see chapter X), as specified by its input layout qualifier(s), is returned.
+      If <pname> is MESH_WORK_GROUP_SIZE_EXT, an array of three integers
+    containing the local work group size of the mesh shader
+    (see chapter X), as specified by its input layout qualifier(s), is returned.
+      If <pname> is MESH_VERTICES_OUT_EXT, the maximum number of vertices the
+    mesh shader (see chapter X) will output is returned.
+      If <pname> is MESH_PRIMITIVES_OUT_EXT, the maximum number of primitives
+    the mesh shader (see chapter X) will output is returned.
+      If <pname> is MESH_OUTPUT_TYPE_EXT, the mesh shader output type,
+    which must be one of POINTS, LINES or TRIANGLES, is returned.
+
+    (add to the list of errors for GetProgramiv, p. 169)
+
+      An INVALID_OPERATION error is generated if TASK_WORK_GROUP_SIZE_EXT is
+    queried for a program which has not been linked successfully, or which
+    does not contain objects to form a task shader.
+      An INVALID_OPERATION error is generated if MESH_VERTICES_OUT_EXT,
+    MESH_PRIMITIVES_OUT_EXT, MESH_OUTPUT_TYPE_EXT, or MESH_WORK_GROUP_SIZE_EXT
+    are queried for a program which has not been linked
+    successfully, or which does not contain objects to form a mesh shader.
+
+
+    Modify Section 10.3.11 Indirect Commands in Buffer Objects, p. 364
+
+    (after "and to DispatchComputeIndirect (see section 19)" add)
+
+    and to DrawMeshTasksIndirectEXT, MultiDrawMeshTasksIndirectEXT,
+    MultiDrawMeshTasksIndirectCountEXT (see chapter X)
+
+    (add following entries to the table 10.7)
+
+      Indirect Command Name               | Indirect Buffer target
+      ====================================|========================
+      DrawMeshTasksIndirectEXT            | DRAW_INDIRECT_BUFFER
+      MultiDrawMeshTasksIndirectEXT       | DRAW_INDIRECT_BUFFER
+      MultiDrawMeshTasksIndirectCountEXT  | DRAW_INDIRECT_BUFFER
+
+
+    Modify Section 11.1.3 Shader Execution, p. 396
+
+    (add after the first paragraph in section 11.1.3, p 396)
+
+    If there is an active program object present for the task or
+    mesh shader stages, the executable code for these
+    active programs is used to process incoming work groups (see
+    chapter X).
+
+    (add to the list of constants, 11.1.3.5 Texture Access, p. 400)
+
+    * MAX_TASK_TEXTURE_IMAGE_UNITS_EXT (for task shaders)
+
+    * MAX_MESH_TEXTURE_IMAGE_UNITS_EXT (for mesh shaders)
+
+    (add to the list of constants, 11.1.3.6 Atomic Counter Access, p. 402)
+
+    * MAX_TASK_ATOMIC_COUNTERS_EXT (for task shaders)
+
+    * MAX_MESH_ATOMIC_COUNTERS_EXT (for mesh shaders)
+
+    (add to the list of constants, 11.1.3.7 Image Access, p. 403)
+
+    * MAX_TASK_IMAGE_UNIFORMS_EXT (for task shaders)
+
+    * MAX_MESH_IMAGE_UNIFORMS_EXT (for mesh shaders)
+
+    (add to the list of constants, 11.1.3.8 Shader Storage Buffer Access,
+     p. 403)
+
+    * MAX_TASK_SHADER_STORAGE_BLOCKS_EXT (for task shaders)
+
+    * MAX_MESH_SHADER_STORAGE_BLOCKS_EXT (for mesh shaders)
+
+    (modify the sentence of 11.1.3.10 Shader Outputs, p. 405)
+
+    A vertex and mesh shader can write to ...
+
+
+
+    Insert a new chapter X before Chapter 13, Fixed-Function Vertex
+    Post-Processing, p. 441
+
+    Chapter X, Programmable Mesh Processing
+
+    In addition to the programmable vertex processing pipeline described in
+    Chapters 10 and 11 [[compatibility profile only:  and the fixed-function
+    vertex processing pipeline in Chapter 12]], applications may use the mesh
+    pipeline to generate primitives for rasterization.  The mesh pipeline
+    generates a collection of meshes using the programmable task and mesh
+    shaders.  Task and mesh shaders are created as described in section 7.1
+    using a type parameter of TASK_SHADER_EXT and MESH_SHADER_EXT, respectively.
+    They are attached to and used in program objects as described in section
+    7.3.
+
+    Mesh and task shader workloads are formed from groups of work items called
+    work groups and processed by the executable code for a mesh or task shader
+    program.  A work group is a collection of shader invocations that execute
+    the same code, potentially in parallel.  An invocation within a work group
+    may share data with other members of the same work group through shared
+    variables (see section 4.3.8, "Shared Variables", of the OpenGL Shading
+    Language Specification) and issue memory and control barriers to
+    synchronize with other members of the same work group.
+
+    X.1 Task Shader Variables
+
+    Task shaders can access uniform variables belonging to the current
+    program object. Limits on uniform storage and methods for manipulating
+    uniforms are described in section 7.6.
+
+    There are several limits to the memory consumed by shared and output
+    variables in a single task shader work group.  These limits, expressed in
+    basic machine units, may be queried by calling GetIntegerv with the
+    following values:
+
+    * MAX_TASK_PAYLOAD_SIZE_EXT limits the total storage size of all output
+      variables
+
+    * MAX_TASK_SHARED_MEMORY_SIZE_EXT limits the total storage size of all
+      shared variables
+
+    * MAX_TASK_PAYLOAD_AND_SHARED_MEMORY_SIZE_EXT limits the total combined
+      storage size of all output and shared variables
+
+    X.2 Task Shader Outputs
+
+    Each task shader work group can define how many mesh work groups
+    should be generated by calling EmitMeshTasksEXT().
+
+    Furthermore the task work group can output data (qualified with
+    "taskPayloadSharedEXT") that can be accessed by the generated mesh
+    work groups.
+
+    X.3 Mesh Shader Variables
+
+    Mesh shaders can access uniform variables belonging to the current
+    program object. Limits on uniform storage and methods for manipulating
+    uniforms are described in section 7.6.
+
+    There are several limits to the memory consumed by shared, input and output
+    variables in a single mesh shader work group.  These limits, expressed in
+    basic machine units, may be queried by calling GetIntegerv with the
+    following values:
+
+    * MAX_MESH_SHARED_MEMORY_SIZE_EXT limits the total storage size of all
+      shared variables
+
+    * MAX_MESH_PAYLOAD_AND_SHARED_MEMORY_SIZE_EXT limits the total combined
+      storage size of all input and shared variables
+
+    * MAX_MESH_OUTPUT_MEMORY_SIZE_EXT limits the total storage size of all
+      output variables
+
+    * MAX_MESH_PAYLOAD_AND_OUTPUT_MEMORY_SIZE_EXT limits the total combined
+      storage size of all input and output variables
+
+    X.4 Mesh Shader Inputs
+
+    When each mesh shader work group runs, its invocations have access to
+    built-in variables describing the work group and invocation and also the
+    task shader outputs (qualified with "taskPayloadSharedEXT") written the
+    task shader that generated the work group. When no task shader is
+    active, the mesh shader has no access to task shader outputs.
+
+    X.5 Mesh Shader Outputs
+
+    When each mesh shader work group completes, it emits an output mesh
+    consisting of
+
+    * a primitive and vertex count, set by calling the SetMeshOutputsEXT
+      function;
+
+    * a collection of vertex attributes, where each vertex in the mesh has a
+      set of built-in and user-defined per-vertex output variables and blocks;
+
+    * a collection of primitive attributes, where each primitive in the mesh
+      has a set of built-in and user-defined per-primitive output variables
+      and blocks; and
+
+    * an array of vertex index values written to one of the appropriate
+      built-in output arrays (gl_PrimitivePointIndicesEXT,
+      gl_PrimitiveLineIndicesEXT or gl_PrimitiveTriangleIndicesEXT), where
+      each output element contains one, two, or three indices that
+      identify the output vertices in the mesh used to form the primitive.
+
+    This data is used to generate primitives of one of three types. The
+    supported output primitive types are points (POINTS), lines (LINES), and
+    triangles (TRIANGLES). The vertices output by the mesh shader are assembled
+    into points, lines, or triangles based on the output primitive type in the
+    DrawElements manner described in section 10.4, with the
+    gl_Primitive(Point|Line|Triangle)IndicesEXT array content serving as index
+    values, and the local vertex attribute arrays as vertex arrays.
+
+    The output arrays are sized depending on the compile-time provided
+    values ("max_vertices" and "max_primitives"), which must be below
+    their appropriate maxima that can be queried via GetIntegerv and
+    MAX_MESH_OUTPUT_PRIMITIVES_EXT as well as MAX_MESH_OUTPUT_VERTICES_EXT.
+
+    The output attributes are allocated at an implementation-dependent
+    granularity that can be queried via MESH_OUTPUT_PER_VERTEX_GRANULARITY_EXT
+    and MESH_OUTPUT_PER_PRIMITIVE_GRANULARITY_EXT.
+
+    There is a limit for the maximum number of components of both per-vertex
+    and per-primitive output variables which can be queried via GetIntegerv
+    and MAX_MESH_OUTPUT_COMPONENTS_EXT.
+
+    Another limit MAX_MESH_OUTPUT_LAYERS_EXT is one greater than the maximum
+    number of layer index that can be output from the mesh shader stage can
+    be queried via GetIntegerv.
+
+    X.6 Mesh Tasks Drawing Commands
+
+    One or more work groups is launched by calling
+
+      void DrawMeshTasksEXT(uint num_groups_x,
+                            uint num_groups_y,
+                            uint num_groups_z);
+
+    If there is an active program object for the task shader stage,
+    work groups are processed by the active program for the task
+    shader stage. If there is no active program object for the task shader
+    stage, work groups are instead processed by the active
+    program for the mesh shader stage.  The active program for both shader
+    stages will be determined in the same manner as the active program for other
+    pipeline stages, as described in section 7.3. While the individual shader
+    invocations within a work group are executed as a unit, work groups are
+    executed completely independently and in unspecified order.
+
+    <num_groups_x>, <num_groups_y> and <num_groups_z> specify the number of
+    work groups that will be dispatched in the X, Y and Z dimensions,
+    respectively. The builtin vector variable gl_NumWorkGroups will be
+    initialized with the contents of the <num_groups_x>, <num_groups_y> and
+    <num_groups_z> parameters. The maximum number of work groups that may be
+    dispatched at one time may be determined by calling GetIntegeri_v with
+    <target> set to MAX_TASK_WORK_GROUP_COUNT_EXT or
+    MAX_MESH_WORK_GROUP_COUNT_EXT and <index> must be 0, 1, or 2, representing
+    the X, Y, and Z dimensions, respectively.  Furthermore, the maximum number
+    of total work groups (i.e., the product of the three dimensions) may be
+    determined by calling GetIntegerv with pname set to
+    MAX_TASK_WORK_GROUP_TOTAL_COUNT_EXT or MAX_MESH_WORK_GROUP_TOTAL_COUNT_EXT.
+
+    The local work size in each dimension is specified at compile time using
+    an input layout qualifier in one or more of the task or mesh shaders
+    attached to the program; see the OpenGL Shading Language Specification for
+    more information.  After the program has been linked, the local work group
+    size of the task or mesh shader may be queried by calling GetProgramiv
+    with <pname> set to TASK_WORK_GROUP_SIZE_EXT or MESH_WORK_GROUP_SIZE_EXT,
+    as described in section 7.13.
+
+    The maximum size of a task or mesh shader local work group may be
+    determined by calling GetIntegeri_v with <target> set to
+    MAX_TASK_WORK_GROUP_SIZE_EXT or MAX_MESH_WORK_GROUP_SIZE_EXT, and <index>
+    set to 0, 1, or 2 to retrieve the maximum work size in the X, Y and Z
+    dimension, respectively.  Furthermore, the maximum number of invocations
+    in a single local work group (i.e., the product of the three dimensions)
+    may be determined by calling GetIntegerv with pname set to
+    MAX_TASK_WORK_GROUP_INVOCATIONS_EXT or MAX_MESH_WORK_GROUP_INVOCATIONS_EXT.
+
+      Errors
+
+        An INVALID_OPERATION error is generated if there is no active
+        program for the mesh shader stage.
+
+        An INVALID_VALUE error is generated if any of <num_groups_x>,
+        <num_groups_y> and <num_groups_z> exceeds
+        MAX_TASK_WORK_GROUP_COUNT_EXT (task shader active) or
+        MAX_MESH_WORK_GROUP_COUNT_EXT (task shader not active).
+
+        An INVALID_VALUE error is generated if the multiply of
+        <num_groups_x>, <num_groups_y> and <num_groups_z> exceeds
+	MAX_TASK_WORK_GROUP_TOTAL_COUNT_EXT (task shader active) or
+	MAX_MESH_WORK_GROUP_TOTAL_COUNT_EXT (task shader not active).
+
+
+    If there is an active program on the task shader stage, each task shader
+    work group emits mesh shader work group count via the EmitMeshTasksEXT
+    function.  If all dimensions of this count are non-zero, work groups are
+    generated and processed by the active program for the mesh shader stage.
+    If any dimension of this count is zero, no work groups are generated.
+    The built-in variables available to the generated mesh shader work groups
+    are identical to those that would be generated if DrawMeshTasksEXT were
+    called with no task shader active and with the same work group count.
+
+    The primitives of the mesh are then processed by the pipeline stages
+    described in subsequent chapters in the same manner as primitives produced
+    by the conventional vertex processing pipeline described in previous
+    chapters.
+
+    The command
+
+      void DrawMeshTasksIndirectEXT(intptr indirect);
+
+      typedef struct {
+        uint x;
+        uint y;
+	uint z;
+      } DrawMeshTasksIndirectCommandEXT;
+
+    is equivalent to calling DrawMeshTasksEXT with the parameters sourced from
+    a DrawMeshTasksIndirectCommandEXT struct stored in the buffer currently
+    bound to the DRAW_INDIRECT_BUFFER binding at an offset, in basic machine
+    units, specified by <indirect>.  If the <x>, <y> and <z> read from the
+    indirect draw buffer exceed the limits specified in DrawMeshTasksEXT, then
+    the results of this command are undefined.
+
+      Errors
+
+        An INVALID_OPERATION error is generated if there is no active program
+        for the mesh shader stage.
+
+        An INVALID_VALUE error is generated if <indirect> is negative or is
+        not a multiple of the size, in basic machine units, of uint.
+
+        An INVALID_OPERATION error is generated if the command would source
+        data beyond the end of the buffer object.
+
+        An INVALID_OPERATION error is generated if zero is bound to the
+        DRAW_INDIRECT_BUFFER binding.
+
+    The command
+
+      void MultiDrawMeshTasksIndirectEXT(intptr indirect,
+                                         sizei drawcount,
+                                         sizei stride);
+
+    behaves identically to DrawMeshTasksIndirectEXT, except that <indirect> is
+    treated as an array of <drawcount> DrawMeshTasksIndirectCommandEXT
+    structures.    <indirect> contains the offset of the first element of the
+    array within the buffer currently bound to the DRAW_INDIRECT buffer
+    binding. <stride> specifies the distance, in basic machine units, between
+    the elements of the array. If <stride> is zero, the array elements are
+    treated as tightly packed. <stride> must be a multiple of four, otherwise
+    an INVALID_VALUE error is generated.
+
+    <drawcount> must be positive, otherwise an INVALID_VALUE error will be
+    generated.
+
+      Errors
+
+        In addition to errors that would be generated by
+        DrawMeshTasksIndirectEXT:
+
+        An INVALID_VALUE error is generated if <stride> is neither zero nor a
+        multiple of four.
+
+        An INVALID_VALUE error is generated if <stride> is non-zero and less
+        than the size of DrawMeshTasksIndirectCommandEXT.
+
+        An INVALID_VALUE error is generated if <drawcount> is not positive.
+
+        An INVALID_OPERATION error is generated if max access offset (calculated
+        by (<drawcount> - 1) * <stride> + <indirect> +
+        sizeof(DrawMeshTasksIndirectCommandEXT) when <stride> is not zero or
+        <drawcount> * sizeof(DrawMeshTasksIndirectCommandEXT) + <indirect> when
+        <stride> is zero) exceeds the size of indirect buffer.
+
+    The command
+
+      void MultiDrawMeshTasksIndirectCountEXT(intptr indirect,
+                                              intptr drawcount,
+                                              sizei maxdrawcount,
+                                              sizei stride);
+
+    behaves similarly to MultiDrawMeshTasksIndirectEXT, except that <drawcount>
+    defines an offset (in bytes) into the buffer object bound to the
+    PARAMETER_BUFFER binding point at which a single <sizei> typed value
+    is stored, which contains the draw count. <maxdrawcount> specifies the
+    maximum number of draws that are expected to be stored in the buffer.
+    If the value stored at <drawcount> into the buffer is greater than
+    <maxdrawcount>, an implementation stop processing draws after
+    <maxdrawcount> parameter sets.
+
+      Errors
+
+        In addition to errors that would be generated by
+        MultiDrawMeshTasksIndirectEXT:
+
+        An INVALID_OPERATION error is generated if no buffer is bound to the
+        PARAMETER_BUFFER binding point.
+
+        An INVALID_VALUE error is generated if <drawcount> (the offset of the
+        memory holding the actual draw count) is negative or is not a multiple
+        of four.
+
+        An INVALID_OPERATION error is generated if reading a <sizei> typed value
+        from the buffer bound to the PARAMETER_BUFFER target at the offset
+        specified by <drawcount> would result in an out-of-bounds access.
+
+        An INVALID_VALUE error is generated if <maxdrawcount> is not positive.
+
+        An INVALID_OPERATION error is generated if max possible access offset
+        (calculated by (<maxdrawcount> - 1) * <stride> + <indirect> +
+        sizeof(DrawMeshTasksIndirectCommandEXT) when <stride> is
+        not zero or <maxdrawcount> * sizeof(DrawMeshTasksIndirectCommandEXT) +
+        <indirect> when <stride> is zero) exceeds the size of indirect buffer.
+
+    X.7 Task and Mesh Shader Queries
+
+    Task and mesh shader queries use query objects to track the number of task
+    and mesh shader invocations.
+
+    When BeginQuery is called with a target of TASK_SHADER_INVOCATIONS_EXT, the
+    task shader invocations count maintained by the GL is set to zero. When a
+    task shader invocations query is active, the counter is incremented every
+    time the task shader is invoked.
+
+    When BeginQuery is called with a target of MESH_SHADER_INVOCATIONS_EXT, the
+    mesh shader invocations count maintained by the GL is set to zero. When a
+    mesh shader invocations query is active, the counter is incremented every
+    time the mesh shader is invoked.
+
+    X.8 Rasterization Order
+
+    Following guarantees are provided for the relative ordering of primitives
+    produced by a mesh shader, as they pertain to primitive order.
+
+    * When a task shader is used, mesh workgroups spawned from lower tasks will
+      be ordered prior those workgroups from subsequent tasks.
+
+    * All output primitives generated from a given mesh workgroup are passed to
+      subsequent pipeline stages before any output primitives generated from
+      subsequent input workgroups.
+
+    * All output primitives within a mesh workgroup, will be generated in the
+      ordering provided by the builtin primitive indexbuffer (from low address
+      to high address).
+
+    X.9 Shader Preferences
+
+    The following properties are implementation preferences which can be
+    queried via GetIntegerv or GetBooleanv. Violating these limits will not
+    result in validation errors, but it is strongly recommended that
+    applications adhere
+    to them in order to maximize performance on each implementation.
+
+    * MAX_PREFERRED_TASK_WORK_GROUP_INVOCATIONS_EXT indicates the maximum
+      preferred number of task shader invocations in a single work group.
+
+    * MAX_PREFERRED_MESH_WORK_GROUP_INVOCATIONS_EXT indicates the maximum
+      preferred number of mesh shader invocations in a single work group.
+
+    * MESH_PREFERS_LOCAL_INVOCATION_VERTEX_OUTPUT_EXT, TRUE if the
+      implementation will perform best when each invocation writes to an array
+      index in the per-vertex output matching <gl_LocalInvocationIndex>.
+
+    * MESH_PREFERS_LOCAL_INVOCATION_PRIMITIVE_OUTPUT_EXT, TRUE if the
+      implementation will perform best when each invocation writes to an array
+      index in the per-primitive output matching <gl_LocalInvocationIndex>.
+
+    * MESH_PREFERS_COMPACT_VERTEX_OUTPUT_EXT, TRUE if the implementation will
+      perform best if there are no unused vertices in the output array.
+
+    * MESH_PREFERS_COMPACT_PRIMITIVE_OUTPUT_EXT, TRUE if the implementation
+      will perform best if there are no unused primitives in the output array.
+
+    Note that even if some of the above values are false, the implementation
+    can still perform just as well whether or not the corresponding preferences
+    are followed. It is recommended to follow these preferences unless the
+    performance cost of doing so outweighs the gains of hitting the optimal
+    paths in the implementation.
+
+
+    Modify Chapter 13, Fixed-Function Vertex Post-Processing, p. 441
+
+    (insert after the first paragraph, p.441)
+
+    After programmable mesh processing, the same fixed-function operations are
+    applied to vertices of the resulting primitives as above, except the
+    transform feedback (see section 13.3), primitive queries (see section 13.4)
+    and transform feedback overflow queries (see section 13.5) are replaced by
+    mesh primitive queries (see section 13.Y).
+
+    Modify Section 13.2, The Last Vertex Processing Stage, p. 442
+
+    (replace the first item of the list, p.442)
+
+    * The mesh shader stage, when in mesh processing pipeline;
+
+    * Otherwise the geometry shader stage, if a geometry shader is active;
+
+    Insert a new section 13.Y before Section 13.6, Flatshading, p. 452
+
+    13.Y Mesh Primitive Queries
+
+    Mesh primitive queries use query objects to track the number of primitives
+    that are generated by the mesh shader and reach the fragment shader stage.
+
+    When BeginQuery is called with a target of MESH_PRIMITIVES_GENERATED_EXT,
+    the mesh primitives generated count maintained by the GL is set to zero.
+    When a mesh primitives generated query is active, the counter is incremented
+    every time a primitive emitted from any mesh shader workgroup that is not
+    culled by fixed function culling.
+
+
+New Implementation Dependent State
+
+    Add to Table 23.31, "Program Pipeline Object State"
+
+    +--------------------+------+-------------------------+---------------+-------------------------------------------------+---------+
+    | Get Value          | Type | Get Command             | Initial Value | Description                                     | Sec.    |
+    +--------------------+------+-------------------------+---------------+-------------------------------------------------+---------+
+    | TASK_SHADER_EXT    | Z+   | GetProgramPipelineiv    | 0             | Name of current task shader program object      | 7.4     |
+    | MESH_SHADER_EXT    | Z+   | GetProgramPipelineiv    | 0             | Name of current mesh shader program object      | 7.4     |
+    +--------------------+------+-------------------------+---------------+-------------------------------------------------+---------+
+
+    Add to Table 23.32, "Program Object State"
+
+    +-----------------------------------------------------+-----------+-------------------------+---------------+--------------------------------------------------------+---------+
+    | Get Value                                           | Type      | Get Command             | Initial Value | Description                                            | Sec.    |
+    +-----------------------------------------------------+-----------+-------------------------+---------------+--------------------------------------------------------+---------+
+    | TASK_WORK_GROUP_SIZE_EXT                            | 3 x Z+    | GetProgramiv            | { 0, ... }    | Local work size of a linked mesh stage                 | 7.14    |
+    | MESH_WORK_GROUP_SIZE_EXT                            | 3 x Z+    | GetProgramiv            | { 0, ... }    | Local work size of a linked task stage                 | 7.14    |
+    | MESH_VERTICES_OUT_EXT                               | Z+        | GetProgramiv            | 0             | max_vertices size of a linked mesh stage               | 7.14    |
+    | MESH_PRIMITIVES_OUT_EXT                             | Z+        | GetProgramiv            | 0             | max_primitives size of a linked mesh stage             | 7.14    |
+    | MESH_OUTPUT_TYPE_EXT                                | Z+        | GetProgramiv            | POINTS        | Primitive output type of a linked mesh stage           | 7.14    |
+    | UNIFORM_BLOCK_REFERENCED_BY_TASK_SHADER_EXT         | B         | GetActiveUniformBlockiv | FALSE         | True if uniform block is referenced by the task stage  | 7.6.2   |
+    | UNIFORM_BLOCK_REFERENCED_BY_MESH_SHADER_EXT         | B         | GetActiveUniformBlockiv | FALSE         | True if uniform block is referenced by the mesh stage  | 7.6.2   |
+    | ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TASK_SHADER_EXT | B         | GetActiveAtomicCounter- | FALSE         | AACB has a counter used by task shaders                | 7.7     |
+    |                                                     |           | Bufferiv                |               |                                                        |         |
+    | ATOMIC_COUNTER_BUFFER_REFERENCED_BY_MESH_SHADER_EXT | B         | GetActiveAtomicCounter- | FALSE         | AACB has a counter used by mesh shaders                | 7.7     |
+    |                                                     |           | Bufferiv                |               |                                                        |         |
+    +-----------------------------------------------------+-----------+-------------------------+---------------+--------------------------------------------------------+---------+
+
+    Add to Table 23.41, "Program Object Resource State"
+
+    +----------------------------------------------------+-----------+-------------------------+---------------+--------------------------------------------------------+---------+
+    | Get Value                                          | Type      | Get Command             | Initial Value | Description                                            | Sec.    |
+    +----------------------------------------------------+-----------+-------------------------+---------------+--------------------------------------------------------+---------+
+    | REFERENCED_BY_TASK_SHADER_EXT                      | Z+        | GetProgramResourceiv    | -             | Active resource used by task shader                    |  7.3.1  |
+    | REFERENCED_BY_MESH_SHADER_EXT                      | Z+        | GetProgramResourceiv    | -             | Active resource used by mesh shader                    |  7.3.1  |
+    +----------------------------------------------------+-----------+-------------------------+---------------+--------------------------------------------------------+---------+
+
+    Add to Table 23.53, "Implementation Dependent Values"
+
+    +-------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+--------+
+    | Get Value                                 | Type      | Get Command   | Minimum Value       | Description                                                           | Sec.   |
+    +-------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+--------+
+    | MESH_OUTPUT_PER_VERTEX_GRANULARITY_EXT    | Z+        | GetIntegerv   | -                   | Per-vertex output allocation granularity for mesh shaders             | X.5    |
+    | MESH_OUTPUT_PER_PRIMITIVE_GRANULARITY_EXT | Z+        | GetIntegerv   | -                   | Per-primitive output allocation granularity for mesh shaders          | X.5    |
+    | MAX_PREFERRED_TASK_WORK_GROUP_-           | Z+        | GetIntegerv   | -                   | Maximum preferred number of shader invocations in a single work group | X.9    |
+    | INVOCATIONS_EXT                           |           |               |                     |                                                                       |        |
+    | MAX_PREFERRED_MESH_WORK_GROUP_-           | Z+        | GetIntegerv   | -                   | Maximum preferred number of shader invocations in a single work group | X.9    |
+    | INVOCATIONS_EXT                           |           |               |                     |                                                                       |        |
+    | MESH_PREFERS_LOCAL_INVOCATION_VERTEX_-    | B         | glGetBooleanv | -                   | Whether prefer each invocation writes to an array index in the        | X.9    |
+    | OUTPUT_EXT                                |           |               |                     | per-vertex output matching <gl_LocalInvocationIndex>                  |        |
+    | MESH_PREFERS_LOCAL_INVOCATION_PRIMITIVE_- | B         | glGetBooleanv | -                   | Whether prefer each invocation writes to an array index in the        | X.9    |
+    | OUTPUT_EXT                                |           |               |                     | per-primitive output matching <gl_LocalInvocationIndex>               |        |
+    | MESH_PREFERS_COMPACT_VERTEX_OUTPUT_EXT    | B         | glGetBooleanv | -                   | Whether prefer there are no unused vertices in the output array       | X.9    |
+    | MESH_PREFERS_COMPACT_PRIMITIVE_OUTPUT_EXT | B         | glGetBooleanv | -                   | Whether prefer there are no unused primitives in the output array     | X.9    |
+    +-------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+--------+
+
+    Insert Table 23.63, "Implementation Dependent Task Shader Limits"
+
+    +------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+----------+
+    | Get Value                                | Type      | Get Command   | Minimum Value       | Description                                                           | Sec.     |
+    +------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+----------+
+    | MAX_TASK_WORK_GROUP_TOTAL_COUNT_EXT      | Z+        | GetIntegerv   | 2^22                | Maximum total number of work groups that can be launched              | X.6      |
+    | MAX_TASK_WORK_GROUP_COUNT_EXT            | 3 x Z+    | GetIntegeri_v | 65535               | Maximum number of work groups that can be launched (per dimension)    | X.6      |
+    | MAX_TASK_WORK_GROUP_SIZE_EXT             | 3 x Z+    | GetIntegeri_v | 128                 | Maximum local size of a task work group (per dimension)               | X.6      |
+    | MAX_TASK_WORK_GROUP_INVOCATIONS_EXT      | Z+        | GetIntegerv   | 128                 | Maximum total task shader invocations in a single local work group    | X.6      |
+    | MAX_TASK_UNIFORM_BLOCKS_EXT              | Z+        | GetIntegerv   | 12                  | Maximum number of uniform blocks per task program                     | 7.6.2    |
+    | MAX_TASK_TEXTURE_IMAGE_UNITS_EXT         | Z+        | GetIntegerv   | 16                  | Maximum number of texture image units accessible by a task program    | 11.1.3.5 |
+    | MAX_TASK_ATOMIC_COUNTER_BUFFERS_EXT      | Z+        | GetIntegerv   | 8                   | Number of atomic counter buffers accessed by a task program           | 7.7      |
+    | MAX_TASK_ATOMIC_COUNTERS_EXT             | Z+        | GetIntegerv   | 8                   | Number of atomic counters accessed by a task program                  | 11.1.3.6 |
+    | MAX_TASK_IMAGE_UNIFORMS_EXT              | Z+        | GetIntegerv   | 8                   | Number of image variables in task program                             | 11.1.3.7 |
+    | MAX_TASK_SHADER_STORAGE_BLOCKS_EXT       | Z+        | GetIntegerv   | 12                  | Maximum number of storage buffer blocks per task program              | 7.8      |
+    | MAX_TASK_UNIFORM_COMPONENTS_EXT          | Z+        | GetIntegerv   | 512                 | Number of components for task shader uniform variables                | 7.6      |
+    | MAX_COMBINED_TASK_UNIFORM_COMPONENTS_EXT | Z+        | GetIntegerv   | *                   | Number of words for task shader uniform variables in all uniform      | 7.6      |
+    |                                          |           |               |                     | blocks, including the default                                         |          |
+    | MAX_TASK_PAYLOAD_SIZE_EXT                | Z+        | GetIntegerv   | 16384               | Maximum total storage size of all variables declared as <out>         | X.1      |
+    | MAX_TASK_SHARED_MEMORY_SIZE_EXT          | Z+        | GetIntegerv   | 32768               | Maximum total storage size of all variables declared as <shared>      | X.1      |
+    | MAX_TASK_PAYLOAD_AND_SHARED_MEMORY_-     | Z+        | GetIntegerv   | 32768               | Maximum total storage size of all variables declared as <shared> and  | X.1      |
+    | SIZE_EXT                                 |           |               |                     | <out> in all task shaders linked into a single program object         |          |
+    +------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+----------+
+
+    Insert Table 23.64, "Implementation Dependent Mesh Shader Limits",
+    renumber subsequent tables.
+
+    +------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+----------+
+    | Get Value                                | Type      | Get Command   | Minimum Value       | Description                                                           | Sec.     |
+    +------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+----------+
+    | MAX_MESH_WORK_GROUP_TOTAL_COUNT_EXT      | Z+        | GetIntegerv   | 2^22                | Maximum total number of work groups that can be launched              | X.6      |
+    | MAX_MESH_WORK_GROUP_COUNT_EXT            | 3 x Z+    | GetIntegeri_v | 65535               | Maximum number of work groups that can be launched (per dimension)    | X.6      |
+    | MAX_MESH_WORK_GROUP_SIZE_EXT             | 3 x Z+    | GetIntegeri_v | 128                 | Maximum local size of a mesh work group (per dimension)               | X.6      |
+    | MAX_MESH_WORK_GROUP_INVOCATIONS_EXT      | Z+        | GetIntegerv   | 128                 | Maximum total mesh shader invocations in a single local work group    | X.6      |
+    | MAX_MESH_UNIFORM_BLOCKS_EXT              | Z+        | GetIntegerv   | 12                  | Maximum number of uniform blocks per mesh program                     | 7.6.2    |
+    | MAX_MESH_TEXTURE_IMAGE_UNITS_EXT         | Z+        | GetIntegerv   | 16                  | Maximum number of texture image units accessible by a mesh shader     | 11.1.3.5 |
+    | MAX_MESH_ATOMIC_COUNTER_BUFFERS_EXT      | Z+        | GetIntegerv   | 8                   | Number of atomic counter buffers accessed by a mesh shader            | 7.7      |
+    | MAX_MESH_ATOMIC_COUNTERS_EXT             | Z+        | GetIntegerv   | 8                   | Number of atomic counters accessed by a mesh shader                   | 11.1.3.6 |
+    | MAX_MESH_IMAGE_UNIFORMS_EXT              | Z+        | GetIntegerv   | 8                   | Number of image variables in mesh shaders                             | 11.1.3.7 |
+    | MAX_MESH_SHADER_STORAGE_BLOCKS_EXT       | Z+        | GetIntegerv   | 12                  | Maximum number of storage buffer blocks per task program              | 7.8      |
+    | MAX_MESH_UNIFORM_COMPONENTS_EXT          | Z+        | GetIntegerv   | 512                 | Number of components for mesh shader uniform variables                | 7.6      |
+    | MAX_COMBINED_MESH_UNIFORM_COMPONENTS_EXT | Z+        | GetIntegerv   | *                   | Number of words for mesh shader uniform variables in all uniform      | 7.6      |
+    |                                          |           |               |                     | blocks, including the default                                         |          |
+    | MAX_MESH_SHARED_MEMORY_SIZE_EXT          | Z+        | GetIntegerv   | 28672               | Maximum total storage size of all variables declared as <shared>      | X.3      |
+    | MAX_MESH_PAYLOAD_AND_SHARED_MEMORY_-     | Z+        | GetIntegerv   | 28672               | Maximum total storage size of all variables declared as <shared> and  | X.3      |
+    | SIZE_EXT                                 |           |               |                     | <in> in all mesh shaders linked into a single program object          |          |
+    | MAX_MESH_OUTPUT_MEMORY_SIZE_EXT          | Z+        | GetIntegerv   | 32768               | Maximum total storage size of all variables declared as <out>         | X.3      |
+    | MAX_MESH_PAYLOAD_AND_OUTPUT_MEMORY_-     | Z+        | GetIntegerv   | 48128               | Maximum total storage size of all variables declared as <in> and      | X.3      |
+    | SIZE_EXT                                 |           |               |                     | <out> in all mesh shaders linked into a single program object         |          |
+    | MAX_MESH_OUTPUT_PRIMITIVES_EXT           | Z+        | GetIntegerv   | 256                 | Maximum number of primitives a single mesh work group can emit        | X.5      |
+    | MAX_MESH_OUTPUT_VERTICES_EXT             | Z+        | GetIntegerv   | 256                 | Maximum number of vertices a single mesh work group can emit          | X.5      |
+    | MAX_MESH_OUTPUT_COMPONENTS_EXT           | Z+        | GetIntegerv   | 128                 | maximum number of components of mesh shader output variables          | X.5      |
+    | MAX_MESH_OUTPUT_LAYERS_EXT               | Z+        | GetIntegerv   | 1                   | Maximum number of layers that a mesh shader can render to             | X.5      |
+    | MAX_MESH_MULTIVIEW_VIEW_COUNT_EXT        | Z+        | GetIntegerv   | 1                   | Maximum number of multi-view views that can be used in a mesh shader  | X.10     |
+    +------------------------------------------+-----------+---------------+---------------------+-----------------------------------------------------------------------+----------+
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.60
+
+    See the separate EXT_mesh_shader GLSL document.
+    https://github.com/KhronosGroup/GLSL/blob/main/extensions/ext/GLSL_EXT_mesh_shader.txt
+
+Dependencies on ARB_gl_spirv and OpenGL 4.6
+
+    If ARB_gl_spirv or OpenGL 4.6 are not supported, ignore all
+    references to SPIR-V functionality.
+
+Dependencies on ARB_spirv_extensions and OpenGL 4.6
+
+    If ARB_spirv_extensions or OpenGL 4.6 are not supported, ignore
+    references to the ability to advertise additional SPIR-V extensions.
+
+Interactions with ARB_indirect_parameters and OpenGL 4.6
+
+    If none of ARB_indirect_parameters or OpenGL 4.6 are supported, remove the
+    MultiDrawMeshTasksIndirectCountEXT function.
+
+Interactions with KHR_shader_subgroup
+
+    Modify the new section "SG.2.2 Subgroup Supported Stages"
+
+    (modify the sentence starting with "<data> will contain the bitwise OR")
+
+    ... geometry, task, mesh, fragment, ...
+
+Interactions with OVR_multiview
+
+    Add a new section to Chapter X, Programmable Mesh Processing
+
+    X.10 Multiview Mesh Shader
+
+    MAX_MESH_MULTIVIEW_VIEW_COUNT_EXT limits the maximum number of views that
+    can be used in a mesh shader which can be queried by GetIntegerv. If this
+    value is one, it means mesh shader does not support multiview.
+
+Interactions with OpenGL ES 3.2
+
+    If implemented in OpenGL ES, remove all references to
+    MESH_SUBROUTINE_EXT, TASK_SUBROUTINE_EXT, MESH_SUBROUTINE_UNIFORM_EXT,
+    TASK_SUBROUTINE_UNIFORM_EXT,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_MESH_SHADER_EXT,
+    ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TASK_SHADER_EXT,
+    MultiDrawMeshTasksIndirectCountEXT and SPIR-V.
+
+    Modify Section 7.3, Program Objects, p. 71 ES 3.2
+
+    (replace the reason why LinkProgram can fail with "program contains objects
+    to form either a vertex shader or fragment shader", p. 73 ES 3.2)
+
+    * <program> contains objects to form either a vertex shader or fragment
+      shader but not a mesh shader, and
+
+      - <program> is not separable, and does not contain objects to form both a
+        vertex shader and fragment shader.
+
+    (add to the list of reasons why LinkProgram can fail, p. 74 ES 3.2)
+
+    * program contains objects to form either a mesh or task shader (see
+      chapter X) but no fragment shader.
+
+Issues
+
+    (1) What are the key differences to NV_mesh_shader?
+
+      Main interface is forked from VK_EXT_mesh_shader. The following
+      changes have been made to the API:
+
+      * Drawing mesh tasks can now be done with a three-dimensional number of
+        workgroups, rather than just one-dimensional.
+
+      * There are new queries for the number of mesh primitives generated, and
+        the number of shader invocations for the new shader stages.
+
+      * Change and add some shader limitations to reflect vender difference.
+
+      * Several preference are expressed to enable application developers to
+        use mesh shaders optimally across vendors.
+
+    Also, please refer to issues in the GLSL extension specification.
+
+Revision History
+
+    Revision 1 (qiang)
+    - Internal revisions.

@@ -27,12 +27,8 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_win)
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include "src/tint/utils/command/command.h"
+#include "src/utils/compiler.h"
 
 #define WIN32_LEAN_AND_MEAN 1
 #include <Windows.h>
@@ -77,6 +73,7 @@ class Handle {
     }
 
     /// @returns the handle
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator HANDLE() { return handle_; }
 
     /// @returns true if the handle is not invalid
@@ -228,7 +225,8 @@ Command::Output Command::Exec(std::initializer_list<std::string> arguments) cons
     }
 
     if (!input_.empty()) {
-        if (!WriteFile(stdin_pipe.write, input_.data(), input_.size(), nullptr, nullptr)) {
+        if (!WriteFile(stdin_pipe.write, input_.data(), static_cast<DWORD>(input_.size()), nullptr,
+                       nullptr)) {
             Output output;
             output.err = "Command::Exec() Failed to write stdin";
             return output;
@@ -281,9 +279,9 @@ Command::Output Command::Exec(std::initializer_list<std::string> arguments) cons
         auto* thread_args = reinterpret_cast<StreamReadThreadArgs*>(user);
         DWORD n = 0;
         char buf[256];
-        while (ReadFile(thread_args->stream, buf, sizeof(buf), &n, NULL)) {
-            auto s = std::string(buf, buf + n);
-            thread_args->output += std::string(buf, buf + n);
+        while (ReadFile(thread_args->stream, buf, sizeof(buf), &n, nullptr)) {
+            // SAFETY: ReadFile guarantees that `n` bytes have been populated in `buf`.
+            DAWN_UNSAFE_BUFFERS(thread_args->output.append(buf, n));
         }
         return 0;
     };

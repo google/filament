@@ -1,0 +1,89 @@
+Name
+
+    QNX_platform_screen
+
+Name Strings
+
+    EGL_QNX_platform_screen
+
+Contributors
+
+    Mike Gorchak <mgorchak@blackberry.com>
+    Jeff Vigil <j.vigil@samsung.com>
+
+Contacts
+
+    Mike Gorchak <mgorchak@blackberry.com>
+
+Status
+
+    Complete
+
+Version
+
+    Version 1, 2023-06-13
+
+Number
+
+    EGL Extension #150
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_EXT_client_extensions to query its existence without
+    a display.
+
+    Requires EGL_EXT_platform_base.
+
+    This extension is written against the wording of version 7 of the
+    EGL_EXT_platform_base specification.
+
+Overview
+
+    This extension defines how to create EGL resources from native qnx
+    resources using the functions defined by EGL_EXT_platform_base.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as the <platform> argument of eglGetPlatformDisplayEXT:
+
+        EGL_PLATFORM_SCREEN_QNX                0x3550
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To determine if the EGL implementation supports this extension, clients
+    should query the EGL_EXTENSIONS string of EGL_NO_DISPLAY.
+
+    To obtain an EGLDisplay backed by a QNX display, call
+    eglGetPlatformDisplayEXT with <platform> set to EGL_PLATFORM_SCREEN_QNX.  The
+    <native_display> parameter specifies the QNX display. The <native_display> must
+    be a display ID or be EGL_DEFAULT_DISPLAY. If
+    <native_display> is EGL_DEFAULT_DISPLAY, then EGL will connect to
+    the default display ID.
+
+    To obtain an on-screen rendering surface from a QNX screen window, call
+    eglCreatePlatformWindowSurfaceEXT with a <dpy> that belongs to QNX display and
+    a <native_window> that points to a QNX screen_window_t.
+
+Issues
+
+Revision History
+
+    Version 1, 2023-06-13 (Jeff Vigil)
+        - Initial draft
+

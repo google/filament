@@ -86,8 +86,8 @@ bool ParseLineBreak(std::string_view str, size_t i, bool* is_line_break, size_t*
     return true;
 }
 
-std::vector<std::string_view> SplitLines(std::string_view str) {
-    std::vector<std::string_view> lines;
+std::vector<Source::FileContent::LineRange> SplitLines(std::string_view str) {
+    std::vector<Source::FileContent::LineRange> lines;
 
     size_t lineStart = 0;
     for (size_t i = 0; i < str.size();) {
@@ -97,7 +97,7 @@ std::vector<std::string_view> SplitLines(std::string_view str) {
         // the Lexer to do so.
         ParseLineBreak(str, i, &is_line_break, &line_break_size);
         if (is_line_break) {
-            lines.push_back(str.substr(lineStart, i - lineStart));
+            lines.push_back({.start = lineStart, .length = i - lineStart});
             i += line_break_size;
             lineStart = i;
         } else {
@@ -105,35 +105,30 @@ std::vector<std::string_view> SplitLines(std::string_view str) {
         }
     }
     if (lineStart < str.size()) {
-        lines.push_back(str.substr(lineStart));
+        lines.push_back({.start = lineStart, .length = str.size() - lineStart});
     }
 
     return lines;
 }
 
-std::vector<std::string_view> CopyRelativeStringViews(const std::vector<std::string_view>& src_list,
-                                                      const std::string_view& src_view,
-                                                      const std::string_view& dst_view) {
-    std::vector<std::string_view> out(src_list.size());
-    for (size_t i = 0; i < src_list.size(); i++) {
-        if (src_list[i].empty()) {
-            continue;
-        }
-        auto offset = static_cast<size_t>(&src_list[i].front() - &src_view.front());
-        auto count = src_list[i].length();
-        out[i] = dst_view.substr(offset, count);
-    }
-    return out;
-}
-
 }  // namespace
 
-Source::FileContent::FileContent(std::string_view body) : data(body), lines(SplitLines(data)) {}
+Source::FileContent::FileContent(std::string_view body)
+    : data(body), line_ranges(SplitLines(data)) {}
 
 Source::FileContent::FileContent(const FileContent& rhs)
-    : data(rhs.data), lines(CopyRelativeStringViews(rhs.lines, rhs.data, data)) {}
+    : data(rhs.data), line_ranges(rhs.line_ranges) {}
 
 Source::FileContent::~FileContent() = default;
+
+std::string_view Source::FileContent::GetLine(size_t n) const {
+    TINT_ASSERT(n < line_ranges.size());
+    return std::string_view(data).substr(line_ranges[n].start, line_ranges[n].length);
+}
+
+size_t Source::FileContent::GetLineCount() const {
+    return line_ranges.size();
+}
 
 Source::File::~File() = default;
 
@@ -161,10 +156,10 @@ std::string ToString(const Source& source) {
             };
 
             for (size_t line = rng.begin.line; line <= rng.end.line; line++) {
-                if (line < source.file->content.lines.size() + 1) {
-                    auto len = source.file->content.lines[line - 1].size();
+                if (line <= source.file->content.GetLineCount()) {
+                    auto len = source.file->content.GetLine(line - 1).size();
 
-                    out << source.file->content.lines[line - 1] << "\n";
+                    out << source.file->content.GetLine(line - 1) << "\n";
 
                     if (line == rng.begin.line && line == rng.end.line) {
                         // Single line
@@ -194,19 +189,19 @@ size_t Source::Range::Length(const FileContent& content) const {
     TINT_ASSERT(begin <= end);
     TINT_ASSERT(begin.column > 0);
     TINT_ASSERT(begin.line > 0);
-    TINT_ASSERT(end.line <= 1 + content.lines.size());
-    TINT_ASSERT(end.column <= 1 + content.lines[end.line - 1].size());
+    TINT_ASSERT(end.line <= 1 + content.GetLineCount());
+    TINT_ASSERT(end.column <= 1 + content.GetLine(end.line - 1).size());
 
     if (end.line == begin.line) {
         return end.column - begin.column;
     }
 
-    size_t len = (content.lines[begin.line - 1].size() + 1 - begin.column) +  // first line
-                 (end.column - 1) +                                           // last line
-                 end.line - begin.line;                                       // newlines
+    size_t len = (content.GetLine(begin.line - 1).size() + 1 - begin.column) +  // first line
+                 (end.column - 1) +                                             // last line
+                 end.line - begin.line;                                         // newlines
 
     for (size_t line = begin.line + 1; line < end.line; line++) {
-        len += content.lines[line - 1].size();  // whole-lines
+        len += content.GetLine(line - 1).size();  // whole-lines
     }
     return len;
 }

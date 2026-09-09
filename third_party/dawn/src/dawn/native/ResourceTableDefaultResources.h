@@ -28,14 +28,15 @@
 #ifndef SRC_DAWN_NATIVE_RESOURCETABLEDEFAULTRESOURCES_H_
 #define SRC_DAWN_NATIVE_RESOURCETABLEDEFAULTRESOURCES_H_
 
+#include <memory>
 #include <variant>
 
-#include "dawn/common/NonMovable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/ityp_span.h"
-#include "dawn/common/ityp_vector.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/Sampler.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/utils/non_movable.h"
+#include "src/utils/span.h"
 
 namespace tint {
 enum class ResourceType : uint32_t;
@@ -46,24 +47,35 @@ namespace dawn::native {
 // Used to cache the default resources on the device so they can be reused between resource tables.
 class ResourceTableDefaultResources : public NonMovable {
   public:
+    static ResultOrError<std::unique_ptr<ResourceTableDefaultResources>> Create(DeviceBase* device);
+
     using Resource = std::variant<Ref<TextureViewBase>, Ref<SamplerBase>>;
 
-    // Returns the order in which we will put the default bindings at the end of the resource table
-    // TODO(https://issues.chromium.org/463925499): Take the device in parameter to know if we have
-    // sampling vs. full resource table.
+    // Returns the order in which we will put the default bindings at the end of the resource table.
     static ityp::span<ResourceTableSlot, const tint::ResourceType> GetOrder();
 
     // Returns the total number of default bindings
     static ResourceTableSlot GetCount();
 
-    // Returns the index of `resourceType` in the span returned by `GetOrder()`
-    static ResourceTableSlot IndexOf(tint::ResourceType resourceType);
+    // Returns the total number of sampler default bindings
+    static ResourceTableSlot GetSamplerCount();
 
-    // Lazily creates and returns the default resources
-    ResultOrError<ityp::span<ResourceTableSlot, Resource>> GetOrCreate(DeviceBase* device);
+    // Returns the total number of non-sampler default bindings
+    static ResourceTableSlot GetNonSamplerCount();
+
+    // Returns the list of all default resources, in order.
+    ityp::span<ResourceTableSlot, const Resource> GetResources() const;
+
+    // Returns any sampler / sampleable texture when needed as placeholder.
+    TextureViewBase* GetPlaceholderSampleableTexture() const;
+    SamplerBase* GetPlaceholderSampler() const;
 
   private:
+    MaybeError Initialize(DeviceBase* device);
+
     ityp::vector<ResourceTableSlot, Resource> mDefaultResources;
+    Ref<TextureViewBase> mPlaceholderSampleableTexture;
+    Ref<SamplerBase> mPlaceholderSampler;
 };
 
 }  // namespace dawn::native

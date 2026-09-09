@@ -1,0 +1,88 @@
+<html>
+
+<head>
+<title>Promoting OpenGL Extensions</title>
+</head>
+
+<body>
+<h1>Promoting OpenGL Extensions</h1>
+
+<p> <i>Promoting</i> an extension refers to moving it from single-vendor
+to multi-vendor or ARB-approved status, usually by changing the vendor
+tag attached to the extension name string, enumerants and API entry
+points. This is sometimes done when an extension is successful and more
+licensees want to support it. This document describes the steps to
+follow when promoting an extension.
+
+<h3>Is Promotion Required?</h3>
+
+<p> Changing the names creates a significant burden for ISVs supporting
+the existing extension. It should not be done gratuitously; if the
+existing interface is sufficient, there's no inherent reason an
+implementation shipped by one vendor cannot advertise and support an
+extension using another vendor's prefix.
+
+<p> If you do this, make <b>certain</b> that the original vendor agrees
+to freeze the definition of the extension, and that what you ship is
+identical in behavior to what the original vendor is shipping. Shipping
+what appears to be the "same" extension while implementing different
+behavior on multiple platforms is a great disservice to ISVs trying to
+use extensions, and to OpenGL in general.
+
+<p> <b>Do not</b>, under any circumstances, ship an extension defined by
+another vendor without first clearing it with that vendor.
+
+
+<h3>Promoting Without Changes in Behavior</h3>
+
+<p> If you nevertheless want to promote an extension from
+vendor-specific to e.g. <tt>EXT</tt> status, without changing the
+behavior or definition of that extension, then advertise and export
+<b>both</b> the old and the new forms of the extension for maximum
+backwards compatibility. This means that:
+
+<ul>
+    <li>Both extensions strings should be included in the
+	<tt>GL_EXTENSIONS</tt> string query (or the corresponding
+	WGL/GLX query, if it extends those APIs).
+    <li>All enumerants should exist in both
+	<tt>GL_<i>VENDOR</i>_ENUM_NAME</tt> and
+	<tt>GL_EXT_ENUM_NAME</tt> forms, with the same values.
+    <li>All entry points should exist in both
+	<b>glExtensionName<i>Vendor</i></b> and
+	<b>glExtensionNameEXT</b> forms, resolving to the same code.
+    <li>For an extension supported under GLX, the same GLX protocol
+	should be generated no matter whether the vendor or <tt>EXT</tt>
+	version of the extension is called.
+</ul>
+
+
+<h3>Promoting With Changes in Behavior</h3>
+
+<p> If you are promoting an extension while changing its definition or
+behavior, <b>do not</b> treat it as identical to the old extension. This
+means that:
+
+<ul>
+    <li>Any new <tt>EXT</tt> enumerants which differ in definition from
+	the original <tt><i>VENDOR</i></tt> enumerants should be assigned new
+	values, and those values registered with SGI.
+    <li>All new <b>EXT</b> entry points should resolve to different code
+	in the GL client library than the original <b><i>Vendor</i></b>
+	extension entry points.
+    <li>For an extension supported under GLX, different GLX protocol
+	requests should be generated for the two extensions, so
+	they can be distinguished on the server side.
+</ul>
+
+<p> None of this should be taken to indicate that code cannot be shared
+between implementations of the old and new extensions; simply that the
+implementation must be able to distinguish whether the old or new form
+is being called, since they are de facto different extensions despite
+sharing similar purposes.
+
+<hr>
+
+<p> Last modified April 5, 1999 Jon Leech
+</body>
+</html>

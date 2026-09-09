@@ -1,0 +1,6 @@
+
+// /Qstrip_reflect strips reflection
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl -D DX12 /Qstrip_reflect /Fo %t.strip.reflection
+// RUN: %dxc -dumpbin %t.strip.reflection | FileCheck  %s --check-prefix=STRIP_REFLECTION
+// STRIP_REFLECTION:define void @main()
+// STRIP_REFLECTION-NOT:i32 6, !"g"

@@ -30,39 +30,51 @@
 
 #include <gmock/gmock.h>
 
+#include <memory>
 #include <span>
 
 #include "dawn/wire/WireServer.h"
-#include "dawn/wire/server/Server.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/wire/server/Server.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::wire::server {
 
 class MockMemoryTransferService : public MemoryTransferService {
   public:
-    class MockReadHandle : public ReadHandle {
+    class MockMemoryHandle : public MemoryHandle {
       public:
-        ~MockReadHandle() override;
+        ~MockMemoryHandle() override;
         MOCK_METHOD(void, Destroy, ());
 
-        MOCK_METHOD(size_t, SizeOfSerializeDataUpdate, (size_t, size_t), (override));
-        MOCK_METHOD(void, SerializeDataUpdate, (const void*, size_t, size_t, void*), (override));
-    };
-
-    class MockWriteHandle : public WriteHandle {
-      public:
-        ~MockWriteHandle() override;
-        MOCK_METHOD(void, Destroy, ());
-
-        MOCK_METHOD(bool, DeserializeDataUpdate, (const void*, size_t, size_t, size_t), (override));
+        MOCK_METHOD(std::span<std::byte>, GetSource, (), (const, override));
+        MOCK_METHOD(size_t, GetSerializeDataUpdateSize, (size_t, size_t), (const, override));
+        MOCK_METHOD(void,
+                    SerializeDataUpdate,
+                    (std::span<std::byte>, size_t, size_t, std::span<const std::byte>),
+                    (const));
+        // GMock does not natively support printing/handling volatile types in mock argument tuples
+        // without custom printers, so we implement the volatile overload directly to cast away
+        // volatile and forward to the non-volatile MOCK_METHOD.
+        void SerializeDataUpdate(std::span<volatile std::byte> serializeData,
+                                 size_t offset,
+                                 size_t size,
+                                 std::span<const std::byte> data) const override {
+            SerializeDataUpdate(
+                DAWN_UNSAFE_TODO(std::span<std::byte>(const_cast<std::byte*>(serializeData.data()),
+                                                      serializeData.size())),
+                offset, size, data);
+        }
         MOCK_METHOD(bool,
                     DeserializeDataUpdate,
-                    (std::span<const uint8_t>, std::span<uint8_t>, size_t),
+                    (std::span<const std::byte>, size_t, size_t, std::span<std::byte>),
                     (override));
     };
 
-    MOCK_METHOD(bool, DeserializeReadHandle, (const void*, size_t, ReadHandle**), (override));
-    MOCK_METHOD(bool, DeserializeWriteHandle, (const void*, size_t, WriteHandle**), (override));
+    MOCK_METHOD(std::unique_ptr<MemoryHandle>,
+                DeserializeMemoryHandle,
+                (std::span<const std::byte>),
+                (override));
 };
 
 }  // namespace dawn::wire::server

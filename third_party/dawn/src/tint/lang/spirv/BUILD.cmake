@@ -41,9 +41,11 @@ include(lang/spirv/type/BUILD.cmake)
 include(lang/spirv/validate/BUILD.cmake)
 include(lang/spirv/writer/BUILD.cmake)
 
+if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
 ################################################################################
 # Target:    tint_lang_spirv
 # Kind:      lib
+# Condition: TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER
 ################################################################################
 tint_add_target(tint_lang_spirv lib
   lang/spirv/builtin_fn.cc
@@ -51,16 +53,25 @@ tint_add_target(tint_lang_spirv lib
 )
 
 tint_target_add_dependencies(tint_lang_spirv lib
+  tint_lang_core
+  tint_lang_core_constant
+  tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_type
+  tint_utils
   tint_utils_containers
+  tint_utils_diagnostic
   tint_utils_ice
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
+  tint_utils_text
 )
 
 tint_target_add_external_dependencies(tint_lang_spirv lib
   "src_utils"
 )
+
+endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)

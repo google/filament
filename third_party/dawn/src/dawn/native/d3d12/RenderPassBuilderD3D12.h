@@ -30,12 +30,12 @@
 
 #include <array>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_span.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 struct ResolveRect;
@@ -102,7 +102,7 @@ class RenderPassBuilder {
                              bool isStencilReadOnly);
 
   private:
-    ColorAttachmentIndex mHighestColorAttachmentIndexPlusOne{uint8_t(0)};
+    ColorAttachmentIndex mHighestColorAttachmentIndexPlusOne{uint8_t{0}};
     bool mHasDepthOrStencil = false;
     D3D12_RENDER_PASS_FLAGS mRenderPassFlags = D3D12_RENDER_PASS_FLAG_NONE;
     D3D12_RENDER_PASS_DEPTH_STENCIL_DESC mRenderPassDepthStencilDesc;

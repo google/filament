@@ -21,7 +21,7 @@ jobs:
         config: [Debug, Release]
         os: [ ubuntu-22.04, ubuntu-24.04, windows-latest, macos-latest ]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Test CMake Minimum
         if: matrix.os == 'ubuntu-22.04'
         uses: lukka/get-cmake@latest
@@ -38,7 +38,7 @@ jobs:
     env:
       CMAKE_GENERATOR: Ninja
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: amd64_arm64
@@ -53,8 +53,8 @@ jobs:
       matrix:
         abi: [ armeabi-v7a, arm64-v8a ]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.8'
       - uses: lukka/get-cmake@latest
@@ -76,29 +76,29 @@ jobs:
   reuse:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: REUSE Compliance Check
       uses: fsfe/reuse-action@v6
 
   # Test to ensure we don't accidentally break the Chromium build.
-  # chromium:
-  #   needs: generate_source
-  #   runs-on: ubuntu-24.04
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #     - uses: actions/setup-python@v6
-  #       with:
-  #         python-version: '3.10'
-  #     - name: Install WSI dependencies
-  #       run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
-  #     - name: Test chromium build
-  #       run: python scripts/gn/gn.py
+  chromium:
+    needs: generate_source
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+      - name: Install WSI dependencies
+        run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - name: Test chromium build
+        run: python scripts/gn/gn.py
 
   generate_source:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.10'
       - run: python3 -m pip install pyparsing

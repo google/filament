@@ -31,14 +31,14 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
-#include "dawn/native/d3d12/GPUDescriptorHeapAllocationD3D12.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
 #include "partition_alloc/pointers/raw_ref.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
+#include "src/dawn/native/d3d12/GPUDescriptorHeapAllocationD3D12.h"
 
 // |SamplerHeapCacheEntry| maintains a cache of sampler descriptor heap allocations.
 // Each entry represents one or more sampler descriptors that co-exist in a CPU and

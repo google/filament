@@ -777,8 +777,7 @@ TEST(WsiTests, GoogleSurfaceslessQuery) {
                                  .add_extension("VK_EXT_full_screen_exclusive")
 #endif
                                  .add_surface_format(surface_format)
-                                 .add_surface_present_modes(present_modes)
-                                 .finish());
+                                 .add_surface_present_modes(present_modes));
 
     InstWrapper inst{env.vulkan_functions};
     inst.create_info.add_extension("VK_KHR_surface");
@@ -824,11 +823,49 @@ TEST(WsiTests, GoogleSurfaceslessQuery) {
 #endif
 }
 
-TEST(WsiTests, ForgetEnableSurfaceExtensions) {
+// When the ICD does not expose vkGetPhysicalDeviceSurfaceCapabilities2EXT the loader emulates it using the
+// KHR entrypoint. If that driver call fails it may leave the output untouched (per spec), so the loader must
+// not copy the emulation scratch struct back to the caller - doing so returned uninitialised loader stack to
+// the application. Model this with a driver whose vkGetPhysicalDeviceSurfaceCapabilitiesKHR returns an error;
+// the caller's struct must be left as-is.
+TEST(WsiTests, GetPhysicalDeviceSurfaceCapabilities2EXTEmulationDriverError) {
     FrameworkEnvironment env{};
+    VkSurfaceCapabilitiesKHR driver_caps{};
+    driver_caps.minImageCount = 0xBADC0DE;
+    driver_caps.maxImageCount = 0xBADC0DE;
     env.add_icd(TEST_ICD_PATH_VERSION_2)
         .setup_WSI()
-        .add_physical_device(PhysicalDevice{}.add_extension("VK_KHR_swapchain").finish());
+        .add_instance_extension(VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME)
+        .add_physical_device(PhysicalDevice{}
+                                 .add_extension("VK_KHR_swapchain")
+                                 .set_surface_capabilities(driver_caps)
+                                 .set_surface_capabilities_result(VK_ERROR_SURFACE_LOST_KHR));
+
+    InstWrapper inst{env.vulkan_functions};
+    inst.create_info.setup_WSI().add_extension(VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME);
+    ASSERT_NO_FATAL_FAILURE(inst.CheckCreate());
+
+    VkSurfaceKHR surface{};
+    ASSERT_EQ(VK_SUCCESS, create_surface(inst, surface));
+    WrappedHandle<VkSurfaceKHR, VkInstance, PFN_vkDestroySurfaceKHR> wrapped_surface{surface, inst.inst,
+                                                                                     env.vulkan_functions.vkDestroySurfaceKHR};
+
+    VkPhysicalDevice physical_device = inst.GetPhysDev();
+
+    PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT get_caps2ext = inst.load("vkGetPhysicalDeviceSurfaceCapabilities2EXT");
+    ASSERT_NE(get_caps2ext, nullptr);
+
+    VkSurfaceCapabilities2EXT caps2{};
+    caps2.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT;
+
+    ASSERT_EQ(VK_ERROR_SURFACE_LOST_KHR, get_caps2ext(physical_device, surface, &caps2));
+    ASSERT_EQ(0u, caps2.minImageCount);
+    ASSERT_EQ(0u, caps2.maxImageCount);
+}
+
+TEST(WsiTests, ForgetEnableSurfaceExtensions) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2).setup_WSI().add_physical_device(PhysicalDevice{}.add_extension("VK_KHR_swapchain"));
 
     InstWrapper inst{env.vulkan_functions};
     inst.create_info.add_extension("VK_KHR_surface");
@@ -838,11 +875,28 @@ TEST(WsiTests, ForgetEnableSurfaceExtensions) {
     ASSERT_EQ(VK_ERROR_EXTENSION_NOT_PRESENT, create_surface(inst, surface));
 }
 
+#if defined(VK_USE_PLATFORM_METAL_EXT)
+// Calling the exported vkCreateMetalSurfaceEXT trampoline when VK_EXT_metal_surface was not enabled must be
+// rejected with VK_ERROR_EXTENSION_NOT_PRESENT, matching every other surface-creation terminator. The
+// terminator used to fall through and hand back a live surface with VK_SUCCESS.
+TEST(WsiTests, CreateMetalSurfaceWithoutEnablingExtension) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2).setup_WSI().add_physical_device(PhysicalDevice{}.add_extension("VK_KHR_swapchain"));
+
+    InstWrapper inst{env.vulkan_functions};
+    inst.create_info.add_extension("VK_KHR_surface");
+    ASSERT_NO_FATAL_FAILURE(inst.CheckCreate());
+
+    VkMetalSurfaceCreateInfoEXT surf_create_info{VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT};
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    ASSERT_EQ(VK_ERROR_EXTENSION_NOT_PRESENT,
+              env.vulkan_functions.vkCreateMetalSurfaceEXT(inst, &surf_create_info, nullptr, &surface));
+}
+#endif  // VK_USE_PLATFORM_METAL_EXT
+
 TEST(WsiTests, SwapchainFunctional) {
     FrameworkEnvironment env{};
-    env.add_icd(TEST_ICD_PATH_VERSION_2)
-        .setup_WSI()
-        .add_physical_device(PhysicalDevice{}.add_extension("VK_KHR_swapchain").finish());
+    env.add_icd(TEST_ICD_PATH_VERSION_2).setup_WSI().add_physical_device(PhysicalDevice{}.add_extension("VK_KHR_swapchain"));
 
     InstWrapper inst{env.vulkan_functions};
     inst.create_info.setup_WSI();
@@ -932,8 +986,7 @@ TEST(WsiTests, EXTSurfaceMaintenance1) {
                                                                         .add_extension("VK_KHR_swapchain")
                                                                         .set_deviceName("no")
                                                                         .set_surface_capabilities(surface_caps)
-                                                                        .add_surface_present_modes(present_modes)
-                                                                        .finish());
+                                                                        .add_surface_present_modes(present_modes));
     VkSurfacePresentScalingCapabilitiesEXT scaling_capabilities{};
     scaling_capabilities.supportedPresentScaling = VK_PRESENT_SCALING_ONE_TO_ONE_BIT_EXT;
     scaling_capabilities.supportedPresentGravityX = VK_PRESENT_SCALING_ASPECT_RATIO_STRETCH_BIT_EXT;
@@ -950,8 +1003,7 @@ TEST(WsiTests, EXTSurfaceMaintenance1) {
                                              .set_deviceName("yes")
                                              .set_surface_capabilities(surface_caps)
                                              .add_surface_present_modes(present_modes)
-                                             .set_surface_present_scaling_capabilities(scaling_capabilities)
-                                             .finish());
+                                             .set_surface_present_scaling_capabilities(scaling_capabilities));
     std::vector<std::vector<VkPresentModeKHR>> compatible_present_modes{
         {VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR},
         {VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR},
@@ -965,8 +1017,7 @@ TEST(WsiTests, EXTSurfaceMaintenance1) {
                                  .add_extension("VK_KHR_swapchain")
                                  .set_deviceName("no")
                                  .set_surface_capabilities(surface_caps)
-                                 .add_surface_present_modes(present_modes)
-                                 .finish());
+                                 .add_surface_present_modes(present_modes));
 
     InstWrapper inst{env.vulkan_functions};
     inst.create_info.setup_WSI();
@@ -1050,15 +1101,13 @@ TEST(WsiTests, MultiPlatformGetPhysicalDeviceSurfaceSupportKHR) {
         .setup_WSI("VK_USE_PLATFORM_XCB_KHR")
         .add_physical_device(PhysicalDevice{}
                                  .set_deviceName(xcb_device_name)
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true})
-                                 .finish());
+                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true}));
     const char* wayland_device_name = "WAYLAND";
     env.add_icd(TEST_ICD_PATH_VERSION_2)
         .setup_WSI("VK_USE_PLATFORM_WAYLAND_KHR")
         .add_physical_device(PhysicalDevice{}
                                  .set_deviceName(wayland_device_name)
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true})
-                                 .finish());
+                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true}));
 
     {
         // Create instance with only XCB support

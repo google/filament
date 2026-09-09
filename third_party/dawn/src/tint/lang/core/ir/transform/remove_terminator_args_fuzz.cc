@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/transform/remove_terminator_args.h"
-#include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {
 namespace {
@@ -39,5 +38,8 @@ Result<SuccessType> RemoveTerminatorArgsFuzzer(Module& ir, const fuzz::ir::Conte
 }  // namespace
 }  // namespace tint::core::ir::transform
 
+constexpr auto kUnsupportedProperties = tint::core::ir::Properties{
+    tint::core::ir::Property::kAllowOverrides,
+};
 TINT_IR_MODULE_FUZZER(tint::core::ir::transform::RemoveTerminatorArgsFuzzer,
-                      tint::core::ir::transform::kRemoveTerminatorArgsCapabilities);
+                      kUnsupportedProperties);

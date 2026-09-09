@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d/DeviceD3D.h"
+#include "src/dawn/native/d3d/DeviceD3D.h"
 
 #include <utility>
 
-#include "dawn/native/d3d/BackendD3D.h"
-#include "dawn/native/d3d/Forward.h"
-#include "dawn/native/d3d/PhysicalDeviceD3D.h"
-#include "dawn/native/d3d/SharedFenceD3D.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/native/d3d/BackendD3D.h"
+#include "src/dawn/native/d3d/Forward.h"
+#include "src/dawn/native/d3d/PhysicalDeviceD3D.h"
+#include "src/dawn/native/d3d/SharedFenceD3D.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
 
 namespace dawn::native::d3d {
 
@@ -49,12 +49,12 @@ Device::~Device() {
 
 void Device::DestroyImpl(DestroyReason reason) {}
 
-const PlatformFunctions* Device::GetFunctions() const {
-    return ToBackend(GetPhysicalDevice())->GetBackend()->GetFunctions();
+const PlatformFunctions* Device::GetFunctionsBase() const {
+    return ToBackend(GetPhysicalDevice())->GetBackendBase()->GetFunctionsBase();
 }
 
 ComPtr<IDXGIFactory4> Device::GetFactory() const {
-    return ToBackend(GetPhysicalDevice())->GetBackend()->GetFactory();
+    return ToBackend(GetPhysicalDevice())->GetBackendBase()->GetFactory();
 }
 
 void Device::RecordDeviceRemovedReason(HRESULT result) {

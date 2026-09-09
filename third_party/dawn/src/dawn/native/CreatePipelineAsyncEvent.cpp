@@ -25,29 +25,28 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
 
 #include <webgpu/webgpu.h>
 
 #include <utility>
 
-#include "dawn/common/FutureUtils.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/AsyncTask.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ErrorData.h"
-#include "dawn/native/EventManager.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/WaitListEvent.h"
 #include "dawn/native/dawn_platform_autogen.h"
-#include "dawn/native/utils/WGPUHelpers.h"
 #include "dawn/native/wgpu_structs_autogen.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/FutureUtils.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/AsyncTask.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/EventManager.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
 
 namespace dawn::native {
 
@@ -94,24 +93,16 @@ CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::CreateP
     DeviceBase* device,
     const CreatePipelineAsyncCallbackInfo& callbackInfo,
     Ref<PipelineType> pipeline,
-    Ref<WaitListEvent> event)
-    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), std::move(event)),
+    bool readyAtCreation)
+    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), readyAtCreation),
       mCallback(callbackInfo.callback),
       mUserdata1(callbackInfo.userdata1),
       mUserdata2(callbackInfo.userdata2),
-      mPipeline(std::move(pipeline)),
-      mScopedUseShaderPrograms(mPipeline->UseShaderPrograms()) {}
-
-template <typename PipelineType, typename CreatePipelineAsyncCallbackInfo>
-CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::CreatePipelineAsyncEvent(
-    DeviceBase* device,
-    const CreatePipelineAsyncCallbackInfo& callbackInfo,
-    Ref<PipelineType> pipeline)
-    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), TrackedEvent::Completed{}),
-      mCallback(callbackInfo.callback),
-      mUserdata1(callbackInfo.userdata1),
-      mUserdata2(callbackInfo.userdata2),
-      mPipeline(std::move(pipeline)) {}
+      mPipeline(std::move(pipeline)) {
+    if (!readyAtCreation) {
+        mScopedUseShaderPrograms = mPipeline->UseShaderPrograms();
+    }
+}
 
 template <typename PipelineType, typename CreatePipelineAsyncCallbackInfo>
 CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::CreatePipelineAsyncEvent(
@@ -119,7 +110,7 @@ CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::CreateP
     const CreatePipelineAsyncCallbackInfo& callbackInfo,
     std::unique_ptr<ErrorData> error,
     StringView label)
-    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), TrackedEvent::Completed{}),
+    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), Completed{}),
       mCallback(callbackInfo.callback),
       mUserdata1(callbackInfo.userdata1),
       mUserdata2(callbackInfo.userdata2),
@@ -136,15 +127,12 @@ template <typename PipelineType, typename CreatePipelineAsyncCallbackInfo>
 void CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::InitializeImpl(
     bool isAsync) {
     DeviceBase* device = mPipeline->GetDevice();
-    const std::string& label = mPipeline->GetLabel();
-    const char* eventLabel = utils::GetLabelForTrace(label);
     if (isAsync) {
-        TRACE_EVENT_FLOW_END1(device->GetPlatform(), General,
-                              "CreatePipelineAsyncEvent::InitializeAsync", this, "label",
-                              eventLabel);
+        TRACE_EVENT_END(DAWN_TRACE_CATEGORY(), perfetto::Track::FromPointer(this), "label",
+                        utils::GetLabelForTrace(mPipeline->GetLabel()));
     }
-    TRACE_EVENT1(device->GetPlatform(), General, "CreatePipelineAsyncEvent::InitializeImpl",
-                 "label", eventLabel);
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "CreatePipelineAsyncEvent::InitializeImpl", "label",
+                utils::GetLabelForTrace(mPipeline->GetLabel()));
 
     MaybeError maybeError;
     {
@@ -170,10 +158,9 @@ void CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::In
 template <typename PipelineType, typename CreatePipelineAsyncCallbackInfo>
 void CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::InitializeAsync() {
     DeviceBase* device = mPipeline->GetDevice();
-    const std::string& label = mPipeline->GetLabel();
-    const char* eventLabel = utils::GetLabelForTrace(label);
-    TRACE_EVENT_FLOW_BEGIN1(device->GetPlatform(), General,
-                            "CreatePipelineAsyncEvent::InitializeAsync", this, "label", eventLabel);
+    TRACE_EVENT_BEGIN(DAWN_TRACE_CATEGORY(), "CreatePipelineAsyncEvent::InitializeAsync",
+                      perfetto::Track::FromPointer(this), "label",
+                      utils::GetLabelForTrace(mPipeline->GetLabel()));
 
     auto asyncTask = [event = Ref<CreatePipelineAsyncEvent>(this)] { event->InitializeImpl(true); };
     device->GetAsyncTaskManager()->PostTask<AsyncTask>(std::move(asyncTask));

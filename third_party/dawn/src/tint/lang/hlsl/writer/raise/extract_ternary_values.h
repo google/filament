@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_HLSL_WRITER_RAISE_EXTRACT_TERNARY_VALUES_H_
 #define SRC_TINT_LANG_HLSL_WRITER_RAISE_EXTRACT_TERNARY_VALUES_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,16 +36,6 @@ class Module;
 }  // namespace tint::core::ir
 
 namespace tint::hlsl::writer::raise {
-
-/// The core::ir::Capabilities that the transform can support.
-const core::ir::Capabilities kExtractTernaryValuesCapabilities{
-    core::ir::Capability::kAllow16BitIntegers,
-    core::ir::Capability::kAllowVectorElementPointer,
-    core::ir::Capability::kAllowHandleVarsWithoutBindings,
-    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowNonCoreTypes,
-};
 
 /// ExtractTernaryValues is a transform used to extract the true and false values of an HLSL ternary
 /// operator to lets if the ternary condition is a constant scalar bool.

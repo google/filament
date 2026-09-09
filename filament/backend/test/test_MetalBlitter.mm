@@ -169,6 +169,12 @@ TEST_P(MetalBlitterTest, Blit) {
 TEST_P(MetalBlitterDepthTest, DepthBlit) {
     SKIP_IF_NOT(Backend::METAL, "MetalBlitter only works with the Metal backend");
 
+#if defined(FILAMENT_IOS_SIMULATOR)
+    // fillTexture/verifyTexture need CPU-accessible (shared) textures, but the
+    // simulator cannot allocate depth textures with MTLStorageModeShared.
+    GTEST_SKIP() << "depth textures cannot use shared storage in the simulator";
+#endif
+
     const MTLPixelFormat depthFormat = GetParam();
 
     MetalDriver& metalDriver = static_cast<MetalDriver&>(getDriver());
@@ -238,6 +244,10 @@ TEST_F(BackendTest, MetalBlitterDepthMismatchSize) {
     desc.height = kTextureSize;
     desc.pixelFormat = MTLPixelFormatDepth32Float;
     desc.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+    // Depth textures cannot use the (default) shared storage mode when running
+    // in the simulator; private is valid everywhere and this test never reads
+    // the contents back.
+    desc.storageMode = MTLStorageModePrivate;
     id<MTLTexture> srcTexture = [metalContext.device newTextureWithDescriptor:desc];
 
     // Create a 16x16 destination depth texture (size mismatch).
@@ -256,7 +266,8 @@ TEST_F(BackendTest, MetalBlitterDepthMismatchSize) {
 #ifdef __EXCEPTIONS
     EXPECT_THROW(blitter.blit(cmdBuffer, args, "MetalBlitterDepthMismatchSize"),
             utils::PreconditionPanic);
-#else
+#elif defined(GTEST_HAS_DEATH_TEST) && GTEST_HAS_DEATH_TEST
+    // Death tests are unavailable on iOS-family platforms.
     EXPECT_DEATH(blitter.blit(cmdBuffer, args, "MetalBlitterDepthMismatchSize"),
             "MetalBlitter slow path does not support depth formats");
 #endif

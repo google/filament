@@ -28,9 +28,9 @@
 #include <vector>
 
 // This must be included instead of vulkan.h so that we can wrap it with vulkan_platform.h.
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -127,6 +127,41 @@ TEST_F(YCbCrVulkanSamplersTest, YCbCrSamplerRequiresVkOrExternalFormat) {
     device.CreateSampler(&samplerDesc);
 }
 
+// Test that creating a YCbCr sampler with address mode or max anisotropy set to something invalid
+// fails.
+TEST_F(YCbCrVulkanSamplersTest, YCbCrSamplerRequiredParams) {
+    wgpu::SamplerDescriptor samplerDesc = {};
+    wgpu::YCbCrVkDescriptor yCbCrDesc = {};
+    yCbCrDesc.vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    samplerDesc.nextInChain = &yCbCrDesc;
+
+    // This should work.
+    device.CreateSampler(&samplerDesc);
+
+    {
+        wgpu::SamplerDescriptor invalidSamplerDesc = samplerDesc;
+        invalidSamplerDesc.addressModeU = wgpu::AddressMode::Repeat;
+        ASSERT_DEVICE_ERROR(device.CreateSampler(&invalidSamplerDesc));
+    }
+
+    {
+        wgpu::SamplerDescriptor invalidSamplerDesc = samplerDesc;
+        invalidSamplerDesc.addressModeV = wgpu::AddressMode::Repeat;
+        ASSERT_DEVICE_ERROR(device.CreateSampler(&invalidSamplerDesc));
+    }
+
+    {
+        wgpu::SamplerDescriptor invalidSamplerDesc = samplerDesc;
+        invalidSamplerDesc.addressModeW = wgpu::AddressMode::Repeat;
+        ASSERT_DEVICE_ERROR(device.CreateSampler(&invalidSamplerDesc));
+    }
+    {
+        wgpu::SamplerDescriptor invalidSamplerDesc = samplerDesc;
+        invalidSamplerDesc.maxAnisotropy = 2;
+        ASSERT_DEVICE_ERROR(device.CreateSampler(&invalidSamplerDesc));
+    }
+}
+
 // Test that only OpaqueYCbCrAndroid textures can be used to create YCbCr views.
 TEST_F(YCbCrVulkanSamplersTest, YCbCrTextureViewRequiresOpaqueYCbCrAndroid) {
     wgpu::TextureViewDescriptor viewDesc{};
@@ -137,12 +172,12 @@ TEST_F(YCbCrVulkanSamplersTest, YCbCrTextureViewRequiresOpaqueYCbCrAndroid) {
 
     // Success case: creating a YCbCr view on an OpaqueYCbCrAndroid texture.
     {
-        wgpu::TextureDescriptor yCbCrDesc = {
+        wgpu::TextureDescriptor textureDesc = {
             .usage = wgpu::TextureUsage::TextureBinding,
             .size = {2, 2},
             .format = wgpu::TextureFormat::OpaqueYCbCrAndroid,
         };
-        wgpu::Texture ycbcr = device.CreateTexture(&yCbCrDesc);
+        wgpu::Texture ycbcr = device.CreateTexture(&textureDesc);
         ycbcr.CreateView(&viewDesc);
     }
 

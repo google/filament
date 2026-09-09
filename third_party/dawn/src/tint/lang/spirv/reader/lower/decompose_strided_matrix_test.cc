@@ -38,7 +38,11 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 class SpirvReader_DecomposeStridedMatrixTest : public core::ir::transform::TransformTest {
   protected:
-    void SetUp() override { capabilities.Add(core::ir::Capability::kAllowNonCoreTypes); }
+    void SetUp() override {
+        core::ir::transform::TransformTest::SetUp();
+        mod.properties.Add(core::ir::Property::kAllowNonCoreTypes);
+        mod.properties.Add(core::ir::Property::kAllowStructMatrixDecorations);
+    }
 
     /// Create a struct that has a matrix member sandwiched between two u32 members, optionally
     /// nested inside one or more arrays.
@@ -2255,6 +2259,548 @@ $B1: {  # root
     %3:Outer_1 = load %var
     %4:u32 = access %3, 0u, 2u
     %value:u32 = let %4
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(before, str());
+    Run(DecomposeStridedMatrix);
+    ASSERT_EQ(after, str());
+}
+
+TEST_F(SpirvReader_DecomposeStridedMatrixTest, PassStridedMatrixToPointer) {
+    auto* matrix_type = ty.mat3x2<f32>();
+    auto* struct_type = Struct(matrix_type, 16);
+
+    auto* u = b.Var("u", ty.ptr(core::AddressSpace::kUniform, struct_type, core::Access::kRead));
+    u->SetBindingPoint(0, 0);
+    mod.root_block->Append(u);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* param =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    helper->SetParams(Vector{param});
+    b.Append(helper->Block(), [&] { b.Return(helper); });
+
+    auto* f = b.ComputeFunction("foo");
+    b.Append(f->Block(), [&] {
+        auto* access = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u, 1_u);
+        b.Call(ty.void_(), helper, access);
+        b.Return(f);
+    });
+
+    auto* before = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+$B1: {  # root
+  %u:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%3:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %5:ptr<uniform, mat3x2<f32>, read> = access %u, 1u
+    %6:void = call %helper, %5
+    ret
+  }
+}
+)";
+
+    auto* after = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(16) {
+  a:u32 @offset(0)
+  b:spirv.explicit_layout_array<vec2<f32>, 3, stride=16> @offset(16)
+  c:u32 @offset(64)
+}
+
+$B1: {  # root
+  %u:ptr<uniform, S_1, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%3:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %5:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read> = access %u, 1u
+    %6:void = call %helper_1, %5
+    ret
+  }
+}
+%helper_1 = func(%8:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>):void {  # %helper_1: 'helper'
+  $B4: {
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(before, str());
+    Run(DecomposeStridedMatrix);
+    ASSERT_EQ(after, str());
+}
+
+TEST_F(SpirvReader_DecomposeStridedMatrixTest, PassMultipleStridedMatricesToPointer) {
+    auto* matrix_type = ty.mat3x2<f32>();
+    auto* struct_type = Struct(matrix_type, 16);
+
+    auto* u = b.Var("u", ty.ptr(core::AddressSpace::kUniform, struct_type, core::Access::kRead));
+    u->SetBindingPoint(0, 0);
+    mod.root_block->Append(u);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* param1 =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    auto* param2 =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    helper->SetParams(Vector{param1, param2});
+    b.Append(helper->Block(), [&] { b.Return(helper); });
+
+    auto* f = b.ComputeFunction("foo");
+    b.Append(f->Block(), [&] {
+        auto* access = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u, 1_u);
+        b.Call(ty.void_(), helper, access, access);
+        b.Return(f);
+    });
+
+    auto* before = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+$B1: {  # root
+  %u:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%3:ptr<uniform, mat3x2<f32>, read>, %4:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %6:ptr<uniform, mat3x2<f32>, read> = access %u, 1u
+    %7:void = call %helper, %6, %6
+    ret
+  }
+}
+)";
+
+    auto* after = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(16) {
+  a:u32 @offset(0)
+  b:spirv.explicit_layout_array<vec2<f32>, 3, stride=16> @offset(16)
+  c:u32 @offset(64)
+}
+
+$B1: {  # root
+  %u:ptr<uniform, S_1, read> = var undef @binding_point(0, 0)
+}
+
+%helper = func(%3:ptr<uniform, mat3x2<f32>, read>, %4:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %6:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read> = access %u, 1u
+    %7:void = call %helper_1, %6, %6
+    ret
+  }
+}
+%helper_1 = func(%9:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>, %10:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>):void {  # %helper_1: 'helper'
+  $B4: {
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(before, str());
+    Run(DecomposeStridedMatrix);
+    ASSERT_EQ(after, str());
+}
+
+TEST_F(SpirvReader_DecomposeStridedMatrixTest, PassSameFunctionMultipleStrides) {
+    auto* matrix_type = ty.mat3x2<f32>();
+    auto* struct_type16 = Struct(matrix_type, 16);
+    auto* struct_type32 = Struct(matrix_type, 32);
+
+    auto* u16 =
+        b.Var("u16", ty.ptr(core::AddressSpace::kUniform, struct_type16, core::Access::kRead));
+    u16->SetBindingPoint(0, 0);
+    mod.root_block->Append(u16);
+
+    auto* u32 =
+        b.Var("u32", ty.ptr(core::AddressSpace::kUniform, struct_type32, core::Access::kRead));
+    u32->SetBindingPoint(0, 1);
+    mod.root_block->Append(u32);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* param =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    helper->SetParams(Vector{param});
+    b.Append(helper->Block(), [&] { b.Return(helper); });
+
+    auto* f = b.ComputeFunction("foo");
+    b.Append(f->Block(), [&] {
+        auto* access16 = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u16, 1_u);
+        auto* access32 = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u32, 1_u);
+        b.Call(ty.void_(), helper, access16);
+        b.Call(ty.void_(), helper, access32);
+        b.Return(f);
+    });
+
+    auto* before = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(32) {
+  a_1:u32 @offset(0)
+  b_1:mat3x2<f32> @offset(32) @size(96), @matrix_stride(32)
+  c_1:u32 @offset(128)
+}
+
+$B1: {  # root
+  %u16:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+  %u32:ptr<uniform, S_1, read> = var undef @binding_point(0, 1)
+}
+
+%helper = func(%4:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %6:ptr<uniform, mat3x2<f32>, read> = access %u16, 1u
+    %7:ptr<uniform, mat3x2<f32>, read> = access %u32, 1u
+    %8:void = call %helper, %6
+    %9:void = call %helper, %7
+    ret
+  }
+}
+)";
+
+    auto* after = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(32) {
+  a_1:u32 @offset(0)
+  b_1:mat3x2<f32> @offset(32) @size(96), @matrix_stride(32)
+  c_1:u32 @offset(128)
+}
+
+S_2 = struct @align(16) {
+  a:u32 @offset(0)
+  b:spirv.explicit_layout_array<vec2<f32>, 3, stride=16> @offset(16)
+  c:u32 @offset(64)
+}
+
+S_1_1 = struct @align(32) {
+  a_1:u32 @offset(0)
+  b_1:spirv.explicit_layout_array<vec2<f32>, 3, stride=32> @offset(32)
+  c_1:u32 @offset(128)
+}
+
+$B1: {  # root
+  %u16:ptr<uniform, S_2, read> = var undef @binding_point(0, 0)
+  %u32:ptr<uniform, S_1_1, read> = var undef @binding_point(0, 1)
+}
+
+%helper = func(%4:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %6:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read> = access %u16, 1u
+    %7:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=32>, read> = access %u32, 1u
+    %8:void = call %helper_1, %6
+    %10:void = call %helper_2, %7
+    ret
+  }
+}
+%helper_1 = func(%12:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>):void {  # %helper_1: 'helper'
+  $B4: {
+    ret
+  }
+}
+%helper_2 = func(%13:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=32>, read>):void {  # %helper_2: 'helper'
+  $B5: {
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(before, str());
+    Run(DecomposeStridedMatrix);
+    ASSERT_EQ(after, str());
+}
+
+TEST_F(SpirvReader_DecomposeStridedMatrixTest, PassStridedMatrixToPointerNested) {
+    auto* matrix_type = ty.mat3x2<f32>();
+    auto* struct_type = Struct(matrix_type, 16);
+
+    auto* u = b.Var("u", ty.ptr(core::AddressSpace::kUniform, struct_type, core::Access::kRead));
+    u->SetBindingPoint(0, 0);
+    mod.root_block->Append(u);
+
+    auto* helper2 = b.Function("helper2", ty.void_());
+    auto* param2 =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    helper2->SetParams(Vector{param2});
+    b.Append(helper2->Block(), [&] { b.Return(helper2); });
+
+    auto* helper1 = b.Function("helper1", ty.void_());
+    auto* param1 =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    helper1->SetParams(Vector{param1});
+    b.Append(helper1->Block(), [&] {
+        b.Call(ty.void_(), helper2, param1);
+        b.Return(helper1);
+    });
+
+    auto* f = b.ComputeFunction("foo");
+    b.Append(f->Block(), [&] {
+        auto* access = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u, 1_u);
+        b.Call(ty.void_(), helper1, access);
+        b.Return(f);
+    });
+
+    auto* before = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+$B1: {  # root
+  %u:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+}
+
+%helper2 = func(%3:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%helper1 = func(%5:ptr<uniform, mat3x2<f32>, read>):void {
+  $B3: {
+    %6:void = call %helper2, %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B4: {
+    %8:ptr<uniform, mat3x2<f32>, read> = access %u, 1u
+    %9:void = call %helper1, %8
+    ret
+  }
+}
+)";
+
+    auto* after = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(16) {
+  a:u32 @offset(0)
+  b:spirv.explicit_layout_array<vec2<f32>, 3, stride=16> @offset(16)
+  c:u32 @offset(64)
+}
+
+$B1: {  # root
+  %u:ptr<uniform, S_1, read> = var undef @binding_point(0, 0)
+}
+
+%helper2 = func(%3:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%helper1 = func(%5:ptr<uniform, mat3x2<f32>, read>):void {
+  $B3: {
+    %6:void = call %helper2, %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B4: {
+    %8:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read> = access %u, 1u
+    %9:void = call %helper1_1, %8
+    ret
+  }
+}
+%helper1_1 = func(%11:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>):void {  # %helper1_1: 'helper1'
+  $B5: {
+    %12:void = call %helper2_1, %11
+    ret
+  }
+}
+%helper2_1 = func(%14:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>):void {  # %helper2_1: 'helper2'
+  $B6: {
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(before, str());
+    Run(DecomposeStridedMatrix);
+    ASSERT_EQ(after, str());
+}
+
+TEST_F(SpirvReader_DecomposeStridedMatrixTest, PassStridedMatrixToPointerMixed) {
+    auto* matrix_type = ty.mat3x2<f32>();
+    auto* struct_type_strided = Struct(matrix_type, 16);
+    auto* struct_type_natural = Struct(matrix_type, 8);
+
+    auto* u_strided = b.Var("u_strided", ty.ptr(core::AddressSpace::kUniform, struct_type_strided,
+                                                core::Access::kRead));
+    u_strided->SetBindingPoint(0, 0);
+    mod.root_block->Append(u_strided);
+
+    auto* u_natural = b.Var("u_natural", ty.ptr(core::AddressSpace::kUniform, struct_type_natural,
+                                                core::Access::kRead));
+    u_natural->SetBindingPoint(0, 1);
+    mod.root_block->Append(u_natural);
+
+    auto* helper = b.Function("helper", ty.void_());
+    auto* param =
+        b.FunctionParam(ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead));
+    helper->SetParams(Vector{param});
+    b.Append(helper->Block(), [&] { b.Return(helper); });
+
+    auto* f = b.ComputeFunction("foo");
+    b.Append(f->Block(), [&] {
+        auto* access_strided = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u_strided, 1_u);
+        auto* access_natural = b.Access(
+            ty.ptr(core::AddressSpace::kUniform, matrix_type, core::Access::kRead), u_natural, 1_u);
+        b.Call(ty.void_(), helper, access_strided);
+        b.Call(ty.void_(), helper, access_natural);
+        b.Return(f);
+    });
+
+    auto* before = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(8) {
+  a_1:u32 @offset(0)
+  b_1:mat3x2<f32> @offset(8), @matrix_stride(8)
+  c_1:u32 @offset(32)
+}
+
+$B1: {  # root
+  %u_strided:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+  %u_natural:ptr<uniform, S_1, read> = var undef @binding_point(0, 1)
+}
+
+%helper = func(%4:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %6:ptr<uniform, mat3x2<f32>, read> = access %u_strided, 1u
+    %7:ptr<uniform, mat3x2<f32>, read> = access %u_natural, 1u
+    %8:void = call %helper, %6
+    %9:void = call %helper, %7
+    ret
+  }
+}
+)";
+
+    auto* after = R"(
+S = struct @align(16) {
+  a:u32 @offset(0)
+  b:mat3x2<f32> @offset(16) @size(48), @matrix_stride(16)
+  c:u32 @offset(64)
+}
+
+S_1 = struct @align(8) {
+  a_1:u32 @offset(0)
+  b_1:mat3x2<f32> @offset(8), @matrix_stride(8)
+  c_1:u32 @offset(32)
+}
+
+S_2 = struct @align(16) {
+  a:u32 @offset(0)
+  b:spirv.explicit_layout_array<vec2<f32>, 3, stride=16> @offset(16)
+  c:u32 @offset(64)
+}
+
+S_1_1 = struct @align(8) {
+  a_1:u32 @offset(0)
+  b_1:mat3x2<f32> @offset(8)
+  c_1:u32 @offset(32)
+}
+
+$B1: {  # root
+  %u_strided:ptr<uniform, S_2, read> = var undef @binding_point(0, 0)
+  %u_natural:ptr<uniform, S_1_1, read> = var undef @binding_point(0, 1)
+}
+
+%helper = func(%4:ptr<uniform, mat3x2<f32>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %6:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read> = access %u_strided, 1u
+    %7:ptr<uniform, mat3x2<f32>, read> = access %u_natural, 1u
+    %8:void = call %helper_1, %6
+    %10:void = call %helper, %7
+    ret
+  }
+}
+%helper_1 = func(%11:ptr<uniform, spirv.explicit_layout_array<vec2<f32>, 3, stride=16>, read>):void {  # %helper_1: 'helper'
+  $B4: {
     ret
   }
 }

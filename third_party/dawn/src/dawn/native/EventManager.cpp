@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/EventManager.h"
+#include "src/dawn/native/EventManager.h"
 
 #include <algorithm>
 #include <functional>
@@ -33,197 +33,72 @@
 #include <utility>
 #include <vector>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/strings/str_format.h"
-#include "dawn/common/Assert.h"
-#include "dawn/common/Atomic.h"
-#include "dawn/common/FutureUtils.h"
-#include "dawn/common/Log.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/Queue.h"
+#include "src/dawn/common/Atomic.h"
+#include "src/dawn/common/FutureUtils.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/Queue.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/log.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn::native {
 namespace {
-
-// Ref<TrackedEvent> plus a few extra fields needed for some implementations.
-// Sometimes they'll be unused, but that's OK; it simplifies code reuse.
-struct TrackedFutureWaitInfo {
-    FutureID futureID;
-    Ref<EventManager::TrackedEvent> event;
-    // Used by EventManager::ProcessPollEvents
-    size_t indexInInfos;
-    // Used by EventManager::ProcessPollEvents and ::WaitAny
-    bool ready;
-};
-
-// Wrapper around an iterator to yield event specific objects and a pointer
-// to the ready bool. We pass this into helpers so that they can extract
-// the event specific objects and get pointers to the ready status - without
-// allocating duplicate storage to store the objects and ready bools.
-template <typename Traits>
-class WrappingIterator {
-  public:
-    // Specify required iterator traits.
-    using value_type = typename Traits::value_type;
-    using difference_type = typename Traits::WrappedIter::difference_type;
-    using iterator_category = typename Traits::WrappedIter::iterator_category;
-    using pointer = value_type*;
-    using reference = value_type&;
-
-    WrappingIterator() = default;
-    WrappingIterator(const WrappingIterator&) = default;
-    WrappingIterator& operator=(const WrappingIterator&) = default;
-
-    explicit WrappingIterator(typename Traits::WrappedIter wrappedIt) : mWrappedIt(wrappedIt) {}
-
-    bool operator==(const WrappingIterator& rhs) const = default;
-
-    difference_type operator-(const WrappingIterator& rhs) const {
-        return mWrappedIt - rhs.mWrappedIt;
-    }
-
-    WrappingIterator operator+(difference_type rhs) const {
-        return WrappingIterator{mWrappedIt + rhs};
-    }
-
-    WrappingIterator& operator++() {
-        ++mWrappedIt;
-        return *this;
-    }
-
-    value_type operator*() { return Traits::Deref(mWrappedIt); }
-
-  private:
-    typename Traits::WrappedIter mWrappedIt;
-};
-
-struct ExtractWaitListEventAndReadyStateTraits {
-    using WrappedIter = std::vector<TrackedFutureWaitInfo>::iterator;
-    using value_type = std::pair<Ref<WaitListEvent>, bool*>;
-
-    static value_type Deref(const WrappedIter& wrappedIt) {
-        DAWN_ASSERT(wrappedIt->event->GetIfWaitListEvent());
-        return {wrappedIt->event->GetIfWaitListEvent(), &wrappedIt->ready};
-    }
-};
-
-using WaitListEventAndReadyStateIterator =
-    WrappingIterator<ExtractWaitListEventAndReadyStateTraits>;
-
-// Returns true if at least one future is ready.
-bool PollFutures(std::vector<TrackedFutureWaitInfo>& futures) {
-    bool success = false;
-    for (auto& future : futures) {
-        if (future.event->IsReadyToComplete()) {
-            success = true;
-            future.ready = true;
-        }
-    }
-    return success;
-}
 
 // Wait/poll queues with given `timeout`. `queueWaitSerials` should contain per queue, the serial up
 // to which we should flush the queue if needed. Note that keys are WeakRef<QueueBase> which
 // actually means the keys are not based on the QueueBase pointer, but a pointer to metadata that is
 // guaranteed to be unique and alive. This ensures that each queue will be represented for multi
 // source validation.
-using QueueWaitSerialsMap = absl::flat_hash_map<WeakRef<QueueBase>, ExecutionSerial>;
-void WaitQueueSerials(const QueueWaitSerialsMap& queueWaitSerials, Nanoseconds timeout) {
+struct QueueWaitSerialsMaps {
+    // A map from the queue to strong ref of the queue if possible. This avoids promoting
+    // (acquire/releasing locks) for the same queue multiple times.
+    absl::flat_hash_map<WeakRef<QueueBase>, Ref<QueueBase>> strongRefs;
+    absl::flat_hash_map<Ref<QueueBase>, ExecutionSerial> minWaitSerials;
+};
+
+// Helper that updates the serial maps with the new `queueAndSerial`.
+void UpdateQueueWaitSerialsMap(QueueWaitSerialsMaps& queueWaitSerialMaps,
+                               const QueueAndSerial* queueAndSerial) {
+    DAWN_ASSERT(queueAndSerial);
+
+    auto refIt = queueWaitSerialMaps.strongRefs.find(queueAndSerial->queue);
+    bool refInserted = false;
+    if (refIt == queueWaitSerialMaps.strongRefs.end()) {
+        std::tie(refIt, refInserted) = queueWaitSerialMaps.strongRefs.insert(
+            {queueAndSerial->queue, queueAndSerial->queue.Promote()});
+        DAWN_ASSERT(refInserted);
+    }
+    auto queue = refIt->second;
+
+    // If the queue failed promotion, then it means that the work is all already done, so we don't
+    // need to do anything here.
+    if (queue == nullptr) {
+        return;
+    }
+
+    // Otherwise, track the queue and the minimum wait serial to satisfy the wait condition.
+    ExecutionSerial completionSerial =
+        queueAndSerial->completionSerial.load(std::memory_order_acquire);
+    auto [serialIt, serialInserted] =
+        queueWaitSerialMaps.minWaitSerials.insert({queue, completionSerial});
+    if (!serialInserted) {
+        serialIt->second = std::min(serialIt->second, completionSerial);
+    }
+}
+
+void WaitQueueSerials(const QueueWaitSerialsMaps& queueWaitSerialMaps, Nanoseconds timeout) {
     // Poll/wait on queues up to the lowest wait serial, but do this once per queue instead of
     // per event so that events with same serial complete at the same time instead of racing.
-    for (const auto& queueAndSerial : queueWaitSerials) {
-        auto queue = queueAndSerial.first.Promote();
-        if (queue == nullptr) {
-            // If we can't promote the queue, then all the work is already done.
-            continue;
-        }
-        auto waitSerial = queueAndSerial.second;
-
+    for (const auto& [queue, waitSerial] : queueWaitSerialMaps.minWaitSerials) {
         [[maybe_unused]] bool hadError = queue->GetDevice()->ConsumedError(
             queue->WaitForQueueSerial(waitSerial, timeout), "waiting for work in %s.", queue.Get());
     }
-}
-
-// We can replace the std::vector& when std::span is available via C++20.
-wgpu::WaitStatus WaitImpl(const InstanceBase* instance,
-                          std::vector<TrackedFutureWaitInfo>& futures,
-                          Nanoseconds timeout) {
-    bool foundWaitListEvent = false;
-
-    QueueWaitSerialsMap queueLowestWaitSerials;
-    for (const auto& future : futures) {
-        if (future.event->GetIfWaitListEvent()) {
-            foundWaitListEvent = true;
-        }
-        if (const auto* queueAndSerial = future.event->GetIfQueueAndSerial()) {
-            auto [it, inserted] = queueLowestWaitSerials.insert(
-                {queueAndSerial->queue,
-                 queueAndSerial->completionSerial.load(std::memory_order_acquire)});
-            if (!inserted) {
-                it->second = std::min(
-                    it->second, queueAndSerial->completionSerial.load(std::memory_order_acquire));
-            }
-        }
-    }
-
-    if (timeout == Nanoseconds(0)) {
-        // This is a no-op if `queueLowestWaitSerials` is empty.
-        WaitQueueSerials(queueLowestWaitSerials, timeout);
-        return PollFutures(futures) ? wgpu::WaitStatus::Success : wgpu::WaitStatus::TimedOut;
-    }
-
-    // We can't have a mix of wait-list events and queue-serial events or queue-serial events
-    // from multiple queues with a non-zero timeout.
-    if (queueLowestWaitSerials.size() > 1 ||
-        (!queueLowestWaitSerials.empty() && foundWaitListEvent)) {
-        // Multi-source wait is unsupported.
-        // TODO(dawn:2062): Implement support for this when the device supports it.
-        // It should eventually gather the lowest serial from the queue(s), transform them
-        // into completion events, and wait on all of the events. Then for any queues that
-        // saw a completion, poll all futures related to that queue for completion.
-        instance->EmitLog(WGPULoggingType_Error,
-                          "Mixed source waits with timeouts are not currently supported.");
-        return wgpu::WaitStatus::Error;
-    }
-
-    bool success = false;
-    if (foundWaitListEvent) {
-        success =
-            WaitListEvent::WaitAny(WaitListEventAndReadyStateIterator{futures.begin()},
-                                   WaitListEventAndReadyStateIterator{futures.end()}, timeout);
-    } else {
-        // This is a no-op if `queueLowestWaitSerials` is empty.
-        WaitQueueSerials(queueLowestWaitSerials, timeout);
-        success = PollFutures(futures);
-    }
-    return success ? wgpu::WaitStatus::Success : wgpu::WaitStatus::TimedOut;
-}
-
-// Reorder callbacks to enforce callback ordering required by the spec.
-// Returns an iterator just past the last ready callback.
-auto PrepareReadyCallbacks(std::vector<TrackedFutureWaitInfo>& futures) {
-    // Partition the futures so the following sort looks at fewer elements.
-    auto endOfReady =
-        std::partition(futures.begin(), futures.end(),
-                       [](const TrackedFutureWaitInfo& future) { return future.ready; });
-
-    // Enforce the following rules from https://gpuweb.github.io/gpuweb/#promise-ordering:
-    // 1. For some GPUQueue q, if p1 = q.onSubmittedWorkDone() is called before
-    //    p2 = q.onSubmittedWorkDone(), then p1 must settle before p2.
-    // 2. For some GPUQueue q and GPUBuffer b on the same GPUDevice,
-    //    if p1 = b.mapAsync() is called before p2 = q.onSubmittedWorkDone(),
-    //    then p1 must settle before p2.
-    //
-    // To satisfy the rules, we need only put lower future ids before higher future
-    // ids. Lower future ids were created first.
-    std::sort(futures.begin(), endOfReady,
-              [](const TrackedFutureWaitInfo& a, const TrackedFutureWaitInfo& b) {
-                  return a.futureID < b.futureID;
-              });
-
-    return endOfReady;
 }
 
 struct AlreadyCompletedEvent final : public EventManager::TrackedEvent {
@@ -235,14 +110,33 @@ struct AlreadyCompletedEvent final : public EventManager::TrackedEvent {
 
 }  // namespace
 
+class EventManager::Waiter : public NonMovable {
+  public:
+    void Signal() {
+        return mSignaled.Use([](auto signaled) { *signaled = true; });
+    }
+    bool Wait(Nanoseconds timeout) {
+        return mSignaled.Use([&](auto signaled) {
+            return signaled.WaitFor(timeout, [](const bool& isSignaled) { return isSignaled; });
+        });
+    }
+
+  private:
+    MutexCondVarProtected<bool> mSignaled = false;
+};
+
 // EventManager
 
 EventManager::EventManager(InstanceBase* instance) : mInstance(instance) {}
 
 EventManager::~EventManager() {
-    mEvents.Use([&](auto events) {
+    mEventState.Use([&](auto state) {
+        // If the event manager is being destroyed, it shouldn't be possible to have waits in
+        // flight.
+        DAWN_CHECK(state->waiters.empty());
+
         // For all non-spontaneous events, call their callbacks now.
-        for (auto& [futureID, event] : *events) {
+        for (auto& [futureID, event] : state->events) {
             if (event->mCallbackMode != wgpu::CallbackMode::AllowSpontaneous) {
                 event->EnsureComplete(EventCompletionType::Shutdown);
             }
@@ -273,9 +167,9 @@ FutureID EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
         if (auto q = queueAndSerial->queue.Promote()) {
             q->TrackSerialTask(QueuePriority::UserVisible, queueAndSerial->completionSerial,
                                [this, event]() {
-                                   // If this is executed, we can be sure that the raw pointer to
-                                   // this EventManager is valid because the task is ran by the
-                                   // Queue and:
+                                   // If this is executed, we can be sure that the raw pointer
+                                   // to this EventManager is valid because the task is ran by
+                                   // the Queue and:
                                    //   Queue -[refs]->
                                    //     Device -[refs]->
                                    //       Adapter -[refs]->
@@ -286,11 +180,11 @@ FutureID EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
         }
     }
 
-    mEvents.Use([&](auto events) {
+    mEventState.Use([&](auto state) {
         if (event->mCallbackMode != wgpu::CallbackMode::WaitAnyOnly) {
             FetchMax(mLastProcessEventID, futureID);
         }
-        events->emplace(futureID, std::move(event));
+        state->events.emplace(futureID, std::move(event));
     });
     return futureID;
 }
@@ -298,154 +192,229 @@ FutureID EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
 void EventManager::SetFutureReady(Ref<TrackedEvent> event) {
     event->SetReadyToComplete();
 
-    // Sometimes, events might become ready before they are even tracked. This can happen because
-    // tracking is ordered to uphold callback ordering, but events may become ready in any order. If
-    // the event is spontaneous, it will be completed when it is tracked.
+    // Sometimes, events might become ready before they are even tracked. This can happen
+    // because tracking is ordered to uphold callback ordering, but events may become ready in
+    // any order. If the event is spontaneous, it will be completed when it is tracked.
     if (event->mFutureID == kNullFutureID) {
         return;
     }
 
+    // Signal all relevant waiters that the event has become ready.
+    mEventState.Use([&](auto state) {
+        if (auto node = state->waiters.extract(event->mFutureID)) {
+            for (Waiter* waiter : node.mapped()) {
+                waiter->Signal();
+            }
+        }
+    });
+
     // Handle spontaneous completion now.
     if (event->mCallbackMode == wgpu::CallbackMode::AllowSpontaneous) {
-        // Since we use the presence of the event to indicate whether the callback has already been
-        // called in WaitAny when searching for the matching FutureID, untrack the event after
-        // calling the callbacks to ensure that we can't race on two different threads waiting on
-        // the same future. Note that only one thread will actually call the callback since
-        // EnsureComplete is thread safe.
+        // Since we use the presence of the event to indicate whether the callback has already
+        // been called in WaitAny when searching for the matching FutureID, untrack the event
+        // after calling the callbacks to ensure that we can't race on two different threads
+        // waiting on the same future. Note that only one thread will actually call the callback
+        // since EnsureComplete is thread safe.
         event->EnsureComplete(EventCompletionType::Ready);
-        mEvents.Use([&](auto events) { events->erase(event->mFutureID); });
+        mEventState.Use([&](auto state) { state->events.erase(event->mFutureID); });
     }
 }
 
 bool EventManager::ProcessPollEvents() {
-    std::vector<TrackedFutureWaitInfo> futures;
-    wgpu::WaitStatus waitStatus;
+    QueueWaitSerialsMaps queueWaitSerialMaps;
+    SortedEventMap readyEvents;
     bool hasProgressingEvents = false;
     FutureID lastProcessEventID;
-    mEvents.Use([&](auto events) {
-        // Iterate all events and record poll events and spontaneous events since they are both
-        // allowed to be completed in the ProcessPoll call. Note that spontaneous events are allowed
-        // to trigger anywhere which is why we include them in the call.
-        lastProcessEventID = mLastProcessEventID.load(std::memory_order_acquire);
-        futures.reserve(events->size());
-        for (auto& [futureID, event] : *events) {
-            if (event->mCallbackMode != wgpu::CallbackMode::WaitAnyOnly) {
-                // Figure out if there are any progressing events. If we only have non-progressing
-                // events, we need to return false to indicate that there isn't any polling work to
-                // be done.
-                if (event->IsProgressing()) {
-                    hasProgressingEvents = true;
-                }
 
-                futures.push_back(TrackedFutureWaitInfo{futureID, event, 0, false});
+    mEventState.Use([&](auto state) {
+        // Iterate all events and record poll events and spontaneous events since they are both
+        // allowed to be completed in the ProcessPoll call. Note that spontaneous events are
+        // allowed to trigger anywhere which is why we include them in the call.
+        lastProcessEventID = mLastProcessEventID.load(std::memory_order_acquire);
+        for (const auto& [futureID, event] : state->events) {
+            if (event->mCallbackMode == wgpu::CallbackMode::WaitAnyOnly) {
+                continue;
+            }
+
+            if (event->IsReadyToComplete()) {
+                readyEvents.emplace(futureID, event);
+                continue;
+            }
+            if (event->IsProgressing()) {
+                hasProgressingEvents = true;
+            }
+
+            // Record queue's and their min serial to force a submit if applicable.
+            if (const auto* queueAndSerial = event->GetIfQueueAndSerial()) {
+                UpdateQueueWaitSerialsMap(queueWaitSerialMaps, queueAndSerial);
             }
         }
     });
 
-    // If there wasn't anything to wait on, we can skip the wait and just return.
-    if (futures.size() == 0) {
-        return false;
-    }
+    // This call is a no-op if `queueWaitSerialMaps` is empty, otherwise, it ensures that the
+    // lowest serial work is submitted on each queue.
+    WaitQueueSerials(queueWaitSerialMaps, Nanoseconds(0u));
 
-    // Wait and enforce callback ordering.
-    waitStatus = WaitImpl(mInstance, futures, Nanoseconds(0));
-    if (waitStatus == wgpu::WaitStatus::TimedOut) {
-        return hasProgressingEvents;
-    }
-    DAWN_ASSERT(waitStatus == wgpu::WaitStatus::Success);
-
-    // Enforce callback ordering.
-    auto readyEnd = PrepareReadyCallbacks(futures);
-    bool hasIncompleteEvents = readyEnd != futures.end();
-
-    // Call all the callbacks.
-    for (auto it = futures.begin(); it != readyEnd; ++it) {
-        it->event->EnsureComplete(EventCompletionType::Ready);
+    // Complete the events that are completable.
+    for (auto& [_, event] : readyEvents) {
+        if (event) {
+            event->EnsureComplete(EventCompletionType::Ready);
+        }
     }
 
     // Since we use the presence of the event to indicate whether the callback has already been
-    // called in WaitAny when searching for the matching FutureID, untrack the event after calling
-    // the callbacks to ensure that we can't race on two different threads waiting on the same
-    // future. Note that only one thread will actually call the callback since EnsureComplete is
-    // thread safe.
-    mEvents.Use([&](auto events) {
-        for (auto it = futures.begin(); it != readyEnd; ++it) {
-            events->erase(it->futureID);
+    // called in WaitAny when searching for the matching FutureID, untrack the event after
+    // calling the callbacks to ensure that we can't race on two different threads waiting on
+    // the same future. Note that only one thread will actually call the callback since
+    // EnsureComplete is thread safe.
+    mEventState.Use([&](auto state) {
+        for (auto& [futureID, _] : readyEvents) {
+            state->events.erase(futureID);
         }
     });
 
-    // Note that in the event of all progressing events completing, but there exists non-progressing
-    // events, we will return true one extra time.
-    return hasIncompleteEvents ||
+    return hasProgressingEvents ||
            (lastProcessEventID != mLastProcessEventID.load(std::memory_order_acquire));
 }
 
-wgpu::WaitStatus EventManager::WaitAny(size_t count, FutureWaitInfo* infos, Nanoseconds timeout) {
-    // Feature support should already be validated for by the Instance.
-    if (count == 0) {
-        return wgpu::WaitStatus::Success;
-    }
+wgpu::WaitStatus EventManager::WaitAny(Span<FutureWaitInfo> infos, Nanoseconds timeout) {
+    bool foundNonQueueEvent = false;
+    QueueWaitSerialsMaps queueWaitSerialMaps;
+    SortedEventMap readyEvents;
 
-    // Look up all of the futures and build a list of `TrackedFutureWaitInfo`s.
-    std::vector<TrackedFutureWaitInfo> futures;
-    futures.reserve(count);
-    bool anyCompleted = false;
-    mEvents.Use([&](auto events) {
+    auto PreProcessWaits = [&](Waiter* waiter) {
         FutureID firstInvalidFutureID = mNextFutureID;
-        for (size_t i = 0; i < count; ++i) {
-            FutureID futureID = infos[i].future.id;
+        mEventState.Use([&](auto state) {
+            for (auto& info : infos) {
+                FutureID futureID = info.future.id;
+                info.completed = false;
 
-            // Check for cases that are undefined behavior in the API contract.
-            DAWN_ASSERT(futureID != 0);
-            DAWN_ASSERT(futureID < firstInvalidFutureID);
+                // Check for cases that are undefined behavior in the API contract.
+                DAWN_CHECK(futureID != 0);
+                DAWN_CHECK(futureID < firstInvalidFutureID);
 
-            // Try to find the event, if we don't find it, we can assume that it has already been
-            // completed.
-            auto it = events->find(futureID);
-            if (it == events->end()) {
-                infos[i].completed = true;
-                anyCompleted = true;
-            } else {
-                infos[i].completed = false;
-                TrackedEvent* event = it->second.Get();
-                futures.push_back(TrackedFutureWaitInfo{futureID, event, i, false});
+                // Try to find the event, if we don't find it, we can assume that it has already
+                // been completed so we can signal the waiter here.
+                auto eventIt = state->events.find(futureID);
+                if (eventIt == state->events.end()) {
+                    if (waiter) {
+                        waiter->Signal();
+                    }
+                    continue;
+                }
+
+                // Otherwise, we want to add the waiter for it.
+                if (waiter) {
+                    state->waiters[futureID].push_back(waiter);
+                }
+
+                // We also handle coalescing the queue events per queue on the lowest serial,
+                // and tracking the different types of events for multi-source validation later.
+                TrackedEvent* event = eventIt->second.Get();
+                if (event->IsReadyToComplete() && waiter) {
+                    waiter->Signal();
+                }
+                if (const auto* queueAndSerial = event->GetIfQueueAndSerial()) {
+                    UpdateQueueWaitSerialsMap(queueWaitSerialMaps, queueAndSerial);
+                } else {
+                    foundNonQueueEvent = true;
+                }
             }
+        });
+    };
+
+    auto PostProcessWaits = [&](bool shouldComplete, Waiter* waiter) {
+        mEventState.Use([&](auto state) {
+            for (auto& info : infos) {
+                FutureID futureID = info.future.id;
+
+                if (shouldComplete) {
+                    auto eventIt = state->events.find(futureID);
+                    Ref<TrackedEvent> event =
+                        (eventIt != state->events.end()) ? eventIt->second : nullptr;
+                    if (!event || event->IsReadyToComplete()) {
+                        info.completed = true;
+                        readyEvents.emplace(futureID, std::move(event));
+                    }
+                }
+
+                // Remove the waiter if relevant.
+                if (waiter) {
+                    std::erase(state->waiters[futureID], waiter);
+                    if (state->waiters[futureID].empty()) {
+                        state->waiters.erase(futureID);
+                    }
+                }
+            }
+        });
+    };
+
+    if (timeout == Nanoseconds(0u)) {
+        PreProcessWaits(/*waiter=*/nullptr);
+        WaitQueueSerials(queueWaitSerialMaps, Nanoseconds(0u));
+        PostProcessWaits(/*shouldComplete=*/true, /*waiter=*/nullptr);
+    } else {
+        // Add the waiter to each of the events and initialize a cleanup routine to ensure that we
+        // always remove the waiter at the end of this scope, optionally completing events if
+        // `shouldComplete` is set to true.
+        Waiter waiter;
+        PreProcessWaits(&waiter);
+        bool shouldComplete = true;
+        absl::Cleanup removeWaiter = [&]() { PostProcessWaits(shouldComplete, &waiter); };
+
+        // There's currently a couple of different cases to handle here depending on the
+        // capabilities of the backends. Each case is documented in their respective clause below.
+        if (queueWaitSerialMaps.minWaitSerials.empty()) {
+            // When `queueWaitSerialMaps` is empty there are no queue events so all events are
+            // waitable via the waiter.
+            shouldComplete = waiter.Wait(timeout);
+        } else if (queueWaitSerialMaps.minWaitSerials.size() == 1 && !foundNonQueueEvent) {
+            // When there is exactly 1 queue in `queueWaitSerialMaps` and there are no other
+            // non-queue events, we can just rely on `WaitQueueSerials` to handle a timed wait on
+            // that queue.
+            WaitQueueSerials(queueWaitSerialMaps, timeout);
+        } else {
+            // Otherwise, we either have multiple queues and/or a mix of queue and non-queue events.
+            // We first verify the device capabilities across all the events before trying to
+            // process them.
+            for (const auto& [queue, waitSerial] : queueWaitSerialMaps.minWaitSerials) {
+                if (!queue->GetDevice()->IsToggleEnabled(Toggle::SpontaneousQueueEvents)) {
+                    mInstance->EmitLog(
+                        WGPULoggingType_Error,
+                        "Mixed source waits with timeouts is not supported for the set of events.");
+                    shouldComplete = false;
+                    return wgpu::WaitStatus::Error;
+                }
+            }
+
+            // For queue events, we still need to ensure that the `waitSerial` has been
+            // submitted via a call to `WaitForQueueSerial` with a timeout=0.
+            WaitQueueSerials(queueWaitSerialMaps, Nanoseconds(0u));
+
+            // Now that we've handled the queue events, we can wait on the events via the waiter.
+            shouldComplete = waiter.Wait(timeout);
         }
-    });
-    // If any completed, return immediately.
-    if (anyCompleted) {
-        return wgpu::WaitStatus::Success;
-    }
-    // Otherwise, we should have successfully looked up all of them.
-    DAWN_ASSERT(futures.size() == count);
-
-    wgpu::WaitStatus waitStatus = WaitImpl(mInstance, futures, timeout);
-    if (waitStatus != wgpu::WaitStatus::Success) {
-        return waitStatus;
     }
 
-    // Enforce callback ordering
-    auto readyEnd = PrepareReadyCallbacks(futures);
-
-    // Call callbacks and update return values.
-    for (auto it = futures.begin(); it != readyEnd; ++it) {
-        // Set completed before calling the callback.
-        infos[it->indexInInfos].completed = true;
-        it->event->EnsureComplete(EventCompletionType::Ready);
+    // Complete the events that are completable.
+    for (auto& [_, event] : readyEvents) {
+        if (event) {
+            event->EnsureComplete(EventCompletionType::Ready);
+        }
     }
 
     // Since we use the presence of the event to indicate whether the callback has already been
-    // called in WaitAny when searching for the matching FutureID, untrack the event after calling
-    // the callbacks to ensure that we can't race on two different threads waiting on the same
-    // future. Note that only one thread will actually call the callback since EnsureComplete is
-    // thread safe.
-    mEvents.Use([&](auto events) {
-        for (auto it = futures.begin(); it != readyEnd; ++it) {
-            events->erase(it->futureID);
+    // called in WaitAny when searching for the matching FutureID, untrack the event after
+    // calling the callbacks to ensure that we can't race on two different threads waiting on
+    // the same future. Note that only one thread will actually call the callback since
+    // EnsureComplete is thread safe.
+    mEventState.Use([&](auto state) {
+        for (auto& [futureID, _] : readyEvents) {
+            state->events.erase(futureID);
         }
     });
 
-    return wgpu::WaitStatus::Success;
+    return !readyEvents.empty() ? wgpu::WaitStatus::Success : wgpu::WaitStatus::TimedOut;
 }
 
 // QueueAndSerial
@@ -470,28 +439,22 @@ Ref<EventManager::TrackedEvent> EventManager::TrackedEvent::CreateAlreadyComplet
     return event;
 }
 
-EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode,
-                                         Ref<WaitListEvent> completionEvent)
-    : mCallbackMode(callbackMode), mCompletionData(std::move(completionEvent)) {}
+EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode, bool readyToComplete)
+    : mCallbackMode(callbackMode), mIsReadyToComplete(readyToComplete) {}
 
 EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode,
                                          QueueBase* queue,
                                          ExecutionSerial completionSerial)
-    : mCallbackMode(callbackMode),
-      mCompletionData(std::in_place_type_t<QueueAndSerial>(), queue, completionSerial) {}
+    : mCallbackMode(callbackMode), mQueueAndSerial(std::in_place, queue, completionSerial) {}
 
 EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode, Completed tag)
-    : mCallbackMode(callbackMode), mCompletionData(AcquireRef(new WaitListEvent())) {
-    GetIfWaitListEvent()->Signal();
-}
+    : mCallbackMode(callbackMode), mIsReadyToComplete(true) {}
 
 EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode, NonProgressing tag)
-    : mCallbackMode(callbackMode),
-      mCompletionData(AcquireRef(new WaitListEvent())),
-      mIsProgressing(false) {}
+    : mCallbackMode(callbackMode), mIsProgressing(false) {}
 
 EventManager::TrackedEvent::~TrackedEvent() {
-    DAWN_ASSERT(mFutureID != kNullFutureID);
+    DAWN_CHECK(mFutureID != kNullFutureID);
 #if defined(DAWN_ENABLE_ASSERTS)
     std::call_once(mFlag, []() { DAWN_ASSERT(false); });
 #endif
@@ -501,28 +464,28 @@ Future EventManager::TrackedEvent::GetFuture() const {
     return {mFutureID};
 }
 
+QueueAndSerial* EventManager::TrackedEvent::GetIfQueueAndSerial() {
+    return mQueueAndSerial ? &*mQueueAndSerial : nullptr;
+}
+
+const QueueAndSerial* EventManager::TrackedEvent::GetIfQueueAndSerial() const {
+    return mQueueAndSerial ? &*mQueueAndSerial : nullptr;
+}
+
 bool EventManager::TrackedEvent::IsReadyToComplete() const {
-    bool isReady = false;
-    if (auto event = GetIfWaitListEvent()) {
-        isReady = event->IsSignaled();
+    // Currently there are only two types of events, queue events and simple state events.
+    if (mIsReadyToComplete) {
+        return true;
     }
     if (const auto* queueAndSerial = GetIfQueueAndSerial()) {
-        isReady = queueAndSerial->completionSerial <= queueAndSerial->GetCompletedSerial();
+        return queueAndSerial->completionSerial <= queueAndSerial->GetCompletedSerial();
     }
-    return isReady;
+
+    return false;
 }
 
 void EventManager::TrackedEvent::SetReadyToComplete() {
-    if (auto event = GetIfWaitListEvent()) {
-        event->Signal();
-    }
-    if (auto* queueAndSerial = GetIfQueueAndSerial()) {
-        ExecutionSerial current = queueAndSerial->completionSerial.load(std::memory_order_acquire);
-        for (auto completed = queueAndSerial->GetCompletedSerial();
-             current > completed && !queueAndSerial->completionSerial.compare_exchange_weak(
-                                        current, completed, std::memory_order_acq_rel);) {
-        }
-    }
+    mIsReadyToComplete = true;
 }
 
 void EventManager::TrackedEvent::EnsureComplete(EventCompletionType completionType) {

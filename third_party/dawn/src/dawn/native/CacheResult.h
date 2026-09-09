@@ -31,8 +31,8 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/CacheKey.h"
+#include "src/dawn/native/CacheKey.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 
@@ -81,8 +81,8 @@ class CacheResult {
 
     CacheKey mKey;
     T mValue;
-    bool mIsCached;
-    bool mIsValid;
+    bool mIsCached = false;
+    bool mIsValid = false;
 };
 
 }  // namespace dawn::native

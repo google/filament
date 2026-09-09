@@ -1,0 +1,93 @@
+Name
+
+    NV_stream_consumer_eglimage_use_scanout_attrib
+
+Name Strings
+
+    EGL_NV_stream_consumer_eglimage_use_scanout_attrib
+
+Contributors
+
+    Sruthik P
+    Daniel Koch
+    James Jones
+    Mukund Keshava
+
+Contacts
+
+    Sruthik P, NVIDIA(spatibandlla 'at' nvidia.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 2 - February 07, 2023
+
+Number
+
+    EGL Extension #149
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    Requires the EGL_NV_stream_consumer_eglimage extension.
+
+    This extension is written against the wording of the EGL 1.5
+    Specification.
+
+Overview
+
+    This extension allows clients to specify to EGL implementations
+    if the images frames in the EGLStream acquired as EGLImages are
+    to be scanned out directly by display hardware.
+
+New Procedures and Functions
+
+    N/A
+
+New Tokens
+
+    Accepted as an attribute name in the <attrib_list> parameter of
+    eglStreamImageConsumerConnectNV:
+
+        EGL_STREAM_CONSUMER_IMAGE_USE_SCANOUT_NV 0x3378
+
+Additions to section "3.10.2.2 EGLImage consumer"
+
+   Replace the paragraph that begins with "If not NULL, <attrib_list> points
+   to an array..." with the following:
+
+       If not NULL, <attrib_list> points to an array of name/value
+       pairs, terminated by EGL_NONE. Attributes accepted for <attrib_list>
+       are listed in Table 3.10.a, below.
+
+         Attribute Name                            Attribute Value(s)     Default Value
+         ----------------------------------------  -------------------    --------------
+         EGL_STREAM_CONSUMER_IMAGE_USE_SCANOUT_NV  EGL_FALSE, EGL_TRUE    EGL_FALSE
+
+         Table 3.10.a: Legal EGLAttrib values for eglStreamImageConsumerConnectNV attrib_list parameter.
+
+   Append the list beginning with "On success, EGL_TRUE is returned..." with the following point:
+
+       - If EGL_STREAM_CONSUMER_IMAGE_USE_SCANOUT_NV attribute is set to EGL_TRUE, the implementation
+         must ensure the image frames in the EGLStream are usable for scan out on the EGLDevice associated
+         with the EGLDisplay <dpy>.
+
+Issues
+
+   N/A
+
+Revision History
+
+    #2  (February 07, 2023) Sruthik P
+        - Update wording in section 3.10.2.2 to more strongly enforce the intent
+          of EGL_STREAM_CONSUMER_IMAGE_USE_SCANOUT_NV.
+
+    #1  (February 06, 2023) Sruthik P
+        - Initial draft.
+

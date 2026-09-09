@@ -116,8 +116,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PreventInfiniteLoops(Module& ir) {
-    core::ir::AssertValid(ir, kPreventInfiniteLoopsCapabilities,
-                          "before core.PreventInfiniteLoops");
+    core::ir::AssertValid(ir, "before core.PreventInfiniteLoops");
 
     State{ir}.Process();
 

@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -172,7 +172,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	if err != nil {
 		return err
 	}
-	dawn, err := gitiles.New(ctx, cfg.Git.Dawn.Host, cfg.Git.Dawn.Project)
+	dawn, err := gitiles.New(ctx, options, cfg.Git.Dawn.Host, cfg.Git.Dawn.Project)
 	if err != nil {
 		return err
 	}
@@ -362,7 +362,7 @@ func (r *roller) roll(ctx context.Context) error {
 
 	if r.flags.dryRun {
 		log.Printf("Filtered Queried Test List:")
-		log.Printf(generatedFiles[common.TestListRelPath])
+		log.Printf("%s", generatedFiles[common.TestListRelPath])
 	}
 
 	// Pull out the test list from the generated files
@@ -401,7 +401,7 @@ func (r *roller) roll(ctx context.Context) error {
 	}
 
 	// Look for an existing gerrit change to update
-	existingRolls, err := r.findExistingRolls()
+	existingRolls, err := r.findExistingRolls(ctx)
 	if err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ func (r *roller) roll(ctx context.Context) error {
 		log.Printf("abandoning %v existing roll...", len(existingRolls))
 		if !r.flags.dryRun {
 			for _, change := range existingRolls {
-				if err := r.gerrit.Abandon(change.ChangeID); err != nil {
+				if err := r.gerrit.Abandon(ctx, change.ChangeID); err != nil {
 					return err
 				}
 			}
@@ -427,7 +427,7 @@ func (r *roller) roll(ctx context.Context) error {
 			changeID = "dry-run-id"
 			log.Printf("created gerrit change (dry-run)...\n%s", msg)
 		} else {
-			change, err := r.gerrit.CreateChange(r.cfg.Gerrit.Project, "main", msg, true)
+			change, err := r.gerrit.CreateChange(ctx, r.cfg.Gerrit.Project, "main", msg, true)
 			if err != nil {
 				return err
 			}
@@ -453,7 +453,7 @@ func (r *roller) roll(ctx context.Context) error {
 	generatedFiles[gitLinkPath] = newCTSHash
 
 	msg := r.rollCommitMessage(oldCTSHash, newCTSHash, ctsLog, changeID)
-	ps, err := r.gerrit.EditFiles(changeID, msg, generatedFiles, deletedFiles)
+	ps, err := r.gerrit.EditFiles(ctx, changeID, msg, generatedFiles, deletedFiles)
 	if err != nil {
 		return fmt.Errorf("failed to update change '%v': %v", changeID, err)
 	}
@@ -471,6 +471,7 @@ func (r *roller) roll(ctx context.Context) error {
 	}()
 
 	// Begin main roll loop
+	clRevision := 0
 	for attempt := 0; ; attempt++ {
 		// Kick builds
 		log.Printf("building (pass %v)...\n", attempt+1)
@@ -525,16 +526,18 @@ func (r *roller) roll(ctx context.Context) error {
 			updateExpectationUpdateTimestamp(&exInfo.newExpectations)
 			editedFiles[exInfo.path] = exInfo.newExpectations.String()
 		}
-		ps, err = r.gerrit.EditFiles(changeID, msg, editedFiles, nil)
+		ps, err = r.gerrit.EditFiles(ctx, changeID, msg, editedFiles, nil)
 		if err != nil {
 			return fmt.Errorf("failed to update change '%v': %v", changeID, err)
 		}
 
 		if attempt >= r.flags.maxAttempts {
 			err := fmt.Errorf("CTS failed after %v retries.\nGiving up", attempt)
-			r.gerrit.Comment(ps, err.Error(), nil)
+			r.gerrit.Comment(ctx, ps, err.Error(), nil)
 			return err
 		}
+
+		clRevision = ps.Patchset
 	}
 
 	reviewer := ""
@@ -563,7 +566,11 @@ func (r *roller) roll(ctx context.Context) error {
 		reviewer = jsonRes.Emails[0]
 	}
 
-	if err := r.gerrit.SetReadyForReview(changeID, "CTS roll succeeded", reviewer); err != nil {
+	if err := r.gerrit.AddLabel(ctx, changeID, strconv.Itoa(clRevision), "", "Bot-Commit", 1); err != nil {
+		fmt.Println("WARNING: unable to Bot-Commit+1 (expected if running locally): ", err)
+	}
+
+	if err := r.gerrit.SetReadyForReview(ctx, changeID, "CTS roll succeeded", reviewer); err != nil {
 		return fmt.Errorf("failed to mark change as ready for review: %v", err)
 	}
 
@@ -692,9 +699,9 @@ func (r *roller) rollCommitMessage(
 // TODO(crbug.com/460178080): Add unittests for this once Gerrit interactions
 // support dependency injection.
 // findExistingRolls looks for all existing open CTS rolls by this user
-func (r *roller) findExistingRolls() ([]gerrit.ChangeInfo, error) {
+func (r *roller) findExistingRolls(ctx context.Context) ([]gerrit.ChangeInfo, error) {
 	// Look for an existing gerrit change to update
-	changes, _, err := r.gerrit.QueryChanges("owner:me",
+	changes, _, err := r.gerrit.QueryChanges(ctx, "owner:me",
 		"is:open",
 		fmt.Sprintf(`repo:"%v"`, r.cfg.Git.Dawn.Project),
 		fmt.Sprintf(`message:"%v"`, common.RollSubjectPrefix))

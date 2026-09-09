@@ -25,12 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/InternalPipelineStore.h"
 
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/ShaderModule.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/ShaderModule.h"
 
 namespace dawn::native {
 

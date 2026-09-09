@@ -33,12 +33,12 @@
 
 #include <thread>
 
-#include "dawn/common/CoreFoundationRef.h"
-#include "dawn/common/NSRef.h"
 #include "dawn/native/MetalBackend.h"
-#include "dawn/native/metal/Forward.h"
-#include "dawn/native/metal/SharedTextureMemoryMTL.h"
-#include "dawn/tests/white_box/SharedTextureMemoryTests.h"
+#include "src/dawn/common/CoreFoundationRef.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/metal/Forward.h"
+#include "src/dawn/native/metal/SharedTextureMemoryMTL.h"
+#include "src/dawn/tests/white_box/SharedTextureMemoryTests.h"
 
 namespace dawn {
 namespace {
@@ -144,7 +144,7 @@ class Backend : public SharedTextureMemoryTestBackend {
             uint32_t bytesPerElement;
             wgpu::FeatureName requiredFeature = wgpu::FeatureName(0u);
         };
-        const std::array<IOSurfaceFormat, 21> kFormats{
+        const std::array<IOSurfaceFormat, 24> kFormats{
             {{kCVPixelFormatType_64RGBAHalf, 8},
              {kCVPixelFormatType_TwoComponent16Half, 4},
              {kCVPixelFormatType_OneComponent16Half, 2},
@@ -161,6 +161,7 @@ class Backend : public SharedTextureMemoryTestBackend {
              {kCVPixelFormatType_DisparityFloat32, 4},
              // Below bytes per element isn't correct.
              {kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, 4},
+             {kCVPixelFormatType_Lossless_420YpCbCr8BiPlanarVideoRange, 4},
              {kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange, 4,
               wgpu::FeatureName::MultiPlanarFormatNv16},
              {kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange, 4,
@@ -169,9 +170,13 @@ class Backend : public SharedTextureMemoryTestBackend {
               wgpu::FeatureName::MultiPlanarFormatNv12a},
              {kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange, 8,
               wgpu::FeatureName::MultiPlanarFormatP010},
+             {kCVPixelFormatType_Lossless_420YpCbCr10PackedBiPlanarVideoRange, 8,
+              wgpu::FeatureName::MultiPlanarFormatP010},
              {kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange, 8,
               wgpu::FeatureName::MultiPlanarFormatP210},
              {kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange, 8,
+              wgpu::FeatureName::MultiPlanarFormatP410},
+             {kCVPixelFormatType_Lossless_422YpCbCr10PackedBiPlanarVideoRange, 8,
               wgpu::FeatureName::MultiPlanarFormatP410}}};
 
         for (auto f : kFormats) {

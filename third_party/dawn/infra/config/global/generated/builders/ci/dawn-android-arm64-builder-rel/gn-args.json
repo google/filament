@@ -1,0 +1,13 @@
+{
+  "gn_args": {
+    "android_static_analysis": "on",
+    "dawn_build_node_bindings": true,
+    "dcheck_always_on": true,
+    "is_debug": false,
+    "target_cpu": "arm64",
+    "target_os": "android",
+    "use_reclient": false,
+    "use_remoteexec": true,
+    "use_siso": true
+  }
+}

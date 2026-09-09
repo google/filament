@@ -25,10 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/Compiler.h"
-#include "dawn/common/Range.h"
-#include "dawn/common/TypedInteger.h"
 #include "gtest/gtest.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/Range.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn {
 namespace {

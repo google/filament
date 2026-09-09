@@ -19,7 +19,7 @@
 
 #import <Metal/Metal.h>
 
-#include <chrono>
+#include <cstdint>
 
 namespace filament {
 namespace backend {
@@ -27,36 +27,22 @@ namespace backend {
 struct MetalTimerQuery;
 struct MetalContext;
 
-class MetalTimerQueryInterface {
+// Implements timer queries by reading GPUStartTime/GPUEndTime off the frame's command buffer.
+// Those are available on every OS version Filament supports, so there is no fallback.
+//
+// NOTE: the resolution is a whole command buffer. Several timer queries issued inside one
+// command buffer all report that command buffer's execution time. Filament only measures frame
+// boundaries, where this is what is wanted.
+class MetalTimerQueryImpl {
 public:
-    virtual ~MetalTimerQueryInterface();
-    virtual void beginTimeElapsedQuery(MetalTimerQuery* query) = 0;
-    virtual void endTimeElapsedQuery(MetalTimerQuery* query) = 0;
-    virtual bool getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) = 0;
+    explicit MetalTimerQueryImpl(MetalContext& context) : mContext(context) {}
 
-protected:
-    using clock = std::chrono::steady_clock;
-};
-
-// Uses MTLSharedEvents to implement timer queries.
-// Only available on >= iOS 12.0.
-class API_AVAILABLE(ios(12.0)) MetalTimerQueryFence : public MetalTimerQueryInterface {
-public:
-    explicit MetalTimerQueryFence(MetalContext& context) : mContext(context) {}
-
-    void beginTimeElapsedQuery(MetalTimerQuery* query) override;
-    void endTimeElapsedQuery(MetalTimerQuery* query) override;
-    bool getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) override;
+    void beginTimeElapsedQuery(MetalTimerQuery* query);
+    void endTimeElapsedQuery(MetalTimerQuery* query);
+    bool getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime);
 
 private:
     MetalContext& mContext;
-};
-
-class TimerQueryNoop : public MetalTimerQueryInterface {
-public:
-    void beginTimeElapsedQuery(MetalTimerQuery* query) override {}
-    void endTimeElapsedQuery(MetalTimerQuery* query) override {}
-    bool getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) override;
 };
 
 } // namespace backend

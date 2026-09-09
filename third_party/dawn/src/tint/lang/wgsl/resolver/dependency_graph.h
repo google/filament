@@ -29,7 +29,6 @@
 #define SRC_TINT_LANG_WGSL_RESOLVER_DEPENDENCY_GRAPH_H_
 
 #include <string>
-#include <vector>
 
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/ast/module.h"
@@ -50,6 +49,7 @@ namespace tint::resolver {
 /// - core::AddressSpace
 /// - core::BuiltinType
 /// - core::TexelFormat
+/// - core::Majorness
 class ResolvedIdentifier {
   public:
     /// UnresolvedIdentifier is the variant value used to represent an unresolved identifier
@@ -61,7 +61,7 @@ class ResolvedIdentifier {
     /// Constructor
     /// @param value the resolved identifier value
     template <typename T>
-    ResolvedIdentifier(T value) : value_(value) {}  // NOLINT(runtime/explicit)
+    explicit(false) ResolvedIdentifier(T value) : value_(value) {}
 
     /// @return the UnresolvedIdentifier if the identifier was not resolved
     const UnresolvedIdentifier* Unresolved() const {
@@ -124,22 +124,11 @@ class ResolvedIdentifier {
         return core::TexelFormat::kUndefined;
     }
 
-    /// @return the texture filterable if the ResolvedIdentifier holds type::TextureFilterable,
-    /// otherwise core::TextureFilterable::kUndefined
-    core::TextureFilterable TextureFilterable() const {
-        if (auto n = std::get_if<core::TextureFilterable>(&value_)) {
+    core::Majorness Majorness() const {
+        if (auto n = std::get_if<core::Majorness>(&value_)) {
             return *n;
         }
-        return core::TextureFilterable::kUndefined;
-    }
-
-    /// @return the texture filterable if the ResolvedIdentifier holds type::SamplerFiltering,
-    /// otherwise core::SamplerFiltering::kUndefined
-    core::SamplerFiltering SamplerFiltering() const {
-        if (auto n = std::get_if<core::SamplerFiltering>(&value_)) {
-            return *n;
-        }
-        return core::SamplerFiltering::kUndefined;
+        return core::Majorness::kUndefined;
     }
 
     /// @param value the value to compare the ResolvedIdentifier to
@@ -170,8 +159,7 @@ class ResolvedIdentifier {
                  core::AddressSpace,
                  core::BuiltinType,
                  core::TexelFormat,
-                 core::TextureFilterable,
-                 core::SamplerFiltering>
+                 core::Majorness>
         value_;
 };
 
@@ -198,12 +186,6 @@ struct DependencyGraph {
 
     /// Map of ast::Identifier to a ResolvedIdentifier
     Hashmap<const ast::Identifier*, ResolvedIdentifier, 64> resolved_identifiers;
-
-    /// Map of ast::Variable to a type, function, or variable that is shadowed by
-    /// the variable key. A declaration (X) shadows another (Y) if X and Y use
-    /// the same symbol, and X is declared in a sub-scope of the scope that
-    /// declares Y.
-    Hashmap<const ast::Variable*, const ast::Node*, 16> shadows;
 };
 
 }  // namespace tint::resolver

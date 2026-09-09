@@ -67,6 +67,7 @@ if (tint_build_msl_writer) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/strconv",
       "${tint_src_dir}/utils/symbol",
@@ -87,19 +88,17 @@ if (tint_build_unittests) {
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
         "${tint_src_dir}/lang/core/type",
+        "${tint_src_dir}/lang/msl/writer/common",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
         "${tint_src_dir}/utils/ice",
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/text",
       ]
-
-      if (tint_build_msl_writer) {
-        deps += [ "${tint_src_dir}/lang/msl/writer/common" ]
-      }
     }
   }
 }

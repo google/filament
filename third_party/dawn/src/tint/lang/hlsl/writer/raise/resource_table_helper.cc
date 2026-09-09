@@ -51,6 +51,13 @@ Hashmap<const core::type::Type*, core::ir::Var*, 4> ResourceTableHelper::Generat
     for (auto& type : types) {
         auto* t = core::type::ResourceTypeToType(b.ir.Types(), type);
 
+        // The defaults can include both filterable/unfilterable variants, but they collapse to the
+        // same type in WGSL, so only emit them once.
+        if (res.Contains(t)) {
+            group_offset += 1;
+            continue;
+        }
+
         // The 'handle' type that the printer uses to emit the unbounded array of type 't'.
         auto* binding_type = t;
         auto* handle_ty = b.ir.Types().Get<core::type::ResourceTable>(binding_type);

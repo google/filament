@@ -28,9 +28,11 @@
 #include "gmock/gmock.h"
 #include "src/tint/api/tint.h"
 #include "src/utils/chromium_test_compat/chromium_test_compat.h"
+#include "src/utils/crash_handler.h"
 
 // Entry point for tint unit tests
 int main(int argc, char** argv) {
+    dawn::InstallCrashHandler(argv[0]);
     dawn::SubstituteChromiumArgs(argc, argv);
     testing::InitGoogleMock(&argc, argv);
 

@@ -34,11 +34,13 @@
 #include <type_traits>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/TypeTraits.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Subresource.h"
+#include "src/dawn/common/TypeTraits.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Subresource.h"
+#include "src/utils/assert.h"
+#include "src/utils/heap_array.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native {
 
@@ -228,23 +230,23 @@ class SubresourceStorage {
     const T& DataInline(uint32_t aspectIndex) const;
     const T& Data(uint32_t aspectIndex, uint32_t layer, uint32_t level = 0) const;
 
-    Aspect mAspects;
-    uint8_t mMipLevelCount;
-    uint16_t mArrayLayerCount;
+    Aspect mAspects = Aspect::None;
+    uint8_t mMipLevelCount = 0;
+    uint16_t mArrayLayerCount = 0;
 
     // Invariant: if an aspect is marked compressed, then all it's layers are marked as
     // compressed.
     static constexpr size_t kMaxAspects = 3;
-    std::array<bool, kMaxAspects> mAspectCompressed;
-    std::array<T, kMaxAspects> mInlineAspectData;
+    std::array<bool, kMaxAspects> mAspectCompressed = {};
+    std::array<T, kMaxAspects> mInlineAspectData = {};
 
     // Indexed as mLayerCompressed[aspectIndex * mArrayLayerCount + layer].
-    std::unique_ptr<bool[]> mLayerCompressed;
+    HeapArray<bool> mLayerCompressed;
 
     // Indexed as mData[(aspectIndex * mArrayLayerCount + layer) * mMipLevelCount + level].
     // The data for a compressed aspect is stored in the slot for (aspect, 0, 0). Similarly
     // the data for a compressed layer of aspect if in the slot for (aspect, layer, 0).
-    std::unique_ptr<T[]> mData;
+    HeapArray<T> mData;
 };
 
 template <typename T>
@@ -252,10 +254,9 @@ SubresourceStorage<T>::SubresourceStorage(Aspect aspects,
                                           uint32_t arrayLayerCount,
                                           uint32_t mipLevelCount,
                                           const T& initialValue)
-    : mAspects(aspects), mMipLevelCount(mipLevelCount), mArrayLayerCount(arrayLayerCount) {
-    DAWN_ASSERT(arrayLayerCount <= std::numeric_limits<decltype(mArrayLayerCount)>::max());
-    DAWN_ASSERT(mipLevelCount <= std::numeric_limits<decltype(mMipLevelCount)>::max());
-
+    : mAspects(aspects),
+      mMipLevelCount(checked_cast<uint8_t>(mipLevelCount)),
+      mArrayLayerCount(checked_cast<uint16_t>(arrayLayerCount)) {
     Fill(initialValue);
 }
 
@@ -492,12 +493,12 @@ void SubresourceStorage<T>::DecompressAspect(uint32_t aspectIndex) {
     mAspectCompressed[aspectIndex] = false;
 
     // Extra allocations are only needed when aspects are decompressed. Create them lazily.
-    if (mData == nullptr) {
-        DAWN_ASSERT(mLayerCompressed == nullptr);
+    if (!mData) {
+        DAWN_ASSERT(!mLayerCompressed);
 
         uint32_t aspectCount = GetAspectCount(mAspects);
-        mLayerCompressed = std::make_unique<bool[]>(aspectCount * mArrayLayerCount);
-        mData = std::make_unique<T[]>(aspectCount * mArrayLayerCount * mMipLevelCount);
+        mLayerCompressed = HeapArray<bool>{static_cast<size_t>(aspectCount) * mArrayLayerCount};
+        mData = HeapArray<T>{static_cast<size_t>(aspectCount) * mArrayLayerCount * mMipLevelCount};
 
         for (uint32_t layerIndex = 0; layerIndex < aspectCount * mArrayLayerCount; layerIndex++) {
             mLayerCompressed[layerIndex] = true;

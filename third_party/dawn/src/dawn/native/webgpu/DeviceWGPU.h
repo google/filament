@@ -32,14 +32,14 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/Device.h"
-#include "dawn/native/ToBackend.h"
 #include "dawn/native/WebGPUBackend.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/QueueWGPU.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ToBackend.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/QueueWGPU.h"
 
 namespace dawn::native::webgpu {
 
@@ -60,6 +60,7 @@ class Device final : public DeviceBase, public ObjectWGPU<WGPUDevice> {
     bool CanResolveSubRect() const override;
 
     float GetTimestampPeriodInNS() const override;
+    bool AreTimestampsQuantized() const override;
 
     bool NeedsIndirectGPUValidation() const override;
 

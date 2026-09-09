@@ -39,9 +39,8 @@ namespace tint::spirv::reader {
 /// Assemble a textual SPIR-V module into a SPIR-V binary.
 /// @param spirv_asm the textual SPIR-V assembly
 /// @returns the SPIR-V binary data, or an error string
-inline Result<std::vector<uint32_t>, std::string> Assemble(
-    std::string spirv_asm,
-    spv_target_env spv_version = SPV_ENV_UNIVERSAL_1_0) {
+inline Result<std::vector<uint32_t>> Assemble(std::string spirv_asm,
+                                              spv_target_env spv_version = SPV_ENV_UNIVERSAL_1_0) {
     StringStream err;
     std::vector<uint32_t> binary;
     spvtools::SpirvTools tools(spv_version);
@@ -50,7 +49,7 @@ inline Result<std::vector<uint32_t>, std::string> Assemble(
             err << "SPIR-V assembly failed:" << pos.line << ":" << pos.column << ": " << msg;
         });
     if (!tools.Assemble(spirv_asm, &binary, SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS)) {
-        return err.str();
+        return Failure(err.str());
     }
     return binary;
 }

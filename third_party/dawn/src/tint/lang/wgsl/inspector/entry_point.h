@@ -127,7 +127,7 @@ struct Override {
     };
 
     /// Type of the scalar
-    Type type;
+    Type type = Type::kBool;
 
     /// Does this override have an initializer?
     bool is_initialized = false;
@@ -162,7 +162,7 @@ struct EntryPoint {
     /// The entry point name
     std::string name;
     /// The entry point stage
-    PipelineStage stage;
+    PipelineStage stage = PipelineStage::kVertex;
     /// The workgroup size. If PipelineStage is kCompute and this holds no value, then the workgroup
     /// size is derived from an override-expression. In this situation you first need to run the
     /// SubstituteOverride transform before using the inspector.

@@ -1,0 +1,807 @@
+Name
+
+    ARB_ES2_compatibility
+
+Name Strings
+
+    GL_ARB_ES2_compatibility
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Acorn Pooley, NVIDIA
+    Bruce Merry, ARM
+    Greg Roth, NVIDIA
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 9, 2010.
+    Approved by the Khronos Board of Promoters on July 23, 2010.
+
+Version
+
+    Last Modified Date:         March 12, 2012
+    Revision:                   7
+
+Number
+
+    ARB Extension #95
+
+Dependencies
+
+    Written based on the wording of the OpenGL 4.0 Compatibility
+    Profile (March 11, 2010) specification.
+
+    This extension interacts with ARB_tessellation_shader or OpenGL 4.0.
+
+Overview
+
+    This extension adds support for features of OpenGL ES 2.0 that are
+    missing from OpenGL 3.x. Enabling these features will ease the process
+    of porting applications from OpenGL ES 2.0 to OpenGL.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void ReleaseShaderCompiler(void);
+    void ShaderBinary(sizei count, const uint *shaders,
+                      enum binaryformat, const void *binary, sizei length);
+    void GetShaderPrecisionFormat(enum shadertype,
+                                  enum precisiontype,
+                                  int *range, int *precision);
+
+    void DepthRangef(clampf n, clampf f);
+    void ClearDepthf(clampf d);
+
+New Tokens
+
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        SHADER_COMPILER                                 0x8DFA
+        SHADER_BINARY_FORMATS                           0x8DF8
+        NUM_SHADER_BINARY_FORMATS                       0x8DF9
+        MAX_VERTEX_UNIFORM_VECTORS                      0x8DFB
+        MAX_VARYING_VECTORS                             0x8DFC
+        MAX_FRAGMENT_UNIFORM_VECTORS                    0x8DFD
+        IMPLEMENTATION_COLOR_READ_TYPE                  0x8B9A
+        IMPLEMENTATION_COLOR_READ_FORMAT                0x8B9B
+
+    Accepted by the <type> parameter of VertexAttribPointer:
+
+        FIXED                                           0x140C
+
+    Accepted by the <precisiontype> parameter of
+    GetShaderPrecisionFormat:
+
+        LOW_FLOAT                                       0x8DF0
+        MEDIUM_FLOAT                                    0x8DF1
+        HIGH_FLOAT                                      0x8DF2
+        LOW_INT                                         0x8DF3
+        MEDIUM_INT                                      0x8DF4
+        HIGH_INT                                        0x8DF5
+
+    Accepted by the <format> parameter of most commands taking sized
+    internal formats:
+
+        RGB565                                           0x8D62
+
+Additions to Chapter 2 of the OpenGL 4.0 Specification (OpenGL Operation)
+
+    Add a new Section 2.1.5 (Fixed-Point Computation) and renumber later
+    sections:
+
+    Fixed-Point Computation
+
+    Vertex attributes may be specified using a 32-bit two's-complement signed
+    representation with 16 bits to the right of the binary point (fraction
+    bits).
+
+
+    Add to Table 2.2, p. 16 (GL data types)
+
+        GL Type |  Minimum  | Description
+                | Bit Width |
+        -----------------------------------
+        fixed   |    32     | Signed 2's complement 16.16 scaled integer
+
+
+    Section 2.8, p.36 (Vertex Arrays)
+
+    Adjust the sentence in the first paragraph on p. 37:
+
+    For type the values BYTE, SHORT, INT, FLOAT, HALF_FLOAT, DOUBLE, and
+    FIXED indicate types byte, short, int, float, half, double, and fixed
+    respectively;...
+
+
+    Modify the descripion of the pseudocode explaining
+    ArrayElementInstanced as follows (p.42):
+
+    ... VertexAttrib[size]N[type]v will be called. When a generic vertex
+    attribute array contains fixed-point data, the generic vertex
+    attribute values are specified using a fixed-point signed 2's
+    complement 16.16 scaled integer format.
+
+    Section 2.8.2, p.43 (Drawing Commands)
+
+    Modify the paragraphs that begin with "with one exception" (page 44):
+
+    with one exception: the current normal coordinate, color, secondary
+    color, color index, edge flag, fog coordinate, texture coordinates,
+    and generic attribute values are not modified by the execution of
+    DrawArraysOneInstance.
+
+    ...
+
+    with one exception: the current normal coordinate, color, secondary
+    color, color index, edge flag, fog coordinate, texture coordinates, and
+    generic attribute values are not modified by the execution of
+    DrawElements.
+
+
+    Table 2.5, p. 39 (Vertex array sizes (values per vertex) and data types.)
+
+    Add "fixed" as a legal type for VertexAttribPointer
+
+
+    Section 2.14, p. 89 (Vertex Shaders)
+
+    Modify the third paragraph:
+
+    To use a vertex shader, shader source code is first loaded into a shader
+    object and then compiled. Alternatively, pre-compiled shader binary code
+    may be directly loaded into a shader object. An OpenGL implementation
+    must support shader compilation (the boolean value SHADER_COMPILER must
+    be TRUE). If the integer value NUM_SHADER_BINARY_FORMATS is greater than
+    zero, then shader binary loading is supported. One or more vertex shader
+    objects are then attached to a program object....
+
+
+    Section 2.14.1, p. 89 (Shader Objects)
+
+    Add before the description of DeleteShader:
+
+    Resources allocated by the shader compiler may be released with the
+    command
+
+        void ReleaseShaderCompiler(void);
+
+    This is a hint from the application, and does not prevent later use
+    of the shader compiler. If shader source is loaded and compiled after
+    ReleaseShaderCompiler has been called, CompileShader must succeed
+    provided there are no errors in the shader source.
+
+    The range and precision for different numeric formats supported by the
+    shader compiler may be determined with the command
+    GetShaderPrecisionFormat (see section 6.1.16)
+
+
+    Add a new Section 2.14.2 (Loading Shader Binaries) and shift other
+    section numbers.
+
+    Precompiled shader binaries may be loaded with the command
+
+        void ShaderBinary(sizei count, const uint *shaders,
+                          enum binaryformat, const void *binary,
+                          sizei length);
+
+    <shaders> contains a list of <count> shader object handles. Each
+    handle refers to a unique shader type (vertex shader or fragment
+    shader). <binary>  points to <length> bytes of pre-compiled binary
+    shader code in client memory, and <binaryformat> denotes the format
+    of the pre-compiled code.
+
+    The binary image will be decoded according to the extension
+    specification defining the specified <binaryformat>. OpenGL defines
+    no specific binary formats, but does provide a mechanism to obtain
+    token values for such formats provided by extensions. The number of
+    shader binary formats supported can be obtained by querying the
+    value of NUM_SHADER_BINARY_FORMATS. The list of specific binary
+    formats supported can be obtained by querying the value of
+    SHADER_BINARY_FORMATS.
+
+    Depending on the types of the shader objects in <shaders>,
+    ShaderBinary will individually load binary vertex or fragment
+    shaders, or load an executable binary that contains an optimized
+    pair of vertex and fragment shaders stored in the same binary.
+
+    An INVALID_ENUM error is generated if <binaryformat> is not a
+    supported format returned in SHADER_BINARY_FORMATS. An INVALID_VALUE
+    error is generated if the data pointed to by binary does not match
+    the specified <binaryformat>. Additional errors corresponding to
+    specific binary formats may be generated as specified by the
+    extensions defining those formats. An INVALID_OPERATION error is
+    generated if more than one of the handles refers to the same type of
+    shader (vertex or fragment shader.)
+
+    If ShaderBinary fails, the old state of shader objects for which the
+    binary was being loaded will not be restored. Note that if shader
+    binary interfaces are supported, then an OpenGL implementation may
+    require that an optimized pair of vertex and fragment shader binaries
+    that were compiled together be specified to LinkProgram. Not
+    specifying an optimized pair may cause LinkProgram to fail.
+
+    Section 2.14.4, p. 97 (Uniform Variables)
+
+    Add after the definition of MAX_VERTEX_UNIFORM_COMPONENTS:
+
+    The implementation-dependent constant MAX_VERTEX_UNIFORM_VECTORS has
+    a value equal to the value of MAX_VERTEX_UNIFORM_COMPONENTS divided
+    by four.
+
+
+    Section 2.14.7, p. 118 (Varying Variables)
+
+    Add after the definition of MAX_VARYING_COMPONENTS:
+
+    The implementation-dependent constant MAX_VARYING_VECTORS has a
+    value equal to the value of MAX_VARYING_COMPONENTS divided by four.
+
+
+    Section 2.16.1, p. 164 (Controlling the Viewport)
+
+    Change the second paragraph:
+
+    The factor and offset applied to zd encoded by n and f are set using
+
+        void DepthRange(clampd n, clampd f);
+        void DepthRangef(clampf n, clampf f);
+
+    ...
+
+Additions to Chapter 3 of the OpenGL 4.0 Specification (Rasterization)
+
+    Section 3.9.3 (Texture Image Specification)
+
+    Add to the list of required texture and renderbuffer color formats on
+    page 262, on the same line as R11F_G11F_B10F:
+
+    - RGB565
+
+    Add to Table 3.17 (Correspondance of sized ...) on page 265, following
+    the row for format RGB5:
+    
+    Sized Internal Format  Base Internal Format  R bits  G bits  B bits  A bits  Shared bits
+    ---------------------  --------------------  ------  ------  ------  ------  -----------
+    RGB565                 RGB                    5      6       5
+
+
+    Section 3.12.1, p. 323 (Shader Variables)
+
+    Add after the definition of MAX_FRAGMENT_UNIFORM_COMPONENTS:
+
+    The implementation-dependent constant MAX_FRAGMENT_UNIFORM_VECTORS
+    has a value equal to the value of MAX_FRAGMENT_UNIFORM_COMPONENTS
+    divided by four.
+
+
+Additions to Chapter 4 of the OpenGL 4.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    Section 4.2.1, p. 352 (Selecting a Buffer for Writing)
+
+    Extend this paragraph:
+
+    Indicating a buffer or buffers using DrawBuffer or DrawBuffers causes
+    subsequent pixel color value writes to affect the indicated buffers. If
+    the GL is bound to a framebuffer object and a draw buffer selects an
+    attachment that has no image attached, then that fragment color is not
+    written to any buffer.
+
+
+    Section 4.2.3, p. 358 (Clearing the Buffers)
+
+    Change the third paragraph
+
+    The commands
+
+        void ClearDepth(clampd d);
+        void ClearDepthf(clampf d);
+
+    set the depth value used when clearing the depth buffer.
+
+
+    Section 4.3.2, p. 363 (Reading Pixels)
+
+    Add after the description of ReadPixels:
+
+    If the current read buffer is neither floating point nor integer,
+    calling GetIntegerv with the symbolic constants
+    IMPLEMENTATION_COLOR_READ_FORMAT and IMPLEMENTATION_COLOR_READ_TYPE will
+    return RGBA and UNSIGNED_BYTE respectively; otherwise it will generate
+    an INVALID_OPERATION error.
+
+    Extend this sentence:
+
+    ReadPixels generates an INVALID_OPERATION error if it attempts to
+    select a color buffer while READ_BUFFER is NONE or if the GL is
+    using a framebuffer object (i.e. READ_FRAMEBUFFER_BINDING is
+    non-zero) and the read buffer selects an attachment that has no
+    image attached.
+
+
+    Section 4.4.4, p. 390 (Framebuffer Completeness)
+
+    Remove all references to draw/read buffers affecting completeness. In
+    particular, delete:
+
+      - The value of FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE must not be NONE
+        for any color attachment point(s) named by DRAW_BUFFERi.
+
+            { FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER }
+
+      - If READ_BUFFER is not NONE, then the value of
+        FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE must not be NONE for the
+        color attachment point named by READ_BUFFER.
+
+            { FRAMEBUFFER_INCOMPLETE_READ_BUFFER }
+
+      - Changing the read buffer or one of the draw buffers.
+
+
+Additions to Chapter 5 of the OpenGL 4.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 4.0 Specification (State and
+State Requests)
+
+    Section 6.1.18 (Shader and Program Queries)
+
+    Add after the description of GetShaderSource:
+
+    The command
+
+        void GetShaderPrecisionFormat(enum shadertype,
+                                      enum precisiontype,
+                                      int *range, int *precision);
+
+    returns the range and precision for different numeric formats
+    supported by the shader compiler. <shadertype> must be VERTEX_SHADER
+    or FRAGMENT_SHADER. <precisiontype> must be one of LOW_FLOAT,
+    MEDIUM_FLOAT, HIGH_FLOAT, LOW_INT, MEDIUM_INT or HIGH_INT. <range>
+    points to an array of two integers in which encodings of the
+    format's numeric range are returned. If min and max are the smallest
+    and largest values representable in the format, then the values
+    returned are defined to be
+
+        <range>[0] = floor(log2(|min|))
+        <range>[1] = floor(log2(|max|))
+
+    <precision> points to an integer in which the log2 value of the
+    number of bits of precision of the format is returned. If the
+    smallest representable value greater than 1 is 1 + <eps>, then
+    *<precision> will contain floor(-log2(eps)), and every value in the
+    range
+
+        [-2^<range>[0], 2^<range>[1]]
+
+    can be represented to at least one part in 2^*<precision>. For
+    example, an IEEE single-precision floating-point format would return
+    <range>[0] = 127, <range>[1] = 127, and *<precision> = 23, while a
+    32-bit two's-complement integer format would return <range>[0] = 31,
+    <range>[1] = 30, and *<precision> = 0.
+
+    The minimum required precision and range for formats corresponding
+    to the different values of <precisiontype> are described in section
+    4.5 of the OpenGL Shading Language specification.
+
+
+Additions to the OpenGL Shading Language Specification, version 4.00.8
+
+    Section 3.3, p. 8 (Preprocessor)
+
+    ...Version 1.10 of the language does not require shaders to include this
+    directive, and shaders that do not include a #version directive will be
+    treated as targeting version 1.10. Shaders that specify #version 100 will
+    be treated as targeting version 1.00 of the OpenGL ES Shading Language,
+    which is a strict subset of version 1.50.
+
+
+    Section 7.3, p. 90 (Built-In Constants)
+
+    Add the following constants:
+
+    const int gl_MaxVertexUniformVectors = 256;
+    const int gl_MaxFragmentUniformVectors = 256;
+    const int gl_MaxVaryingVectors = 15;
+
+
+    Add a new Section X.Y (Counting of Varyings and Uniforms)
+
+    GLSL ES 1.00 specifies the storage available for varying variables in
+    terms of an array of 4-vectors. Similarly for uniform variables. The
+    assumption is that variables will be packed into these arrays without
+    wasting space. This places significant burden on implementations since
+    optimal packing is computationally intensive. Implementations may have
+    more internal resources than exposed to the application and so avoid the
+    need to perform packing but this is also considered an expensive
+    solution.
+
+    ES 2.0 therefore relaxes the requirements for packing by specifying a
+    simpler algorithm that may be used. This algorithm specifies a minimum
+    requirement for when a set of variables must be supported by an
+    implementation. The implementation is allowed to support more than the
+    minimum and so may use a more efficient algorithm and/or may support more
+    registers than the virtual target machine.
+
+    In all cases, failing resource allocation for variables must result in an
+    error.
+
+    The resource allocation of variables must succeed for all cases where the
+    following packing algorithm succeeds:
+
+    - The target architecture consists of a grid of registers,
+      gl_MaxVaryingVectors rows by 4 columns for varying variables and
+      gl_Max{Vertex,Fragment}UniformVectors rows by 4 columns for uniform
+      variables. Each register can contain a float value.
+
+    - Variables are packed into the registers one at a time so that they each
+      occupy a contiguous subrectangle. No splitting of variables is
+      permitted.
+
+    - The orientation of variables is fixed. Vectors always occupy registers
+      in a single row. Elements of an array must be in different rows. E.g.
+      vec4 will always occupy one row; float[8] will occupy one column. Since
+      it is not permitted to split a variable, large arrays e.g.. for
+      varyings, float[17] will always fail with this algorithm.
+
+    - Variables consume only the minimum space required with the exception
+      that mat2 occupies 2 complete rows. This is to allow implementations
+      more flexibility in how variables are stored.
+
+    - Arrays of size N are assumed to take N times the size of the base type.
+
+    - Variables are packed in the following order:
+
+      1. Arrays of mat4 and mat4
+      2. Arrays of mat2 and mat2 (since they occupy full rows)
+      3. Arrays of vec4 and vec4
+      4. Arrays of mat3 and mat3
+      5. Arrays of vec3 and vec3
+      6. Arrays of vec2 and vec2
+      7. Arrays of float and float
+
+    - For each of the above types, the arrays are processed in order of size,
+      largest first. Arrays of size 1 and the base type are considered
+      equivalent. In the case of varyings, the first type to be packed
+      (successfully) is mat4[2] followed by mat4, mat2[2], mat2, vec4[8],
+      vec4[7],...vec4[1], vec4, mat3[2], mat3 and so on. The last variables
+      to be packed will be float (and float[1]).
+
+    - For 2,3 and 4 component variables packing is started using the 1st
+      column of the 1st row. Variables are then allocated to successive rows,
+      aligning them to the 1st column.
+
+    - For 2 component variables, when there are no spare rows, the strategy
+      is switched to using the highest numbered row and the lowest numbered
+      column where the variable will fit. (In practice, this means they will
+      be aligned to the x or z component.) Packing of any further 3 or 4
+      component variables will fail at this point.
+
+    - 1 component variables (i.e. floats and arrays of floats) have their own
+      packing rule. They are packed in order of size, largest first. Each
+      variable is placed in the column that leaves the least amount of space
+      in the column and aligned to the lowest available rows within that
+      column. During this phase of packing, space will be available in up to
+      4 columns. The space within each column is always contiguous.
+
+    - If at any time the packing of a variable fails, the compiler or linker
+      must report an error.
+
+    Example: pack the following types, if gl_MaxVaryingVectors were equal to
+    eight:
+
+        varying vec4 a;         // top left
+        varying mat3 b;         // align to left, lowest numbered rows
+        varying vec2 c[3];      // align to left, lowest numbered rows
+        varying vec2 d[2];      // Cannot align to left so align to z column,
+                                // highest numbered rows
+        varying vec2 e;         // Align to left, lowest numbered rows.
+        varying float f[3]      // Column with minimum space
+        varying float g[2];     // Column with minimum space (choice of 2,
+                                // either one can be used)
+        varying float h;        // Column with minimum space
+
+    In this example, the varyings happen to be listed in the order in which
+    they are packed. Packing is independent of the order of declaration.
+
+          x y z w
+        0 a a a a
+        1 b b b f
+        2 b b b f
+        3 b b b f
+        4 c c g h
+        5 c c g
+        6 c c d d
+        7 e e d d
+
+    Some varyings e.g. mat4[8] will be too large to fit. These always fail
+    with this algorithm.
+
+    If referenced in the fragment shader (after preprocessing), the built-in
+    special variables (gl_FragCoord, gl_FrontFacing and gl_PointCoord) are
+    included when calculating the storage requirements of varyings.
+
+    Only varyings statically used in both shaders are counted.
+
+    When calculating the number of uniform variables used, any literal
+    constants present in the shader source after preprocessing are included
+    when calculating the storage requirements. Multiple instances of
+    identical constants should count multiple times.
+
+    Part of the storage may be reserved by an implementation for its own use
+    e.g. for computation of transcendental functions. This reduces the number
+    of uniforms available to the shader. The size of this reduction is
+    undefined but should be minimized.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    ShaderBinary generates an INVALID_ENUM error if <binaryformat> is
+    not a supported format returned in SHADER_BINARY_FORMATS.
+
+    ShaderBinary generates an INVALID_VALUE error if the data pointed to
+    by binary does not match the specified <binaryformat>.
+
+    ShaderBinary generates an INVALID_OPERATION error if more than one
+    of the handles refers to the same type of shader (vertex or fragment
+    shader.)
+
+    GetIntegerv, GetBooleanv, and GetFloatv generate an INVALID_OPERATION
+    error if <pname> is IMPLEMENTATION_COLOR_READ_TYPE or
+    IMPLEMENTATION_COLOR_READ_FORMAT and the current read buffer is floating
+    point or integer format.
+
+    ReadPixels generates an INVALID_OPERATION error if it attempts to
+    select a color buffer while READ_BUFFER is NONE or if the GL is
+    using a framebuffer object (i.e. READ_FRAMEBUFFER_BINDING is
+    non-zero) and the read buffer selects an attachment that has no
+    image attached.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+                                                       Minimum
+    Get Value                        Type    Get Command  Value  Description                  Sec.
+    -------------------------        ------- ------------ ------- ------------------------   ------
+    SHADER_BINARY_FORMATS             0* x Z GetIntegerv    -    Enumerated shader binary    2.14.2
+                                                                 formats
+    NUM_SHADER_BINARY_FORMATS         Z+     GetIntegerv    0    Number of shader binary     2.14.2
+                                                                 formats
+    SHADER_COMPILER                   B      GetBooleanv    -    Shader compiler supported   2.14
+
+    MAX_VERTEX_UNIFORM_VECTORS        Z+     GetIntegerv   256   Number of vectors for       2.14.4
+                                                                 vertex shader uniform
+                                                                 variables
+    MAX_VARYING_VECTORS               Z+     GetIntegerv   15    Number of vectors for       2.14.6
+                                                                 varying variables
+    MAX_FRAGMENT_UNIFORM_VECTORS      Z+     GetIntegerv   256   Number of vectors for       3.12.1
+                                                                 fragment shader uniform
+                                                                 variables
+    IMPLEMENTATION_COLOR_READ_TYPE    Z+     GetIntegerv    -    Implementation preferred    4.3.2
+                                                                 pixel type
+    IMPLEMENTATION_COLOR_READ_FORMAT  Z+     GetIntegerv    -    Implementation preferred    4.3.2
+                                                                 pixel format
+
+
+Issues
+
+    (1) Should the uniform/varying limits MAX_*_COMPONENTS vs MAX_*_VECTORS
+    constants be allowed to take independent values, or are they tied
+    together?
+
+    UNRESOLVED: Currently MAX_*_VECTORS = MAX_*_COMPONENTS / 4.
+
+    (2) What should IMPLEMENTATION_COLOR_READ_FORMAT and
+    IMPLEMENTATION_COLOR_READ_TYPE do? OpenGL does not have the same
+    limitations of allowed format/type for ReadPixels that ES has.
+
+    RESOLVED: Always return RGBA/UNSIGNED_BYTE.
+
+    This query is in the weird situation where the application needs to know
+    how to compute a size based on the format/type combination that is
+    returned as well as how to interpret the data. So if the GL attempts to
+    return "something useful", it may cause an application to have
+    unpredictable behavior if it doesn't understand the values that are
+    returned. Given the wide variety of format/type conversions supported by
+    GL, this feature is not particularly useful - the app can simply use the
+    format it wants.
+
+    What's really required of this for compatibility is to return a valid
+    format for any legal renderable format in GL ES2.0. RGBA/UNSIGNED_BYTE
+    should be sufficient to accomplish that. Having these queries return
+    an error for float and integer formats discourages their use in the
+    future.
+
+    (3) The current GLSL ES packing rules hardcode 8 and 128 rather than
+    scaling with the limits exposed by the implementation. Should these
+    scale?
+
+    RESOLVED: Yes, replace references to 8 and 128 with gl_Max*Vectors.
+
+    (4) How can we deal with the conflicting behavior of current vertex
+    attribute state being made indeterminate by DrawArrays/DrawElements?
+
+    UNRESOLVED: GL behavior is currently undefined, so make it defined to
+    match ES behavior. Are there any performance concerns with this?
+
+    (5) Should the varying/uniform packing rules apply to double-precision
+    types in GL SM5?
+
+    UNRESOLVED: Yes. Need to insert these into the ordered list of types.
+
+    (6) What should we do about conflicting #version values?
+
+    RESOLVED: The original GLSL 1.00 spec did not include #version, it was
+    added in GLSL 1.10 and the first accepted value was "110". GLSL ES has
+    only one version and it is "100", so there is currently no overlap and
+    ambiguity. So GLSL can be extended to accept "100" and always interpret
+    it to mean "GLSL ES 1.00 functionality".
+
+    Future versions of the shading language specs should be modified to
+    require something in the shader text to indicate which type of GLSL is
+    being used. In GLSL 1.50, the #version command accepts
+
+        #version <number> <profile_opt>
+
+    where <profile_opt> can be either "core" or "compatibility". We could
+    require "es" for GLSL ES shaders and make the profile be required in
+    both GLSL and GLSL ES.
+
+    (7) Are there any existing packing rules that the ES packing rules may
+    conflict with?
+
+    UNRESOLVED: Named uniform blocks have extensive packing rules, but the ES
+    rules only apply to the default uniform block so those aren't in
+    conflict. The only mention of how things may be packed in the default
+    uniform block is that matrices consume no more than 4*min(r,c)
+    components. For both uniforms and varyings, the spec does not explicitly
+    guarantee that if a program is within the limit then linking will
+    succeed, but that guarantee may be reasonably inferred.
+
+    The ES rules guarantee that under certain circumstances linking is
+    guaranteed to succeed. Adopting these rules as *the* minimum guarantee
+    will weaken the desktop rules. However, it is likely that some vec4-
+    centric implementations may not be able to satisfy the inferred desktop
+    guarantee. For example, any time a single variable has more array
+    elements than MAX_*_UNIFORM_COMPONENTS/4 and is dynamically indexed.
+
+    Proposed resolution is to adopt the ES rules as the minimum guarnatee
+    for the default uniform block and for varyings.
+
+    (8) How should we handle draw buffer completeness?
+
+    RESOLVED: Remove draw/readbuffer completeness checks, and treat
+    drawbuffers referring to missing attachments as if they were NONE.
+
+    GL ES does not support MRT and the notions of DrawBuffers and ReadBuffer
+    were removed, including the FRAMEBUFFER_INCOMPLETE_{DRAW,READ}_BUFFER
+    checks. One consequence of this is that a GL ES application can render to
+    a depth-only FBO without calling DrawBuffer, whereas in Desktop GL an
+    application must call DrawBuffer(NONE). To make Desktop GL a superset, we
+    must remove the need to call DrawBuffer(NONE), and the most
+    straightforward way to do that is to remove these completeness checks.
+
+    (9) What divergent behaviors should this spec leave unaltered?
+
+    RESOLVED: There are various differing features that cannot be
+    resolved without breaking backward compatibility with desktop
+    applications.
+
+    * Framebuffer Objects are shared on desktop, but not in ES.
+    * Some textures are incomplete in ES that would be considered
+      complete on desktop.
+    * ES requires different version string formats for API and shading
+      language version queries.
+
+
+    (10) Which changes should be made to both the core and compatibility
+    profiles and which should be restricted to the core profile?
+
+    UNRESOLVED: We should probably decide what needs to go into core and
+    what into compatibility. In the cases that core has removed the
+    features being expanded, this decision is clear. Even where this is
+    not the case, it may make sense to limit certain features to
+    compatibility rather than clutter up core with features only present
+    for ES compatibility.
+
+    Bruce Merry's suggested division:
+
+    Core + compatibility:
+    ReleaseShaderCompiler
+    Relaxation of framebuffer completeness rules
+    Preserving current attributes after Draw*
+
+    Compatibility only:
+    Fixed-point vertex attributes
+    Float versions of DepthRange and ClearDepth
+    Binary shaders
+    #version 100
+    ES2 packing model
+    implementation read color format
+    vector-based resource-limits
+    GetShaderPrecisionFormat
+
+    (11) Are immediate mode vertex attrib calls that take fixed point
+    parameters required?
+
+    RESOLVED: No. The purpose of this extension is limited to
+    facilitating the porting of ES2 applications to the desktop. Adding
+    immediate mode VertexAttrib calls to promote internal consistency
+    with other desktop features is less important.
+
+    (12) Should RGB565 be added to the extension?
+
+    RESOLVED: Yes. The initial version of this extension did not include it,
+    as did OpenGL 4.1, which included functionality from this extension.
+    This was an oversight. RGB565 was added to the required format list in
+    the initial release of the OpenGL 4.2 spec, but it was not added to the
+    table of sized internal color formats. However, RGB565
+    compatibility is important to ES2 compatibility.
+
+    The ARB discussed this situation in February 2012 and agreed to revise
+    the extension spec and OpenGL 4.2 spec to fully support RGB565. While
+    some drivers may not support RGB565, we believe they will add support
+    quickly.
+
+    (13) OpenGL ES 2.0 may have some unavoidable differences from an OpenGL
+    context supporting ES2_compatibility, since this extension can't change
+    default GL state values or prevent behavior defined to work by the GL
+    specification. How do we deal with these differences?
+       
+    RESOLVED: If the application needs a strict OpenGL ES 2.0
+    implementation, it should not attempt to use a desktop GL context
+    with the ES2_compatibility extension supported. Instead, use the
+    {GLX|WGL}_EXT_create_context_es_profile extensions to request an
+    actual OpenGL ES 2.0 context, which will not have these caveats.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------- -----------------------------------------
+    7     03/12/2013  Jon Leech Add issue 13 and copy resolution from
+                                ES3_compatibility spec.
+    6     04/13/2012  Jon Leech Add RGB565 to required texture & renderbuffer
+                                formats and to the table of sized internal
+                                formats (Bug 8530).
+    5     08/04/2010  Jon Leech Add SHADER_BINARY_FORMATS to new tokens
+                                section.
+    4     05/26/2010  Jon Leech Add missing tokens, make language more
+                                consistent with GL core spec in some places,
+                                and reflow paragraphs.
+    3     05/21/2010  groth     limit features to the minimum for portability
+                                purge VertexAttrib*. limit shaderbinary to V&F
+                                adjust page/section numbers and text to 4.0
+    2     05/19/2010  groth     respond to bmerry's feedback
+    1     12/28/2009  jbolz     Internal revisions.

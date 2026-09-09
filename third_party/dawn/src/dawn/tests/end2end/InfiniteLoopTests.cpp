@@ -30,8 +30,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -244,17 +245,17 @@ class ExpectOneNonZero : public detail::Expectation {
 
         std::optional<size_t> whereFound;
         for (size_t i = 0; i < size / sizeof(T); i++) {
-            if (actual[i] == mValue) {
+            if (DAWN_UNSAFE_TODO(actual[i]) == mValue) {
                 if (whereFound.has_value()) {
                     return testing::AssertionFailure()
                            << "Found value " << mValue << " at data[" << whereFound.value()
                            << "] and data[" << i << "]\n";
                 }
                 whereFound = i;
-            } else if (actual[i] != 0) {
+            } else if (DAWN_UNSAFE_TODO(actual[i]) != 0) {
                 return testing::AssertionFailure()
-                       << "Found unexpected value data[" << i << "] = " << actual[i]
-                       << " instead of " << mValue << "\n";
+                       << "Found unexpected value data[" << i
+                       << "] = " << DAWN_UNSAFE_TODO(actual[i]) << " instead of " << mValue << "\n";
             }
         }
         if (!whereFound.has_value()) {

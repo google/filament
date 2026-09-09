@@ -38,6 +38,11 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 class SpirvReader_DecomposeStridedArrayTest : public core::ir::transform::TransformTest {
   protected:
+    void SetUp() override {
+        core::ir::transform::TransformTest::SetUp();
+        mod.properties.Add(core::ir::Property::kAllowNonCoreTypes);
+    }
+
     const spirv::type::ExplicitLayoutArray* Array(const core::type::Type* elem_ty,
                                                   uint32_t count,
                                                   uint32_t stride) {

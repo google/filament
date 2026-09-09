@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/WaitListEvent.h"
+#include "src/dawn/native/WaitListEvent.h"
 
 #include <array>
 
-#include "dawn/common/Ref.h"
+#include "src/dawn/common/Ref.h"
 
 namespace dawn::native {
 

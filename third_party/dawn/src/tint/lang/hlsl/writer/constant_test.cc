@@ -719,7 +719,7 @@ void main() {
 }
 
 TEST_F(HlslWriterTest, ConstantTypeArrayModuleScopeZero) {
-    core::ir::Var* v = b.Var<private_>("v", b.Zero<array<f32, 65536>>());
+    core::ir::Var* v = b.Var<private_>("v", b.Zero<array<f32, 32767>>());
     b.ir.root_block->Append(v);
 
     auto* eb = b.ComputeFunction("main");
@@ -731,7 +731,7 @@ TEST_F(HlslWriterTest, ConstantTypeArrayModuleScopeZero) {
     auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
-static float v[65536] = (float[65536])0;
+static float v[32767] = (float[32767])0;
 [numthreads(1, 1, 1)]
 void main() {
 }

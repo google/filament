@@ -34,13 +34,14 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/Atomic.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/d3d/d3d_platform.h"
-#include "dawn/native/d3d11/Forward.h"
-#include "dawn/native/d3d11/QueueD3D11.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Atomic.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/d3d11/Forward.h"
+#include "src/dawn/native/d3d11/QueueD3D11.h"
+#include "src/utils/heap_array.h"
 
 namespace dawn::native::d3d11 {
 
@@ -181,6 +182,7 @@ class Buffer : public BufferBase {
 
     virtual ComPtr<ID3D11Buffer> GetD3D11MappedBuffer();
 
+    // TODO(https://crbug.com/501491697): Spanify this.
     Atomic<uint8_t*, std::memory_order::relaxed> mMappedData{nullptr};
 
   private:
@@ -191,7 +193,7 @@ class Buffer : public BufferBase {
     void UnmapImpl(BufferState oldState, BufferState newState) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointerImpl() override;
+    Span<std::byte> GetMappedRangeImpl(size_t offset, size_t size) override;
     std::optional<DeviceGuard> UseDeviceGuardForDestroy() override;
 
     MaybeError InitializeToZero(const ScopedCommandRecordingContext* commandContext);
@@ -203,7 +205,7 @@ class Buffer : public BufferBase {
     // Track whether padding bytes have been cleared to zero.
     bool mPaddingCleared = false;
     // Temporary storage for MapAtCreation when the lock cannot be acquired.
-    std::unique_ptr<uint8_t[]> mMapAtCreationData;
+    HeapArray<uint8_t> mMapAtCreationData;
 
     // A buffer can only have one scheduled map request at a time, so we embed the request object
     // here to avoid heap allocations.
@@ -232,10 +234,32 @@ class GPUUsableBuffer final : public Buffer {
     ID3D11Buffer* GetD3D11ConstantBufferForTesting();
     ID3D11Buffer* GetD3D11NonConstantBufferForTesting();
 
-    ResultOrError<ComPtr<ID3D11ShaderResourceView>>
-    UseAsSRV(const ScopedCommandRecordingContext* commandContext, uint64_t offset, uint64_t size);
-    ResultOrError<ComPtr<ID3D11UnorderedAccessView>>
-    UseAsUAV(const ScopedCommandRecordingContext* commandContext, uint64_t offset, uint64_t size);
+    // Runs `fn` with the buffer's (possibly cached) raw SRV/UAV pointer. The pointer is owned by
+    // this Buffer's view cache, which may destroy or replace it later (e.g. on the next SRV/UAV
+    // creation or on DestroyImpl), so `fn` must not keep using the raw pointer once it returns. If
+    // `fn` needs to keep the view alive longer, it should copy the pointer into a ComPtr (which
+    // AddRefs) before returning.
+    template <typename Fn>
+    MaybeError UseAsSRV(const ScopedCommandRecordingContext* commandContext,
+                        uint64_t offset,
+                        uint64_t size,
+                        Fn&& fn) {
+        ID3D11ShaderResourceView* srv;
+        DAWN_TRY_ASSIGN(srv, UseAsSRV(commandContext, offset, size));
+        fn(srv);
+        return {};
+    }
+
+    template <typename Fn>
+    MaybeError UseAsUAV(const ScopedCommandRecordingContext* commandContext,
+                        uint64_t offset,
+                        uint64_t size,
+                        Fn&& fn) {
+        ID3D11UnorderedAccessView* uav;
+        DAWN_TRY_ASSIGN(uav, UseAsUAV(commandContext, offset, size));
+        fn(uav);
+        return {};
+    }
 
     MaybeError PredicatedClear(const ScopedSwapStateCommandRecordingContext* commandContext,
                                ID3D11Predicate* predicate,
@@ -265,7 +289,7 @@ class GPUUsableBuffer final : public Buffer {
                               Buffer* destination,
                               uint64_t destinationOffset) override;
     MaybeError CopyFromD3DInternal(const ScopedCommandRecordingContext* commandContext,
-                                   ID3D11Buffer* srcD3D11Buffer,
+                                   ID3D11Buffer* d3d11SourceBuffer,
                                    uint64_t sourceOffset,
                                    size_t size,
                                    uint64_t destinationOffset) override;
@@ -277,6 +301,11 @@ class GPUUsableBuffer final : public Buffer {
                              bool isInitialWrite) override;
 
     ComPtr<ID3D11Buffer> GetD3D11MappedBuffer() override;
+
+    ResultOrError<ID3D11ShaderResourceView*>
+    UseAsSRV(const ScopedCommandRecordingContext* commandContext, uint64_t offset, uint64_t size);
+    ResultOrError<ID3D11UnorderedAccessView*>
+    UseAsUAV(const ScopedCommandRecordingContext* commandContext, uint64_t offset, uint64_t size);
 
     ResultOrError<ComPtr<ID3D11ShaderResourceView>> CreateD3D11ShaderResourceViewFromD3DBuffer(
         ID3D11Buffer* d3d11Buffer,

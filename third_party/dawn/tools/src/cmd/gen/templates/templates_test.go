@@ -2,7 +2,6 @@ package templates
 
 import (
 	"context"
-	"flag"
 	"math/rand"
 	"path/filepath"
 	"testing"
@@ -62,9 +61,13 @@ func TestCmd_Run_FileDiscovery(t *testing.T) {
 	tmplPath2 := filepath.Join(realDawnRoot, "test", "tint", "subdir", "test2.tmpl")
 	createTemplateFile(t, osw, tmplPath2, `Test Template 2`)
 
-	c := &Cmd{}
+	c := &CmdSources{}
 	err := c.Run(ctx, cfg)
-	require.NoError(t, err, "Run failed")
+	require.NoError(t, err, "Run sources failed")
+
+	c2 := &CmdTests{}
+	err = c2.Run(ctx, cfg)
+	require.NoError(t, err, "Run tests failed")
 
 	// Verify output 1
 	outPath := filepath.Join(realDawnRoot, "src", "tint", "test")
@@ -77,37 +80,6 @@ func TestCmd_Run_FileDiscovery(t *testing.T) {
 	content2, err := osw.ReadFile(outPath2)
 	require.NoError(t, err, "Output file 2 not found")
 	require.Contains(t, string(content2), "Test Template 2", "Output content 2 mismatch")
-}
-
-func TestCmd_Run_ExplicitFiles(t *testing.T) {
-	osw, cfg, realDawnRoot := setupRunFileTest(t)
-	ctx := context.Background()
-
-	tmplPath := filepath.Join(realDawnRoot, "src", "tint", "explicit.tmpl")
-	createTemplateFile(t, osw, tmplPath, `Explicit Template`)
-
-	// Inject args since the existing FlagSet's args cannot be easily modified.
-	// NOTE: This means that this test is incompatible with t.Parallel() since it
-	// is modifying global state.
-	args := []string{tmplPath}
-	origCommandLine := flag.CommandLine
-	defer func() { flag.CommandLine = origCommandLine }()
-
-	flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
-	err := flag.CommandLine.Parse(args)
-	require.NoError(t, err, "Failed to parse mock flags")
-
-	c := &Cmd{}
-	err = c.Run(ctx, cfg)
-	require.NoError(t, err, "Run failed")
-
-	// Verify output
-	outPath := filepath.Join(realDawnRoot, "src", "tint", "explicit")
-	content, err := osw.ReadFile(outPath)
-	require.NoError(t, err, "Output file not found")
-
-	// Check content
-	require.Contains(t, string(content), "Explicit Template", "Output content mismatch")
 }
 
 func TestCmd_Run_StaleCheck(t *testing.T) {
@@ -123,7 +95,7 @@ func TestCmd_Run_StaleCheck(t *testing.T) {
 	require.NoError(t, err, "Failed to write existing output file")
 
 	cfg.Flags.CheckStale = true
-	c := &Cmd{}
+	c := &CmdSources{}
 	err = c.Run(ctx, cfg)
 
 	require.Error(t, err, "Run should have returned an error for stale files")
@@ -141,7 +113,7 @@ func TestCmd_Run_StaleCheck_Clean(t *testing.T) {
 	createTemplateFile(t, osw, tmplPath, `Clean Template`)
 
 	// First run: generate the file
-	c := &Cmd{}
+	c := &CmdSources{}
 	err := c.Run(ctx, cfg)
 	require.NoError(t, err, "First run failed")
 
@@ -163,7 +135,7 @@ func TestCmd_Run_InvalidTemplateSyntax(t *testing.T) {
 	tmplPath := filepath.Join(realDawnRoot, "src", "tint", "invalid.tmpl")
 	createTemplateFile(t, osw, tmplPath, `{{ invalid syntax }}`)
 
-	c := &Cmd{}
+	c := &CmdSources{}
 	err := c.Run(ctx, cfg)
 	require.Error(t, err, "Run should fail with invalid template syntax")
 	require.ErrorContains(t, err, "function \"invalid\" not defined")
@@ -177,36 +149,11 @@ func TestCmd_Run_MissingIntrinsicDef(t *testing.T) {
 	// The template must try to use the intrinsics to trigger the load.
 	createTemplateFile(t, osw, tmplPath, `{{ (LoadIntrinsics "src/tint/missing.def").Sem }}`)
 
-	c := &Cmd{}
+	c := &CmdSources{}
 	err := c.Run(ctx, cfg)
 	require.Error(t, err, "Run should fail with missing intrinsic definition")
 	// The error comes from ReadFile failing in intrinsicCache.Sem()
 	require.ErrorContains(t, err, "does not exist")
-}
-
-func TestCmd_Run_TemplateOutsideProjectRoot(t *testing.T) {
-	osw, cfg, realDawnRoot := setupRunFileTest(t)
-	ctx := context.Background()
-
-	// Create a file outside the project root
-	outsidePath := filepath.Join(filepath.Dir(realDawnRoot), "outside_project.tmpl")
-	createTemplateFile(t, osw, outsidePath, `Outside Template`)
-
-	// Inject args since the existing FlagSet's args cannot be easily modified.
-	// NOTE: This means that this test is incompatible with t.Parallel() since it
-	// is modifying global state.
-	args := []string{outsidePath}
-	origCommandLine := flag.CommandLine
-	defer func() { flag.CommandLine = origCommandLine }()
-
-	flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
-	err := flag.CommandLine.Parse(args)
-	require.NoError(t, err, "Failed to parse mock flags")
-
-	c := &Cmd{}
-	err = c.Run(ctx, cfg)
-	require.Error(t, err, "Run should fail with template outside project root")
-	require.ErrorContains(t, err, "is not under project root")
 }
 
 // spyFS is a wrapper around FilesystemReader that records calls to ReadFile.

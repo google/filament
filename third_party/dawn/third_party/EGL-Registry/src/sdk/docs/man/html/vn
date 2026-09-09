@@ -1,0 +1,221 @@
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv=Content-Type content="text/html; charset=us-ascii"><meta name=Generator content="Microsoft Word 12 (filtered medium)"><!--[if !mso]><style>v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style><![endif]--><style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;}
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Tahoma;
+	panose-1:2 11 6 4 3 5 4 4 2 4;}
+@font-face
+	{font-family:"\@MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;}
+@font-face
+	{font-family:Consolas;
+	panose-1:2 11 6 9 2 2 4 3 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0cm;
+	margin-bottom:.0001pt;
+	font-size:11.0pt;
+	font-family:"Calibri","sans-serif";}
+h1
+	{mso-style-priority:9;
+	mso-style-link:"Heading 1 Char";
+	margin:0cm;
+	margin-bottom:.0001pt;
+	text-indent:0cm;
+	page-break-after:avoid;
+	mso-list:l0 level1 lfo2;
+	font-size:12.0pt;
+	font-family:"Tahoma","sans-serif";
+	color:black;}
+h2
+	{mso-style-priority:9;
+	mso-style-link:"Heading 2 Char";
+	margin:0cm;
+	margin-bottom:.0001pt;
+	text-indent:0cm;
+	page-break-after:avoid;
+	mso-list:l0 level2 lfo2;
+	font-size:10.0pt;
+	font-family:"Tahoma","sans-serif";}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:blue;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-priority:99;
+	color:purple;
+	text-decoration:underline;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-priority:99;
+	mso-style-link:"Plain Text Char";
+	margin:0cm;
+	margin-bottom:.0001pt;
+	font-size:10.5pt;
+	font-family:Consolas;}
+p.MsoListParagraph, li.MsoListParagraph, div.MsoListParagraph
+	{mso-style-priority:34;
+	margin-top:0cm;
+	margin-right:0cm;
+	margin-bottom:0cm;
+	margin-left:36.0pt;
+	margin-bottom:.0001pt;
+	font-size:11.0pt;
+	font-family:"Calibri","sans-serif";}
+span.Heading1Char
+	{mso-style-name:"Heading 1 Char";
+	mso-style-priority:9;
+	mso-style-link:"Heading 1";
+	font-family:"Tahoma","sans-serif";
+	color:black;
+	font-weight:bold;}
+span.Heading2Char
+	{mso-style-name:"Heading 2 Char";
+	mso-style-priority:9;
+	mso-style-link:"Heading 2";
+	font-family:"Tahoma","sans-serif";
+	font-weight:bold;}
+span.PlainTextChar
+	{mso-style-name:"Plain Text Char";
+	mso-style-priority:99;
+	mso-style-link:"Plain Text";
+	font-family:Consolas;}
+span.EmailStyle22
+	{mso-style-type:personal-compose;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle23
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle24
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle25
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle26
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle27
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle28
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+span.EmailStyle29
+	{mso-style-type:personal;
+	font-family:"Calibri","sans-serif";
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:72.0pt 72.0pt 72.0pt 72.0pt;}
+div.WordSection1
+	{page:WordSection1;}
+/* List Definitions */
+@list l0
+	{mso-list-id:1;
+	mso-list-template-ids:699138934;}
+@list l0:level1
+	{mso-level-number-format:none;
+	mso-level-style-link:"Heading 1";
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level2
+	{mso-level-number-format:none;
+	mso-level-style-link:"Heading 2";
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level3
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level4
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level5
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level6
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level7
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level8
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+@list l0:level9
+	{mso-level-number-format:none;
+	mso-level-suffix:none;
+	mso-level-text:"";
+	mso-level-tab-stop:0cm;
+	mso-level-number-position:left;
+	margin-left:0cm;
+	text-indent:0cm;}
+ol
+	{margin-bottom:0cm;}
+ul
+	{margin-bottom:0cm;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext="edit" spidmax="1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext="edit">
+<o:idmap v:ext="edit" data="1" />
+</o:shapelayout></xml><![endif]--></head><body lang=EN-GB link=blue vlink=purple><div class=WordSection1><p class=MsoNormal style='page-break-after:avoid'><b><span lang=EN-US style='font-size:16.0pt;color:black'>Call-in Details<o:p></o:p></span></b></p><p class=MsoPlainText style='text-align:justify'><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'>U.S. Toll-free: +1 (866) 365-4406<o:p></o:p></span></p><p class=MsoPlainText style='text-align:justify'><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'>U.S. Toll:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;+1 (303) 248-9655<o:p></o:p></span></p><p class=MsoPlainText style='text-align:justify'><b><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'>Access code: &nbsp;&nbsp;8040316#<o:p></o:p></span></b></p><p class=MsoPlainText style='text-align:justify'><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'><a href="https://conf.cfer.com/?sp_id=154&amp;comp_id=345368&amp;an=3032489655&amp;ac=8040316&amp;startview=GOS&amp;login=true">List of international dial-in numbers</a><o:p></o:p></span></p><p class=MsoPlainText style='text-align:justify'><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'><o:p>&nbsp;</o:p></span></p><p class=MsoPlainText><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'>Please let me know if you have any additional agenda items, intend to discuss a dormant item or wish to prioritise a topic.<o:p></o:p></span></p><p class=MsoPlainText><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'><o:p>&nbsp;</o:p></span></p><p class=MsoPlainText><span lang=EN-US style='font-size:11.0pt;font-family:"Calibri","sans-serif"'>Alon<o:p></o:p></span></p><div class=MsoNormal align=center style='text-align:center'><b><span lang=EN-US><hr size=2 width="100%" align=center></span></b></div><p class=MsoNormal style='margin-top:6.0pt;page-break-after:avoid'><b><span lang=EN-US style='font-size:16.0pt;color:black'>Agenda<o:p></o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt;page-break-after:avoid'><b><span lang=EN-US style='font-size:12.0pt;color:black'>Corrections to previous minutes<o:p></o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt'><span lang=EN-US>- Minutes of EGL call 16th July 2014<o:p></o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><span lang=EN-US><o:p>&nbsp;</o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US style='font-size:12.0pt'>Future direction of EGL<o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US style='color:black'><a href="https://cvs.khronos.org/wiki/index.php/EGL/EGLNextGoals">Wiki page for EGL future direction goal discussion</a><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>Alon &#8211; big news from GL Common F2F in Bellevue was the contribution of XGL from AMD and the group agreeing to use it as starting point for GL Common<br>Alon &#8211; I raised at the meeting and on the today&#8217;s GL Common call how XGL deals with platform integration and interoperation with other Khronos APIs, open issue<br>Alon &#8211; need to decide how to take things forwards, identify any problems such as IP zone issue if that's a problem, how we should structure discussions given GL progression.<br>...<br>Alon &#8211; If we could make sure that in two weeks time we have that, possibly have some sort of straw poll to see if we have agreement on how to proceed<br>Alon &#8211; If you have any suggestions on what I should be doing as chair at this point, always open to them<br><b>[ACTION]<i> All &#8211; poll across your company to gauge position on direction, what problem would need EGL-like API to solve, initial proposals for COB PDT 29th July 2014</i></b><i><br></i>[ACTION]<i> All &#8211; help engage GL Common group in discussion, understanding of your company&#8217;s current thoughts here<br></i>[ACTION]<i> Alon &#8211; put out email to GL Common group with information on previous EGL2 discussions, background information<br></i>[ACTION]<i> All &#8211; add proposed goals and input to wiki<br></i>[ACTION] <i>Chad &#8211; vtable proposal &#8211; will draft up what an API would look like<br></i>[ACTION]<i> </i></span><i>Jon &#8211; put together matrix of functionality</i><span lang=EN-US><o:p></o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US style='font-size:12.0pt'><o:p>&nbsp;</o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US style='font-size:12.0pt'>New proposals<o:p></o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=11550">Bug 11550</a> &#8211; Partial update extension</span></b><span lang=EN-US><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>Latest spec draft &#8211; <a href="https://cvs.khronos.org/svn/repos/registry/trunk/egl/extensions/drafts/EGL_KHR_partial_update.txt">EGL_KHR_partial_update draft spec</a><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'>Ray &#8211; Sent an email a week ago explaining a problem &#8211; passing damaged regions through to a compositor isn't possible with the API as it is at the moment<br>Alon &#8211; Sent on the 6th July at 11:33 UK time, for those who don't have it to hand<br><span lang=EN-US>[ACTION]<i> All &#8211; consider Ray&#8217;s solution to resolving compositor information issue, Antoine&#8217;s suggestions<br></i>[ACTION]<i> Jesse &#8211; ping Antoine to get his opinion</i></span><o:p></o:p></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US>- </span><a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=12459">Bug&nbsp;12459</a>&nbsp;&#8211;&nbsp;Create EGL_KHR_context_flush_control</b><b><span lang=EN-US><o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt;page-break-after:avoid'><span lang=EN-US>[ACTION] <i>Jon &#8211; open bug</i><b><span style='color:black'><o:p></o:p></span></b></span></p><p class=MsoNormal style='margin-top:6.0pt;page-break-after:avoid'><b><span lang=EN-US style='color:black'>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=10232">Bug 10232</a> &#8211; Add Device Enumeration API to EGL 1.x<o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'>James &#8211; Updated specs, need to publish them at the end of the month. Last call for feedback if you have any<br><span lang=EN-US>[ACTION] <i>All &#8211; last change for feedback on EXT device extensions before they&#8217;re published</i><o:p></o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=10943">Bug 10943</a> &#8211; EGL_KHR_debug debugging API<o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>[ACTION] <i>All &#8211; review options and comment on bug</i><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:0cm;margin-bottom:.0001pt;text-indent:0cm;page-break-after:avoid;mso-list:l0 level1 lfo2'><b><span lang=EN-US style='color:black'>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=10091">Bug 10091</a> &#8211; EGL_KHR_no_config creating surfaces &amp; contexts without configs<o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt;text-indent:0cm;page-break-after:avoid;mso-list:l0 level1 lfo2'><span lang=EN-US style='color:black'><a href="https://cvs.khronos.org/svn/repos/registry/trunk/egl/extensions/drafts/EGL_KHR_no_config.txt">EGL_KHR_no_config draft spec</a>, </span><span style='color:black'><a href="https://cvs.khronos.org/svn/repos/registry/trunk/egl/extensions/drafts/EGL_KHR_rgba_no_config.txt">EGL_KHR_rgba_no_config draft spec</a><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt;text-indent:0cm;page-break-after:avoid;mso-list:l0 level1 lfo2'><span lang=EN-US>[ACTION]<i> All &#8211; consider fuzzy vs exact match options</i><b><span style='color:black'><o:p></o:p></span></b></span></p><p class=MsoNormal style='margin-top:6.0pt'><b>- </b><a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=12127"><b>Bug&nbsp;12127</b></a><b>&nbsp;&#8211;&nbsp;eglSwapBuffers completion notifications<o:p></o:p></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>[ACTION]<i> Chad &#8211; enumerate different types of state</i><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:0cm;margin-bottom:.0001pt;text-indent:0cm;page-break-after:avoid;mso-list:l0 level1 lfo2'><b><span style='color:black'>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=12230">Bug&nbsp;12230</a>&nbsp;&#8211; Timestamps in EGL and client APIs</span></b><b><span lang=EN-US style='color:black'><o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt;text-indent:0cm;page-break-after:avoid;mso-list:l0 level1 lfo2'><span lang=EN-US>Alon &#8211; KCam WG notified about this, no feedback yet<b><span style='color:black'><o:p></o:p></span></b></span></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US style='font-size:12.0pt'><o:p>&nbsp;</o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US style='font-size:12.0pt'>Issues<o:p></o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt'><b>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=12456">Bug&nbsp;12456</a>&nbsp;-&nbsp;eglMakeCurrent flush behaviour when same context and surfaces are made current<o:p></o:p></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'>New bug<o:p></o:p></p><p class=MsoNormal style='margin-top:6.0pt'><b>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=12457">Bug&nbsp;12457</a>&nbsp;-&nbsp;Trivial wording updates to EGL_KHR_gl_colorspace<o:p></o:p></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'>New bug<o:p></o:p></p><p class=MsoNormal style='margin-top:6.0pt'><b>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=12072">Bug&nbsp;12072</a>&nbsp;&#8211;&nbsp;No way to completely release an EGLDisplay</b><span lang=EN-US><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>Alon &#8211; suggest we do a straw poll on next call, see if conclusion between the 3 options<br>James &#8211; sounds good to me<br>[ACTION] <i>All &#8211; review options and comment<br></i>[ACTION] <i>Alon &#8211; post explanation of terminate refcount issue</i><o:p></o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><o:p>&nbsp;</o:p></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US style='font-size:12.0pt'>Dormant topics</span></b><span lang=EN-US style='font-size:12.0pt'> (please indicate before next call if you&#8217;d like to discuss these)<o:p></o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US>- </span><a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=10159" title="ASSIGNED - Remove FOURCC dependency and define VX specific formats">Bug 10159</a> &#8211; </b><b><span lang=EN-US>Khronos color format proposal<o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'>Andrew &#8211; Not accepted into VX 1.0, updates on bug, no longer a rush, hoping that something will go in in 1.1<span lang=EN-US><br>[ACTION]<i> </i></span><i><span lang=EN-US style='font-size:10.0pt;font-family:"Tahoma","sans-serif"'>All &#8211; continue providing feedback on bug</span></i><span lang=EN-US><o:p></o:p></span></p><p class=MsoNormal style='margin-top:6.0pt'><span lang=EN-US>- <b><a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=11606">Bug 11606</a> &#8211; GPU Resource Monitoring proposal<o:p></o:p></b></span></p><p class=MsoNormal style='margin-top:6.0pt;text-indent:36.0pt'><span lang=EN-US><a href="https://www.khronos.org/members/login/groups/EGL/F2F%20Materials/Phoenix%20Jan14/GPU%20Resource%20Monitoring%20-%20Phoenix%20F2F%20-%20Jan%202014.pdf">GPU Resource Monitoring slides from Phoenix F2F</a><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>[ACTION]<i> </i></span><i>All &#8211; request feedback, especially from SOC teams<o:p></o:p></i></p><p class=MsoNormal style='margin-top:6.0pt;page-break-after:avoid'><b><span lang=EN-US>- <a href="https://cvs.khronos.org/bugzilla/show_bug.cgi?id=11481">Bug 11481</a> &#8211; Remove thread restriction for eglSwapBuffers in EGL 1.5<o:p></o:p></span></b></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt;text-indent:0cm;page-break-after:avoid;mso-list:l0 level1 lfo2'><span lang=EN-US>[ACTION]<i> <span style='color:black'>Chad &#8211; will update bug as discussed (</span>Postponed indefinitely)</i></span><i><o:p></o:p></i></p><p class=MsoNormal style='margin-top:6.0pt'><b><span lang=EN-US>- Streaming / feedback from Cross-API Interop sessions<o:p></o:p></span></b></p><p class=MsoNormal style='margin-top:6.0pt;text-indent:36.0pt'><span lang=EN-US>Discussion page <a href="https://cvs.khronos.org/wiki/index.php?title=OpenCL/EGLStream">https://cvs.khronos.org/wiki/index.php?title=OpenCL/EGLStream</a><o:p></o:p></span></p><p class=MsoNormal style='mso-margin-top-alt:6.0pt;margin-right:0cm;margin-bottom:0cm;margin-left:36.0pt;margin-bottom:.0001pt'><span lang=EN-US>[ACTION]<i> </i></span><i><span lang=EN-US style='font-size:10.0pt;font-family:"Tahoma","sans-serif"'>All &#8211; provide further topology / use-case feedback<br></span></i><span lang=EN-US>[ACTION]<i> Alon/</i></span><i><span lang=EN-US style='font-size:10.0pt;font-family:"Tahoma","sans-serif"'>Mikael &#8211; discuss how to push metadata proposal forwards<br></span></i><span lang=EN-US>[ACTION]<i> </i></span><i><span lang=EN-US style='font-size:10.0pt;font-family:"Tahoma","sans-serif"'>Neil &#8211; invite StreamInput members to Cross-API session and get topology input</span></i><span lang=EN-US><o:p></o:p></span></p></div></body></html>

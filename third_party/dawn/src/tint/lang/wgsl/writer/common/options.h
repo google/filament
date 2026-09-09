@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_WGSL_WRITER_COMMON_OPTIONS_H_
 
 #include "src/tint/lang/wgsl/allowed_features.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 
 namespace tint::wgsl::writer {
 

@@ -30,10 +30,10 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/BuddyMemoryAllocator.h"
-#include "dawn/native/PooledResourceMemoryAllocator.h"
-#include "dawn/native/ResourceHeapAllocator.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/BuddyMemoryAllocator.h"
+#include "src/dawn/native/PooledResourceMemoryAllocator.h"
+#include "src/dawn/native/ResourceHeapAllocator.h"
 
 namespace dawn::native {
 

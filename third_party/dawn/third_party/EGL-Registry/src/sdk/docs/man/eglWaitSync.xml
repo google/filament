@@ -1,0 +1,134 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglWaitSync">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglWaitSync</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglWaitSync</refname>
+        <refpurpose>
+            Wait in the server for a sync object to be signalled
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+            <funcdef>EGLBoolean <function>eglWaitSync</function></funcdef>
+            <paramdef>(EGLDisplay <parameter>display</parameter></paramdef>
+            <paramdef>EGLSync <parameter>sync</parameter></paramdef>
+            <paramdef>EGLint <parameter>flags</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>sync</parameter></term>
+                <listitem><para>
+                    Specifies the sync object to wait on.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>flags</parameter></term>
+                <listitem><para>
+                    Specifies flags controlling wait behavior.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglWaitSync</function> is similar to
+            <function>eglClientWaitSync</function>, but instead of blocking
+            and not returning to the application until
+            <parameter>sync</parameter> is signaled,
+            <function>eglWaitSync</function> returns immediately. On
+            success, <constant>EGL_TRUE</constant> is returned, and the
+            server for the client API context will block until
+            <parameter>sync</parameter> is signaled.
+        </para>
+        <para>
+            Note: <function>eglWaitSync</function> allows applications to
+            continue to queue commands from the application in anticipation
+            of the sync being signaled, potentially increasing parallelism
+            between application, client API server code, and the GPU. The
+            server only blocks execution of commands for the specific
+            context on which <function>eglWaitSync</function> was issued;
+            other contexts implemented by the same server are not affected..
+        </para>
+        <para>
+            <parameter>sync</parameter> has the same meaning as for
+            <function>eglClientWaitSync</function>.
+        </para>
+        <para>
+            <parameter>flags</parameter> must be 0.
+        </para>
+        <para>
+            <function>eglWaitSync</function> requires support from the bound
+            client API, and will not succeed unless the same client API
+            properties described for creation of fence syncs in
+            <citerefentry><refentrytitle>eglCreateSync</refentrytitle></citerefentry>
+            are satisfied.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <function>eglWaitSync</function> returns
+            <constant>EGL_FALSE</constant> on failure, and does not cause
+            the server for the client API context to block.
+        </para>
+        <para>
+            If the current context for the currently bound client API does
+            not support server waits, an <constant>EGL_BAD_MATCH</constant>
+            error is generated.
+        </para>
+        <para>
+            If no context is current for the currently bound client API
+            (i.e., <function>eglGetCurrentContext</function> returns
+            <constant>EGL_NO_CONTEXT</constant>), an
+            <constant>EGL_BAD_MATCH</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>display</parameter> does not match the
+            <type>EGLDisplay</type> passed to
+            <function>eglCreateSync</function> when
+            <parameter>sync</parameter> was created, the behavior is
+            undefined.
+        </para>
+        <para>
+            If <parameter>sync</parameter> is not a valid sync object for
+            <parameter>display</parameter>, an
+            <constant>EGL_BAD_PARAMETER</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>flags</parameter> is not 0, an
+            <constant>EGL_BAD_PARAMETER</constant> error is generated.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglWaitSync</function> is available only if the EGL
+            version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglClientWaitSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

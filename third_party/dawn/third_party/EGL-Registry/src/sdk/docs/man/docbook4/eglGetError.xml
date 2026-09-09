@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglGetError">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglGetError</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetError</refname>
+        <refpurpose>
+            return error information
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLint <function>eglGetError</function></funcdef>
+                <void/>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglGetError</function> returns the error of the last
+            called <acronym>EGL</acronym> function in the current thread.
+            Initially, the error is set to <constant>EGL_SUCCESS</constant>.
+        </para>
+        <para>
+            The following errors are currently defined:
+        </para>
+        <variablelist>
+            <varlistentry>
+            <term><constant>EGL_SUCCESS</constant></term>
+            <listitem><para>The last function succeeded without error.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_NOT_INITIALIZED</constant></term>
+            <listitem><para>EGL is not initialized, or could not be initialized,
+                for the specified EGL display connection.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_ACCESS</constant></term>
+            <listitem><para>EGL cannot access a requested resource
+                (for example a context is bound in another thread).
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_ALLOC</constant></term>
+            <listitem><para>EGL failed to allocate resources for the requested
+                operation.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_ATTRIBUTE</constant></term>
+            <listitem><para>An unrecognized attribute or attribute value was
+                passed in the attribute list.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_CONTEXT</constant></term>
+            <listitem><para>An <type>EGLContext</type> argument does not name a
+                valid EGL rendering context.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_CONFIG</constant></term>
+            <listitem><para>
+                An <type>EGLConfig</type> argument does not name a valid
+                EGL frame buffer configuration.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_CURRENT_SURFACE</constant></term>
+            <listitem><para>The current surface of the calling thread is a window,
+                pixel buffer or pixmap that is no longer valid.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_DISPLAY</constant></term>
+            <listitem><para>An <type>EGLDisplay</type> argument does not name a
+                valid EGL display connection.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_SURFACE</constant></term>
+            <listitem><para>An <type>EGLSurface</type> argument does not name a
+                valid surface (window, pixel buffer or pixmap) configured for
+                GL rendering.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_MATCH</constant></term>
+            <listitem><para>Arguments are inconsistent (for example, a valid
+                context requires buffers not supplied by a valid surface).
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_PARAMETER</constant></term>
+            <listitem><para>One or more argument values are invalid.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_NATIVE_PIXMAP</constant></term>
+            <listitem><para>
+                A <type>NativePixmapType</type> argument does not refer to
+                a valid native pixmap.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_BAD_NATIVE_WINDOW</constant></term>
+            <listitem><para>A <type>NativeWindowType</type> argument does not refer
+                to a valid native window.
+            </para></listitem>
+            </varlistentry>
+            <varlistentry>
+            <term><constant>EGL_CONTEXT_LOST</constant></term>
+            <listitem><para>
+                A power management event has occurred. The application must destroy all
+                contexts and reinitialise OpenGL ES state and objects to continue rendering.
+            </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            A call to <function>eglGetError</function> sets the error to
+            <constant>EGL_SUCCESS</constant>.
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

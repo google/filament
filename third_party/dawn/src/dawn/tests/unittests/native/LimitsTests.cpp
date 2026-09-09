@@ -29,9 +29,9 @@
 
 #include <unordered_set>
 
-#include "dawn/common/Constants.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Limits.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Limits.h"
 
 namespace dawn {
 namespace native {
@@ -379,11 +379,11 @@ TEST(Limits, NormalizeLimits) {
     {
         CombinedLimits limits = defaults;
         limits.v1.maxVertexBufferArrayStride = kMaxVertexBufferArrayStride + 1;
-        limits.v1.maxColorAttachments = uint32_t(kMaxColorAttachments) + 1;
+        limits.v1.maxColorAttachments = uint32_t{kMaxColorAttachments} + 1;
         limits.v1.maxBindGroups = kMaxBindGroups + 1;
         limits.v1.maxBindGroupsPlusVertexBuffers = kMaxBindGroupsPlusVertexBuffers + 1;
-        limits.v1.maxVertexAttributes = uint32_t(kMaxVertexAttributes) + 1;
-        limits.v1.maxVertexBuffers = uint32_t(kMaxVertexBuffers) + 1;
+        limits.v1.maxVertexAttributes = uint32_t{kMaxVertexAttributes} + 1;
+        limits.v1.maxVertexBuffers = uint32_t{kMaxVertexBuffers} + 1;
         limits.v1.maxSampledTexturesPerShaderStage = kMaxSampledTexturesPerShaderStage + 1;
         limits.v1.maxSamplersPerShaderStage = kMaxSamplersPerShaderStage + 1;
         limits.v1.maxStorageBuffersPerShaderStage = kMaxStorageBuffersPerShaderStage + 1;
@@ -394,11 +394,11 @@ TEST(Limits, NormalizeLimits) {
         NormalizeLimits(&limits);
 
         EXPECT_EQ(limits.v1.maxVertexBufferArrayStride, kMaxVertexBufferArrayStride);
-        EXPECT_EQ(limits.v1.maxColorAttachments, uint32_t(kMaxColorAttachments));
+        EXPECT_EQ(limits.v1.maxColorAttachments, uint32_t{kMaxColorAttachments});
         EXPECT_EQ(limits.v1.maxBindGroups, kMaxBindGroups);
         EXPECT_EQ(limits.v1.maxBindGroupsPlusVertexBuffers, kMaxBindGroupsPlusVertexBuffers);
-        EXPECT_EQ(limits.v1.maxVertexAttributes, uint32_t(kMaxVertexAttributes));
-        EXPECT_EQ(limits.v1.maxVertexBuffers, uint32_t(kMaxVertexBuffers));
+        EXPECT_EQ(limits.v1.maxVertexAttributes, uint32_t{kMaxVertexAttributes});
+        EXPECT_EQ(limits.v1.maxVertexBuffers, uint32_t{kMaxVertexBuffers});
         EXPECT_EQ(limits.v1.maxSampledTexturesPerShaderStage, kMaxSampledTexturesPerShaderStage);
         EXPECT_EQ(limits.v1.maxSamplersPerShaderStage, kMaxSamplersPerShaderStage);
         EXPECT_EQ(limits.v1.maxStorageBuffersPerShaderStage, kMaxStorageBuffersPerShaderStage);

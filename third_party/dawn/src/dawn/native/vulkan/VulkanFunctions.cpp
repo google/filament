@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/VulkanFunctions.h"
+#include "src/dawn/native/vulkan/VulkanFunctions.h"
 
 #include <string>
 #include <utility>
 
-#include "dawn/common/DynamicLib.h"
-#include "dawn/native/vulkan/VulkanInfo.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/native/vulkan/VulkanInfo.h"
 
 namespace dawn::native::vulkan {
 
@@ -153,20 +153,6 @@ MaybeError VulkanFunctions::LoadInstanceProcs(VkInstance instance,
     GET_INSTANCE_PROC(GetPhysicalDeviceQueueFamilyProperties2);
     GET_INSTANCE_PROC(GetPhysicalDeviceSparseImageFormatProperties2);
 
-    if (globalInfo.HasExt(InstanceExt::DebugUtils)) {
-        GET_INSTANCE_PROC(CmdBeginDebugUtilsLabelEXT);
-        GET_INSTANCE_PROC(CmdEndDebugUtilsLabelEXT);
-        GET_INSTANCE_PROC(CmdInsertDebugUtilsLabelEXT);
-        GET_INSTANCE_PROC(CreateDebugUtilsMessengerEXT);
-        GET_INSTANCE_PROC(DestroyDebugUtilsMessengerEXT);
-        GET_INSTANCE_PROC(QueueBeginDebugUtilsLabelEXT);
-        GET_INSTANCE_PROC(QueueEndDebugUtilsLabelEXT);
-        GET_INSTANCE_PROC(QueueInsertDebugUtilsLabelEXT);
-        GET_INSTANCE_PROC(SetDebugUtilsObjectNameEXT);
-        GET_INSTANCE_PROC(SetDebugUtilsObjectTagEXT);
-        GET_INSTANCE_PROC(SubmitDebugUtilsMessageEXT);
-    }
-
     if (globalInfo.HasExt(InstanceExt::Surface)) {
         GET_INSTANCE_PROC(DestroySurfaceKHR);
         GET_INSTANCE_PROC(GetPhysicalDeviceSurfaceSupportKHR);
@@ -228,6 +214,41 @@ MaybeError VulkanFunctions::LoadInstanceProcs(VkInstance instance,
     GET_INSTANCE_PROC_NO_ERROR(GetPhysicalDeviceCooperativeMatrixPropertiesKHR);
 
     return {};
+}
+
+bool VulkanFunctions::TryLoadEXTDebugUtils(VkInstance instance) {
+    GET_INSTANCE_PROC_NO_ERROR(CmdBeginDebugUtilsLabelEXT);
+    GET_INSTANCE_PROC_NO_ERROR(CmdEndDebugUtilsLabelEXT);
+    GET_INSTANCE_PROC_NO_ERROR(CmdInsertDebugUtilsLabelEXT);
+    GET_INSTANCE_PROC_NO_ERROR(CreateDebugUtilsMessengerEXT);
+    GET_INSTANCE_PROC_NO_ERROR(DestroyDebugUtilsMessengerEXT);
+    GET_INSTANCE_PROC_NO_ERROR(QueueBeginDebugUtilsLabelEXT);
+    GET_INSTANCE_PROC_NO_ERROR(QueueEndDebugUtilsLabelEXT);
+    GET_INSTANCE_PROC_NO_ERROR(QueueInsertDebugUtilsLabelEXT);
+    GET_INSTANCE_PROC_NO_ERROR(SetDebugUtilsObjectNameEXT);
+    GET_INSTANCE_PROC_NO_ERROR(SetDebugUtilsObjectTagEXT);
+    GET_INSTANCE_PROC_NO_ERROR(SubmitDebugUtilsMessageEXT);
+
+    if (CmdBeginDebugUtilsLabelEXT == nullptr || CmdEndDebugUtilsLabelEXT == nullptr ||
+        CmdInsertDebugUtilsLabelEXT == nullptr || CreateDebugUtilsMessengerEXT == nullptr ||
+        DestroyDebugUtilsMessengerEXT == nullptr || QueueBeginDebugUtilsLabelEXT == nullptr ||
+        QueueEndDebugUtilsLabelEXT == nullptr || QueueInsertDebugUtilsLabelEXT == nullptr ||
+        SetDebugUtilsObjectNameEXT == nullptr || SetDebugUtilsObjectTagEXT == nullptr ||
+        SubmitDebugUtilsMessageEXT == nullptr) {
+        CmdBeginDebugUtilsLabelEXT = nullptr;
+        CmdEndDebugUtilsLabelEXT = nullptr;
+        CmdInsertDebugUtilsLabelEXT = nullptr;
+        CreateDebugUtilsMessengerEXT = nullptr;
+        DestroyDebugUtilsMessengerEXT = nullptr;
+        QueueBeginDebugUtilsLabelEXT = nullptr;
+        QueueEndDebugUtilsLabelEXT = nullptr;
+        QueueInsertDebugUtilsLabelEXT = nullptr;
+        SetDebugUtilsObjectNameEXT = nullptr;
+        SetDebugUtilsObjectTagEXT = nullptr;
+        SubmitDebugUtilsMessageEXT = nullptr;
+        return false;
+    }
+    return true;
 }
 
 #define GET_DEVICE_PROC(name)                                                        \
@@ -430,7 +451,7 @@ MaybeError VulkanFunctions::LoadDeviceProcs(VkInstance instance,
         GET_DEVICE_PROC(QueuePresentKHR);
     }
 
-#if VK_USE_PLATFORM_FUCHSIA
+#if defined(VK_USE_PLATFORM_FUCHSIA)
     if (deviceInfo.HasExt(DeviceExt::ExternalMemoryZirconHandle)) {
         GET_DEVICE_PROC(GetMemoryZirconHandleFUCHSIA);
         GET_DEVICE_PROC(GetMemoryZirconHandlePropertiesFUCHSIA);

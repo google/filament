@@ -28,12 +28,14 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_EXTERNAL_MEMORY_SERVICEIMPLEMENTATION_H_
 #define SRC_DAWN_NATIVE_VULKAN_EXTERNAL_MEMORY_SERVICEIMPLEMENTATION_H_
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
+#include "src/dawn/common/vulkan_platform.h"
+
+// VulkanBackend must come after vulkan_platform
 #include "dawn/native/VulkanBackend.h"
-#include "dawn/native/vulkan/ExternalHandle.h"
-#include "dawn/native/vulkan/external_memory/MemoryImportParams.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/vulkan/ExternalHandle.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryImportParams.h"
 
 namespace dawn::native::vulkan {
 class Device;

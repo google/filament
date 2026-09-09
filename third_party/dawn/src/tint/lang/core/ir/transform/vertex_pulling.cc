@@ -85,6 +85,7 @@ uint32_t FormatWidth(VertexFormat format) {
         case VertexFormat::kUint32x4:
         case VertexFormat::kSint32x4:
         case VertexFormat::kUnorm10_10_10_2:
+        case VertexFormat::kSnorm10_10_10_2:
         case VertexFormat::kUnorm8x4BGRA:
             return 4;
     }
@@ -678,6 +679,17 @@ struct State {
                 auto* div = b.Composite<vec4f>(1023_f, 1023_f, 1023_f, 3_f);
                 return float_value(b.Divide(b.Convert<vec4f>(mask), div)->Result());
             }
+            case VertexFormat::kSnorm10_10_10_2: {
+                auto* s32 = b.Bitcast<i32>(load_u32(0));
+                auto* s32s = b.Construct<vec4i>(s32);
+                auto* shl = b.ShiftLeft(s32s, b.Composite<vec4u>(22_u, 12_u, 2_u, 0_u));
+                auto* shr = b.ShiftRight(shl, b.Composite<vec4u>(22_u, 22_u, 22_u, 30_u));
+                auto* div = b.Composite<vec4f>(511_f, 511_f, 511_f, 1_f);
+                auto* normalized = b.Divide(b.Convert<vec4f>(shr), div);
+                auto* clamped =
+                    b.Call<vec4f>(core::BuiltinFn::kMax, normalized, b.Splat<vec4f>(-1_f));
+                return float_value(clamped->Result());
+            }
         }
         TINT_IR_UNREACHABLE(ir);
     }
@@ -686,7 +698,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> VertexPulling(core::ir::Module& ir, const VertexPullingConfig& config) {
-    AssertValid(ir, kVertexPullingCapabilities, "before core.VertexPulling");
+    AssertValid(ir, "before core.VertexPulling");
 
     State{config, ir}.Process();
 

@@ -25,18 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <fcntl.h>
-#include <gbm.h>
-
 #include <cstring>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
-#include "VideoViewsTests.h"
-#include "dawn/common/Assert.h"
+// gbm.h transitively include X11 headers which have problematic #define for common names (like
+// "Always") preemptively include xlib_with_undefs.h that will do the necessary #undefs before gbm.h
+// tries to include X11.h.
+#include <gbm.h>
+
+#include "src/dawn/common/xlib_with_undefs.h"
+// Comment to prevent reordering.
+
 #include "dawn/native/VulkanBackend.h"
+#include "src/dawn/common/DRMUtils.h"
+#include "src/dawn/tests/end2end/VideoViewsTests.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -55,74 +60,56 @@ namespace {
 
 class PlatformTextureGbm : public VideoViewsTestBackend::PlatformTexture {
   public:
-    PlatformTextureGbm(wgpu::Texture&& texture, gbm_bo* gbmBo)
-        : PlatformTexture(std::move(texture)), mGbmBo(gbmBo) {}
+    PlatformTextureGbm(wgpu::Texture&& texture, OwnedGbmBo gbmBo)
+        : PlatformTexture(std::move(texture)), mGbmBo(std::move(gbmBo)) {}
     ~PlatformTextureGbm() override = default;
 
     // TODO(chromium:1258986): Add DISJOINT vkImage support for multi-plannar formats.
     bool CanWrapAsWGPUTexture() override {
         DAWN_ASSERT(mGbmBo != nullptr);
         // Checks if all plane handles of a multi-planar gbm_bo are same.
-        gbm_bo_handle plane0Handle = gbm_bo_get_handle_for_plane(mGbmBo, 0);
-        for (int plane = 1; plane < gbm_bo_get_plane_count(mGbmBo); ++plane) {
-            if (gbm_bo_get_handle_for_plane(mGbmBo, plane).u32 != plane0Handle.u32) {
+        gbm_bo_handle plane0Handle = gbm_bo_get_handle_for_plane(mGbmBo.get(), 0);
+        for (int plane = 1; plane < gbm_bo_get_plane_count(mGbmBo.get()); ++plane) {
+            if (gbm_bo_get_handle_for_plane(mGbmBo.get(), plane).u32 != plane0Handle.u32) {
                 return false;
             }
         }
         return true;
     }
 
-    gbm_bo* GetGbmBo() { return mGbmBo; }
-
   private:
-    gbm_bo* mGbmBo = nullptr;
+    OwnedGbmBo mGbmBo;
 };
 
 class VideoViewsTestBackendGbm : public VideoViewsTestBackend {
   public:
-    void OnSetUp(const wgpu::Device& device) override {
+    bool Initialize(const wgpu::Device& device) override {
         mWGPUDevice = device.Get();
-        mGbmDevice = CreateGbmDevice();
-    }
+        wgpu::AdapterPropertiesDrm drmProperties;
+        wgpu::AdapterInfo adapterInfo;
+        adapterInfo.nextInChain = &drmProperties;
+        if (device.GetAdapter().GetInfo(&adapterInfo) != wgpu::Status::Success ||
+            !drmProperties.hasRender) {
+            return false;
+        }
 
-    void OnTearDown() override {
-        if (mGbmDevice != nullptr) {
-            gbm_device_destroy(mGbmDevice);
+        SystemHandle renderNode =
+            OpenDRMRenderNode(drmProperties.renderMajor, drmProperties.renderMinor);
+        if (!renderNode.IsValid()) {
+            return false;
         }
-        if (mRenderNodeFd >= 0) {
-            close(mRenderNodeFd);
+
+        OwnedGbmDevice gbmDevice(gbm_create_device(renderNode.Get()));
+        if (gbmDevice == nullptr) {
+            return false;
         }
+
+        mGbmDevice = std::move(gbmDevice);
+        mRenderNode = std::move(renderNode);
+        return true;
     }
 
   private:
-    gbm_device* CreateGbmDevice() {
-        // Render nodes [1] are the primary interface for communicating with the GPU on
-        // devices that support DRM. The actual filename of the render node is
-        // implementation-specific, so we must scan through all possible filenames to find
-        // one that we can use [2].
-        //
-        // [1] https://dri.freedesktop.org/docs/drm/gpu/drm-uapi.html#render-nodes
-        // [2]
-        // https://cs.chromium.org/chromium/src/ui/ozone/platform/wayland/gpu/drm_render_node_path_finder.cc
-        const uint32_t kRenderNodeStart = 128;
-        const uint32_t kRenderNodeEnd = kRenderNodeStart + 16;
-        const std::string kRenderNodeTemplate = "/dev/dri/renderD";
-
-        mRenderNodeFd = -1;
-        for (uint32_t i = kRenderNodeStart; i < kRenderNodeEnd; i++) {
-            std::string renderNode = kRenderNodeTemplate + std::to_string(i);
-            mRenderNodeFd = open(renderNode.c_str(), O_RDWR);
-            if (mRenderNodeFd >= 0) {
-                break;
-            }
-        }
-        DAWN_ASSERT(mRenderNodeFd > 0);
-
-        gbm_device* gbmDevice = gbm_create_device(mRenderNodeFd);
-        DAWN_ASSERT(gbmDevice != nullptr);
-        return gbmDevice;
-    }
-
     static uint32_t GetGbmBoFormat(wgpu::TextureFormat format) {
         switch (format) {
             case wgpu::TextureFormat::R8BG8Biplanar420Unorm:
@@ -164,19 +151,21 @@ class VideoViewsTestBackendGbm : public VideoViewsTestBackend {
             // of I915_FORMAT_MOD_Y_TILED.
             flags |= GBM_BO_USE_SW_WRITE_RARELY;
         }
-        gbm_bo* gbmBo = gbm_bo_create(mGbmDevice, VideoViewsTestsBase::kYUVAImageDataWidthInTexels,
-                                      VideoViewsTestsBase::kYUVAImageDataHeightInTexels,
-                                      GetGbmBoFormat(format), flags);
+        OwnedGbmBo gbmBo(gbm_bo_create(
+            mGbmDevice.get(), VideoViewsTestsBase::kYUVAImageDataWidthInTexels,
+            VideoViewsTestsBase::kYUVAImageDataHeightInTexels, GetGbmBoFormat(format), flags));
         if (gbmBo == nullptr) {
+            ADD_FAILURE() << "Failed to create GBM buffer object";
             return nullptr;
         }
 
         if (initialized) {
             void* mapHandle = nullptr;
             uint32_t strideBytes = 0;
-            void* addr = gbm_bo_map(gbmBo, 0, 0, VideoViewsTestsBase::kYUVAImageDataWidthInTexels,
-                                    VideoViewsTestsBase::kYUVAImageDataHeightInTexels,
-                                    GBM_BO_TRANSFER_WRITE, &strideBytes, &mapHandle);
+            void* addr =
+                gbm_bo_map(gbmBo.get(), 0, 0, VideoViewsTestsBase::kYUVAImageDataWidthInTexels,
+                           VideoViewsTestsBase::kYUVAImageDataHeightInTexels, GBM_BO_TRANSFER_WRITE,
+                           &strideBytes, &mapHandle);
             EXPECT_NE(addr, nullptr);
             std::vector<uint8_t> initialData =
                 VideoViewsTestsBase::GetTestTextureData<uint8_t>(format, isCheckerboard,
@@ -189,7 +178,7 @@ class VideoViewsTestBackendGbm : public VideoViewsTestBackend {
                 std::memcpy(dstBegin, srcBegin, VideoViewsTestsBase::kYUVAImageDataWidthInTexels);
             }
 
-            gbm_bo_unmap(gbmBo, mapHandle);
+            gbm_bo_unmap(gbmBo.get(), mapHandle);
         }
 
         wgpu::TextureDescriptor textureDesc;
@@ -208,20 +197,19 @@ class VideoViewsTestBackendGbm : public VideoViewsTestBackend {
             reinterpret_cast<const WGPUTextureDescriptor*>(&textureDesc);
         descriptor.isInitialized = initialized;
 
-        descriptor.memoryFD = gbm_bo_get_fd(gbmBo);
-        for (int plane = 0; plane < gbm_bo_get_plane_count(gbmBo); ++plane) {
-            descriptor.planeLayouts[plane].stride = gbm_bo_get_stride_for_plane(gbmBo, plane);
-            descriptor.planeLayouts[plane].offset = gbm_bo_get_offset(gbmBo, plane);
+        SystemHandle memoryFD = SystemHandle::Acquire(gbm_bo_get_fd(gbmBo.get()));
+        descriptor.memoryFD = memoryFD.Get();
+        for (int plane = 0; plane < gbm_bo_get_plane_count(gbmBo.get()); ++plane) {
+            descriptor.planeLayouts[plane].stride = gbm_bo_get_stride_for_plane(gbmBo.get(), plane);
+            descriptor.planeLayouts[plane].offset = gbm_bo_get_offset(gbmBo.get(), plane);
         }
-        descriptor.drmModifier = gbm_bo_get_modifier(gbmBo);
+        descriptor.drmModifier = gbm_bo_get_modifier(gbmBo.get());
         descriptor.waitFDs = {};
 
         auto texture = std::make_unique<PlatformTextureGbm>(
-            native::vulkan::WrapVulkanImage(mWGPUDevice, &descriptor), gbmBo);
-        // The ownership of FD is only transferred in case of a success import. Otherwise cleanup
-        // is still needed to avoid FD leak.
-        if (!texture->wgpuTexture && descriptor.memoryFD >= 0) {
-            close(descriptor.memoryFD);
+            native::vulkan::WrapVulkanImage(mWGPUDevice, &descriptor), std::move(gbmBo));
+        if (texture->wgpuTexture) {
+            memoryFD.Detach();
         }
         return texture;
     }
@@ -236,14 +224,12 @@ class VideoViewsTestBackendGbm : public VideoViewsTestBackend {
             ASSERT_NE(fd, -1);
             close(fd);
         }
-        gbm_bo* gbmBo = static_cast<PlatformTextureGbm*>(platformTexture.get())->GetGbmBo();
-        ASSERT_NE(gbmBo, nullptr);
-        gbm_bo_destroy(gbmBo);
     }
 
     WGPUDevice mWGPUDevice = nullptr;
-    gbm_device* mGbmDevice = nullptr;
-    int mRenderNodeFd = -1;
+    // Declare first so the render node outlives the GBM device.
+    SystemHandle mRenderNode;
+    OwnedGbmDevice mGbmDevice;
 };
 
 }  // anonymous namespace

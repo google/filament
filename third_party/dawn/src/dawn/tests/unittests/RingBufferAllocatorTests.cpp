@@ -27,12 +27,10 @@
 
 #include <limits>
 
-#include "dawn/native/RingBufferAllocator.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/RingBufferAllocator.h"
 
 namespace dawn::native {
-
-constexpr uint64_t RingBufferAllocator::kInvalidOffset;
 
 // Number of basic tests for Ringbuffer
 TEST(RingBufferAllocatorTests, BasicTest) {
@@ -45,15 +43,15 @@ TEST(RingBufferAllocatorTests, BasicTest) {
     ASSERT_EQ(allocator.GetSize(), sizeInBytes);
 
     // Ensure failure upon sub-allocating an oversized request.
-    ASSERT_EQ(allocator.Allocate(sizeInBytes + 1, ExecutionSerial(0)),
+    ASSERT_EQ(allocator.Allocate(sizeInBytes + 1, ExecutionSerial(0u)),
               RingBufferAllocator::kInvalidOffset);
 
     // Fill the entire buffer with two requests of equal size.
-    ASSERT_EQ(allocator.Allocate(sizeInBytes / 2, ExecutionSerial(1)), 0u);
-    ASSERT_EQ(allocator.Allocate(sizeInBytes / 2, ExecutionSerial(2)), 32000u);
+    ASSERT_EQ(allocator.Allocate(sizeInBytes / 2, ExecutionSerial(1u)), 0u);
+    ASSERT_EQ(allocator.Allocate(sizeInBytes / 2, ExecutionSerial(2u)), 32000u);
 
     // Ensure the buffer is full.
-    ASSERT_EQ(allocator.Allocate(1, ExecutionSerial(3)), RingBufferAllocator::kInvalidOffset);
+    ASSERT_EQ(allocator.Allocate(1, ExecutionSerial(3u)), RingBufferAllocator::kInvalidOffset);
 }
 
 // Tests that several ringbuffer allocations do not fail.
@@ -64,9 +62,9 @@ TEST(RingBufferAllocatorTests, RingBufferManyAlloc) {
     RingBufferAllocator allocator(maxNumOfFrames * frameSizeInBytes);
 
     size_t offset = 0;
-    for (ExecutionSerial i(0); i < ExecutionSerial(maxNumOfFrames); ++i) {
+    for (ExecutionSerial i(0u); i < ExecutionSerial(maxNumOfFrames); ++i) {
         offset = allocator.Allocate(frameSizeInBytes, i);
-        ASSERT_EQ(offset, uint64_t(i) * frameSizeInBytes);
+        ASSERT_EQ(offset, uint64_t{i} * frameSizeInBytes);
     }
 }
 
@@ -79,22 +77,22 @@ TEST(RingBufferAllocatorTests, AllocInSameFrame) {
 
     //    F1
     //  [xxxx|--------]
-    size_t offset = allocator.Allocate(frameSizeInBytes, ExecutionSerial(1));
+    size_t offset = allocator.Allocate(frameSizeInBytes, ExecutionSerial(1u));
 
     //    F1   F2
     //  [xxxx|xxxx|----]
 
-    offset = allocator.Allocate(frameSizeInBytes, ExecutionSerial(2));
+    offset = allocator.Allocate(frameSizeInBytes, ExecutionSerial(2u));
 
     //    F1     F2
     //  [xxxx|xxxxxxxx]
 
-    offset = allocator.Allocate(frameSizeInBytes, ExecutionSerial(2));
+    offset = allocator.Allocate(frameSizeInBytes, ExecutionSerial(2u));
 
     ASSERT_EQ(offset, 8u);
     ASSERT_EQ(allocator.GetUsedSize(), frameSizeInBytes * 3);
 
-    allocator.Deallocate(ExecutionSerial(2));
+    allocator.Deallocate(ExecutionSerial(2u));
 
     ASSERT_EQ(allocator.GetUsedSize(), 0u);
     EXPECT_TRUE(allocator.Empty());
@@ -108,8 +106,8 @@ TEST(RingBufferAllocatorTests, RingBufferSubAlloc) {
     RingBufferAllocator allocator(maxNumOfFrames * frameSizeInBytes);
 
     // Sub-alloc the first eight frames.
-    ExecutionSerial serial(0);
-    while (serial < ExecutionSerial(8)) {
+    ExecutionSerial serial(0u);
+    while (serial < ExecutionSerial(8u)) {
         allocator.Allocate(frameSizeInBytes, serial);
         serial++;
     }
@@ -126,7 +124,7 @@ TEST(RingBufferAllocatorTests, RingBufferSubAlloc) {
     ASSERT_EQ(allocator.GetUsedSize(), frameSizeInBytes * 8);
 
     // Reclaim the first 3 frames.
-    allocator.Deallocate(ExecutionSerial(2));
+    allocator.Deallocate(ExecutionSerial(2u));
 
     //                 F4   F5   F6   F7   F8
     //  [------------|xxxx|xxxx|xxxx|xxxx|xxxx|--------]
@@ -151,7 +149,7 @@ TEST(RingBufferAllocatorTests, RingBufferSubAlloc) {
     ASSERT_EQ(allocator.Allocate(frameSizeInBytes, serial), RingBufferAllocator::kInvalidOffset);
 
     // Reclaim the next two frames.
-    allocator.Deallocate(ExecutionSerial(4));
+    allocator.Deallocate(ExecutionSerial(4u));
 
     //        F9       F4   F5   F6   F7   F8
     //  [xxxxxxxxxxxx|----|----|xxxx|xxxx|xxxx|xxxxxxxx]
@@ -182,8 +180,8 @@ TEST(RingBufferAllocatorTests, RingBufferSubAlloc) {
 TEST(RingBufferAllocatorTests, RingBufferOverflow) {
     RingBufferAllocator allocator(std::numeric_limits<uint64_t>::max());
 
-    ASSERT_EQ(allocator.Allocate(1, ExecutionSerial(1)), 0u);
-    ASSERT_EQ(allocator.Allocate(std::numeric_limits<uint64_t>::max(), ExecutionSerial(1)),
+    ASSERT_EQ(allocator.Allocate(1, ExecutionSerial(1u)), 0u);
+    ASSERT_EQ(allocator.Allocate(std::numeric_limits<uint64_t>::max(), ExecutionSerial(1u)),
               RingBufferAllocator::kInvalidOffset);
 }
 

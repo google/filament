@@ -31,15 +31,15 @@
 #include <memory>
 #include <string>
 
-#include "dawn/common/Platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/platform.h"
 
 #if defined(DAWN_USE_WINDOWS_UI)
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 #endif  // defined(DAWN_USE_WINDOWS_UI)
 
 // Forward declare IUnknown
@@ -76,6 +76,7 @@ class Surface final : public ErrorMonad {
 
     // These are valid to call on all Surfaces.
     enum class Type {
+        Undefined,
         AndroidWindow,
         MetalLayer,
         WaylandSurface,
@@ -137,7 +138,7 @@ class Surface final : public ErrorMonad {
     MaybeError GetCurrentTexture(SurfaceTexture* surfaceTexture) const;
 
     Ref<InstanceBase> mInstance;
-    Type mType;
+    Type mType = Type::Undefined;
     std::string mLabel;
 
     // The surface has an associated device *if and only if* it is configured.

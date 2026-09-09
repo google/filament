@@ -1,0 +1,175 @@
+Name
+
+    SGIX_texture_supersample
+
+Name Strings
+
+    GL_SGIX_texture_supersample
+
+Version
+
+    $Date: 1997/07/17 03:04:37 $ $Revision: 1.1 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    SGIX_texture_lod_bias affects the definition of this extension
+
+Overview
+
+    This extension introduces high quality texture minification 
+    filters which do not require prefiltering or multiple level of detail
+    maps.  The texture map is supersampled based on a pixel's projected 
+    footprint in texture space.  The weighted average of the samples is 
+    used as the texture value for the pixel.
+
+Issues
+
+    * Should 3D textures be supported? Not for now.
+    * Should the TEXTURE_SUPERSAMPLE_WIDTH_SGIX greater than 1 be supported?
+      Dignam would like to consider supporting them -- they will be quite slow.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameteri and TexParameterf,
+    and by the <pname> parameter of TexParameteriv and TexParameterfv.
+
+        TEXTURE_SUPERSAMPLE_WIDTH_SGIX
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv, when
+    their <pname> parameter is TEXTURE_MIN_FILTER.  
+
+        LINEAR_SUPERSAMPLE_SGIX
+        FILTER4_SUPERSAMPLE_SGIX
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    GL Specification Table 3.9 is updated with the addition of:
+
+	Name				Type	    Legal Values
+	----				----	    ------------
+	TEXTURE_MIN_FILTER		integer	    LINEAR_SUPERSAMPLE_SGIX,
+						    FILTER4_SUPERSAMPLE_SGIX
+
+        TEXTURE_SUPERSAMPLE_WIDTH_SGIX  integer	    1, 2, or 4
+
+   Texture Minification
+   ------------------------
+
+   This extensions substantially changes Section 3.8.1.  Previously
+   a single scale factor P was determined based on the pixel's projection
+   into texture space.  Now two scale factors, Px and Py, are computed.
+
+   Px = sqrt(dudx^2 + dvdx^2)
+   Py = sqrt(dudy^2 + dvdy^2)
+ 
+   It is also acceptable for an implementation to approximate the ideal 
+   functions Px and Py with functions Fx and Fy subject to the following
+   conditions:
+
+   1.  Fx is continuous and monotonically increasing in |du/dx| and |dv/dx|.
+       Fy is continuous and monotonically increasing in |du/dy| and |dv/dy|.
+
+   2.  max(|du/dx|,|dv/dx|} <= Fx <= |du/dx| + |dv/dx|.
+       max(|du/dy|,|dv/dy|} <= Fy <= |du/dy| + |dv/dy|.
+
+   LamdaX = log2(Px)
+   LamdaY = log2(Py)
+
+   Nx = round (2^LamdaX);
+   Ny = round (2^LamdaY);
+  
+
+   Instead of a single sample, Tau, at (u,v), Nx x Ny locations of the 
+   texture at LOD 0 are sampled and averaged as follows:
+
+                  i=Nx,j=Ny
+                  ---
+   Tau =1/(Nx*Ny) \ Tau( u_sub_ij, v_sub_ij);
+	          /          
+                  ---	       
+         	  i=1,j=1
+    where:
+
+    u_sub_ij = u(x - 0.5 + i/(Nx+1), y - 0.5 + j/(Ny+1));
+    v_sub_ij = v(x - 0.5 + i/(Nx+1), y - 0.5 + j/(Ny+1));
+
+
+    It is acceptable to reduce the smaller of Nx and Ny as the pixel 
+    footprint collapses to a line, so long as the sampling rate of the texture
+    coordinates with respect to each of the screen coordinates is maintained.
+
+    The sampling function for Tau(u,v) will be LINEAR if TEXTURE_MIN_FILTER is 
+    LINEAR_SUPERSAMPLE_SGIX, and FILTER4_SGIS if TEXTURE_MIN_FILTER is 
+    FILTER4_SUPERSAMPLE_SGIX.
+
+    The default resampling filter is an equal weighted box filter.  A linear
+    or cubic filter may be specified by setting the 
+    TEXTURE_SUPERSAMPLE_WIDTH_SGIX from 1 to 2 or 4.
+
+    When TEXTURE_SUPERSAMPLE_WIDTH_SGIX is 2, the width and height
+    of the pixel footprint in screen space will double, and a linear filter
+    centered at the center of the pixel will be used to weight each sample.
+
+    When TEXTURE_SUPERSAMPLE_WIDTH_SGIX is 4, the width and height
+    of the pixel footprint in screen space will quadruple, and the FILTER4_SGIS
+    texture filter function will be used to weight each sample.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on SGIX_texture_lod_bias
+
+    If SGIX_texture_lod_bias is supported, dudx, dvdx, dwdx, dudy, dvdy, dwdy 
+    are replaced with dlodudx, dlodvdx, dlodwdx, dlodudy, dlodvdy, dlodwdy in 
+    the Px and Py functions.
+
+Dependencies on SGIX_texture_lod
+
+   LamdaX and LamdaY are clamped to the range [MIN_LOD, MAX_LOD] if the 
+   SGIS_texture_lod extension is supported.
+
+Errors
+
+    None
+
+New State
+
+								Initial
+    Get Value			    Get Command	     Type	Value	  Attrib
+    ---------			    -----------	     ----	-------	  ------
+    TEXTURE_SUPERSAMPLE_WIDTH_SGIX  GetTexParameteriv Z1*         1        texture
+
+New Implementation Dependent State
+
+                                                                        Minimum
+    Get Value                           Get Command     Type            Value
+    ---------                           -----------     ----            -------
+    MAX_TEXTURE_SUPERSAMPLE_WIDTH       GetIntegerv     Z1*              1

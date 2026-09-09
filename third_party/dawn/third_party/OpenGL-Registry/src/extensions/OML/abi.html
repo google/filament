@@ -1,0 +1,465 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+
+<title>OpenML ABI/DDI (DRAFT July 19, 2001)</title>
+
+<meta name="description" content="OpenML ABI/DDI standards">
+<meta name="keywords" content="OpenML, OpenGL, ABI, Linux">
+<meta name="owner" content="Jon Leech">
+
+<center>
+<h2> OpenML&reg; Application Binary Interface (ABI) and Device Driver
+    Interface (DDI) Standards </h2>
+
+<p>Version 0.2<br>
+   July 19, 2001<br>
+   Editor: Jon Leech, SGI
+</center>
+
+<p><hr></p>
+
+<h2> Index </h2>
+
+    <ul>
+    <li><a href="#1">1. Overview and Goals </a>
+    <li><a href="#2">2. OpenML Component APIs and Versions</a>
+    <li><a href="#3">3. Calling Conventions</a>
+    <li><a href="#4">4. Libraries</a>
+    <li><a href="#5">5. Header Files</a>
+    <li><a href="#6">6. Extension Mechanism and Extension Headers</a>
+    <li><a href="#7">7. Device Driver Interfaces</a>
+    <li><a href="#app">Appendix: Open Issues</a>
+    <li><a href="#log">Change Log</a>
+    </ul>
+
+<a name="1">
+<h2> 1. Overview and Goals  </h2>
+
+<p> 1.1. This document is intended to solve three related problems.
+    First, defining the ABIs and runtime environment for applications
+    using OpenML. This will enable applications using the OpenML APIs
+    for rendering to run on a variety of underlying implementations
+    transparently.
+
+<p> Second, defining the Software Development Kit (SDK) (for developing
+    apps using OpenGL. This includes header file locations, conventions
+    for use of extensions, etc.
+
+<p> Finally, defining the Device Driver Interface (DDI) for appropriate
+    portions of OpenML.
+
+<p> These standards target multiple platforms. For Linux and Microsoft
+    Windows, where multiple vendors will supply OpenML implementations,
+    the standards are <b>proscriptive</b>; all conformant OpenML
+    implementations must satisfy the ABI, SDK, and DDI requirements. For
+    other platforms (at this time, vendor-specific Unix platforms such
+    as IRIX or Solaris), only some parts of the standards are required,
+    while others are <b>recommended</b>, for maximal portability between
+    platforms.
+
+<p> It may eventually be appropriate to share these standards with
+    broader standards bodies such as the
+    <a href="http://www.freestandards.org">Free Standards Group</a> on
+    Linux.
+
+<p> 1.2. There are many open issues in the initial draft; this is
+    intended for discussion and extensive modification. Open issues are
+    summarized in the <a href="#app">appendix</a>. Some decisions are
+    largely arbitrary (filenames and file locations, for example), and
+    in those cases we have been guided by existing practice where
+    possible.
+
+<p> 1.3. This document is intended to become part of the OpenML
+    Specification on its approval, and is a joint work of the
+    <a href="http://www.khronos.org">Khronos SIG</a>.</p>
+
+<a name="2">
+<h2> 2. OpenML Component APIs and Versions </h2>
+
+<h3> 2.1. Component APIs </h3>
+
+<p> OpenML requires implementations of several separate APIs: <b>ML</b>,
+    <b>MLdc</b>, and <b>OpenGL</b>. For the most part, the ABIs, SDKs,
+    and DDIs required for each of these APIs are not related, and are
+    described separately. Interactions are documented where needed.
+
+<h3> 2.2. ML </h3>
+
+<p> ML is the <i>Media Library</i> component of OpenML. It is a
+    low-level API for accessing video and audio hardware.
+
+<h3> 2.3. MLdc </h3>
+
+<p> MLdc is the <i>Display Control</i> component of OpenML. It manages
+    multiple video <i>channels</i>, including aspects such as video
+    formats, timing, gamma tables, etc.
+
+<h3> 2.4. OpenGL </h3>
+
+<p> OpenGL is the <i>Graphics</i> component of OpenML. It is a low-level
+    API for performing 3D rendering. OpenGL is standardized separately
+    from OpenML by the <a href="http://www.opengl.org/">OpenGL
+    Architecture Review Board</a>; OpenML simply requires a specific
+    version of OpenGL with a small number of added API extensions for
+    managing video data.
+
+<p> Because OpenGL is a pre-existing API with shipping implementations,
+    this document mostly refers to other standards (such as the <a
+    href="http://oss.sgi.com/projects/ogl-sample/ABI/">OpenGL ABI for
+    Linux</a>) when defining OpenGL-specific standards.</p>
+
+<h3> 2.5. Versions </h3>
+
+<p> This document defines ABIs and DDIs for the OpenML 1.0 APIs. </p>
+
+<a name="3">
+<h2> 3. Calling Conventions </h2>
+
+<h3> 3.1. ML Calling Conventions </h3>
+
+<p> <b>OPEN</b> - need to define ML datatype required sizes, Windows / Linux
+    / etc. conventions.
+
+<h3> 3.2. MLdc Calling Conventions </h3>
+
+<p> <b>OPEN</b> - need to define MLdc datatype required sizes, Windows /
+    Linux / etc. conventions.
+
+<h3> 3.3. OpenGL Calling Conventions </h3>
+
+<p> 3.3.1. <b>Linux</b> - the OpenGL implementation must follow the
+    calling and datatype conventions defined by the <a
+    href="http://oss.sgi.com/projects/ogl-sample/ABI/">OpenGL ABI for
+    Linux</a>.
+
+<p> 3.3.2. <b>Windows</b> - the OpenGL implementation must follow the
+    calling and datatype conventions established <i>de facto</i> by
+    Microsoft's <tt>OPENGL32.DLL</tt> and header files.
+
+<p> 3.3.3. <b>Other Platforms</b> - calling conventions are
+    platform-dependent. Datatype conventions are platform dependent so
+    long as they satisfy the minimum size requirements of the OpenGL
+    Specification.
+
+<p> <b>Issues:</b> Do we need to address C++ linking issues? Need more
+    detail on calling conventions for Linux?</p>
+
+<a name="4">
+<h2> 4. Libraries </h2>
+
+<h3> 4.1. ML Library </h3>
+
+<p> There is a single user-level ML link library. It includes ML entry
+    points, and in general makes use of underlying hardware drivers for
+    hardware device access. Hardware drivers may be incorporated into
+    the link library, but in general they are loaded by the link library
+    at runtime, and accessed through a <a href="#DDIsection">Device
+    Driver Interface</a> defined below.
+
+<p> 4.1.1 <b>Linux</b> - the link library has two names: that used on
+    the ld command line, and the <tt>DT_SONAME</tt> within that library
+    (specified by the <i>-soname</i> switch when linking the library),
+    defining where it's looked up at runtime. Both forms must exist so
+    that both linking and running will operate properly.
+
+<p> The <tt>DT_SONAME</tt> includes the ML major version number, and is
+    <tt>libML.so.1</tt>. The <i>link library name</i> is
+    <tt>libML.so</tt>. <tt>libML.so</tt> must be implemented as a
+    symbolic link to <tt>libML.so.1</tt>. This allows future major
+    revisions of ML to be implemented transparently to applications by
+    simply changing the link; new applications will link with the new
+    runtime library, while old, compiled applications will continue to
+    use the old runtime.
+
+<p> <b>Issues:</b> do we need static link libraries?
+
+<p> Both ML libraries must be located in <tt>/usr/lib</tt>.
+
+<p> 4.1.2. <b>Windows</b> - the link library is named <tt>ML32.DLL</tt>.
+    It must be located in <tt>\System\???</tt>
+
+<p> <b>Issues:</b> What the heck are the Windows system library
+    conventions, anyway? And will we run into the horrid Windows XP
+    &quot;driver signing&quot; mess by mandating the library live in
+    <tt>\System</tt>?
+
+<p> 4.1.3. <b>Other Platforms</b> - the base name of the library should
+    be <tt>libML</tt>, so that crossplatform Unix build systems can
+    always use "-lML" on their link lines. The ML major version number
+    (1) should be incorporated into the link library name in appropriate
+    fashion. The library should be shared, and should use whatever the
+    platform's library versioning mechanism is to cause compiled
+    applications to resolve to resolve to the correct version of
+    <tt>libML</tt> (e.g. the one they were linked against), even if a
+    newer major version has become the default.
+
+<p> The ML library is typically located in <tt>/usr/lib</tt>, although
+    platform conventions may override this. The important point is that
+    there be a single, standard location for the link library on that
+    platform.
+
+<h3> 4.2. MLdc Library </h3>
+
+<p> There is a single user-level MLdc link library. It includes MLdc
+    entry points, and in general makes use of underlying hardware
+    drivers for hardware device access. Hardware drivers may be
+    incorporated into the link library, but in general they are loaded
+    by the link library or the window system at runtime, and accessed
+    through a <a href="#DDIsection">Device Driver Interface</a> defined
+    below.
+
+<p> 4.2.1 <b>Linux</b> - the link library has two names: that used on
+    the ld command line, and the <tt>DT_SONAME</tt> within that library
+    (specified by the <i>-soname</i> switch when linking the library),
+    defining where it's looked up at runtime. Both forms must exist so
+    that both linking and running will operate properly.
+
+<p> The <tt>DT_SONAME</tt> includes the MLdc major version number, and
+    is <tt>libMLdc.so.1</tt>. The <i>link library name</i> is
+    <tt>libMLdc.so</tt>. <tt>libMLdc.so</tt> must be implemented as a
+    symbolic link to <tt>libMLdc.so.1</tt>. This allows future major
+    revisions of MLdc to be implemented transparently to applications by
+    simply changing the link; new applications will link with the new
+    runtime library, while old, compiled applications will continue to
+    use the old runtime.
+
+<p> <b>Issues:</b> do we need static link libraries?
+
+<p> Both MLdc libraries must be located in <tt>/usr/lib</tt>.
+
+<p> 4.2.2. <b>Windows</b> - the link library is named
+    <tt>MLDC32.DLL</tt>. It must be located in <tt>\System\???</tt>
+
+<p> <b>Issues:</b> As for <tt>ML32.DLL</tt> - decide where
+    the library lives.
+    &quot;driver signing&quot; mess by mandating the library live in
+    <tt>\System</tt>?
+
+<p> 4.2.3. <b>Other Platforms</b> - the base name of the library should
+    be <tt>libMLdc</tt>, so that crossplatform Unix build systems can
+    always use "-lMLdc" on their link lines. The MLdc major version
+    number (1) should be incorporated into the link library name in
+    appropriate fashion. The library should be shared, and should use
+    whatever the platform's library versioning mechanism is to cause
+    compiled applications to resolve to resolve to the correct version
+    of <tt>libMLdc</tt> (e.g. the one they were linked against), even if
+    a newer major version has become the default.
+
+<p> The MLdc library is typically located in <tt>/usr/lib</tt>, although
+    platform conventions may override this. The important point is that
+    there be a single, standard location for the link library on that
+    platform.
+
+<h3> 4.3. OpenGL Library </h3>
+
+<p> There is a single user-level OpenGL link library. It includes OpenGL
+    entry points, and in general makes use of underlying hardware
+    drivers for hardware device access. Hardware drivers may be
+    incorporated into the link library, but in general they are loaded
+    by the link library or the window system at runtime, and accessed
+    through a <a href="#DDIsection">Device Driver Interface</a> defined
+    below.
+
+<p> 4.3.1 <b>Linux</b> - the OpenGL library naming, location, and
+    versioning conventions are as defined by the <a
+    href="http://oss.sgi.com/projects/ogl-sample/ABI/">OpenGL ABI for
+    Linux</a>.
+
+<p> 4.3.2. <b>Windows</b> - the OpenGL library is shipped by Microsoft
+    in <tt>\System\OPENGL32.DLL</tt>.
+
+<p> 4.3.3. <b>Other Platforms</b> - follow existing conventions on those
+    platforms (typically the OpenGL library is linked via "-lGL"). New
+    platforms without existing conventions should follow the Linux
+    conventions insofar as possible.
+
+<h3> 4.4. Additional Issues </h3>
+
+<p> <ul>
+    <li> C++ runtime issues on Linux?
+    <li> Entry points guaranteed in each library.
+    <li> Thread safety.
+    <li> Transitive linking of required libraries.
+    </ul>
+
+<a name="5">
+<h2> 5. Header Files </h2>
+
+<h3> 5.1. ML Header Files </h3>
+
+<p> 5.1.1. The following header files are required for ML:
+
+    <ul>
+    <li> <b>TBD</b>
+    </ul>
+
+<p> Language bindings supported - <b>TBD</b> (C and C++?)
+
+<p> Header locations - <b>TBD</b> (presumably /usr/include/ML on
+    Linux/Unix)
+
+<p> Header contents - <b>TBD</b> (ML 1.0)
+
+<h3> 5.2. MLdc Header Files</h3>
+
+<p> 5.2.1. The following header files are required for MLdc:
+
+    <ul>
+    <li> <b>TBD</b>
+    </ul>
+
+<p> Language bindings supported - <b>TBD</b> (C and C++?)
+
+<p> Header locations - <b>TBD</b> (/usr/include/ML? check w/Cary)
+
+<p> Header contents - <b>TBD</b> (MLdc 1.0)
+
+<h3> 5.3. OpenGL Header Files </h3>
+
+<p> 5.3.1 <b>Linux</b> - the OpenGL header file requirements are as
+    defined by the <a
+    href="http://oss.sgi.com/projects/ogl-sample/ABI/">OpenGL ABI for
+    Linux</a>. In addition, <tt>glext.h</tt> and <tt>glxext.h</tt> must
+    define interfaces for the OpenGL and GLX extensions, respectively,
+    required by OpenML 1.0.
+
+<p> 5.3.2. <b>Windows</b> - the following header files
+    are required:
+
+    <ul>
+    <li> <tt>&lt;GL/gl.h&gt;</tt> - OpenGL
+    <li> <tt>&lt;GL/wgl.h&gt;</tt> - WGL
+    <li> <tt>&lt;GL/glu.h&gt;</tt> - GLU
+    <li> <tt>&lt;GL/glext.h&gt;</tt> - OpenGL Extensions
+    <li> <tt>&lt;GL/wglext.h&gt;</tt> - WGL Extensions
+    </ul>
+
+<p> gl.h, glu.h, and wgl.h are typically supplied by Microsoft,
+    while <tt>glext.h</tt> and <tt>wglext.h</tt> should be obtained from
+    the OpenGL extension registry. <tt>glext.h</tt> and
+    <tt>wglext.h</tt> must define interfaces for the OpenGL and WGL
+    extensions, respectively, required by OpenML 1.0.
+
+<p> Header locations - <b>TBD</b> (check existing practice for
+    MS-supplied headers; define a location for others).
+
+<p> 5.3.3. <b>Other Platforms</b> - follow existing conventions on those
+    platforms (typically header files are placed in
+    <tt>/usr/include/GL</tt>). However, all implementations must provide
+    <tt>glext.h</tt> and, for implementations on the X Window System and
+    GLX, <tt>glxext.h</tt>, and all OpenML 1.0 extensions must be
+    defined in those headers.
+
+<p> New platforms without existing conventions should follow the Linux
+    conventions insofar as possible.
+
+<h3> 5.4. General Issues </h3>
+
+<p> Required header files must not pull in internal headers or headers
+    from other packages where that would cause unexpected namespace
+    pollution. They must be protected against multiple inclusion and
+    should not themselves include any headers that are not so protected.
+
+<p> Vendor-specific shortcuts, such as macros for higher performance GL
+    entry points, are intrinsically unportable. These should <b>not</b>
+    be present in any required header files, but instead in a
+    vendor-specific header file that requires explicit effort by
+    developers to access, such as defining a vendor-specific
+    preprocessor symbol or including a vendor-specific header file.</p>
+
+<!-- <font face="Arial" size="2">yadda yadda</font> -->
+
+<a name="6">
+<h2> 6. Extension Mechanism and Extension Headers </h2>
+
+<h3> 6.1. General Requirements </h3>
+
+<p> The ML, MLdc, and OpenGL APIs may be extended by individual vendors
+    or groups of vendors to provide functionality specific to some
+    implementations. Such extensions take the form of new entry points
+    and/or new parameters to existing functions.
+
+<p> In general each API will be exposed to applications as a single link
+    library, with the library dispatching functions to hardware-specific
+    drivers as appropriate. If vendors providing extensions each
+    provided a modified link library, binary applications could not
+    reliably be moved from system to system, because incompatible
+    interfaces would be provided depending on the source of the library.
+
+<p> To deal with this, each API provides an <i>extension mechanism</i>
+    which lets applications obtain new entry points (pointers to
+    functions within driver modules) dynamically at runtime.
+
+<p> Similarly, if each vendor provided modified header files adding
+    their extensions, it would be difficult to build applications
+    consistently in different environments. To deal with this, each API
+    defines the structure of a <i>extension header</i> which defines
+    interfaces for all known extensions and can be maintained at a
+    central source.
+
+<h3> 6.2. ML Extensions </h3>
+
+<p> 6.2.1. The ML extension mechanism and extension headers
+    are not defined yet; this will be done for OpenML 1.1.
+
+<h3> 6.3. MLdc Extensions </h3>
+
+<p> 6.3.1. <i>Need to insert MLdc extension mechanism</i>.
+
+<h3> 6.4. OpenGL Extensions </h3>
+
+<p> 6.4.1. <b>Linux</b> - The OpenGL ABI for Linux defines the required
+    extension functionality, including the <b>glXGetProcAddressARB</b>
+    function (provided by the <tt>GLX_ARB_get_proc_address</tt>
+    extension) used to query extension interfaces. The <tt>glext.h</tt>
+    and <tt>glxext.h</tt> headers from the OpenGL extension registry
+    define interfaces to known OpenGL and GLX extensions.
+
+<p> 6.4.2. <b>Windows</b> - WGL provides the <b>wglGetProcAddress</b>
+    function used to query extension interfaces (unlike the GLX
+    equivalent, returned function pointers are <i>context dependent</i>;
+    portable code must be aware of this difference). <tt>glext.h</tt>
+    (identical to the Linux version) and <tt>wglext.h</tt> headers from
+    the OpenGL extension registry define interfaces to known OpenGL and
+    WGL extensions.
+
+<p> 6.4.3. <b>Other Platforms</b> - Unix platforms should follow the
+    Linux conventions, providing the <tt>GLX_ARB_get_proc_address</tt>
+    extension as well as <tt>glext.h</tt> and <tt>glxext.h</tt>. Other
+    platforms should define an extension with similar functionality and
+    provide <tt>glext.h</tt>; a companion extension header for window
+    system interface extensions may also need to be provided. </p>
+
+<a name="7">
+<h2> 7. Device Driver Interfaces </h2>
+
+<p> <b>TBD</b> - waiting on dmSDK DDI.
+
+
+<p><hr></p>
+
+<a name="app">
+<h2> Appendix: Open Issues </h2>
+
+<p> <b>TBD</b>
+
+<!-- <p><a name="issue2.1">
+    <b>Section 2.1</b>:
+    Define GL datatypes for other supported Linux architectures - Alpha,
+    PowerPC, MIPS, etc. (in general these will be identical to the IA32
+    types). Note: we may want to suggest <tt>GLlong</tt> and
+    <tt>GLulong</tt> as 64-bit datatypes for future OpenGL revisions.
+-->
+
+
+<a name="log">
+<h2> Change Log </h2>
+
+<ul>
+<li> 2001/07/19 - Added extension mechanism section.
+<li> 2001/04/17 - Initial version.
+</ul>
+
+</body>
+</html>

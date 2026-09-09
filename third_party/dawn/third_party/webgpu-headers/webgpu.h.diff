@@ -1,0 +1,4 @@
+--- webgpu_header
++++ dawn_header
+@@
++    WGPUVertexFormat_Snorm10_10_10_2 = 0x0000002A,

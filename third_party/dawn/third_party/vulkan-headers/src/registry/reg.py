@@ -206,10 +206,11 @@ def mergeInternalFeatures(tree, apiName):
         depends = feature.get('depends', '')
         if not depends:
             return set()
-        # Parse the depends expression - for simplicity, extract feature names
-        # Dependencies can be like "VK_VERSION_1_0" or "VK_VERSION_1_0+VK_KHR_feature"
+        # Feature depends must use '+' (AND). ',' means OR in the dependency
+        # syntax and is not currently supported at the feature level.
+        if ',' in depends:
+            raise ValueError(f'Feature {feature.get("name")} has OR (",") in depends="{depends}"; use "+" for AND')
         deps = set()
-        # Split on + and , to get individual dependencies
         for dep in depends.replace('+', ',').split(','):
             dep = dep.strip()
             if dep:
@@ -1515,6 +1516,22 @@ class Registry:
                         cmd.deprecatedlink = deprecation.get('explanationlink')
                     else:
                         self.gen.logMsg('error', cmdElem.get('name'), ' is tagged for deprecation but not present in registry')
+                for featureElem in deprecation.findall('feature'):
+                    structName = featureElem.get('struct')
+                    memberName = featureElem.get('name')
+                    structInfo = self.lookupElementInfo(structName, self.typedict)
+                    member = None
+                    if structInfo:
+                        member = structInfo.elem.find(f"member[name='{memberName}']")
+
+                    if member is not None:
+                        existing = member.get('deprecated')
+                        if existing and existing != 'true':
+                            self.gen.logMsg('error', structName, '::', memberName, ' is tagged for deprecation twice but with different "deprecated" attributes: ', existing, ' and true')
+                        else:
+                            member.set('deprecated', 'true')
+                    else:
+                        self.gen.logMsg('error', structName, '::', memberName, ' is tagged for deprecation but not present in registry')
 
 
     def removeFeatures(self, interface, featurename, api, profile):

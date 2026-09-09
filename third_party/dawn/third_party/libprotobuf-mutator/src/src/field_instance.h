@@ -190,14 +190,14 @@ class ConstFieldInstance {
     return descriptor_->message_type();
   }
 
-  bool EnforceUtf8() const { return descriptor_->requires_utf8_validation(); }
+  bool EnforceUtf8() const { return RequiresUtf8Validation(*descriptor_); }
 
   const protobuf::FieldDescriptor* descriptor() const { return descriptor_; }
 
   std::string DebugString() const {
-    std::string s = absl::StrCat(*descriptor_);
-    if (is_repeated()) s += absl::StrCat("[", index_, "]");
-    return s + " of\n" + absl::StrCat(*message_);
+    std::string s = descriptor_->DebugString();
+    if (is_repeated()) s += "[" + std::to_string(index_) + "]";
+    return s + " of\n" + message_->DebugString();
   }
 
  protected:

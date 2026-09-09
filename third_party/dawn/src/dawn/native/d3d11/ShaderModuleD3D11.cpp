@@ -25,29 +25,29 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/ShaderModuleD3D11.h"
+#include "src/dawn/native/d3d11/ShaderModuleD3D11.h"
 
 #include <string>
 #include <unordered_map>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/ImmediateConstantsLayout.h"
-#include "dawn/native/Pipeline.h"
-#include "dawn/native/TintUtils.h"
-#include "dawn/native/d3d/D3DCompilationRequest.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d11/BackendD3D11.h"
-#include "dawn/native/d3d11/BindGroupLayoutD3D11.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/PhysicalDeviceD3D11.h"
-#include "dawn/native/d3d11/PipelineLayoutD3D11.h"
-#include "dawn/native/d3d11/PlatformFunctionsD3D11.h"
-#include "dawn/native/d3d11/UtilsD3D11.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/Pipeline.h"
+#include "src/dawn/native/TintUtils.h"
+#include "src/dawn/native/d3d/D3DCompilationRequest.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d11/BackendD3D11.h"
+#include "src/dawn/native/d3d11/BindGroupLayoutD3D11.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/ImmediatesLayoutD3D11.h"
+#include "src/dawn/native/d3d11/PhysicalDeviceD3D11.h"
+#include "src/dawn/native/d3d11/PipelineLayoutD3D11.h"
+#include "src/dawn/native/d3d11/PlatformFunctionsD3D11.h"
+#include "src/dawn/native/d3d11/UtilsD3D11.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/assert.h"
 #include "tint/tint.h"
 
 namespace dawn::native::d3d11 {
@@ -72,11 +72,12 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     SingleShaderStage stage,
     const PipelineLayout* layout,
     uint32_t compileFlags,
-    const ImmediateConstantMask& pipelineImmediateMask,
+    const ImmediateMask& pipelineImmediateMask,
     const std::optional<dawn::native::d3d::InterStageShaderVariablesMask>& usedInterstageVariables,
-    const std::optional<tint::hlsl::writer::PixelLocalOptions>& pixelLocalOptions) {
+    const std::optional<tint::hlsl::writer::PixelLocalOptions>& pixelLocalOptions,
+    std::vector<uint32_t> snorm10_10_10_2_locations) {
     Device* device = ToBackend(GetDevice());
-    TRACE_EVENT0(device->GetPlatform(), General, "ShaderModuleD3D11::Compile");
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "ShaderModuleD3D11::Compile");
     DAWN_ASSERT(!IsError());
 
     d3d::D3DCompilationRequest req = {};
@@ -85,6 +86,7 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     req.hlsl.disableSymbolRenaming = device->IsToggleEnabled(Toggle::DisableSymbolRenaming);
     req.hlsl.dumpShaders = device->IsToggleEnabled(Toggle::DumpShaders);
     req.hlsl.dumpShadersOnFailure = device->IsToggleEnabled(Toggle::DumpShadersOnFailure);
+    req.hlsl.tintOptions.snorm10_10_10_2_locations = std::move(snorm10_10_10_2_locations);
     req.hlsl.tintOptions.entry_point_name = programmableStage.entryPoint;
     req.hlsl.tintOptions.remapped_entry_point_name = device->GetIsolatedEntryPointName();
 
@@ -94,7 +96,7 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     // D3D11 only supports FXC.
     req.bytecode.compiler = d3d::Compiler::FXC;
     req.bytecode.d3dCompile =
-        UnsafeUnserializedValue(pD3DCompile{device->GetFunctions()->d3dCompile});
+        UnsafeUnserializedValue(pD3DCompile{device->GetFunctionsBase()->d3dCompile});
     DAWN_ASSERT(device->GetDeviceInfo().shaderModel == 50);
     switch (stage) {
         case SingleShaderStage::Vertex:
@@ -140,12 +142,12 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
         tint::BindingPoint{0, PipelineLayout::kReservedConstantBufferSlot};
     if (stage == SingleShaderStage::Compute) {
         req.hlsl.tintOptions.num_workgroups_start_offset = GetImmediateByteOffsetInPipelineIfAny(
-            &ComputeImmediateConstants::numWorkgroups, pipelineImmediateMask);
+            &ComputeImmediates::numWorkgroups, pipelineImmediateMask);
     } else {
         req.hlsl.tintOptions.first_index_offset = GetImmediateByteOffsetInPipelineIfAny(
-            &RenderImmediateConstants::firstVertex, pipelineImmediateMask);
+            &RenderImmediates::firstVertex, pipelineImmediateMask);
         req.hlsl.tintOptions.first_instance_offset = GetImmediateByteOffsetInPipelineIfAny(
-            &RenderImmediateConstants::firstInstance, pipelineImmediateMask);
+            &RenderImmediates::firstInstance, pipelineImmediateMask);
     }
 
     if (stage == SingleShaderStage::Vertex) {

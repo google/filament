@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_SHARED_TEXTURE_MEMORY_GL_H_
 #define SRC_DAWN_NATIVE_OPENGL_SHARED_TEXTURE_MEMORY_GL_H_
 
-#include "dawn/native/SharedTextureMemory.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/SharedTextureMemory.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 

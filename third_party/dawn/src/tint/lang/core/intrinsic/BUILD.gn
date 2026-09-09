@@ -45,9 +45,9 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("intrinsic") {
   sources = [
-    "ctor_conv.cc",
-    "ctor_conv.h",
-    "data.cc",
+    "${root_gen_dir}/src/tint/lang/core/intrinsic/ctor_conv.cc",
+    "${root_gen_dir}/src/tint/lang/core/intrinsic/ctor_conv.h",
+    "${root_gen_dir}/src/tint/lang/core/intrinsic/data.cc",
     "dialect.h",
     "table.cc",
     "table.h",
@@ -56,6 +56,7 @@ libtint_source_set("intrinsic") {
   ]
   deps = [
     "${dawn_root}/src/utils",
+    "${tint_src_dir}:generate_sources",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -67,6 +68,7 @@ libtint_source_set("intrinsic") {
     "${tint_src_dir}/utils/macros",
     "${tint_src_dir}/utils/math",
     "${tint_src_dir}/utils/memory",
+    "${tint_src_dir}/utils/reflection",
     "${tint_src_dir}/utils/rtti",
     "${tint_src_dir}/utils/symbol",
     "${tint_src_dir}/utils/text",
@@ -91,6 +93,7 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",

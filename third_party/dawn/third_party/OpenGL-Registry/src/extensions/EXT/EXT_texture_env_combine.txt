@@ -1,0 +1,347 @@
+Name
+
+    EXT_texture_env_combine
+
+Name Strings
+
+    GL_EXT_texture_env_combine
+
+Contact
+
+    Michael Gold (gold 'at' nvidia.com)
+    Tom Frisinger, AMD (tom.frisinger 'at' amd.com)
+
+Status
+
+    Shipping (NVIDIA, ATI)
+
+Version
+
+    $Date$ $Revision$
+    Last Modified Date: 2006/11/04 02:49:00  Revision: 1.8
+
+Number
+
+    158
+
+Dependencies
+
+    SGI_texture_color_table affects the definition of this extension
+    SGIX_texture_scale_bias affects the definition of this extension
+
+Overview
+
+    New texture environment function COMBINE_EXT allows programmable
+    texture combiner operations, including:
+
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        ADD_SIGNED_EXT          Arg0 + Arg1 - 0.5
+        INTERPOLATE_EXT         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+
+    where Arg0, Arg1 and Arg2 are derived from
+
+        PRIMARY_COLOR_EXT       primary color of incoming fragment
+        TEXTURE                 texture color of corresponding texture unit
+        CONSTANT_EXT            texture environment constant color
+        PREVIOUS_EXT            result of previous texture environment; on
+                                texture unit 0, this maps to PRIMARY_COLOR_EXT
+
+    and Arg2 is restricted to the alpha component of the corresponding source.
+
+    In addition, the result may be scaled by 1.0, 2.0 or 4.0.
+
+Issues
+
+    Should the explicit bias be removed in favor of an implcit bias as
+    part of a ADD_SIGNED_EXT function?
+
+     - Yes.  This pre-scale bias is a special case and will be treated
+       as such.
+
+    Should the primary color of the incoming fragment be available to
+    all texture environments?  Currently it is only available to the
+    texture environment of texture unit 0.
+
+     - Yes, PRIMARY_COLOR_EXT has been added as an input source.
+
+    Should textures from other texture units be allowed as sources?
+
+     - No, not in the base spec.  Too many vendors have expressed
+       concerns about the scalability of such functionality.  This can
+       be added as a subsequent extension.
+
+    All of the 1.2 modes except BLEND can be expressed in terms of
+    this extension.  Should texture color be allowed as a source for
+    Arg2, so all of the 1.2 modes can be expressed?  If so, should all
+    color sources be allowed, to maintain orthogonality?
+
+     - No, not in the base spec.  This can be added as a subsequent
+       extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is TEXTURE_ENV_MODE
+
+        COMBINE_EXT                                     0x8570
+
+    Accepted by the <pname> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <target> parameter value is TEXTURE_ENV
+
+        COMBINE_RGB_EXT                                 0x8571
+        COMBINE_ALPHA_EXT                               0x8572
+        SOURCE0_RGB_EXT                                 0x8580
+        SOURCE1_RGB_EXT                                 0x8581
+        SOURCE2_RGB_EXT                                 0x8582
+        SOURCE0_ALPHA_EXT                               0x8588
+        SOURCE1_ALPHA_EXT                               0x8589
+        SOURCE2_ALPHA_EXT                               0x858A
+        OPERAND0_RGB_EXT                                0x8590
+        OPERAND1_RGB_EXT                                0x8591
+        OPERAND2_RGB_EXT                                0x8592
+        OPERAND0_ALPHA_EXT                              0x8598
+        OPERAND1_ALPHA_EXT                              0x8599
+        OPERAND2_ALPHA_EXT                              0x859A
+        RGB_SCALE_EXT                                   0x8573
+        ALPHA_SCALE
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is COMBINE_RGB_EXT
+    or COMBINE_ALPHA_EXT
+
+        REPLACE
+        MODULATE
+        ADD
+        ADD_SIGNED_EXT                                  0x8574
+        INTERPOLATE_EXT                                 0x8575
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is SOURCE0_RGB_EXT,
+    SOURCE1_RGB_EXT, SOURCE2_RGB_EXT, SOURCE0_ALPHA_EXT,
+    SOURCE1_ALPHA_EXT, or SOURCE2_ALPHA_EXT
+
+        TEXTURE
+        CONSTANT_EXT                                    0x8576
+        PRIMARY_COLOR_EXT                               0x8577
+        PREVIOUS_EXT                                    0x8578
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is
+    OPERAND0_RGB_EXT or OPERAND1_RGB_EXT
+
+        SRC_COLOR
+        ONE_MINUS_SRC_COLOR
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA     
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is
+    OPERAND0_ALPHA_EXT or OPERAND1_ALPHA_EXT
+
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA     
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is
+    OPERAND2_RGB_EXT or OPERAND2_ALPHA_EXT
+
+        SRC_ALPHA
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is RGB_SCALE_EXT or
+    ALPHA_SCALE
+
+        1.0
+        2.0
+        4.0     
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Added to subsection 3.8.9, before the paragraph describing the
+    state requirements:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE_EXT, the form of the
+    texture function depends on the values of COMBINE_RGB_EXT and
+    COMBINE_ALPHA_EXT, according to table 3.20.  The RGB and ALPHA
+    results of the texture function are then multiplied by the values
+    of RGB_SCALE_EXT and ALPHA_SCALE, respectively.  The results are
+    clamped to [0,1].
+
+
+        COMBINE_RGB_EXT or
+        COMBINE_ALPHA_EXT       Texture Function
+        ------------------      ----------------
+        REPLACE                 Arg0
+        MODULATE                Arg0 * Arg1
+        ADD                     Arg0 + Arg1
+        ADD_SIGNED_EXT          Arg0 + Arg1 - 0.5
+        INTERPOLATE_EXT         Arg0 * (Arg2) + Arg1 * (1-Arg2)
+
+        Table 3.20: COMBINE_EXT texture functions
+
+    The arguments Arg0, Arg1 and Arg2 are determined by the values of
+    SOURCE<n>_RGB_EXT, SOURCE<n>_ALPHA_EXT, OPERAND<n>_RGB_EXT and
+    OPERAND<n>_ALPHA_EXT.  In the following two tables, Ct and At are
+    the filtered texture RGB and alpha values; Cc and Ac are the
+    texture environment RGB and alpha values; Cf and Af are the RGB
+    and alpha of the primary color of the incoming fragment; and Cp
+    and Ap are the RGB and alpha values resulting from the previous
+    texture environment.  On texture environment 0, Cp and Ap are
+    identical to Cf and Af, respectively.  The relationship is
+    described in tables 3.21 and 3.22.
+
+        SOURCE<n>_RGB_EXT       OPERAND<n>_RGB_EXT      Argument
+        -----------------       --------------          --------
+        TEXTURE                 SRC_COLOR               Ct
+                                ONE_MINUS_SRC_COLOR     (1-Ct)
+                                SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_EXT            SRC_COLOR               Cc
+                                ONE_MINUS_SRC_COLOR     (1-Cc)
+                                SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_EXT       SRC_COLOR               Cf
+                                ONE_MINUS_SRC_COLOR     (1-Cf)
+                                SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_EXT            SRC_COLOR               Cp
+                                ONE_MINUS_SRC_COLOR     (1-Cp)
+                                SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+
+        Table 3.21: Arguments for COMBINE_RGB_EXT functions
+
+        SOURCE<n>_ALPHA_EXT     OPERAND<n>_ALPHA_EXT    Argument
+        -----------------       --------------          --------
+        TEXTURE                 SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_EXT            SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_EXT       SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_EXT            SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+
+        Table 3.22: Arguments for COMBINE_ALPHA_EXT functions
+
+    The mapping of texture components to source components is
+    summarized in Table 3.23.  In the following table, At, Lt, It, Rt,
+    Gt and Bt are the filtered texel values.
+
+        Base Internal Format            RGB Values      Alpha Value
+        --------------------            ----------      -----------
+        ALPHA                           0,  0,  0       At
+        LUMINANCE                       Lt, Lt, Lt      1
+        LUMINANCE_ALPHA                 Lt, Lt, Lt      At
+        INTENSITY                       It, It, It      It
+        RGB                             Rt, Gt, Bt      1
+        RGBA                            Rt, Gt, Bt      At
+        
+        Table 3.23: Correspondence of texture components to source
+        components for COMBINE_RGB_EXT and COMBINE_ALPHA_EXT arguments
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if <params> value for COMBINE_RGB_EXT or
+    COMBINE_ALPHA_EXT is not one of REPLACE, MODULATE, ADD,
+    ADD_SIGNED_EXT, or INTERPOLATE_EXT.
+
+    INVALID_ENUM is generated if <params> value for SOURCE0_RGB_EXT,
+    SOURCE1_RGB_EXT, SOURCE2_RGB_EXT, SOURCE0_ALPHA_EXT,
+    SOURCE1_ALPHA_EXT or SOURCE2_ALPHA_EXT is not one of TEXTURE,
+    CONSTANT_EXT, PRIMARY_COLOR_EXT or PREVIOUS_EXT.
+
+    INVALID_ENUM is generated if <params> value for OPERAND0_RGB_EXT
+    or OPERAND1_RGB_EXT is not one of SRC_COLOR, ONE_MINUS_SRC_COLOR,
+    SRC_ALPHA or ONE_MINUS_SRC_ALPHA.
+
+    INVALID_ENUM is generated if <params> value for OPERAND0_ALPHA_EXT
+    or OPERAND1_ALPHA_EXT is not one of SRC_ALPHA or
+    ONE_MINUS_SRC_ALPHA.
+
+    INVALID_ENUM is generated if <params> value for OPERAND2_RGB_EXT
+    or OPERAND2_ALPHA_EXT is not SRC_ALPHA.
+
+    INVALID_VALUE is generated if <params> value for RGB_SCALE_EXT or
+    ALPHA_SCALE is not one of 1.0, 2.0, or 4.0.
+
+Dependencies on SGI_texture_color_table
+
+    If SGI_texture_color_table is implemented, the expanded Rt, Gt,
+    Bt, and At values are used directly instead of the expansion
+    described by Table 3.23.
+
+Dependencies on SGIX_texture_scale_bias
+
+    If SGIX_texture_scale_bias is implemented, the expanded Rt, Gt,
+    Bt, and At values are used directly instead of the expansion
+    described by Table 3.23.
+
+New State
+
+    Get Value           Get Command    Type     Initial Value   Attribute
+    ---------           -----------    ----     -------------   ---------
+    COMBINE_RGB_EXT     GetTexEnviv    n x Z4   MODULATE        texture
+    COMBINE_ALPHA_EXT   GetTexEnviv    n x Z4   MODULATE        texture
+    SOURCE0_RGB_EXT     GetTexEnviv    n x Z3   TEXTURE         texture
+    SOURCE1_RGB_EXT     GetTexEnviv    n x Z3   PREVIOUS_EXT    texture
+    SOURCE2_RGB_EXT     GetTexEnviv    n x Z3   CONSTANT_EXT    texture
+    SOURCE0_ALPHA_EXT   GetTexEnviv    n x Z3   TEXTURE         texture
+    SOURCE1_ALPHA_EXT   GetTexEnviv    n x Z3   PREVIOUS_EXT    texture
+    SOURCE2_ALPHA_EXT   GetTexEnviv    n x Z3   CONSTANT_EXT    texture
+    OPERAND0_RGB_EXT    GetTexEnviv    n x Z6   SRC_COLOR       texture
+    OPERAND1_RGB_EXT    GetTexEnviv    n x Z6   SRC_COLOR       texture
+    OPERAND2_RGB_EXT    GetTexEnviv    n x Z1   SRC_ALPHA       texture
+    OPERAND0_ALPHA_EXT  GetTexEnviv    n x Z4   SRC_ALPHA       texture
+    OPERAND1_ALPHA_EXT  GetTexEnviv    n x Z4   SRC_ALPHA       texture
+    OPERAND2_ALPHA_EXT  GetTexEnviv    n x Z1   SRC_ALPHA       texture
+    RGB_SCALE_EXT       GetTexEnvfv    n x R3   1.0             texture
+    ALPHA_SCALE         GetTexEnvfv    n x R3   1.0             texture
+
+New Implementation Dependent State
+
+    None
+
+NVIDIA Implementation Details
+
+    Because of a hardware limitation, TNT, TNT2, GeForce, and Quadro
+    treat "scale by 4.0" with the COMBINE_RGB_EXT or COMBINE_ALPHA_EXT
+    mode of ADD_SIGNED_EXT as "scale by 2.0".
+
+    GeForce 6 Series and later GPUs (NV40 and on) support "scale by 4.0"
+    properly.
+
+Revision History
+
+    2/22/00 mjk - added NVIDIA Implementation Details

@@ -31,8 +31,8 @@
 #include <limits>
 #include <memory>
 
-#include "dawn/common/SerialQueue.h"
-#include "dawn/native/IntegerTypes.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/native/IntegerTypes.h"
 
 // RingBufferAllocator is the front-end implementation used to manage a ring buffer in GPU memory.
 namespace dawn::native {
@@ -59,8 +59,8 @@ class RingBufferAllocator {
 
   private:
     struct Request {
-        uint64_t endOffset;
-        uint64_t size;
+        uint64_t endOffset = 0;
+        uint64_t size = 0;
     };
 
     SerialQueue<ExecutionSerial, Request> mInflightRequests;  // Queue of the recorded sub-alloc

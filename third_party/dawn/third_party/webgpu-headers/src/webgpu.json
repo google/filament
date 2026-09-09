@@ -1066,6 +1066,10 @@
         {
           "doc": "TODO\n",
           "name": "texture_component_swizzle"
+        },
+        {
+          "doc": "TODO\n",
+          "name": "subgroup_size_control"
         }
       ],
       "name": "feature_name"
@@ -2425,6 +2429,14 @@
         {
           "doc": "TODO\n",
           "name": "linear_indexing"
+        },
+        {
+          "doc": "TODO\n",
+          "name": "immediate_address_space"
+        },
+        {
+          "doc": "TODO\n",
+          "name": "buffer_view"
         }
       ],
       "name": "WGSL_language_feature_name"
@@ -2654,7 +2666,7 @@
           "returns": {
             "doc": "",
             "pointer": "mutable",
-            "type": "c_void"
+            "type": "c_void_mapped_range_ptr"
           }
         },
         {
@@ -2675,7 +2687,7 @@
           "returns": {
             "doc": "",
             "pointer": "immutable",
-            "type": "c_void"
+            "type": "c_void_mapped_range_ptr"
           }
         },
         {
@@ -2689,7 +2701,7 @@
               "doc": "Destination, to read buffer data into.\n",
               "name": "data",
               "pointer": "mutable",
-              "type": "c_void"
+              "type": "c_void_data_ptr"
             },
             {
               "doc": "Number of bytes of data to read from the buffer.\n(Note @ref WGPU_WHOLE_MAP_SIZE is *not* accepted here.)\n",
@@ -2715,7 +2727,7 @@
               "doc": "Source, to write buffer data from.\n",
               "name": "data",
               "pointer": "immutable",
-              "type": "c_void"
+              "type": "c_void_data_ptr"
             },
             {
               "doc": "Number of bytes of data to write to the buffer.\n(Note @ref WGPU_WHOLE_MAP_SIZE is *not* accepted here.)\n",
@@ -3122,6 +3134,28 @@
           ],
           "doc": "TODO\n",
           "name": "set_bind_group"
+        },
+        {
+          "args": [
+            {
+              "doc": "TODO\n",
+              "name": "offset",
+              "type": "uint32"
+            },
+            {
+              "doc": "TODO\n",
+              "name": "data",
+              "pointer": "immutable",
+              "type": "c_void_data_ptr"
+            },
+            {
+              "doc": "TODO\n",
+              "name": "size",
+              "type": "usize"
+            }
+          ],
+          "doc": "TODO\n",
+          "name": "set_immediates"
         },
         {
           "args": [
@@ -3761,7 +3795,7 @@
               "doc": "TODO\n",
               "name": "data",
               "pointer": "immutable",
-              "type": "c_void"
+              "type": "c_void_data_ptr"
             },
             {
               "doc": "TODO\n",
@@ -3784,7 +3818,7 @@
               "doc": "TODO\n",
               "name": "data",
               "pointer": "immutable",
-              "type": "c_void"
+              "type": "c_void_data_ptr"
             },
             {
               "doc": "TODO\n",
@@ -3874,6 +3908,28 @@
           ],
           "doc": "TODO\n",
           "name": "set_bind_group"
+        },
+        {
+          "args": [
+            {
+              "doc": "TODO\n",
+              "name": "offset",
+              "type": "uint32"
+            },
+            {
+              "doc": "TODO\n",
+              "name": "data",
+              "pointer": "immutable",
+              "type": "c_void_data_ptr"
+            },
+            {
+              "doc": "TODO\n",
+              "name": "size",
+              "type": "usize"
+            }
+          ],
+          "doc": "TODO\n",
+          "name": "set_immediates"
         },
         {
           "args": [
@@ -4111,6 +4167,28 @@
           ],
           "doc": "TODO\n",
           "name": "set_bind_group"
+        },
+        {
+          "args": [
+            {
+              "doc": "TODO\n",
+              "name": "offset",
+              "type": "uint32"
+            },
+            {
+              "doc": "TODO\n",
+              "name": "data",
+              "pointer": "immutable",
+              "type": "c_void_data_ptr"
+            },
+            {
+              "doc": "TODO\n",
+              "name": "size",
+              "type": "usize"
+            }
+          ],
+          "doc": "TODO\n",
+          "name": "set_immediates"
         },
         {
           "args": [
@@ -6447,7 +6525,7 @@
           "doc": "The pointer to the [`ANativeWindow`](https://developer.android.com/ndk/reference/group/a-native-window) that will be wrapped by the @ref WGPUSurface.",
           "name": "window",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_a_native_window"
         }
       ],
       "name": "surface_source_android_native_window",
@@ -6463,7 +6541,7 @@
           "doc": "The pointer to the [`CAMetalLayer`](https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc) that will be wrapped by the @ref WGPUSurface.",
           "name": "layer",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_ca_metal_layer"
         }
       ],
       "name": "surface_source_metal_layer",
@@ -6479,13 +6557,13 @@
           "doc": "A [`wl_display`](https://wayland.freedesktop.org/docs/html/apa.html#protocol-spec-wl_display) for this Wayland instance.",
           "name": "display",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_wl_display"
         },
         {
           "doc": "A [`wl_surface`](https://wayland.freedesktop.org/docs/html/apa.html#protocol-spec-wl_surface) that will be wrapped by the @ref WGPUSurface",
           "name": "surface",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_wl_surface"
         }
       ],
       "name": "surface_source_wayland_surface",
@@ -6501,13 +6579,13 @@
           "doc": "The [`HINSTANCE`](https://learn.microsoft.com/en-us/windows/win32/learnwin32/winmain--the-application-entry-point) for this application.\nMost commonly `GetModuleHandle(nullptr)`.\n",
           "name": "hinstance",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_h_instance"
         },
         {
           "doc": "The [`HWND`](https://learn.microsoft.com/en-us/windows/apps/develop/ui-input/retrieve-hwnd) that will be wrapped by the @ref WGPUSurface.",
           "name": "hwnd",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_h_wnd"
         }
       ],
       "name": "surface_source_windows_HWND",
@@ -6523,7 +6601,7 @@
           "doc": "The `xcb_connection_t` for the connection to the X server.",
           "name": "connection",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_xcb_connection"
         },
         {
           "doc": "The `xcb_window_t` for the window that will be wrapped by the @ref WGPUSurface.",
@@ -6544,7 +6622,7 @@
           "doc": "A pointer to the [`Display`](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html#Opening_the_Display) connected to the X server.",
           "name": "display",
           "pointer": "mutable",
-          "type": "c_void"
+          "type": "c_void_x11_display"
         },
         {
           "doc": "The [`Window`](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html#Creating_Windows) that will be wrapped by the @ref WGPUSurface.",

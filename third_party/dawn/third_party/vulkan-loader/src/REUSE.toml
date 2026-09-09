@@ -1,0 +1,238 @@
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "loader/**"
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "BUILD.gn",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The ANGLE Project Authors",
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "tests/framework/icd/test_icd.cpp",
+    "tests/loader_regression_tests.cpp",
+
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "MIT-Khronos-old"
+
+[[annotations]]
+path = [
+    "loader/CMakeLists.txt",
+    "loader/generated/vk_loader_extensions.c",
+    "loader/generated/vk_layer_dispatch_table.h",
+    "loader/generated/vk_loader_extensions.h",
+    "loader/vk_loader_platform.h",
+    "scripts/generators/loader_extension_generator.py",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/loader.c",
+    "loader/terminator.c",
+    "loader/trampoline.c",
+    "scripts/generate_source.py",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "Google Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "CMakeLists.txt",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "scripts/update_deps.py",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Glslang Authors.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/asm_test_aarch32.S",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "scripts/loader_genvk.py",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group, Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "RasterGrid Kft.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/dlopen_fuchsia.h",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "Google Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/asm_test_aarch64.S",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/unknown_ext_chain_marmasm.asm",
+    "loader/unknown_ext_chain_gas_aarch.S",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/asm_offset.c",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+    "loader/cJSON.c",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "Dave Gamble and cJSON contributors",
+]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "loader/LoaderAndLayerInterface.md",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = [
+    "loader/dirent_on_windows.c",
+    "loader/dirent_on_windows.h",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "Kevlin Henney",
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+]
+SPDX-License-Identifier = "HPND-Kevlin-Henney"
+
+[[annotations]]
+path = [
+    "loader/generated/vk_object_types.h",
+    "loader/loader_common.h",
+    "loader/debug_utils.c",
+    "loader/loader_windows.h",
+    "loader/allocation.h",
+    "loader/stack_allocation.h",
+    "loader/loader.h",
+    "loader/debug_utils.h",
+    "loader/loader_windows.c",
+    "scripts/common_codegen.py",
+    "scripts/generators/dispatch_table_helper_generator.py",
+    "scripts/generators/vk_result_to_string_generator.py",
+    "scripts/generators/helper_file_generator.py",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = [
+    "The Khronos Group Inc.",
+    "Valve Corporation",
+    "LunarG, Inc.",
+    "Google Inc.",
+]
+SPDX-License-Identifier = "Apache-2.0"

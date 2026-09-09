@@ -30,9 +30,9 @@
 
 #include <optional>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/d3d/SharedTextureMemoryD3D.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/d3d/SharedTextureMemoryD3D.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native {
 namespace d3d {

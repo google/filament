@@ -67,10 +67,6 @@ static inline VkLayerInstanceDispatchTable *loader_get_instance_layer_dispatch(c
     return *((VkLayerInstanceDispatchTable **)obj);
 }
 
-static inline struct loader_instance_dispatch_table *loader_get_instance_dispatch(const void *obj) {
-    return *((struct loader_instance_dispatch_table **)obj);
-}
-
 static inline void loader_init_dispatch(void *obj, const void *data) {
 #if defined(DEBUG)
     assert(valid_loader_magic_value(obj) &&
@@ -114,6 +110,10 @@ VkResult create_string_list(const struct loader_instance *inst, uint32_t allocat
 // Resize if there isn't enough space, then add the string str to the end of the loader_string_list
 // This function takes ownership of the str passed in
 VkResult append_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str);
+// Checks that the string doesn't already exist in the list, resizes if there isn't enough space, adds the string str to the end of
+// the loader_string_list.
+// This function takes ownership of the str passed in
+VkResult append_str_to_string_list_if_unique(const struct loader_instance *inst, struct loader_string_list *string_list, char *str);
 // Resize if there isn't enough space, then add the string str to the start of the loader_string_list
 // This function takes ownership of the str passed in
 VkResult prepend_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str);
@@ -123,6 +123,13 @@ VkResult prepend_str_to_string_list(const struct loader_instance *inst, struct l
 // The str_len parameter does not include the null terminator
 VkResult copy_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, const char *str,
                                  size_t str_len);
+// Checks that the string doesn't already exist in the list, then copies the string str to a new string and append it to
+// string_list, resizing string_list if there isn't enough space.
+// This function does not take ownership of the string, it merely copies it.
+// This function automatically appends a null terminator to the string being copied The str_len parameter does not
+// include the null terminator
+VkResult copy_str_to_string_list_if_unique(const struct loader_instance *inst, struct loader_string_list *string_list,
+                                           const char *str, size_t str_len);
 // Copy the string str to a new string and prepend it to string_list, resizing string_list if there isn't enough space.
 // This function does not take ownership of the string, it merely copies it.
 // This function automatically appends a null terminator to the string being copied
@@ -226,17 +233,21 @@ void unload_drivers_without_physical_devices(struct loader_instance *inst);
 VkResult loader_apply_settings_device_configurations(struct loader_instance *inst, uint32_t *pPhysicalDeviceCount,
                                                      VkPhysicalDevice *pPhysicalDevices);
 
-VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
+TEST_FUNCTION_EXPORT VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
 char *loader_get_next_path(char *path);
 VkResult add_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files);
 VkResult prepend_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files);
-VkResult add_data_files(const struct loader_instance *inst, char *search_path, struct loader_string_list *out_files);
+VkResult add_data_files(const struct loader_instance *inst, struct loader_string_list *search_paths,
+                        struct loader_string_list *out_files);
 
 loader_api_version loader_make_version(uint32_t version);
 loader_api_version loader_combine_version(uint32_t major, uint32_t minor, uint32_t patch);
 
 // Helper macros for determining if a version is valid or not
 bool loader_check_version_meets_required(loader_api_version required, loader_api_version version);
+
+// Helper that returns true if the string passed in path ends in .json
+bool is_json(const char *path, size_t len);
 
 VkResult loader_filter_enumerated_physical_device(const struct loader_instance *inst,
                                                   const struct loader_envvar_id_filter *device_id_filter,

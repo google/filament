@@ -165,11 +165,6 @@ class Impl {
         core::ir::Value* index = nullptr;
     };
 
-    struct CollapsedSwizzle {
-        const sem::ValueExpression* vector = nullptr;
-        tint::Vector<uint32_t, 4> indices;
-    };
-
     using ValueOrVecElAccess = std::variant<core::ir::Value*, VectorRefElementAccess>;
 
     /// The current block for expressions.
@@ -180,6 +175,9 @@ class Impl {
 
     /// The current stack of scopes being processed.
     ScopeStack<Symbol, core::ir::Value*> scopes_;
+
+    /// The number of entry points that have been emitted.
+    uint32_t entry_point_count = 0;
 
     /// The diagnostic that have been raised.
     diag::List diagnostics_;
@@ -252,9 +250,12 @@ class Impl {
                     EmitVariable(var);
                 },
                 [&](const ast::Function* func) { EmitFunction(func); },
-                [&](const ast::Enable*) {
+                [&](const ast::Enable* enable) {
                     // TODO(dsinclair): Implement? I think these need to be passed along so further
                     // stages know what is enabled.
+                    if (enable->HasExtension(wgsl::Extension::kF16)) {
+                        mod.properties.Add(core::ir::Property::kAllow16BitFloats);
+                    }
                 },
                 [&](const ast::ConstAssert*) {
                     // Evaluated by the resolver, drop from the IR.
@@ -267,6 +268,12 @@ class Impl {
                 },  //
                 TINT_ICE_ON_NO_MATCH);
         }
+
+        // Set properties that are used by the generated module.
+        if (entry_point_count > 1) {
+            mod.properties.Add(core::ir::Property::kAllowMultipleEntryPoints);
+        }
+        mod.properties.Add(core::ir::Property::kAllowSwizzleView);
 
         if (diagnostics_.ContainsErrors()) {
             return diag::Failure{std::move(diagnostics_)};
@@ -287,6 +294,7 @@ class Impl {
         scopes_.Set(ast_func->name->symbol, ir_func);
 
         if (ast_func->IsEntryPoint()) {
+            entry_point_count++;
             switch (ast_func->PipelineStage()) {
                 case ast::PipelineStage::kVertex:
                     ir_func->SetStage(core::ir::Function::PipelineStage::kVertex);
@@ -347,7 +355,7 @@ class Impl {
         Vector<core::ir::FunctionParam*, 1> params;
         for (auto* p : ast_func->params) {
             const auto* param_sem = program_.Sem().Get(p)->As<sem::Parameter>();
-            auto* ty = RemapOverrideSizedArrayIfNeeded(param_sem->Type());
+            auto* ty = RemapOverrideSizedTypeIfNeeded(param_sem->Type());
             auto* param = builder_.FunctionParam(p->name->symbol.NameView(), ty);
 
             for (auto* attr : p->attributes) {
@@ -365,6 +373,10 @@ class Impl {
 
             scopes_.Set(p->name->symbol, param);
             params.Push(param);
+
+            if (ty->UnwrapPtr()->Is<core::type::Buffer>()) {
+                mod.properties.Add(core::ir::Property::kAllowBufferTypes);
+            }
         }
         ir_func->SetParams(params);
 
@@ -449,26 +461,6 @@ class Impl {
             return;
         }
 
-        auto b = builder_.Append(current_block_);
-        const auto* sem_swizzle = program_.Sem().Get<sem::Swizzle>(stmt->lhs);
-        if (sem_swizzle) {
-            CollapsedSwizzle swizzle = CollapseSwizzle(sem_swizzle);
-            // Evaluate pointer to swizzled vector.
-            auto lhs_vec_ptr = EmitValueExpression(swizzle.vector->Declaration());
-            auto* rhs_val = EmitValueExpression(stmt->rhs);
-
-            if (swizzle.indices.Length() == 1) {
-                b.StoreVectorElement(lhs_vec_ptr, b.Constant(u32(swizzle.indices[0])), rhs_val);
-            } else {
-                // Load the lhs vector to a value after the rhs has been evaluated (because it may
-                // have had side effects on non-swizzled components).
-                auto* lhs_vec_val = Load(lhs_vec_ptr);
-                auto* inst = ConstructSwizzleAssignmentRhs(lhs_vec_val, rhs_val, swizzle.indices);
-                Store(lhs_vec_ptr, inst);
-            }
-            return;
-        }
-
         auto lhs = EmitExpression(stmt->lhs);
 
         auto rhs = EmitValueExpression(stmt->rhs);
@@ -493,39 +485,6 @@ class Impl {
     }
 
     void EmitCompoundAssignment(const ast::CompoundAssignmentStatement* stmt) {
-        const auto* sem_swizzle = program_.Sem().Get<sem::Swizzle>(stmt->lhs);
-        if (sem_swizzle && sem_swizzle->Type()->Is<core::type::SwizzleView>()) {
-            auto b = builder_.Append(current_block_);
-
-            CollapsedSwizzle swizzle = CollapseSwizzle(sem_swizzle);
-            auto* lhs_vec_ptr = EmitValueExpression(swizzle.vector->Declaration());
-            auto* lhs_ty = sem_swizzle->Type()->As<core::type::SwizzleView>()->StoreType();
-
-            // Single element swizzles with a swizzle view type only result from chained swizzles,
-            // otherwise they're simply handled as vector element references below.
-            if (swizzle.indices.Length() == 1) {
-                auto* idx = b.Constant(u32(swizzle.indices[0]));
-                auto* lhs_val = b.LoadVectorElement(lhs_vec_ptr, idx);
-                auto* rhs_val = EmitValueExpression(stmt->rhs);
-                auto* inst = current_block_->Append(BinaryOp(lhs_val->Result(), rhs_val, stmt->op));
-                b.StoreVectorElement(lhs_vec_ptr, idx, inst);
-                return;
-            }
-
-            auto* lhs_vec_value = Load(lhs_vec_ptr);
-            auto* lhs_val =
-                b.Swizzle(lhs_ty->Clone(clone_ctx_.type_ctx), lhs_vec_value, swizzle.indices);
-            auto* rhs_val = EmitValueExpression(stmt->rhs);
-            auto* inst = current_block_->Append(BinaryOp(lhs_val->Result(), rhs_val, stmt->op));
-
-            // Re-load lhs vec after rhs has been evaluated, in case non-swizzled elements were
-            // modified.
-            lhs_vec_value = Load(lhs_vec_ptr);
-            Store(lhs_vec_ptr,
-                  ConstructSwizzleAssignmentRhs(lhs_vec_value, inst->Result(), swizzle.indices));
-            return;
-        }
-
         auto lhs = EmitExpression(stmt->lhs);
         auto* lhs_val = Load(lhs);
 
@@ -561,65 +520,6 @@ class Impl {
         } else if (auto ref = std::get_if<VectorRefElementAccess>(&lhs)) {
             b.StoreVectorElement(ref->vector, ref->index, rhs);
         }
-    }
-
-    // Collapse a possibly nested chain of swizzles into a single set of swizzle indices on the base
-    // vector. Note that target components cannot be repeated in lhs swizzles used for assignment,
-    // so each consecutive swizzle on a vector will produce a smaller or equal sized vector (i.e.
-    // v.xyzw.xy.yx.x).
-    CollapsedSwizzle CollapseSwizzle(const sem::Swizzle* swizzle) {
-        // Initialize with the outermost swizzle object and indices.
-        CollapsedSwizzle res{
-            .vector = swizzle->Object(),
-            .indices = swizzle->Indices(),
-        };
-        // If the inner object is also a swizzle, collapse it down.
-        while (auto* inner_swizzle = res.vector->As<sem::Swizzle>()) {
-            tint::Vector<uint32_t, 4> combined;
-            // For each index in the outer swizzle, get the corresponding index into the inner
-            // swizzle.
-            for (uint32_t i : res.indices) {
-                combined.Push(inner_swizzle->Indices()[i]);
-            }
-            res.indices = std::move(combined);
-            res.vector = inner_swizzle->Object();
-        }
-        return res;
-    }
-
-    core::ir::Value* ConstructSwizzleAssignmentRhs(core::ir::Value* lhs,
-                                                   core::ir::Value* rhs,
-                                                   VectorRef<uint32_t> indices) {
-        auto b = builder_.Append(current_block_);
-        auto* vec_ty = lhs->Type()->UnwrapPtrOrRef()->As<core::type::Vector>();
-        TINT_ASSERT(vec_ty);
-        auto* elem_ty = vec_ty->Type();
-
-        // Reserve the result vector which will eventually be stored.
-        tint::Vector<core::ir::Value*, 4> new_vec_args;
-        new_vec_args.Resize(vec_ty->Width());
-
-        // For indices that are referenced in the swizzle, use the appropriate new vals from the
-        // rhs to populate the result vector.
-        for (size_t i = 0; i < indices.Length(); i++) {
-            auto* access = b.Access(elem_ty->Clone(clone_ctx_.type_ctx), rhs, b.Constant(u32(i)));
-
-            uint32_t target_index = indices[i];
-            new_vec_args[target_index] = access->Result();
-        }
-
-        // For indices which were not referenced in the swizzle, fill in the old vals from the
-        // loaded lhs vector.
-        for (uint32_t i = 0; i < vec_ty->Width(); i++) {
-            if (new_vec_args[i] == nullptr) {
-                auto* access =
-                    b.Access(elem_ty->Clone(clone_ctx_.type_ctx), lhs, b.Constant(u32(i)));
-                new_vec_args[i] = access->Result();
-            }
-        }
-
-        // Construct the result vector.
-        return b.Construct(vec_ty->Clone(clone_ctx_.type_ctx), new_vec_args)->Result();
     }
 
     void EmitBlock(const ast::BlockStatement* block) {
@@ -918,10 +818,7 @@ class Impl {
 
             void Bind(const ast::Expression* expr, core::ir::Value* value) {
                 auto* sem = impl.program_.Sem().Get<sem::Load>(expr);
-                // If this expression maps to sem::Load, insert a load instruction to get the
-                // result, unless the source is a swizzle view. The swizzle view's Load sem node is
-                // just a temporary wrapper to satisfy early type checking and can now be ignored.
-                if (sem && !sem->Source()->Type()->Is<core::type::SwizzleView>()) {
+                if (sem) {
                     auto* load = impl.builder_.Load(value);
                     impl.current_block_->Append(load);
                     value = load->Result();
@@ -992,12 +889,10 @@ class Impl {
                 // The access result type should match the source result type.
                 const core::type::Type* ty =
                     sem->Type()->UnwrapRef()->Clone(impl.clone_ctx_.type_ctx);
-                // If the source is a swizzle view, generate the appropriate vector result type. If
-                // the source is a pointer, generate a pointer.
-                if (auto* swizzle_view = sem->Type()->As<core::type::SwizzleView>()) {
-                    ty = swizzle_view->StoreType()->Clone(impl.clone_ctx_.type_ctx);
-                } else if (auto* ptr = obj->Type()->As<core::type::Pointer>();
-                           ptr && !ty->Is<core::type::Pointer>()) {
+                // If the source is a pointer, generate a pointer, unless it's already a
+                // SwizzleView.
+                if (auto* ptr = obj->Type()->As<core::type::Pointer>();
+                    ptr && !ty->IsAnyOf<core::type::Pointer, core::type::SwizzleView>()) {
                     ty = impl.builder_.ir.Types().ptr(ptr->AddressSpace(), ty, ptr->Access());
                 }
 
@@ -1024,12 +919,6 @@ class Impl {
                         }
 
                         core::ir::Swizzle* val;
-                        // First load the object being swizzled if it's a memory view.
-                        if (obj->Type()->Is<core::type::MemoryView>()) {
-                            auto* load = impl.builder_.Load(obj);
-                            impl.current_block_->Append(load);
-                            obj = load->Result();
-                        }
                         val = impl.builder_.Swizzle(ty, obj, std::move(indices));
 
                         impl.current_block_->Append(val);
@@ -1159,15 +1048,22 @@ class Impl {
                         if (b->Overload().num_explicit_templates > 0) {
                             auto* tmpl = expr->target->identifier->As<ast::TemplatedIdentifier>();
                             TINT_ASSERT(tmpl);
-                            Vector<const core::type::Type*, 1> explicit_types;
+                            Vector<core::ir::TemplateParameter, 1> explicit_templates;
                             for (uint32_t i = 0; i < b->Overload().num_explicit_templates; i++) {
                                 auto* tmpl_sem = impl.program_.Sem().Get(tmpl->arguments[i]);
-                                auto* tmpl_ty = tmpl_sem->As<sem::TypeExpression>();
-                                TINT_ASSERT(tmpl_ty);
-                                auto* cloned_ty = tmpl_ty->Type()->Clone(impl.clone_ctx_.type_ctx);
-                                explicit_types.Push(cloned_ty);
+                                if (auto* tmpl_ty = tmpl_sem->As<sem::TypeExpression>()) {
+                                    auto* cloned_ty =
+                                        tmpl_ty->Type()->Clone(impl.clone_ctx_.type_ctx);
+                                    explicit_templates.Push(cloned_ty);
+                                } else if (auto* tmpl_majorness =
+                                               tmpl_sem->As<
+                                                   sem::BuiltinEnumExpression<core::Majorness>>()) {
+                                    explicit_templates.Push(tmpl_majorness->Value());
+                                } else {
+                                    TINT_UNREACHABLE() << "Unhandled template parameter kind";
+                                }
                             }
-                            call->SetExplicitTemplateParams(std::move(explicit_types));
+                            call->SetExplicitTemplateParams(std::move(explicit_templates));
                         }
 
                         inst = call;
@@ -1384,8 +1280,7 @@ class Impl {
             var,
             [&](const ast::Var* v) {
                 auto* ref = sem->Type()->As<core::type::Reference>();
-                const core::type::Type* store_ty =
-                    RemapOverrideSizedArrayIfNeeded(ref->StoreType());
+                const core::type::Type* store_ty = RemapOverrideSizedTypeIfNeeded(ref->StoreType());
                 auto* ty = builder_.ir.Types().Get<core::type::Pointer>(ref->AddressSpace(),
                                                                         store_ty, ref->Access());
 
@@ -1416,6 +1311,10 @@ class Impl {
                 // Record the original name and source of the var
                 builder_.ir.SetName(val, v->name->symbol.Name());
                 builder_.ir.SetSource(val, v->source);
+
+                if (store_ty->Is<core::type::Buffer>()) {
+                    mod.properties.Add(core::ir::Property::kAllowBufferTypes);
+                }
             },
             [&](const ast::Let* l) {
                 auto init = EmitValueExpression(l->initializer);
@@ -1460,6 +1359,8 @@ class Impl {
                 // Record the original name and source of the var
                 builder_.ir.SetName(override, o->name->symbol.Name());
                 builder_.ir.SetSource(override, o->source);
+
+                mod.properties.Add(core::ir::Property::kAllowOverrides);
             },
             [&](const ast::Const*) {
                 // Skip. This should be handled by const-eval already, so the const will be a
@@ -1510,18 +1411,24 @@ class Impl {
         TINT_UNREACHABLE();
     }
 
-    const core::type::Type* RemapOverrideSizedArrayIfNeeded(const core::type::Type* ty) {
-        // Check that we have an override-sized array, or a pointer to one.
+    const core::type::Type* RemapOverrideSizedTypeIfNeeded(const core::type::Type* ty) {
+        // Check that we have an override-sized array, buffer, or a pointer to one.
         const auto* ary = ty->UnwrapPtr()->As<core::type::Array>();
-        if (!ary ||
-            !ary->Count()
-                 ->IsAnyOf<sem::NamedOverrideArrayCount, sem::UnnamedOverrideArrayCount>()) {
+        const auto* buf = ty->UnwrapPtr()->As<core::type::Buffer>();
+        const core::type::ArrayCount* orig_count = nullptr;
+        if (ary) {
+            orig_count = ary->Count();
+        } else if (buf) {
+            orig_count = buf->Count();
+        }
+        if (!orig_count ||
+            !orig_count->IsAnyOf<sem::NamedOverrideArrayCount, sem::UnnamedOverrideArrayCount>()) {
             return ty->Clone(clone_ctx_.type_ctx);
         }
 
-        // If the array has an override count, we need to remap it to a value array count.
+        // If the type has an override count, we need to remap it to a value array count.
         core::ir::Value* count = tint::Switch(
-            ary->Count(),  //
+            orig_count,  //
             [&](const sem::UnnamedOverrideArrayCount* u) {
                 return EmitValueExpression(u->expr->Declaration());
             },
@@ -1530,11 +1437,17 @@ class Impl {
             },
             TINT_ICE_ON_NO_MATCH);
 
+        const core::type::Type* remapped_ty = nullptr;
         auto* ary_count = builder_.ir.Types().Get<core::ir::type::ValueArrayCount>(count);
-        const core::type::Type* remapped_ty = builder_.ir.Types().Get<core::type::Array>(
-            ary->ElemType()->Clone(clone_ctx_.type_ctx), ary_count, ary->Size());
+        if (ary) {
+            remapped_ty = builder_.ir.Types().Get<core::type::Array>(
+                ary->ElemType()->Clone(clone_ctx_.type_ctx), ary_count, ary->Size());
+        } else {
+            TINT_ASSERT(buf);
+            remapped_ty = builder_.ir.Types().Get<core::type::Buffer>(ary_count);
+        }
 
-        // If the original type was a pointer, wrap the remapped array in a pointer too.
+        // If the original type was a pointer, wrap the remapped type in a pointer too.
         if (auto* ptr = ty->As<core::type::Pointer>()) {
             remapped_ty = builder_.ir.Types().ptr(ptr->AddressSpace(), remapped_ty, ptr->Access());
         }

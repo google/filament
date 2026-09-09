@@ -1,0 +1,93 @@
+Name
+
+    EXT_get_drawable_type
+
+Name Strings
+
+    GLX_EXT_get_drawable_type
+
+Contributors
+
+    Adam Jackson, Red Hat
+    Kyle Brenneman, NVIDIA
+
+Contacts
+
+    Adam Jackson <ajax@redhat.com>
+
+Status
+
+    Complete.
+
+Version
+
+    Version 3, 24 September 2020
+
+Number
+
+    OpenGL Extension #552
+
+Dependencies
+
+    GLX 1.3 or higher is required.
+
+    This extension is written against the text of the GLX 1.4 specification.
+
+Overview
+
+    This extension adds to the set of drawable attributes that are sent in
+    a GLXGetDrawableAttributes request, and that can be queried with
+    glXQueryDrawable. While this is primarily a convenience for the client
+    library implementation, it may also be useful for applications.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    New attributes accepted for the <attribute> argument of
+    glXQueryDrawable:
+
+        GLX_DRAWABLE_TYPE                       0x8010
+
+Additions to the GLX 1.4 specification
+
+    In Section 3.3.6 "Querying Attributes", add GLX_DRAWABLE_TYPE to the
+    list of legal values for the <attribute> parameter. The returned value
+    must have exactly one of GLX_{WINDOW,PIXMAP,PBUFFER}_BIT set.
+
+Issues
+
+    1) Why add GLX_DRAWABLE_TYPE?
+
+    An X client may get the XID of a GLXDrawable from another process. When
+    this happens, the client library needs to import the drawable's state as
+    if the client had created it itself. Since different drawable types may
+    require different handling, this attribute allows the client library to
+    distinguish between windows, pixmaps, and pbuffers.
+
+    2) Why use GLX_*_BIT for the GLX_DRAWABLE_TYPE value?
+
+    GLX_WINDOW and GLX_PBUFFER exist, but GLX_PIXMAP does not.
+
+    3) Are there other attributes we should add?
+
+    RESOLVED. No, there aren't any other drawable (not fbconfig) attributes in
+    core GLX that aren't currently exposed, as far as we can tell. Drawable
+    attributes added by GLX extensions can be added in separate extensions.
+
+Revision History
+
+    Version 3, 24 September 2020
+    - Resolve issues, assign extension number, and mark as complete.
+
+    Version 2, 9 September 2020
+    - Change name to GLX_EXT_get_drawable_type.
+
+    Version 1, 24 August 2020
+    - Initial draft.

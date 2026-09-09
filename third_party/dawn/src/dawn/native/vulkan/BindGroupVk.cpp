@@ -25,25 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/BindGroupVk.h"
+#include "src/dawn/native/vulkan/BindGroupVk.h"
 
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Enumerator.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/Range.h"
-#include "dawn/common/ityp_stack_vec.h"
-#include "dawn/native/ExternalTexture.h"
-#include "dawn/native/vulkan/BindGroupLayoutVk.h"
-#include "dawn/native/vulkan/BufferVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/SamplerVk.h"
-#include "dawn/native/vulkan/TexelBufferViewVk.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/common/ityp_stack_vec.h"
+#include "src/dawn/native/ExternalTexture.h"
+#include "src/dawn/native/vulkan/BindGroupLayoutVk.h"
+#include "src/dawn/native/vulkan/BufferVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/SamplerVk.h"
+#include "src/dawn/native/vulkan/TexelBufferViewVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
 
 namespace dawn::native::vulkan {
 
@@ -82,17 +82,17 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
     // invalidate the pointers chained in `writes`.
     // TODO(https://crbug.com/438554018): Use Vulkan's descriptor set update template so as to need
     // a single allocation, and one that could be reused at the layout level.
-    const uint32_t bindingCount = static_cast<uint32_t>((layout->GetBindingCount()));
-    ityp::stack_vec<uint32_t, VkWriteDescriptorSet, kMaxOptimalBindingsPerGroup> writes(
+    const BindingIndex bindingCount = layout->GetBindingCount();
+    ityp::stack_vec<BindingIndex, VkWriteDescriptorSet, kMaxOptimalBindingsPerGroup> writes(
         bindingCount);
-    ityp::stack_vec<uint32_t, VkDescriptorBufferInfo, kMaxOptimalBindingsPerGroup> writeBufferInfo(
-        bindingCount);
-    ityp::stack_vec<uint32_t, VkDescriptorImageInfo, kMaxOptimalBindingsPerGroup> writeImageInfo(
-        bindingCount);
-    ityp::stack_vec<uint32_t, VkBufferView, kMaxOptimalBindingsPerGroup> writeTexelBufferViews(
+    ityp::stack_vec<BindingIndex, VkDescriptorBufferInfo, kMaxOptimalBindingsPerGroup>
+        writeBufferInfo(bindingCount);
+    ityp::stack_vec<BindingIndex, VkDescriptorImageInfo, kMaxOptimalBindingsPerGroup>
+        writeImageInfo(bindingCount);
+    ityp::stack_vec<BindingIndex, VkBufferView, kMaxOptimalBindingsPerGroup> writeTexelBufferViews(
         bindingCount);
 
-    uint32_t numWrites = 0;
+    uint32_t numWrites{0u};
     auto AddWrite = [&](BindingIndex bindingIndex, auto DoWrite) {
         const BindingInfo& bindingInfo = layout->GetBindingInfo(bindingIndex);
 
@@ -105,7 +105,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
             return;
         }
 
-        size_t writeIndex = numWrites;
+        BindingIndex writeIndex = BindingIndex{numWrites};
         numWrites++;
 
         auto& write = writes[writeIndex];
@@ -114,8 +114,8 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
         write.dstSet = dsSet;
         // Arrays all have a single binding, so compute the binding index for the array, which is
         // the same as the binding index for the 0th element.
-        write.dstBinding = uint32_t(bindingIndex - bindingInfo.indexInArray);
-        write.dstArrayElement = uint32_t(bindingInfo.indexInArray);
+        write.dstBinding = uint32_t{bindingIndex - bindingInfo.indexInArray};
+        write.dstArrayElement = uint32_t{bindingInfo.indexInArray};
         write.descriptorCount = 1;
         write.descriptorType = VulkanDescriptorType(bindingInfo);
 
@@ -144,7 +144,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
             binding.size = Align(binding.size, 16u);
         }
 
-        AddWrite(i, [&](size_t writeIndex, VkWriteDescriptorSet* write) {
+        AddWrite(i, [&](BindingIndex writeIndex, VkWriteDescriptorSet* write) {
             writeBufferInfo[writeIndex].buffer = handle;
             writeBufferInfo[writeIndex].offset = binding.offset;
             writeBufferInfo[writeIndex].range = binding.size;
@@ -155,7 +155,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
     for (BindingIndex i : layout->GetNonStaticSamplerIndices()) {
         Sampler* sampler = ToBackend(GetBindingAsSampler(i));
 
-        AddWrite(i, [&](size_t writeIndex, VkWriteDescriptorSet* write) {
+        AddWrite(i, [&](BindingIndex writeIndex, VkWriteDescriptorSet* write) {
             writeImageInfo[writeIndex].sampler = sampler->GetHandle();
             write->pImageInfo = &writeImageInfo[writeIndex];
         });
@@ -169,7 +169,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
             continue;
         }
 
-        AddWrite(i, [&](size_t writeIndex, VkWriteDescriptorSet* write) {
+        AddWrite(i, [&](BindingIndex writeIndex, VkWriteDescriptorSet* write) {
             // TODO(crbug.com/41488897): Add GetVkDescriptorSet{Index, Type}(BindingIndex) functions
             // to BindGroupLayoutVk that access vectors holding entries for all BGL entries and
             // eliminate this special-case code in favor of calling those functions to assign
@@ -185,7 +185,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
 
             writeImageInfo[writeIndex].imageView = handle;
             writeImageInfo[writeIndex].imageLayout =
-                VulkanImageLayout(view->GetFormat(), wgpu::TextureUsage::TextureBinding);
+                view->VulkanImageLayout(wgpu::TextureUsage::TextureBinding);
             write->pImageInfo = &writeImageInfo[writeIndex];
         });
     }
@@ -203,7 +203,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
             continue;
         }
 
-        AddWrite(i, [&](size_t writeIndex, VkWriteDescriptorSet* write) {
+        AddWrite(i, [&](BindingIndex writeIndex, VkWriteDescriptorSet* write) {
             writeImageInfo[writeIndex].imageView = handle;
             writeImageInfo[writeIndex].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             write->pImageInfo = &writeImageInfo[writeIndex];
@@ -217,7 +217,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
             continue;
         }
 
-        AddWrite(i, [&](size_t writeIndex, VkWriteDescriptorSet* write) {
+        AddWrite(i, [&](BindingIndex writeIndex, VkWriteDescriptorSet* write) {
             writeTexelBufferViews[writeIndex] = handle;
             write->pTexelBufferView = AsVkArray(&writeTexelBufferViews[writeIndex]);
         });
@@ -231,7 +231,7 @@ void BindGroup::WriteDescriptorSet(VkDescriptorSet dsSet,
             continue;
         }
 
-        AddWrite(i, [&](size_t writeIndex, VkWriteDescriptorSet* write) {
+        AddWrite(i, [&](BindingIndex writeIndex, VkWriteDescriptorSet* write) {
             writeImageInfo[writeIndex].imageView = handle;
             writeImageInfo[writeIndex].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             write->pImageInfo = &writeImageInfo[writeIndex];

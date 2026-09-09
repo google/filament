@@ -1,0 +1,1416 @@
+Name
+
+    NV_shader_buffer_load
+
+Name Strings
+
+    GL_NV_shader_buffer_load
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Chris Dodd, NVIDIA
+    Mark Kilgard, NVIDIA
+    Eric Werness, NVIDIA
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:         August 8, 2010
+    Author Revision:            8
+
+Number
+
+    379
+
+Dependencies
+
+    Written against the OpenGL 3.0 Specification.
+
+    Written against the GLSL 1.30 Specification (Revision 09).
+
+    This extension interacts with NV_gpu_program4. 
+
+
+Overview
+
+    At a very coarse level, GL has evolved in a way that allows 
+    applications to replace many of the original state machine variables 
+    with blocks of user-defined data. For example, the current vertex 
+    state has been augmented by vertex buffer objects, fixed-function 
+    shading state and parameters have been replaced by shaders/programs 
+    and constant buffers, etc.. Applications switch between coarse sets 
+    of state by binding objects to the context or to other container 
+    objects (e.g. vertex array objects) instead of manipulating state 
+    variables of the context. In terms of the number of GL commands 
+    required to draw an object, modern applications are orders of 
+    magnitude more efficient than legacy applications, but this explosion 
+    of objects bound to other objects has led to a new bottleneck - 
+    pointer chasing and CPU L2 cache misses in the driver, and general 
+    L2 cache pollution.
+
+    This extension provides a mechanism to read from a flat, 64-bit GPU 
+    address space from programs/shaders, to query GPU addresses of buffer
+    objects at the API level, and to bind buffer objects to the context in
+    such a way that they can be accessed via their GPU addresses in any 
+    shader stage. 
+    
+    The intent is that applications can avoid re-binding buffer objects 
+    or updating constants between each Draw call and instead simply use 
+    a VertexAttrib (or TexCoord, or InstanceID, or...) to "point" to the 
+    new object's state. In this way, one of the cheapest "state" updates 
+    (from the CPU's point of view) can be used to effect a significant 
+    state change in the shader similarly to how a pointer change may on 
+    the CPU. At the same time, this relieves the limits on how many 
+    buffer objects can be accessed at once by shaders, and allows these 
+    buffer object accesses to be exposed as C-style pointer dereferences
+    in the shading language.
+
+    As a very simple example, imagine packing a group of similar objects' 
+    constants into a single buffer object and pointing your program
+    at object <i> by setting "glVertexAttribI1iEXT(attrLoc, i);"
+    and using a shader as such:
+
+        struct MyObjectType {
+            mat4x4 modelView;
+            vec4 materialPropertyX;
+            // etc.
+        };
+        uniform MyObjectType *allObjects;
+        in int objectID; // bound to attrLoc
+        
+        ...
+
+        mat4x4 thisObjectsMatrix = allObjects[objectID].modelView;
+        // do transform, shading, etc.
+
+    This is beneficial in much the same way that texture arrays allow 
+    choosing between similar, but independent, texture maps with a single
+    coordinate identifying which slice of the texture to use. It also
+    resembles instancing, where a lightweight change (incrementing the 
+    instance ID) can be used to generate a different and interesting 
+    result, but with additional flexibility over instancing because the 
+    values are app-controlled and not a single incrementing counter.
+    
+    Dependent pointer fetches are allowed, so more complex scene graph 
+    structures can be built into buffer objects providing significant new 
+    flexibility in the use of shaders. Another simple example, showing 
+    something you can't do with existing functionality, is to do dependent
+    fetches into many buffer objects:
+
+        GenBuffers(N, dataBuffers);
+        GenBuffers(1, &pointerBuffer);
+
+        GLuint64EXT gpuAddrs[N];
+        for (i = 0; i < N; ++i) {
+            BindBuffer(target, dataBuffers[i]);
+            BufferData(target, size[i], myData[i], STATIC_DRAW);
+            
+            // get the address of this buffer and make it resident.
+            GetBufferParameterui64vNV(target, BUFFER_GPU_ADDRESS, 
+                                      gpuaddrs[i]); 
+            MakeBufferResidentNV(target, READ_ONLY);
+        }
+
+        GLuint64EXT pointerBufferAddr;
+        BindBuffer(target, pointerBuffer);
+        BufferData(target, sizeof(GLuint64EXT)*N, gpuAddrs, STATIC_DRAW);
+        GetBufferParameterui64vNV(target, BUFFER_GPU_ADDRESS, 
+                                  &pointerBufferAddr); 
+        MakeBufferResidentNV(target, READ_ONLY);
+
+        // now in the shader, we can use a double indirection
+        vec4 **ptrToBuffers = pointerBufferAddr;
+        vec4 *ptrToBufferI = ptrToBuffers[i];
+
+    This allows simultaneous access to more buffers than 
+    EXT_bindable_uniform (MAX_VERTEX_BINDABLE_UNIFORMS, etc.) and each
+    can be larger than MAX_BINDABLE_UNIFORM_SIZE.
+
+New Procedures and Functions
+
+    void MakeBufferResidentNV(enum target, enum access);
+    void MakeBufferNonResidentNV(enum target);
+    boolean IsBufferResidentNV(enum target);
+    void MakeNamedBufferResidentNV(uint buffer, enum access);
+    void MakeNamedBufferNonResidentNV(uint buffer);
+    boolean IsNamedBufferResidentNV(uint buffer);
+
+    void GetBufferParameterui64vNV(enum target, enum pname, 
+                                   uint64EXT *params);
+    void GetNamedBufferParameterui64vNV(uint buffer, enum pname, 
+                                        uint64EXT *params);
+
+    void GetIntegerui64vNV(enum value, uint64EXT *result);
+
+    void Uniformui64NV(int location, uint64EXT value);
+    void Uniformui64vNV(int location, sizei count,
+                               const uint64EXT *value);
+    void GetUniformui64vNV(uint program, int location, uint64EXT *params);
+    void ProgramUniformui64NV(uint program, int location, uint64EXT value);
+    void ProgramUniformui64vNV(uint program, int location, sizei count, 
+                               const uint64EXT *value);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBufferParameterui64vNV,
+    GetNamedBufferParameterui64vNV:
+
+        BUFFER_GPU_ADDRESS_NV                          0x8F1D
+
+    Returned by the <type> parameter of GetActiveUniform:
+    
+        GPU_ADDRESS_NV                                 0x8F34
+
+    Accepted by the <value> parameter of GetIntegerui64vNV: 
+
+        MAX_SHADER_BUFFER_ADDRESS_NV                   0x8F35
+
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+    Append to Section 2.9 (p. 45)
+
+    The data store of a buffer object may be made accessible to the GL
+    via shader buffer loads by calling:
+
+        void MakeBufferResidentNV(enum target, enum access);
+
+    <access> may only be READ_ONLY, but is provided for future 
+    extensibility to indicate to the driver that the GPU may write to the
+    memory. <target> may be any of the buffer targets accepted by 
+    BindBuffer.  The error INVALID_OPERATION will be generated if no
+    buffer is bound to <target>, if the buffer bound to <target> is
+    already resident in the current GL context, or if the buffer bound to
+    <target> has no data store.
+
+    While the buffer object is resident, it is legal to use GPU addresses 
+    in the range [BUFFER_GPU_ADDRESS, BUFFER_GPU_ADDRESS + BUFFER_SIZE) 
+    in any shader stage.
+
+    The data store of a buffer object may be made inaccessible to the GL
+    via shader buffer loads by calling:
+    
+        void MakeBufferNonResidentNV(enum target);
+
+    A buffer is also made non-resident implicitly as a result of being
+    respecified via BufferData or being deleted. <target> may be any of 
+    the buffer targets accepted by BindBuffer.  The error 
+    INVALID_OPERATION will be generated if no buffer is bound to <target>
+    or if the buffer bound to <target> is not resident in the current
+    GL context.
+
+    The function:
+
+        void GetBufferParameterui64vNV(enum target, enum pname, 
+                                       uint64EXT *params);
+
+    may be used to query the GPU address of a buffer object's data store. 
+    This address remains valid until the buffer object is deleted, or 
+    when the data store is respecified via BufferData. The address "zero"
+    is reserved for convenience, so no buffer object will ever have an 
+    address of zero.  The error INVALID_OPERATION will be generated if no
+    buffer is bound to <target>, or if the buffer bound to <target> has no
+    data store.
+
+    The functions:
+
+        void MakeNamedBufferResidentNV(uint buffer, enum access);
+        void MakeNamedBufferNonResidentNV(uint buffer);
+        void GetNamedBufferParameterui64vNV(uint buffer, enum pname, 
+                                            uint64EXT *params);
+   
+    operate identically to the non-"Named" functions except, rather than 
+    using currently bound buffers, it uses the buffer object identified 
+    by <buffer>.  If the buffer object named by the buffer parameter has
+    not been previously bound or has been deleted since the last binding,
+    the GL first creates a new state vector, initialized with a zero-sized
+    memory buffer and comprising the state values listed in table 2.6.
+    There is no buffer corresponding to the name zero, these commands
+    generate the INVALID_OPERATION error if the buffer parameter is zero.
+
+    Add to Section 2.20.3 (p. 98)
+
+        void Uniformui64NV(int location, uint64EXT value);
+        void Uniformui64vNV(int location, sizei count, uint64EXT *value);
+
+    The Uniformui64{v}NV commands will load <count> uint64EXT values into 
+    a uniform location defined as a GPU_ADDRESS_NV or an array of 
+    GPU_ADDRESS_NVs.
+
+    The functions:
+
+        void ProgramUniformui64NV(uint program, int location, 
+                                  uint64EXT value);
+        void ProgramUniformui64vNV(uint program, int location, sizei count, 
+                                   uint64EXT *value);
+   
+    operate identically to the non-"Program" functions except, rather 
+    than updating the currently in use program object, these "Program" 
+    commands update the program object named by the initial program 
+    parameter.
+
+
+    Insert a new subsection after Section 2.20.4, Shader Execution (Vertex
+    Shaders), p. 103.
+
+    Section 2.20.X, Shader Memory Access
+
+    Shaders may load from buffer object memory by dereferencing pointer
+    variables.  Pointer variables are 64-bit unsigned integer values referring
+    to the GPU addresses of data stored in buffer objects made resident by
+    MakeBufferResidentNV.  The GPU addresses of such buffer objects may be
+    queried using GetBufferParameterui64vNV with a <pname> of
+    BUFFER_GPU_ADDRESS_NV.
+
+    When a shader dereferences a pointer variable, data are read from buffer
+    object memory according to the following rules:
+
+    - Data of type "bool" are stored in memory as one uint-typed value at the
+      specified GPU address.  All non-zero values correspond to true, and zero
+      corresponds to false.
+
+    - Data of type "int" are stored in memory as one int-typed value at the
+      specified GPU address.
+
+    - Data of type "uint" are stored in memory as one uint-typed value at the
+      specified GPU address.
+ 
+    - Data of type "float" are stored in memory as one float-typed value at
+      the specified GPU address.
+
+    - Vectors with <N> elements with any of the above basic element types are
+      stored in memory as <N> values in consecutive memory locations beginning
+      at the specified GPU address, with components stored in order with the
+      first (X) component at the lowest offset.  The data type used for
+      individual components is derived according to the rules for scalar
+      members above.
+
+    - Data with any pointer type are stored in memory as a single 64-bit
+      unsigned integer value at the specified GPU address.
+
+    - Column-major matrices with <C> columns and <R> rows (using the type
+      "mat<C>x<R>", or simply "mat<C>" if <C>==<R>) are treated as an array of
+      <C> floating-point column vectors, each consisting of <R> components.
+      The column vectors will be stored in order, with column zero at the
+      lowest offset.  The difference in offsets between consecutive columns of
+      the matrix will be referred to as the column stride, and is constant
+      across the matrix.
+
+    - Row-major matrices with <C> columns and <R> rows (using the type
+      "mat<C>x<R>", or simply "mat<C>" if <C>==<R>) are treated as an array of
+      <R> floating-point row vectors, each consisting of <C> components. The
+      row vectors will be stored in order, with row zero at the lowest offset.
+      The difference in offsets between consecutive rows of the matrix will be
+      referred to as the row stride, and is constant across the matrix.
+ 
+    - Arrays of scalars, vectors, pointers, and matrices are stored in memory
+      by element order, with array member zero at the lowest offset.  The
+      difference in offsets between each pair of elements in the array in
+      basic machine units is referred to as the array stride, and is constant
+      across the entire array.
+
+    For matrix and array variables, the matrix and/or array strides
+    corresponding to the variable may be derived according to the structure
+    layout rules specified immediately below.
+
+    When dereferencing a pointer to a structure, its individual members will
+    be laid out in memory in monotonically increasing order based on their
+    location in the structure declaration.  Each structure member has a base
+    offset and a base alignment, from which an aligned offset is computed by
+    rounding the base offset up to the next multiple of the base alignment.
+    The base offset of the first member of a structure is taken from the
+    aligned offset of the structure itself.  The base offset of all other
+    structure members is derived by taking the offset of the last basic
+    machine unit consumed by the previous member and adding one.  Each
+    structure member is stored in memory at its aligned offset.
+
+      (1) If the member is a scalar consuming <N> basic machine units, the
+          base alignment is <N>.
+
+      (2) If the member is a two- or four-component vector with components
+          consuming <N> basic machine units, the base alignment is 2<N> or
+          4<N>, respectively.
+
+      (3) If the member is a three-component vector with components consuming
+          <N> basic machine units, the base alignment is 4<N>.
+
+      (4) If the member is an array of scalars or vectors, the base alignment
+          and array stride are set to match the base alignment of a single
+          array element, according to rules (1), (2), and (3). The array may
+          have padding at the end; the base offset of the member following the
+          array is rounded up to the next multiple of the base alignment.
+
+      (5) If the member is a column-major matrix with <C> columns and <R>
+          rows, the matrix is stored identically to an array of <C> column
+          vectors with <R> components each, according to rule (4).
+
+      (6) If the member is an array of <S> column-major matrices with <C>
+          columns and <R> rows, the matrix is stored identically to a row of
+          <S>*<C> column vectors with <R> components each, according to rule
+          (4).
+
+      (7) If the member is a row-major matrix with <C> columns and <R> rows,
+          the matrix is stored identically to an array of <R> row vectors
+          with <C> components each, according to rule (4).
+
+      (8) If the member is an array of <S> row-major matrices with <C> columns
+          and <R> rows, the matrix is stored identically to a row of <S>*<R>
+          row vectors with <C> components each, according to rule (4).
+
+      (9) If the member is a structure, the base alignment of the structure is
+          <N>, where <N> is the largest base alignment value of any of its
+          members.  The individual members of this sub-structure are then
+          assigned offsets by applying this set of rules recursively, where
+          the base offset of the first member of the sub-structure is equal to
+          the aligned offset of the structure. The structure may have padding
+          at the end; the base offset of the member following the
+          sub-structure is rounded up to the next multiple of the base
+          alignment of the structure.
+
+      (10) If the member is an array of <S> structures, the <S> elements of
+           the array are laid out in order, according to rule (9).
+
+    If a shader reads from a GPU address that does not correspond to a buffer
+    object made resident by MakeBufferResidentNV, the results of the operation
+    are undefined and may result in application termination.
+
+    Any variable, array element, or structure member accessed using a pointer
+    has a required base alignment, which may be derived according the
+    structure layout rules above.  If a variable, array member, or structure
+    member is accessed using a pointer that is not a multiple of its base
+    alignment, the results of the access will be undefined.  To store multiple
+    variables in a single buffer object, an application must ensure that each
+    variable is properly aligned.  Storing a single scalar, vector, matrix,
+    array, or structure variable using a pointer set to the base GPU address
+    of a resident buffer object requires no special alignment.  The base GPU
+    address of a buffer object is guaranteed to be sufficiently aligned to
+    satisfy the base alignment requirement of any variable, and the layout
+    rules above ensure that individual matrix rows/columns, array elements,
+    and structure members are properly aligned as long as the base pointer
+    meets alignment requirements.
+
+
+Additions to Chapter 5 of the OpenGL 3.0 Specification (Special Functions)
+
+    Add to Section 5.4, p. 310 (Display Lists)
+
+    Edit the list of commands that are executed immediately when compiling
+    a display list to include MakeBufferResidentNV, 
+    MakeBufferNonResidentNV, MakeNamedBufferResidentNV, 
+    MakeNamedBufferNonResidentNV, GetBufferParameterui64vNV, 
+    GetNamedBufferParameterui64vNV, IsBufferResidentNV, and
+    IsNamedBufferResidentNV.
+
+Additions to Chapter 6 of the OpenGL 3.0 Specification (Querying GL State)
+
+    Add to Section 6.1.11, p. 314 (Pointer, String, and 64-bit Queries)
+
+    The command:
+        
+        void GetIntegerui64vNV(enum value, uint64EXT *result);
+
+    obtains 64-bit unsigned integer state variables. Legal values of 
+    <value> are only those that specify GetIntegerui64vNV in the state
+    tables in Chapter 6.
+
+    Add to Section 6.1.13, p. 332 (Buffer Object Queries)
+
+    The commands:
+
+        boolean IsBufferResidentNV(enum target);
+        boolean IsNamedBufferResidentNV(uint buffer);
+
+    return TRUE if the specified buffer is resident in the current context.
+    The error INVALID_OPERATION will be generated by IsBufferResidentNV if no
+    buffer is bound to <target>.  If the buffer object named by the buffer
+    parameter of IsNamedBufferResidentNV has not been previously bound or has
+    been deleted since the last binding, the GL first creates a new state
+    vector, initialized with a zero-sized memory buffer and comprising the
+    state values listed in table 2.6.  There is no buffer corresponding to the
+    name zero, IsNamedBufferResidentNV generates the INVALID_OPERATION error if
+    the buffer parameter is zero.
+
+    Add to Section 6.1.15, p. 337 (Shader and Program Queries)
+
+        void GetUniformui64vNV(uint program, int location, uint64EXT *params);
+
+Additions to Appendix D of the OpenGL 3.0 Specification (Shared Objects and Multiple Contexts)
+
+    Add a new section D.X (Object Use by GPU Address)
+
+    A buffer object's GPU addresses is valid in all contexts in the share
+    group that the buffer belongs to. A buffer should be made resident in
+    each context that will use it via GPU address, to allow the GL 
+    knowledge that it is used in each command stream.
+
+Additions to the NV_gpu_program4 specification:
+
+    Change Section 2.X.2, Program Grammar
+
+    If a program specifies the NV_shader_buffer_load program option, 
+    the following modifications apply to the program grammar:
+
+    Append to <opModifier> list: | "F32" | "F32X2" | "F32X4" | "S8" | "S16" | 
+    "S32" | "S32X2" | "S32X4" | "U8" | "U16" | "U32" | "U32X2" | "U32X4".
+
+    Append to <SCALARop> list: | "LOAD".
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (Add to the set of opcodes in Table X.13)
+
+                  Modifiers 
+      Instruction F I C S H D  Out Inputs    Description
+      ----------- - - - - - -  --- --------  --------------------------------
+      LOAD        X X X X - F  v   su        Global load
+
+
+    (Add to Table X.14, Instruction Modifiers, and to the corresponding
+    description following the table)
+
+      Modifier  Description
+      --------  -----------------------------------------------
+      F32       Access one 32-bit floating-point value
+      F32X2     Access two 32-bit floating-point values
+      F32X4     Access four 32-bit floating-point values
+      S8        Access one 8-bit signed integer value
+      S16       Access one 16-bit signed integer value
+      S32       Access one 32-bit signed integer value
+      S32X2     Access two 32-bit signed integer values
+      S32X4     Access four 32-bit signed integer values
+      U8        Access one 8-bit unsigned integer value
+      U16       Access one 16-bit unsigned integer value
+      U32       Access one 32-bit unsigned integer value
+      U32X2     Access two 32-bit unsigned integer values
+      U32X4     Access four 32-bit unsigned integer values
+
+    For memory load operations, the "F32", "F32X2", "F32X4", "S8", "S16",
+    "S32", "S32X2", "S32X4", "U8", "U16", "U32", "U32X2", and "U32X4" storage
+    modifiers control how data are loaded from memory.  Storage modifiers are
+    supported by LOAD instruction and are covered in more detail in the
+    descriptions of that instruction.  LOAD must specify exactly one of these
+    modifiers, and may not specify any of the base data type modifiers (F,U,S)
+    described above.  The base data type of the result vector of a LOAD
+    instruction is trivially derived from the storage modifier.
+
+
+    Add New Section 2.X.4.5, Program Memory Access
+
+    Programs may load from buffer object memory via the LOAD (global load)
+    instruction.
+
+    Load instructions read 8, 16, 32, 64, or 128 bits of data from a source
+    address to produce a four-component vector, according to the storage
+    modifier specified with the instruction.  The storage modifier has three
+    parts:
+
+      - a base data type, "F", "S", or "U", specifying that the instruction
+        fetches floating-point, signed integer, or unsigned integer values,
+        respectively;
+
+      - a component size, specifying that the components fetched by the
+        instruction have 8, 16, or 32 bits; and
+
+      - an optional component count, where "X2" and "X4" indicate that two or
+        four components be fetched, and no count indicates a single component
+        fetch.
+
+    When the storage modifier specifies that fewer than four components should
+    be fetched, remaining components are filled with zeroes.  When performing
+    a global load (LOAD), the GPU address is specified as an instruction
+    operand.  Given a GPU address <address> and a storage modifier <modifier>,
+    the memory load can be described by the following code:
+
+      result_t_vec BufferMemoryLoad(char *address, OpModifier modifier)
+      {
+        result_t_vec result = { 0, 0, 0, 0 };
+        switch (modifier) {
+        case F32:
+            result.x = ((float32_t *)address)[0];
+            break;
+        case F32X2:
+            result.x = ((float32_t *)address)[0];
+            result.y = ((float32_t *)address)[1];
+            break;
+        case F32X4:
+            result.x = ((float32_t *)address)[0];
+            result.y = ((float32_t *)address)[1];
+            result.z = ((float32_t *)address)[2];
+            result.w = ((float32_t *)address)[3];
+            break;
+        case S8:
+            result.x = ((int8_t *)address)[0];
+            break;
+        case S16:
+            result.x = ((int16_t *)address)[0];
+            break;
+        case S32:
+            result.x = ((int32_t *)address)[0];
+            break;
+        case S32X2:
+            result.x = ((int32_t *)address)[0];
+            result.y = ((int32_t *)address)[1];
+            break;
+        case S32X4:
+            result.x = ((int32_t *)address)[0];
+            result.y = ((int32_t *)address)[1];
+            result.z = ((int32_t *)address)[2];
+            result.w = ((int32_t *)address)[3];
+            break;
+        case U8:
+            result.x = ((uint8_t *)address)[0];
+            break;
+        case U16:
+            result.x = ((uint16_t *)address)[0];
+            break;
+        case U32:
+            result.x = ((uint32_t *)address)[0];
+            break;
+        case U32X2:
+            result.x = ((uint32_t *)address)[0];
+            result.y = ((uint32_t *)address)[1];
+            break;
+        case U32X4:
+            result.x = ((uint32_t *)address)[0];
+            result.y = ((uint32_t *)address)[1];
+            result.z = ((uint32_t *)address)[2];
+            result.w = ((uint32_t *)address)[3];
+            break;
+        }
+        return result;
+      }
+
+    If a global load accesses a memory address that does not correspond to a
+    buffer object made resident by MakeBufferResidentNV, the results of the
+    operation are undefined and may result in application termination.
+
+    The address used for the buffer memory loads must be aligned to the fetch
+    size corresponding to the storage opcode modifier.  For S8 and U8, the
+    offset has no alignment requirements.  For S16 and U16, the offset must be
+    a multiple of two basic machine units.  For F32, S32, and U32, the offset
+    must be a multiple of four.  For F32X2, S32X2, and U32X2, the offset must
+    be a multiple of eight.  For F32X4, S32X4, and U32X4, the offset must be a
+    multiple of sixteen.  If an offset is not correctly aligned, the values
+    returned by a buffer memory load will be undefined.
+
+
+    Modify Section 2.X.6, Program Options
+
+    + Shader Buffer Load Support (NV_shader_buffer_load)
+
+    If a program specifies the "NV_shader_buffer_load" option, it may use the
+    LOAD instruction to load data from a resident buffer object given a GPU
+    address.
+
+
+    Section 2.X.8.Z, LOAD:  Global Load
+
+    The LOAD instruction generates a result vector by reading an address from
+    the single unsigned integer scalar operand and fetching data from buffer
+    object memory, as described in Section 2.X.4.5.
+
+      address = ScalarLoad(op0);
+      result = BufferMemoryLoad(address, storageModifier);
+
+    LOAD supports no base data type modifiers, but requires exactly one
+    storage modifier.  The base data type of the result vector is derived from
+    the storage modifier.  The single scalar operand is always interpreted as
+    an unsigned integer.
+
+    The range of GPU addresses supported by the LOAD instruction may be
+    subject to an implementation-dependent limit.  If any component fetched by
+    the LOAD instruction corresponds to memory with an address larger than the
+    value of MAX_SHADER_BUFFER_ADDRESS_NV, the value fetched for that
+    component will be undefined.
+
+
+Modifications to The OpenGL Shading Language Specification, Version 1.30.09
+
+    Modify Section 3.6, Keywords, p. 14
+
+    (add the following to the list of reserved keywords)
+
+    intptr_t 
+    uintptr_t
+
+
+    Modify Section 4.1, Basic Types, p. 18
+
+    (add to the basic "Transparent Types" table, p. 18)
+
+      Types       Meaning
+      --------    ----------------------------------------------------------
+      intptr_t    a signed integer with the same precision as a pointer
+      uintptr_t   an unsigned integer with the same precision as a pointer
+
+    (replace the last paragraph of the section with the following)
+
+    Pointers to any of the transparent types, user-defined structs, or other
+    pointer types are supported.
+
+
+    Modify Section 4.1.3, Integers, p. 18
+
+    (add to the end of the first paragraph) Signed and unsigned integer
+    variables are fully supported.  ... intptr_t and uintptr_t variables have
+    the same number of bits of precision as the native size of a pointer in
+    the underlying implementation.
+
+
+    (Insert new section immediately before Section 4.1.10, Implicit
+    Conversions, p. 27)
+
+    Section 4.1.X, Pointers
+
+    Pointers are 64-bit unsigned integer values that represent the address of
+    some "global" memory (i.e. not local to this invocation of a shader).
+    Pointers to any of the transparent types, user-defined structures, or
+    pointer types are supported.  Pointers are dereferenced with the operators
+    (*), (->), and ([]) and a variety of operators performing addition and
+    subtraction are supported.  There is no mechanism to assign a pointer to
+    the address of a local variable or array, nor is there a mechanism to
+    allocate or free memory from within a shader.  There are no function
+    pointers.
+
+    The underlying memory read using pointer variables may also be accessed
+    using the OpenGL API commands.  To communicate between shaders and other
+    OpenGL API commands, variables read through pointers are arranged in
+    memory in the manner described in Section 2.20.X of the OpenGL
+    Specification.
+
+
+    Modify Section 4.1.10, Implicit Conversions, p. 27
+
+    (add before the final paragraph of the section, p. 27) 
+
+    Pointers to any type may be implicitly converted to pointers to void.
+    Pointers to any type (including void), are never implicitly converted to
+    pointers to any other non-void type.
+
+
+    Modify Section 5.1, Operators, p. 39
+
+    (add new entries to the precedence table; for a full spec, renumber the
+    new precedence row "3.5" to "4", and renumber all subsequent rows)
+
+    Precedence  Operator Class               Operators    Associativity
+    ----------  --------------------------   ---------    -------------
+      2         field access from pointer       ->        left to right
+      3         pointer dereference             *         right to left
+      3.5       typecast                        ()        right to left    
+
+    (modify the last paragraph, p.39, to delete language saying that
+     dereferences and typecast operators are not supported)  
+
+    There is no address-of operator.
+
+
+    (Insert new section immediately after Section 5.7, Structure and Array
+     Operations, p. 46)
+
+    Section 5.X, Pointer Operations
+
+    The following operators are allowed to operate on pointer types:
+
+        pointer dereference                     *
+        additive                                + -
+        array subscript                         []
+        arithmetic assignments                  += -=
+        postfix increment and decrement         ++ --
+        prefix increment and decrement          ++ --
+        equality                                == !=
+        assignment                              =
+        field or method selector                ->
+
+    The pointer dereference operator is a unary operator that converts a
+    pointer expression into an l-value designating data of the type pointed to
+    by the pointer expression.  The result of a pointer dereference may not be
+    used as the left-hand side of an assignment.
+
+    The pointer binary addition (+) and subtraction (-) operators produce a
+    pointer result from one pointer operand and one scalar signed or unsigned
+    integer operand.  For subtraction, the pointer must be the first operand;
+    for addition, the pointer may be either operand.  The type of the result
+    is the same type as the pointer operand.  A new pointer is computed by
+    adding or subtracting <I>*<S> basic machine units to the value of the
+    pointer operand, where <I> is the integer operand and <S> is the stride
+    that would be derived by applying the rules specified in Section 2.20.X of
+    the OpenGL Specification to an array with elements of the type pointed to
+    by the pointer.
+
+    The binary subtraction (-) operator may also operate on a pair of pointers
+    of identical type.  In this operation, the second operand is subtracted
+    from the first, yielding a signed integer result of type <intptr_t>.  The
+    result is in units of the type being pointed to.  The result is the
+    integer value that would yield the first pointer operand if added to the
+    second pointer operand in the manner described above.  If no such integer
+    value exists, the result of the operation is undefined.  Pointer
+    subtraction is not supported for pointers to the type <void>.
+
+    The array subscript operator ([]) adds a signed or unsigned integer
+    expression specified inside the brackets to a pointer expression specified
+    to the left of the brackets, and then dereferences the pointer produced by
+    the addition.  The array subscript operation "P[i]" is functionally
+    equivalent to "(*(P+i))".
+
+    The add into (+=) and subtract from (-=) are binary operations, where the
+    first operand must be one that could be assigned to (an l-value) and the
+    second operand must be a signed or unsigned integer scalar.  These
+    operations add the integer operand into or subtract the integer operand
+    from the pointer operand, as defined for pointer addition and subtraction.
+
+    The arithmetic unary operators post- and pre-increment and decrement (--
+    and ++) operate on pointers.  For post- and pre-increment and decrement,
+    the expression must be one that could be assigned to (an l-value).  Pre-
+    and post-increment and decrement add or subtract 1 to the contents of the
+    expression they operate on, as defined for pointer addition and
+    subtraction.  The value of the pre-increment or pre-decrement expression
+    is the resulting value of that modification.  The value of the
+    post-increment or post-decrement expression is the value of the expression
+    before modification.
+
+    The equality operators equal (==) and not equal (!=) operate on pointer
+    types and produce a scalar Boolean result.  The two operands must either
+    be pointers to the same type, or one of the two operands must point to
+    void.  Two pointers are considered equal if and only if they point to the
+    same global memory address.
+
+    The field or method selection operator (->) operates on a pointer to a
+    structure of any type and is used to select a field of the structure
+    pointed to by the pointer.  This selector also operates on a pointer to
+    vector of any type, where the right hand side of the operator must be a
+    valid string using the vector component selection suffix described in
+    Section 5.5.  In both cases, the field or method selection operation
+    "p->s" is functionally equivalent to "((*p).s)".
+
+    Pointer addition and subtraction, including the add into, subtract from,
+    and pre- and post-increment and decrement operators, are not supported on
+    pointers to a void type.
+
+    The assignment operator may be used to update the value of a pointer
+    variable, as described in Section 5.8.
+
+
+    (Insert after Section 5.10, Vector and Matrix Operations, p. 50)
+
+    Section 5.11, Typecast Operations
+
+    The typecast operator may be used to convert an expression from one type
+    to another, operating in a manner similar to scalar, vector, and matrix
+    constructors.  The typecast operator specifies a new data type in
+    parentheses, followed by an expression, as in the following examples:
+
+      float a = (float) 2U;
+      vec3 b = (vec3) 1.0;
+      vec4 c = (vec4) b;
+      mat2 d = (mat2) 1.0;
+      mat4 e = (mat4) d;
+
+    For scalar, vector, and matrix data types, the set of typecasts supported
+    is equivalent to the set of single-operand constructors supported, and a
+    typecast operates identically to an equivalent constructor.  A scalar
+    expression may be typecast to any scalar, vector, or matrix data type.  A
+    vector expression may be typecast any vector type, except vectors with a
+    larger number of components.  Additionally, four-component vector
+    expressions may also be cast to a mat2 type.  A matrix expression may be
+    typecast to any other matrix data type.
+
+    Expressions with structure type may only be typecast to a structure of
+    identical type, which has no effect.  Typecast operators are not supported
+    for array types.
+
+    Note that the typecast operator takes only a single expression.  Unlike
+    constructors, they can not be used to generate a vector, structure, or
+    matrix from multiple inputs.  For example,
+
+      vec3 f = (vec3) (1.0, 2.0, 3.0);
+
+    generates a three-component vector <f>.  But all three components
+    are set to 3.0, which is the scalar value of the expression "(1.0, 2.0,
+    3.0)".  The commas in that expression are sequence operators, not list
+    delimiters.
+
+    Additionally, typecast operators may also be used to cast values to a
+    pointer type.  In this case, the expression being typecast must be either
+    a pointer (to any type) or a scalar of type intptr_t or uintptr_t.
+
+      vec4      *v4ptr
+      intptr_t  iptr;
+      vec3      *v3ptr = (vec3 *) v4ptr;
+      ivec2     *iv2ptr = (ivec2 *) iptr;
+
+    Note that function call-style constructors are not supported for pointers.
+
+
+    Add to the end of Section 8.3, Common Functions, p. 72
+
+    (add support for pointer packing functions)
+
+    Syntax:
+
+      void *packPtr(uvec2 a);
+      uvec2 unpackPtr(void *a);
+
+    The function packPtr() returns a pointer to void by constructing a 64-bit
+    void pointer from the two 32-bit components of an unsigned integer vector.
+    The first vector component specifies the 32 least significant bits of the
+    pointer; the second component specifies the 32 most significant bits.
+
+    The function unpackPtr() returns a two-component unsigned integer vector
+    built from a 64-bit void pointer.  The first component of the vector
+    consists of the 32 least significant bits of the pointer value; the second
+    component consists of the 32 most significant bits.
+
+
+    Modify Chapter 9, Shading Language Grammar, p.92
+
+    (change comment in the grammar disallowing pointer dereferences)
+
+    Change the sentence:
+
+      // Grammar Note: No '*' or '&' unary ops. Pointers are not supported.
+
+    to
+
+      // Grammar Note: No '&' unary.
+
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated by MakeBufferResidentNV if <access> is not
+    READ_ONLY.
+    
+    INVALID_ENUM is generated by GetBufferParameterui64vNV if <pname> is
+    not BUFFER_GPU_ADDRESS_NV.
+
+    INVALID_OPERATION is generated by MakeBufferResidentNV,
+    MakeBufferNonResidentNV, IsBufferResidentNV, and GetBufferParameterui64vNV
+    if no buffer is bound to <target>.
+
+    INVALID_OPERATION is generated by MakeBufferResidentNV if the buffer bound
+    to <target> is already resident in the current GL context.
+
+    INVALID_OPERATION is generated by MakeBufferNonResidentNV if the buffer
+    bound to <target> is not resident in the current GL context.
+
+    INVALID_OPERATION is generated by MakeNamedBufferResidentNV if <buffer> is
+    already resident in the current GL context.
+
+    INVALID_OPERATION is generated by MakeNamedBufferNonResidentNV if <buffer>
+    is not resident in the current GL context.
+
+    INVALID_OPERATION is generated by GetBufferParameterui64vNV or
+    MakeBufferResidentNV if the buffer bound to <target> has no data store.
+
+    INVALID_OPERATION is generated by GetNamedBufferParameterui64vNV or
+    MakeNamedBufferResidentNV if <buffer> has no data store.
+
+Examples
+
+    (1) Layout of a complex structure using the rules from the new Section
+        2.20.X added to the OpenGL spec:
+
+    struct  Example {
+                    // bytes used            rules
+      float a;      //  0-3                  
+      vec2 b;       //  8-15                 1   // bumped to a multiple of 8
+      vec3 c;       //  16-27                1
+      struct {
+        int d;      //  32-35                2   // bumped to a multiple of 8 (bvec2)
+        bvec2 e;    //  40-47                1
+      } f;
+      float g;      //  48-51                
+      float h[2];   //  52-55 (h[0])         5   // multiple of 4 (float) with no additional padding
+                    //  56-59 (h[1])         6   // tightly packed
+      mat2x3 i;     //  64-75 (i[0])         
+                    //  80-91 (i[1])         6   // bumped to a multiple of 16 (vec3)
+      struct {
+        uvec3 j;    //   96-107 (m[0].j)     
+        vec2 k;     //  112-119 (m[0].k)     1   // bumped to a multiple of 8 (vec2)
+        float l[2]; //  120-123 (m[0].l[0])  1,5 // simply float aligned
+                    //  124-127 (m[0].l[1])  6   // tightly packed
+                    //  128-139 (m[1].j)
+                    //  144-151 (m[1].k)
+                    //  152-155 (m[1].l[0])
+                    //  156-159 (m[1].l[1])
+      } m[2];
+    };
+    // sizeof(Example) == 160
+
+    (2) Replacing bindable_uniform with an array of pointers:
+
+        #version 120
+        #extension GL_NV_shader_buffer_load : require
+        #extension GL_EXT_bindable_uniform : require
+
+        in vec4 **ptr;
+        in uvec2 whichbuf;
+
+        void main() {
+            gl_FrontColor = ptr[whichbuf.x][whichbuf.y];
+            gl_Position = ftransform();
+        }
+
+        in the GL code, assuming the bufferobject setup in the Overview:
+
+        glBindAttribLocation(program, 8, "ptr");    
+        glBindAttribLocation(program, 9, "whichbuf");    
+        glLinkProgram(program);
+        glBegin(...);
+        glVertexAttribI2iEXT(8, (unsigned int)pointerBufferAddr, 
+                                (unsigned int)(pointerBufferAddr>>32));
+        for (i = ...) {
+            for (j = ...) {
+                glVertexAttribI2iEXT(9, i, j);
+                glVertex3f(...);
+            }
+        }
+        glEnd();
+
+
+New State
+
+    Update Table 6.11, p. 349 (Buffer Object State)
+
+    Get Value                   Type    Get Command                  Initial Value   Sec     Attribute
+    ---------                   ----    -----------                  -------------   ---     ---------
+    BUFFER_GPU_ADDRESS_NV       Z64+    GetBufferParameterui64vNV    0               2.9     none
+
+    Update Table 6.46, p. 384 (Implementation Dependent Values)
+
+    Get Value                   Type    Get Command                  Minimum Value   Sec     Attribute
+    ---------                   ----    -----------                  -------------   ---     ---------
+    MAX_SHADER_BUFFER_ADDRESS_NV Z64+   GetIntegerui64vNV            0xFFFFFFFF      2.X.2   none
+
+Dependencies on NV_gpu_program4:
+
+    This extension is generally written against the NV_gpu_program4 
+    wording, program grammar, etc., but doesn't have specific 
+    dependencies on its functionality. 
+
+    
+Issues
+
+    1) Only buffer objects?
+
+    RESOLVED: YES, for now. Buffer objects are unformatted memory and 
+    easily mapped to a "pointer"-style shading language. 
+
+    2) Should we allow writes?
+
+    RESOLVED: NO, deferred to a later extension. Writes involve 
+    specifying many kinds of synchronization primitives. Writes are also
+    a "side effect" which makes program execution "observable" in cases
+    where it may not have otherwise been (e.g. early-Z can kill fragments
+    before shading, or a post-transform cache may prevent vertex program
+    execution).
+    
+    3) What happens if an invalid pointer is fetched?
+
+    UNRESOLVED: Unpredictable results, including program termination?
+    Make the driver trap the error and report it (still unpredictable
+    results, but no program termination)? My preference would be to 
+    at least report the faulting address (roughly), whether it was 
+    a read or a write, and which shader stage faulted. I'd like to not 
+    terminate the program, but the app has to assume all their data 
+    stored in the GL is lost.
+
+    4) What should this extension be named?
+
+    RESOLVED: NV_shader_buffer_load. Rather than trying to choose an
+    overly-general name and naming future extensions "GL_XXX2", let's 
+    name this according to the specific functionality it provides.
+
+    5) What are the performance characteristics of buffer loads?
+
+    RESOLVED: Likely somewhere between uniforms and texture fetches, 
+    but totally implementation-dependent. Uniforms still serve a purpose
+    for "program locals". Buffer loads may have different caching 
+    behavior than either uniforms or texture fetches, but the expectation
+    is that they will be cached reads of memory and all the common sense
+    guidelines to try to maintain locality of reference apply.
+
+    6) What does MakeBufferResidentNV do? Why not just have a 
+    MapBufferGPUNV?
+
+    RESOLVED: Reserving virtual address space only requires knowing the 
+    size of the data store, so an explicit MapBufferGPU call isn't 
+    necessary. If all GPUs supported demand paging, a GPU address might
+    be sufficient, but without that assumption MakeBufferResidentNV serves
+    as a hint to the driver that it needs to page lock memory, download 
+    the buffer contents into GPU-accessible memory, or other similar 
+    preparation. MapBufferGPU would also imply that a different address
+    may be returned each time it is mapped, which could be cumbersome
+    for the application to handle.
+
+    7) Is it an error to render while any resident buffer is mapped?
+    
+    RESOLVED: No. As the number of attachment points in the context grows,
+    even the existing error check is falling out of favor.
+
+    8) Does MapBuffer stall on pending use of a resident buffer?
+
+    RESOLVED: No. The existing language is:
+    
+        "If the GL is able to map the buffer object's data store into the 
+         client's address space, MapBuffer returns the pointer value to 
+         the data store once all pending operations on that buffer have
+         completed."
+
+    However, since the implementation has no information about how the 
+    buffer is used, "all pending operations" amounts to a Finish. In 
+    terms of sharing across contexts/threads, ARB_vertex_buffer_object 
+    says:
+
+        "How is synchronization enforced when buffer objects are shared by
+         multiple OpenGL contexts?
+
+         RESOLVED: It is generally the clients' responsibility to
+         synchronize modifications made to shared buffer objects."
+
+    So we shouldn't dictate any additional shared object synchronization.
+    So the best we could do is a Finish, but it's not clear that this 
+    accomplishes anything for the application since they can just as 
+    easily call Finish. Or if they don't want synchronization, they can 
+    use MAP_UNSYNCHRONIZED_BIT. It seems the resolution to this is 
+    inconsequential as GL already provides the tools to achieve either 
+    behavior. Hence, don't bother stalling.
+
+    However, if a buffer was previously resident and has since been made 
+    non-resident, the implementation should enforce the stalling 
+    behavior for those pending operations from before it was made non-
+    resident.
+
+    9) Given issue (8), what are some effective ways to load data into 
+    a buffer that is resident?
+
+    RESOLVED: There are several possibilities:
+
+    - BufferSubData.
+    
+    - The application may track using Fences which parts of the buffer 
+      are actually in use and update them with CPU writes using 
+      MAP_UNSYNCHRONIZED_BIT. This is potentially error-prone, as 
+      described in ARB_copy_buffer.
+
+    - CopyBufferSubData. ARB_copy_buffer describes a simple usage example
+      for a single-threaded application. Since this extension is targeted
+      at reducing the CPU bottleneck in the rendering thread, offloading
+      some of the work to other threads may be useful.
+
+      Example with a single Loading thread and Rendering thread:
+
+          Loading thread:
+              while (1) {
+                  WaitForEvent(something to do);
+
+                  NamedBufferData(tempBuffer, updateSize, NULL, STREAM_DRAW);
+                  ptr = MapNamedBuffer(tempBuffer, WRITE_ONLY);
+                  // fill ptr
+                  UnmapNamedBuffer(tempBuffer);
+                  // the buffer could have been filled via BufferData, if 
+                  // that's more natural.
+                  
+                  // send tempBuffer name to Rendering thread
+              }
+          Rendering thread:
+              foreach (obj in scene) {
+                  if (obj has changed) {
+                      // get tempBuffer name from Loading thread
+                      
+                      NamedCopyBufferSubData(tempBuffer, objBuf, objOffset, updateSize);
+                  }
+                  Draw(obj);
+              }
+
+      If we further desire to offload the data transfer to another 
+      thread, and the implementation supports concurrent data transfers 
+      in one context/thread while rendering in another context/thread, 
+      this may also be accomplished thusly:
+
+          Loading thread:
+              while (1) {
+                  WaitForEvent(something to do);
+
+                  NamedBufferData(sysBuffer, updateSize, NULL, STREAM_DRAW);
+                  ptr = MapNamedBuffer(sysBuffer, WRITE_ONLY);
+                  // fill ptr
+                  UnmapNamedBuffer(sysBuffer);
+                  
+                  NamedBufferData(vidBuffer, updateSize, NULL, STREAM_COPY);
+                  // This is a sysmem->vidmem blit.
+                  NamedCopyBufferSubData(sysBuffer, vidBuffer, 0, updateSize);
+                  SetFence(fenceId, ALL_COMPLETED);
+
+                  // send vidBuffer name and fenceId to Rendering thread
+
+                  // This could have been a BufferSubData directly into 
+                  // vidBuffer, if that's more natural.
+              }
+          Rendering thread:
+              foreach (obj in scene) {
+                  if (obj has changed) {
+                      // get vidBuffer name and fenceId from Loading thread
+                      
+                      // note: there aren't any sharable fences currently,
+                      // actually need to ask the loading thread when it
+                      // has finished.
+                      FinishFence(fenceId);
+                      
+                      // This is hopefully a fast vidmem->vidmem blit.
+                      NamedCopyBufferSubData(vidBuffer, objBuffer, objOffset, updateSize);
+                  }
+                  Draw(obj);
+              }
+
+      In both of these examples, the point at which the data is written to 
+      the resident buffer's data store is clearly specified in order
+      with rendering commands. This resolves a whole class of 
+      synchronization bugs (Write After Read hazard) that 
+      MAP_UNSYNCHRONIZED_BIT is prone to.
+
+    10) What happens if BufferData is called on a buffer that is resident? 
+    
+    RESOLVED: BufferData is specified to "delete the existing data store", 
+    so the GPU address of that data should become invalid. The buffer is
+    therefore made non-resident in the current context.
+
+    11) Should residency be a property of the buffer object, or should
+    a buffer be "made resident to a context"?
+
+    RESOLVED: Made resident to a context. If a shared buffer is used in 
+    two threads/contexts, it may be difficult for the application to know 
+    when the residency state actually changes on the shared object 
+    particularly if there is a large latency between commands being 
+    submitted on the client and processed on the server. Allowing the 
+    buffer to be made resident to each context individually allows the 
+    state to be reliably toggled in-order in each command stream. This 
+    also allows MakeBufferNonResident to serve as indication to the GL
+    that the buffer is no longer in use in each command stream.
+
+    This leads to an unfortunate orphaning issue. For example, if the 
+    buffer is resident in context A and then deleted in context B, how 
+    can the app make it non-resident in context A? Given the name-based 
+    object model, it is impossible. It would be complex from an 
+    implementation point of view for DeleteBuffers (or BufferData) to 
+    either make it non-resident or throw an error if it is resident in 
+    some other context. 
+    
+    An ideal solution would be a (separate) extension that allows the 
+    application to increment the refcount on the object and to decrement
+    the refcount without necessarily deleting the object's name. Until 
+    such an extension exists, the unsatisfying proposed resolution is that
+    a buffer can be "stuck" resident until the context is deleted. Note 
+    that DeleteBuffers should make the buffer non-resident in the context 
+    that does the delete, so this problem only applies to rare multi-
+    context corner cases.
+
+    12) Is there any value in requiring an "immutable structure" bit of 
+    state to be set in order to query the address? 
+    
+    RESOLVED: NO. Given that the BufferData behavior is fairly 
+    straightforward to specify and implement, it's not clear that this 
+    would be useful.
+
+    13) What should the program syntax look like?
+
+    RESOLVED: Support 1-, 2-, 4-vec fetches of float/int/uint types, as 
+    well as 8- and 16-bit int/uint fetches via a new LOAD instruction 
+    with a slew of suffixes. Handling 8/16bit sizes will be useful for 
+    high-level languages compiling to the assembly. Addresses are required
+    to be a multiple of the size of the data, as some implementations may 
+    require this.
+
+    Other options include a more x86-style pointer dereference 
+    ("MOV R0, DWORD PTR[R1];") or a complement to program.local
+    ("MOV R0, program.global[R1];") but neither of these provide the
+    simple granularity of the explicit type suffixes, and a new 
+    instruction is convenient in terms of implementation and not muddling 
+    the clean definition of MOV.
+
+    14) How does the GL know to invalidate caches when data has changed?
+
+    RESOLVED: Any entry points that can write to buffer objects should 
+    trigger the necessary invalidation. A new entry point may only be 
+    necessary once there is a way to write to a buffer by GPU address.
+
+    15) Does this extension require 64bit register/operation support in 
+        programs and shaders?
+
+    RESOLVED: NO. At the API level, GPU addresses are always 64bit values
+    and when they are stored in uniforms, attribs, parameters, etc. they
+    should always be stored at full precision. However, if programs and 
+    shaders don't support 64bit registers/operations via another 
+    programmability extension, then they will need to use only 32 bits.
+    On such implementations, the usable address space is therefore limited
+    to 4GB. Such a limit should be reflected in the value of 
+    MAX_SHADER_BUFFER_ADDRESS_NV.
+
+    It is expected that GLSL shaders will be compiled in such a way as to 
+    generate 64bit pointers on implementations that support it and 32bit
+    pointers on implementations that don't. So GLSL shaders written against
+    a 32bit implementation can be expected to be forward-compatible when 
+    run against a 64bit implementation. (u)intptr_t types are provided to 
+    ease this compatibility.
+    
+    Built-in functions are provided to convert pointers to and from a pair
+    of integers. These can be used to pass pointers as two components of a
+    generic attrib, to construct a pointer from an RGUI32 texture fetch, 
+    or to write a pointer to a fragment shader output.
+
+    16) What assumption can applications make about the alignment of 
+    addresses returned by GetBufferParameterui64vNV?
+
+    RESOLVED: All buffers will begin at an address that is a multiple of 
+    16 bytes.
+
+    17) How can the application guarantee that the layout of a structure
+        on the CPU matches the layout used by the GLSL compiler?
+
+    RESOLVED: Provide a standard set of packing rules designed around 
+    naturally aligning simple types. This spec will define pointer fetches
+    in GLSL to use these rules, but does not explicitly guarantee that 
+    other extensions (like EXT_bindable_uniform) will use the same packing
+    rules for their bufferobject fetches. These packing rules are 
+    different from the ARB_uniform_buffer_object rules - in particular, 
+    these rules do not require vec4 padding of the array stride.
+
+    18) Is the address space per-context, per-share-group, or global?
+
+    RESOLVED: It is per-share-group. Using addresses from one share group
+    in another share group will cause undefined results.
+
+    19) Is there risk of using invalid pointers for "killed" fragments, 
+    fragments that don't take a certain branch of an "if" block, or 
+    fragments whose shader is conceptually never executed due to pixel 
+    ownership, stipple, etc.?
+
+    RESOLVED: NO. OpenGL implementations sometimes run fragment programs 
+    on "helper" pixels that have no coverage, or continue to run fragment
+    programs on killed pixels in order to be able to compute sane partial
+    derivatives for fragment program instructions (DDX, DDY) or automatic
+    level-of-detail calculations for texturing.  In this approach,
+    derivatives are approximated by computing the difference in a quantity
+    computed for a given fragment at (x,y) and a fragment at a neighboring
+    pixel.  When a fragment program is executed on a "helper" pixel or 
+    killed pixel, global loads may not be executed in order to prevent 
+    spurious faults. Helper pixels aren't explicitly mentioned in the spec 
+    body; instead, partial derivatives are obtained by magic.
+
+    If a fragment program contains a KIL instruction, compilers may not
+    reorder code such that a LOAD instruction is executed before a KIL
+    instruction that logically precedes it in flow control.  Once a 
+    fragment is killed, subsequent loads should never be executed if they
+    could cause any observable side effects.
+
+    As a result, if a shader uses instructions that explicitly or 
+    implicitly do LOD calculations dependent on the result of a global 
+    load, those instructions will have undefined results.
+
+    20) How are structures and arrays stored in buffer object memory?
+
+    RESOLVED:  Individual structure members and array elements are stored
+    "packed" in memory, subject to an alignment requirement.  Structure
+    members are stored according to the order of declaration.  Array elements
+    are stored consecutively by element number.  Unreferenced structure
+    members or array elements are never eliminated.  
+
+    The alignment requirement of individual structure members or array
+    elements is usually equal to the size of the item.  For the purposes of
+    this requirement, vector types are treated atomically (i.e., a "vec4" with
+    32-bit floats will be 16-byte aligned).  One exception is that the
+    required alignment of three-component vectors is the same as the required
+    alignment of a four-component vector of the same base type.
+
+    21) How do the memory layout rules relate to the similar layout rules
+    specified for the uniform buffer object (UBO) feature incorporated in
+    OpenGL 3.1?
+
+    RESOLVED:  This extension was completed prior to OpenGL 3.1, but the
+    layout rules for this extension and for UBO were developed roughly
+    concurrently.  The layout rules here are nearly identical to those for the
+    "std140" layout for uniform blocks.  The main difference here is that
+    "std140" requires arrays of small types (e.g., "float") to be padded out
+    to vec4 alignment (16B), while this extension does not.
+
+    Note that this extension does NOT allow shaders to use the layout()
+    qualifier added by GLSL 1.40 to achieve fine-grained control of structure
+    or array layout using pointers.  A subsequent extension could provide this
+    capability.
+
+    22) Should we provide a mechanism for tighter packing of an array of
+    three-component vectors?
+
+    RESOLVED:  This could be desirable, but it won't be provided in this
+    extension.  A subsequent extension could support alternate layouts by
+    allowing shaders to use of the GLSL 1.40 layout() modifier to qualify
+    pointer types.  
+
+    If tight packing of vec3's is strongly required, a three component array
+    element could be constructed using three single component loads or by
+    selecting/swizzling components of one or more larger loads.  The former
+    technique could be done using GLSL by replacing:
+
+      vec3 *pointer;
+      vec3 elementN;
+      int n;
+      elementN = pointer[n];
+
+    with
+
+      float *pointer;
+      vec3 elementN;
+      int n;
+      elementN = vec3(pointer[n*3], pointer[n*3+1], pointer[n*3+2]);
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     8    08/06/10  istewart  Modify behavior of named buffer functions
+                              to match those of EXT_direct_state_access.
+                              Add INVALID_OPERATION error to 
+                              MakeBufferResidentNV and GetBufferParameterui64vNV
+                              if the buffer object has no data store.
+
+     7    06/22/10  pbrown    Document INVALID_OPERATION errors on 
+                              residency managment and query APIs when an
+                              non-existent buffer object is referenced, 
+                              when trying to make an already resident buffer
+                              resident, or when trying to make an already
+                              non-resident buffer non-resident.
+
+     6    09/21/09  groth     Fix non-conformant DSA function names.
+
+     5    09/10/09  Jon Leech Add 'const' to type of Uniformui64vNV and
+                              ProgramUniformui64vNV 'count' argument.
+
+     4    09/09/09  mjk       Fix typos
+
+     3    08/21/09  pbrown    Add explicit spec language describing the
+                              typecast operator implemented here.  The
+                              previous spec language said it was allowed
+                              but didn't say what it did.
+
+     2    08/05/09  pbrown    Update section describing memory layout of
+                              variables pointed to; moved to the core
+                              specification as with OpenGL 3.1's uniform
+                              buffer layout.  Added a few issues on memory
+                              layout.  Explicitly documented the set of
+                              operations and implicit conversions allowed 
+                              on pointers.
+
+     1              jbolz     Internal revisions.

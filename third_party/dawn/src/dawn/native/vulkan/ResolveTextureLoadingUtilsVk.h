@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_RESOLVETEXTURELOADINGUTILSVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_RESOLVETEXTURELOADINGUTILSVK_H_
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native {
 

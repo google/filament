@@ -30,9 +30,9 @@
 
 #include <string>
 
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/ObjectBase.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ObjectBase.h"
 
 namespace dawn::native {
 

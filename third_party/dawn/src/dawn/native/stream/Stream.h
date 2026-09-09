@@ -34,6 +34,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -41,12 +42,13 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/Platform.h"
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/stream/Sink.h"
-#include "dawn/native/stream/Source.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/stream/Sink.h"
+#include "src/dawn/native/stream/Source.h"
+#include "src/utils/compiler.h"
+#include "src/utils/platform.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn::ityp {
 template <typename Index, size_t N>
@@ -115,13 +117,17 @@ inline MaybeError StreamOut(Source* s) {
 
 // Stream specialization for fundamental types.
 template <typename T>
-class Stream<T, std::enable_if_t<std::is_fundamental_v<T>>> {
+    requires(std::is_fundamental_v<T>)
+class Stream<T> {
   public:
-    static void Write(Sink* s, const T& v) { memcpy(s->GetSpace(sizeof(T)), &v, sizeof(T)); }
-    static MaybeError Read(Source* s, T* v) {
-        const void* ptr;
-        DAWN_TRY(s->Read(&ptr, sizeof(T)));
-        memcpy(v, ptr, sizeof(T));
+    static void Write(Sink* sink, const T& v) {
+        auto value = std::as_bytes(std::span(&v, 1u));
+        std::ranges::copy(value, sink->GetSpace(sizeof(T)).begin());
+    }
+    static MaybeError Read(Source* source, T* v) {
+        std::span<const std::byte> ptr;
+        DAWN_TRY_ASSIGN(ptr, source->Read(sizeof(T)));
+        std::ranges::copy(ptr, reinterpret_cast<std::byte*>(v));
         return {};
     }
 };
@@ -137,7 +143,8 @@ constexpr bool BitsetSupportsToUllong(size_t N) {
 
 // Stream specialization for bitsets that are smaller than BitsetUllong.
 template <size_t N>
-class Stream<std::bitset<N>, std::enable_if_t<detail::BitsetSupportsToUllong(N)>> {
+    requires(detail::BitsetSupportsToUllong(N))
+class Stream<std::bitset<N>> {
   public:
     static void Write(Sink* s, const std::bitset<N>& t) { StreamIn(s, t.to_ullong()); }
     static MaybeError Read(Source* s, std::bitset<N>* v) {
@@ -150,7 +157,8 @@ class Stream<std::bitset<N>, std::enable_if_t<detail::BitsetSupportsToUllong(N)>
 
 // Stream specialization for bitsets since using the built-in to_ullong has a size limit.
 template <size_t N>
-class Stream<std::bitset<N>, std::enable_if_t<!detail::BitsetSupportsToUllong(N)>> {
+    requires(!detail::BitsetSupportsToUllong(N))
+class Stream<std::bitset<N>> {
   public:
     static void Write(Sink* s, const std::bitset<N>& t) {
         // Iterate in chunks of detail::BitsetUllong.
@@ -189,7 +197,8 @@ class Stream<ityp::bitset<Index, N>> {
 
 // Stream specialization for enums.
 template <typename T>
-class Stream<T, std::enable_if_t<std::is_enum_v<T>>> {
+    requires(std::is_enum_v<T>)
+class Stream<T> {
     using U = std::underlying_type_t<T>;
 
   public:
@@ -223,7 +232,8 @@ class Stream<::dawn::detail::TypedIntegerImpl<Tag, Integer>> {
 // To handle nullptr scenarios, we always serialize whether the pointer was not nullptr,
 // followed by the contents if applicable.
 template <typename T>
-class Stream<T, std::enable_if_t<std::is_pointer_v<T>>> {
+    requires(std::is_pointer_v<T>)
+class Stream<T> {
   public:
     static void Write(stream::Sink* sink, const T& t) {
         using Pointee = std::decay_t<std::remove_pointer_t<T>>;
@@ -242,7 +252,8 @@ class Stream<T, std::enable_if_t<std::is_pointer_v<T>>> {
 // pointer. To handle nullptr scenarios, we always serialize whether the pointer was not nullptr,
 // followed by the contents if applicable.
 template <typename T>
-class Stream<std::unique_ptr<T>, std::enable_if_t<!std::is_pointer_v<T>>> {
+    requires(!std::is_pointer_v<T>)
+class Stream<std::unique_ptr<T>> {
   public:
     static void Write(stream::Sink* sink, const std::unique_ptr<T>& t) {
         StreamIn(sink, t != nullptr);
@@ -303,30 +314,32 @@ class Stream<std::optional<T>> {
 
 // Stream specialization for fixed arrays of fundamental types.
 template <typename T, size_t N>
-class Stream<T[N], std::enable_if_t<std::is_fundamental_v<T>>> {
+    requires(std::is_fundamental_v<T>)
+class Stream<T[N]> {
   public:
-    static void Write(Sink* s, const T (&t)[N]) {
+    static void Write(Sink* sink, const T (&t)[N]) {
         static_assert(N > 0);
-        memcpy(s->GetSpace(sizeof(t)), &t, sizeof(t));
+        std::ranges::copy(std::as_bytes(std::span(t)), sink->GetSpace(sizeof(T) * N).begin());
     }
 
-    static MaybeError Read(Source* s, T (*t)[N]) {
+    static MaybeError Read(Source* source, T (*t)[N]) {
         static_assert(N > 0);
-        const void* ptr;
-        DAWN_TRY(s->Read(&ptr, sizeof(*t)));
-        memcpy(*t, ptr, sizeof(*t));
+        std::span<const std::byte> ptr;
+        DAWN_TRY_ASSIGN(ptr, source->Read(sizeof(T) * N));
+        std::ranges::copy(ptr, std::as_writable_bytes(std::span(*t)).begin());
         return {};
     }
 };
 
 // Specialization for fixed arrays of non-fundamental types.
 template <typename T, size_t N>
-class Stream<T[N], std::enable_if_t<!std::is_fundamental_v<T>>> {
+    requires(!std::is_fundamental_v<T>)
+class Stream<T[N]> {
   public:
     static void Write(Sink* s, const T (&t)[N]) {
         static_assert(N > 0);
         for (size_t i = 0; i < N; i++) {
-            StreamIn(s, t[i]);
+            StreamIn(s, DAWN_UNSAFE_TODO(t[i]));
         }
     }
 
@@ -369,25 +382,27 @@ class Stream<std::vector<T>> {
 
 // Stream specialization for std::array<T, Size> of fundamental types T.
 template <typename T, size_t Size>
-class Stream<std::array<T, Size>, std::enable_if_t<std::is_fundamental_v<T>>> {
+    requires(std::is_fundamental_v<T>)
+class Stream<std::array<T, Size>> {
   public:
-    static void Write(Sink* s, const std::array<T, Size>& t) {
+    static void Write(Sink* sink, const std::array<T, Size>& t) {
         static_assert(Size > 0);
-        memcpy(s->GetSpace(sizeof(t)), t.data(), sizeof(t));
+        std::ranges::copy(std::as_bytes(std::span(t)), sink->GetSpace(sizeof(T) * Size).begin());
     }
 
-    static MaybeError Read(Source* s, std::array<T, Size>* t) {
+    static MaybeError Read(Source* source, std::array<T, Size>* t) {
         static_assert(Size > 0);
-        const void* ptr;
-        DAWN_TRY(s->Read(&ptr, sizeof(*t)));
-        memcpy(t->data(), ptr, sizeof(*t));
+        std::span<const std::byte> ptr;
+        DAWN_TRY_ASSIGN(ptr, source->Read(sizeof(T) * Size));
+        std::ranges::copy(ptr, std::as_writable_bytes(std::span(*t)).begin());
         return {};
     }
 };
 
 // Stream specialization for std::array<T, Size> of non-fundamental types T.
 template <typename T, size_t Size>
-class Stream<std::array<T, Size>, std::enable_if_t<!std::is_fundamental_v<T>>> {
+    requires(!std::is_fundamental_v<T>)
+class Stream<std::array<T, Size>> {
   public:
     static void Write(Sink* s, const std::array<T, Size>& v) {
         static_assert(Size > 0);
@@ -438,6 +453,54 @@ class Stream<std::pair<A, B>> {
         DAWN_TRY(StreamOut(s, &v->first));
         DAWN_TRY(StreamOut(s, &v->second));
         return {};
+    }
+};
+
+template <typename S>
+concept IsStringLike = std::is_same_v<S, std::basic_string<typename S::value_type>> &&
+                       std::is_fundamental_v<typename S::value_type>;
+
+// Stream specialization for std::basic_string types.
+template <IsStringLike StringType>
+class Stream<StringType> {
+  public:
+    static void Write(stream::Sink* sink, const StringType& s) {
+        StreamIn(sink, s.length());
+        if (s.length() > 0) {
+            std::ranges::copy(
+                std::as_bytes(std::span(s)),
+                sink->GetSpace(sizeof(typename StringType::value_type) * s.length()).begin());
+        }
+    }
+    static MaybeError Read(Source* source, StringType* s) {
+        size_t length;
+        DAWN_TRY(StreamOut(source, &length));
+        *s = StringType();
+        if (length != 0) {
+            std::span<const std::byte> ptr;
+            DAWN_TRY_ASSIGN(ptr, source->Read(sizeof(typename StringType::value_type) * length));
+            s->resize(length);
+            std::ranges::copy(ptr, std::as_writable_bytes(std::span(*s)).begin());
+        }
+        return {};
+    }
+};
+
+template <typename S>
+concept IsStringViewLike = std::is_same_v<S, std::basic_string_view<typename S::value_type>> &&
+                           std::is_fundamental_v<typename S::value_type>;
+
+// Stream specialization for std::basic_string_view types.
+template <IsStringViewLike StringViewType>
+class Stream<StringViewType> {
+  public:
+    static void Write(stream::Sink* sink, const StringViewType& s) {
+        StreamIn(sink, s.length());
+        if (s.length() > 0) {
+            std::ranges::copy(
+                std::as_bytes(std::span(s)),
+                sink->GetSpace(sizeof(typename StringViewType::value_type) * s.length()).begin());
+        }
     }
 };
 
@@ -549,11 +612,10 @@ class Stream<std::variant<Types...>> {
 
   private:
     // WriteImpl template for trying multiple possible value types
-    template <size_t N,
-              typename TryType,
-              typename... RemainingTypes,
-              typename = std::enable_if_t<sizeof...(RemainingTypes) != 0>>
-    static inline void WriteImpl(stream::Sink* sink, const VariantType& t) {
+    template <size_t N, typename TryType, typename... RemainingTypes>
+    static inline void WriteImpl(stream::Sink* sink, const VariantType& t)
+        requires(sizeof...(RemainingTypes) != 0)
+    {
         if (std::holds_alternative<TryType>(t)) {
             // Record the type index
             StreamIn(sink, N);
@@ -575,11 +637,10 @@ class Stream<std::variant<Types...>> {
         StreamIn(sink, std::get<LastType>(t));
     }
     // ReadImpl template for trying multiple possible value types
-    template <size_t N,
-              typename TryType,
-              typename... RemainingTypes,
-              typename = std::enable_if_t<sizeof...(RemainingTypes) != 0>>
-    static inline MaybeError ReadImpl(stream::Source* source, VariantType* t, size_t typeId) {
+    template <size_t N, typename TryType, typename... RemainingTypes>
+    static inline MaybeError ReadImpl(stream::Source* source, VariantType* t, size_t typeId)
+        requires(sizeof...(RemainingTypes) != 0)
+    {
         if (typeId == N) {
             // Read the value
             TryType value;
@@ -618,7 +679,7 @@ struct Iterable {
 template <typename T>
 auto Iterable(const T* ptr, size_t count) {
     using Iterator = const T*;
-    return detail::Iterable<Iterator>{ptr, ptr + count};
+    return detail::Iterable<Iterator>{ptr, DAWN_UNSAFE_TODO(ptr + count)};
 }
 
 // Stream specialization for detail::Iterable which writes the number of elements,
@@ -628,7 +689,7 @@ class Stream<detail::Iterable<Iterator>> {
   public:
     static void Write(stream::Sink* sink, const detail::Iterable<Iterator>& iter) {
         StreamIn(sink, std::distance(iter.begin, iter.end));
-        for (auto it = iter.begin; it != iter.end; ++it) {
+        for (auto it = iter.begin; it != iter.end; DAWN_UNSAFE_TODO(++it)) {
             StreamIn(sink, *it);
         }
     }

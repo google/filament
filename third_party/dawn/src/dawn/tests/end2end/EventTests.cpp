@@ -35,17 +35,15 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/FutureUtils.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/SystemUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
-#include "dawn/utils/WireHelper.h"
+#include "src/dawn/common/FutureUtils.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/SystemUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/dawn/utils/WireHelper.h"
 
 namespace dawn {
 namespace {
 
-using testing::AnyOf;
-using testing::Eq;
 
 wgpu::Device CreateExtraDevice(utils::WireHelper* wireHelper, wgpu::Instance instance) {
     // IMPORTANT: DawnTest overrides RequestAdapter and RequestDevice and mixes
@@ -148,12 +146,11 @@ class EventCompletionTests : public DawnTestWithParams<EventCompletionTestParams
     void SetUp() override {
         DawnTestWithParams::SetUp();
         WaitTypeAndCallbackMode mode = GetParam().mWaitTypeAndCallbackMode;
-        if (!BackendDeviceHasFeature(wgpu::FeatureName::DawnNativeSpontaneousQueueEvents)) {
-            // Spontaneous is only supported on backends with the DawnSpontaneousEvents feature.
+        if (!HasToggleEnabled("spontaneous_queue_events")) {
             DAWN_TEST_UNSUPPORTED_IF(mode == WaitTypeAndCallbackMode::Spin_AllowSpontaneous);
             if (UsesWire()) {
-                // Timed wait any in tests is only supported on the wire if the native backend
-                // supports spontaneous.
+                // Timed wait any is only supported on the wire if the native backend supports
+                // spontaneous.
                 DAWN_TEST_UNSUPPORTED_IF(
                     mode == WaitTypeAndCallbackMode::TimedWaitAny_WaitAnyOnly ||
                     mode == WaitTypeAndCallbackMode::TimedWaitAny_AllowSpontaneous);
@@ -496,12 +493,12 @@ TEST_P(WaitAnyTests, UnsupportedTimeout) {
     std::tie(instance2, device2) = CreateExtraInstance(GetWireHelper(), &desc);
 
     // UnsupportedTimeout is still validated if no futures are passed.
-    for (uint64_t timeout : {uint64_t(1), uint64_t(0), UINT64_MAX}) {
+    for (uint64_t timeout : {uint64_t{1}, uint64_t{0}, UINT64_MAX}) {
         ASSERT_EQ(instance2.WaitAny(0, nullptr, timeout),
                   timeout > 0 ? wgpu::WaitStatus::Error : wgpu::WaitStatus::Success);
     }
 
-    for (uint64_t timeout : {uint64_t(1), uint64_t(0), UINT64_MAX}) {
+    for (uint64_t timeout : {uint64_t{1}, uint64_t{0}, UINT64_MAX}) {
         wgpu::WaitStatus status =
             instance2.WaitAny(device2.GetQueue().OnSubmittedWorkDone(
                                   wgpu::CallbackMode::WaitAnyOnly,
@@ -520,7 +517,7 @@ TEST_P(WaitAnyTests, UnsupportedCount) {
     // TODO(crbug.com/474391710): Flaky on Snapdragon X Elite w/ D3D11.
     DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D11());
 
-    for (uint64_t timeout : {uint64_t(0), uint64_t(1)}) {
+    for (uint64_t timeout : {uint64_t{0}, uint64_t{1}}) {
         // We don't support values higher than the default (64), and if you ask for lower than 64
         // you still get 64. DawnTest doesn't request anything (so requests 0) so gets 64.
         for (size_t count : {kTimedWaitAnyMaxCountDefault, kTimedWaitAnyMaxCountDefault + 1}) {
@@ -550,7 +547,7 @@ TEST_P(WaitAnyTests, UnsupportedMixedSources) {
     wgpu::Queue queue1 = queue;
     wgpu::Queue queue2 = device2.GetQueue();
 
-    for (uint64_t timeout : {uint64_t(0), uint64_t(1)}) {
+    for (uint64_t timeout : {uint64_t{0}, uint64_t{1}}) {
         std::vector<wgpu::FutureWaitInfo> infos{{
             {queue1.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
                                         [](wgpu::QueueWorkDoneStatus, wgpu::StringView) {})},
@@ -566,6 +563,12 @@ TEST_P(WaitAnyTests, UnsupportedMixedSources) {
             // Wire supports mixed source waiting.
             ASSERT_TRUE(status == wgpu::WaitStatus::Success ||
                         status == wgpu::WaitStatus::TimedOut);
+        } else if (HasToggleEnabled("spontaneous_queue_events", device1) &&
+                   HasToggleEnabled("spontaneous_queue_events", device2)) {
+            // Mixed sources across different devices are supported if spontaneous queue events is
+            // enabled on both devices.
+            ASSERT_TRUE(status == wgpu::WaitStatus::Success ||
+                        status == wgpu::WaitStatus::TimedOut);
         } else {
             ASSERT_EQ(status, wgpu::WaitStatus::Error);
         }
@@ -575,10 +578,10 @@ TEST_P(WaitAnyTests, UnsupportedMixedSources) {
 // Test that submitting multiple heavy works then waiting one by one works.
 // This is a regression test for crbug.com/dawn/415561579
 TEST_P(WaitAnyTests, WaitHeavyWorksOneByOne) {
-    // Wire doesn't support timeouts in tests unless the backend supports spontaneous events.
-    DAWN_TEST_UNSUPPORTED_IF(
-        UsesWire() &&
-        !BackendDeviceHasFeature(wgpu::FeatureName::DawnNativeSpontaneousQueueEvents));
+    // Wire doesn't support timeouts unless its the Metal backend.
+    // TODO(crbug.com/412761228): Once spontaneous events are supported in the other backends,
+    // enable this test for them as well.
+    DAWN_TEST_UNSUPPORTED_IF(UsesWire() && !HasToggleEnabled("spontaneous_queue_events"));
 
     wgpu::Buffer countBuffer;
     wgpu::Buffer ssbo;

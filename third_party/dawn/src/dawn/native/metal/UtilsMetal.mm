@@ -25,20 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
 
 #include <Metal/Metal.h>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/Pipeline.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/native/metal/BufferMTL.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/Pipeline.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/native/metal/BufferMTL.h"
+#include "src/utils/assert.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::metal {
 
@@ -84,6 +85,7 @@ struct SavedMetalAttachment {
     id<MTLTexture> texture = nil;
     NSUInteger level;
     NSUInteger slice;
+    NSUInteger depthPlane;
 
     NSPRef<id<MTLTexture>> temporary;
 
@@ -97,7 +99,7 @@ struct SavedMetalAttachment {
                     toTexture:texture
              destinationSlice:slice
              destinationLevel:level
-            destinationOrigin:MTLOriginMake(0, 0, 0)];
+            destinationOrigin:MTLOriginMake(0, 0, depthPlane)];
     }
 
     void CopyFromAttachmentToTemporary(CommandRecordingContext* commandContext) {
@@ -105,7 +107,7 @@ struct SavedMetalAttachment {
               copyFromTexture:texture
                   sourceSlice:slice
                   sourceLevel:level
-                 sourceOrigin:MTLOriginMake(0, 0, 0)
+                 sourceOrigin:MTLOriginMake(0, 0, depthPlane)
                    sourceSize:MTLSizeMake([temporary.Get() width], [temporary.Get() height], 1)
                     toTexture:temporary.Get()
              destinationSlice:0
@@ -118,12 +120,14 @@ struct SavedMetalAttachment {
 ResultOrError<SavedMetalAttachment> SaveAttachmentCreateTemporary(Device* device,
                                                                   id<MTLTexture> attachmentTexture,
                                                                   NSUInteger attachmentLevel,
-                                                                  NSUInteger attachmentSlice) {
+                                                                  NSUInteger attachmentSlice,
+                                                                  NSUInteger attachmentDepthPlane) {
     // Save the attachment.
     SavedMetalAttachment result;
     result.texture = attachmentTexture;
     result.level = attachmentLevel;
     result.slice = attachmentSlice;
+    result.depthPlane = attachmentDepthPlane;
 
     // Create the temporary texture.
     NSRef<MTLTextureDescriptor> mtlDescRef = AcquireNSRef([MTLTextureDescriptor new]);
@@ -155,13 +159,15 @@ ResultOrError<SavedMetalAttachment> PatchAttachmentWithTemporary(
     Device* device,
     MTLRenderPassAttachmentDescriptor* attachment) {
     SavedMetalAttachment result;
-    DAWN_TRY_ASSIGN(result, SaveAttachmentCreateTemporary(device, attachment.texture,
-                                                          attachment.level, attachment.slice));
+    DAWN_TRY_ASSIGN(result,
+                    SaveAttachmentCreateTemporary(device, attachment.texture, attachment.level,
+                                                  attachment.slice, attachment.depthPlane));
 
     // Replace the attachment with the temporary
     attachment.texture = result.temporary.Get();
     attachment.level = 0;
     attachment.slice = 0;
+    attachment.depthPlane = 0;
 
     return result;
 }
@@ -255,11 +261,13 @@ void MakeResourcesResident(Encoder encoder, const SyncScopeResourceUsage& resour
             continue;
         }
 
+        // The texture is either a normal one, or a planar texture with up to 3 planes.
         // There are at most three planes. Call useResource for each plane that is used.
-        const Aspect kAspectsCorrespondingToPlane0{~(Aspect::Plane1 | Aspect::Plane2)};
-        for (Aspect plane : {kAspectsCorrespondingToPlane0, Aspect::Plane1, Aspect::Plane2}) {
-            if (aspects & plane) {
-                MakeResourceResident(encoder, texture->GetMTLTexture(plane),
+        const Aspect kNonPlanarAspects{~(Aspect::Plane0 | Aspect::Plane1 | Aspect::Plane2)};
+        for (Aspect plane : {kNonPlanarAspects, Aspect::Plane0, Aspect::Plane1, Aspect::Plane2}) {
+            auto aspect = aspects & plane;
+            if (aspect) {
+                MakeResourceResident(encoder, texture->GetMTLTexture(aspect),
                                      ToMTLResourceUsage(usages), stages);
             }
         }
@@ -267,6 +275,26 @@ void MakeResourcesResident(Encoder encoder, const SyncScopeResourceUsage& resour
 }
 
 }  // anonymous namespace
+
+MTLTextureType MetalTextureViewType(wgpu::TextureViewDimension dimension, bool multisampled) {
+    switch (dimension) {
+        case wgpu::TextureViewDimension::e1D:
+            return MTLTextureType1D;
+        case wgpu::TextureViewDimension::e2D:
+            return multisampled ? MTLTextureType2DMultisample : MTLTextureType2D;
+        case wgpu::TextureViewDimension::e2DArray:
+            return MTLTextureType2DArray;
+        case wgpu::TextureViewDimension::Cube:
+            return MTLTextureTypeCube;
+        case wgpu::TextureViewDimension::CubeArray:
+            return MTLTextureTypeCubeArray;
+        case wgpu::TextureViewDimension::e3D:
+            return MTLTextureType3D;
+        case wgpu::TextureViewDimension::Undefined:
+            break;
+    }
+    DAWN_UNREACHABLE();
+}
 
 MTLPixelFormat MetalPixelFormat(const DeviceBase* device, wgpu::TextureFormat format) {
     switch (format) {
@@ -608,12 +636,14 @@ MTLCompareFunction ToMetalCompareFunction(wgpu::CompareFunction compareFunction)
 }
 
 MTLSize ToMTLSize(const TexelExtent3D& extent) {
-    return MTLSizeMake(uint32_t(extent.width), uint32_t(extent.height),
-                       uint32_t(extent.depthOrArrayLayers));
+    return MTLSizeMake(dchecked_cast<uint32_t>(extent.width),
+                       dchecked_cast<uint32_t>(extent.height),
+                       dchecked_cast<uint32_t>(extent.depthOrArrayLayers));
 }
 
 MTLOrigin ToMTLOrigin(const TexelOrigin3D& origin) {
-    return MTLOriginMake(uint32_t(origin.x), uint32_t(origin.y), uint32_t(origin.z));
+    return MTLOriginMake(dchecked_cast<uint32_t>(origin.x), dchecked_cast<uint32_t>(origin.y),
+                         dchecked_cast<uint32_t>(origin.z));
 }
 
 TextureBufferCopySplit ComputeTextureBufferCopySplit(const Texture* texture,
@@ -698,7 +728,7 @@ TextureBufferCopySplit ComputeTextureBufferCopySplit(const Texture* texture,
         const uint32_t localBytesPerRow = maxBytesPerRow;
         const uint32_t localBytesPerImage = 0;  // workaround case 3
         const TexelExtent3D localCopySize = {clampedCopyExtent.width, blockInfo.height,
-                                             TexelCount(1)};
+                                             TexelCount(1u)};
 
         for (BlockCount slice : Range(copyExtent.depthOrArrayLayers)) {
             for (BlockCount row : Range(copyExtent.height)) {
@@ -715,8 +745,8 @@ TextureBufferCopySplit ComputeTextureBufferCopySplit(const Texture* texture,
     }
 
     const BlockCount blocksPerImage = blocksPerRow * rowsPerImage;
-    const uint32_t bytesPerRow = blockInfo.ToBytes(blocksPerRow);
-    const uint32_t bytesPerImage = blockInfo.ToBytes(blocksPerImage);
+    const size_t bytesPerRow = blockInfo.ToBytes(blocksPerRow);
+    const size_t bytesPerImage = blockInfo.ToBytes(blocksPerImage);
 
     // Check whether buffer size is big enough.
     const uint64_t sizeRequiredByValidation =
@@ -724,9 +754,9 @@ TextureBufferCopySplit ComputeTextureBufferCopySplit(const Texture* texture,
     const bool needCopyLastImageAndLastRowSeparately =
         bufferSize - bufferOffset < sizeRequiredByValidation;
     if (!needCopyLastImageAndLastRowSeparately) {
-        const uint32_t localBytesPerImage = copyExtent.depthOrArrayLayers == BlockCount(1)
-                                                ? 0
-                                                : bytesPerImage;  // workaround case 3
+        const size_t localBytesPerImage = copyExtent.depthOrArrayLayers == BlockCount(1u)
+                                              ? 0
+                                              : bytesPerImage;  // workaround case 3
         copy.push_back(
             TextureBufferCopySplit::CopyInfo(bufferOffset, bytesPerRow, localBytesPerImage,
                                              blockInfo.ToTexel(origin), clampedCopyExtent));
@@ -737,10 +767,10 @@ TextureBufferCopySplit ComputeTextureBufferCopySplit(const Texture* texture,
     uint64_t currentOffset = bufferOffset;
 
     // Doing all the copy except the last image.
-    if (copyExtent.depthOrArrayLayers > BlockCount(1)) {
-        const BlockCount localDepthOrArrayLayers = copyExtent.depthOrArrayLayers - BlockCount(1);
-        const uint32_t localBytesPerImage =
-            localDepthOrArrayLayers == BlockCount(1) ? 0 : bytesPerImage;  // workaround case 3
+    if (copyExtent.depthOrArrayLayers > BlockCount(1u)) {
+        const BlockCount localDepthOrArrayLayers = copyExtent.depthOrArrayLayers - BlockCount(1u);
+        const size_t localBytesPerImage =
+            localDepthOrArrayLayers == BlockCount(1u) ? 0 : bytesPerImage;  // workaround case 3
         const TexelExtent3D localSize = {clampedCopyExtent.width, clampedCopyExtent.height,
                                          blockInfo.ToTexelDepth(localDepthOrArrayLayers)};
         copy.push_back(TextureBufferCopySplit::CopyInfo(
@@ -748,40 +778,40 @@ TextureBufferCopySplit ComputeTextureBufferCopySplit(const Texture* texture,
 
         // Update offset to copy to the last image.
         const BlockCount copiedBlocks =
-            (copyExtent.depthOrArrayLayers - BlockCount(1)) * blocksPerImage;
+            (copyExtent.depthOrArrayLayers - BlockCount(1u)) * blocksPerImage;
         currentOffset += blockInfo.ToBytes(copiedBlocks);
     }
 
     // Doing all the copy in last image except the last row.
-    if (copyExtent.height > BlockCount(1)) {
-        const uint32_t localBytesPerImage = 0;  // workaround case 3
+    if (copyExtent.height > BlockCount(1u)) {
+        const size_t localBytesPerImage = 0;  // workaround case 3
         const BlockOrigin3D localOrigin = {
-            origin.x, origin.y, origin.z + copyExtent.depthOrArrayLayers - BlockCount(1)};
-        const TexelExtent3D localSize = {clampedCopyExtent.width,
-                                         blockInfo.ToTexelHeight(copyExtent.height - BlockCount(1)),
-                                         TexelCount(1)};
+            origin.x, origin.y, origin.z + copyExtent.depthOrArrayLayers - BlockCount(1u)};
+        const TexelExtent3D localSize = {
+            clampedCopyExtent.width, blockInfo.ToTexelHeight(copyExtent.height - BlockCount(1u)),
+            TexelCount(1u)};
         copy.push_back(TextureBufferCopySplit::CopyInfo(currentOffset, bytesPerRow,
                                                         localBytesPerImage,
                                                         blockInfo.ToTexel(localOrigin), localSize));
 
         // Update offset to copy to the last row.
-        const BlockCount copiedBlocks = (copyExtent.height - BlockCount(1)) * blocksPerRow;
+        const BlockCount copiedBlocks = (copyExtent.height - BlockCount(1u)) * blocksPerRow;
         currentOffset += blockInfo.ToBytes(copiedBlocks);
     }
 
     // Doing the last row copy with the exact number of bytes in last row.
     // Workaround this issue in a way just like the copy to a 1D texture.
-    const uint32_t lastRowDataSize = blockInfo.ToBytes(copyExtent.width);
-    const uint32_t lastImageDataSize = 0;  // workaround case 3
+    const size_t lastRowDataSize = blockInfo.ToBytes(copyExtent.width);
+    const size_t lastImageDataSize = 0;  // workaround case 3
     const TexelCount lastRowCopyExtentHeight =
-        clampedCopyExtent.height - blockInfo.ToTexelHeight(copyExtent.height - BlockCount(1));
+        clampedCopyExtent.height - blockInfo.ToTexelHeight(copyExtent.height - BlockCount(1u));
     DAWN_ASSERT(lastRowCopyExtentHeight <= blockInfo.height);
 
-    const BlockOrigin3D localOrigin = {origin.x, origin.y + copyExtent.height - BlockCount(1),
-                                       origin.z + copyExtent.depthOrArrayLayers - BlockCount(1)};
+    const BlockOrigin3D localOrigin = {origin.x, origin.y + copyExtent.height - BlockCount(1u),
+                                       origin.z + copyExtent.depthOrArrayLayers - BlockCount(1u)};
     copy.push_back(TextureBufferCopySplit::CopyInfo(
         currentOffset, lastRowDataSize, lastImageDataSize, blockInfo.ToTexel(localOrigin),
-        {clampedCopyExtent.width, lastRowCopyExtentHeight, TexelCount(1)}));
+        {clampedCopyExtent.width, lastRowCopyExtentHeight, TexelCount(1u)}));
 
     return copy;
 }
@@ -962,7 +992,7 @@ id<MTLTexture> CreateTextureMtlForPlane(MTLTextureUsage mtlUsage,
                                         size_t plane,
                                         Device* device,
                                         IOSurfaceRef ioSurface) {
-    Aspect aspect = GetPlaneAspect(format, plane);
+    Aspect aspect = GetPlaneAspect(format, static_cast<uint32_t>(plane));
     const auto& aspectInfo = format.GetAspectInfo(aspect);
 
     // Multiplanar texture is validated to only have single layer, single mipLevel

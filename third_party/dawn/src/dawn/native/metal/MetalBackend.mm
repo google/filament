@@ -30,9 +30,9 @@
 
 #include "dawn/native/MetalBackend.h"
 
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/QueueMTL.h"
-#include "dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
 
 namespace dawn::native::metal {
 

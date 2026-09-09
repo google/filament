@@ -25,7 +25,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 ################################################################################
 # NOTE: The Bazel build is best-effort and currently only support Tint targets.#
 #       There is no support for Dawn targets at this time                      #
@@ -33,44 +32,4 @@
 
 workspace(name = "dawn")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-local_repository(
-    name = "abseil_cpp",
-    path = "third_party/abseil-cpp",
-)
-
-local_repository(
-    name = "benchmark",
-    path = "third_party/google_benchmark/src",
-)
-
-local_repository(
-    name = "gtest",
-    path = "third_party/googletest",
-)
-
-local_repository(
-    name = "spirv_headers",
-    path = "third_party/spirv-headers/src",
-)
-
-local_repository(
-    name = "spirv_tools",
-    path = "third_party/spirv-tools/src",
-)
-
-http_archive(
-    name = "bazel_skylib",
-    sha256 = "66ffd9315665bfaafc96b52278f57c7e2dd09f5ede279ea6d39b2be471e7e3aa",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.4.2/bazel-skylib-1.4.2.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.4.2/bazel-skylib-1.4.2.tar.gz",
-    ],
-)
-
-
-load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
-
-bazel_skylib_workspace()
-
+# Dependencies have been migrated to MODULE.bazel

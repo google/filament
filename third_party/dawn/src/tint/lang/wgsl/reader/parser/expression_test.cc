@@ -382,7 +382,7 @@ TEST_F(WGSLParserTest, Expression_MaxF32) {
 
     ASSERT_TRUE(e->Is<ast::FloatLiteralExpression>());
     EXPECT_EQ(e->As<ast::FloatLiteralExpression>()->value,
-              340282346638528859811704183484516925440.0f);
+              340282346638528859811704183484516925440.0);
 }
 
 TEST_F(WGSLParserTest, Expression_MinF32) {
@@ -406,7 +406,7 @@ TEST_F(WGSLParserTest, Expression_MinF32) {
 
     ASSERT_TRUE(b->expr->Is<ast::FloatLiteralExpression>());
     EXPECT_EQ(b->expr->As<ast::FloatLiteralExpression>()->value,
-              340282346638528859811704183484516925440.0f);
+              340282346638528859811704183484516925440.0);
 }
 
 namespace mixing_binary_ops {

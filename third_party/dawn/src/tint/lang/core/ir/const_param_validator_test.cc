@@ -49,7 +49,10 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-class IR_ConstParamValidatorTest : public IRTestHelper {};
+class IR_ConstParamValidatorTest : public IRTestHelper {
+  protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
+};
 
 TEST_F(IR_ConstParamValidatorTest, CorrectDomainQuantizeF16) {
     auto* func = b.Function("foo", ty.f32());

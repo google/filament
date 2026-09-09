@@ -28,12 +28,12 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_UTILSEGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_UTILSEGL_H_
 
-#include "dawn/common/NonMovable.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/Time.h"
-#include "dawn/common/egl_platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/opengl/DisplayEGL.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/Time.h"
+#include "src/dawn/common/egl_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/opengl/DisplayEGL.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn::native::opengl {
 

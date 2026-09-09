@@ -28,12 +28,12 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -53,24 +53,27 @@ class InternalResolveAttachmentSampleTypeTests : public DawnTest {
 
     wgpu::PipelineLayout CreatePipelineLayout(bool withSampler) {
         // Create binding group layout with internal resolve attachment sample type.
-        std::vector<native::BindGroupLayoutEntry> bglEntries(2);
-        bglEntries[0].binding = 0;
-        bglEntries[0].texture.sampleType = native::kInternalResolveAttachmentSampleType;
-        bglEntries[0].texture.viewDimension = wgpu::TextureViewDimension::e2D;
-        bglEntries[0].visibility = wgpu::ShaderStage::Fragment;
-
-        native::BindGroupLayoutDescriptor bglDesc;
+        std::vector<native::BindGroupLayoutEntry> bglEntries;
+        bglEntries.push_back({
+            .binding = 0,
+            .visibility = wgpu::ShaderStage::Fragment,
+            .texture =
+                {
+                    .sampleType = native::kInternalResolveAttachmentSampleType,
+                    .viewDimension = wgpu::TextureViewDimension::e2D,
+                },
+        });
 
         if (withSampler) {
-            bglEntries[1].binding = 1;
-            bglEntries[1].sampler.type = wgpu::SamplerBindingType::Filtering;
-            bglEntries[1].visibility = wgpu::ShaderStage::Fragment;
-
-            bglDesc.entryCount = bglEntries.size();
-        } else {
-            bglDesc.entryCount = 1;
+            bglEntries.push_back({
+                .binding = 1,
+                .visibility = wgpu::ShaderStage::Fragment,
+                .sampler = {.type = wgpu::SamplerBindingType::Filtering},
+            });
         }
-        bglDesc.entries = bglEntries.data();
+
+        native::BindGroupLayoutDescriptor bglDesc;
+        bglDesc.entries = bglEntries;
 
         native::DeviceBase* nativeDevice = native::FromAPI(device.Get());
 

@@ -32,10 +32,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/tests/perf_tests/DawnPerfTestPlatform.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTestPlatform.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 // The purpose of this test to determine if dispatches in webgpu run concurrently.
 // We know that this almost certainly does not happen for metal as we are not using the 'concurrent'

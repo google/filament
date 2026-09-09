@@ -17,7 +17,7 @@ main
 
 | | |
 |---|---|
-| intensity | This parameter depends on the [Type](../-type/index.md), for directional lights, it specifies the illuminance in *lux* (or *lumen/m^2*). For point lights and spot lights, it specifies the luminous power in *lumen*. For example, the sun's illuminance is about 100,000 lux. |
+| intensity | This parameter depends on the [Type](../-type/index.md), for directional lights, it specifies the illuminance in *lux* (or *lumen/m^2*). For point lights and spotlights, it specifies the luminous power in *lumen*. For example, the sun's illuminance is about 100,000 lux. |
 
 #### See also
 

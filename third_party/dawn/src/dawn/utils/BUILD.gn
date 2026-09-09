@@ -37,6 +37,10 @@ import("${dawn_root}/scripts/dawn_features.gni")
 
 dawn_json_generator("dawn_utils_gen") {
   target = "dawn_utils"
+  inputs = [
+    "${dawn_template_dir}/dawn/utils/ComboLimits.h",
+    "${dawn_template_dir}/dawn/utils/ComboLimits.cpp",
+  ]
   outputs = [
     "src/dawn/utils/ComboLimits.h",
     "src/dawn/utils/ComboLimits.cpp",
@@ -65,7 +69,7 @@ static_library("wgpu_utils") {
   ]
 
   public_deps = [
-    "${dawn_root}:abseil",
+    "${dawn_abseil_dir}:absl",
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn/common",
   ]
@@ -88,7 +92,7 @@ static_library("test_utils") {
 
   public_deps = [
     ":wgpu_utils",
-    "${dawn_root}:abseil",
+    "${dawn_abseil_dir}:absl",
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn:proc",
     "${dawn_root}/src/dawn/common",
@@ -105,15 +109,13 @@ static_library("system_utils") {
     "CommandLineParser.cpp",
     "CommandLineParser.h",
     "PlatformDebugLogger.h",
-    "SystemHandle.cpp",
-    "SystemHandle.h",
     "SystemUtils.cpp",
     "SystemUtils.h",
     "Timer.h",
   ]
 
   public_deps = [
-    "${dawn_root}:abseil",
+    "${dawn_abseil_dir}:absl",
     "${dawn_root}/src/dawn/common",
   ]
 

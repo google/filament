@@ -26,14 +26,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 DawnGenerator(
-    SCRIPT "${Dawn_SOURCE_DIR}/generator/dawn_version_generator.py"
-    PRINT_NAME "Dawn version based utilities"
-    OUTPUT_HEADERS DAWN_VERSION_AUTOGEN_HEADERS
-    EXTRA_PARAMETERS "--dawn-dir"
-         "${Dawn_SOURCE_DIR}"
-)
-
-DawnGenerator(
     SCRIPT "${Dawn_SOURCE_DIR}/generator/dawn_gpu_info_generator.py"
     PRINT_NAME "Dawn GPU info utilities"
     OUTPUT_HEADERS DAWN_GPU_INFO_AUTOGEN_HEADERS
@@ -43,12 +35,9 @@ DawnGenerator(
 )
 
 set(private_headers
-    "${DAWN_VERSION_AUTOGEN_HEADERS}"
     "${DAWN_GPU_INFO_AUTOGEN_HEADERS}"
     "Algebra.h"
     "AlignedAlloc.h"
-    "Alloc.h"
-    "Assert.h"
     "Atomic.h"
     "BitSetRangeIterator.h"
     "ColorSpace.h"
@@ -67,22 +56,18 @@ set(private_headers
     "IOKitRef.h"
     "ityp_array.h"
     "ityp_bitset.h"
-    "ityp_span.h"
     "ityp_stack_vec.h"
     "ityp_vector.h"
     "LinkedList.h"
-    "Log.h"
     "LRUCache.h"
     "MatchVariant.h"
     "Math.h"
+    "MemoryBlockAllocator.h"
     "Mutex.h"
     "MutexProtected.h"
-    "NonCopyable.h"
-    "NonMovable.h"
     "NSRef.h"
     "Numeric.h"
     "PlacementAllocated.h"
-    "Platform.h"
     "Preprocessor.h"
     "Range.h"
     "Ref.h"
@@ -96,13 +81,13 @@ set(private_headers
     "SerialStorage.h"
     "SlabAllocator.h"
     "StackAllocated.h"
+    "Strings.h"
     "StringViewUtils.h"
+    "SystemHandle.h"
     "SystemUtils.h"
     "ThreadLocal.h"
     "Time.h"
-    "TypedInteger.h"
     "TypeTraits.h"
-    "UnderlyingType.h"
     "vulkan_platform.h"
     "WeakRef.h"
     "WeakRefSupport.h"
@@ -113,18 +98,18 @@ set(private_headers
 set(sources
     "${DAWN_GPU_INFO_AUTOGEN_SOURCES}"
     "AlignedAlloc.cpp"
-    "Assert.cpp"
     "Defer.cpp"
     "DynamicLib.cpp"
     "FutureUtils.cpp"
     "GPUInfo.cpp"
-    "Log.cpp"
     "Math.cpp"
+    "MemoryBlockAllocator.cpp"
     "RefCounted.cpp"
     "Result.cpp"
     "Sha3.cpp"
     "SlabAllocator.cpp"
     "StringViewUtils.cpp"
+    "SystemHandle.cpp"
     "SystemUtils.cpp"
     "ThreadLocal.cpp"
     "WeakRefSupport.cpp"
@@ -134,7 +119,6 @@ set(conditional_private_depends)
 
 if (WIN32)
     list(APPEND private_headers
-        "windows_with_undefs.h"
         "WindowsUtils.h"
     )
     list(APPEND sources
@@ -177,6 +161,15 @@ if (DAWN_ENABLE_VULKAN)
         Vulkan::Headers)
 endif ()
 
+if (DAWN_ENABLE_VULKAN AND UNIX AND NOT ANDROID AND NOT APPLE)
+    list(APPEND private_headers
+        "DRMUtils.h"
+    )
+    list(APPEND sources
+        "DRMUtils.cpp"
+    )
+endif()
+
 list(APPEND conditional_private_depends
     ${CMAKE_DL_LIBS})
 
@@ -191,6 +184,7 @@ dawn_add_library(
     DEPENDS
         webgpu_c
         webgpu_cpp
+        dawn::dawn_version
         absl::flat_hash_set
         absl::inlined_vector
         absl::no_destructor

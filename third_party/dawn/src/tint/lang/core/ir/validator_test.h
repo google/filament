@@ -46,6 +46,21 @@ namespace ir {
 
 class Function;
 
+/// Helper to build a type from a template argument.
+template <typename T>
+const core::type::Type* TypeBuilder(core::type::Manager& m) {
+    return m.Get<T>();
+}
+
+/// Helper to build a reference type from a template argument.
+template <typename T>
+const core::type::Type* RefTypeBuilder(core::type::Manager& m) {
+    return m.ref<AddressSpace::kFunction, T>();
+}
+
+/// Type alias for a function that builds a type.
+using TypeBuilderFn = const core::type::Type* (*)(core::type::Manager&);
+
 class IR_ValidatorTest : public IRTestHelper {
   public:
     /// Builds and returns a basic 'compute' entry point function, named @p name
@@ -80,6 +95,12 @@ class IR_ValidatorTest : public IRTestHelper {
                           const std::string& name,
                           BuiltinValue builtin,
                           const core::type::Type* type);
+
+  protected:
+    void SetUp() override {
+        IRTestHelper::SetUp();
+        mod.properties.Add(Property::kAllow16BitFloats);
+    }
 };
 
 }  // namespace ir

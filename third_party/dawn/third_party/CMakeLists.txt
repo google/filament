@@ -63,6 +63,16 @@ if (NOT TARGET absl::strings)
     add_subdirectory(${DAWN_ABSEIL_DIR} "${CMAKE_CURRENT_BINARY_DIR}/abseil")
 endif()
 
+# Warning suppressions to keep dependencies from poluting the logs.
+if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
+    ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+    add_compile_options(
+            -Wno-deprecated-this-capture # For protobuf and marl
+            -Wno-nontrivial-memcall # For swiftshader
+            -Wno-c++20-extensions # For swiftshader and marl
+    )
+endif()
+
 if (DAWN_BUILD_PROTOBUF AND EXISTS "${DAWN_PROTOBUF_DIR}/cmake")
     if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND WIN32)
         set(protobuf_HAVE_BUILTIN_ATOMICS 1)
@@ -132,8 +142,7 @@ if (NOT TARGET SPIRV-Headers)
 endif()
 
 if (NOT TARGET SPIRV-Tools AND
-    (((DAWN_ENABLE_OPENGL OR DAWN_ENABLE_VULKAN)
-        AND DAWN_ENABLE_SPIRV_VALIDATION)
+    (DAWN_ENABLE_SPIRV_VALIDATION
         OR TINT_BUILD_SPV_READER
         OR TINT_BUILD_SPV_WRITER
         OR DAWN_USE_BUILT_DXC))
@@ -285,7 +294,7 @@ function(AddSubdirectoryDXC)
     set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "" FORCE)
 
     if (NOT WIN32)
-        set(DIRECTX_HEADER_INCLUDE_DIR "${DAWN_THIRD_PARTY_DIR}/dxheaders/include")
+        set(DIRECTX_HEADER_INCLUDE_DIR "${DAWN_THIRD_PARTY_DIR}/directx-headers/src/include")
     endif()
 
     # Disable HCT.cmake looking for and using clang-format. This is used to compare generated files
@@ -361,12 +370,6 @@ endfunction()
 
 if (DAWN_USE_BUILT_DXC)
     AddSubdirectoryDXC()
-endif()
-
-if (TINT_BUILD_TINTD)
-    set(LANGSVR_JSON_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp" EXCLUDE_FROM_ALL)
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/langsvr" EXCLUDE_FROM_ALL)
 endif()
 
 if (TINT_BUILD_MESA)

@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/AsyncTask.h"
+#include "src/dawn/native/AsyncTask.h"
 
 #include <utility>
 
@@ -43,19 +43,19 @@ AsyncTask::AsyncTask(AsyncTaskManager* taskManager, AsyncTaskFunction task)
 }
 
 bool AsyncTask::IsCompleted() const {
-    return mState.Use([](auto state) { return state->state == AsyncTaskState::Completed; });
+    return mState.Use([](auto state) { return state->state != AsyncTaskState::Pending; });
 }
 
 void AsyncTask::Wait() {
     mState.Use<NotifyType::None>([](auto state) {
-        state.Wait([](auto& x) { return x.state == AsyncTaskState::Completed; });
+        state.Wait([](auto& x) { return x.state == AsyncTaskState::CompletedCallbacks; });
     });
 }
 
 void AsyncTask::AddCompletionCallback(AsyncTaskCompletionCallback completionCallback) {
     bool completeCallbackNow = false;
     mState.Use<NotifyType::None>([&](auto state) {
-        if (state->state == AsyncTaskState::Completed) {
+        if (state->state != AsyncTaskState::Pending) {
             completeCallbackNow = true;
             return;
         }
@@ -85,11 +85,11 @@ void AsyncTask::Run() {
     task();
     mTaskManager.ExtractAsDangling()->mTasks.Use([this](auto tasks) { tasks->erase(this); });
 
-    // Update the state, notify all waiting threads, and grab the completion callbacks to call them
-    // outside the lock scope.
+    // Update the state and grab the completion callbacks to call them outside the lock scope. Note
+    // that we don't notify other threads yet since the callbacks haven't completed.
     std::vector<AsyncTaskCompletionCallback> completionCallbacks;
-    mState.Use<NotifyType::All>([&completionCallbacks](auto state) {
-        state->state = AsyncTaskState::Completed;
+    mState.Use<NotifyType::None>([&completionCallbacks](auto state) {
+        state->state = AsyncTaskState::CompletedTask;
 
         completionCallbacks = std::move(state->completionCallbacks);
         state->completionCallbacks.clear();
@@ -97,6 +97,10 @@ void AsyncTask::Run() {
     for (auto completionCallback : completionCallbacks) {
         completionCallback();
     }
+
+    // Finally notify waiting threads.
+    mState.Use<NotifyType::All>(
+        [](auto state) { state->state = AsyncTaskState::CompletedCallbacks; });
 }
 
 ErrorGeneratingAsyncTask::ErrorGeneratingAsyncTask(AsyncTaskManager* taskManager,

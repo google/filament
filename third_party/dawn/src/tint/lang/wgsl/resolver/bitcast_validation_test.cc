@@ -38,13 +38,17 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 struct Type {
-    template <typename T, std::enable_if_t<IsVector<T>, bool> = true>
-    static constexpr bool UsedF16() {
+    template <typename T>
+    static constexpr bool UsedF16()
+        requires(IsVector<T>)
+    {
         return std::is_same_v<typename T::type, f16>;
     }
 
-    template <typename T, std::enable_if_t<!IsVector<T>, bool> = true>
-    static constexpr bool UsedF16() {
+    template <typename T>
+    static constexpr bool UsedF16()
+        requires(!IsVector<T>)
+    {
         return std::is_same_v<T, f16>;
     }
 

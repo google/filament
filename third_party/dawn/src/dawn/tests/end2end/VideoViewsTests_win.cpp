@@ -37,10 +37,10 @@
 #include <vector>
 
 #include "VideoViewsTests.h"
-#include "dawn/common/Assert.h"
 #include "dawn/native/D3DBackend.h"
-#include "dawn/utils/SystemHandle.h"
-#include "dawn/utils/TextureUtils.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -59,7 +59,13 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
   public:
     ~VideoViewsTestBackendWin() override = default;
 
-    void OnSetUp(const wgpu::Device& device) override {
+    bool Initialize(const wgpu::Device& device) override {
+        InitializeD3D11Device(device);
+        return true;
+    }
+
+  protected:
+    void InitializeD3D11Device(const wgpu::Device& device) {
         mWGPUDevice = device;
 
         // Create the D3D11 device/contexts that will be used in subsequent tests
@@ -96,7 +102,6 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
         mD3d11Device = std::move(d3d11Device);
     }
 
-  protected:
     static DXGI_FORMAT GetDXGITextureFormat(wgpu::TextureFormat format) {
         switch (format) {
             case wgpu::TextureFormat::R8BG8Biplanar420Unorm:
@@ -172,7 +177,7 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
         hr = d3d11Texture.As(&dxgiResource);
         DAWN_ASSERT(hr == S_OK);
 
-        utils::SystemHandle sharedHandle;
+        SystemHandle sharedHandle;
         hr = dxgiResource->CreateSharedHandle(
             nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr,
             sharedHandle.GetMut());
@@ -187,7 +192,7 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
         hr = d3d11Device5->CreateFence(0, D3D11_FENCE_FLAG_SHARED, IID_PPV_ARGS(&d3d11Fence));
         DAWN_ASSERT(hr == S_OK);
 
-        utils::SystemHandle fenceSharedHandle;
+        SystemHandle fenceSharedHandle;
         hr = d3d11Fence->CreateSharedHandle(nullptr, GENERIC_ALL, nullptr,
                                             fenceSharedHandle.GetMut());
         DAWN_ASSERT(hr == S_OK);
@@ -225,12 +230,15 @@ class VideoViewsTestBackendWin : public VideoViewsTestBackend {
         beginDesc.concurrentRead = false;
         beginDesc.fenceCount = 1;
         beginDesc.fences = &wgpuFence;
+        beginDesc.signaledValueCount = 1;
         beginDesc.signaledValues = &signaled_value;
 
         auto wgpuTexture = sharedTextureMemory.CreateTexture(&textureDesc);
-        bool success = sharedTextureMemory.BeginAccess(wgpuTexture, &beginDesc);
+        wgpu::Status status = sharedTextureMemory.BeginAccess(wgpuTexture, &beginDesc);
 
-        return success ? std::make_unique<PlatformTextureWin>(std::move(wgpuTexture)) : nullptr;
+        return status == wgpu::Status::Success
+                   ? std::make_unique<PlatformTextureWin>(std::move(wgpuTexture))
+                   : nullptr;
     }
 
     void DestroyVideoTextureForTest(

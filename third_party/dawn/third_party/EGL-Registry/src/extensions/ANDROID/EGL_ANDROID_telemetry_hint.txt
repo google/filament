@@ -1,0 +1,68 @@
+Name
+
+    ANDROID_telemetry_hint
+
+Name Strings
+
+    EGL_ANDROID_telemetry_hint
+
+Contributors
+
+    Tom Murphy
+
+Contact
+
+    Tom Murphy, Google Inc. (tomnom 'at' google.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 1, July 6, 2024
+
+Number
+
+    EGL Extension #153
+
+Dependencies:
+
+    None.
+
+Overview
+
+    The telemetry of Android OpenGL ES can be enhanced by including information
+    about the purpose for which a context is created. This extension introduces
+    a new EGLConfig attribute that indicates the intended use of the context.
+    By doing so, OpenGL telemetry can be separated based on which library
+    created the context.
+
+    This extension is specifically designed for use by Android Platform
+    developers. Consequently, we have not defined the values associated with
+    EGL_ANDROID_TELEMETRY_HINT within this specification. Instead, these values
+    are defined in Android's telemetry header files, allowing us to easily add
+    new telemetry hints without cluttering this specification.
+
+New Types
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <attrib_list> parameter of eglCreateContext:
+
+    EGL_ANDROID_TELEMETRY_HINT                      0x9001
+
+Issues
+
+    None.
+
+Revision History
+
+#1 (Tom Murphy, July 6, 2024)
+    - Initial draft.

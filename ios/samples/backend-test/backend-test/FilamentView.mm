@@ -18,6 +18,8 @@
 
 #import <QuartzCore/CAMetalLayer.h>
 
+#include <backend_test/PlatformRunner.h>
+
 @implementation FilamentView
 
 - (instancetype)initWithCoder:(NSCoder*)coder
@@ -40,8 +42,7 @@
     metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     metalLayer.framebufferOnly = NO;
 
-    CGRect nativeBounds = [UIScreen mainScreen].nativeBounds;
-    metalLayer.drawableSize = nativeBounds.size;
+    metalLayer.drawableSize = CGSizeMake(test::WINDOW_WIDTH, test::WINDOW_HEIGHT);
 }
 
 - (void)initializeGlLayer

@@ -30,7 +30,7 @@
 namespace tint::spirv::reader {
 namespace {
 
-TEST_F(SpirvParserDeathTest, ExecutionMode_DepthGreater) {
+TEST_F(SpirvParserTest, ExecutionMode_DepthGreater) {
     auto spirv_asm = R"(
                OpCapability Shader
                OpMemoryModel Logical GLSL450
@@ -46,19 +46,14 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_DepthGreater) {
                OpFunctionEnd
 )";
 
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
-            if (binary != Success) {
-                return;
-            }
-
-            [[maybe_unused]] auto res = Parse(binary.Get(), options);
-        },
-        "ExecutionMode DepthGreater is not supported");
+    auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
+    ASSERT_TRUE(binary == Success);
+    auto res = Parse(binary.Get(), options);
+    EXPECT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "ExecutionMode DepthGreater is not supported in WGSL");
 }
 
-TEST_F(SpirvParserDeathTest, ExecutionMode_DepthLess) {
+TEST_F(SpirvParserTest, ExecutionMode_DepthLess) {
     auto spirv_asm = R"(
                OpCapability Shader
                OpMemoryModel Logical GLSL450
@@ -74,19 +69,14 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_DepthLess) {
                OpFunctionEnd
 )";
 
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
-            if (binary != Success) {
-                return;
-            }
-
-            [[maybe_unused]] auto res = Parse(binary.Get(), options);
-        },
-        "ExecutionMode DepthLess is not supported");
+    auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
+    ASSERT_TRUE(binary == Success);
+    auto res = Parse(binary.Get(), options);
+    EXPECT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "ExecutionMode DepthLess is not supported in WGSL");
 }
 
-TEST_F(SpirvParserDeathTest, ExecutionMode_DepthUnchanged) {
+TEST_F(SpirvParserTest, ExecutionMode_DepthUnchanged) {
     auto spirv_asm = R"(
                OpCapability Shader
                OpMemoryModel Logical GLSL450
@@ -102,19 +92,14 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_DepthUnchanged) {
                OpFunctionEnd
 )";
 
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
-            if (binary != Success) {
-                return;
-            }
-
-            [[maybe_unused]] auto res = Parse(binary.Get(), options);
-        },
-        "ExecutionMode DepthUnchanged is not supported");
+    auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
+    ASSERT_TRUE(binary == Success);
+    auto res = Parse(binary.Get(), options);
+    EXPECT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "ExecutionMode DepthUnchanged is not supported in WGSL");
 }
 
-TEST_F(SpirvParserDeathTest, ExecutionMode_EarlyFragmentTest) {
+TEST_F(SpirvParserTest, ExecutionMode_EarlyFragmentTest) {
     auto spirv_asm = R"(
                OpCapability Shader
                OpMemoryModel Logical GLSL450
@@ -130,17 +115,36 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_EarlyFragmentTest) {
                OpFunctionEnd
 )";
 
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
-            if (binary != Success) {
-                return;
-            }
-
-            [[maybe_unused]] auto res = Parse(binary.Get(), options);
-        },
-        "ExecutionMode EarlyFragmentTests is not supported");
+    auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
+    ASSERT_TRUE(binary == Success);
+    auto res = Parse(binary.Get(), options);
+    EXPECT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "ExecutionMode EarlyFragmentTests is not supported in WGSL");
 }
 
+TEST_F(SpirvParserTest, EntryPoint_UnhandledExecutionModel) {
+    auto spirv_asm = R"(
+               OpCapability Shader
+               OpCapability Geometry
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Geometry %main "main"
+               OpExecutionMode %main InputPoints
+               OpExecutionMode %main OutputPoints
+               OpExecutionMode %main OutputVertices 3
+               OpName %main "main"
+        %void = OpTypeVoid
+           %6 = OpTypeFunction %void
+        %main = OpFunction %void None %6
+          %15 = OpLabel
+                OpReturn
+                OpFunctionEnd
+)";
+
+    auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_0);
+    ASSERT_TRUE(binary == Success);
+    auto res = Parse(binary.Get(), options);
+    EXPECT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason, "unhandled execution model: 3");
+}
 }  // namespace
 }  // namespace tint::spirv::reader

@@ -80,31 +80,47 @@ def apply_win_cq_builder_defaults(kwargs):
     return kwargs
 
 def apply_functional_builder_with_node_defaults(kwargs):
-    kwargs.setdefault("tryjob", try_.job(
+    kwargs.setdefault("cq_settings", try_.cq_settings(
         location_filters = exclusion_filters.gn_clang_cq_file_exclusions,
     ))
     return kwargs
 
 def apply_functional_builder_without_node_defaults(kwargs):
-    kwargs.setdefault("tryjob", try_.job(
+    kwargs.setdefault("cq_settings", try_.cq_settings(
         location_filters = exclusion_filters.gn_clang_no_node_cq_file_exclusions,
     ))
     return kwargs
 
 def apply_fuzz_builder_defaults(kwargs):
-    kwargs.setdefault("tryjob", try_.job(
+    kwargs.setdefault("cq_settings", try_.cq_settings(
         location_filters = exclusion_filters.gn_clang_cq_fuzz_file_exclusions,
     ))
     return kwargs
 
-def add_builder_to_main_and_milestone_cq_groups(kwargs):
-    # Dawn standalone builders run fine unbranched on branched CLs.
-    try_.builder(**kwargs)
+def add_builder_to_milestone_cq_groups(name, disable_reuse = False):
     for milestone in ACTIVE_MILESTONES.keys():
         luci.cq_tryjob_verifier(
             cq_group = "Dawn-CQ-" + milestone,
-            builder = "dawn:try/" + kwargs["name"],
+            builder = "dawn:try/" + name,
+            disable_reuse = disable_reuse,
         )
+
+def add_builder_to_main_and_milestone_cq_groups(kwargs):
+    # Dawn standalone builders run fine unbranched on branched CLs.
+    try_.builder(**kwargs)
+    add_builder_to_milestone_cq_groups(kwargs["name"])
+
+def add_presubmit_builder_to_main_and_milestone_cq_groups(kwargs):
+    try_.presubmit_builder(**kwargs)
+    add_builder_to_milestone_cq_groups(kwargs["name"], disable_reuse = True)
+
+def dawn_android_functional_cq_tester(**kwargs):
+    kwargs = apply_linux_cq_builder_defaults(kwargs)
+    kwargs = apply_functional_builder_with_node_defaults(kwargs)
+
+    # TODO(crbug.com/520153663): Add to branches once both arm and arm64 are
+    # added to the CQ.
+    try_.builder(**kwargs)
 
 def dawn_linux_functional_cq_tester(**kwargs):
     kwargs = apply_linux_cq_builder_defaults(kwargs)
@@ -136,7 +152,32 @@ def dawn_linux_fuzz_cq_tester(**kwargs):
     kwargs = apply_fuzz_builder_defaults(kwargs)
     add_builder_to_main_and_milestone_cq_groups(kwargs)
 
+def dawn_linux_presubmit_builder(**kwargs):
+    kwargs = apply_linux_cq_builder_defaults(kwargs)
+    add_presubmit_builder_to_main_and_milestone_cq_groups(kwargs)
+
 ## Functional testers
+
+dawn_android_functional_cq_tester(
+    name = "dawn-cq-android-arm-rel",
+    description_html = "Tests release Dawn on Android/arm on multiple hardware configs. Blocks CL submission.",
+    mirrors = [
+        "ci/dawn-android-arm-builder-rel",
+    ],
+    gn_args = "ci/dawn-android-arm-builder-rel",
+    # TODO(crbug.com/520153663): Add to CQ + branches once we confirm there is
+    # sufficient GCE capacity.
+    cq_settings = try_.cq_settings(includable_only = True),
+)
+
+dawn_android_functional_cq_tester(
+    name = "dawn-cq-android-arm64-rel",
+    description_html = "Tests release Dawn on Android/arm64 on multiple hardware configs. Blocks CL submission.",
+    mirrors = [
+        "ci/dawn-android-arm64-builder-rel",
+    ],
+    gn_args = "ci/dawn-android-arm64-builder-rel",
+)
 
 dawn_linux_functional_cq_tester(
     name = "dawn-cq-linux-x64-dbg",
@@ -259,6 +300,7 @@ dawn_win_functional_cq_tester(
     description_html = "Tests release Dawn on Win/x64 on multiple hardware configs. Blocks CL submission",
     mirrors = [
         "ci/dawn-win-x64-builder-rel",
+        "ci/dawn-win-x64-amd-rx5500xt-rel",
         "ci/dawn-win-x64-intel-uhd630-rel",
         # TODO(crbug.com/458768121): Add the UHD 770 config when capacity has
         # recovered.
@@ -326,6 +368,21 @@ dawn_linux_fuzz_cq_tester(
         "ci/dawn-linux-x86-fuzz-rel",
     ],
     gn_args = "ci/dawn-linux-x86-fuzz-rel",
+)
+
+# Presubmit-only testers
+
+dawn_linux_presubmit_builder(
+    name = "presubmit",
+    description_html = "Runs basic presubmit checks on Linux machines",
+    executable = "recipe:run_presubmit",
+    cq_settings = try_.cq_settings(
+        on_default_cq = True,
+    ),
+    properties = {
+        "repo_name": "dawn",
+        "runhooks": True,
+    },
 )
 
 ################################################################################
@@ -443,6 +500,16 @@ dawn_linux_manual_builder(
         "ci/dawn-linux-x86-sws-rel",
     ],
     gn_args = "ci/dawn-linux-x86-builder-rel",
+)
+
+dawn_mac_manual_builder(
+    name = "dawn-try-mac-arm64-apple-m2-exp-rel",
+    description_html = "Tests release Dawn on Mac/arm64 on Apple M2 devices w/ experimental OS configs. Manual only.",
+    mirrors = [
+        "ci/dawn-mac-arm64-builder-rel",
+        "ci/dawn-mac-arm64-apple-m2-exp-rel",
+    ],
+    gn_args = "ci/dawn-mac-arm64-builder-rel",
 )
 
 dawn_mac_manual_builder(

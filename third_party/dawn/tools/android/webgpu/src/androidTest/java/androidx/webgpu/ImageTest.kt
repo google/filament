@@ -24,110 +24,138 @@ import androidx.webgpu.helper.asString
 import androidx.webgpu.helper.createBitmap
 import androidx.webgpu.helper.createWebGpu
 import junit.framework.TestCase.assertEquals
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ImageTest {
-    private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-    private val storage = StorageFactory.createStore(appContext)
-    @get:Rule
-    val apiSkipRule = ApiLevelSkipRule()
+  private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+  private val storage = StorageFactory.createStore(appContext)
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
 
-    @Test
-    @MediumTest
-    @ApiRequirement(minApi = EMULATOR_TESTS_MIN_API_LEVEL, onlySkipOnEmulator = true)
-    fun imageCompareGreen() {
-        triangleTest(GPUColor(0.2, 0.9, 0.1, 1.0), "green.png")
-    }
+  @get:Rule
+  val apiSkipRule = ApiLevelSkipRule()
 
-    @Test
-    @MediumTest
-    @ApiRequirement(minApi = EMULATOR_TESTS_MIN_API_LEVEL, onlySkipOnEmulator = true)
-    fun imageCompareRed() {
-        triangleTest(GPUColor(0.9, 0.1, 0.2, 1.0), "red.png")
-    }
+  @After
+  fun teardown() {
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
+  }
 
-    private fun triangleTest(color: GPUColor, imageName: String) {
-        runBlocking {
-            val webGpu = createWebGpu()
-            val device = webGpu.device
+  @Test
+  @MediumTest
+  @ApiRequirement(minApi = EMULATOR_TESTS_MIN_API_LEVEL, onlySkipOnEmulator = true)
+  fun imageCompareGreen() {
+    triangleTest(GPUColor(0.2, 0.9, 0.1, 1.0), "green.png")
+  }
 
-            val shaderModule = device.createShaderModule(
-                GPUShaderModuleDescriptor(
-                    shaderSourceWGSL = GPUShaderSourceWGSL(
-                        code = appContext.assets.open("triangle/shader.wgsl").asString()
+  @Test
+  @MediumTest
+  @ApiRequirement(minApi = EMULATOR_TESTS_MIN_API_LEVEL, onlySkipOnEmulator = true)
+  fun imageCompareRed() {
+    triangleTest(GPUColor(0.9, 0.1, 0.2, 1.0), "red.png")
+  }
+
+  private fun triangleTest(color: GPUColor, imageName: String) {
+    runBlocking {
+      val webGpu = createWebGpu(dispatcher)
+      val device = webGpu.device
+      val job = testScope.launch {
+        webGpu.processEventsLoop()
+      }
+      try {
+        val unused = webGpu.execute {
+          val shaderModule = device.createShaderModule(
+            GPUShaderModuleDescriptor(
+              shaderSourceWGSL = GPUShaderSourceWGSL(
+                code = appContext.assets.open("triangle/shader.wgsl").asString()
+              )
+            )
+          )
+
+          val testTexture = device.createTexture(
+            GPUTextureDescriptor(
+              size = GPUExtent3D(256, 256),
+              format = TextureFormat.RGBA8Unorm,
+              usage = TextureUsage.CopySrc or TextureUsage.RenderAttachment
+            )
+          )
+
+          with(device.queue) {
+            submit(device.createCommandEncoder().use {
+              with(
+                it.beginRenderPass(
+                  GPURenderPassDescriptor(
+                    colorAttachments = arrayOf(
+                      GPURenderPassColorAttachment(
+                        loadOp = LoadOp.Clear,
+                        storeOp = StoreOp.Store,
+                        clearValue = color,
+                        view = testTexture.createView()
+                      )
                     )
+                  )
                 )
-            )
-
-            val testTexture = device.createTexture(
-                GPUTextureDescriptor(
-                    size = GPUExtent3D(256, 256),
-                    format = TextureFormat.RGBA8Unorm,
-                    usage = TextureUsage.CopySrc or TextureUsage.RenderAttachment
+              ) {
+                setPipeline(
+                  device.createRenderPipeline(
+                    GPURenderPipelineDescriptor(
+                      vertex = GPUVertexState(module = shaderModule),
+                      primitive = GPUPrimitiveState(
+                        topology = PrimitiveTopology.TriangleList
+                      ),
+                      fragment = GPUFragmentState(
+                        module = shaderModule,
+                        targets = arrayOf(
+                          GPUColorTargetState(
+                            format = TextureFormat.RGBA8Unorm
+                          )
+                        )
+                      )
+                    )
+                  )
                 )
-            )
+                draw(3)
+                end()
+              }
 
-            with(device.queue) {
-                submit(device.createCommandEncoder().use {
-                    with(
-                        it.beginRenderPass(
-                            GPURenderPassDescriptor(
-                                colorAttachments = arrayOf(
-                                    GPURenderPassColorAttachment(
-                                        loadOp = LoadOp.Clear,
-                                        storeOp = StoreOp.Store,
-                                        clearValue = color,
-                                        view = testTexture.createView()
-                                    )
-                                )
-                            )
-                        )
-                    ) {
-                        setPipeline(
-                            device.createRenderPipeline(
-                                GPURenderPipelineDescriptor(
-                                    vertex = GPUVertexState(module = shaderModule),
-                                    primitive = GPUPrimitiveState(
-                                        topology = PrimitiveTopology.TriangleList
-                                    ),
-                                    fragment = GPUFragmentState(
-                                        module = shaderModule,
-                                        targets = arrayOf(
-                                            GPUColorTargetState(
-                                                format = TextureFormat.RGBA8Unorm
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                        draw(3)
-                        end()
-                    }
+              arrayOf(it.finish())
+            })
+          }
 
-                    arrayOf(it.finish())
-                })
-            }
+          val bitmap = testTexture.createBitmap(device)
 
-            val bitmap = testTexture.createBitmap(device)
+          // Write the generated bitmap to test storage for inspection in the event of test
+          // failures.
+          storage.writeImage("generated_image.png", bitmap)
 
-            // Write the generated bitmap to test storage for inspection in the event of test
-            // failures.
-            storage.writeImage("generated_image.png", bitmap)
+          val testAssets = appContext.assets
+          val matched = testAssets.list("compare")!!.filter {
+            imageSimilarity(
+              bitmap,
+              BitmapFactory.decodeStream(testAssets.open("compare/$it"))
+            ) > 0.99
+          }
 
-            val testAssets = appContext.assets
-            val matched = testAssets.list("compare")!!.filter {
-                imageSimilarity(
-                    bitmap,
-                    BitmapFactory.decodeStream(testAssets.open("compare/$it"))
-                ) > 0.99
-            }
-
-            assertEquals(listOf(imageName), matched)
+          assertEquals(listOf(imageName), matched)
         }
+      } finally {
+        webGpu.close()
+        job.cancel()
+      }
     }
+  }
 }

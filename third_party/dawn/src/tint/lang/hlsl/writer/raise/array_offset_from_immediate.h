@@ -32,7 +32,6 @@
 
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -44,14 +43,6 @@ namespace tint::hlsl::writer::raise {
 
 using ImmediateDataLayout = core::ir::transform::ImmediateDataLayout;
 
-/// The capabilities that the transform can support.
-const core::ir::Capabilities kArrayOffsetFromImmediateCapabilities{
-    core::ir::Capability::kAllow16BitIntegers,
-    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowNonCoreTypes,
-};
-
 /// ArrayOffsetFromImmediates is a transform that adds an offset to storage buffer loads and stores
 /// provided via immediate blocks.
 ///
@@ -59,7 +50,7 @@ const core::ir::Capabilities kArrayOffsetFromImmediateCapabilities{
 /// ```
 /// struct tint_immediate_data_struct {
 ///  ...
-///    buffer_offsets: array<vec4<u32>, 8>;  // offset is provided via config
+///    buffer_offsets: array<u32, 8>;  // offset is provided via config
 /// };
 /// var<immediate> tint_immediate_data : tint_immediate_data_struct;
 /// ```
@@ -70,8 +61,8 @@ const core::ir::Capabilities kArrayOffsetFromImmediateCapabilities{
 /// @param module the module to transform
 /// @param immediate_data_layout The immediate data layout information.
 /// @param buffer_offsets_offset The offset in immediate block where buffer offsets start.
-/// @param buffer_offsets_array_elements_num the number of vec4s used to store buffer offsets that
-/// will be set into the immediate block.
+/// @param buffer_offsets_array_elements_num number of u32 buffer-offset elements in the immediate
+/// block
 /// @param bindpoint_to_offset_index The map from binding point to an index which holds the offset
 /// of that buffer.
 /// @returns the transform result or failure

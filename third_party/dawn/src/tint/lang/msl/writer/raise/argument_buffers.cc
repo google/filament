@@ -392,14 +392,13 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ArgumentBuffers(core::ir::Module& ir, const ArgumentBuffersConfig& config) {
-    AssertValid(ir,
-                tint::core::ir::Capabilities{
-                    tint::core::ir::Capability::kAllowPointSizeBuiltin,
-                    tint::core::ir::Capability::kAllowDuplicateBindings,
-                },
-                "before msl.ArgumentBuffers");
+    AssertValid(ir, "before msl.ArgumentBuffers");
 
-    return State{config, ir}.Process();
+    TINT_CHECK_RESULT((State{config, ir}.Process()));
+
+    ir.properties.Add(core::ir::Property::kAllowMslEntryPointInterface);
+
+    return Success;
 }
 
 }  // namespace tint::msl::writer::raise

@@ -123,7 +123,7 @@ TEST_F(ResolverSwizzleAssignmentTest, InvalidDuplicateComponents) {
               "1:2 error: cannot assign to vector swizzle with duplicate target components");
 }
 
-TEST_F(ResolverSwizzleAssignmentTest, InvalidDuplicateComponentsChainedSwizzle) {
+TEST_F(ResolverSwizzleAssignmentTest, DuplicateComponentsChainedSwizzle_SingleUnique) {
     // var v : vec4f;
     // v.xxy.x = 1.0;
     GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
@@ -133,9 +133,123 @@ TEST_F(ResolverSwizzleAssignmentTest, InvalidDuplicateComponentsChainedSwizzle) 
     allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
 
     Resolver resolver{this, allowed_features};
+    EXPECT_TRUE(resolver.Resolve()) << resolver.error();
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, DuplicateComponentsChainedSwizzle_MultipleUnique) {
+    // var v : vec4f;
+    // v.xyy.xy = vec2(1.0, 2.0);
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(MemberAccessor(Source{{1, 2}}, MemberAccessor("v", "xyy"), "xy"),
+                          Call<vec2<f32>>(1_f, 2_f)));
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_TRUE(resolver.Resolve()) << resolver.error();
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, DuplicateComponentsChainedSwizzle_Multiple) {
+    // var v : vec4f;
+    // v.xyy.yy = vec2(1.0, 2.0);
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(MemberAccessor(Source{{1, 2}}, MemberAccessor("v", "xyy"), "yy"),
+                          Call<vec2<f32>>(1_f, 2_f)));
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
     EXPECT_FALSE(resolver.Resolve());
     EXPECT_EQ(r()->error(),
               "1:2 error: cannot assign to vector swizzle with duplicate target components");
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, DuplicateComponentsChainedSwizzle_MultipleNonUnique) {
+    // var v : vec4f;
+    // v.xxyy.xy = vec2(1.0, 2.0);
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(MemberAccessor(Source{{1, 2}}, MemberAccessor("v", "xxyy"), "xy"),
+                          Call<vec2<f32>>(1_f, 2_f)));
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(r()->error(),
+              "1:2 error: cannot assign to vector swizzle with duplicate target components");
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, SwizzleAssignment_Indexed) {
+    // var v : vec4f;
+    // v.xyz[1] = 1.0;
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(IndexAccessor(MemberAccessor("v", "xyz"), 1_i), 1_f));
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_TRUE(resolver.Resolve()) << resolver.error();
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, SwizzleAssignment_IndexedDynamic) {
+    // var v : vec4f;
+    // var i : i32;
+    // v.xyz[i] = 1.0;
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    auto* i = Var("i", ty.i32(), core::AddressSpace::kFunction);
+    auto* assign = Assign(IndexAccessor(MemberAccessor("v", "xyz"), "i"), 1_f);
+    WrapInFunction(i, assign);
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_TRUE(resolver.Resolve()) << resolver.error();
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, SwizzleAssignment_Indexed_ValidInterimDuplicate) {
+    // var v : vec4f;
+    // v.xx[0] = 1.0;
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(IndexAccessor(MemberAccessor("v", "xx"), 0_i), 1_f));
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_TRUE(resolver.Resolve()) << resolver.error();
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, SwizzleAssignment_IndexSize1) {
+    // var v : vec4f;
+    // v.x[0] = 1.0;
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(IndexAccessor(MemberAccessor("v", "x"), 0_i), 1_f));
+
+    wgsl::AllowedFeatures allowed_features{};
+    allowed_features.features.insert(wgsl::LanguageFeature::kSwizzleAssignment);
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(resolver.error(), "error: cannot index type 'f32'");
+}
+
+TEST_F(ResolverSwizzleAssignmentTest, SwizzleAssignment_Indexed_FeatureDisabled) {
+    // var v : vec4f;
+    // v.xyz[1] = 1.0;
+    GlobalVar("v", ty.vec4<f32>(), core::AddressSpace::kPrivate);
+    WrapInFunction(Assign(IndexAccessor(MemberAccessor("v", "xyz"), 1_i), 1_f));
+
+    wgsl::AllowedFeatures allowed_features{};
+
+    Resolver resolver{this, allowed_features};
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(resolver.error(),
+              R"(error: cannot assign to value of type 'swizzle<private, f32, read_write, 3, 1>')");
 }
 
 }  // namespace

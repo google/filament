@@ -30,11 +30,20 @@ foreach(lib IN LISTS LIBXML2_LIBRARIES)
   add_dependencies(${lib} ${LIBXML2_TARGET})
 endforeach(lib)
 
+# NOTE: Fuzzer "libxml2_example" is being used for actual fuzzing in OSS-Fuzz.
+#       We want a rock-solid build by default (hence the pinning to a
+#       specific version) but also be fuzzing the very latest in OSS-Fuzz.
+if (LIB_PROTO_MUTATOR_EXAMPLES_USE_LATEST)
+  set(LIBXML2_GIT_TAG "master")
+else()
+  set(LIBXML2_GIT_TAG "v2.13.6")
+endif()
+
 include (ExternalProject)
 ExternalProject_Add(${LIBXML2_TARGET}
     PREFIX ${LIBXML2_TARGET}
     GIT_REPOSITORY GIT_REPOSITORY https://gitlab.gnome.org/GNOME/libxml2
-    GIT_TAG master
+    GIT_TAG ${LIBXML2_GIT_TAG}
     UPDATE_COMMAND ""
     CMAKE_CACHE_ARGS -DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}
                      -DCMAKE_CXX_COMPILER:FILEPATH=${CMAKE_CXX_COMPILER}

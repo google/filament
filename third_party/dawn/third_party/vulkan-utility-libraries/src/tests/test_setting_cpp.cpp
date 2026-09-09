@@ -458,32 +458,6 @@ TEST(test_layer_setting_cpp, vkuGetLayerSettingValues_Frameset) {
     vkuDestroyLayerSettingSet(layerSettingSet, nullptr);
 }
 
-TEST(test_layer_setting_cpp, vkuGetLayerSettingValues_VkuCustomSTypeInfo) {
-    const char* values_data[] = {"0x76", "0X82", "76", "82"};
-    const uint32_t value_count = static_cast<uint32_t>(std::size(values_data));
-
-    const VkLayerSettingEXT settings[] = {
-        {"VK_LAYER_LUNARG_test", "my_setting", VK_LAYER_SETTING_TYPE_STRING_EXT, value_count, values_data}};
-    const uint32_t settings_size = static_cast<uint32_t>(std::size(settings));
-
-    const VkLayerSettingsCreateInfoEXT layer_settings_create_info{VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT, nullptr,
-                                                                  settings_size, &settings[0]};
-
-    VkuLayerSettingSet layerSettingSet = VK_NULL_HANDLE;
-    vkuCreateLayerSettingSet("VK_LAYER_LUNARG_test", &layer_settings_create_info, nullptr, nullptr, &layerSettingSet);
-
-    EXPECT_TRUE(vkuHasLayerSetting(layerSettingSet, "my_setting"));
-
-    std::vector<VkuCustomSTypeInfo> values;
-    vkuGetLayerSettingValues(layerSettingSet, "my_setting", values);
-    EXPECT_EQ(0x76u, values[0].first);
-    EXPECT_EQ(0x82u, values[0].second);
-    EXPECT_EQ(76u, values[1].first);
-    EXPECT_EQ(82u, values[1].second);
-
-    vkuDestroyLayerSettingSet(layerSettingSet, nullptr);
-}
-
 TEST(test_layer_setting_cpp, vkuGetUnknownSettings_legacy) {
     std::vector<VkLayerSettingEXT> settings;
 

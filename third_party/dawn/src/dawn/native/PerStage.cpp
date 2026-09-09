@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/PerStage.h"
+#include "src/dawn/native/PerStage.h"
 
 namespace dawn::native {
 
@@ -35,7 +35,7 @@ ityp::bitset<SingleShaderStage, kNumStages> IterateStages(wgpu::ShaderStage stag
 }
 
 wgpu::ShaderStage StageBit(SingleShaderStage stage) {
-    DAWN_ASSERT(static_cast<uint32_t>(stage) < kNumStages);
+    DAWN_CHECK(static_cast<uint32_t>(stage) < kNumStages);
     return static_cast<wgpu::ShaderStage>(1 << static_cast<uint32_t>(stage));
 }
 

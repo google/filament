@@ -25,18 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.h"
 
 #include <zircon/syscalls.h>
 
 #include <utility>
 
-#include "dawn/native/vulkan/BackendVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/VulkanError.h"
-#include "dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/native/vulkan/BackendVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreServiceImplementation.h"
 
 namespace dawn::native::vulkan::external_semaphore {
 
@@ -108,7 +108,7 @@ class ServiceImplementationZirconHandle : public ServiceImplementation {
         importSemaphoreHandleInfo.flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT;
         importSemaphoreHandleInfo.handleType =
             VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA;
-        utils::SystemHandle handleCopy = utils::SystemHandle::Duplicate(handle);
+        SystemHandle handleCopy = SystemHandle::Duplicate(handle);
         importSemaphoreHandleInfo.zirconHandle = handleCopy.Get();
 
         MaybeError status = CheckVkSuccess(mDevice->fn.ImportSemaphoreZirconHandleFUCHSIA(

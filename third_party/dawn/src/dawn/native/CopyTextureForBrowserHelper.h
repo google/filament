@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_COPYTEXTUREFORBROWSERHELPER_H_
 #define SRC_DAWN_NATIVE_COPYTEXTUREFORBROWSERHELPER_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ObjectBase.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ObjectBase.h"
 
 namespace dawn::native {
 class DeviceBase;

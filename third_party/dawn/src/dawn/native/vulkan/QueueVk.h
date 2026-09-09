@@ -32,11 +32,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/SerialQueue.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/vulkan/CommandRecordingContextVk.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/vulkan/CommandRecordingContextVk.h"
 
 namespace dawn::native::vulkan {
 
@@ -63,12 +63,13 @@ class Queue final : public QueueBase {
 
     MaybeError Initialize();
 
-    MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
+    MaybeError SubmitImpl(Span<CommandBufferBase* const> commands) override;
     bool HasPendingCommands() const override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;
     MaybeError WaitForIdleForDestructionImpl() override;
     MaybeError SubmitPendingCommandsImpl() override;
+    MaybeError RecycleRecordingContext();
     void DestroyImpl(DestroyReason reason) override;
 
     // Dawn API

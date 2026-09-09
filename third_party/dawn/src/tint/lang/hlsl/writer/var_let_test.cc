@@ -657,6 +657,7 @@ void main(main_inputs inputs) {
 }
 
 TEST_F(HlslWriterTest, VarWorkgroupU16) {
+    mod.properties.Add(core::ir::Property::kAllow16BitIntegers);
     auto* s = b.Var("u", ty.ptr<workgroup>(ty.u16()));
 
     b.ir.root_block->Append(s);
@@ -692,6 +693,7 @@ void main(main_inputs inputs) {
 }
 
 TEST_F(HlslWriterTest, VarPrivateU16) {
+    mod.properties.Add(core::ir::Property::kAllow16BitIntegers);
     auto* s = b.Var("u", ty.ptr<private_>(ty.u16()));
 
     b.ir.root_block->Append(s);
@@ -715,6 +717,7 @@ void main() {
 }
 
 TEST_F(HlslWriterTest, VarStorageReadU16) {
+    mod.properties.Add(core::ir::Property::kAllow16BitIntegers);
     auto* s = b.Var("u", ty.ptr<storage, core::Access::kRead>(ty.u16()));
     s->SetBindingPoint(0, 0);
 
@@ -738,6 +741,7 @@ void main() {
 }
 
 TEST_F(HlslWriterTest, VarStorageReadVec4U16) {
+    mod.properties.Add(core::ir::Property::kAllow16BitIntegers);
     auto* s = b.Var<storage, vec4<u16>, core::Access::kRead>("u");
     s->SetBindingPoint(0, 0);
 
@@ -761,6 +765,7 @@ void main() {
 }
 
 TEST_F(HlslWriterTest, VarStorageWriteU16) {
+    mod.properties.Add(core::ir::Property::kAllow16BitIntegers);
     auto* s = b.Var("u", ty.ptr<storage, core::Access::kReadWrite>(ty.u16()));
     s->SetBindingPoint(0, 0);
 
@@ -784,6 +789,7 @@ void main() {
 }
 
 TEST_F(HlslWriterTest, VarStorageWriteVec4U16) {
+    mod.properties.Add(core::ir::Property::kAllow16BitIntegers);
     auto* s = b.Var<storage, vec4<u16>, core::Access::kReadWrite>("u");
     s->SetBindingPoint(0, 0);
 
@@ -801,6 +807,108 @@ TEST_F(HlslWriterTest, VarStorageWriteVec4U16) {
 RWByteAddressBuffer u : register(u0);
 void main() {
   u.Store<vector<uint16_t, 4> >(0u, (uint16_t(0u)).xxxx);
+}
+
+)");
+}
+
+TEST_F(HlslWriterTest, Var_SubgroupMatrix_ZeroInit) {
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        b.Var("a", function, ty.subgroup_matrix_result(ty.f32(), 16, 8));
+        b.Return(func);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
+    EXPECT_EQ(output_.hlsl, R"(#include <dx/linalg.h>
+using namespace dx::linalg;
+using Matrix_result_f32_8x16 = Matrix<ComponentType::F32, 8, 16, MatrixUse::Accumulator, MatrixScope::Wave>;
+
+[numthreads(1, 1, 1)]
+void main() {
+  Matrix_result_f32_8x16 a = Matrix_result_f32_8x16::Splat(0.0f);
+}
+
+)");
+}
+
+TEST_F(HlslWriterTest, Var_SubgroupMatrix_Array_ZeroInit) {
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        b.Var("a", function, ty.array(ty.subgroup_matrix_result(ty.f32(), 16, 8), 4u));
+        b.Return(func);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
+    EXPECT_EQ(output_.hlsl, R"(#include <dx/linalg.h>
+using namespace dx::linalg;
+using Matrix_result_f32_8x16 = Matrix<ComponentType::F32, 8, 16, MatrixUse::Accumulator, MatrixScope::Wave>;
+
+[numthreads(1, 1, 1)]
+void main() {
+  Matrix_result_f32_8x16 v = Matrix_result_f32_8x16::Splat(0.0f);
+  Matrix_result_f32_8x16 a[4] = {v, v, v, v};
+}
+
+)");
+}
+
+TEST_F(HlslWriterTest, Var_SubgroupMatrix_Struct_ZeroInit) {
+    auto* str = ty.Struct(mod.symbols.New("S"),
+                          {
+                              {mod.symbols.New("m"), ty.subgroup_matrix_result(ty.f32(), 16, 8)},
+                          });
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        b.Var("a", function, str);
+        b.Return(func);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
+    EXPECT_EQ(output_.hlsl, R"(#include <dx/linalg.h>
+using namespace dx::linalg;
+using Matrix_result_f32_8x16 = Matrix<ComponentType::F32, 8, 16, MatrixUse::Accumulator, MatrixScope::Wave>;
+struct S {
+  Matrix_result_f32_8x16 m;
+};
+
+
+[numthreads(1, 1, 1)]
+void main() {
+  S a = {Matrix_result_f32_8x16::Splat(0.0f)};
+}
+
+)");
+}
+
+// Test deduplication of the linalg header and type aliases.
+TEST_F(HlslWriterTest, Var_SubgroupMatrix_Multiple) {
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        b.Var("l1", function, ty.subgroup_matrix_left(ty.f32(), 16, 8));
+        b.Var("l2", function, ty.subgroup_matrix_left(ty.f32(), 16, 8));
+        b.Var("r1", function, ty.subgroup_matrix_right(ty.f32(), 16, 8));
+        b.Var("r2", function, ty.subgroup_matrix_right(ty.f32(), 16, 8));
+        b.Return(func);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
+    EXPECT_EQ(output_.hlsl, R"(#include <dx/linalg.h>
+using namespace dx::linalg;
+using Matrix_left_f32_8x16 = Matrix<ComponentType::F32, 8, 16, MatrixUse::A, MatrixScope::Wave>;
+using Matrix_right_f32_8x16 = Matrix<ComponentType::F32, 8, 16, MatrixUse::B, MatrixScope::Wave>;
+
+[numthreads(1, 1, 1)]
+void main() {
+  Matrix_left_f32_8x16 l1 = Matrix_left_f32_8x16::Splat(0.0f);
+  Matrix_left_f32_8x16 l2 = Matrix_left_f32_8x16::Splat(0.0f);
+  Matrix_right_f32_8x16 r1 = Matrix_right_f32_8x16::Splat(0.0f);
+  Matrix_right_f32_8x16 r2 = Matrix_right_f32_8x16::Splat(0.0f);
 }
 
 )");

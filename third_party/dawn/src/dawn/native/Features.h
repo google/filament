@@ -32,17 +32,17 @@
 
 #include <bitset>
 
-#include "dawn/common/ityp_bitset.h"
 #include "dawn/native/DawnNative.h"
 #include "dawn/native/Features_autogen.h"
-#include "dawn/native/Serializable.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/Serializable.h"
 
 namespace dawn::native {
 
 extern const ityp::array<Feature, FeatureInfo, kEnumCount<Feature>> kFeatureNameAndInfoList;
 
-wgpu::FeatureName ToAPI(Feature feature);
-Feature FromAPI(wgpu::FeatureName feature);
+wgpu::FeatureName ToCppAPI(Feature feature);
+Feature FromCppAPI(wgpu::FeatureName feature);
 
 // A wrapper of the bitset to store if an feature is enabled or not. This wrapper provides the
 // convenience to convert the enums of enum class Feature to the indices of a bitset.

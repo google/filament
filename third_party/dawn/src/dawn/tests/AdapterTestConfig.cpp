@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/AdapterTestConfig.h"
+#include "src/dawn/tests/AdapterTestConfig.h"
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
 
 BackendTestConfig::BackendTestConfig(wgpu::BackendType backendType,
                                      std::initializer_list<const char*> forceEnabledWorkarounds,

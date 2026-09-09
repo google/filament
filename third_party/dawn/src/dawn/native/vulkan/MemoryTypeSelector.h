@@ -28,11 +28,12 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_MEMORYTYPESELECTOR_H_
 #define SRC_DAWN_NATIVE_VULKAN_MEMORYTYPESELECTOR_H_
 
+#include <limits>
 #include <vector>
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/EnumClassBitmasks.h"
-#include "dawn/native/vulkan/VulkanInfo.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/EnumClassBitmasks.h"
+#include "src/dawn/native/vulkan/VulkanInfo.h"
 
 namespace dawn::native::vulkan {
 
@@ -47,6 +48,8 @@ enum class MemoryKind : uint8_t {
     HostCached = 32,
 };
 
+static constexpr uint32_t kInvalidMemoryTypeIndex = std::numeric_limits<uint32_t>::max();
+
 bool IsMemoryKindMappable(MemoryKind memoryKind);
 
 bool SupportsBufferMapExtendedUsages(const VulkanDeviceInfo& deviceInfo);
@@ -58,7 +61,7 @@ class MemoryTypeSelector {
     MemoryTypeSelector(std::vector<VkMemoryType> memoryTypes,
                        std::vector<VkMemoryHeap> memoryHeaps);
 
-    int FindBestTypeIndex(VkMemoryRequirements requirements, MemoryKind kind);
+    uint32_t FindBestTypeIndex(VkMemoryRequirements requirements, MemoryKind kind);
 
   private:
     VkMemoryPropertyFlags GetRequiredMemoryPropertyFlags(MemoryKind memoryKind) const;

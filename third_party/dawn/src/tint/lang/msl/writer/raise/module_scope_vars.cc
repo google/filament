@@ -77,7 +77,7 @@ struct State {
         }
 
         // Create the structure to hold all module-scope variables.
-        // This includes all variables declared in the module, even those that are unused.
+        // This includes all variables declared in the module that have at least one use.
         CreateStruct();
 
         // Process functions in reverse-dependency order (i.e. root to leaves).
@@ -144,8 +144,15 @@ struct State {
     void CreateStruct() {
         // Collect a list of struct members for the variable declarations.
         Vector<core::type::Manager::StructMemberDesc, 8> struct_members;
+        Vector<core::ir::Instruction*, 16> to_destroy;
         for (auto* global : *ir.root_block) {
             if (auto* var = global->As<core::ir::Var>()) {
+                // Remove trivially unused variables that have been introduced by other transforms.
+                if (var->Result()->NumUsages() == 0U) {
+                    to_destroy.Push(var);
+                    continue;
+                }
+
                 auto* type = var->Result()->Type();
 
                 // Handle types drop the pointer and are passed around by value.
@@ -161,6 +168,9 @@ struct State {
                 module_vars.Push(var);
                 struct_members.Push(core::type::Manager::StructMemberDesc{name, type});
             }
+        }
+        for (auto* var : to_destroy) {
+            var->Destroy();
         }
         if (struct_members.IsEmpty()) {
             return;
@@ -341,17 +351,12 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ModuleScopeVars(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllow8BitIntegers,
-                    core::ir::Capability::kAllowPointSizeBuiltin,
-                    core::ir::Capability::kMslAllowEntryPointInterface,
-                    core::ir::Capability::kAllowDuplicateBindings,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                },
-                "before msl.ModuleScopeVars");
+    AssertValid(ir, "before msl.ModuleScopeVars");
 
     State{ir}.Process();
+
+    ir.properties.Add(core::ir::Property::kAllowAnyLetType);
+    ir.properties.Add(core::ir::Property::kAllowMslEntryPointInterface);
 
     return Success;
 }

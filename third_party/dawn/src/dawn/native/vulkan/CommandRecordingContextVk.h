@@ -30,10 +30,10 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/vulkan/BufferVk.h"
-#include "dawn/native/vulkan/VulkanFunctions.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/vulkan/BufferVk.h"
+#include "src/dawn/native/vulkan/VulkanFunctions.h"
 
 namespace dawn::native::vulkan {
 

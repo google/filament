@@ -25,22 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/wire/ChunkedCommandHandler.h"
+#include "src/dawn/wire/ChunkedCommandHandler.h"
 
 #include <algorithm>
 #include <cstring>
+#include <span>
 #include <utility>
 
-#include "dawn/common/Alloc.h"
+#include "src/utils/compiler.h"
+#include "src/utils/heap_array.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::wire {
-
-ChunkedCommandHandler::ChunkedCommandHandler() = default;
 
 ChunkedCommandHandler::~ChunkedCommandHandler() = default;
 
@@ -50,14 +46,18 @@ WireResult ChunkedCommandHandler::HandleChunkedCommand(DeserializeBuffer* deseri
 
     ChunkedCommand* chunkedCommand = nullptr;
     if (auto it = mChunkedCommands.find(cmd.id); it != mChunkedCommands.end()) {
+        // We already started handling this chunked command. Continue writing into that allocation.
         chunkedCommand = &(it->second);
     } else {
+        // This is the first block of this chunked command. Make a new allocation to write into.
         ChunkedCommand newChunkedCommand = {};
-        newChunkedCommand.remainingSize = cmd.size;
-        newChunkedCommand.data.reset(AllocNoThrow<char>(cmd.size));
-        if (newChunkedCommand.data.get() == nullptr) {
+        newChunkedCommand.data =
+            // SAFETY: This will be incrementally initialized by each chunk of the command.
+            DAWN_UNSAFE_BUFFERS(HeapArray<std::byte>::Uninit(cmd.size, std::nothrow));
+        if (!newChunkedCommand.data) {
             return WireResult::FatalError;
         }
+        newChunkedCommand.current = newChunkedCommand.data;
 
         const auto& [newIt, inserted] =
             mChunkedCommands.insert({cmd.id, std::move(newChunkedCommand)});
@@ -66,20 +66,17 @@ WireResult ChunkedCommandHandler::HandleChunkedCommand(DeserializeBuffer* deseri
     }
     DAWN_ASSERT(chunkedCommand);
 
-    if (cmd.chunkSize > chunkedCommand->remainingSize) {
+    if (cmd.chunkData.size() > chunkedCommand->current.size()) {
         // If the chunk size is greater than the remaining size, something is wrong and we can no
         // longer handle it, so just return a FatalError.
         return WireResult::FatalError;
     }
-    memcpy(chunkedCommand->data.get() + chunkedCommand->putOffset,
-           const_cast<const char*>(cmd.chunkData), cmd.chunkSize);
-    chunkedCommand->putOffset += cmd.chunkSize;
-    chunkedCommand->remainingSize -= cmd.chunkSize;
+    chunkedCommand->current.TakeFirst(cmd.chunkData.size()).CopyFrom(cmd.chunkData);
 
-    if (chunkedCommand->remainingSize == 0) {
+    if (chunkedCommand->current.empty()) {
         ChunkedCommand fullCommand = std::move(*chunkedCommand);
         mChunkedCommands.erase(cmd.id);
-        if (HandleCommands(fullCommand.data.get(), fullCommand.putOffset) == nullptr) {
+        if (!HandleCommands(fullCommand.data)) {
             return WireResult::FatalError;
         }
     }

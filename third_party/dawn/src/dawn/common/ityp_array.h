@@ -33,8 +33,8 @@
 #include <limits>
 #include <utility>
 
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/UnderlyingType.h"
+#include "src/utils/numeric.h"
+#include "src/utils/underlying_type.h"
 
 namespace dawn::ityp {
 
@@ -47,37 +47,36 @@ class array : private ::std::array<Value, Size> {
     using I = UnderlyingType<Index>;
     using Base = ::std::array<Value, Size>;
 
+    static_assert(HasUnsignedUnderlyingType<Index>, "Index type must be unsigned");
     static_assert(Size <= std::numeric_limits<I>::max());
+    static_assert(Size <= std::numeric_limits<size_t>::max());
 
   public:
     constexpr array() = default;
 
     template <typename... Values>
-    // NOLINTNEXTLINE(runtime/explicit)
-    constexpr array(Values&&... values) : Base{std::forward<Values>(values)...} {}
+    explicit(false) constexpr array(Values&&... values) : Base{std::forward<Values>(values)...} {}
 
-    constexpr Value& operator[](Index i) { return Base::operator[](static_cast<I>(i)); }
-    constexpr const Value& operator[](Index i) const { return Base::operator[](static_cast<I>(i)); }
-
-    Value& at(Index i) { return Base::at(static_cast<I>(i)); }
-    constexpr const Value& at(Index i) const { return Base::at(static_cast<I>(i)); }
-
-    typename Base::iterator begin() noexcept { return Base::begin(); }
-    typename Base::const_iterator begin() const noexcept { return Base::begin(); }
-
-    typename Base::iterator end() noexcept { return Base::end(); }
-    typename Base::const_iterator end() const noexcept { return Base::end(); }
-
-    constexpr Index size() const { return Index(I(Size)); }
+    using Base::begin, Base::end;
+    using Base::front, Base::back;
 
     using Base::data;
     using Base::empty;
     using Base::fill;
 
-    using Base::back;
-    using Base::front;
+    constexpr Value& operator[](Index i) { return Base::operator[](checked_cast<size_t>(i)); }
+    constexpr const Value& operator[](Index i) const {
+        return Base::operator[](checked_cast<size_t>(i));
+    }
 
-    bool operator==(const array<Index, Value, Size>& other) const = default;
+    constexpr Value& at(Index i) { return Base::at(checked_cast<size_t>(i)); }
+    constexpr const Value& at(Index i) const { return Base::at(checked_cast<size_t>(i)); }
+
+    constexpr Index size() const { return Index(static_cast<I>(Base::size())); }
+
+    constexpr bool operator==(const array<Index, Value, Size>& other) const {
+        return static_cast<const Base&>(*this) == static_cast<const Base&>(other);
+    }
 };
 
 }  // namespace dawn::ityp

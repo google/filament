@@ -214,7 +214,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> DemoteToHelper(Module& ir) {
-    core::ir::AssertValid(ir, kDemoteToHelperCapabilities, "before core.DemoteToHelper");
+    core::ir::AssertValid(ir, "before core.DemoteToHelper");
 
     State{ir}.Process();
 

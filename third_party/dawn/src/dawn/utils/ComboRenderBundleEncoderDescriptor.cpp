@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/utils/ComboRenderBundleEncoderDescriptor.h"
+#include "src/dawn/utils/ComboRenderBundleEncoderDescriptor.h"
 
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn::utils {
 
@@ -37,5 +37,14 @@ ComboRenderBundleEncoderDescriptor::ComboRenderBundleEncoderDescriptor() {
     descriptor->colorFormatCount = 0;
     descriptor->colorFormats = &cColorFormats[0];
 }
+
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
+void ComboRenderBundleEncoderDescriptor::SetUsesResourceTable(bool use) {
+    DAWN_ASSERT(cResourceTable.nextInChain == nullptr);
+    cResourceTable.nextInChain = nextInChain;
+    nextInChain = &cResourceTable;
+    cResourceTable.usesResourceTable = use;
+}
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 }  // namespace dawn::utils

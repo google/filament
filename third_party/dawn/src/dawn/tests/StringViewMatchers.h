@@ -32,6 +32,7 @@
 
 #include "dawn/webgpu_cpp.h"
 #include "gmock/gmock.h"
+#include "src/utils/compiler.h"
 
 namespace testing {
 
@@ -44,14 +45,15 @@ MATCHER(NonEmptySizedString, "") {
 }
 
 MATCHER_P(SizedString, expected, "") {
-    return arg.length != WGPU_STRLEN && std::string_view(arg.data, arg.length) == expected;
+    return arg.length != WGPU_STRLEN &&
+           DAWN_UNSAFE_TODO(std::string_view(arg.data, arg.length)) == expected;
 }
 
 MATCHER_P(SizedStringMatches, matcher, "") {
     if (arg.length == WGPU_STRLEN) {
         return false;
     }
-    std::string_view v = {arg.data, arg.length};
+    std::string_view v = DAWN_UNSAFE_TODO(std::string_view(arg.data, arg.length));
     return Matches(matcher)(v);
 }
 

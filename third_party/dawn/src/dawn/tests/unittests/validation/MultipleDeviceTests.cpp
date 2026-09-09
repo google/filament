@@ -26,8 +26,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/DawnNative.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
 
 namespace dawn {
 namespace {
