@@ -40,7 +40,7 @@ class RenderTestCase(abc.ABC):
         return f"{self.test_name}.{self.get_renderer_spec(renderer)}.{self.target_name}"
 
     def get_out_tif_name(self, renderer: 'BaseRenderer') -> str:
-        return os.path.join(self.output_dir, f"{self.get_out_name(renderer)}.tif")
+        return os.path.abspath(os.path.join(self.output_dir, f"{self.get_out_name(renderer)}.tif"))
 
     def get_working_dir(self, renderer: 'BaseRenderer') -> str:
         return f"/tmp/renderdiff/{self.get_renderer_spec(renderer)}/{self.test_name}/{self.target_name}"
@@ -218,7 +218,7 @@ class DesktopRenderer(BaseRenderer):
         return cases
 
     def run_tests(self, test_config, output_dir: str) -> list[dict]:
-        named_output_dir = os.path.join(output_dir, test_config.name)
+        named_output_dir = os.path.abspath(os.path.join(output_dir, test_config.name))
         mkdir_p(named_output_dir)
 
         results = []

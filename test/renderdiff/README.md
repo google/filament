@@ -57,11 +57,11 @@ renderings, do the following step
 
 ## Command-line Options
 
-You can control the behavior of the test scripts with the following flags passed to `local_test.sh`:
-
+- `--test=<path>`: Path to the test suite configuration JSON file (defaults to
+  `test/renderdiff/tests/presubmit.json`). For example, `--test=test/renderdiff/tests/sample.json`.
 - `--test_filter=<filter>`: Run a subset of tests using fnmatch wildcards (`*`). It filters against
-  the pattern `{test.name}.{platform}-{backend}.{model}`.
-- `--no_rebuild`: Skip rebuilding the `gltf_viewer` executable.
+  the pattern `{test.name}.{platform}-{backend}.{target}`.
+- `--no_rebuild`: Skip rebuilding the executables (`gltf_viewer` and `filament-samples`).
 - `--num_threads=<number>`: Set the number of threads for rendering. If not set, the system's default is used.
 
 For example, to run all `MSAA` tests on Vulkan without rebuilding and using 8 threads:
