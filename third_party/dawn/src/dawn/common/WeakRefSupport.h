@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_COMMON_WEAKREFSUPPORT_H_
 #define SRC_DAWN_COMMON_WEAKREFSUPPORT_H_
 
-#include "dawn/common/Compiler.h"
-#include "dawn/common/Ref.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/Ref.h"
 
 namespace dawn {
 

@@ -25,12 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/native/mocks/DawnMockTest.h"
+#include "src/dawn/tests/unittests/native/mocks/DawnMockTest.h"
 
 #include <utility>
 
 #include "dawn/dawn_proc.h"
-#include "dawn/native/ChainUtils.h"
+#include "src/dawn/native/ChainUtils.h"
 
 using testing::_;
 using testing::AtMost;
@@ -62,9 +62,10 @@ void DawnMockTest::SetUp() {
 
     mDeviceToggles.SetForTesting(Toggle::AllowUnsafeAPIs, true, true);
     auto deviceMock = AcquireRef(new ::testing::NiceMock<DeviceMock>(
-        adapters[0].Get(), unpackedDesc, mDeviceToggles, std::move(lostEvent)));
+        adapters[0].Get(), unpackedDesc, mDeviceToggles, lostEvent.Get()));
     mDeviceMock = deviceMock.Get();
     device = wgpu::Device::Acquire(ToAPI(ReturnToAPI<DeviceBase>(std::move(deviceMock))));
+    instance->GetEventManager()->TrackEvent(std::move(lostEvent));
 }
 
 void DawnMockTest::DropDevice() {

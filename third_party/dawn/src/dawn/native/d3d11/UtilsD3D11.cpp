@@ -25,14 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/UtilsD3D11.h"
+#include "src/dawn/native/d3d11/UtilsD3D11.h"
 
 #include <sstream>
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/Format.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native::d3d11 {
 
@@ -141,14 +141,16 @@ void SetDebugName(Device* device,
     }
 
     if (label.empty()) {
-        object->SetPrivateData(WKPDID_D3DDebugObjectName, strlen(prefix), prefix);
+        object->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(prefix)),
+                               prefix);
         return;
     }
 
     std::string objectName = prefix;
     objectName += "_";
     objectName += label;
-    object->SetPrivateData(WKPDID_D3DDebugObjectName, objectName.length(), objectName.c_str());
+    object->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(objectName.length()),
+                           objectName.c_str());
 }
 
 bool IsDebugLayerEnabled(const ComPtr<ID3D11Device>& d3d11Device) {

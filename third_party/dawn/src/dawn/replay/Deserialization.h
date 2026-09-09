@@ -36,7 +36,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "dawn/replay/Error.h"
+#include "src/dawn/replay/Error.h"
 
 namespace dawn::replay {
 
@@ -84,21 +84,16 @@ MaybeError Deserialize(ReadHead& s, std::array<T, N>* v) {
 
 // Deserialize for enum types with uint32_t or uint64_t underlying type.
 template <typename T>
-MaybeError Deserialize(
-    ReadHead& s,
-    T* value,
-    typename std::enable_if<
-        std::is_enum<T>::value &&
-            (std::is_same<typename std::underlying_type<T>::type, uint32_t>::value ||
-             std::is_same<typename std::underlying_type<T>::type, uint64_t>::value),
-        void>::type* = nullptr) {
+    requires(std::is_enum_v<T> && (std::is_same_v<typename std::underlying_type_t<T>, uint32_t> ||
+                                   std::is_same_v<typename std::underlying_type_t<T>, uint64_t>))
+MaybeError Deserialize(ReadHead& s, T* value) {
     return ReadBytes(s, reinterpret_cast<char*>(value), sizeof(T));
 }
 
 // Helper to call Deserialize on a parameter pack.
 template <typename T, typename... Ts>
-auto Deserialize(ReadHead& s, T* v, Ts*... vs)
-    -> std::enable_if_t<(sizeof...(Ts) > 0) || !std::is_enum_v<T>, MaybeError> {
+    requires((sizeof...(Ts) > 0) || !std::is_enum_v<T>)
+MaybeError Deserialize(ReadHead& s, T* v, Ts*... vs) {
     DAWN_TRY(Deserialize(s, v));
     return Deserialize(s, vs...);
 }
@@ -237,7 +232,7 @@ constexpr int kInternalVisitableUnusedForComma = 0;
 #define DAWN_REPLAY_MAKE_ROOT_CMD_AND_CMD_DATA(CmdName, CMD_MEMBERS) \
     DAWN_REPLAY_MAKE_CMD_AND_CMD_DATA(RootCommand, CmdName, CMD_MEMBERS)
 
-#include "dawn/serialization/Schema.h"
+#include "src/dawn/serialization/Schema.h"
 
 }  // namespace dawn::replay
 

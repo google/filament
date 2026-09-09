@@ -36,11 +36,13 @@
 #include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/input_attachment.h"
 #include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/texel_buffer.h"
 #include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/hlsl/writer/common/option_helpers.h"
 #include "src/tint/lang/hlsl/writer/printer/printer.h"
 #include "src/tint/lang/hlsl/writer/raise/raise.h"
+#include "src/tint/utils/internal_limits.h"
 
 namespace tint::hlsl::writer {
 
@@ -49,8 +51,9 @@ namespace {
 Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& options) {
     // Check for unsupported types.
     for (auto* ty : ir.Types()) {
-        if (ty->Is<core::type::SubgroupMatrix>()) {
-            return Failure("subgroup matrices are not supported by the HLSL backend");
+        if (ty->Is<core::type::SubgroupMatrix>() &&
+            options.compiler != Options::Compiler::kDXC_2021) {
+            return Failure("subgroup matrices support requires DXC with HLSL 2021");
         }
         if (ty->Is<core::type::TexelBuffer>()) {
             // TODO(crbug/382544164): Prototype texel buffer feature
@@ -66,8 +69,11 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
                 return Failure("16-bit integers are not supported by the HLSL FXC backend");
             }
         }
-        if (ty->Is<core::type::Buffer>()) {
-            return Failure("buffers are not supported by the HLSL backend");
+        if (auto* str = ty->As<core::type::Struct>()) {
+            auto res = str->PaddingWithinLimit();
+            if (res != Success) {
+                return res.Failure();
+            }
         }
     }
 
@@ -86,10 +92,10 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
         if (call->Func() == core::BuiltinFn::kPrint) {
             return Failure("print is not supported by the HLSL backend");
         }
-        if (call->Func() == core::BuiltinFn::kAtomicStoreMax ||
-            call->Func() == core::BuiltinFn::kAtomicStoreMin) {
-            return Failure(
-                "64-bit (vec2u) atomic operations are not yet supported by the HLSL backend");
+        if ((call->Func() == core::BuiltinFn::kAtomicStoreMax ||
+             call->Func() == core::BuiltinFn::kAtomicStoreMin) &&
+            options.compiler == Options::Compiler::kFXC) {
+            return Failure("64-bit atomic operations are not supported by the HLSL FXC backend");
         }
     }
 

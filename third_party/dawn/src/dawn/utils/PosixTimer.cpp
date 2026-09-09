@@ -28,7 +28,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#include "dawn/utils/Timer.h"
+#include "src/dawn/utils/Timer.h"
 
 namespace dawn::utils {
 
@@ -37,7 +37,8 @@ namespace {
 uint64_t GetCurrentTimeNs() {
     struct timespec currentTime;
     clock_gettime(CLOCK_MONOTONIC, &currentTime);
-    return currentTime.tv_sec * 1'000'000'000llu + currentTime.tv_nsec;
+    return static_cast<uint64_t>(currentTime.tv_sec) * 1'000'000'000llu +
+           static_cast<uint64_t>(currentTime.tv_nsec);
 }
 
 }  // anonymous namespace
@@ -66,10 +67,10 @@ class PosixTimer : public Timer {
             endTimeNs = mStopTimeNs;
         }
 
-        return (endTimeNs - mStartTimeNs) * 1e-9;
+        return static_cast<double>(endTimeNs - mStartTimeNs) * 1e-9;
     }
 
-    double GetAbsoluteTime() override { return GetCurrentTimeNs() * 1e-9; }
+    double GetAbsoluteTime() override { return static_cast<double>(GetCurrentTimeNs()) * 1e-9; }
 
   private:
     bool mRunning;

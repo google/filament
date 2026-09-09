@@ -166,7 +166,7 @@ TEST_F(GlslWriterTest, VarIn) {
         b.Return(func);
     });
 
-    auto result = Generate({}, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
@@ -191,7 +191,7 @@ TEST_F(GlslWriterTest, VarOutBuiltin) {
         b.Return(func);
     });
 
-    auto result = Generate({}, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
@@ -214,7 +214,7 @@ TEST_F(GlslWriterTest, VarBuiltinSampleIndex_ES) {
         b.Return(func);
     });
 
-    auto result = Generate({}, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(#extension GL_OES_sample_variables: require
 precision highp float;
@@ -238,7 +238,7 @@ TEST_F(GlslWriterTest, VarBuiltinSampleMask_ES) {
         b.Return(func);
     });
 
-    auto result = Generate({}, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(#extension GL_OES_sample_variables: require
 precision highp float;
@@ -260,7 +260,7 @@ TEST_F(GlslWriterTest, VarBuiltinSampled_NonES) {
 
     Options opts{};
     opts.version = Version(Version::Standard::kDesktop, 4, 6);
-    auto result = Generate(opts, core::ir::Function::PipelineStage::kFragment);
+    auto result = Generate(opts);
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, R"(#version 460
 precision highp float;

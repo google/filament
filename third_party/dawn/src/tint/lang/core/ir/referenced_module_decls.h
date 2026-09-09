@@ -117,10 +117,16 @@ class ReferencedModuleDecls {
                 continue;
             }
             auto* ary = ptr->UnwrapPtr()->template As<core::type::Array>();
-            if (!ary) {
+            auto* buf = ptr->UnwrapPtr()->template As<core::type::Buffer>();
+            if (!ary && !buf) {
                 continue;
             }
-            auto* cnt = ary->Count()->template As<core::ir::type::ValueArrayCount>();
+            const core::ir::type::ValueArrayCount* cnt = nullptr;
+            if (ary) {
+                cnt = ary->Count()->template As<core::ir::type::ValueArrayCount>();
+            } else if (buf) {
+                cnt = buf->Count()->template As<core::ir::type::ValueArrayCount>();
+            }
             if (!cnt || cnt->value->template Is<core::ir::Constant>()) {
                 continue;
             }

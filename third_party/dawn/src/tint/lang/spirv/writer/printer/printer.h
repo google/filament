@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_PRINTER_PRINTER_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_PRINTER_PRINTER_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/spirv/writer/common/options.h"
 #include "src/tint/lang/spirv/writer/common/output.h"
 #include "src/tint/utils/result.h"
@@ -39,15 +38,6 @@ class Module;
 }  // namespace tint::core::ir
 
 namespace tint::spirv::writer {
-
-// The capabilities that might be needed due to raising.
-const core::ir::Capabilities kPrinterCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kLoosenValidationForShaderIO,
-};
 
 /// @returns the generated SPIR-V instructions on success, or failure
 /// @param module the Tint IR module to generate

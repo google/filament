@@ -783,7 +783,7 @@ TEST_F(HlslWriterTest, FunctionWithDiscardAndVoidReturnWithPlatformDiscard) {
     tint::hlsl::writer::Options options;
     options.entry_point_name = "main";
 
-    options.compiler = tint::hlsl::writer::Options::Compiler::kDXC;
+    options.compiler = tint::hlsl::writer::Options::Compiler::kDXC_2021;
     auto result = Generate(options);
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
@@ -882,7 +882,7 @@ TEST_F(HlslWriterTest, FunctionWithDiscardAndNonVoidReturnWithPlatformDiscard) {
     });
 
     tint::hlsl::writer::Options options;
-    options.compiler = tint::hlsl::writer::Options::Compiler::kDXC;
+    options.compiler = tint::hlsl::writer::Options::Compiler::kDXC_2021;
     auto result = Generate(options);
     ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(

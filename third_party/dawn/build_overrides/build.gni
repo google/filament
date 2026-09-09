@@ -40,6 +40,10 @@ declare_args() {
 # Enables assertions on safety checks in libc++.
 enable_safe_libcxx = true
 
+perfetto_build_with_embedder = true
+perfetto_build_standalone = false
+is_perfetto_build_generator = false
+
 # Detect whether we can use the hermetic XCode like in Chromium and do so if
 # possible.
 if (host_os == "mac" && use_system_xcode == "") {
@@ -55,4 +59,11 @@ if (host_os == "mac" && use_system_xcode == "") {
              "Please install Xcode.")
 
   use_system_xcode = _result != 1
+} else if (host_os != "mac") {
+  use_system_xcode = false
+}
+
+if (is_android) {
+  limit_android_deps = true
+  enable_java_templates = true
 }

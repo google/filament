@@ -68,6 +68,7 @@ class Struct final : public Castable<Struct, core::type::Struct> {
     const ast::Struct* Declaration() const { return declaration_; }
 
     /// @returns the members of the structure
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     VectorRef<const StructMember*> Members() const {
         return Base::Members().ReinterpretCast<const StructMember*>();
     }
@@ -105,6 +106,7 @@ class StructMember final : public Castable<StructMember, core::type::StructMembe
     const ast::StructMember* Declaration() const { return declaration_; }
 
     /// @returns the structure that owns this member
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const sem::Struct* Struct() const { return static_cast<const sem::Struct*>(Base::Struct()); }
 
   private:

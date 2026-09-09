@@ -57,6 +57,7 @@ class BlockStatement : public Castable<BlockStatement, CompoundStatement> {
 
     /// @returns the AST block statement associated with this semantic block
     /// statement
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::BlockStatement* Declaration() const;
 };
 

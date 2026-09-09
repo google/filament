@@ -30,7 +30,7 @@
 #include <vector>
 
 #include "src/tint/api/helpers/generate_bindings.h"
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/referenced_module_vars.h"
 #include "src/tint/lang/spirv/validate/validate.h"
@@ -67,8 +67,8 @@ struct FuzzedOptions {
     bool subgroup_shuffle_clamped;
     bool polyfill_subgroup_broadcast_f16;
     bool pass_matrix_by_pointer;
-    bool polyfill_unary_f32_negation;
-    bool polyfill_f32_abs;
+    bool polyfill_float_negation;
+    bool polyfill_float_abs;
     bool use_demote_to_helper_invocation;
     bool use_storage_input_output_16;
     bool use_zero_initialize_workgroup_memory;
@@ -80,11 +80,15 @@ struct FuzzedOptions {
     SpvVersion spirv_version;
     SubstituteOverridesConfig substitute_overrides_config;
     bool texture_sample_compare_depth_cube_array;
+    bool texture_sample_compare_2d_polyfill;
     bool polyfill_saturate_as_min_max_f16;
     bool multisampled_framebuffer_fetch;
     bool cooperative_matrix_stride_is_matrix_elements;
-    bool polyfill_length_scalar_f32;
-    bool polyfill_distance_scalar_f32;
+    bool polyfill_length_scalar_float;
+    bool polyfill_distance_scalar_float;
+    bool collapse_subgroup_min_max;
+    bool replace_workgroup_atomic_store_with_exchange;
+    bool replace_unsigned_compare_zero;
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(FuzzedOptions,
@@ -102,8 +106,8 @@ struct FuzzedOptions {
                  subgroup_shuffle_clamped,
                  polyfill_subgroup_broadcast_f16,
                  pass_matrix_by_pointer,
-                 polyfill_unary_f32_negation,
-                 polyfill_f32_abs,
+                 polyfill_float_negation,
+                 polyfill_float_abs,
                  use_demote_to_helper_invocation,
                  use_storage_input_output_16,
                  use_zero_initialize_workgroup_memory,
@@ -115,11 +119,15 @@ struct FuzzedOptions {
                  spirv_version,
                  substitute_overrides_config,
                  texture_sample_compare_depth_cube_array,
+                 texture_sample_compare_2d_polyfill,
                  polyfill_saturate_as_min_max_f16,
                  multisampled_framebuffer_fetch,
                  cooperative_matrix_stride_is_matrix_elements,
-                 polyfill_length_scalar_f32,
-                 polyfill_distance_scalar_f32);
+                 polyfill_length_scalar_float,
+                 polyfill_distance_scalar_float,
+                 collapse_subgroup_min_max,
+                 replace_workgroup_atomic_store_with_exchange,
+                 replace_unsigned_compare_zero);
     TINT_REFLECT_HASH_CODE(FuzzedOptions);
 };
 
@@ -134,10 +142,12 @@ Result<SuccessType> ValidateUsingVulkan(const std::string& vk_icd_path,
     // This setenv call is why this works on Linux/Mac but not Windows
     setenv("VK_ICD_FILENAMES", vk_icd_path.c_str(), 1);
 
+    TINT_BEGIN_DISABLE_WARNING(OLD_STYLE_CAST);
     VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .apiVersion = VK_API_VERSION_1_1,
     };
+    TINT_END_DISABLE_WARNING(OLD_STYLE_CAST);
 
     VkInstanceCreateInfo create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -270,6 +280,11 @@ std::unordered_map<uint32_t, tint::BindingPoint> GenerateColourBindings(core::ir
 Result<SuccessType> IRFuzzer(core::ir::Module& module,
                              const fuzz::ir::Context& context,
                              FuzzedOptions fuzzed_options) {
+    if (context.options.verbose) {
+        PrintReflected(std::cout, fuzzed_options);
+        std::cout << "\n";
+    }
+
     // TODO(375388101): We cannot run the backend for every entry point in the module unless we
     // clone the whole module each time, so for now we just generate the first entry point.
 
@@ -302,18 +317,19 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
     options.disable_polyfill_integer_div_mod = fuzzed_options.disable_polyfill_integer_div_mod;
     options.disable_integer_range_analysis = !fuzzed_options.enable_integer_range_analysis;
     options.emit_vertex_point_size = fuzzed_options.emit_vertex_point_size;
-    options.polyfill_pixel_center = fuzzed_options.polyfill_pixel_center;
+    if (fuzzed_options.polyfill_pixel_center) {
+        options.polyfill_pixel_center = 99;  // Number bigger then is normally allowed in WGSL
+    }
     options.workarounds.polyfill_case_switch = fuzzed_options.polyfill_case_switch;
     options.workarounds.scalarize_max_min_clamp = fuzzed_options.scalarize_max_min_clamp;
     options.workarounds.dva_transform_handle = fuzzed_options.dva_transform_handle;
     options.workarounds.polyfill_pack_unpack_4x8_norm =
         fuzzed_options.polyfill_pack_unpack_4x8_norm;
-    options.workarounds.subgroup_shuffle_clamped = fuzzed_options.subgroup_shuffle_clamped;
     options.workarounds.polyfill_subgroup_broadcast_f16 =
         fuzzed_options.polyfill_subgroup_broadcast_f16;
     options.workarounds.pass_matrix_by_pointer = fuzzed_options.pass_matrix_by_pointer;
-    options.workarounds.polyfill_unary_f32_negation = fuzzed_options.polyfill_unary_f32_negation;
-    options.workarounds.polyfill_f32_abs = fuzzed_options.polyfill_f32_abs;
+    options.workarounds.polyfill_float_negation = fuzzed_options.polyfill_float_negation;
+    options.workarounds.polyfill_float_abs = fuzzed_options.polyfill_float_abs;
     options.extensions.use_demote_to_helper_invocation =
         fuzzed_options.use_demote_to_helper_invocation;
     options.extensions.use_storage_input_output_16 = fuzzed_options.use_storage_input_output_16;
@@ -329,33 +345,41 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
     options.substitute_overrides_config = fuzzed_options.substitute_overrides_config;
     options.workarounds.texture_sample_compare_depth_cube_array =
         fuzzed_options.texture_sample_compare_depth_cube_array;
+    options.workarounds.texture_sample_compare_2d_polyfill =
+        fuzzed_options.texture_sample_compare_2d_polyfill;
     options.workarounds.polyfill_saturate_as_min_max_f16 =
         fuzzed_options.polyfill_saturate_as_min_max_f16;
-    options.workarounds.polyfill_length_scalar_f32 = fuzzed_options.polyfill_length_scalar_f32;
-    options.workarounds.polyfill_distance_scalar_f32 = fuzzed_options.polyfill_distance_scalar_f32;
+    options.workarounds.polyfill_length_scalar_float = fuzzed_options.polyfill_length_scalar_float;
+    options.workarounds.polyfill_distance_scalar_float =
+        fuzzed_options.polyfill_distance_scalar_float;
     options.workarounds.cooperative_matrix_stride_is_matrix_elements =
         fuzzed_options.cooperative_matrix_stride_is_matrix_elements;
+    options.workarounds.collapse_subgroup_min_max = fuzzed_options.collapse_subgroup_min_max;
+    options.workarounds.replace_workgroup_atomic_store_with_exchange =
+        fuzzed_options.replace_workgroup_atomic_store_with_exchange;
+    options.workarounds.replace_unsigned_compare_zero =
+        fuzzed_options.replace_unsigned_compare_zero;
     options.multisampled_framebuffer_fetch = fuzzed_options.multisampled_framebuffer_fetch;
 
     TINT_CHECK_RESULT_UNWRAP(output, Generate(module, options));
 
-    spv_target_env target_env = SPV_ENV_VULKAN_1_1;
+    validate::Options validation_options;
     switch (options.spirv_version) {
         case SpvVersion::kSpv13:
-            target_env = SPV_ENV_VULKAN_1_1;
+            validation_options.target_env = SPV_ENV_VULKAN_1_1;
             break;
         case SpvVersion::kSpv14:
-            target_env = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+            validation_options.target_env = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
             break;
         case SpvVersion::kSpv15:
-            target_env = SPV_ENV_VULKAN_1_2;
+            validation_options.target_env = SPV_ENV_VULKAN_1_2;
             break;
         default:
             TINT_ICE() << "unsupported SPIR-V version";
     }
 
     auto& spirv = output.spirv;
-    auto res = validate::Validate(spirv, target_env);
+    auto res = validate::Validate(spirv, validation_options);
     TINT_ASSERT(res == Success) << "output of SPIR-V writer failed to validate with SPIR-V Tools\n"
                                 << res.Failure() << "\n\n"
                                 << "IR:\n"
@@ -373,6 +397,4 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
 }  // namespace
 }  // namespace tint::spirv::writer
 
-TINT_IR_MODULE_FUZZER(tint::spirv::writer::IRFuzzer,
-                      tint::core::ir::Capabilities{},
-                      tint::spirv::writer::kPrinterCapabilities);
+TINT_IR_MODULE_FUZZER(tint::spirv::writer::IRFuzzer);

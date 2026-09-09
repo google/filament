@@ -39,7 +39,7 @@ class Module;
 
 namespace tint::core::ir::transform {
 
-struct DecomposeAccessOptions {
+struct DecomposeAccessConfig {
     /// Specify whether all variables in the address space should be decomposed.
     bool storage = false;
     bool uniform = false;
@@ -48,6 +48,12 @@ struct DecomposeAccessOptions {
 
     // The minimum size of the resulting array, in bytes.
     uint32_t minimum_array_size = 0;
+
+    bool allow_dynamic_immediate_indices = true;
+
+    // Decompose workgroup variables if they are used with subgroupMatrixLoad/Store and the
+    // pointer's array element base type does not match the matrix element type.
+    bool workgroup_subgroup_matrix = false;
 
     // TODO(b/477295042): should there be a uniform standard layout option? When enabled uniform
     // could be treated like every other storage class.
@@ -58,8 +64,7 @@ struct DecomposeAccessOptions {
 ///
 /// @param module the module to transform
 /// @returns success or failure
-Result<SuccessType> DecomposeAccess(core::ir::Module& module,
-                                    const DecomposeAccessOptions& options);
+Result<SuccessType> DecomposeAccess(core::ir::Module& module, const DecomposeAccessConfig& options);
 
 }  // namespace tint::core::ir::transform
 

@@ -1,0 +1,120 @@
+# Per-file per-warning suppressions.
+# Every suppression should have a brief explanation of why it's needed.
+# Note: make sure there is only one section per warning - later sections overwrite earlier ones.
+# Formatting Notes:
+# 1. Don't put comments on the same line as a glob pattern! Clang will get confused,
+#    and the warning won't be suppressed.
+# 2. The syntax {/,\\} matches either a backslash or forward slash. They can sometimes
+#    be intermixed in a single path when compiling on Windows.
+
+[language-extension-token]
+# For MSVC-specific extensions: __FUNCSIG__, __uuidof, IID_PPV_ARGS.
+src:*src{/,\\}dawn{/,\\}native{/,\\}Surface.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}d3d{/,\\}*
+src:*src{/,\\}dawn{/,\\}native{/,\\}d3d11{/,\\}*
+src:*src{/,\\}dawn{/,\\}native{/,\\}d3d12{/,\\}*
+src:*src{/,\\}dawn{/,\\}tests{/,\\}end2end{/,\\}AdapterEnumerationTests.cpp
+src:*src{/,\\}dawn{/,\\}tests{/,\\}end2end{/,\\}VideoViewsTests_win.cpp
+src:*src{/,\\}dawn{/,\\}tests{/,\\}white_box{/,\\}SharedBufferMemoryTests_win.cpp
+src:*src{/,\\}dawn{/,\\}tests{/,\\}white_box{/,\\}SharedTextureMemoryTests_win.cpp
+src:*src{/,\\}dawn{/,\\}tests{/,\\}white_box{/,\\}SharedTextureMemoryTests_win_d3d12.cpp
+src:*src{/,\\}tint{/,\\}lang{/,\\}hlsl{/,\\}validate{/,\\}validate.cc
+src:*src{/,\\}tint{/,\\}utils{/,\\}rtti{/,\\}castable.h
+# For KHR platform headers which use MSVC-specific __int32/__int64 typedefs on Windows
+src:*third_party{/,\\}EGL-Registry{/,\\}src{/,\\}api{/,\\}KHR{/,\\}*
+
+[sign-conversion]
+# The OpenGL API forces an excessive amount of sign conversion that is not useful to fix.
+src:*src{/,\\}dawn{/,\\}native{/,\\}opengl{/,\\}*
+src:*src{/,\\}dawn{/,\\}tests{/,\\}*
+# Google Mock's gmock-actions.h contains sign conversion warnings.
+src:*third_party{/,\\}googletest{/,\\}googlemock{/,\\}*
+
+[zero-as-null-pointer-constant]
+# Used by EGL macros.
+src:*src{/,\\}dawn{/,\\}native{/,\\}opengl{/,\\}*EGL*
+# Node Addon API headers contain zero as null pointer constant warnings.
+src:*third_party{/,\\}node-addon-api{/,\\}*
+# Use 0 as nullptr.
+src:*third_party{/,\\}partition_alloc{/,\\}src{/,\\}*
+
+[cast-function-type-strict]
+# Needed to cast procs in GL.
+src:*gen{/,\\}src{/,\\}dawn{/,\\}native{/,\\}opengl{/,\\}OpenGLFunctionsBase_autogen.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}opengl{/,\\}ContextEGL.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}opengl{/,\\}EGLFunctions.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}opengl{/,\\}OpenGLVersion.cpp
+# Needed to cast procs in Vulkan.
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}VulkanFunctions.cpp
+# Needed to cast procs in webgpu.h.
+src:*gen{/,\\}src{/,\\}dawn{/,\\}native{/,\\}ProcTable.cpp
+src:*src{/,\\}dawn{/,\\}tests{/,\\}end2end{/,\\}EventTests.cpp
+src:*src{/,\\}dawn{/,\\}tests{/,\\}unittests{/,\\}GetProcAddressTests.cpp
+# For some unknown reason this one filepath can get a backslash on Windows.
+src:*gen{/,\\}src{/,\\}dawn{/,\\}wire{/,\\}client{/,\\}ApiProcs_autogen.cpp.inc
+# Needed to cast procs in Windows.
+src:*src{/,\\}tint{/,\\}utils{/,\\}command{/,\\}command_windows.cc
+src:*src{/,\\}tint{/,\\}lang{/,\\}hlsl{/,\\}validate{/,\\}validate.cc
+
+[old-style-cast]
+# For C-Style casts used by RenderDoc macros
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}TextureVk.cpp
+# For C-Style casts in Vulkan macros from vulkan/ vulkan_core.h
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}BackendVk.h
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}PhysicalDeviceVk.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}UtilsVulkan.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}VulkanExtensions.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}VulkanFunctions.cpp
+src:*src{/,\\}dawn{/,\\}native{/,\\}vulkan{/,\\}VulkanInfo.cpp
+# For C-Style casts in partition_alloc/
+src:*third_party{/,\\}partition_alloc{/,\\}src{/,\\}*
+# For D3D12_ENCODE_ANISOTROPIC_FILTER
+src:*src{/,\\}dawn{/,\\}native{/,\\}d3d12{/,\\}SamplerD3D12.cpp
+
+[double-promotion]
+# Performance warning for float-to-double promotion, common in tests.
+src:*src{/,\\}dawn{/,\\}tests{/,\\}*
+# Also happens inside GTest macros like EXPECT_EQ.
+# Path differs currently in Dawn vs Chromium.
+src:*third_party{/,\\}googletest{/,\\}{,src/,src\\}googletest{/,\\}include{/,\\}gtest{/,\\}gtest.h
+# Many of our code triggers this for absl string formatting.
+src:*third_party{/,\\}abseil-cpp{/,\\}absl{/,\\}strings{/,\\}str_cat.h
+
+[used-but-marked-unused]
+# Google Benchmark's state.h defines internal types/methods using "Value", which is marked as unused, triggering this warning.
+src:*third_party{/,\\}google_benchmark{/,\\}*
+
+[undef]
+# __OBJC__ and DEFINE_PARTITION_ROOT_EXPORT_TEMPLATE can be undefined.
+src:*third_party{/,\\}partition_alloc{/,\\}src{/,\\}partition_alloc{/,\\}pointers{/,\\}raw_ptr.h
+src:*third_party{/,\\}partition_alloc{/,\\}src{/,\\}partition_alloc{/,\\}internal{/,\\}partition_root_exports.h
+# __PTRAUTH__ can be undefined in build_config.h
+src:*build{/,\\}build_config.h
+
+[unique-object-duplication]
+# straighten_larger_slot_span_free_lists_, sort_smaller_slot_span_free_lists_,
+# and sort_active_slot_spans_ may be duplicated when built into a shared library.
+src:*third_party{/,\\}partition_alloc{/,\\}src{/,\\}partition_alloc{/,\\}partition_root.h
+
+[nullability-extension]
+# absl uses _Nonnull.
+src:*third_party{/,\\}abseil-cpp{/,\\}absl{/,\\}*
+
+[gcc-compat]
+# absl uses enable_if.
+src:*third_party{/,\\}abseil-cpp{/,\\}absl{/,\\}*
+
+[implicit-float-conversion]
+# Implicit float conversions in tests, samples, and external dependencies.
+src:*src{/,\\}dawn{/,\\}tests{/,\\}*
+src:*src{/,\\}dawn{/,\\}samples{/,\\}*
+
+[implicit-int-conversion]
+# Implicit int conversions in tests and samples.
+src:*src{/,\\}dawn{/,\\}tests{/,\\}*
+src:*src{/,\\}dawn{/,\\}samples{/,\\}*
+
+[shorten-64-to-32]
+src:*src{/,\\}dawn{/,\\}tests{/,\\}*
+src:*src{/,\\}dawn{/,\\}samples{/,\\}*
+# Suppress shorten-64-to-32 progressively.

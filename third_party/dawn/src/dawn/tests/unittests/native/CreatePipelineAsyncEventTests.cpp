@@ -35,12 +35,12 @@
 #include <utility>
 
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Error.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/utils/WGPUHelpers.h"
-#include "mocks/ComputePipelineMock.h"
-#include "mocks/DawnMockTest.h"
-#include "mocks/RenderPipelineMock.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/unittests/native/mocks/ComputePipelineMock.h"
+#include "src/dawn/tests/unittests/native/mocks/DawnMockTest.h"
+#include "src/dawn/tests/unittests/native/mocks/RenderPipelineMock.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn::native {
 namespace {
@@ -49,8 +49,6 @@ using ::testing::_;
 using ::testing::HasSubstr;
 using ::testing::IsNull;
 using ::testing::MockCppCallback;
-using ::testing::NotNull;
-using ::testing::Test;
 
 using MockComputePipelineAsyncCallback = MockCppCallback<
     void (*)(wgpu::CreatePipelineAsyncStatus, wgpu::ComputePipeline, wgpu::StringView)>;
@@ -216,6 +214,116 @@ TEST_F(CreatePipelineAsyncEventTests, InitializationInternalErrorInCreateCompute
     ProcessEvents();
 
     EXPECT_CALL(*computePipelineMock.Get(), DestroyImpl).Times(1);
+}
+
+// Verify that noexcept callbacks work with CreateComputePipelineAsync.
+TEST_F(CreatePipelineAsyncEventTests, NoexceptCallbackInCreateComputePipelineAsync) {
+    wgpu::ComputePipelineDescriptor desc = {};
+    desc.compute.module = utils::CreateShaderModule(device, kComputeShader.data());
+    Ref<ComputePipelineMock> computePipelineMock =
+        ComputePipelineMock::Create(mDeviceMock, FromCppAPI(&desc));
+
+    ON_CALL(*computePipelineMock.Get(), InitializeImpl)
+        .WillByDefault([]() -> ResultOrError<Extent3D> { return Extent3D{}; });
+    ON_CALL(*mDeviceMock.get(), CreateUninitializedComputePipelineImpl)
+        .WillByDefault(testing::Return(testing::ByMove(computePipelineMock)));
+
+    bool called = false;
+    device.CreateComputePipelineAsync(
+        &desc, wgpu::CallbackMode::AllowProcessEvents,
+        [&called](wgpu::CreatePipelineAsyncStatus status, wgpu::ComputePipeline pipeline,
+                  wgpu::StringView) noexcept {
+            called = true;
+            EXPECT_EQ(status, wgpu::CreatePipelineAsyncStatus::Success);
+            EXPECT_NE(pipeline, nullptr);
+        });
+    ProcessEvents();
+    EXPECT_TRUE(called);
+}
+
+// Verify that noexcept callbacks work with CreateRenderPipelineAsync.
+TEST_F(CreatePipelineAsyncEventTests, NoexceptCallbackInCreateRenderPipelineAsync) {
+    wgpu::DepthStencilState ds = {};
+    ds.format = wgpu::TextureFormat::Depth32Float;
+    ds.depthWriteEnabled = wgpu::OptionalBool::True;
+    ds.depthCompare = wgpu::CompareFunction::Always;
+
+    wgpu::RenderPipelineDescriptor desc = {};
+    desc.vertex.module = utils::CreateShaderModule(device, kVertexShader.data());
+    desc.depthStencil = &ds;
+    Ref<RenderPipelineMock> renderPipelineMock =
+        RenderPipelineMock::Create(mDeviceMock, FromCppAPI(&desc));
+
+    ON_CALL(*renderPipelineMock.Get(), InitializeImpl).WillByDefault([]() -> MaybeError {
+        return {};
+    });
+    ON_CALL(*mDeviceMock.get(), CreateUninitializedRenderPipelineImpl)
+        .WillByDefault(testing::Return(testing::ByMove(renderPipelineMock)));
+
+    bool called = false;
+    device.CreateRenderPipelineAsync(
+        &desc, wgpu::CallbackMode::AllowProcessEvents,
+        [&called](wgpu::CreatePipelineAsyncStatus status, wgpu::RenderPipeline pipeline,
+                  wgpu::StringView) noexcept {
+            called = true;
+            EXPECT_EQ(status, wgpu::CreatePipelineAsyncStatus::Success);
+            EXPECT_NE(pipeline, nullptr);
+        });
+    ProcessEvents();
+    EXPECT_TRUE(called);
+}
+
+// Verify that noexcept function pointers work with CreateComputePipelineAsync.
+TEST_F(CreatePipelineAsyncEventTests, NoexceptFunctionPtrInCreateComputePipelineAsync) {
+    wgpu::ComputePipelineDescriptor desc = {};
+    desc.compute.module = utils::CreateShaderModule(device, kComputeShader.data());
+    Ref<ComputePipelineMock> computePipelineMock =
+        ComputePipelineMock::Create(mDeviceMock, FromCppAPI(&desc));
+
+    ON_CALL(*computePipelineMock.Get(), InitializeImpl)
+        .WillByDefault([]() -> ResultOrError<Extent3D> { return Extent3D{}; });
+    ON_CALL(*mDeviceMock.get(), CreateUninitializedComputePipelineImpl)
+        .WillByDefault(testing::Return(testing::ByMove(computePipelineMock)));
+
+    static bool called = false;
+    called = false;
+    device.CreateComputePipelineAsync(
+        &desc, wgpu::CallbackMode::AllowProcessEvents,
+        [](wgpu::CreatePipelineAsyncStatus status, wgpu::ComputePipeline pipeline, wgpu::StringView,
+           bool* userdata) noexcept { *userdata = true; },
+        &called);
+    ProcessEvents();
+    EXPECT_TRUE(called);
+}
+
+// Verify that noexcept function pointers work with CreateRenderPipelineAsync.
+TEST_F(CreatePipelineAsyncEventTests, NoexceptFunctionPtrInCreateRenderPipelineAsync) {
+    wgpu::DepthStencilState ds = {};
+    ds.format = wgpu::TextureFormat::Depth32Float;
+    ds.depthWriteEnabled = wgpu::OptionalBool::True;
+    ds.depthCompare = wgpu::CompareFunction::Always;
+
+    wgpu::RenderPipelineDescriptor desc = {};
+    desc.vertex.module = utils::CreateShaderModule(device, kVertexShader.data());
+    desc.depthStencil = &ds;
+    Ref<RenderPipelineMock> renderPipelineMock =
+        RenderPipelineMock::Create(mDeviceMock, FromCppAPI(&desc));
+
+    ON_CALL(*renderPipelineMock.Get(), InitializeImpl).WillByDefault([]() -> MaybeError {
+        return {};
+    });
+    ON_CALL(*mDeviceMock.get(), CreateUninitializedRenderPipelineImpl)
+        .WillByDefault(testing::Return(testing::ByMove(renderPipelineMock)));
+
+    static bool called = false;
+    called = false;
+    device.CreateRenderPipelineAsync(
+        &desc, wgpu::CallbackMode::AllowProcessEvents,
+        [](wgpu::CreatePipelineAsyncStatus status, wgpu::RenderPipeline pipeline, wgpu::StringView,
+           bool* userdata) noexcept { *userdata = true; },
+        &called);
+    ProcessEvents();
+    EXPECT_TRUE(called);
 }
 
 }  // anonymous namespace

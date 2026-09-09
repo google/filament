@@ -1,0 +1,122 @@
+Name
+
+    APPLE_texture_range
+
+Name Strings
+
+    GL_APPLE_texture_range
+
+Contact
+
+    Bob Beretta, Apple Inc. (beretta 'at' apple.com)
+
+Version
+
+    $Date: 2002/02/18 18:16:55 $ $Revision: 1.3 $
+
+Number
+
+    367
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a method to specify the range of client address
+    space that may be used by a texture.  In general, the storage size of a
+    texture may be easily determined by the texture's data type and geometry.
+    However, driver optimizations may be realized if an extended address
+    range is specified to encompass the storage of multiple textures, or to
+    encompass potential future changes in the size of a texture.  A typical
+    usage of this extension is to specify an identical address range for
+    several textures in a particular working set that encompasses the storage
+    of all the textures in the set.  This allows the driver to make a single
+    memory mapping for all of the textures.
+
+    Further, a mechanism is provided to allow the application to give the GL
+    driver a hint regarding the storage requirements of the texture data.
+
+New Procedures and Functions
+
+    void TextureRangeAPPLE(enum target, sizei length, void *pointer)
+
+    void GetTexParameterPointervAPPLE(enum target, enum pname, void **params)
+
+New Tokens
+
+    Accepted by the <pname> parameters of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and
+    GetTexParameterfv:
+
+    TEXTURE_STORAGE_HINT_APPLE          0x85BC
+
+    Accepted by the <param> parameters of TexParameteri, TexParameterf,
+    TexParameteriv, and TexParameterfv:
+
+    STORAGE_PRIVATE_APPLE               0x85BD
+    STORAGE_CACHED_APPLE                0x85BE
+    STORAGE_SHARED_APPLE                0x85BF
+
+    Accepted by the <pname> parameters of GetTexParameteriv and
+    GetTexParameterfv:
+
+    TEXTURE_RANGE_LENGTH_APPLE          0x85B7
+
+    Accepted by the <pname> parameters of GetTexParameterPointerv:
+
+    TEXTURE_RANGE_POINTER_APPLE         0x85B8
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    XXX - lots
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    "OpenGL implementations using GLX indirect rendering should silently
+    ignore the texture range.
+
+Errors
+
+    TextureRangeAPPLE(enum target, sizei length, void *pointer);
+
+    GetTexParameterPointerv(enum target, enum pname, void **params);
+
+    INVALID_ENUM is generated if TextureRangeAPPLE or GetTexParameterPointerv
+    is called with <target> that is not a valid texture target.
+
+    INVALID_ENUM is generated if GetTexParameterPointerv parameter
+    <pname> is not equal to TEXTURE_RANGE_POINTER_APPLE.
+
+    INVALID_VALUE is generated if TextureRangeAPPLE parameter <length> is
+    negative.
+
+New State
+
+   Get Value                       Get Command             Type    Value    Attrib
+   ---------                       -----------             ----    -------  ------------
+   TEXTURE_RANGE_POINTER_APPLE     GetTexParameterPointerv Y       0        texture 
+   TEXTURE_RANGE_LENGTH_APPLE      GetTexParameteriv       Z+      0        texture
+
+New Implementation Dependent State
+
+    None
+

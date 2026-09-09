@@ -46,14 +46,15 @@ if (tint_build_benchmarks) {
   if (tint_build_wgsl_reader) {
     tint_benchmarks_source_set("bench") {
       sources = [
+        "${root_gen_dir}/src/tint/cmd/bench/enums_core_bench.cc",
+        "${root_gen_dir}/src/tint/cmd/bench/enums_wgsl_bench.cc",
         "bench.cc",
         "bench.h",
-        "enums_core_bench.cc",
-        "enums_wgsl_bench.cc",
         "validator_bench.cc",
       ]
       deps = [
         "${dawn_root}/src/utils",
+        "${tint_src_dir}:generate_sources",
         "${tint_src_dir}:google_benchmark",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
@@ -63,6 +64,7 @@ if (tint_build_benchmarks) {
         "${tint_src_dir}/lang/wgsl",
         "${tint_src_dir}/lang/wgsl/ast",
         "${tint_src_dir}/lang/wgsl/program",
+        "${tint_src_dir}/lang/wgsl/reader",
         "${tint_src_dir}/lang/wgsl/sem",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
@@ -71,14 +73,11 @@ if (tint_build_benchmarks) {
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/symbol",
         "${tint_src_dir}/utils/text",
       ]
-
-      if (tint_build_wgsl_reader) {
-        deps += [ "${tint_src_dir}/lang/wgsl/reader" ]
-      }
     }
   }
 }
@@ -92,6 +91,7 @@ if (tint_build_benchmarks) {
         "${dawn_root}/src/utils",
         "${tint_src_dir}:google_benchmark",
         "${tint_src_dir}/api/common",
+        "${tint_src_dir}/cmd/bench",
         "${tint_src_dir}/lang/core",
         "${tint_src_dir}/lang/core/constant",
         "${tint_src_dir}/lang/core/type",
@@ -106,33 +106,30 @@ if (tint_build_benchmarks) {
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/rtti:bench",
         "${tint_src_dir}/utils/symbol",
         "${tint_src_dir}/utils/text",
       ]
 
-      if (tint_build_glsl_writer && tint_build_wgsl_reader) {
+      if (tint_build_glsl_writer) {
         deps += [ "${tint_src_dir}/cmd/bench/glsl:bench" ]
       }
 
-      if (tint_build_hlsl_writer && tint_build_wgsl_reader) {
+      if (tint_build_hlsl_writer) {
         deps += [ "${tint_src_dir}/cmd/bench/hlsl:bench" ]
       }
 
-      if (tint_build_msl_writer && tint_build_wgsl_reader) {
+      if (tint_build_msl_writer) {
         deps += [ "${tint_src_dir}/cmd/bench/msl:bench" ]
       }
 
-      if (tint_build_spv_writer && tint_build_wgsl_reader) {
+      if (tint_build_spv_writer) {
         deps += [ "${tint_src_dir}/cmd/bench/spirv:bench" ]
       }
 
-      if (tint_build_wgsl_reader) {
-        deps += [ "${tint_src_dir}/cmd/bench" ]
-      }
-
-      if (tint_build_wgsl_writer && tint_build_wgsl_reader) {
+      if (tint_build_wgsl_writer) {
         deps += [ "${tint_src_dir}/cmd/bench/wgsl:bench" ]
       }
     }

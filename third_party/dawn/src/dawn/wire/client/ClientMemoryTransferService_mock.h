@@ -30,39 +30,53 @@
 
 #include <gmock/gmock.h>
 
+#include <memory>
+#include <span>
+
 #include "dawn/wire/WireClient.h"
-#include "dawn/wire/client/Client.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::wire::client {
 
 class MockMemoryTransferService : public MemoryTransferService {
   public:
-    class MockReadHandle : public ReadHandle {
+    class MockMemoryHandle : public MemoryHandle {
       public:
-        ~MockReadHandle() override;
+        ~MockMemoryHandle() override;
         MOCK_METHOD(void, Destroy, ());
 
-        MOCK_METHOD(size_t, SerializeCreateSize, (), (override));
-        MOCK_METHOD(void, SerializeCreate, (void*), (override));
-        MOCK_METHOD(const void*, GetData, (), (override));
-        MOCK_METHOD(bool, DeserializeDataUpdate, (const void*, size_t, size_t, size_t), (override));
+        MOCK_METHOD(size_t, GetSerializeCreateSize, (), (const, override));
+        MOCK_METHOD(void, SerializeCreate, (std::span<std::byte>), (const));
+        // GMock does not natively support printing/handling volatile types in mock argument tuples
+        // without custom printers, so we implement the volatile overload directly to cast away
+        // volatile and forward to the non-volatile MOCK_METHOD.
+        void SerializeCreate(std::span<volatile std::byte> serializeSpace) const override {
+            SerializeCreate(DAWN_UNSAFE_TODO(std::span<std::byte>(
+                const_cast<std::byte*>(serializeSpace.data()), serializeSpace.size())));
+        }
+        MOCK_METHOD(std::span<std::byte>, GetData, (), (const, override));
+        MOCK_METHOD(size_t, GetSerializeDataUpdateSize, (size_t, size_t), (const, override));
+        MOCK_METHOD(void, SerializeDataUpdate, (std::span<std::byte>, size_t, size_t), (const));
+        // GMock does not natively support printing/handling volatile types in mock argument tuples
+        // without custom printers, so we implement the volatile overload directly to cast away
+        // volatile and forward to the non-volatile MOCK_METHOD.
+        void SerializeDataUpdate(std::span<volatile std::byte> serializeData,
+                                 size_t offset,
+                                 size_t size) const override {
+            SerializeDataUpdate(
+                DAWN_UNSAFE_TODO(std::span<std::byte>(const_cast<std::byte*>(serializeData.data()),
+                                                      serializeData.size())),
+                offset, size);
+        }
+        MOCK_METHOD(bool,
+                    DeserializeDataUpdate,
+                    (std::span<const std::byte>, size_t, size_t),
+                    (override));
     };
 
-    class MockWriteHandle : public WriteHandle {
-      public:
-        ~MockWriteHandle() override;
-        MOCK_METHOD(void, Destroy, ());
-
-        MOCK_METHOD(size_t, SerializeCreateSize, (), (override));
-        MOCK_METHOD(void, SerializeCreate, (void*), (override));
-        MOCK_METHOD(void*, GetData, (), (override));
-        MOCK_METHOD(size_t, SizeOfSerializeDataUpdate, (size_t, size_t), (override));
-        MOCK_METHOD(void, SerializeDataUpdate, (void*, size_t, size_t), (override));
-    };
-
-    MOCK_METHOD(ReadHandle*, CreateReadHandle, (size_t), (override));
-    MOCK_METHOD(WriteHandle*, CreateWriteHandle, (size_t), (override));
+    MOCK_METHOD(std::unique_ptr<MemoryHandle>, CreateMemoryHandle, (size_t), (override));
 };
 
 }  // namespace dawn::wire::client

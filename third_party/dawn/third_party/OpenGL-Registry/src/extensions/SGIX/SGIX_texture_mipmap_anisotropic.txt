@@ -1,0 +1,219 @@
+Name
+
+    SGIX_texture_mipmap_anisotropic
+
+Name Strings
+
+    GL_SGIX_texture_mipmap_anisotropic
+
+Version
+
+    $Date: 1998/10/21 00:42:24 $ $Revision: 1.4 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    EXT_texture3D affects the definition of this extension
+    SGIX_texture_lod_bias affects the definition of this extension
+
+Overview
+
+    This extension improves the filtering quality over the standard mipmap
+    algorithm.  The limitation of the standard mipmap algorithm is that a 
+    pixel's footprint in texture space is approximated by a symmetrically
+    filtered sample.  The approximation becomes worse as the pixel footprint
+    becomes more anisotropic.  The poor approximation usually results in
+    the mapped image appearing excessively blurry.  This extension replaces
+    a single symmetric sample with the average of distributed smaller samples, 
+    which better approximates the pixel footprint shape.  This anisotropic
+    filtering method uses the existing mipmap and clipmap structures.
+
+Issues
+
+    *	Should this extension handle all anisotropic filtering methods?
+        -- No.  Since all other known anisotropic filter methods (summed-area, 
+           ripmap, non-mip supersampling) use different data structures,
+  	   the control mechanisms will be different and therefore should
+  	   be separate extensions.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and GetTexParameterfv:
+
+	TEXTURE_MIPMAP_ANISOTROPY_SGIX	0x832E
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_MIPMAP_ANISOTROPY_SGIX	0x832F
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    GL Specification Table 3.9 is updated as follows:
+
+	Name				Type	    Legal Values
+	----				----	    ------------
+	TEXTURE_WRAP_S			integer	    CLAMP, REPEAT
+	TEXTURE_WRAP_T			integer	    CLAMP, REPEAT
+	TEXTURE_WRAP_R_EXT		integer	    CLAMP, REPEAT
+	TEXTURE_MIN_FILTER		integer	    NEAREST, LINEAR,
+						    NEAREST_MIPMAP_NEAREST,
+						    NEAREST_MIPMAP_LINEAR,
+						    LINEAR_MIPMAP_NEAREST,
+						    LINEAR_MIPMAP_LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_CLIPMAP_LINEAR_SGIX,
+	TEXTURE_MAG_FILTER		integer	    NEAREST, LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_DETAIL_SGIS,
+						    LINEAR_DETAIL_ALPHA_SGIS,
+						    LINEAR_DETAIL_COLOR_SGIS,
+						    LINEAR_SHARPEN_SGIS,
+						    LINEAR_SHARPEN_ALPHA_SGIS,
+						    LINEAR_SHARPEN_COLOR_SGIS
+	TEXTURE_BORDER_COLOR		4 floats    any 4 values in [0,1]
+	DETAIL_TEXTURE_LEVEL_SGIS	integer	    any non-negative integer
+	DETAIL_TEXTURE_MODE_SGIS	integer	    ADD, MODULATE
+	TEXTURE_MIN_LOD_SGIS		float	    any value
+	TEXTURE_MAX_LOD_SGIS		float	    any value
+	TEXTURE_BASE_LEVEL_SGIS		integer	    any non-negative integer
+	TEXTURE_MAX_LEVEL_SGIS		integer	    any non-negative integer
+        GENERATE_MIPMAP_SGIS            boolean     TRUE or FALSE
+        TEXTURE_CLIPMAP_FRAME_SGIX      float       any non-negative value
+        TEXTURE_CLIPMAP_CENTER_SGIX     2 integers  any 2 non-negative integers
+        TEXTURE_CLIPMAP_OFFSET_SGIX     2 integers  any 2 non-negative integers
+        TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX 3 integers  any 3 non-negative integer
+	TEXTURE_LOD_BIAS_S_SGIX		float	    any value
+	TEXTURE_LOD_BIAS_T_SGIX		float	    any value
+	TEXTURE_LOD_BIAS_R_SGIX		float	    any value
+        TEXTURE_MIPMAP_ANISOTROPY	int	    any value >= 1
+
+	Table 3.9: Texture parameters and their values.
+
+   Texture Minification
+   ------------------------
+
+   This extensions substantially changes Section 3.8.1.  Previously
+   a single scale factor P was determined based on the pixel's projection
+   into texture space.  Now two scale factors, Px and Py, are computed.
+
+   Px = sqrt(dudx^2 + dvdx^2)
+   Py = sqrt(dudy^2 + dvdy^2)
+  
+   Pmax = max(Px,Py)
+   Pmin = min(Px,Py)
+
+   N = min(ceil(Pmax/Pmin),TEXTURE_MIPMAP_ANISOTROPY_SGIX);
+   Lamda = log2(Pmax/N)
+   
+
+   It is acceptable for implementation to round 'N' up to the nearest supported
+   sampling rate.  For example an implementation may only support power-of-two
+   sampling rates.
+
+   It is also acceptable for an implementation to approximate the ideal 
+   functions Px and Py with functions Fx and Fy subject to the following
+   conditions:
+
+   1.  Fx is continuous and monotonically increasing in |du/dx| and |dv/dx|.
+       Fy is continuous and monotonically increasing in |du/dy| and |dv/dy|.
+
+   2.  max(|du/dx|,|dv/dx|} <= Fx <= |du/dx| + |dv/dx|.
+       max(|du/dy|,|dv/dy|} <= Fy <= |du/dy| + |dv/dy|.
+
+   Instead of a single sample, Tau, at (u,v,Lamda), 'N' locations in the mipmap
+   at LOD Lamda, are sampled within the texture footprint of the pixel.
+
+             i=N
+             ---
+   Tau = 1/N \ Tau(u(x - 1/2 + i/(N+1), y), v(x - 1/2 + i/(N+1), y)),  Px > Py
+             /          
+             ---	       
+             i=1
+
+             i=N
+             ---
+   Tau = 1/N \ Tau(u(x, y - 1/2 + i/(N+1)), v(x, y - 1/2 + i/(N+1))),  Py >= Px
+             /          
+             ---	       
+             i=1
+
+
+   It is acceptable to approximate the u and v functions with equally spaced
+   samples in texture space at LOD Lamda:
+
+             i=N
+             ---
+   Tau = 1/N \ Tau(u(x,y)+dudx(i/(N+1)-1/2), v(x,y)+dvdx(i/(N+1)-1/2)), Px > Py
+             /          
+             ---	       
+             i=1
+
+             i=N
+             ---
+   Tau = 1/N \ Tau(u(x,y)+dudy(i/(N+1)-1/2), v(x,y)+dvdy(i/(N+1)-1/2)), Py >= Px
+             /          
+             ---	       
+             i=1
+
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is supported, the functions Px, Py, and Tau are modified
+    to include dwdx, dwdy, and w.
+
+
+Dependencies on SGIX_texture_lod_bias
+
+    If SGIX_texture_lod_bias is supported, dudx, dvdx, dwdx, dudy, dvdy, dwdy 
+    are replaced with dlodudx, dlodvdx, dlodwdx, dlodudy, dlodvdy, dlodwdy in 
+    the Px and Py functions.
+
+Errors
+
+    None
+
+New State
+
+								Initial
+    Get Value			   Get Command	    Type	Value	  Attrib
+    ---------			   -----------	    ----	-------	  ------
+    TEXTURE_MIPMAP_ANISOTROPY_SGIX GetTexParameteriv Z1*        1         texture
+
+New Implementation Dependent State
+
+                                                                        Minimum
+    Get Value                           Get Command     Type            Value
+    ---------                           -----------     ----            -------
+    MAX_MIPMAP_ANISOTROPY_SGIX          GetIntegerv     Z1*              2

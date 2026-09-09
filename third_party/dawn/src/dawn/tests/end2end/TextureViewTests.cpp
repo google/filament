@@ -31,12 +31,12 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -145,6 +145,9 @@ class TextureViewSamplingTest : public TextureViewTestBase {
     void SetUp() override {
         DawnTest::SetUp();
 
+        // TODO(crbug.com/523211970): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
         mRenderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
         wgpu::SamplerDescriptor samplerDescriptor = {};
@@ -197,7 +200,7 @@ class TextureViewSamplingTest : public TextureViewTestBase {
                 const int pixelValue = GenerateTestPixelValue(layer, level);
 
                 constexpr uint32_t kPaddedTexWidth = kPixelsPerRowPitch;
-                std::vector<utils::RGBA8> data(kPaddedTexWidth * texHeight,
+                std::vector<utils::RGBA8> data(static_cast<size_t>(kPaddedTexWidth) * texHeight,
                                                utils::RGBA8(0, 0, 0, pixelValue));
                 wgpu::Buffer stagingBuffer = utils::CreateBufferFromData(
                     device, data.data(), data.size() * sizeof(utils::RGBA8),
@@ -699,6 +702,12 @@ TEST_P(TextureViewSamplingTest, TextureCubeMapArrayViewSingleCubeMap) {
 
 class TextureViewRenderingTest : public TextureViewTestBase {
   protected:
+    void SetUp() override {
+        TextureViewTestBase::SetUp();
+        // TODO(crbug.com/523211969): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+    }
+
     void TextureLayerAsColorAttachmentTest(wgpu::TextureViewDimension dimension,
                                            uint32_t layerCount,
                                            uint32_t levelCount,
@@ -1204,7 +1213,14 @@ DAWN_INSTANTIATE_TEST(TextureView3DTest,
                       VulkanBackend(),
                       WebGPUBackend());
 
-class TextureView1DTest : public DawnTest {};
+class TextureView1DTest : public DawnTest {
+  protected:
+    void SetUp() override {
+        DawnTest::SetUp();
+        // TODO(crbug.com/523211968): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+    }
+};
 
 // Test that it is possible to create a 1D texture view and sample from it.
 TEST_P(TextureView1DTest, Sampling) {

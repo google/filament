@@ -512,6 +512,54 @@ bool IsASCII(std::string_view str) {
     return true;
 }
 
+bool IsIdentifier(std::string_view str) {
+    if (str.empty()) {
+        return false;
+    }
+    auto is_alpha_or_underscore = [](char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    };
+    auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
+    if (!is_alpha_or_underscore(str.front())) {
+        return false;
+    }
+    for (size_t i = 1; i < str.length(); i++) {
+        if (!is_alpha_or_underscore(str[i]) && !is_digit(str[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool IsWGSLIdentifier(std::string_view str) {
+    if (str.empty()) {
+        return false;
+    }
+
+    // Identifiers must not start with two or more underscores.
+    if (str.length() > 1 && str[0] == '_' && str[1] == '_') {
+        return false;
+    }
+
+    // Must begin with an XID_Source unicode character, or underscore
+    auto [first_cp, first_n] = Decode(str);
+    if (first_n == 0 || (first_cp != '_' && !first_cp.IsXIDStart())) {
+        return false;
+    }
+
+    // Must continue with an XID_Continue unicode character
+    str.remove_prefix(first_n);
+    while (!str.empty()) {
+        auto [cp, n] = Decode(str);
+        if (n == 0 || !cp.IsXIDContinue()) {
+            return false;
+        }
+        str.remove_prefix(n);
+    }
+
+    return true;
+}
+
 }  // namespace utf8
 
 namespace utf16 {

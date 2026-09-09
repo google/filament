@@ -45,38 +45,56 @@ line three)";
 
 using SourceFileContentTest = testing::Test;
 
+void CheckLineAndRangeConsistency(const Source::FileContent& fc) {
+    EXPECT_EQ(fc.line_ranges.size(), fc.GetLineCount());
+
+    for (size_t i = 0; i < fc.GetLineCount(); i++) {
+        std::string_view line_view = fc.GetLine(i);
+        std::string_view range_view =
+            std::string_view(fc.data).substr(fc.line_ranges[i].start, fc.line_ranges[i].length);
+        ASSERT_EQ(line_view.size(), range_view.size());
+        ASSERT_EQ(line_view.data(), range_view.data());
+    }
+}
+
 TEST_F(SourceFileContentTest, Init) {
     Source::FileContent fc(kSource);
+
+    CheckLineAndRangeConsistency(fc);
     EXPECT_EQ(fc.data, kSource);
-    ASSERT_EQ(fc.lines.size(), 4u);
-    EXPECT_EQ(fc.lines[0], "line one");
-    EXPECT_EQ(fc.lines[1], "line two");
-    EXPECT_EQ(fc.lines[2], "");
-    EXPECT_EQ(fc.lines[3], "line three");
+    ASSERT_EQ(fc.GetLineCount(), 4u);
+    EXPECT_EQ(fc.GetLine(0), "line one");
+    EXPECT_EQ(fc.GetLine(1), "line two");
+    EXPECT_EQ(fc.GetLine(2), "");
+    EXPECT_EQ(fc.GetLine(3), "line three");
 }
 
 TEST_F(SourceFileContentTest, CopyInit) {
     auto src = std::make_unique<Source::FileContent>(kSource);
     Source::FileContent fc{*src};
     src.reset();
+
+    CheckLineAndRangeConsistency(fc);
     EXPECT_EQ(fc.data, kSource);
-    ASSERT_EQ(fc.lines.size(), 4u);
-    EXPECT_EQ(fc.lines[0], "line one");
-    EXPECT_EQ(fc.lines[1], "line two");
-    EXPECT_EQ(fc.lines[2], "");
-    EXPECT_EQ(fc.lines[3], "line three");
+    ASSERT_EQ(fc.GetLineCount(), 4u);
+    EXPECT_EQ(fc.GetLine(0), "line one");
+    EXPECT_EQ(fc.GetLine(1), "line two");
+    EXPECT_EQ(fc.GetLine(2), "");
+    EXPECT_EQ(fc.GetLine(3), "line three");
 }
 
 TEST_F(SourceFileContentTest, MoveInit) {
     auto src = std::make_unique<Source::FileContent>(kSource);
     Source::FileContent fc{std::move(*src)};
     src.reset();
+
+    CheckLineAndRangeConsistency(fc);
     EXPECT_EQ(fc.data, kSource);
-    ASSERT_EQ(fc.lines.size(), 4u);
-    EXPECT_EQ(fc.lines[0], "line one");
-    EXPECT_EQ(fc.lines[1], "line two");
-    EXPECT_EQ(fc.lines[2], "");
-    EXPECT_EQ(fc.lines[3], "line three");
+    ASSERT_EQ(fc.GetLineCount(), 4u);
+    EXPECT_EQ(fc.GetLine(0), "line one");
+    EXPECT_EQ(fc.GetLine(1), "line two");
+    EXPECT_EQ(fc.GetLine(2), "");
+    EXPECT_EQ(fc.GetLine(3), "line three");
 }
 
 // Line break code points
@@ -95,9 +113,11 @@ TEST_P(LineBreakTest, Single) {
     src += "line two";
 
     Source::FileContent fc(src);
-    EXPECT_EQ(fc.lines.size(), 2u);
-    EXPECT_EQ(fc.lines[0], "line one");
-    EXPECT_EQ(fc.lines[1], "line two");
+
+    CheckLineAndRangeConsistency(fc);
+    EXPECT_EQ(fc.GetLineCount(), 2u);
+    EXPECT_EQ(fc.GetLine(0), "line one");
+    EXPECT_EQ(fc.GetLine(1), "line two");
 }
 TEST_P(LineBreakTest, Double) {
     std::string src = "line one";
@@ -106,10 +126,12 @@ TEST_P(LineBreakTest, Double) {
     src += "line two";
 
     Source::FileContent fc(src);
-    EXPECT_EQ(fc.lines.size(), 3u);
-    EXPECT_EQ(fc.lines[0], "line one");
-    EXPECT_EQ(fc.lines[1], "");
-    EXPECT_EQ(fc.lines[2], "line two");
+
+    CheckLineAndRangeConsistency(fc);
+    EXPECT_EQ(fc.GetLineCount(), 3u);
+    EXPECT_EQ(fc.GetLine(0), "line one");
+    EXPECT_EQ(fc.GetLine(1), "");
+    EXPECT_EQ(fc.GetLine(2), "line two");
 }
 INSTANTIATE_TEST_SUITE_P(SourceFileContentTest,
                          LineBreakTest,

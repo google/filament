@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_COMMON_XLIB_WITH_UNDEFS_H_
 #define SRC_DAWN_COMMON_XLIB_WITH_UNDEFS_H_
 
-#include "dawn/common/Platform.h"
+#include "src/utils/platform.h"
 
 #if !DAWN_PLATFORM_IS(LINUX)
 #error "xlib_with_undefs.h included on non-Linux"

@@ -264,6 +264,10 @@ const char* str(BuiltinFn i) {
             return "group_non_uniform_s_min";
         case BuiltinFn::kGroupNonUniformSMax:
             return "group_non_uniform_s_max";
+        case BuiltinFn::kInterpolateAtOffset:
+            return "interpolate_at_offset";
+        case BuiltinFn::kAddCarry:
+            return "add_carry";
     }
     return "<unknown>";
 }
@@ -385,8 +389,10 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kGroupNonUniformQuadSwap:
         case BuiltinFn::kGroupNonUniformSMin:
         case BuiltinFn::kGroupNonUniformSMax:
+        case BuiltinFn::kInterpolateAtOffset:
         case BuiltinFn::kSConvert:
         case BuiltinFn::kUConvert:
+        case BuiltinFn::kAddCarry:
             break;
     }
     return core::ir::Instruction::Accesses{};

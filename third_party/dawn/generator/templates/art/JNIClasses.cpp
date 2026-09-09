@@ -43,6 +43,30 @@ JNIClasses::JNIClasses(JNIEnv* env) {
     gpuCallbackRunnable = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("androidx/webgpu/GPURequestCallbackRunnable")));
     gpuCallbackErrorTypeRunnable = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("androidx/webgpu/GPURequestCallbackErrorTypeRunnable")));
     gpuCallbackVoidRunnable = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("androidx/webgpu/GPURequestCallbackVoidRunnable")));
+    stringClass = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("java/lang/String")));
+    gpuHardwareBufferExternalTexture = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("androidx/webgpu/GPUHardwareBufferExternalTexture")));
+    gpuHardwareBufferTexture = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("androidx/webgpu/GPUHardwareBufferTexture")));
+    javaIllegalStateException = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("java/lang/IllegalStateException")));
+    javaUnsupportedOperationException = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("java/lang/UnsupportedOperationException")));
+    parcelFileDescriptor = reinterpret_cast<jclass>(env->NewGlobalRef(env->FindClass("android/os/ParcelFileDescriptor")));
+    pfdGetFd = env->GetMethodID(parcelFileDescriptor, "getFd", "()I");
+    pfdAdoptFd = env->GetStaticMethodID(parcelFileDescriptor, "adoptFd", "(I)Landroid/os/ParcelFileDescriptor;");
+    jclass originClz = env->FindClass("androidx/webgpu/GPUOrigin2D");
+    originX = env->GetFieldID(originClz, "x", "I");
+    originY = env->GetFieldID(originClz, "y", "I");
+    env->DeleteLocalRef(originClz);
+
+    jclass extentClz = env->FindClass("androidx/webgpu/GPUExtent2D");
+    extentWidth = env->GetFieldID(extentClz, "width", "I");
+    extentHeight = env->GetFieldID(extentClz, "height", "I");
+    env->DeleteLocalRef(extentClz);
+
+    jclass colorSpaceClz = env->FindClass("androidx/webgpu/GPUColorSpaceDawn");
+    colorSpacePrimaries = env->GetFieldID(colorSpaceClz, "primaries", "I");
+    colorSpaceTransfer = env->GetFieldID(colorSpaceClz, "transfer", "I");
+    colorSpaceYCbCrRange = env->GetFieldID(colorSpaceClz, "yCbCrRange", "I");
+    colorSpaceYCbCrMatrix = env->GetFieldID(colorSpaceClz, "yCbCrMatrix", "I");
+    env->DeleteLocalRef(colorSpaceClz);
 
 }
 

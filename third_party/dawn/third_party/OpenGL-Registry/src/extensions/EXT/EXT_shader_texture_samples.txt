@@ -1,0 +1,103 @@
+Name
+
+    EXT_shader_texture_samples
+
+Name Strings
+
+    GL_EXT_shader_texture_samples
+
+Contact
+
+    Geoff Lang, (geofflang 'at' google.com)
+
+Contributors
+
+    Contributors to ARB_shader_texture_image_samples
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: Oct 22, 2025
+    Revision: 1
+
+Number
+
+    OpenGL ES Extension #352
+
+Dependencies
+
+    Either OpenGL ES 3.1 or OpenGL ES 3.0 with multisample texture support is
+    required.
+
+    This extension is written against the OpenGL ES 3.2 specification and
+    version 3.20 ES of the OpenGL Shading Language Specification.
+
+    This extension interacts with OES_texture_storage_multisample_2d_array
+    and OpenGL ES 3.2.
+
+Overview
+
+    This extension provides GLSL built-in functions allowing shaders to query
+    the number of samples of a texture.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the OpenGL ES 3.2 Specification
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Modifications to The OpenGL ES Shading Language Specification, Version 3.20
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_EXT_shader_texture_samples
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+        #define GL_EXT_shader_texture_samples 1
+
+    Add to table in section 8.9.1 "Texture Query Functions"
+
+        Syntax:
+
+            lowp int textureSamples(gsampler2DMS sampler)
+            lowp int textureSamples(gsampler2DMSArray sampler)
+
+        Description:
+
+            Returns the number of samples of the texture bound to <sampler>.
+
+Dependencies on OES_texture_storage_multisample_2d_array and OpenGL ES 3.2
+
+    If neither OES_texture_storage_multisample_2d_array nor OpenGL ES 3.2 are
+    supported, ignore references to gsampler2DMSArray.
+
+Issues
+
+    See the issue list in ARB_shader_texture_image_samples.
+
+Revision History
+    Revision 1, 2025/10/22
+      - Initial release

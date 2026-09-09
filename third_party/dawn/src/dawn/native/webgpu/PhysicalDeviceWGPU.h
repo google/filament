@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_PHYSICALDEVICEWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_PHYSICALDEVICEWGPU_H_
 
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/webgpu/Forward.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/webgpu/Forward.h"
 
 namespace dawn::native::webgpu {
 

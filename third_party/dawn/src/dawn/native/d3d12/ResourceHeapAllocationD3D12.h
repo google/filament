@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_RESOURCEHEAPALLOCATIOND3D12_H_
 #define SRC_DAWN_NATIVE_D3D12_RESOURCEHEAPALLOCATIOND3D12_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ResourceMemoryAllocation.h"
-#include "dawn/native/d3d12/ResourceAllocatorManagerD3D12.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ResourceMemoryAllocation.h"
+#include "src/dawn/native/d3d12/ResourceAllocatorManagerD3D12.h"
 
 namespace dawn::native::d3d12 {
 

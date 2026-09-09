@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 
-#include "dawn/utils/Timer.h"
+#include "src/dawn/utils/Timer.h"
 
 namespace dawn::utils {
 
@@ -66,14 +66,14 @@ class WindowsTimer : public Timer {
             endTime = mStopTime;
         }
 
-        return static_cast<double>(endTime - mStartTime) / mFrequency;
+        return static_cast<double>(endTime - mStartTime) / static_cast<double>(mFrequency);
     }
 
     double GetAbsoluteTime() override {
         LARGE_INTEGER curTime;
         QueryPerformanceCounter(&curTime);
 
-        return static_cast<double>(curTime.QuadPart) / GetFrequency();
+        return static_cast<double>(curTime.QuadPart) / static_cast<double>(GetFrequency());
     }
 
   private:

@@ -45,6 +45,10 @@ SISO="1"
 SHARED=""
 INSTALL=""
 UBSAN=""
+ANDROID_ABI="arm64-v8a"
+ANDROID_NDK=""
+ANDROID_PLATFORM="android-28"
+USE_GCC_RUNTIME=0
 
 function show_usage() {
   echo "setup-build [-f] $POSSIBLE_BUILD_SYSTEMS $POSSIBLE_BUILD_TYPES $POSSIBLE_BUILD_ARCHS [fuzz|fuzzer]"
@@ -63,6 +67,7 @@ function show_usage() {
   echo "  debug         Make a debug build"
   echo " "
   echo "  fuzz, fuzzer  Build fuzzers. Forces Clang to be used"
+  echo "  gccrt         Use GCC 14 runtime with clang"
   echo "  install       Install to out/install (cmake only)"
   echo "  native        Target the machine you're running on"
   echo "  x86           Target a 32-bit x86 (adds -m32 to compiler flags)"
@@ -70,6 +75,11 @@ function show_usage() {
   echo "  remoteexec    Use siso to improve compile time (the default)"
   echo "  shared        Build shared libs (cmake only)"
   echo "  ubsan         Enable undefined behaviour sanitizer"
+  echo "  ndk=\$NDK_DIR The Android NDK root directory."
+  echo "                Targets Android. Only usable with cmake."
+  echo "  abi=\$ANDROID_API"
+  echo "                The Android target ABI. Default is arm64-v8a"
+  echo " "
   if [[ ! -z "$1" ]]; then
     echo
     echo "error: $1"
@@ -121,6 +131,9 @@ for arg in "$@"; do
     ;;
     "native")
     ;;
+    "gccrt")
+      USE_GCC_RUNTIME=1
+    ;;
     "fuzz" | "fuzzer")
       BUILD_FUZZER=1
     ;;
@@ -145,6 +158,12 @@ for arg in "$@"; do
     "ubsan")
       UBSAN=1
     ;;
+    ndk=*)
+      ANDROID_NDK="${arg:4}"
+    ;;
+    abi=*)
+      ANDROID_ABI="${arg:4}"
+    ;;
     "--help" | "-help" | "-h")
       show_usage
     ;;
@@ -166,8 +185,22 @@ if [[ ( -n "$UBSAN" ) && ( "$BUILD_SYSTEM-$BUILD_TYPE" == "gn-debug" ) ]]; then
   show_usage "the gn build does not support ubsan with debug builds: use a release build instead"
 fi
 
+if [[ -n "$ANDROID_NDK" ]]; then
+  if [[ "$BUILD_SYSTEM" != "cmake" ]]; then
+    show_usage "the Android build only works with cmake"
+  fi
+  if [[ -n "$BUILD_ARCH" ]]; then
+    show_usage "Don't specify a target CPU with the Android build"
+  fi
+  if ! grep "^Android NDK" <"$ANDROID_NDK/README.md" >/dev/null; then
+    show_usage "Invalid Android NDK directory: $ANDROID_NDK"
+  fi
+fi
+
 BUILD_DIR="$BUILD_SYSTEM-$BUILD_TYPE"
-if [[ ! -z "$BUILD_ARCH" ]]; then
+if [[ -n "$ANDROID_NDK" ]]; then
+  BUILD_DIR+="-$ANDROID_ABI"
+elif [[ ! -z "$BUILD_ARCH" ]]; then
   BUILD_DIR+="-$BUILD_ARCH"
 fi
 if [[ ! -z "$BUILD_FUZZER" ]]; then
@@ -227,9 +260,6 @@ case $BUILD_SYSTEM in
     if [[ -n "$UBSAN" ]]; then
         GN_ARGS+=" is_ubsan=true"
     fi
-    if grep 'dawn_node.*True' .gclient >/dev/null; then
-        GN_ARGS+=" dawn_build_node_bindings=true"
-    fi
     GN_ARGS+=" use_clang_modules=false"
     if [[ -z "$FORCE" && -f "$ROOT_DIR/out/$BUILD_DIR/args.gn" ]]; then
       generate "gn" "gen" $GN_OPTIONS "out/active" # keep existing args
@@ -238,6 +268,8 @@ case $BUILD_SYSTEM in
     fi
   ;;
   "cmake")
+    CXX_FLAGS=()
+    C_FLAGS=()
     CMAKE_FLAGS=()
     CMAKE_FLAGS+=("-DTINT_BUILD_GLSL_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_HLSL_WRITER=1")
@@ -245,17 +277,18 @@ case $BUILD_SYSTEM in
     CMAKE_FLAGS+=("-DTINT_BUILD_SPV_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_WGSL_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_SPV_READER=1")
-    # tintd requires third_party/jsoncpp and third_party/langsvr
-    # which are only downloaded when dawn_tintd=True in .gclient
-    if grep 'dawn_tintd.*True' .gclient >/dev/null; then
-        CMAKE_FLAGS+=("-DTINT_BUILD_TINTD=1")
-    else
-        CMAKE_FLAGS+=("-DTINT_BUILD_TINTD=0")
-    fi
     CMAKE_FLAGS+=("-DDAWN_BUILD_NODE_BINDINGS=1")
+    CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER=clang++")
+    CMAKE_FLAGS+=("-DCMAKE_C_COMPILER=clang")
+    if [[ $USE_GCC_RUNTIME == 1 ]]; then
+        GCCRT_DIR=/usr/lib/gcc/x86_64-linux-gnu/14
+        if [[ ! -d $GCCRT_DIR ]]; then
+            echo "error: specified 'gccrt' but $GCCRT_DIR does not exist"
+            exit 1
+        fi
+        CXX_FLAGS+=("--gcc-install-dir=$GCCRT_DIR")
+    fi
     if [[ -n "$BUILD_FUZZER" ]]; then
-        CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER=clang++")
-        CMAKE_FLAGS+=("-DCMAKE_C_COMPILER=clang")
         CMAKE_FLAGS+=("-DTINT_BUILD_FUZZERS=ON")
         CMAKE_FLAGS+=("-DDAWN_BUILD_PROTOBUF=ON")
         CMAKE_FLAGS+=("-DTINT_BUILD_IR_BINARY=ON")
@@ -275,17 +308,26 @@ case $BUILD_SYSTEM in
         show_usage "invalid build type '$BUILD_TYPE'"
       ;;
     esac
-    case $BUILD_ARCH in
-      "")
-      ;;
-      "x86")
-        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-m32")
-        CMAKE_FLAGS+=("-DCMAKE_C_FLAGS=-m32")
-      ;;
-      *)
-        show_usage "invalid build architecture '$BUILD_ARCH'"
-      ;;
-    esac
+    if [[ -n "$ANDROID_NDK" ]]; then
+      CMAKE_FLAGS+="-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake"
+      CMAKE_FLAGS+="-DANDROID_ABI=$ANDROID_ABI"
+      CMAKE_FLAGS+="-DANDROID_PLATFORM=$ANDROID_PLATFORM"
+      CMAKE_FLAGS+="-DDAWN_USE_X11=OFF"
+      CMAKE_FLAGS+="-DDAWN_ENABLE_VULKAN=ON"
+      CMAKE_FLAGS+="-DDAWN_ENABLE_OPENGLES=ON"
+    else
+      case $BUILD_ARCH in
+        "")
+        ;;
+        "x86")
+          CXX_FLAGS+=("-m32")
+          C_FLAGS+=("-m32")
+        ;;
+        *)
+          show_usage "invalid build architecture '$BUILD_ARCH'"
+        ;;
+      esac
+    fi
     if [[ -n "$UBSAN" ]]; then
       CMAKE_FLAGS+=("-DDAWN_ENABLE_UBSAN=ON")
     fi
@@ -293,6 +335,11 @@ case $BUILD_SYSTEM in
       CMAKE_FLAGS+=("-DCMAKE_INSTALL_PREFIX=out/install")
       CMAKE_FLAGS+=("-DTINT_ENABLE_INSTALL=ON")
       CMAKE_FLAGS+=("-DDAWN_ENABLE_INSTALL=ON")
+
+      # With Ninja, avoid the need to relink at install time
+      # with installed directory location.
+      CMAKE_FLAGS+=("-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON")
+
       # Build Dawn as a monolithic library.  This is incompatible
       # with BUILD_SHARED_LIBS=ON
       CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=OFF")
@@ -305,6 +352,12 @@ case $BUILD_SYSTEM in
       if [[ -n "$SHARED" ]]; then
         CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=ON")
       fi
+    fi
+    if [[ -n "$CXX_FLAGS" ]]; then
+        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS='${CXX_FLAGS[@]}'")
+    fi
+    if [[ -n "$C_FLAGS" ]]; then
+        CMAKE_FLAGS+=("-DCMAKE_C_FLAGS='${C_FLAGS[@]}'")
     fi
     generate "cmake"             \
              "-S" "."            \

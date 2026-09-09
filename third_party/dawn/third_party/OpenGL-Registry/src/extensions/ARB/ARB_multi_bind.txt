@@ -1,0 +1,914 @@
+Name
+
+    ARB_multi_bind
+
+Name Strings
+
+    GL_ARB_multi_bind
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Frank Chen, Qualcomm
+    Piers Daniell, NVIDIA
+    Daniel Koch, NVIDIA
+    Jon Leech
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date:         May 30, 2013
+    Revision:                   10
+
+Number
+
+    ARB Extension #147
+
+Dependencies
+
+    This extension is written against the OpenGL 4.3 (Compatibility Profile)
+    Specification, dated August 6, 2012.
+
+    OpenGL 3.0 is required.
+
+    This extension interacts with OpenGL 3.3 and ARB_sampler_objects.
+
+    This extension interacts with OpenGL 4.3 and ARB_vertex_attrib_binding.
+
+Overview
+
+    This extension provides a new set of commands allowing applications to
+    bind or unbind a set of objects in a single call, instead of requiring a
+    separate call for each bind or unbind operation.  Using a single command
+    allows OpenGL implementations to amortize function call, name space
+    lookup, and potential locking overhead over multiple bind or unbind
+    operations.  The rendering loops of graphics applications frequently
+    switch between different states, binding different sets of resources,
+    including texture objects, sampler objects, textures for image loads and
+    stores, uniform buffers, and vertex buffers; this extension provides
+    "multi-bind" entry points for all of these object types.
+
+    Each command in this extension includes a <first> and <count> parameter,
+    specifying a continguous range of binding points to update, as well as an
+    array of <count> object names specifying the objects to bind.  Unlike
+    single bind commands, multi-bind commands can be used only to bind or
+    unbind existing objects.  Passing a previously unused object name
+    (generated or not) results in an error and does not create a new object.
+    For binding points with associated data (e.g., ranges of a buffer),
+    separate arrays are used to pass the associated data for each binding
+    point.  Passing zero values in the array of object names removes the
+    object bound to the current bounding point.  Additionally, if NULL is
+    passed as the array of objects, objects bound to the entire range of
+    binding points are unbound, as though the caller passed an array of
+    zeroes.
+
+New Procedures and Functions
+
+    void BindBuffersBase(enum target, uint first, sizei count, 
+                         const uint *buffers);
+
+    void BindBuffersRange(enum target, uint first, sizei count, 
+                          const uint *buffers, const intptr *offsets,
+                          const sizeiptr *sizes);
+
+    void BindTextures(uint first, sizei count, const uint *textures);
+
+    void BindSamplers(uint first, sizei count, const uint *samplers);
+
+    void BindImageTextures(uint first, sizei count, const uint *textures);
+
+    void BindVertexBuffers(uint first, sizei count, const uint *buffers,
+                           const intptr *offsets, const sizei *strides);
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL 4.3 (Compatibility Profile) Specification
+
+    Modify Section 2.3.1, Errors, p. 15
+
+    (modify third paragraph, p. 16, adding "unless otherwise noted"
+     qualification to the general rule that commands producing errors have no
+     side effects)
+
+    Table 2.3 summarizes ...  if an OUT_OF_MEMORY error has occurred.  In
+    other cases, there are no side effects unless otherwise noted; the command
+    which generates the error is ignored so that it has no effect on GL state
+    or framebuffer contents. ...
+
+
+    Modify Section 6.1.1, Binding Buffer Objects To Indexed Targets, p. 55
+
+    (insert immediately after the "Errors" block at the end of the section,
+    p. 56)
+
+    The commands
+
+      void BindBuffersBase(enum target, uint first, sizei count, 
+                           const uint *buffers);
+
+      void BindBuffersRange(enum target, uint first, sizei count, 
+                            const uint *buffers, const intptr *offsets,
+                            const sizeiptr *sizes);
+
+    bind <count> existing buffer objects to bindings numbered <first> through
+    <first>+<count>-1 in the array of buffer binding points corresponding to
+    <target>.  If <buffers> is not NULL, it specifies an array of <count>
+    values, each of which must be zero or the name of an existing buffer
+    object.  For BindBuffersRange, <offsets> and <sizes> specify arrays of
+    <count> values indicating the range of each buffer to bind.  If <buffers>
+    is NULL, all bindings from <first> through <first>+<count>-1 are reset
+    to their unbound (zero) state. In this case, the offsets and sizes
+    associated with the binding points are set to default values, ignoring
+    <offsets> and <sizes>.
+
+    BindBuffersBase is equivalent to:
+
+      for (i = 0; i < count; i++) {
+        if (buffers == NULL) {
+          glBindBufferBase(target, first + i, 0);
+        } else {
+          glBindBufferBase(target, first + i, buffers[i]);
+        }
+      }
+
+    except that the single general buffer binding corresponding to <target>
+    is unmodified, and that buffers will not be created if they do not
+    exist.
+
+    BindBuffersRange is equivalent to:
+
+      for (i = 0; i < count; i++) {
+        if (buffers == NULL) {
+          glBindBufferRange(target, first + i, 0, 0, 0);
+        } else {
+          glBindBufferRange(target, first + i, buffers[i], offsets[i], 
+                            sizes[i]);
+        }
+      }
+
+    except that the single general buffer binding corresponding to <target>
+    is unmodified, and that buffers will not be created if they do not
+    exist.
+
+    The values specified in <buffers>, <offsets>, and <sizes> will be checked
+    separately for each binding point.  When values for a specific binding
+    point are invalid, the state for that binding point will be unchanged and
+    an error will be generated.  However, state for other binding points will
+    still be changed if their corresponding values are valid.
+
+    Errors
+
+      An INVALID_ENUM error is generated if <target> is not one of the targets
+      listed above.
+
+      An INVALID_OPERATION error is generated if <first> + <count> is greater
+      than the number of target-specific indexed binding points, as described
+      in section 6.7.1.
+
+      An INVALID_OPERATION error is generated if any value in <buffers> is not
+      zero or the name of an existing buffer object (per binding).
+
+      An INVALID_VALUE error is generated by BindBuffersRange if any value in
+      <offsets> is less than zero (per binding).
+
+      An INVALID_VALUE error is generated by BindBuffersRange if any value in
+      <sizes> is less than or equal to zero (per binding).
+
+      An INVALID_VALUE error is generated by BindBuffersRange if any pair of
+      values in <offsets> and <sizes> does not respectively satisfy the
+      constraints described for those parameters for the specified target, as
+      described in section 6.7.1 (per binding).
+
+
+    Modify Section 8.1, Texture Objects (p. 155)
+
+    (insert after errors section, p. 156)
+
+    The command
+
+      void BindTextures(uint first, sizei count, const uint *textures);
+
+    binds <count> existing texture objects to texture image units numbered
+    <first> through <first>+<count>-1.  If <textures> is not NULL, it
+    specifies an array of <count> values, each of which must be zero or the
+    name of an existing texture object.  When an entry in <textures> is the
+    name of an existing texture object, that object is bound to corresponding
+    texture unit for the target specified when the texture object was created.
+    When an entry in <textures> is zero, each of the targets enumerated at the
+    beginning of this section is reset to its default texture for the
+    corresponding texture image unit.  If <textures> is NULL, each target of
+    each affected texture image unit from <first> through <first>+<count>-1 is
+    reset to its default texture.
+
+    BindTextures is equivalent to
+
+      for (i = 0; i < count; i++) {
+        uint texture;
+        if (textures == NULL) { 
+          texture = 0;
+        } else {
+          texture = textures[i];
+        }
+        ActiveTexture(TEXTURE0 + first + i);
+        if (texture != 0) {
+          enum target = /* target of texture object textures[i] */;
+          BindTexture(target, textures[i]);
+        } else {
+          for (target in all supported targets) {
+            BindTexture(target, 0);
+          }
+        }
+      }
+
+    except that the active texture selector retains its original value upon
+    completion of the command, and that textures will not be created if they
+    do not exist.
+
+
+    The values specified in <textures> will be checked separately for each
+    texture image unit.  When a value for a specific texture image unit is
+    invalid, the state for that texture image unit will be unchanged and an
+    error will be generated.  However, state for other texture image units
+    will still be changed if their corresponding values are valid.
+
+    Errors
+
+      An INVALID_OPERATION error is generated if <first> + <count> is greater
+      than the number of texture image units supported by the implementation.
+
+      An INVALID_OPERATION error is generated if any value in <textures> is
+      not zero or the name of an existing texture object (per binding).
+
+
+    Modify Section 8.2, Sampler Objects (p. 158)
+
+    (insert after errors section, p. 159)
+
+    The command
+
+      void BindSamplers(uint first, sizei count, const uint *samplers);
+
+    binds <count> existing sampler objects to texture image units numbered
+    <first> through <first>+<count>-1.  If <samplers> is not NULL, it
+    specifies an array of <count> values, each of which must be zero or the
+    name of an existing sampler object.  If <samplers> is NULL, each affected
+    texture image unit from <first> through <first>+<count>-1 will be reset to
+    have no bound sampler object.
+
+    BindSamplers is equivalent to
+
+      for (i = 0; i < count; i++) {
+        if (samplers == NULL) {
+          glBindSampler(first + i, 0);
+        } else {
+          glBindSampler(first + i, samplers[i]);
+        }
+      }
+
+    The values specified in <samplers> will be checked separately for each
+    texture image unit.  When a value for a specific texture image unit is
+    invalid, the state for that texture image unit will be unchanged and an
+    error will be generated.  However, state for other texture image units
+    will still be changed if their corresponding values are valid.
+
+    Errors
+
+      An INVALID_OPERATION error is generated if <first> + <count> is greater
+      than the number of texture image units supported by the implementation.
+
+      An INVALID_OPERATION error is generated if any value in <samplers> is
+      not zero or the name of an existing sampler object (per binding).
+
+
+    Modify Section 8.25, Texture Image Loads and Stores, p. 281
+
+    (insert before the next-to-last paragraph, p. 282, "When a shader
+     accesses...")
+
+    The command
+
+      void BindImageTextures(uint first, sizei count, const uint *textures);
+
+    binds <count> existing texture objects to image units numbered <first>
+    through <first>+<count>-1.  If <textures> is not NULL, it specifies an
+    array of <count> values, each of which must be zero or the name of an
+    existing texture object.  If <textures> is NULL, each affected image unit
+    from <first> through <first>+<count>-1 will be reset to have no bound
+    texture object.
+
+    When binding a non-zero texture object to an image unit, the image unit
+    <level>, <layered>, <layer>, and <access> parameters are set to zero,
+    TRUE, zero, and READ_WRITE, respectively.  The image unit <format>
+    parameter is taken from the internal format of the texture image at level
+    zero of the texture object identified by <textures>.  For cube map
+    textures, the internal format of the TEXTURE_CUBE_MAP_POSITIVE_X image of
+    level zero is used.  For multisample, multisample array, buffer, and
+    rectangle textures, the internal format of the single texture level is
+    used.
+
+    When unbinding a texture object from an image unit, the image unit
+    parameters <level>, <layered>, <layer>, and <format> will be reset to
+    their default values of zero, FALSE, 0, and R8, respectively.
+
+    BindImageTextures is equivalent to
+
+      for (i = 0; i < count; i++) {
+        if (textures == NULL || textures[i] = 0) {
+          glBindImageTexture(first + i, 0, 0, FALSE, 0, READ_ONLY, R8);
+        } else {
+          glBindImageTexture(first + i, textures[i], 0, TRUE, 0, READ_WRITE,
+                             lookupInternalFormat(textures[i]));
+        }
+      }
+
+    where lookupInternalFormat returns the internal format of the specified
+    texture object.
+
+    The values specified in <textures> will be checked separately for each
+    image unit.  When a value for a specific image unit is invalid, the state
+    for that image unit will be unchanged and an error will be generated.
+    However, state for other image units will still be changed if their
+    corresponding values are valid.
+
+    Errors
+
+      An INVALID_OPERATION error is generated if <first> + <count> is greater
+      than the number of image units supported by the implementation.
+
+      An INVALID_OPERATION error is generated if any value in <textures> is
+      not zero or the name of an existing texture object (per binding).
+
+      An INVALID_OPERATION error is generated if the internal format of the
+      level zero texture image of any texture in <textures> is not found in
+      table 8.33 (per binding).
+
+      An INVALID_OPERATION error is generated if the width, height, or depth
+      of the level zero texture image of any texture in <textures> is zero
+      (per binding).
+
+
+    Modify Section 10.3.1, Specifying Arrays For Generic Attributes, p. 340
+
+    (insert after first errors section, p. 343)
+
+    The command
+
+      void BindVertexBuffers(uint first, sizei count, const uint *buffers,
+                             const intptr *offsets, const sizei *strides);
+
+    binds <count> existing buffer objects to vertex buffer binding points
+    numbered <first> through <first>+<count>-1.  If <buffers> is not NULL, it
+    specifies an array of <count> values, each of which must be zero or the
+    name of an existing buffer object.  <offsets> and <strides> specify arrays
+    of <count> values indicating the offset of the first element and stride
+    between elements in each buffer, respectively.  If <buffers> is NULL, each
+    affected vertex buffer binding point from <first> through
+    <first>+<count>-1 will be reset to have no bound buffer object.  In this
+    case, the offsets and strides associated with the binding points are set
+    to default values, ignoring <offsets> and <strides>.
+
+    BindVertexBuffers is equivalent to
+
+      for (i = 0; i < count; i++) {
+        if (buffers == NULL) {
+          glBindVertexBuffer(first + i, 0, 0, 16);
+        } else {
+          glBindVertexBuffer(first + i, buffers[i], offsets[i], strides[i]);
+        }
+      }
+
+    except that buffers will not be created if they do not exist.
+
+    The values specified in <buffers>, <offsets>, and <strides> will be
+    checked separately for each vertex buffer binding point.  When a value for
+    a specific binding point is invalid, the state for that binding point will
+    be unchanged and an error will be generated.  However, state for other
+    binding points will still be changed if their corresponding values are
+    valid.
+
+    Errors
+
+      An INVALID_OPERATION error is generated if <first> + <count> is greater
+      than the value of MAX_VERTEX_ATTRIB_BINDINGS.
+
+      An INVALID_OPERATION error is generated if any value in <buffers> is not
+      zero or the name of an existing buffer object (per binding).
+
+      An INVALID_VALUE error is generated if any value in <offsets> or
+      <strides> is negative (per binding).
+
+
+    Modify Section 21.4.1, Commands Not Usable in Display Lists, p. 618
+
+    (add a new section below "Debug output", p. 619)
+
+    Multi-object binds:  BindBuffersBase, BindBuffersRange, BindTextures,
+    BindSamplers, BindImageTextures, BindVertexBuffers
+
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on OpenGL 3.3 and ARB_sampler_objects
+
+    If neither OpenGL 3.3 nor ARB_sampler_objects is supported, references to
+    BindSamplers should be removed.
+
+Dependencies on OpenGL 4.3 and ARB_vertex_attrib_binding
+
+    If neither OpenGL 4.3 nor ARB_vertex_attrib_binding is supported,
+    references to BindVertexBuffers should be removed.
+
+Errors
+
+    An INVALID_ENUM error is generated by BindBuffersBase or BindBuffersRange
+    if <target> is not one of the indexed targets for buffer bindings.
+
+    An INVALID_OPERATION error is generated by BindBuffersBase or
+    BindBuffersRange if <first> + <count> is greater than the number of
+    target-specific indexed binding points, as described in section 6.7.1.
+
+    An INVALID_OPERATION error is generated by BindBuffersBase or
+    BindBuffersRange if any value in <buffers> is not zero or the name of an
+    existing buffer object (per binding).
+
+    An INVALID_VALUE error is generated by BindBuffersRange if any value in
+    <offsets> is less than zero (per binding).
+
+    An INVALID_VALUE error is generated by BindBuffersRange if any value in
+    <sizes> is less than or equal to zero (per binding).
+
+    An INVALID_VALUE error is generated by BindBuffersRange if any pair of
+    values in <offsets> and <sizes> do not respectively satisfy the
+    constraints described for those parameters for the specified target, as
+    described in section 6.7.1 (per binding).
+
+    An INVALID_OPERATION error is generated by BindTextures if <first> +
+    <count> is greater than the number of texture image units supported by the
+    implementation.
+
+    An INVALID_OPERATION error is generated by BindTextures if any value in
+    <textures> is not zero or the name of an existing texture object (per
+    binding).
+
+    An INVALID_OPERATION error is generated by BindSamplers if <first> +
+    <count> is greater than the number of texture image units supported by the
+    implementation.
+
+    An INVALID_OPERATION error is generated by BindSamplers if any value in
+    <samplers> is not zero or the name of an existing texture object (per
+    binding).
+
+    An INVALID_OPERATION error is generated by BindImageTextures if <first> +
+    <count> is greater than the number of image units supported by the
+    implementation.
+
+    An INVALID_OPERATION error is generated by BindImageTextures if any value
+    in <textures> is not zero or the name of an existing texture object (per
+    binding).
+
+    An INVALID_OPERATION error is generated by BindImageTextures if the
+    internal format of the level zero texture image of any texture in
+    <textures> is not found in table 8.33 (per binding).
+
+    An INVALID_OPERATION error is generated by BindImageTextures if the width,
+    height, or depth of the level zero texture image of any texture in
+    <textures> is zero (per binding).
+
+    An INVALID_OPERATION error is generated by BindVertexBuffers if <first> +
+    <count> is greater than the value of MAX_VERTEX_ATTRIB_BINDINGS.
+
+    An INVALID_OPERATION error is generated by BindVertexBuffers if any value
+    in <buffers> is not zero or the name of an existing texture object (per
+    binding).
+
+    An INVALID_VALUE error is generated by BindVertexBuffers if any value in
+    <offsets> or <strides> is negative (per binding).
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Regular binding commands such as BindBuffer or BindTexture can be used
+        either to bind an existing object or to create and bind a new object.
+        Should the multi-bind commands behave similarly?
+
+      RESOLVED:  No.  Multi-Bind commands will only support binding existing
+      objects.  They will generate an error if any of the provided objects
+      doesn't already exist.
+
+      This extension is intended to provide efficient APIs allowing
+      applications to bind multiple objects for rendering in a single command.
+      Implementations of these commands are intended to bind the objects to
+      consecutive binding points in a loop amortizing function call, name
+      space lookup, locking, and other overhead over <N> objects.  Not
+      supporting bind-to-create reduces the number of cases that this loop
+      needs to handle.
+
+      Even if bind-to-create were supported, it probably wouldn't be very
+      useful.  When bind-to-create is used in current single-bind APIs, the
+      binding serves two purposes -- to create the object and to bind it for
+      use by subsequent "update" APIs defining the state of the new object.
+      In a multi-Bind API, it wouldn't be possible to bind more than one of
+      the <N> objects for update.
+
+      Additionally, if BindTexture is used to create a texture object, the
+      texture type is established based on the <target> parameter (e.g.,
+      TEXTURE_2D).  The multi-Bind API for textures doesn't include <target>
+      parameters, so we wouldn't know what type of texture to create.
+
+    (2) Should we provide a command binding multiple texture objects of
+        different targets (e.g., TEXTURE_2D and TEXTURE_3D) in a single call?
+        For example, should you be able to bind three 2D textures to the
+        TEXTURE_2D target of image units 1, 2, and 3, as well as binding two
+        3D textures to the TEXTURE_3D target of texture image units 0 and 4?
+
+      RESOLVED:  Yes.  The BindTextures() command does not take <target>
+      enums.  Instead, the target used for each texture image unit comes from
+      the target used when the texture object was created.
+
+    (3) Should we support unbinding objects in a multi-bind command?  If so,
+        how does this work for texture objects, where each texture image unit
+        has multiple binding points (targets)?
+
+      RESOLVED:  Yes, applications can unbind objects by passing zero in the
+      array of object names.  For textures, passing zero will unbind textures
+      from all texture targets.
+
+    (4) Should we provide a simple way to unbind objects from a collection of
+        contiguous binding points?
+
+      RESOLVED:  Yes, passing a NULL pointer instead of an array of object
+      names does an unbind for all binding points.  Basically, it's treated
+      like an array of zeroes.
+
+    (5) Should we support multiple bindings of buffer objects using both the
+        "BindBufferBase" and the "BindBufferRange" styles?  If so, what name
+        should we use for these APIs?
+
+      RESOLVED:  Yes.  BindBuffersBase() is equivalent to a loop repeatedly
+      calling BindBufferBase(); BindBuffersRange() is equivalent to a loop
+      repeatedly calling BindBufferRange().
+
+      The name choice for the "plural" forms of BindBufferBase and
+      BindBufferRange was tricky.  "BindBufferRanges" would have been a fine
+      choice for BindBufferRange, but using "BindBufferBases" would have been
+      strange since "BindBufferBase" means "bind a buffer from the base of its
+      storage (offset zero)".  We considered "BindBuffers" as the plural for
+      "BindBufferBase", but decided to use "BindBuffers{Base,Range}".
+
+    (6) If we support multiple bindings using the BindBufferRange style, how
+        should the application specify the ranges?
+
+      RESOLVED:  Applications will pass separate arrays of offsets and sizes.
+
+      Alternate options included:
+
+        * a single array where entry 2<N> specifies the offset for binding <N>
+          and entry 2<N>+1 specifies the size for binding <N>;
+
+        * defining a new structure type including an offset and a size, and
+          accepting an array of <N> structures
+
+    (7) Should we create a "multi-bind" command for specifying vertex buffer
+        bindings (those specified via BindVertexBuffer)?
+
+      RESOLVED:  Yes.
+
+    (8) If we add a "multi-bind" command for specifying vertex buffer
+        bindings, should we also create a similar command for specifying
+        multiple vertex formats (VertexAttrib*Format) in a single call?
+
+      RESOLVED:  No.  The design of ARB_vertex_attrib_binding separated
+      vertex buffer bindings from vertex formats, expecting that many
+      applications will change bindings frequently but change formats
+      relatively infrequently.  While we could create a command specifying
+      multiple formats at once, but it would require us to turn several format
+      parameters (<size>, <type>, <normalized>, <relativeoffset>) into arrays.
+
+      Additionally, mutable vertex array objects can already be used to make a
+      wholesale change of formats and bindings.  An application using a small
+      number of formats with a large number of bindings could create a
+      separate VAO for each format, and then change bindings with the
+      "multi-bind" command.
+
+    (9) Should we provide a command to specify multiple image unit bindings in
+        a single command?
+
+      RESOLVED:  Yes.  We decided to support this for completeness, though the
+      required number of image units is relatively small (8).
+
+    (10) Should binding an array of buffer objects via BindBuffersBase or
+         BindBuffersRange update the generic (non-indexed) binding points for
+         <target>?
+
+      RESOLVED:  No.
+
+      In unextended OpenGL 4.3, targets like UNIFORM_BUFFER include both an
+      array of indexed bindings used for shader execution as well as a generic
+      "non-indexed" binding point that can be used for commands such as
+      BufferSubData.  Calling BindBufferBase or BindBufferRange updates two
+      binding points -- binding <index> in the array of indexed bindings as
+      well as the generic binding point.  Updating both binding points allows
+      applications to bind a buffer for manipulation and update in a single
+      command.
+
+      For BindBuffersBase and BindBuffersRange, the caller specifies <count>
+      separate buffers.  We have specified these commands not to update the
+      generic binding point.  Even if we were to update the generic binding
+      point, we'd have to pick one arbitrarily.
+
+    (11) Typically, OpenGL specifies that if an error is generated by a
+         command, that command has no effect.  This is somewhat unfortunate
+         for multi-bind commands, because it would require a first pass to
+         scan the entire list of bound objects for errors and then a second
+         pass to actually perform the bindings.  Should we have different
+         error semantics?
+
+      RESOLVED:  Yes.  In this specification, when the parameters for one of
+      the <count> binding points are invalid, that binding point is not
+      updated and an error will be generated.  However, other binding points
+      in the same command will be updated if their parameters are valid and no
+      other error occurs.
+
+    (12) What error should be generated if the <first> and <count> parameters
+         specified in multi-bind commands specify a range beyond
+         implementation-dependent limits?
+
+      RESOLVED:  INVALID_OPERATION is typically generated when the
+      combination of two values is illegal.  INVALID_VALUE would also be
+      defensible.
+
+    (13) How are the <offsets> and <sizes> parameters of BindBuffersRange used
+         if <buffers> is NULL?
+
+      RESOLVED:  We specify that these parameters are ignored when buffers
+      is NULL, so that applications can unbind a range of buffers with:
+
+        BindBuffersRange(target, 0, 8, NULL, NULL, NULL);
+
+    (14) Should we provide a "multi-bind" API to attach multiple textures to
+         the color attachments of a framebuffer object?  Should we add an API
+         populating all attachments at once?
+
+      RESOLVED:  No.  We could consider an API like:
+
+        void FramebufferColorTextures(enum target, uint first, sizei count,
+                                      const uint *textures, 
+                                      const uint *levels);
+
+      One might omit the <levels> parameter, since level 0 is used most
+      frequently, and non-zero levels could still be handled by creating
+      spearate views via ARB_texture_view.  If we wanted to be able to specify
+      the full set of attachments at once, we could have:
+
+        void FramebufferTextures(enum target, sizei count,
+                                 const uint *colorAttachments,
+                                 const uint depthAttachment,
+                                 const uint stencilAttachment);
+
+      This API effectively omits the <first> argument and always starts at
+      zero.  The "all attachments" API could be handled in OpenGL today by
+      using separate framebuffer objects for each attachment combination.
+      However, for applications that work with various combinations of
+      attachments but don't already have a notion of "attachment sets" to map
+      to framebuffer objects, caching different attachment combinations is
+      somewhat unwieldy.
+
+    (15) Should we provide a multi-bind API that binds pairs of textures and
+    samplers to a set of consecutive texture image units?
+
+      RESOLVED:  No.  We could provide a command such as:
+
+        void BindTexturesSamplers(uint first, sizei count,
+                                  const uint *textures, 
+                                  const uint *samplers);
+
+      that would be roughly equivalent to:
+
+        BindTextures(first, count, textures);
+        BindSamplers(first, count, samplers);
+
+      If we did this, we'd have to decide how it would interact with the error
+      semantics in issue (11).  If we have an error generated because of an
+      invalid texture for a given unit, would the sampler state for that unit
+      still be updated if the sampler provided were valid?  Since we chose not
+      to support this feature, we don't need to address this question.
+
+    (16) When binding a non-zero texture to a texture image unit, should
+         BindTextures implicitly unbind the textures bound to all other
+         targets of the unit?
+
+      RESOLVED:  No.
+
+      This approach was considered to behave similarly to the proposed
+      behavior for binding zero in a multi-bind API, where it unbinds any
+      bound texture for all targets.  Applications using BindTextures
+      exclusively would never have more than one texture bound to the targets
+      of a texture image unit.  A driver implementation might optimize for
+      this behavior by having a single "primary" binding point for each
+      texture unit (used by this API) and then "backup" binding points for the
+      other targets (used by BindTexture).  This API would update the
+      "primary" binding point but would only need to touch the "backup"
+      binding points if something were bound there via BindTexture.  However,
+      BindTexture would still be available and is commonly used today, so
+      there would probably be little benefit.
+
+    (17) For the BindTextures API, should the <first> parameter be an unsigned
+         integer (0) or an enum (GL_TEXTURE0)?
+
+      RESOLVED:  Use an integer unit number.
+
+    (18) The BindImageTexture API not only binds a texture to an image unit,
+         but also sets several additional pieces of state associated with an
+         image unit (level, layered or not, selected layer, and image unit
+         format).  How should this state be set?  Should we provide separate
+         arrays for each extra parameter?
+
+      RESOLVED:  Use "default" values for each image unit.  When unbinding
+      textures, reset the state to API defaults (level zero, non-layered,
+      layer zero, and R8 format).  When binding textures, bind all layers of
+      level zero and take the format from the internal format of the texture
+      level being bound.  Setting <layered> to TRUE in this case is not the
+      default state, but it seems like the best default choice for cube map or
+      array textures.  For textures without layers, the <layered> parameter
+      has no effect, so this doesn't cause any problems with other targets
+      like TEXTURE_2D.
+
+      If an application wants to bind levels other than zero, select
+      individual layers of a level for array textures, or use a format
+      different from that of the texture, it will be necessary to do
+      individual bindings via BindImageTexture.
+
+    (19) If a texture bound to an image unit via BindImageTextures doesn't
+         have a defined texture image (i.e., width = height = 0 for 2D
+         textures), what internal format is associated with the binding?
+
+      UNRESOLVED:  We will generate INVALID_OPERATION if there is no defined
+      texture image.
+
+      Note that even if a texture level has no texels defined, there is still
+      an <internalformat> associated with the level, which can be queried with
+      GetTexLevelParameter.  That value could be used, but it would still have
+      to be checked to see if it's valid for image loads and stores.
+      BindImageTexture doesn't accept all possible <format> enums.
+      Additionally, the default internal format is profile-dependent:  core
+      uses "RGBA", compatibility uses "1" (from OpenGL 1.0, meaning
+      LUMINANCE).  Neither is accepted by BindImageTexture, though RGBA might
+      be mapped internally by a driver to an internal format like RGBA8 that
+      is accepted.
+
+      Given the potential confusion over the internal format for zero-sized
+      images and default internal formats, it's best to just not accept
+      textures without defined images.
+
+    (20) The BindBuffersRange and BindVertexBuffers accept arrays of "intptr"
+         and "sizeiptr" values, which will have different sizes on 32- and
+         64-bit architectures.  Is there any problem here?
+
+      RESOLVED:  The API is fine.  Application developers will need to be
+      careful to use the correct data type for the arrays it passes to these
+      commands.  If the array passed to <offsets> is an array of "int" instead
+      of "intptr", that code will typically work fine when compiled on 32-bit
+      architectures if "int" types are stored as 32-bit values.  But if the
+      same code is compiled for a 64-bit architecture, the array will be too
+      small.  We expect that compilers will generate warnings and/or errors
+      if the caller passes a pointer to the wrong type.
+
+    (21) In the compatibility profile, can multi-bind commands be included in
+         display lists?
+
+      RESOLVED:  No.
+
+    (22) What error should be generated when one of the names passed to a
+         multi-bind command is not the name of an existing object?
+
+      UNRESOLVED:  INVALID_OPERATION.  For the core profile, as well as for
+      object types created since OpenGL 3.1, we have spec errors like the
+      following for BindTexture:
+
+        An INVALID_OPERATION error is generated if <texture> is not zero or a
+        name returned from a previous call to GenTextures, or if such a name
+        has since been deleted.
+
+      In issue (1), we decided that the multi-bind commands could not be used
+      to create objects, whether or not the object names had previously been
+      returned by commands like GenTextures.  The errors we require for the
+      multi-bind commands are different from the BindTexture language quoted
+      immmediately above only in the sense that the multi-bind will
+      additionally throw an error if a texture name has been generated by
+      GenTextures but the underlying texture object hasn't yet been created.
+      However, the errors are similar enough that they should both throw the
+      same error code (INVALID_OPERATION).
+
+
+Revision History
+
+    Revision 11, August 16, 2013 (Jon Leech)
+      - Typo fix for BindBuffers* "offsets and strides" -> "offsets and
+        sizes" (Bug 10685).
+    Revision 10, July 21, 2013 (Jon Leech)
+      - Specify that multibind commands are equivalent to repeated calls to
+        the corresponding single bind commands except that objects are not
+        created if they do not exist, matching issue 1. The other single
+        bind commands do not create objects so this clarification is not
+        needed for them (Bug 10486).
+
+    Revision 9, May 30, 2013 (Jon Leech)
+      - Fix typo for <offsets> "less than to zero" -> "less than zero". Use
+        "<first> *through* <first> + <count> - 1" consistently.
+
+    Revision 8, May 28, 2013
+      - Change the error thrown when an object name passed to a multi-bind
+        command doesn't yet exist from INVALID_VALUE to INVALID_OPERATION 
+        (bug 10264).
+      - Disallow the use of multi-bind commands in display lists (bug 10322).
+      - Change the <count> parameter in multi-bind commands to use the type
+        "sizei" to be consistent with other GL commands accepting a <count>
+         parameter (bug 10323).
+      - Clarify that passing NULL in arguments like <buffers> only affect
+        bindings <first> through <first>+<count>-1 (bug 10289).
+      - In the errors section for multi-bind commands, clarify which errors
+        apply to only a single binding and which apply to the entire call (bug
+        10289). 
+      - Clarify in the spec language that BindImageTextures sets <access> to
+        READ_WRITE for all bindings, which was already in the pseudocode (bug
+        10289).
+      - Use the term "general buffer binding" in spec language stating that
+        BindBuffersBase and BindBuffersRange only affect numbered binding
+        points (bug 10289).
+      - Add issues (21) and (22).
+
+    Revision 7, May 18, 2013
+      - Fix typo in the description of BindSamplers.
+
+    Revision 6, May 17, 2013
+      - Modify the pseudocode for BindTextures to add in TEXTURE0 to the
+        value passed to ActiveTexture, since it takes an enum and not an
+        integer.
+
+    Revision 5, May 10, 2013
+      - Define lookupInternalFormat in pseudocode example.
+
+    Revision 4, May 2, 2013
+      - Renamed entry points for buffer bindings from BindBuffers() and
+        BindBufferRanges() to BindBuffersBase() and BindBuffersRange(),
+        respectively.
+      - Add an INVALID_OPERATION error if a non-zero texture passed to
+        BindImageTextures() does not have a defined image array.
+      - Add an "unless otherwise noted" qualification to the general spec rule
+        that commands producing errors do not modify the GL state.  Multi-bind
+        commands have special error behavior discussed in issue (11).
+      - Mark issues resolved based on previous spec reviews.
+      - Added issue (20).
+
+    Revision 3, April 19, 2013
+      - Add a BindImageTextures API to bind a collection of textures to image
+        units (for shader image loads/stores).
+      - Fix the spec to consistently use the parameter name <first> to
+        identify the first binding point to update.
+      - Add new issues.
+
+    Revision 2, January 20, 2013
+      - Fix various specification errors.
+      - Add an issue about whether we should provide a multi-bind API for
+        framebuffer object attachments.
+
+    Revision 1, January 18, 2013
+      - Initial revision.

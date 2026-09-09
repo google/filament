@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Device.h"
-#include "dawn/native/metal/Forward.h"
-#include "dawn/native/metal/QueueMTL.h"
-#include "dawn/tests/DawnTest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/metal/Forward.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn::native {
 namespace {

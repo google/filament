@@ -1,0 +1,161 @@
+Name
+
+    EXT_texture_perturb_normal
+
+Name Strings
+
+    GL_EXT_texture_perturb_normal
+
+Version
+
+    $Date: 1999/07/29 23:28:10 $
+
+Number
+
+    147
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    EXT_coordinate_frame is required.
+    EXT_light_texture is required.
+    The language is written against the OpenGL 1.2 specification.
+
+Overview
+
+    This extension defines a mechanism for using texture values to perturb
+    the fragment normal vector prior to fragment lighting.  It enables a
+    direct implementation of the original formulation of bump mapping by
+    Blinn.
+
+Patent Note
+
+    To the extent that SGI has patent rights that are unavoidably
+    infringed by all implementations of this extension, SGI will, upon
+    request, grant a license under such patent rights to the requesting
+    party subject to reasonable terms and conditions, and without
+    incremental charge or fee. Such license shall be non-exclusive, and
+    non-transferable, and shall be limited to implementations of the
+    extension in combination with any conformance certified
+    implementation of the OpenGL API. Such license is expressly
+    contingent upon a grant back of a non-exclusive, royalty-free,
+    perpetual, worldwide license to SGI and its OpenGL licensees under
+    the requesting party's patent rights that are unavoidably infringed
+    by all implementations of this extension or OpenGL.
+
+Issues
+
+    *  do we need to specify how evaluators compute the tangent and binormal
+       in a way different than the EXT_coordinate_frame spec does?
+
+    *  TextureLightEXT effectively defines a set of orthogonal binding
+       points.  TextureNormalEXT defines modes for how the NORMAL binding
+       works, either as a perturbation or a straight replacement.  An
+       alternate way to define TextureNormalEXT which might be more
+       symmetric is to allow it to define two binding points: the
+       base normal and the perturbation and allow binding to either.
+       If no texture is bound to the perturbation, it is treated as
+       zero.  A disadvantage is that it provides generality that may be
+       unwarranted such as the ability to bind one texture to the base
+       and another texture to the perturbation.  Which way should we
+       do this?
+
+    *  the naming scheme doesn't seem consistent.  light_texture.spec
+       defines TextureLightEXT and the extension name EXT_light_texture.
+       texture_perturb_normal.spec defines TextureNormalEXT and the extension
+       name EXT_texture_perturb_normal.  Perhaps light_texture should be
+       renamed EXT_texture_light or rename this one?
+
+New Procedures and Functions
+
+    void TextureNormalEXT(enum mode)
+
+New Tokens
+
+    Accepted by the <mode> parameter of TextureNormalEXT:
+
+    PERTURB_EXT                         0x85AE
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    TEXTURE_NORMAL_EXT                  0x85AF
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    The command
+
+    TextureNormalEXT(enum mode)
+
+    determines how the fragment normal vector is modified by the post-
+    texture-environment color when the texture application mode is
+    FRAGMENT_NORMAL_EXT.  <mode> is one of REPLACE or PERTURB_EXT.
+
+    If <mode> is REPLACE, then the R, G, and B components of the
+    post-texture-environment color replace the normal for the fragment,
+    as defined in the light_texture specification.  This is the default
+    behavior.
+
+    If <mode> is PERTURB_EXT, then the R and A components of the
+    post-texture-environment color are used, along with the tangent and
+    binormal vectors of the fragment, to perturb the normal vector of the
+    fragment.  The tangent vector for the fragment is multiplied by the
+    range-shifted R component (2*R-1) of the post-texture-environment
+    color, and the binormal vector for the fragment is multiplied by the
+    range-shifted A component (2*A-1) of the post-texture-environment
+    color.  The vectors thus obtained are added to the normal for the
+    fragment and the resultant vector is normalized. This normalized
+    resultant vector replaces the normal for the fragment.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    The texture normal mode is queried using GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev with the <pname> parameter set to
+    TEXTURE_NORMAL_EXT.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on EXT_coordinate_frame
+
+    EXT_coordinate_frame is required since this extension requires
+    the tangent and binormal to perturb the normal vector and this
+    extension makes no sense without the tangent and binormal.
+
+Dependencies on EXT_light_texture
+
+    EXT_light_texture is required since this extension pertains to how
+    textures are used in the fragment lighting computations and makes
+    no sense without light texture.
+
+Errors
+
+    INVALID_ENUM is generated if TextureNormalEXT parameter <pname> is
+    not REPLACE or PERTURB_EXT.
+
+    INVALID_OPERATION is generated if TextureNormalEXT is executed between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value           Get Command     Type    Initial Value       Attribute
+    ---------           -----------     ----    -------------       ---------
+    TEXTURE_NORMAL_EXT  GetIntegerv     Z2      REPLACE             texture
+
+New Implementation Dependent State
+
+    None

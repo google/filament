@@ -34,15 +34,15 @@
 #include <mutex>
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/SerialMap.h"
-#include "dawn/common/Time.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/ObjectBase.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/SerialMap.h"
+#include "src/dawn/common/Time.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ObjectBase.h"
 
 namespace dawn::native {
 

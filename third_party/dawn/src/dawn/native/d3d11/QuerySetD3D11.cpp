@@ -25,15 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/QuerySetD3D11.h"
+#include "src/dawn/native/d3d11/QuerySetD3D11.h"
 
 #include <utility>
 
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d11/BufferD3D11.h"
-#include "dawn/native/d3d11/CommandRecordingContextD3D11.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/UtilsD3D11.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d11/BufferD3D11.h"
+#include "src/dawn/native/d3d11/CommandRecordingContextD3D11.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/UtilsD3D11.h"
 
 namespace dawn::native::d3d11 {
 
@@ -49,7 +50,7 @@ MaybeError QuerySet::Initialize() {
     D3D11_QUERY_DESC queryDesc = {};
     queryDesc.Query = D3D11_QUERY_OCCLUSION_PREDICATE;
 
-    for (uint32_t i = 0; i < GetQueryCount(); ++i) {
+    for ([[maybe_unused]] QueryIndex i : Range(GetQueryCount())) {
         ComPtr<ID3D11Predicate> d3d11Predicate;
         DAWN_TRY(CheckHRESULT(
             ToBackend(GetDevice())->GetD3D11Device()->CreatePredicate(&queryDesc, &d3d11Predicate),
@@ -78,29 +79,29 @@ void QuerySet::SetLabelImpl() {
     }
 }
 
-void QuerySet::BeginQuery(ID3D11DeviceContext* d3d11DeviceContext, uint32_t query) {
+void QuerySet::BeginQuery(ID3D11DeviceContext* d3d11DeviceContext, QueryIndex query) {
     d3d11DeviceContext->Begin(mPredicates[query].Get());
 }
 
-void QuerySet::EndQuery(ID3D11DeviceContext* d3d11DeviceContext, uint32_t query) {
+void QuerySet::EndQuery(ID3D11DeviceContext* d3d11DeviceContext, QueryIndex query) {
     d3d11DeviceContext->End(mPredicates[query].Get());
 }
 
 MaybeError QuerySet::Resolve(const ScopedSwapStateCommandRecordingContext* commandContext,
-                             uint32_t firstQuery,
-                             uint32_t queryCount,
+                             QueryIndex firstQuery,
+                             QueryIndex queryCount,
                              Buffer* destination,
                              uint64_t offset) {
-    DAWN_TRY(destination->Clear(commandContext, 0, offset, queryCount * sizeof(uint64_t)));
-    const auto& queryAvailability = GetQueryAvailability();
-    for (uint32_t i = 0; i < queryCount; ++i) {
-        uint32_t queryIndex = i + firstQuery;
-        if (queryAvailability[queryIndex]) {
-            auto& predicate = mPredicates[queryIndex];
-            DAWN_TRY(destination->PredicatedClear(commandContext, predicate.Get(), 1,
-                                                  offset + i * sizeof(uint64_t), sizeof(uint64_t)));
+    DAWN_TRY(destination->Clear(commandContext, 0, offset, ToQueryStorageSize(queryCount)));
+
+    for (QueryIndex i : Range(firstQuery, firstQuery + queryCount)) {
+        if (IsQueryAvailable(i)) {
+            DAWN_TRY(destination->PredicatedClear(commandContext, mPredicates[i].Get(), 1,
+                                                  offset + ToQueryStorageSize(i - firstQuery),
+                                                  kSingleQueryStorageSize));
         }
     }
+
     return {};
 }
 

@@ -25,33 +25,33 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
 
-#include "dawn/common/Math.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/Commands.h"
 #include "dawn/native/dawn_platform_autogen.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/QuerySetWGPU.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/QuerySetWGPU.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
 
 namespace dawn::native::webgpu {
 
 WGPUExtent3D ToWGPU(const TexelExtent3D& extent) {
     return {
-        .width = static_cast<uint32_t>(extent.width),
-        .height = static_cast<uint32_t>(extent.height),
-        .depthOrArrayLayers = static_cast<uint32_t>(extent.depthOrArrayLayers),
+        .width = dchecked_cast<uint32_t>(extent.width),
+        .height = dchecked_cast<uint32_t>(extent.height),
+        .depthOrArrayLayers = dchecked_cast<uint32_t>(extent.depthOrArrayLayers),
     };
 }
 
 WGPUOrigin3D ToWGPU(const TexelOrigin3D& origin) {
     return {
-        .x = static_cast<uint32_t>(origin.x),
-        .y = static_cast<uint32_t>(origin.y),
-        .z = static_cast<uint32_t>(origin.z),
+        .x = dchecked_cast<uint32_t>(origin.x),
+        .y = dchecked_cast<uint32_t>(origin.y),
+        .z = dchecked_cast<uint32_t>(origin.z),
     };
 }
 
@@ -92,7 +92,7 @@ WGPUTexelCopyBufferInfo ToWGPU(const BufferCopy& copy, const TypedTexelBlockInfo
             {
                 .offset = copy.offset,
                 .bytesPerRow = static_cast<uint32_t>(blockInfo.ToBytes(copy.blocksPerRow)),
-                .rowsPerImage = static_cast<uint32_t>(copy.rowsPerImage),
+                .rowsPerImage = dchecked_cast<uint32_t>(copy.rowsPerImage),
             },
         .buffer = ToBackend(copy.buffer)->GetInnerHandle(),
     };
@@ -161,8 +161,8 @@ WGPUPassTimestampWrites ToWGPU(const TimestampWrites& writes) {
     return {
         .nextInChain = nullptr,
         .querySet = ToBackend(writes.querySet)->GetInnerHandle(),
-        .beginningOfPassWriteIndex = writes.beginningOfPassWriteIndex,
-        .endOfPassWriteIndex = writes.endOfPassWriteIndex,
+        .beginningOfPassWriteIndex = uint32_t{writes.beginningOfPassWriteIndex},
+        .endOfPassWriteIndex = uint32_t{writes.endOfPassWriteIndex},
     };
 }
 

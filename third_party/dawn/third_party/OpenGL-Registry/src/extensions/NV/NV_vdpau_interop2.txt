@@ -1,0 +1,208 @@
+Name
+
+    NV_vdpau_interop2
+
+Name Strings
+
+    GL_NV_vdpau_interop2
+
+Contributors
+
+    Manoj Gupta Bonda, NVIDIA
+    James Jones, NVIDIA
+
+Contact
+
+    Manoj Gupta Bonda, NVIDIA (mbonda 'at' nvidia.com)
+
+Status
+
+    Complete
+
+Version
+
+    1 (2 Oct 2018)
+
+Number
+
+    OpenGL Extension #533
+
+Dependencies
+
+    This extension is written against the OpenGL 4.6 Specification
+    (Compatibility Profile), dated July 30, 2017.
+    but can apply to OpenGL 1.1 and up.
+
+    OpenGL 1.1 is required.
+    GL_NV_vdpau_interop is required.
+    GL_EXT_framebuffer_object affects the definition of this extension.
+    GL_ARB_texture_rectangle affects the definition of this extension.
+    GL_ARB_texture_non_power_of_two affects the definition of this
+    extension.
+
+Overview
+
+    This extension allows VDPAU video surfaces to be used
+    either with frame or field structures for texturing and rendering.
+
+IP Status
+
+    There are no known IP issues.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+
+    vdpauSurfaceNV VDPAURegisterVideoSurfaceWithPictureStructureNV (const void *vdpSurface,
+                                                                    enum       target,
+                                                                    sizei      numTextureNames,
+                                                                    const uint *textureNames,
+                                                                    boolean    isFrameStructure);
+
+New Tokens
+
+    None
+
+Additions to Chapter 8 of the OpenGL 4.6 (unabridged) Specification
+(Textures and Samplers)
+
+    Replace the paragraph that begins with 'The command
+    vdpauSurfaceNV VDPAURegisterVideoSurfaceNV' and the following two paragraphs,
+    including table 3.8.3.1, with the following:
+
+    The commands
+
+        vdpauSurfaceNV VDPAURegisterVideoSurfaceNV (const void *vdpSurface,
+                                                    enum       target,
+                                                    sizei      numTextureNames,
+                                                    const uint *textureNames);
+
+        vdpauSurfaceNV VDPAURegisterVideoSurfaceWithPictureStructureNV (const void *vdpSurface,
+                                                                        enum       target,
+                                                                        sizei      numTextureNames,
+                                                                        const uint *textureNames,
+                                                                        boolean    isFrameStructure);
+
+    defines a set of two-dimensional textures, where the image data may
+    be taken from the VdpVideoSurface <vdpSurface>. <target> must be
+    one of TEXTURE_2D or TEXTURE_RECTANGLE. <numTextureNames>
+    determines how many textures are defined. <textureNames> contains
+    the names of the textures that are defined. The surface is
+    transitioned into the registered state.
+
+    VDPAURegisterVideoSurfaceNV is equivalent to calling
+    VDPAURegisterVideoSurfaceWithPictureStructureNV with <isFrameStructure>
+    set to FALSE.
+
+    Legal values for <numTextureNames>,<isFrameStructure> are derived from the
+    VdpChromaType of <vdpSurface>, as defined in table 8.7.1.
+
+                                                                                          Internal
+      VdpChromaType              numTextureNames  isFrameStructure      Index  Size       Format    Content
+      -------------              ---------------  ----------------      -----  ----       --------  -------------------
+      VDP_CHROMA_TYPE_420        4                        0             0      w   x h/2  R8        Top-field luma
+                                                                        1      w   x h/2  R8        Bottom-field luma
+                                                                        2      w/2 x h/4  R8G8      Top-field chroma
+                                                                        3      w/2 x h/4  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_422        4                        0             0      w   x h/2  R8        Top-field luma
+                                                                        1      w   x h/2  R8        Bottom-field luma
+                                                                        2      w/2 x h/2  R8G8      Top-field chroma
+                                                                        3      w/2 x h/2  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_444        4                        0             0      w   x h/2  R8        Top-field luma
+                                                                        1      w   x h/2  R8        Bottom-field luma
+                                                                        2      w   x h/2  R8G8      Top-field chroma
+                                                                        3      w   x h/2  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_420        2                        1             0      w   x h    R8        Luma
+                                                                        1      w/2 x h/2  R8G8      Chroma
+      VDP_CHROMA_TYPE_422        2                        1             0      w   x h    R8        Luma
+                                                                        1      w/2 x h    R8G8      Chroma
+      VDP_CHROMA_TYPE_444        2                        1             0      w   x h    R8        Luma
+                                                                        1      w   x h    R8G8      Chroma
+      VDP_CHROMA_TYPE_420_FIELD  4                        0             0      w   x h/2  R8        Top-field luma
+                                                                        1      w   x h/2  R8        Bottom-field luma
+                                                                        2      w/2 x h/4  R8G8      Top-field chroma
+                                                                        3      w/2 x h/4  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_422_FIELD  4                        0             0      w   x h/2  R8        Top-field luma
+                                                                        1      w   x h/2  R8        Bottom-field luma
+                                                                        2      w/2 x h/2  R8G8      Top-field chroma
+                                                                        3      w/2 x h/2  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_444_FIELD  4                        0             0      w   x h/2  R8        Top-field luma
+                                                                        1      w   x h/2  R8        Bottom-field luma
+                                                                        2      w   x h/2  R8G8      Top-field chroma
+                                                                        3      w   x h/2  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_420_FRAME  2                        1             0      w   x h    R8        Luma
+                                                                        1      w/2 x h/2  R8G8      Chroma
+      VDP_CHROMA_TYPE_422_FRAME  2                        1             0      w   x h    R8        Luma
+                                                                        1      w/2 x h    R8G8      Chroma
+      VDP_CHROMA_TYPE_444_FRAME  2                        1             0      w   x h    R8        Luma
+                                                                        1      w   x h    R8G8      Chroma
+
+      Table 8.7.1: Supported VdpChromaType values, and derived values
+      of <numTextureNames>,<isFrameStructure> and texture parameters for
+      each texture.
+
+    VDPAURegisterVideoSurfaceWithPictureStructureNV's return value is a handle
+    used by various other commands detailed in NV_vdpau_interop.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to the OpenGL Shading Language
+
+    None
+
+GLX Protocol
+
+    VDPAU implementations currently only support direct-rendering.
+    Consequently, no GLX protocol is currently defined for this
+    extension.
+
+Dependencies on GL_ARB_texture_rectangle
+
+    If GL_ARB_texture_rectangle is not supported, TEXTURE_RECTANGLE may
+    not be used as target for VDPAURegisterVideoSurfaceWithPictureStructureNV.
+
+Dependencies on GL_ARB_texture_non_power_of_two
+
+    If GL_ARB_texture_non_power_of_two is not supported, only VDPAU
+    surfaces with power-of-two size may be used with target TEXTURE_2D.
+
+Errors
+
+    INVALID_OPERATION is generated by
+    VDPAURegisterVideoSurfaceWithPictureStructureNV if the VDPAU driver
+    refuses the request for some reason.
+
+    INVALID_OPERATION is generated if any texture named by an entry
+    within the <textureNames> parameter of
+    VDPAURegisterVideoSurfaceWithPictureStructureNV is marked as immutable.
+
+    INVALID_VALUE is generated if the VDPAU surface named by the
+    <vdpSurface> parameter of VDPAURegisterVideoSurfaceWithPictureStructureNV
+    does not have a supported format;
+    see table 8.7.1.
+
+New State
+
+    None
+
+New Implementation State
+
+    None
+
+Issues
+
+
+Revision History
+
+    1. 02 Oct 2018 - Manoj Bonda
+        Initial version
+
+    2. 21 Nov 2018 - Manoj Bonda
+        Changed status to complete.
+

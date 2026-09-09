@@ -30,12 +30,12 @@
 
 #include <atomic>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SerialQueue.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/ExecutionQueue.h"
-#include "dawn/native/IntegerTypes.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/ExecutionQueue.h"
+#include "src/dawn/native/IntegerTypes.h"
 
 namespace dawn::native::vulkan {
 

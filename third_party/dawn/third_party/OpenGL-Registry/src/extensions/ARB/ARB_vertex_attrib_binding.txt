@@ -1,0 +1,703 @@
+Name
+
+    ARB_vertex_attrib_binding
+
+Name Strings
+
+    GL_ARB_vertex_attrib_binding
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Bruce Merry
+    Mark Kilgard
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: October 22, 2013
+    Revision: 5
+
+    EXT_direct_state_access interacton added with revision 3.
+
+Number
+
+    ARB Extension #125
+
+Dependencies
+
+    This extension is written against the OpenGL 4.2 Core specification.
+
+    NV_vertex_buffer_unified_memory affects the definition of this 
+    extension.
+
+    EXT_direct_state_access affects the definition of this extension.
+
+    The Compatibility specification affects the definition of this extension.
+
+Overview
+
+    OpenGL currently supports (at least) 16 vertex attributes and 16 vertex 
+    buffer bindings, with a fixed mapping between vertex attributes and 
+    vertex buffer bindings. This extension allows the application to change
+    the mapping between attributes and bindings, which can make it more 
+    efficient to update vertex buffer bindings for interleaved vertex formats
+    where many attributes share the same buffer.
+
+    This extension also separates the vertex binding update from the vertex
+    attribute format update, which saves applications the effort of 
+    redundantly specifying the same format state over and over.
+
+    Conceptually, this extension splits the state for generic vertex attribute
+    arrays into:
+
+    - An array of vertex buffer binding points, each of which specifies:
+
+      - a bound buffer object,
+
+      - a starting offset for the vertex attribute data in that buffer object,
+
+      - a stride used by all attributes using that binding point, and
+
+      - a frequency divisor used by all attributes using that binding point.
+
+    - An array of generic vertex attribute format information records, each of
+      which specifies:
+
+      - a reference to one of the new buffer binding points above,
+
+      - a component count and format, and a normalization flag for the
+        attribute data, and
+
+      - the offset of the attribute data relative to the base offset of each
+        vertex found at the associated binding point.
+
+
+New Procedures and Functions
+
+    void BindVertexBuffer(uint bindingindex, uint buffer, intptr offset, 
+                          sizei stride);
+    
+    void VertexAttribFormat(uint attribindex, int size, enum type, 
+                            boolean normalized, uint relativeoffset);
+    void VertexAttribIFormat(uint attribindex, int size, enum type, 
+                             uint relativeoffset);
+    void VertexAttribLFormat(uint attribindex, int size, enum type, 
+                             uint relativeoffset);
+
+    void VertexAttribBinding(uint attribindex, uint bindingindex);
+
+    void VertexBindingDivisor(uint bindingindex, uint divisor);
+
+    When EXT_direct_state_access is present:
+
+        void VertexArrayBindVertexBufferEXT(uint vaobj, uint bindingindex, uint buffer, intptr offset, 
+                                            sizei stride);
+    
+        void VertexArrayVertexAttribFormatEXT(uint vaobj, uint attribindex, int size, enum type, 
+                                boolean normalized, uint relativeoffset);
+        void VertexArrayVertexAttribIFormatEXT(uint vaobj, uint attribindex, int size, enum type, 
+                                 uint relativeoffset);
+        void VertexArrayVertexAttribLFormatEXT(uint vaobj, uint attribindex, int size, enum type, 
+                                 uint relativeoffset);
+
+        void VertexArrayVertexAttribBindingEXT(uint vaobj, uint attribindex, uint bindingindex);
+
+        void VertexArrayVertexBindingDivisorEXT(uint vaobj, uint bindingindex, uint divisor);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetVertexAttrib*v:
+
+        VERTEX_ATTRIB_BINDING                           0x82D4  
+        VERTEX_ATTRIB_RELATIVE_OFFSET                   0x82D5  
+
+    Accepted by the <target> parameter of GetBooleani_v, GetIntegeri_v,
+    GetFloati_v, GetDoublei_v, and GetInteger64i_v:
+
+        VERTEX_BINDING_DIVISOR                          0x82D6  
+        VERTEX_BINDING_OFFSET                           0x82D7  
+        VERTEX_BINDING_STRIDE                           0x82D8  
+        VERTEX_BINDING_BUFFER                           0x8F4F
+
+    Accepted by the <pname> parameter of GetIntegerv, ...
+
+        MAX_VERTEX_ATTRIB_RELATIVE_OFFSET               0x82D9  
+        MAX_VERTEX_ATTRIB_BINDINGS                      0x82DA  
+
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify Section 2.8, "Vertex Arrays"
+
+    Vertex data are placed into arrays that are stored in the server's address 
+    space (described in section 2.9). Blocks of data in these arrays may then 
+    be used to specify multiple geometric primitives through the execution of 
+    a single GL command. The client may specify up to the value of 
+    MAX_VERTEX_ATTRIBS arrays to store one or more generic vertex attributes. 
+    A generic vertex attribute array is described by an index into an array of 
+    vertex buffer bindings which contain the vertex data and state describing 
+    how that data is organized.
+    
+    The commands
+
+      [Compatibility profile only: Keep the named attribute *Pointer
+                                   commands in this list]
+
+      void VertexAttribFormat(uint attribindex, int size, enum type, 
+                              boolean normalized, uint relativeoffset);
+      void VertexAttribIFormat(uint attribindex, int size, enum type, 
+                               uint relativeoffset);
+
+    describe the organizations of vertex arrays. For each command, <type> 
+    specifies the data type of the values stored in the array. <size> 
+    indicates the number of values per vertex that are stored in the array as 
+    well as their component ordering. Table 2.5 indicates the allowable values
+    for <size> and <type> (when present). For <type> the values BYTE, SHORT, 
+    INT, FIXED, FLOAT, HALF_FLOAT, and DOUBLE indicate types byte, short, int, 
+    fixed, float, half, and double, respectively; the values UNSIGNED_BYTE, 
+    UNSIGNED_SHORT, and UNSIGNED_INT indicate types ubyte, ushort, and uint, 
+    respectively; and the values INT_2_10_10_10_REV and UNSIGNED_INT_2_-
+    10_10_10_REV, indicating respectively four signed or unsigned elements 
+    packed into a single uint, both correspond to the term <packed> in that 
+    table. <relativeoffset> is a byte offset of the first element relative 
+    to the start of the vertex buffer binding this attribute fetches from.
+
+    An INVALID_VALUE error is generated if <size> is not one of the values 
+    allowed in table 2.5 for the corresponding command.
+
+    An INVALID_OPERATION error is generated under any of the following 
+    conditions:
+     - if no vertex array object is currently bound (see section 2.10);
+     - <size> is BGRA and <type> is not UNSIGNED_BYTE, INT_2_10_10_10_REV or
+       UNSIGNED_INT_2_10_10_10_REV;
+     - <type> is INT_2_10_10_10_REV or UNSIGNED_INT_2_10_10_10_REV, and <size>
+       is neither 4 or BGRA;
+     - <size> is BGRA and <normalized> is FALSE;
+
+    An INVALID_VALUE error is generated if <relativeoffset> is larger than
+    the value of MAX_VERTEX_ATTRIB_RELATIVE_OFFSET.
+
+    The <attribIndex> parameter in the VertexAttribFormat and VertexAttribIFormat
+    commands identifies the generic vertex attribute array being described. 
+    The error INVALID_VALUE is generated if index is greater than or equal to 
+    the value of MAX_VERTEX_ATTRIBS. Generic attribute arrays with integer 
+    type arguments can be handled in one of three ways: converted to float by 
+    normalizing to [0, 1] or [-1, 1] as described in equations 2.1 and 2.2, 
+    respectively; converted directly to float, or left as integers. Data for 
+    an array specified by VertexAttribPointer will be converted to floating-
+    point by normalizing if <normalized> is TRUE, and converted directly to 
+    floating-point otherwise. Data for an array specified by 
+    VertexAttribIFormat will always be left as integer values; such data are 
+    referred to as pure integers.
+
+    The command
+
+      void BindVertexBuffer(uint bindingindex, uint buffer, intptr offset,
+                            sizei stride);
+
+    binds a buffer indicated by <buffer> to the vertex buffer bind point 
+    indicated by <bindingindex>, and sets the <stride> between elements 
+    and <offset> (in basic machine units) of the first element in the buffer.
+    The error INVALID_VALUE is generated if <stride> or <offset> are negative.
+    Otherwise pointers to the ith and (i + 1)st elements of an array differ 
+    by stride basic machine units (typically unsigned bytes), the pointer to 
+    the (i + 1)st element being greater. An INVALID_OPERATION error is 
+    generated if no vertex array object is bound. If <buffer> is zero, any
+    buffer object attached to this bindpoint is detached. An INVALID_VALUE 
+    error is generated if <bindingindex> is greater than the value of 
+    MAX_VERTEX_ATTRIB_BINDINGS.
+      [Core profile only:]
+    An INVALID_OPERATION error is generated if buffer is not zero or a
+    name returned from a previous call to GenBuffers, or if such a name
+    has since been deleted with DeleteBuffers.
+    
+    The association between a vertex attribute and the vertex buffer binding
+    used by that attribute is set by the command
+
+      void VertexAttribBinding(uint attribindex, uint bindingindex);
+
+    <attribindex> must be less than the value of MAX_VERTEX_ATTRIBS and 
+    <bindingindex> must be less than the value of MAX_VERTEX_ATTRIB_BINDINGS, 
+    otherwise the error INVALID_VALUE is generated. An INVALID_OPERATION error
+    is generated if no vertex array object is bound.
+
+    Modify Table 2.5 to add the command VertexAttribFormat to the first row 
+    and VertexAttribIFormat to the second row.
+
+    The one, two, three, or four values in an array that correspond to a 
+    single vertex comprise an array element. When size is BGRA, it indicates 
+    four values. The values within each array element are stored sequentially 
+    in memory. However, if size is BGRA, the first, second, third, and fourth 
+    values of each array element are taken from the third, second, first, and 
+    fourth values in memory respectively.
+        [Compatibility profile only:]
+    For each *Pointer command, <pointer> specifies the location in
+    memory of the first value of the first element of the array being
+    specified.
+
+    The command
+
+      void VertexAttribLFormat(uint attribindex, int size, enum type, 
+                               uint relativeoffset);
+
+    specifies state for a generic vertex attribute array associated with a 
+    shader attribute variable declared with 64-bit double precision components.
+    <type> must be DOUBLE. <attribindex> and <size> behave as defined in all 
+    other VertexAttrib*Format commands; <size> may be one, two, three or four.
+
+    Each component of an array specified by VertexAttribLFormat will be 
+    encoded into one or more generic attribute components as specified for the
+    VertexAttribL* commands in section 2.7. The error INVALID_VALUE is 
+    generated if <attribindex> is greater than or equal to the value of 
+    MAX_VERTEX_ATTRIBS. 
+    
+    The commands 
+        
+      void VertexAttribPointer(uint index, int size, enum type,
+                               boolean normalized, sizei stride, 
+                               const void *pointer);
+      void VertexAttribIPointer(uint index, int size, enum type,
+                                sizei stride, const void *pointer);
+      void VertexAttribLPointer(uint index, int size, enum type,
+                                sizei stride, const void *pointer);
+    
+    control vertex attribute state, a vertex buffer binding, and the mapping
+    between a vertex attribute and a vertex buffer binding. They are 
+    equivalent to (assuming no errors are generated):
+
+      if (no buffer is bound to ARRAY_BUFFER and pointer != NULL) {
+        generate INVALID_OPERATION;
+      }
+      VertexAttrib*Format(index, size, type, {normalized, }, 0);
+      VertexAttribBinding(index, index);
+      if (stride != 0) {
+        effectiveStride = stride;
+      } else {
+        compute effectiveStride based on size/type;
+      }
+      VERTEX_ATTRIB_ARRAY_STRIDE[index] = stride;
+      // VERTEX_BINDING_STRIDE will be set to effectiveStride
+      // by BindVertexBuffer.
+      BindVertexBuffer(index, <buffer bound to ARRAY_BUFFER>, 
+                       (char *)pointer - (char *)NULL, effectiveStride);
+
+    If <stride> is specified as zero, then array elements are stored 
+    sequentially. 
+    
+    An individual generic vertex attribute array is 
+    enabled or disabled by calling one of
+
+      void EnableVertexAttribArray(uint index);
+      void DisableVertexAttribArray(uint index);
+
+    where <index> identifies the generic vertex attribute array to enable or 
+    disable. An INVALID_VALUE error is generated if <index> is greater than or 
+    equal to MAX_VERTEX_ATTRIBS.
+
+    An INVALID_OPERATION error is generated if no vertex array object is 
+    bound.
+
+    The command
+
+      void VertexBindingDivisor(uint bindingindex, uint divisor);
+
+    modifies the rate at which generic vertex attributes advance when 
+    rendering multiple instances of primitives in a single draw call. If 
+    <divisor> is zero, the attributes using the buffer bound to <bindingindex>
+    advance once per vertex. If <divisor> is non-zero, the attributes advance 
+    once per <divisor> instances of the set(s) of vertices being rendered. An 
+    attribute is referred to as <instanced> if the corresponding <divisor> 
+    value is non-zero.
+
+    An INVALID_VALUE error is generated if <bindingindex> is greater than or 
+    equal to the value of MAX_VERTEX_ATTRIB_BINDINGS.
+
+    An INVALID_OPERATION error is generated if no vertex array object is 
+    bound.
+
+    The command
+
+      void VertexAttribDivisor(uint index, uint divisor);
+
+    is equivalent to (assuming no errors are generated):
+
+      VertexAttribBinding(index, index);
+      VertexBindingDivisor(index, divisor);
+
+    An INVALID_VALUE error is generated if <attribindex> is greater than or 
+    equal to the value of MAX_VERTEX_ATTRIBS.
+
+
+    Modify Section 2.8.3, "Drawing Commands"
+
+    For any vertex attribute whose divisor is non-zero as set by 
+    VertexBindingDivisor, the value "baseinstance" is used to determine the 
+    element of the enabled instanced attribute arrays that will be transferred
+    for all vertices transferred by this function.
+
+    ...
+
+    Those attributes that have divisor N where N is other than zero (as 
+    specified by VertexBindingDivisor) advance once every N instances.
+
+    ...
+
+    If an enabled vertex attribute array is instanced (it has a non-zero 
+    binding divisor as specified by VertexAttribBinding and 
+    VertexBindingDivisor), the element that is transferred to the GL is given 
+    by:
+
+      floor(instance/divisor) + baseinstance
+
+    ...
+
+    If the number of supported generic vertex attributes (the value of MAX_-
+    VERTEX_ATTRIBS) is <n> and the number of vertex attribute bindings (the 
+    value of MAX_VERTEX_ATTRIB_BINDINGS) is <k>, then the state required to 
+    implement vertex arrays consists of <n> boolean values (enables), <n> 
+    memory pointers, <n> integer stride values (VERTEX_ATTRIB_ARRAY_STRIDE),
+    <n> symbolic constants representing array types, <n> integers representing
+    values per element, <n> boolean values indicating normalization, <n> 
+    boolean values indicating whether the attribute values are pure integers, 
+    <k> integers representing vertex attribute divisors, <n> integer vertex 
+    attribute binding indices, <n> integer relative offsets, <k> integer stride
+    values (VERTEX_BINDING_STRIDE), <k> 64-bit integer buffer offsets, and an 
+    unsigned integer representing the restart index.
+
+    In the initial state, the boolean values are each false, the memory 
+    pointers are each NULL, the VERTEX_ATTRIB_ARRAY_STRIDE strides are each 
+    zero, the array types are each FLOAT, the integers representing values per
+    element are each four, the normalized and pure integer flags are each 
+    false, the divisors are each zero, the vertex attribute binding indices 
+    are <i> for attribute <i>, the relative offsets are each zero, the 
+    VERTEX_BINDING_STRIDE values are each 16, the buffer offsets are each zero,
+    and the restart index is zero.
+
+
+    Modify Section 2.9.6, "Vertex Arrays in Buffer Objects"
+
+    When an array is sourced from a buffer object, the vertex attribute's 
+    VERTEX_ATTRIB_BINDING indicates which vertex buffer binding is used. The 
+    sum of the attribute's VERTEX_ATTRIB_RELATIVE_OFFSET and the vertex 
+    buffer binding's VERTEX_BINDING_OFFSET is used as the offset (in basic 
+    machine units) of the first element in that buffer's data store.
+
+    (Compatibility Only) Add to the final paragraph:
+
+    Attributes using client memory ignore the VERTEX_ATTRIB_BINDING state.
+    That is, the logic for computing the address of the base of a vertex array
+    is:
+
+        bindingIndex = VERTEX_ATTRIB_BINDING[attribIndex];
+        buffer = VERTEX_BINDING_BUFFER[bindingIndex];
+
+        if (buffer->name != 0) {
+            address = buffer->baseAddress + 
+                      VERTEX_BINDING_OFFSET[bindingIndex] + 
+                      VERTEX_ATTRIB_RELATIVE_OFFSET[attribIndex];
+        } else {
+            address = VERTEX_ATTRIB_ARRAY_POINTER[attribIndex];
+        }
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.18, "Shader and Program Queries", p. 500
+
+    (Append to the description of GetVertexAttrib)
+
+    Queries of VERTEX_ATTRIB_ARRAY_BUFFER_BINDING and VERTEX_ATTRIB_ARRAY_-
+    DIVISOR first map the requested attribute index to a binding index via
+    the VERTEX_ATTRIB_BINDING state, and then return the value of 
+    VERTEX_BINDING_BUFFER or VERTEX_BINDING_DIVISOR, respectively.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD
+
+Dependencies on NV_vertex_buffer_unified_memory
+
+    When this extension is present, the GL_VERTEX_ATTRIB_ARRAY_ADDRESS_NV 
+    state is modified to correspond to the <i>'th vertex buffer binding
+    rather than vertex attribute. Additionally, while the <buffer> and 
+    <offset> set by BindVertexBuffer are irrelevant while 
+    GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV is enabled, the command 
+    
+        BindVertexBuffer(bindingindex, 0, 0, stride);
+
+    can still be used to set the stride for a particular binding.
+
+    Note that NV_vertex_buffer_unified_memory uses the same function names 
+    (VertexAttrib*FormatNV) as this extension, however the behavior of the 
+    these functions is different.
+
+Dependencies on EXT_direct_state_access
+
+    When this extension is not present, ignore references to
+
+        VertexArrayBindVertexBufferEXT
+        VertexArrayVertexAttribFormatEXT
+        VertexArrayVertexAttribIFormatEXT
+        VertexArrayVertexAttribLFormatEXT
+        VertexArrayVertexAttribBindingEXT
+        VertexArrayVertexBindingDivisorEXT
+
+    When EXT_direct_state_access is present, add new entry points that take a
+    vertex array object handle:
+
+        void VertexArrayBindVertexBufferEXT(uint vaobj, uint bindingindex, uint buffer, intptr offset, 
+                              sizei stride);
+        
+        void VertexArrayVertexAttribFormatEXT(uint vaobj, uint attribindex, int size, enum type, 
+                                boolean normalized, uint relativeoffset);
+        void VertexArrayVertexAttribIFormatEXT(uint vaobj, uint attribindex, int size, enum type, 
+                                 uint relativeoffset);
+        void VertexArrayVertexAttribLFormatEXT(uint vaobj, uint attribindex, int size, enum type, 
+                                 uint relativeoffset);
+    
+        void VertexArrayVertexAttribBindingEXT(uint vaobj, uint attribindex, uint bindingindex);
+    
+        void VertexArrayVertexBindingDivisorEXT(uint vaobj, uint bindingindex, uint divisor);
+
+    These commands behave identically to their
+    non-VertexArray/EXT-suffixed commands except they modify the state
+    of the vertex array object named by their initial vaobj parameter
+    (rather than the currently bound vertex array object).  The vertex
+    array object named by vaobj must be generated by GenVertexArrays
+    (and not since deleted); otherwise an INVALID_OPERATION error is
+    generated.
+
+    Modify the description of GetVertexArrayIntegeri_vEXT to allow
+    queries of VERTEX_BINDING_OFFSET and VERTEX_BINDING_STRIDE state:
+    
+    "For GetVertexArrayIntegeri_vEXT, <pname> must be one of the
+    'Get value' tokens in tables 6.8 and 6.9 that use GetVertexAttribiv
+    or GetVertexAttribPointerv (so allowing only the VERTEX_ATTRIB_* and
+    VERTEX_BINDING_* tokens) or a token of the form TEXTURE_COORD_ARRAY_*; 
+    <index> identifies the vertex attribute array to query, vertex binding to
+    query, or texture coordinate set index."
+
+Dependencies on the Compatibility profile
+
+    If the context is created with a compatibility profile, remove the 
+    INVALID_OPERATION errors from all new commands if no vertex array 
+    object is currently bound, and remove the INVALID_OPERATION error
+    from VertexAttrib*Pointer if no buffer is bound to ARRAY_BUFFER and 
+    pointer != NULL.
+
+    Client vertex arrays are not changed to use the new state, that is, 
+    VERTEX_ATTRIB_ARRAY_POINTER is still attribute state. 
+
+Errors
+
+    !!!TODO
+
+New State
+
+    (Modify Table 6.5 -- Vertex Array Object State)
+
+                                                           Initial
+    Get Value                    Type    Get Command       Value    Description                Sec.  
+    ---------                    ------- -----------       -------  ------------------------   ------
+    VERTEX_ATTRIB_BINDING        16*Z16* GetVertexAttribiv <i>[fn1] Vertex buffer binding      2.8   
+                                                                    used by vertex attrib <i>
+    VERTEX_ATTRIB_RELATIVE_      16*Z+   GetVertexAttribiv    0     Byte offset added to       2.8
+      OFFSET                                                        vertex binding offset
+                                                                    for this attribute
+    VERTEX_BINDING_OFFSET        16*Z    GetInteger64i_v      0     Byte offset of the first   2.8
+                                                                    element in data store of
+                                                                    the buffer bound to vertex
+                                                                    binding <i>
+    VERTEX_BINDING_STRIDE        16*Z    GetIntegeri_v       16     Stride between elements in 2.8
+                                                                    vertex binding <i>
+    VERTEX_BINDING_DIVISOR       16*Z+   GetIntegeri_v        0     Instance divisor used for  2.8
+                                                                    vertex binding <i>
+    VERTEX_BINDING_BUFFER        16*Z+   GetIntegeri_v        0     Name of buffer bound to    2.8
+                                                                    vertex binding <i>
+
+    [fn1] The <i>'th attribute defaults to a value of <i>.
+
+    If the compatibility profile is supported, then all of these new state 
+    values belong to the 'vertex-array' attribute.
+
+New Implementation Dependent State
+
+                                                      Minimum
+    Get Value                    Type    Get Command  Value   Description            Sec.  
+    ---------                    ------- -----------  ------- --------------------   ------
+    MAX_VERTEX_ATTRIB_           Z       GetIntegerv  2047    Maximum offset added   2.8
+      RELATIVE_OFFSET                                         to vertex buffer 
+                                                              binding offset
+    MAX_VERTEX_ATTRIB_BINDINGS   Z16*    GetIntegerv  16      Maxmimum number of     2.8
+                                                              vertex buffers
+
+NVIDIA Implementation Details
+
+    The VertexArrayVertexBindingDivisorEXT function was not missing
+    from early versions of this specification's interactions with
+    EXT_direct_state_access (an oversight).  NVIDIA driver implementations
+    (prior to Release 330.00, August 2013) do not advertise the function a
+    GetProcAddress call for the function name will return NULL.
+
+Examples
+
+    The following code will set up two interleaved vertex buffers, where 
+    attribs 0 and 1 are vec3 position and vec3 color in buffer0, and attribs 
+    2 and 3 come from are vec2 texcoords in buffer1.
+
+        // Set up formats and relative offsets within the interleaved data.
+        VertexAttribFormat(0, 3, FLOAT, FALSE, 0);
+        VertexAttribFormat(1, 3, FLOAT, FALSE, 12);
+        VertexAttribFormat(2, 2, FLOAT, FALSE, 0);
+        VertexAttribFormat(3, 2, FLOAT, FALSE, 8);
+
+        // Set up attrib->binding mapping
+        VertexAttribBinding(0, 0);
+        VertexAttribBinding(1, 0);
+        VertexAttribBinding(2, 1);
+        VertexAttribBinding(3, 1);
+
+        // Bind the vertex buffers to binding index 0 and 1.
+        BindVertexBuffer(0, buffer0, 0, 24);
+        BindVertexBuffer(1, buffer1, 0, 16);
+
+Issues
+
+    (1) Should the instance divisor (previously VertexAttribDivisor) be 
+        attribute state or binding state?
+
+      RESOLVED: Make it per-binding, since some hardware requires this.
+
+    (2) How is a stride of zero interpreted in BindVertexBuffer?
+
+      RESOLVED: No error is generated, all array elements for a given 
+      attribute will be sourced from the same location in the buffer.
+
+    (3) How is a stride of zero handled in VertexAttribPointer?
+
+      RESOLVED: BindVertexBuffer has no knowledge of the attrib format,
+      so VertexAttribPointer needs to compute the stride itself. However,
+      if an application specifies a stride of zero and then queries 
+      VERTEX_ATTRIB_ARRAY_STRIDE, it returns zero. So the derived stride 
+      that's passed to BindVertexBuffer must be tracked separately from the
+      stride originally passed to VertexAttribPointer, so this spec introduces
+      a separate piece of state (VERTEX_BINDING_STRIDE). Rendering always uses
+      VERTEX_BINDING_STRIDE.
+
+      This can potentially lead to misleading state queries if the API is 
+      abused. For example:
+
+        VertexAttribPointer(0, 3, FLOAT, FALSE, 12, 0);
+        // VERTEX_ATTRIB_ARRAY_STRIDE = 12
+        // VERTEX_BINDING_STRIDE = 12
+        BindVertexBuffer(0, buffer, 0, 16)
+        // now VERTEX_ATTRIB_ARRAY_STRIDE is still 12, but
+        // VERTEX_BINDING_STRIDE = 16. 
+
+    (4) How should the attrib->binding mapping be handled for legacy commands?
+
+      RESOLVED: Redefine legacy commands to reset the mapping to its initial 
+      state for the attribute being operated on. This allows legacy code to 
+      coexist in the same context/VAO with use of this extension even though 
+      that code is oblivious to the fact that this mapping is now flexible. 
+      As long as the legacy code sets up each attribute it wants to use, it 
+      should operate as expected. This may be useful for applications using 
+      middleware that they can't control.
+
+    (5) What is the minimum maximum value for VERTEX_ATTRIB_RELATIVE_OFFSET?
+
+      RESOLVED: Agreed on 2047 (inclusive).
+
+    (6) Can MAX_VERTEX_ATTRIBS and MAX_VERTEX_ATTRIB_BINDINGS have different 
+    values?
+
+      RESOLVED: Decided that it's nice to have them be separate queries, but
+      that we don't want to deal with all the complexities that arise if the
+      two values are different. So this spec assumes that the two values are
+      the same.
+
+    (7) How does this extension interact with EXT_direct_state_access?
+
+      RESOLVED:  The EXT commands in this specification are available only when
+      EXT_direct_state_access is also advertised.
+
+      Note:  Early versions of this specification failed to document
+      the EXT_direct_state_access commands.  Revision 3 (August 2013)
+      corrects this oversight.
+
+    (8) Which state queries return information from attributes vs from 
+        bindings?
+
+      RESOLVED: The general convention is that tokens starting with 
+      VERTEX_BINDING return information corresponding to a buffer binding and
+      are queried with GetIntegeri_v, whereas tokens starting with 
+      VERTEX_ATTRIB_ARRAY return information corresponding to a vertex 
+      attribute index and are queried with GetVertexAttribiv.
+
+      For cases where there is both an "attribute" and "binding" token for the
+      same state, the "attribute" query returns state for the binding that 
+      attribute is currently using (set via VertexAttribBinding). Specifically,
+      VERTEX_ATTRIB_ARRAY_BUFFER_BINDING returns a value from VERTEX_BINDING_-
+      BUFFER, and VERTEX_ATTRIB_ARRAY_DIVISOR returns a value from VERTEX_-
+      BINDING_DIVISOR.
+
+      A notable exception to this is for VERTEX_BINDING_STRIDE and 
+      VERTEX_ATTRIB_ARRAY_STRIDE. As described in issue (3), these tokens track
+      separate state.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  ------------------------------------------
+      5   10/22/13  jbolz     Added missing definition of 
+                              VERTEX_BINDING_DIVISOR, and added 
+                              VERTEX_BINDING_BUFFER, to keep things consistent.
+      4   08/06/13  mjk       Added EXT_direct_state_access interactions
+      3   07/19/13  Jon Leech Add error to BindVertexBuffer for the core
+                              profile if <buffer> is not a name returned
+                              by GenBuffers (Bug 10486).
+      2   08/13/12  Jon Leech Renumbered from #143 to #125
+      1             jbolz     Internal revisions.

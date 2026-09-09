@@ -30,11 +30,11 @@
 
 #include <memory>
 
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/vulkan/ExternalHandle.h"
-#include "dawn/native/vulkan/external_memory/MemoryImportParams.h"
-#include "dawn/native/vulkan/external_memory/MemoryServiceImplementation.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/vulkan/ExternalHandle.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryImportParams.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryServiceImplementation.h"
 
 namespace dawn::native::vulkan {
 class Device;

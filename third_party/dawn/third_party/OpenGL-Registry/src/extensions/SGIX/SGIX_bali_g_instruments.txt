@@ -1,0 +1,151 @@
+XXX - incomplete
+
+Name
+
+    SGIX_bali_g_instruments
+
+Name Strings
+
+    GL_SGIX_bali_g_instruments
+
+Version
+
+    $Date: 1998/10/02 18:20:28 $  $Revision: 1.5 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    SGIX_instruments is required
+
+Overview
+
+    This extension defines behavior for instruments which are
+    maintained on the Bali G chip.  The behavior is similar to
+    standard instruments behavior since there is only one G ship.
+
+    Additionally, this extension defines four such instruments:  one to
+    count the number of triangles culled, a second to count the number of            primitives clipped, a third to count the number of primitives carried      
+    through after clipping, and a fourth to count the number of primitives  
+    rejected.
+
+Issues
+
+    *	Are there any other G instruments we should add?
+
+    *   Synchronization issues when G and R instruments are used simultaneously.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled:
+
+        BALI_NUM_TRIS_CULLED_INSTRUMENT         0x6080
+        BALI_NUM_PRIMS_CLIPPED_INSTRUMENT       0x6081
+        BALI_NUM_PRIMS_REJECT_INSTRUMENT        0x6082
+        BALI_NUM_PRIMS_CLIP_RESULT_INSTRUMENT   0x6083
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    Add to the end of section 2.11 (Clipping):
+
+    If BALI_NUM_PRIMS_CLIPPED_INSTRUMENT is enabled and the instruments have 
+    been started via a call to StartInstrumentsSGIX, a counter of the number of 
+    primitives clipped is maintained.  This counter is incremented by one for   
+    each primitive that is clipped.
+
+    If BALI_NUM_PRIMS_CLIP_RESULT_INSTRUMENT is enabled and the instruments have
+    been started via a call to StartInstrumentsSGIX, a counter of the number of 
+    primitives after clipping is maintained.  This counter is incremented by one
+    for each primitive that is carried through after clipping.
+
+    If BALI_NUM_PRIMS_REJECT_INSTRUMENT is enabled and the instruments have been
+    started via a call to StartInstrumentsSGIX, a counter of the number of 
+    primitives rejected is maintained.  This counter is incremented by one for 
+    each prmitive that is rejected.
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    Add to section 3.5, between section 3.5.1 (Basic Polygon Rasterization) and 
+    section 3.5.2 (Stippling):
+
+    If BALI_NUM_TRIS_CULLED_INSTRUMENT is enabled and the instruments have been 
+    started via a call to StartInstrumentsSGIX, a counter of the number of 
+    triangles culled is maintained.  This counter is incremented by one for each
+    triangle that is culled.     
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+    
+    Add to the end of section 5.X entitled Instruments:
+
+    Unlike the instruments computed on the Bali R chip, only one response is 
+    returned to the buffer for the G chip since there is only one G chip.  Each 
+    call to StopInstrumentsSGIX or ReadInstrumentsSGIX will therefore generate 
+    only one response for the G chip for each enabled G chip instrument. 
+
+    Each G chip response from BALI_NUM_TRIS_CULLED_INSTRUMENT, 
+    BALI_NUM_PRIMS_CLIPPED_INSTRUMENT, BALI_NUM_PRIMS_CLIP_RESULT_INSTRUMENT, or
+    BALI_NUM_PRIMS_REJECT_INSTRUMENT uses 6 32-bit words of the buffer.  The 
+    first word (index 0) will be the enum name of the instrument    
+    (BALI_NUM_TRIS_CULLED_INSTRUMENT, BALI_NUM_PRIMS_CLIPPED_INSTRUMENT, 
+    BALI_NUM_PRIMS_CLIP_RESULT_INSTRUMENT, or BALI_NUM_PRIMS_REJECT_INSTRUMENT).
+    The second word (index 1) of the instrument is the size in words of all the 
+    data returned by the instrument, which is six for the instruments defined in
+    this extension.  The fourth word (index 3) will be the instrument value. 
+    (The preceeding word (index 2) would be a dummy word.)  The fifth word would be
+    another dummy value. This will be followed by the sixth word  
+    (index 5) that will contain the marker passed to StopInstrumentsSGIX or  
+    ReadInstrumentsSGIX.  The following is a simple diagram of how 
+    this information will be passed down the pipe.  Since the host and the pipe 
+    will be communicating with 64-bits, three 64-bit packets will be sent down 
+    the pipe for each measurement that is made.
+
+            -------------------------------------------------
+            |                       |                       |
+            | [enabled enum name]   |    [size in words]    |
+            |                       |                       |
+            -------------------------------------------------
+
+            -------------------------------------------------
+            |                       |                       |
+            |        [dummy]        |   [instrument value]  |
+            |                       |                       |
+            -------------------------------------------------
+
+            -------------------------------------------------
+            |                       |                       |
+            |       [dummy]         |       [marker]        |
+            |                       |                       |
+            -------------------------------------------------
+
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    XXX    
+
+Additions to the GLX Specification
+
+    XXX
+
+Errors
+
+    None
+
+New State
+
+    XXX
+
+New Implementation Dependent State
+
+    None
+

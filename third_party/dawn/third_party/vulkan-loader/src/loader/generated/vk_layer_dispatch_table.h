@@ -322,6 +322,9 @@ typedef struct VkLayerInstanceDispatchTable_ {
     // ---- VK_ARM_data_graph_optical_flow extension commands
     PFN_vkGetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM GetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM;
 
+    // ---- VK_EXT_cooperative_matrix_maintenance1 extension commands
+    PFN_vkGetPhysicalDeviceCooperativeMatrixProperties2EXT GetPhysicalDeviceCooperativeMatrixProperties2EXT;
+
     // ---- VK_SEC_ubm_surface extension commands
 #if defined(VK_USE_PLATFORM_UBM_SEC)
     PFN_vkCreateUbmSurfaceSEC CreateUbmSurfaceSEC;
@@ -884,6 +887,20 @@ typedef struct VkLayerDispatchTable_ {
     PFN_vkGetMemoryAndroidHardwareBufferANDROID GetMemoryAndroidHardwareBufferANDROID;
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
+    // ---- VK_AMD_gpa_interface extension commands
+    PFN_vkCreateGpaSessionAMD CreateGpaSessionAMD;
+    PFN_vkDestroyGpaSessionAMD DestroyGpaSessionAMD;
+    PFN_vkSetGpaDeviceClockModeAMD SetGpaDeviceClockModeAMD;
+    PFN_vkGetGpaDeviceClockInfoAMD GetGpaDeviceClockInfoAMD;
+    PFN_vkCmdBeginGpaSessionAMD CmdBeginGpaSessionAMD;
+    PFN_vkCmdEndGpaSessionAMD CmdEndGpaSessionAMD;
+    PFN_vkCmdBeginGpaSampleAMD CmdBeginGpaSampleAMD;
+    PFN_vkCmdEndGpaSampleAMD CmdEndGpaSampleAMD;
+    PFN_vkGetGpaSessionStatusAMD GetGpaSessionStatusAMD;
+    PFN_vkGetGpaSessionResultsAMD GetGpaSessionResultsAMD;
+    PFN_vkResetGpaSessionAMD ResetGpaSessionAMD;
+    PFN_vkCmdCopyGpaSessionResultsAMD CmdCopyGpaSessionResultsAMD;
+
     // ---- VK_AMDX_shader_enqueue extension commands
 #if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkCreateExecutionGraphPipelinesAMDX CreateExecutionGraphPipelinesAMDX;
@@ -1086,6 +1103,15 @@ typedef struct VkLayerDispatchTable_ {
     PFN_vkCmdDispatchTileQCOM CmdDispatchTileQCOM;
     PFN_vkCmdBeginPerTileExecutionQCOM CmdBeginPerTileExecutionQCOM;
     PFN_vkCmdEndPerTileExecutionQCOM CmdEndPerTileExecutionQCOM;
+
+    // ---- VK_NV_low_latency extension commands
+    PFN_vkSetLatencySleepModeLegacyNV SetLatencySleepModeLegacyNV;
+    PFN_vkLatencySleepLegacyNV LatencySleepLegacyNV;
+    PFN_vkSetLatencyMarkerLegacyNV SetLatencyMarkerLegacyNV;
+    PFN_vkGetLatencyTimingsLegacyNV GetLatencyTimingsLegacyNV;
+    PFN_vkQueueNotifyOutOfBandLegacyNV QueueNotifyOutOfBandLegacyNV;
+    PFN_vkGetSleepStatusLegacyNV GetSleepStatusLegacyNV;
+    PFN_vkShutdownLatencyDeviceLegacyNV ShutdownLatencyDeviceLegacyNV;
 
     // ---- VK_EXT_metal_objects extension commands
 #if defined(VK_USE_PLATFORM_METAL_EXT)

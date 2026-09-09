@@ -34,8 +34,8 @@
 #include <jni.h>
 #include <webgpu/webgpu.h>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Log.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
 #include "JNIClasses.h"
 #include "JNIContext.h"
 
@@ -108,16 +108,16 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
             jclass clz = classes->{{ structure.name.camelCase() }};
             //* JNI signature needs to be built using the same logic used in the Kotlin structure spec.
             jmethodID ctor = env->GetMethodID(clz, "<init>", "(
-            {%- for member in kotlin_record_members(structure.members) %}
+            {%- for member in kotlin_record_members(structure.members, structure.name.get()) %}
                 {{- jni_signature(member) -}}
             {%- endfor -%}
             {%- for structure in chain_children[structure.name.get()] -%}
                 {{- jni_signature({'type': structure}) -}}
             {%- endfor %})V");
             //* Each field converted using the individual value converter.
-            {% for member in kotlin_record_members(structure.members) %}
+            {% for member in kotlin_record_members(structure.members, structure.name.get()) %}
                 {{ convert_to_kotlin('input->' + member.name.camelCase(), member.name.camelCase(),
-                                     'input->' + member.length.name.camelCase() if member.length.name,
+                                     'input->' + member.length.name.camelCase() if member.length and member.length != 'constant' else (member.constant_length | string if member.length == 'constant' and member.constant_length != 1 else None),
                                      member) | indent(4) -}}
             {% endfor %}
             //* Allow conversion of every child structure.
@@ -145,7 +145,7 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
             jobject converted = env->NewObject(
                 clz,
                 ctor
-            {%- for member in kotlin_record_members(structure.members) %},
+            {%- for member in kotlin_record_members(structure.members, structure.name.get()) %},
                 {%- if member.type.category == 'kotlin type' -%}
                     nullptr  {#- We can't make these. TODO(b/451995459): Don't even create the converter. #}
                 {%- else -%}
@@ -163,21 +163,23 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
 
         {% set Struct = as_cType(structure.name) %}
         {% set KotlinRecord = "KotlinRecord" + structure.name.CamelCase() %}
-        {{ define_kotlin_record_structure(KotlinRecord, structure.members)}}
+        {{ define_kotlin_record_structure(KotlinRecord, structure.members, structure.name.get())}}
 
-        {{ define_kotlin_to_struct_conversion("ConvertInternal", KotlinRecord, Struct, structure.members, is_structure_converter=True)}}
+        {{ define_kotlin_to_struct_conversion("ConvertInternal", KotlinRecord, Struct, structure.members, structure.name.get(), is_structure_converter=True)}}
         void ToNative(JNIContext* c, JNIEnv* env, jobject obj, {{ as_cType(structure.name) }}* converted) {
             JNIClasses* classes = JNIClasses::getInstance(env);
             jclass clz = classes->{{ structure.name.camelCase() }};
 
             //* Use getters to fill in the Kotlin record that will get converted to our struct.
             {{KotlinRecord}} kotlinRecord;
-            {% for member in kotlin_record_members(structure.members) %}
-                {
-                    {% set prefix = "is" if member.type.name.get() == "bool" else "get" %}
-                    jmethodID getter = env->GetMethodID(clz, "{{prefix}}{{member.name.CamelCase()}}", "(){{jni_signature(member)}}");
-                    CallGetter(env, getter, obj, &kotlinRecord.{{as_varName(member.name)}});
-                }
+            {% for member in kotlin_record_members(structure.members, structure.name.get()) %}
+                {% if not member.skip_serialize %}
+                    {
+                        {% set prefix = "is" if member.type.name.get() == "bool" else "get" %}
+                        jmethodID getter = env->GetMethodID(clz, "{{prefix}}{{member.name.CamelCase()}}", "(){{jni_signature(member)}}");
+                        CallGetter(env, getter, obj, &kotlinRecord.{{as_varName(member.name)}});
+                    }
+                {% endif %}
             {% endfor %}
 
             //* Fill all struct members from the Kotlin record.

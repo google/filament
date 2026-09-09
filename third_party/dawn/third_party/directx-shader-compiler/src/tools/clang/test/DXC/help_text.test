@@ -1,0 +1,7 @@
+// Test /? and /help option
+// RUN: %dxc /? | FileCheck %s
+// RUN: %dxc /help | FileCheck %s
+
+// Test to ensure the help text for '-Qsource_in_debug_module' is present
+// CHECK:-Qsource_in_debug_module
+// CHECK:Embed source code in PDB

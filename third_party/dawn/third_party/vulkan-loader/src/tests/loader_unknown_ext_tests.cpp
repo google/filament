@@ -390,39 +390,34 @@ TEST(UnknownFunction, PhysicalDeviceFunctionMultipleDriverSupport) {
     }
 }
 
-// Add unknown functions to driver 0, and try to use them on driver 1.
+// Add unknown functions to driver 0, and try to use them on driver 1. Needs TestICD to implement the unknown function so that it
+// can validate the passed in VkPhysicalDevice
 TEST(UnknownFunctionDeathTests, PhysicalDeviceFunctionErrorPath) {
     FrameworkEnvironment env{};
     auto& driver_0 = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
-    auto& driver_1 = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
-    std::vector<std::string> function_names;
-    add_function_names(function_names, 1);
+    auto& driver_1 = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA).set_supports_internal_function(true);
 
     // used to identify the GPUs
-    auto& test_physical_driver_0 = driver_0.add_and_get_physical_device("physical_device_0");
-    test_physical_driver_0.properties.deviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-    auto& test_physical_driver_1 = driver_1.add_and_get_physical_device("physical_device_1");
-    test_physical_driver_1.properties.deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
-    function_names.push_back(std::string("vkNotIntRealFuncTEST_0"));
-
-    custom_physical_device_functions funcs{};
-    test_physical_driver_0.custom_physical_device_functions.push_back(
-        VulkanFunction{function_names.back(), to_vkVoidFunction(funcs.func_zero)});
+    driver_0.add_and_get_physical_device("physical_device_0").properties.deviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+    driver_1.add_and_get_physical_device("physical_device_1").properties.deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
     InstWrapper inst{env.vulkan_functions};
     inst.CheckCreate();
 
     auto phys_devs = inst.GetPhysDevs(2);
-    VkPhysicalDevice phys_dev_to_use = phys_devs[1];
     VkPhysicalDeviceProperties props{};
-    env.vulkan_functions.vkGetPhysicalDeviceProperties(phys_devs[1], &props);
-    if (props.deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) phys_dev_to_use = phys_devs[0];
-    // use the wrong GPU to query the functions, should get 5 errors
+    env.vulkan_functions.vkGetPhysicalDeviceProperties(phys_devs[0], &props);
+    ASSERT_EQ(props.deviceType, VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU);
 
-    decltype(custom_physical_device_functions::func_zero)* returned_func_i =
-        env.vulkan_functions.load(inst.inst, function_names.at(0).c_str());
+    env.vulkan_functions.vkGetPhysicalDeviceProperties(phys_devs[1], &props);
+    ASSERT_EQ(props.deviceType, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
+
+    // GPU that supports the unknown function is enumerated first (gpus are enumerated in reverse order)
+    PFN_test_icd_internal_function returned_func_i = env.vulkan_functions.load(inst.inst, TEST_ICD_INTERNAL_FUNCTION_NAME_STRING);
     ASSERT_NE(returned_func_i, nullptr);
-    ASSERT_DEATH(returned_func_i(phys_dev_to_use, 0), "Function vkNotIntRealFuncTEST_0 not supported for this physical device");
+    ASSERT_EQ(returned_func_i(phys_devs[0], 0, 1, 2.2f), VK_SUCCESS);
+    ASSERT_DEATH(returned_func_i(phys_devs[1], 0, 1, 2.2f),
+                 "Function " TEST_ICD_INTERNAL_FUNCTION_NAME_STRING " not supported for this physical device");
 }
 
 TEST(UnknownFunction, PhysicalDeviceFunctionWithImplicitLayerImplementation) {

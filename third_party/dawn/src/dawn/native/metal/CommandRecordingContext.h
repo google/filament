@@ -29,10 +29,10 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/common/NonMovable.h"
-#include "dawn/native/Error.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/Error.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn::native::metal {
 

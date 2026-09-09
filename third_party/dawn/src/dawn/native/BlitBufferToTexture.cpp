@@ -25,24 +25,24 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/BlitBufferToTexture.h"
+#include "src/dawn/native/BlitBufferToTexture.h"
 
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Strings.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/InternalPipelineStore.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/RenderPassEncoder.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/RenderPassEncoder.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 
@@ -311,8 +311,7 @@ ResultOrError<Ref<RenderPipelineBase>> GetOrCreatePipeline(DeviceBase* device,
     colorTarget.format = format;
     colorTarget.writeMask = wgpu::ColorWriteMask::All;
 
-    fragmentState.targetCount = 1;
-    fragmentState.targets = &colorTarget;
+    fragmentState.targets = SpanFromRef<ColorAttachmentIndex>(colorTarget);
 
     RenderPipelineDescriptor renderPipelineDesc = {};
     renderPipelineDesc.label = "blit_buffer_to_texture";
@@ -391,7 +390,7 @@ bool IsBufferToTextureBlitSupported(BufferBase* buffer,
     }
 
     // Must have non-zero copy size.
-    return copyExtent.width * copyExtent.height * copyExtent.depthOrArrayLayers > TexelCount{0};
+    return copyExtent.width * copyExtent.height * copyExtent.depthOrArrayLayers > TexelCount{0u};
 }
 
 MaybeError BlitBufferToTexture(DeviceBase* device,
@@ -406,12 +405,12 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
     // bytesPerRow is aligned to 256. However some backends might enable
     // DawnTexelCopyBufferRowAlignment feature to relax the alignment. Currently only D3D11 backend
     // enables this feature, and the relaxed alignment there is 4.
-    DAWN_ASSERT((src.bytesPerRow % 4) == 0);
+    DAWN_CHECK((src.bytesPerRow % 4) == 0);
 
     DAWN_ASSERT(buffer->GetInternalUsage() &
                 (kReadOnlyStorageBuffer | kInternalStorageBuffer | wgpu::BufferUsage::Storage));
 
-    DAWN_ASSERT(!copyExtent.IsEmpty());
+    DAWN_CHECK(!copyExtent.IsEmpty());
 
     // Allow internal usages since we need to use the destination
     // as a render attachment.
@@ -437,30 +436,30 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
             break;
         case wgpu::TextureDimension::e3D:
             viewDimension = wgpu::TextureViewDimension::e3D;
-            baseDepth = static_cast<uint32_t>(dst.origin.z);
+            baseDepth = dchecked_cast<uint32_t>(dst.origin.z);
             depthStep = 1;
             break;
         default:
             viewDimension = wgpu::TextureViewDimension::e2D;
-            baseArray = static_cast<uint32_t>(dst.origin.z);
+            baseArray = dchecked_cast<uint32_t>(dst.origin.z);
             arrayStep = 1;
             break;
     }
 
-    for (TexelCount z{0}; z < copyExtent.depthOrArrayLayers; ++z) {
+    for (TexelCount z{0u}; z < copyExtent.depthOrArrayLayers; ++z) {
         Ref<TextureViewBase> dstView;
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = viewDimension;
-            viewDesc.baseArrayLayer = baseArray + arrayStep * static_cast<uint32_t>(z);
+            viewDesc.baseArrayLayer = baseArray + arrayStep * dchecked_cast<uint32_t>(z);
             viewDesc.arrayLayerCount = 1;
             viewDesc.baseMipLevel = dst.mipLevel;
             viewDesc.mipLevelCount = 1;
             DAWN_TRY_ASSIGN(dstView, dst.texture->CreateView(&viewDesc));
         }
 
-        const uint64_t srcOffset =
-            src.offset + static_cast<uint32_t>(z) * src.rowsPerImage * src.bytesPerRow;
+        const uint64_t srcOffset = src.offset + static_cast<uint64_t>(dchecked_cast<uint32_t>(z)) *
+                                                    src.rowsPerImage * src.bytesPerRow;
         const uint64_t srcBufferBindingOffset = AlignDown(srcOffset, ssboAlignment);
         const uint32_t shaderReadOffset = static_cast<uint32_t>(srcOffset & (ssboAlignment - 1));
         Ref<BufferBase> paramsBuffer;
@@ -468,14 +467,13 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
             DAWN_TRY_ASSIGN(paramsBuffer,
                             device->GetOrCreateTemporaryUniformBuffer(sizeof(uint32_t) * 4));
 
-            uint32_t params[4];
+            std::array<uint32_t, 4> params;
             params[0] = shaderReadOffset;
             params[1] = src.bytesPerRow;
-            params[2] = static_cast<uint32_t>(dst.origin.x);
-            params[3] = static_cast<uint32_t>(dst.origin.y);
+            params[2] = dchecked_cast<uint32_t>(dst.origin.x);
+            params[3] = dchecked_cast<uint32_t>(dst.origin.y);
             commandEncoder->APIWriteBuffer(paramsBuffer.Get(), 0,
-                                           reinterpret_cast<const uint8_t*>(&params[0]),
-                                           sizeof(params));
+                                           SpanAsBytes(Span<const uint32_t>(params)));
         }
 
         Ref<BindGroupBase> bindGroup;
@@ -489,22 +487,21 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
         RenderPassColorAttachment colorAttachment;
         colorAttachment.view = dstView.Get();
         if (depthStep) {
-            colorAttachment.depthSlice = baseDepth + depthStep * static_cast<uint32_t>(z);
+            colorAttachment.depthSlice = baseDepth + depthStep * dchecked_cast<uint32_t>(z);
         }
         colorAttachment.loadOp = wgpu::LoadOp::Load;
         colorAttachment.storeOp = wgpu::StoreOp::Store;
 
         RenderPassDescriptor rpDesc = {};
-        rpDesc.colorAttachmentCount = 1;
-        rpDesc.colorAttachments = &colorAttachment;
+        rpDesc.colorAttachments = SpanFromRef<ColorAttachmentIndex>(colorAttachment);
 
         Ref<RenderPassEncoder> pass = commandEncoder->BeginRenderPass(&rpDesc);
         // Bind the resources.
         pass->APISetBindGroup(0, bindGroup.Get());
-        pass->APISetViewport(static_cast<float>(static_cast<uint32_t>(dst.origin.x)),
-                             static_cast<float>(static_cast<uint32_t>(dst.origin.y)),
-                             static_cast<float>(static_cast<uint32_t>(copyExtent.width)),
-                             static_cast<float>(static_cast<uint32_t>(copyExtent.height)), 0.f,
+        pass->APISetViewport(static_cast<float>(dchecked_cast<uint32_t>(dst.origin.x)),
+                             static_cast<float>(dchecked_cast<uint32_t>(dst.origin.y)),
+                             static_cast<float>(dchecked_cast<uint32_t>(copyExtent.width)),
+                             static_cast<float>(dchecked_cast<uint32_t>(copyExtent.height)), 0.f,
                              1.f);
 
         // Draw to perform the blit.

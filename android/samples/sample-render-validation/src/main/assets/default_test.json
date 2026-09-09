@@ -12,29 +12,6 @@
   "presets": [
     {
       "name": "base",
-      "models": [
-        "DamagedHelmet"
-      ],
-      "rendering": {
-        "camera": {
-          "enabled": true,
-          "horizontalFov": 45.0,
-          "center": [
-            0,
-            0,
-            -0.8
-          ],
-          "lookAt": [
-            0,
-            0,
-            -1
-          ]
-        },
-        "view": {
-          "postProcessingEnabled": true,
-          "dithering": "NONE"
-        }
-      },
       "tolerance": {
         "mode": "OR",
         "maxFailingPixelsFraction": 0.0005,
@@ -54,24 +31,51 @@
             "blurRadius": 0
           }
         ]
+      },
+      "gltf_test": {
+        "models": [
+          "DamagedHelmet"
+        ],
+        "rendering": {
+          "camera": {
+            "enabled": true,
+            "horizontalFov": 45.0,
+            "center": [
+              0,
+              0,
+              -0.8
+            ],
+            "lookAt": [
+              0,
+              0,
+              -1
+            ]
+          },
+          "view": {
+            "postProcessingEnabled": true,
+            "dithering": "NONE"
+          }
+        }
       }
     },
     {
       "name": "tilted",
-      "rendering": {
-        "camera": {
-          "enabled": true,
-          "horizontalFov": 45.0,
-          "center": [
-            -4,
-            -2,
-            -3
-          ],
-          "lookAt": [
-            0,
-            0,
-            -4
-          ]
+      "gltf_test": {
+        "rendering": {
+          "camera": {
+            "enabled": true,
+            "horizontalFov": 45.0,
+            "center": [
+              -4,
+              -2,
+              -3
+            ],
+            "lookAt": [
+              0,
+              0,
+              -4
+            ]
+          }
         }
       }
     },
@@ -85,12 +89,10 @@
         "shiftRadius": 2,
         "blurRadius": 4,
         "maxFailingPixelsFraction": 0.0005
-      },
-      "rendering": {}
+      }
     },
     {
       "name": "noisy_tolerance",
-      "rendering": {},
       "tolerance": {
         "mode": "OR",
         "maxFailingPixelsFraction": 0.0005,
@@ -118,14 +120,16 @@
       "name": "basic",
       "apply_presets": [
         "base"
-      ]
+      ],
+      "gltf_test": {}
     },
     {
       "name": "rotated",
       "apply_presets": [
         "base",
         "tilted"
-      ]
+      ],
+      "gltf_test": {}
     },
     {
       "name": "msaa_custom",
@@ -133,9 +137,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.customResolve": true
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.customResolve": true
+        }
       }
     },
     {
@@ -144,9 +150,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.customResolve": false
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.customResolve": false
+        }
       }
     },
     {
@@ -155,9 +163,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.sampleCount": 8
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.sampleCount": 8
+        }
       }
     },
     {
@@ -166,8 +176,10 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.antiAliasing": "FXAA"
+      "gltf_test": {
+        "rendering": {
+          "view.antiAliasing": "FXAA"
+        }
       }
     },
     {
@@ -175,9 +187,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.aoType": "GTAO"
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.aoType": "GTAO"
+        }
       }
     },
     {
@@ -185,9 +199,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.aoType": "SAO"
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.aoType": "SAO"
+        }
       }
     },
     {
@@ -195,9 +211,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.resolution": 0.5
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.resolution": 0.5
+        }
       }
     },
     {
@@ -206,9 +224,11 @@
         "base",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.bentNormals": true
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.bentNormals": true
+        }
       }
     },
     {
@@ -216,9 +236,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.quality": "ULTRA"
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.quality": "ULTRA"
+        }
       }
     },
     {
@@ -226,9 +248,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.quality": "LOW"
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.quality": "LOW"
+        }
       }
     },
     {
@@ -236,9 +260,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.lowPassFilter": "ULTRA"
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.lowPassFilter": "ULTRA"
+        }
       }
     },
     {
@@ -246,9 +272,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.ssao.upsampling": "ULTRA"
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.ssao.upsampling": "ULTRA"
+        }
       }
     },
     {
@@ -257,8 +285,10 @@
         "base",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.screenSpaceReflections.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.screenSpaceReflections.enabled": true
+        }
       }
     },
     {
@@ -267,10 +297,12 @@
         "base",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.screenSpaceReflections.enabled": true,
-        "view.screenSpaceReflections.thickness": 0.2,
-        "view.screenSpaceReflections.stride": 2.0
+      "gltf_test": {
+        "rendering": {
+          "view.screenSpaceReflections.enabled": true,
+          "view.screenSpaceReflections.thickness": 0.2,
+          "view.screenSpaceReflections.stride": 2.0
+        }
       }
     },
     {
@@ -279,8 +311,10 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true
+        }
       }
     },
     {
@@ -289,9 +323,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true,
-        "view.bloom.lensFlare": true
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true,
+          "view.bloom.lensFlare": true
+        }
       }
     },
     {
@@ -300,10 +336,12 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true,
-        "view.bloom.lensFlare": true,
-        "view.bloom.starburst": false
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true,
+          "view.bloom.lensFlare": true,
+          "view.bloom.starburst": false
+        }
       }
     },
     {
@@ -312,10 +350,12 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true,
-        "view.bloom.lensFlare": true,
-        "view.bloom.chromaticAberration": 0.05
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true,
+          "view.bloom.lensFlare": true,
+          "view.bloom.chromaticAberration": 0.05
+        }
       }
     },
     {
@@ -324,9 +364,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true,
-        "view.bloom.quality": "HIGH"
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true,
+          "view.bloom.quality": "HIGH"
+        }
       }
     },
     {
@@ -335,9 +377,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true,
-        "view.bloom.blendMode": "INTERPOLATE"
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true,
+          "view.bloom.blendMode": "INTERPOLATE"
+        }
       }
     },
     {
@@ -345,8 +389,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.dof.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.dof.enabled": true
+        }
       }
     },
     {
@@ -354,9 +400,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.dof.enabled": true,
-        "view.dof.nativeResolution": true
+      "gltf_test": {
+        "rendering": {
+          "view.dof.enabled": true,
+          "view.dof.nativeResolution": true
+        }
       }
     },
     {
@@ -364,9 +412,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.dof.enabled": true,
-        "view.dof.filter": "NONE"
+      "gltf_test": {
+        "rendering": {
+          "view.dof.enabled": true,
+          "view.dof.filter": "NONE"
+        }
       }
     },
     {
@@ -374,8 +424,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.fog.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.fog.enabled": true
+        }
       }
     },
     {
@@ -383,8 +435,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.vignette.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.vignette.enabled": true
+        }
       }
     },
     {
@@ -392,8 +446,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.colorGrading.toneMapping": "FILMIC"
+      "gltf_test": {
+        "rendering": {
+          "view.colorGrading.toneMapping": "FILMIC"
+        }
       }
     },
     {
@@ -401,8 +457,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.colorGrading.toneMapping": "ACES"
+      "gltf_test": {
+        "rendering": {
+          "view.colorGrading.toneMapping": "ACES"
+        }
       }
     },
     {
@@ -410,8 +468,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.colorGrading.toneMapping": "AGX"
+      "gltf_test": {
+        "rendering": {
+          "view.colorGrading.toneMapping": "AGX"
+        }
       }
     },
     {
@@ -419,8 +479,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.colorGrading.toneMapping": "PBR_NEUTRAL"
+      "gltf_test": {
+        "rendering": {
+          "view.colorGrading.toneMapping": "PBR_NEUTRAL"
+        }
       }
     },
     {
@@ -428,8 +490,10 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.shadowType": "VSM"
+      "gltf_test": {
+        "rendering": {
+          "view.shadowType": "VSM"
+        }
       }
     },
     {
@@ -437,9 +501,11 @@
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "view.shadowType": "VSM",
-        "view.vsmShadowOptions.anisotropy": 2
+      "gltf_test": {
+        "rendering": {
+          "view.shadowType": "VSM",
+          "view.vsmShadowOptions.anisotropy": 2
+        }
       }
     },
     {
@@ -448,9 +514,11 @@
         "base",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.shadowType": "VSM",
-        "view.vsmShadowOptions.highPrecision": true
+      "gltf_test": {
+        "rendering": {
+          "view.shadowType": "VSM",
+          "view.vsmShadowOptions.highPrecision": true
+        }
       }
     },
     {
@@ -459,10 +527,12 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.customResolve": true,
-        "view.bloom.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.customResolve": true,
+          "view.bloom.enabled": true
+        }
       }
     },
     {
@@ -471,10 +541,12 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.customResolve": false,
-        "view.bloom.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.customResolve": false,
+          "view.bloom.enabled": true
+        }
       }
     },
     {
@@ -483,10 +555,12 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.customResolve": true,
-        "view.dof.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.customResolve": true,
+          "view.dof.enabled": true
+        }
       }
     },
     {
@@ -495,10 +569,12 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.msaa.enabled": true,
-        "view.msaa.customResolve": false,
-        "view.dof.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.msaa.enabled": true,
+          "view.msaa.customResolve": false,
+          "view.dof.enabled": true
+        }
       }
     },
     {
@@ -507,9 +583,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.dof.enabled": true,
-        "view.bloom.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.dof.enabled": true,
+          "view.bloom.enabled": true
+        }
       }
     },
     {
@@ -518,9 +596,11 @@
         "base",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.ssao.enabled": true,
-        "view.screenSpaceReflections.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.ssao.enabled": true,
+          "view.screenSpaceReflections.enabled": true
+        }
       }
     },
     {
@@ -530,9 +610,11 @@
         "noisy_tolerance",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.bloom.enabled": true,
-        "view.screenSpaceReflections.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.bloom.enabled": true,
+          "view.screenSpaceReflections.enabled": true
+        }
       }
     },
     {
@@ -541,9 +623,11 @@
         "base",
         "relaxed_tolerance"
       ],
-      "rendering": {
-        "view.dof.enabled": true,
-        "view.screenSpaceReflections.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.dof.enabled": true,
+          "view.screenSpaceReflections.enabled": true
+        }
       }
     },
     {
@@ -552,9 +636,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.fog.enabled": true,
-        "view.bloom.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.fog.enabled": true,
+          "view.bloom.enabled": true
+        }
       }
     },
     {
@@ -563,9 +649,11 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.antiAliasing": "FXAA",
-        "view.bloom.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.antiAliasing": "FXAA",
+          "view.bloom.enabled": true
+        }
       }
     },
     {
@@ -574,38 +662,44 @@
         "base",
         "noisy_tolerance"
       ],
-      "rendering": {
-        "view.antiAliasing": "FXAA",
-        "view.dof.enabled": true
+      "gltf_test": {
+        "rendering": {
+          "view.antiAliasing": "FXAA",
+          "view.dof.enabled": true
+        }
       }
     },
     {
       "name": "fox_animation",
-      "models": [
-        "Fox"
-      ],
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "animation": {
-          "enabled": true,
-          "time": 0.5
+      "gltf_test": {
+        "models": [
+          "Fox"
+        ],
+        "rendering": {
+          "animation": {
+            "enabled": true,
+            "time": 0.5
+          }
         }
       }
     },
     {
       "name": "transmission",
-      "models": [
-        "TransmissionRoughnessTest"
-      ],
       "apply_presets": [
         "base"
       ],
-      "rendering": {
-        "animation": {
-          "enabled": true,
-          "time": 0.5
+      "gltf_test": {
+        "models": [
+          "TransmissionRoughnessTest"
+        ],
+        "rendering": {
+          "animation": {
+            "enabled": true,
+            "time": 0.5
+          }
         }
       }
     }

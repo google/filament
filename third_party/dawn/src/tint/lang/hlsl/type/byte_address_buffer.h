@@ -52,8 +52,6 @@ class ByteAddressBuffer final : public Castable<ByteAddressBuffer, core::type::M
     /// @param ctx the clone context
     /// @returns a clone of this type
     ByteAddressBuffer* Clone(core::type::CloneContext& ctx) const override;
-
-    const Type* StoreType() const = delete;
 };
 
 }  // namespace tint::hlsl::type

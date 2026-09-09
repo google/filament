@@ -33,11 +33,11 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/Blob.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/d3d/ShaderUtils.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/d3d/ShaderUtils.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native {
 struct ProgrammableStage;
@@ -60,10 +60,11 @@ class ShaderModule final : public ShaderModuleBase {
         SingleShaderStage stage,
         const PipelineLayout* layout,
         uint32_t compileFlags,
-        const ImmediateConstantMask& pipelineImmediateMask,
+        const ImmediateMask& pipelineImmediateMask,
         const std::optional<dawn::native::d3d::InterStageShaderVariablesMask>&
             usedInterstageVariables = {},
-        const std::optional<tint::hlsl::writer::PixelLocalOptions>& pixelLocalOptions = {});
+        const std::optional<tint::hlsl::writer::PixelLocalOptions>& pixelLocalOptions = {},
+        std::vector<uint32_t> snorm10_10_10_2_locations = {});
 
   private:
     ShaderModule(Device* device,

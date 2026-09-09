@@ -1,0 +1,601 @@
+Name
+
+    SGIX_hyperpipe
+
+Name Strings
+
+    GLX_SGIX_hyperpipe
+
+Contact
+
+    Jon Leech, SGI (ljp 'at' sgi.com)
+
+Status
+
+    Shipping on SGI Infinite Reality and Ultimate Vision systems.
+
+Version
+
+    Last Modified Date: 2004/07/21
+    Revision: $Header: //depot/main/doc/registry/extensions/SGI/hyperpipe_group.spec#14 $
+
+Number
+
+    307
+
+Dependencies
+
+    GLX 1.2 is required
+    SGIX_swap_control affects the definition of this extension.
+
+Overview
+
+    Even though graphics hardware is constantly improving in speed, there
+    will always be applications that require more performance than is
+    available from a single pipeline. In order to overcome these limits,
+    it is possible to parallelize the rendering task across multiple
+    pipes; the image outputs of these pipes must then be assembled into
+    a single display output. This group of pipes is termed a hyperpipe;
+    the pipes involved must be physically cabled together in some way
+    to form a hyperpipe network. Typically a hyperpipe network uses one
+    of the pipes to assemble the rendered images and drive the display.
+
+    In a hyperpipe network, the rendering task may be divided by rendering
+    each successive frame on a different hardware pipe (temporal division);
+    by dividing the frame into rectangular subregions and rendering each
+    on a different pipe (spatial division); or by a combination of these
+    two techniques. Specific hardware implementations may impose limits
+    on how rendering may be subdivided; but in general it is possible to
+    use a subset of the pipes connected to a hyperpipe network if desired.
+
+    This extension provides a means for configuring and managing a group
+    of rendering pipes which work together to produce a single display.
+    Typically, a hyperpipe application will be multithreaded, with
+    one thread per pipe; each thread needs to create its own rendering
+    context. The hyperpipe extension allows these rendering threads to
+    communicate with the hardware.
+
+    The API calls allow an application to :
+
+    o  Determine the physical configuration of a hyperpipe network.
+
+    o  Configure the hyperpipe. The hyperpipe configuration used by the
+       application may be a subset of the physical hyperpipe network.
+       The rendering task may be divided in time slices (temporally divided),
+       in rectangular regions of a single frame (spatially divided), or both.
+       The hyperpipe configuration is subject to hardware constraints.
+
+       For example, on a hyperpipe network consisting of five pipes, it
+       would be possible to configure a rendering task in two time slices,
+       with each slice being rendered by two pipes; thus using four total
+       pipes. (The fifth pipe would not be used in the hyperpipe, and
+       could be used for normal non-hyperpipe rendering and display).
+
+    o  Maintain state to manage the glXSwapBuffers() call correctly. In
+       spatial subdivision, swap cannot occur until all pipes rendering
+       the next frame have completed; and in temporal subdivision, swap
+       cannot occur until the appropriate time. Swap management is
+       handled by the displaying pipe.
+
+    o  Redirect resize parameters correctly; typically resize is handled
+       by the displaying pipe, and must be managed synchronously with
+       swap.
+
+    o  Balance load among the pipes in the spatial subdivision case.
+
+    o  Clean up operations when a hyperpipe application terminates
+       (either normally or due to error).
+
+    This extension adds to the set of conditions that must be met before
+    a buffer swap can take place.
+
+Issues and Notes
+
+    o  This extension will work only on graphics pipelines with suitable
+       hyperpipe hardware installed.
+
+
+New Procedures and Functions
+
+    The following structure definitions are used by the extension:
+
+    /*
+     *	pipeName uniquely names a pipe in the form ":display.screen"
+     *	networkId is a unique physical hyperpipe network ID.
+     */
+    typedef struct {
+	char  pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
+	int  networkId;
+    } GLXHyperpipeNetworkSGIX;
+
+    /*
+     *	pipeName uniquely names a pipe in the form ":display.screen"
+     *	channel is the channel number associated with the display pipe.
+     *	participationType is a bitmask describing the attributes of a
+     *	    participating pipe. It may contain one or more of the
+     *	    attribute bits
+     *		GLX_HYPERPIPE_DISPLAY_PIPE_SGIX
+     *		GLX_HYPERPIPE_RENDERING_PIPE_SGIX
+     *	timeSlice is ignored for GLX_HYPERPIPE_DISPLAY_PIPE_SGIX only.
+     */
+    typedef struct {
+	char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
+	int channel;
+	unsigned int participationType;
+	int timeSlice;
+    } GLXHyperpipeConfigSGIX;
+
+    /*
+     *	pipeName uniquely names a pipe in the form ":display.screen"
+     *	src origin/size are in managed area coordinates (pixels).
+     *	dest origin/size are in output channel display coordinates.
+     */
+    typedef struct {
+	char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
+	int srcXOrigin;
+	int srcYOrigin;
+	int srcWidth;
+	int srcHeight;
+	int destXOrigin;
+	int destYOrigin;
+	int destWidth;
+	int destHeight;
+    } GLXPipeRect;
+
+    /*
+     *	pipeName uniquely names a pipe in the form ":display.screen"
+     *	origin/size are in managed area coordinates (pixels)
+     */
+    typedef struct {
+	char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
+	int XOrigin; /* pixels in managed area */
+	int YOrigin;
+	int maxHeight;
+	int maxWidth;
+    } GLXPipeRectLimits;
+
+    GLXHyperpipeNetworkSGIX *
+	glXQueryHyperpipeNetworkSGIX(
+	    Display *dpy, int *npipes);
+
+    int glXHyperpipeConfigSGIX(
+	    Display *dpy, int networkId, int npipes,
+	    GLXHyperpipeConfigSGIX *cfg, int *hpId);
+
+    GLXHyperpipeConfigSGIX *
+	glXQueryHyperpipeConfigSGIX(
+	    Display *dpy, int hpId, int *npipes);
+
+    int glXDestroyHyperpipeConfigSGIX(
+	    Display * dpy, int hpId);
+
+    int glXBindHyperpipeSGIX(
+	    Display *dpy, int hpId);
+
+    int glXQueryHyperpipeBestAttribSGIX(
+	    Display *dpy, int timeSlice, int attrib, int size,
+	    void *attribList, void *returnAttribList);
+
+    int glXHyperpipeAttribSGIX(
+	    Display *dpy, int timeSlice, int attrib, int size,
+	    void *attribList);
+
+    int glXQueryHyperpipeAttribSGIX(
+	    Display *dpy, int timeSlice, int attrib, int size,
+	    void *returnAttribList);
+
+
+
+New Tokens
+
+    Accepted by the <attribute> parameter of glXQueryContextInfoEXT:
+
+	GLX_HYPERPIPE_ID_SGIX		    0x8030
+
+    Maximum length of the string naming a hyperpipe:
+
+	GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX 80
+
+    Bits that may be set in the <participationType> bitfield of the
+    GLXHyperpipeConfigSGIX argument passed into glXHyperpipeConfigSGIX
+    and returned by glXQueryHyperpipeConfigSGIX:
+
+	GLX_HYPERPIPE_DISPLAY_PIPE_SGIX     0x00000001
+	GLX_HYPERPIPE_RENDER_PIPE_SGIX	    0x00000002
+
+    Accepted by the <attrib> parameter of glXQueryHyperpipeAttribSGIX:
+
+	GLX_PIPE_RECT_SGIX		    0x00000001
+	GLX_PIPE_RECT_LIMITS_SGIX	    0x00000002
+	GLX_HYPERPIPE_STEREO_SGIX	    0x00000003
+	GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX    0x00000004
+
+    Accepted by the <attrib> parameters of and glXHyperpipeAttribSGIX:
+
+	GLX_PIPE_RECT_SGIX
+	GLX_HYPERPIPE_STEREO_SGIX
+	GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX
+
+    Accepted by the <attrib> parameter of
+    glXQueryHyperpipeBestAttribSGIX:
+
+	GLX_PIPE_RECT_SGIX
+	GLX_PIPE_RECT_LIMITS_SGIX
+
+    New error codes:
+
+	GLX_BAD_HYPERPIPE_CONFIG_SGIX	    91
+	GLX_BAD_HYPERPIPE_SGIX		    92
+
+
+Additions to the GLX 1.3 Specification
+
+    Add new section 3.X "Hyperpipes"
+
+    Hyperpipes are collections of graphics pipes that may operate
+    together to generate images. The pipes may be split either spatially
+    (with different pipes rendering different subrectangles of an output
+    image), temporally (with different pipes rendering different time
+    slices of an output image), or both.
+
+    Section 3.X.1 "Hyperpipe Networks"
+
+    To determine the physical connectivity of hyperpipes in a system,
+    call
+
+	GLXHyperpipeNetworkSGIX *glXQueryHyperpipeNetworkSGIX(
+	    Display *dpy, int *npipes)
+
+    There may be more than one hyperpipe network in the system. The
+    networks are numbered sequentially.
+
+    glXQueryHyperpipeNetworkSGIX returns a pointer to an array of
+    GLXHyperpipeNetworkSGIX structures describing the availalable pipes.
+    This list is sorted on the physical hyperpipe network number (the
+    <networkId> field of the GLXHyperpipeNetworkSGIX structure).
+    Networks are numbered sequentially from 0.
+
+    The number of pipes is returned in <*npipes>. If no hyperpipe
+    network is defined in the system, NULL is returned. returns NULL.
+    Use XFree to free the array returned by
+    glXQueryHyperpipeNetworkSGIX.
+
+
+    Section 3.X.2 "Hyperpipe Configuration"
+
+    To specify the logical configuration of a hyperpipe, call
+
+	int glXHyperpipeConfigSGIX(Display *dpy, int networkId,
+	    int npipes, GLXHyperpipeConfigSGIX *cfg, int *hpId);
+
+    The physical connectivity of a hyperpipe is determined by the
+    cabling of the hardware. It is possible to use only a subset of the
+    pipes physically connected together. These participant pipes may
+    contribute to the hyperpipe in a temporally interleaved manner
+    and/or spatially subdivided manner. The configuration information
+    specifies which pipes participate in the hyperpipe. It also
+    specifies the relative order of these pipes and their type of
+    contribution (spatial or temporal). This configuration cannot be
+    arbitrary and is subject to some hardware constraints.
+
+    <networkId> specifies the physical hyperpipe network ID to be
+    configured. <npipes> specifies the total number of pipes in the
+    configuration. <cfg> is a pointer to an array of <npipes>
+    GLXHyperpipeConfigSGIX structures, each specifying the configuration
+    for a single pipe.
+
+    The <pipeName> field of each <cfg> structure specifies the pipe ID
+    of that pipe, and the <channel> field specifies a channel number
+    associated with that pipe.
+
+    If the <participationType> field contains
+    GLX_HYPERPIPE_RENDER_PIPE_SGIX, the pipe is designated to render
+    data for a subset of the pipeline (spatially or temporally). If the
+    field contains GLX_HYPERPIPE_DISPLAY_PIPE_SGIX, the pipe is
+    designated to assemble rendered data and display it on that pipe's
+    local channel. There can be multiple rendering pipes, but only one
+    display pipe in a network.
+
+    The <timeSlice> field specifies the time slice to which a rendering
+    pipe contributes, and must be in the range 0 to <npipes>-1.
+
+    On success, a unique hyperpipe ID is generated and returned in the
+    integer pointed to by <hpId>. Subsequent calls may require a valid
+    hyperpipe ID parameter. In the case of a multi-process application,
+    the master process should configure the hyperpipe, and child
+    processes should then use the same hyperpipe ID as the master
+    process. The hyperpipe ID is global across multiple processes. If
+    another process attempts a configuration using already allocated
+    pipes, the second configuration will fail.
+
+    If the pipes contribute in a spatially subdivided manner, then the
+    screen is divided evenly between them. This division can be
+    subsequently changed via calls to glXHyperpipeAttribSGIX().
+
+    glXHyperpipeConfigSGIX() returns GLX_BAD_HYPERPIPE_CONFIG_SGIX if
+    the specified <cfg> is invalid.
+
+
+    To query the details of a hyperpipe configuration, call
+
+	GLXHyperpipeConfigSGIX *glXQueryHyperpipeConfigSGIX(
+	    Display *dpy, int hpId, int *npipes);
+
+    <hpId> is the ID of the hyperpipe configuration to query. It must
+    have been obtained from a previous call to glXHyperpipeConfigSGIX.
+
+    glXQueryHyperpipeConfigSGIX returns a pointer to an array of
+    GLXHyperpipeConfigSGIX structures describing the pipes in the
+    configuration. The parameters of the structures are as described for
+    glXHyperpipeConfigSGIX.
+
+    The number of pipes is returned in <*npipes>. If <hpId> is not a
+    valid hyperpipe ID, NULL is returned. Use XFree to free the array
+    returned by glXQueryHyperpipeConfigSGIX.
+
+
+    To destroy a hyperpipe configuration, call
+
+	int glXDestroyHyperpipeConfigSGIX(Display * dpy, int hpId);
+
+    <hpId> is the ID of the hyperpipe configuration to destroy. It must
+    have been obtained from a previous call to glXHyperpipeConfigSGIX.
+    All process should unbind from <hpId> by calling
+    glXBindHyperipipeSGIX(dpy, -1) before destroying the hyperpipe
+    configuration.
+
+    On success, the resources associated with <hpId> are destroyed and
+    <hpId> is no longer a valid hyperpipe ID.
+
+    glXHyperpipeConfigSGIX() returns GLX_BAD_HYPERPIPE_SGIX if there is
+    no valid hyperpipe configuration with the specified ID.
+
+
+    Section 3.X.2 "Binding Hyperpipes"
+
+    To bind the current rendering context to a hyperpipe, call
+
+	int glXBindHyperpipeSGIX(Display *dpy, int hpId);
+
+    This establishes an association between the calling process, the
+    current context, and the hyperpipe configuration with ID <hpId>.
+    When this rendering context is destroyed, the hyperpipe operations
+    associated with this hyperpipe group may be terminated.
+
+    Every process participating in a hyperpipe should call
+    glXBindHyperpipeSGIX after creating and choosing a rendering
+    context. Hyperpipe requests to this process will not begin until
+    this call is made.
+
+    It is possible to determine if a hyperpipe is bound by calling
+    glXQueryContextInfoEXT with the attribute GLX_HYPERPIPE_ID_SGIX.
+
+    Calling glXBindHyperpipeSGIX with <hpId> == -1 unbinds the current
+    rendering context from the hyperpipe. If no hyperpipe is bound, this
+    call is ignored and no error is generated.
+
+    A process can bind to only one hyperpipe at any time. In order to
+    bind to another hyperpipe, the process must explicitly unbind from
+    the current hyperpipe. If a process calls glXBindHyperpipeSGIX()
+    more than once without an intervening unbind, then the subsequent
+    bind will fail.
+
+    glXBindHyperpipeSGIX returns GLX_BAD_HYPERPIPE_SGIX if <hpId> is not
+    a valid hyperpipe ID.
+
+
+    To determine the best possible hyperpipe attributes subject to
+    constraints imposed by the hyperpipe implementation, call
+
+	int glXQueryHyperpipeBestAttribSGIX(Display *dpy,
+	    int timeSlice, int attrib, int size, void *attribList,
+	    void *returnAttribList);
+
+    <timeSlice> specifies the time slice for which <attrib> is queried.
+    Its value may range from 0 to the maximum number of time slices for
+    which the hyperpipe is configure.
+
+    <attrib> is a bitmask specifying the type of the attribute for which
+    the best attributes are to be determined.
+
+    <size> specifies the total size, in bytes, of the arrays pointed to
+    by <attribList> and <returnAttribList>.
+
+    <attribList> is a pointer to an array of requested values. The array
+    contains one value, of type determined by <attrib>, for each pipe
+    contributing to the specified time slice.
+
+    <returnAttribList> is a pointer to an array in which returned values
+    are copied. The array must be large enough to contain one value, of
+    type determined by <attrib>, for each pipe contributing to the
+    specified time slice (in other words, must be the same size as the
+    array pointed to by <attribList>). Values returned will be as close
+    as possible to those specified in <attribList>, subject to the
+    implementation constraints.
+
+    If <attrib> is GLX_PIPE_RECT, the subrectangles composing a
+    hyperpipe rectangle during <timeSlice> are queried. <attribList>
+    must point to an array of <n> GLXPipeRect structures, one for each
+    pipe contributing to the specified <timeSlice> of the currently
+    bound hyperpipe, each defining an input source rectangle (origin,
+    width, and height in the managed area), and an output destination
+    rectangle (origin, width, and height in the output display area). In
+    this case <size> must be <n> * sizeof(GLXPipeRect).
+
+    If <attrib> is GLX_PIPE_RECT_LIMITS, the maximum size of the
+    subrectangles during <timeSlice> are queried. <attribList> must
+    point to an array of <n> GLXPipeRectLimits structures, each defining
+    an origin and maximum width and height in the managed area. In this
+    case <size> must be <n> * sizeof(GLXPipeRectLimits), where <n> is
+    the number of pipes participating in <timeSlice>.
+
+    glXQueryHyperpipeBestAttribSGIX returns GLX_BAD_HYPERPIPE_SGIX if
+    there is no valid hyperpipe configuration bound to the current
+    context, or if <size> is too small for the amount of data
+    implied by <timeSlice> and <attrib>.
+
+    glXQueryHypepipeBestAttribSGIX returns GLX_BAD_VALUE if <attrib> is
+    not one of GLX_PIPE_RECT or GLX_PIPE_RECT_LIMITS, or if any of the
+    elements in <attribList> cannot be altered to satisfy the
+    constraints of the current hyperpipe.
+
+
+
+    Section 3.X.3 "Hyperpipe Attributes"
+
+    To set hyperpipe attribute values, call
+
+	int glXHyperpipeAttribSGIX(Display *dpy, int timeSlice,
+	    int attrib, int size, void *attribList);
+
+    <timeSlice>, <attrib>, and <size> have the same meaning as the
+    corresponding attributes of glXQueryHyperpipeBestAttribSGIX.
+
+    If <attrib> is GLX_PIPE_RECT_SGIX, <attribList> must point to an
+    array of <n> subrectangles defined by GLXPipeRect structures, one for
+    each pipe contributing to the specified <timeSlice> of the currently
+    bound hyperpipe. This allows load balancing the pipes. In this case
+    <size> must be <n> * sizeof(GLXPipeRect).
+
+    If <attrib> is GLX_HYPERPIPE_STEREO_SGIX, <attribList> must point to
+    an integer controlling alternation between pipes in the hyerpipe.
+    One pipe provides the left eye data, and the second provides the
+    right eye data. An attribute value of 1 enables stereo for the
+    corresponding pipe, and an attribute value of 0 disables stereo. In
+    this case <size> = sizeof(int).
+
+    If <attrib> is GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX, <attribList> must
+    point to an integer controlling averaging of pixel data. An
+    attribute value of 1 enables an averaging mode in which
+    corresponding pixel values from all pipes in the hyperpipe are
+    averaged together before being sent to the display, and an attribute
+    value of 0 disables averaging. In this case <size> = sizeof(int).
+
+    glXHyperpipeAttribSGIX is swap synchronous; that is, the attributes
+    are not changed until glXSwapBuffers is called for the corresponding
+    window.
+
+    glXHyperpipeAttribSGIX returns GLX_BAD_HYPERPIPE_SGIX if there is no
+    valid hyperpipe configuration bound to the current context, or if
+    <size> is too small for the amount of data implied by <timeSlice>
+    and <attrib>.
+
+    glXHypepipeAttribSGIX returns GLX_BAD_VALUE if <attrib> is not one
+    of GLX_PIPE_RECT_SGIX, GLX_HYPERPIPE_STEREO_SGIX, or
+    GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX.
+
+
+    To query hyperpipe attribute values, call
+
+	int glXQueryHyperpipeAttribSGIX(Display *dpy, int timeSlice,
+	    int attrib, int size, void *returnAttribList);
+
+    <timeSlice>, <attrib>, and <size> have the same meaning as the
+    corresponding attributes of glXHyperpipeAttribSGIX.
+
+    If <attrib> is GLX_PIPE_RECT_SGIX, <attribList> must point to an
+    array of <n> GLXPipeRect structures, one for each pipe contributing
+    to the specified <timeSlice> of the currently bound hyperpipe. The
+    subrectangles corresponding to each pipe are returned in
+    <attribList>. In this case <size> must be <n> * sizeof(GLXPipeRect).
+
+    If <attrib> is GLX_PIPE_RECT_LIMITS_SGIX, <attribList> must point to
+    an array of <n> GLXPipeRectLimits structures, one for each pipe
+    contributing to the specified <timeSlice> of the currently bound
+    hyperpipe. The maximum width and height of the subrectangles
+    corresponding to each pipe are returned in <attribList>. In this
+    case <size> must be <n> * sizeof(GLXPipeRectLimits).
+
+    If <attrib> is GLX_HYPERPIPE_STEREO_SGIX, <attribList> must point to
+    an integer. A return value of 1 indicates that stereo is enabled
+    while a return value of 0 indicates that stereo is disabled. In this
+    case <size> = sizeof(int).
+
+    If <attrib> is GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX, <attribList> must
+    point to an integer. A return value of 1 indicates that pixel
+    averaging is enabled, while a return value of 0 indicates that pixel
+    averaging is disabled. In this case <size> = sizeof(int).
+
+    glXQueryHyperpipeAttribSGIX returns GLX_BAD_HYPERPIPE_SGIX if there
+    is no valid hyperpipe configuration bound to the current context, or
+    if <size> is too small for the amount of data implied by <timeSlice>
+    and <attrib>.
+
+    glXQueryHypepipeAttribSGIX returns GLX_BAD_VALUE if <attrib> is not
+    one of GLX_PIPE_RECT_SGIX, GLX_PIPE_RECT_LIMITS_SGIX,
+    GLX_HYPERPIPE_STEREO_SGIX, or GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX.
+
+
+
+    Add to section 3.2.6, Double Buffering:
+
+    When a hyperpipe is bound to the current context, all pipes
+    participating in a single time slice will swap together.
+    glXSwapBuffers may be called even for a single-buffered visual when
+    a hyperpipe is bound, to cause the hyperpipe to switch to the next
+    time slice.
+
+    When a pipe in a hyperpipe configuration completes rendering of its
+    portion of the framebuffer, completion is indicated by via a call to
+    glXSwapBuffers. After all the pipes contributing to a particular
+    time slice indicate completion, the hyperpipe requests for this time
+    slice may begin.
+
+
+    [Add to table listing GLX context attributes for glXQueryContextInfoEXT]
+
+    GLX context attribute	type	context information
+    ---------------------	----	-------------------
+    GLX_HYPERPIPE_ID_SGIX	XID	hyperpipe id, if the rendering context
+					is associated with a hyperpipe
+
+
+Errors
+
+    Errors specific to hyperpipes are defined in the specification
+    language. GLX_BAD_CONTEXT may be returned by any hyperpipe call if
+    there is no valid current context.
+
+
+Implementation Notes
+
+    glXQueryHyperpipeBestAttribSGIX and glXHyperpipeAttribSGIX are
+    currently supported only on InfinitePerformance systems.
+
+    On InfinitePerformance systems, GLX_PIPE_RECT_SGIX requires that X
+    origins and sizes be aligned on 4 pixel boundaries.
+
+
+    The hyperpipe context ensures that resize parameters may be
+    synchronized across a hyperpipe. The details of this synchronization
+    are system-dependent, and may for example use the /dev/gfx device on
+    SGI IRIX systems.
+
+
+    In SGI implementations using external compositors (e.g. SG2), the
+    distinction between display and render pipes in the
+    <participationType> bitfield is ignored. In principle both bits
+    could be set for a single pipe, but no implementations in which this
+    mode is supported, or makes sense, have yet been developed.
+
+
+    In SGI implementations, the pixel averaging mode controlled by
+    GLX_HYPERPIPE_PIXEL_AVERAGE_SGIX is meant to be used for full-screen
+    antialiasing, with each pipe in a time slice contributing jittered
+    samples for each pixel in the output image.
+
+
+    The SGI implementation uses an internal constant
+    GLX_HYPERPIPE_PIPE_NPIPES_SGIX = 32. This token is not exposed in
+    the external API, and has not been placed in the public glxext.h
+    header file.
+
+Revision History
+
+    Revision 14, 2004/07/22 - closed out some open issues based on the
+    SGI implementation details.
+
+    Revision 13, 2004/07/21 - completely rewrote specification based on
+    the IRIX man pages. This should be substantially more complete than
+    the previous (1999) revision, and better correspond to what's
+    actually being shipped.

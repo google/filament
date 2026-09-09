@@ -569,5 +569,34 @@ TEST_F(SpirvParserTest, OpKill_InNonVoidFunction) {
 )");
 }
 
+TEST_F(SpirvParserTest, Instruction_UnhandledOpcode) {
+    auto spirv_asm = R"(
+               OpCapability Shader
+               OpCapability GroupNonUniform
+               OpCapability GroupNonUniformVote
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+        %u32 = OpTypeInt 32 0
+      %scope = OpConstant %u32 3
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+    %ep_type = OpTypeFunction %void
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+        %res = OpGroupNonUniformAllEqual %bool %scope %true
+               OpReturn
+               OpFunctionEnd
+)";
+
+    auto binary = Assemble(spirv_asm, SPV_ENV_UNIVERSAL_1_3);
+    ASSERT_TRUE(binary == Success);
+    auto res = Parse(binary.Get(), options);
+    EXPECT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason,
+              "unhandled SPIR-V instruction: OpGroupNonUniformAllEqual (val = 336)");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

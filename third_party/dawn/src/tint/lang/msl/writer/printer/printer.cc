@@ -63,6 +63,7 @@
 #include "src/tint/lang/core/ir/switch.h"
 #include "src/tint/lang/core/ir/swizzle.h"
 #include "src/tint/lang/core/ir/terminate_invocation.h"
+#include "src/tint/lang/core/ir/traverse.h"
 #include "src/tint/lang/core/ir/unreachable.h"
 #include "src/tint/lang/core/ir/unused.h"
 #include "src/tint/lang/core/ir/user_call.h"
@@ -115,6 +116,12 @@ namespace {
 /// @returns true if @p ident is an MSL keyword that needs to be avoided
 bool IsKeyword(std::string_view ident);
 
+// The list of properties that are not supported.
+const core::ir::Properties kUnsupportedProperties{
+    core::ir::Property::kAllowMultipleEntryPoints,
+    core::ir::Property::kAllowOverrides,
+};
+
 /// PIMPL class for the MSL generator
 class Printer : public tint::TextGenerator {
   public:
@@ -125,7 +132,8 @@ class Printer : public tint::TextGenerator {
 
     /// @returns the generated MSL shader
     tint::Result<Output> Generate() {
-        core::ir::AssertValid(ir_, kPrinterCapabilities, "before msl.Printer");
+        AssertValid(ir_, "before msl.Printer");
+        AssertNoUnsupportedProperties(ir_, kUnsupportedProperties);
 
         {
             TINT_SCOPED_ASSIGNMENT(current_buffer_, &preamble_buffer_);
@@ -175,6 +183,8 @@ class Printer : public tint::TextGenerator {
     /// Non-empty only if an invariant attribute has been generated.
     std::string invariant_define_name_;
 
+    std::string volatile_zero_name_;
+
     Hashset<const core::type::Struct*, 16> host_shareable_structs_;
     Hashset<const core::type::Struct*, 4> emitted_structs_;
 
@@ -223,8 +233,25 @@ class Printer : public tint::TextGenerator {
     /// Find all structures that are used in host-shareable address spaces and mark them as such so
     /// that we know to pad the properly when we emit them.
     void FindHostShareableStructs() {
-        // We only look at function parameters of entry points, since this is how binding resources
-        // are handled in MSL.
+        auto RecordSubTypes = [&](const core::type::Pointer* ptr) {
+            // Look for structures at any nesting depth of this parameter's type.
+            Vector<const core::type::Type*, 8> type_queue;
+            type_queue.Push(ptr->StoreType());
+            while (!type_queue.IsEmpty()) {
+                auto* next = type_queue.Pop();
+                if (auto* str = next->As<core::type::Struct>()) {
+                    // Record this structure as host-shareable.
+                    host_shareable_structs_.Add(str);
+                    for (auto* member : str->Members()) {
+                        type_queue.Push(member->Type());
+                    }
+                } else if (auto* arr = next->As<core::type::Array>()) {
+                    type_queue.Push(arr->ElemType());
+                }
+            }
+        };
+
+        // We need to look at function parameters of the entry point.
         for (auto func : ir_.functions) {
             if (!func->IsEntryPoint()) {
                 continue;
@@ -232,23 +259,24 @@ class Printer : public tint::TextGenerator {
             for (auto* param : func->Params()) {
                 auto* ptr = param->Type()->As<core::type::Pointer>();
                 if (ptr && core::IsHostShareable(ptr->AddressSpace())) {
-                    // Look for structures at any nesting depth of this parameter's type.
-                    Vector<const core::type::Type*, 8> type_queue;
-                    type_queue.Push(ptr->StoreType());
-                    while (!type_queue.IsEmpty()) {
-                        auto* next = type_queue.Pop();
-                        if (auto* str = next->As<core::type::Struct>()) {
-                            // Record this structure as host-shareable.
-                            host_shareable_structs_.Add(str);
-                            for (auto* member : str->Members()) {
-                                type_queue.Push(member->Type());
-                            }
-                        } else if (auto* arr = next->As<core::type::Array>()) {
-                            type_queue.Push(arr->ElemType());
-                        }
-                    }
+                    RecordSubTypes(ptr);
                 }
             }
+        }
+        // For buffer_view we need to look at the results of pointer offset calls in any function
+        // (and workgroup storage class).
+        for (auto func : ir_.functions) {
+            Traverse(func->Block(), [&](msl::ir::BuiltinCall* call) {
+                if (call->Func() != msl::BuiltinFn::kPointerOffset) {
+                    return;
+                }
+                auto* ptr = call->Result()->Type()->As<core::type::Pointer>();
+                TINT_IR_ASSERT(ir_, ptr);
+                if (core::IsHostShareable(ptr->AddressSpace()) ||
+                    ptr->AddressSpace() == core::AddressSpace::kWorkgroup) {
+                    RecordSubTypes(ptr);
+                }
+            });
         }
     }
 
@@ -347,6 +375,13 @@ class Printer : public tint::TextGenerator {
                     result_.workgroup_info.y = wg_size[1];
                     result_.workgroup_info.z = wg_size[2];
 
+                    // Store the subgroup size information away to return from the generator when
+                    // the `@subgroup_size` attribute is used.
+                    const auto const_sg_size = func->SubgroupSizeAsConst();
+                    if (const_sg_size.has_value()) {
+                        result_.workgroup_info.subgroup_size = const_sg_size;
+                    }
+
                     break;
                 }
                 case core::ir::Function::PipelineStage::kFragment:
@@ -429,6 +464,12 @@ class Printer : public tint::TextGenerator {
                     auto& allocations = result_.workgroup_allocations;
                     out << " [[threadgroup(" << allocations.size() << ")]]";
                     allocations.push_back(ty->Size());
+
+                    // Because we combine the workgroup memory into a single struct, we should only
+                    // ever get a single allocation. If we change this we need to update the
+                    // corresponding validation in ShaderModuleMTL which checks the allocation size
+                    // against the available compute workgroup memory size.
+                    TINT_ASSERT(allocations.size() == 1);
 
                     // Currently type is always a struct, if this changes in the future we'll need
                     // to update this to handle non-struct data as well.
@@ -929,9 +970,14 @@ class Printer : public tint::TextGenerator {
 
     void EmitCallStmt(const core::ir::Call* c) {
         if (!c->Result()->IsUsed()) {
+            // This is a call (or constructor) whose result is not used.
             auto out = Line();
+            // If the name of the callee is a type (which is the case when it's a constructor), then
+            // this could end up looking like a C++ variable declaration. Parentheses ensure it'll
+            // be an expression.
+            out << "(";
             EmitValue(out, c->Result());
-            out << ";";
+            out << ");";
         }
     }
 
@@ -997,6 +1043,9 @@ class Printer : public tint::TextGenerator {
                 case core::AddressSpace::kStorage:
                     out << "device ";
                     break;
+                case core::AddressSpace::kWorkgroup:
+                    out << "threadgroup ";
+                    break;
                 default:
                     TINT_IR_ICE(ir_) << "invalid address space for pointer_offset";
             }
@@ -1022,6 +1071,16 @@ class Printer : public tint::TextGenerator {
             out << ", " << sm->Columns() << ", " << sm->Rows() << ">(";
             EmitValue(out, c->Args()[0]);
             out << ")";
+            return;
+        }
+        if (c->Func() == msl::BuiltinFn::kVolatileZero) {
+            if (volatile_zero_name_.empty()) {
+                volatile_zero_name_ = UniqueIdentifier("tint_volatile_zero");
+                Line(&preamble_buffer_);
+                Line(&preamble_buffer_)
+                    << "volatile constexpr constant uint " << volatile_zero_name_ << " = 0u;";
+            }
+            out << " " << volatile_zero_name_;
             return;
         }
 
@@ -1268,6 +1327,9 @@ class Printer : public tint::TextGenerator {
                 break;
             case core::BuiltinFn::kUnpack2X16Unorm:
                 out << "unpack_unorm2x16_to_float";
+                break;
+            case core::BuiltinFn::kAddSat:
+                out << "addsat";
                 break;
             default:
                 TINT_IR_UNREACHABLE(ir_) << "unhandled: " << func;
@@ -1808,6 +1870,8 @@ class Printer : public tint::TextGenerator {
         tint::Switch(
             c->Type(),  //
             [&](const core::type::Bool*) { out << (c->ValueAs<bool>() ? "true" : "false"); },
+            // 8-bit types print as chars by default.
+            [&](const core::type::U8*) { out << static_cast<uint32_t>(c->ValueAs<u8>()) << "u"; },
             [&](const core::type::I32*) { PrintI32(out, c->ValueAs<i32>()); },
             [&](const core::type::U32*) { out << c->ValueAs<u32>() << "u"; },
             [&](const core::type::U64*) { out << c->ValueAs<u64>() << "ul"; },
@@ -1901,7 +1965,7 @@ class Printer : public tint::TextGenerator {
 
     /// @returns `true` if @p ident should be renamed
     bool ShouldRename(std::string_view ident) {
-        return options_.strip_all_names || IsKeyword(ident) || !tint::utf8::IsASCII(ident);
+        return options_.strip_all_names || IsKeyword(ident) || !tint::utf8::IsIdentifier(ident);
     }
 
     /// @param s the structure

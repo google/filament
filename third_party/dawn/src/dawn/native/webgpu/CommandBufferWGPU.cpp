@@ -25,26 +25,27 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/CommandBufferWGPU.h"
+#include "src/dawn/native/webgpu/CommandBufferWGPU.h"
 
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/RenderBundle.h"
-#include "dawn/native/webgpu/BindGroupWGPU.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/CommandBufferHelpers.h"
-#include "dawn/native/webgpu/ComputePipelineWGPU.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/QuerySetWGPU.h"
-#include "dawn/native/webgpu/RenderBundleWGPU.h"
-#include "dawn/native/webgpu/RenderPipelineWGPU.h"
-#include "dawn/native/webgpu/Serialization.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/RenderBundle.h"
+#include "src/dawn/native/webgpu/BindGroupWGPU.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/CommandBufferHelpers.h"
+#include "src/dawn/native/webgpu/ComputePipelineWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/QuerySetWGPU.h"
+#include "src/dawn/native/webgpu/RenderBundleWGPU.h"
+#include "src/dawn/native/webgpu/RenderPipelineWGPU.h"
+#include "src/dawn/native/webgpu/Serialization.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::webgpu {
 
@@ -145,19 +146,21 @@ void EncodeComputePass(const DawnProcTable& wgpu,
 
             case Command::SetBindGroup: {
                 auto cmd = commands.NextCommand<SetBindGroupCmd>();
-                uint32_t* dynamicOffsets = nullptr;
-                if (cmd->dynamicOffsetCount > 0) {
+                ityp::span<BindingIndex, const uint32_t> dynamicOffsets;
+                if (cmd->dynamicOffsetCount != BindingIndex{0u}) {
                     dynamicOffsets = commands.NextData<uint32_t>(cmd->dynamicOffsetCount);
                 }
+
                 wgpu.computePassEncoderSetBindGroup(passEncoder, static_cast<uint32_t>(cmd->index),
                                                     ToBackend(cmd->group)->GetInnerHandle(),
-                                                    cmd->dynamicOffsetCount, dynamicOffsets);
+                                                    uint32_t{dynamicOffsets.size()},
+                                                    dynamicOffsets.data());
                 break;
             }
             case Command::InsertDebugMarker: {
                 auto cmd = commands.NextCommand<InsertDebugMarkerCmd>();
-                char* label = commands.NextData<char>(cmd->length + 1);
-                wgpu.computePassEncoderInsertDebugMarker(passEncoder, {label, cmd->length});
+                std::string_view label = NextNullTerminatedString(&commands, cmd->length);
+                wgpu.computePassEncoderInsertDebugMarker(passEncoder, {label.data(), label.size()});
                 break;
             }
 
@@ -169,24 +172,25 @@ void EncodeComputePass(const DawnProcTable& wgpu,
 
             case Command::PushDebugGroup: {
                 auto cmd = commands.NextCommand<PushDebugGroupCmd>();
-                char* label = commands.NextData<char>(cmd->length + 1);
-                wgpu.computePassEncoderPushDebugGroup(passEncoder, {label, cmd->length});
+                std::string_view label = NextNullTerminatedString(&commands, cmd->length);
+                wgpu.computePassEncoderPushDebugGroup(passEncoder, {label.data(), label.size()});
                 break;
             }
 
             case Command::WriteTimestamp: {
                 auto cmd = commands.NextCommand<WriteTimestampCmd>();
-                wgpu.computePassEncoderWriteTimestamp(
-                    passEncoder, ToBackend(cmd->querySet)->GetInnerHandle(), cmd->queryIndex);
+                wgpu.computePassEncoderWriteTimestamp(passEncoder,
+                                                      ToBackend(cmd->querySet)->GetInnerHandle(),
+                                                      uint32_t{cmd->queryIndex});
                 break;
             }
 
             case Command::SetImmediates: {
                 auto cmd = commands.NextCommand<SetImmediatesCmd>();
                 DAWN_ASSERT(cmd->size > 0);
-                uint8_t* value = nullptr;
-                value = commands.NextData<uint8_t>(cmd->size);
-                wgpu.computePassEncoderSetImmediates(passEncoder, cmd->offset, value, cmd->size);
+                Span<const uint8_t> data = commands.NextData<uint8_t>(cmd->size);
+                wgpu.computePassEncoderSetImmediates(passEncoder, cmd->offset, data.data(),
+                                                     data.size());
                 break;
             }
 
@@ -291,10 +295,10 @@ void EncodeRenderPass(const Device* device,
                 auto* cmd = commands.NextCommand<ExecuteBundlesCmd>();
                 auto bundles = commands.NextData<Ref<RenderBundleBase>>(cmd->count);
                 std::vector<WGPURenderBundle> wgpuBundles;
-                wgpuBundles.reserve(cmd->count);
+                wgpuBundles.reserve(bundles.size());
 
-                for (uint32_t i = 0; i < cmd->count; ++i) {
-                    wgpuBundles.push_back(ToBackend(bundles[i].Get())->GetInnerHandle());
+                for (const auto& bundle : bundles) {
+                    wgpuBundles.push_back(ToBackend(bundle.Get())->GetInnerHandle());
                 }
                 wgpu.renderPassEncoderExecuteBundles(passEncoder, wgpuBundles.size(),
                                                      wgpuBundles.data());
@@ -303,7 +307,7 @@ void EncodeRenderPass(const Device* device,
 
             case Command::BeginOcclusionQuery: {
                 auto cmd = commands.NextCommand<BeginOcclusionQueryCmd>();
-                wgpu.renderPassEncoderBeginOcclusionQuery(passEncoder, cmd->queryIndex);
+                wgpu.renderPassEncoderBeginOcclusionQuery(passEncoder, uint32_t{cmd->queryIndex});
                 break;
             }
 
@@ -315,8 +319,9 @@ void EncodeRenderPass(const Device* device,
 
             case Command::WriteTimestamp: {
                 auto cmd = commands.NextCommand<WriteTimestampCmd>();
-                wgpu.renderPassEncoderWriteTimestamp(
-                    passEncoder, ToBackend(cmd->querySet)->GetInnerHandle(), cmd->queryIndex);
+                wgpu.renderPassEncoderWriteTimestamp(passEncoder,
+                                                     ToBackend(cmd->querySet)->GetInnerHandle(),
+                                                     uint32_t{cmd->queryIndex});
                 break;
             }
 
@@ -365,8 +370,8 @@ void EncodeRenderPass(const Device* device,
 
             case Command::InsertDebugMarker: {
                 auto cmd = commands.NextCommand<InsertDebugMarkerCmd>();
-                char* label = commands.NextData<char>(cmd->length + 1);
-                wgpu.renderPassEncoderInsertDebugMarker(passEncoder, {label, cmd->length});
+                std::string_view label = NextNullTerminatedString(&commands, cmd->length);
+                wgpu.renderPassEncoderInsertDebugMarker(passEncoder, {label.data(), label.size()});
                 break;
             }
 
@@ -378,20 +383,21 @@ void EncodeRenderPass(const Device* device,
 
             case Command::PushDebugGroup: {
                 auto cmd = commands.NextCommand<PushDebugGroupCmd>();
-                char* label = commands.NextData<char>(cmd->length + 1);
-                wgpu.renderPassEncoderPushDebugGroup(passEncoder, {label, cmd->length});
+                std::string_view label = NextNullTerminatedString(&commands, cmd->length);
+                wgpu.renderPassEncoderPushDebugGroup(passEncoder, {label.data(), label.size()});
                 break;
             }
 
             case Command::SetBindGroup: {
                 auto cmd = commands.NextCommand<SetBindGroupCmd>();
-                uint32_t* dynamicOffsets = nullptr;
-                if (cmd->dynamicOffsetCount > 0) {
+                ityp::span<BindingIndex, const uint32_t> dynamicOffsets;
+                if (cmd->dynamicOffsetCount != BindingIndex{0u}) {
                     dynamicOffsets = commands.NextData<uint32_t>(cmd->dynamicOffsetCount);
                 }
                 wgpu.renderPassEncoderSetBindGroup(passEncoder, static_cast<uint32_t>(cmd->index),
                                                    ToBackend(cmd->group)->GetInnerHandle(),
-                                                   cmd->dynamicOffsetCount, dynamicOffsets);
+                                                   uint32_t{dynamicOffsets.size()},
+                                                   dynamicOffsets.data());
                 break;
             }
 
@@ -421,9 +427,9 @@ void EncodeRenderPass(const Device* device,
             case Command::SetImmediates: {
                 auto cmd = commands.NextCommand<SetImmediatesCmd>();
                 DAWN_ASSERT(cmd->size > 0);
-                uint8_t* value = nullptr;
-                value = commands.NextData<uint8_t>(cmd->size);
-                wgpu.renderPassEncoderSetImmediates(passEncoder, cmd->offset, value, cmd->size);
+                Span<const uint8_t> data = commands.NextData<uint8_t>(cmd->size);
+                wgpu.renderPassEncoderSetImmediates(passEncoder, cmd->offset, data.data(),
+                                                    data.size());
                 break;
             }
 
@@ -455,7 +461,7 @@ MaybeError GatherReferencedResourcesFromComputePass(CaptureContext& captureConte
             }
             case Command::SetBindGroup: {
                 auto cmd = commands.NextCommand<SetBindGroupCmd>();
-                if (cmd->dynamicOffsetCount > 0) {
+                if (cmd->dynamicOffsetCount > BindingIndex{0u}) {
                     commands.NextData<uint32_t>(cmd->dynamicOffsetCount);
                 }
                 usedResources.bindGroups.push_back(cmd->group.Get());
@@ -494,8 +500,8 @@ MaybeError GatherReferencedResourcesFromRenderPass(CaptureContext& captureContex
             case Command::ExecuteBundles: {
                 auto cmd = commands.NextCommand<ExecuteBundlesCmd>();
                 auto bundles = commands.NextData<Ref<RenderBundleBase>>(cmd->count);
-                for (uint32_t i = 0; i < cmd->count; ++i) {
-                    usedResources.renderBundles.push_back(bundles[i].Get());
+                for (const auto& bundle : bundles) {
+                    usedResources.renderBundles.push_back(bundle.Get());
                 }
                 break;
             }
@@ -516,7 +522,7 @@ void CaptureTimestampWriteCommand(CaptureContext& captureContext, CommandIterato
     schema::CommandBufferCommandWriteTimestampCmd data{{
         .data = {{
             .querySetId = captureContext.GetId(cmd.querySet),
-            .queryIndex = cmd.queryIndex,
+            .queryIndex = uint32_t{cmd.queryIndex},
         }},
     }};
     Serialize(captureContext, data);
@@ -596,8 +602,8 @@ MaybeError CaptureRenderPass(CaptureContext& captureContext, CommandIterator& co
                 const auto& cmd = *commands.NextCommand<ExecuteBundlesCmd>();
                 auto bundles = commands.NextData<Ref<RenderBundleBase>>(cmd.count);
                 std::vector<schema::ObjectId> bundleIds;
-                for (uint32_t i = 0; i < cmd.count; ++i) {
-                    bundleIds.push_back(captureContext.GetId(bundles[i].Get()));
+                for (const auto& bundle : bundles) {
+                    bundleIds.push_back(captureContext.GetId(bundle.Get()));
                 }
                 schema::CommandBufferCommandExecuteBundlesCmd data{{
                     .data = {{
@@ -611,7 +617,7 @@ MaybeError CaptureRenderPass(CaptureContext& captureContext, CommandIterator& co
                 const auto& cmd = *commands.NextCommand<BeginOcclusionQueryCmd>();
                 schema::CommandBufferCommandBeginOcclusionQueryCmd data{{
                     .data = {{
-                        .queryIndex = cmd.queryIndex,
+                        .queryIndex = uint32_t{cmd.queryIndex},
                     }},
                 }};
                 Serialize(captureContext, data);
@@ -681,16 +687,13 @@ MaybeError CaptureRenderPass(CaptureContext& captureContext, CommandIterator& co
     return {};
 }
 
-template <typename T>
 MaybeError AddReferencedPassResourceUsages(CaptureContext& captureContext,
-                                           const std::vector<T>& syncScopeResourceUsages) {
-    for (const auto& usages : syncScopeResourceUsages) {
-        for (auto buffer : usages.buffers) {
-            DAWN_TRY(captureContext.AddResource(ToBackend(buffer)));
-        }
-        for (auto texture : usages.textures) {
-            DAWN_TRY(captureContext.AddResource(ToBackend(texture)));
-        }
+                                           const SyncScopeResourceUsage& usages) {
+    for (auto buffer : usages.buffers) {
+        DAWN_TRY(captureContext.AddResource(ToBackend(buffer)));
+    }
+    for (auto texture : usages.textures) {
+        DAWN_TRY(captureContext.AddResource(ToBackend(texture)));
     }
     return {};
 }
@@ -708,9 +711,13 @@ MaybeError CommandBuffer::AddReferenced(CaptureContext& captureContext) {
     for (auto querySet : resourceUsages.usedQuerySets) {
         DAWN_TRY(captureContext.AddResource(ToBackend(querySet)));
     }
-    DAWN_TRY(AddReferencedPassResourceUsages(captureContext, resourceUsages.renderPasses));
+    for (const auto& usages : resourceUsages.renderPasses) {
+        DAWN_TRY(AddReferencedPassResourceUsages(captureContext, usages));
+    }
     for (const auto& pass : resourceUsages.computePasses) {
-        DAWN_TRY(AddReferencedPassResourceUsages(captureContext, pass.dispatchUsages));
+        for (const auto& usages : pass.dispatchUsages) {
+            DAWN_TRY(AddReferencedPassResourceUsages(captureContext, usages));
+        }
     }
 
     CommandBufferResourceUsages usedResources;
@@ -902,12 +909,12 @@ MaybeError CommandBuffer::CaptureCreationParameters(CaptureContext& captureConte
             }
             case Command::WriteBuffer: {
                 const auto& cmd = *commands.NextCommand<WriteBufferCmd>();
-                auto values = mCommands.NextData<uint8_t>(cmd.size);
+                Span<const uint8_t> values = commands.NextData<uint8_t>(cmd.size);
                 schema::CommandBufferCommandWriteBufferCmd data{{
                     .data = {{
                         .bufferId = captureContext.GetId(cmd.buffer.Get()),
                         .bufferOffset = cmd.offset,
-                        .data = std::vector<uint8_t>(values, values + cmd.size),
+                        .data = std::vector(values.begin(), values.end()),
                     }},
                 }};
                 Serialize(captureContext, data);
@@ -936,10 +943,10 @@ MaybeError CommandBuffer::CaptureCreationParameters(CaptureContext& captureConte
                 ColorAttachmentMask attachmentMask = cmd.attachmentState->GetColorAttachmentsMask();
                 ColorAttachmentIndex attachmentCount = GetHighestBitIndexPlusOne(attachmentMask);
 
-                std::vector<schema::ColorAttachment> colorAttachments(size_t(attachmentCount),
+                std::vector<schema::ColorAttachment> colorAttachments(size_t{attachmentCount},
                                                                       schema::ColorAttachment{});
                 for (ColorAttachmentIndex slot : attachmentMask) {
-                    colorAttachments[size_t(slot)] =
+                    colorAttachments[size_t{slot}] =
                         ToSchema(captureContext, cmd.colorAttachments[slot]);
                 }
 
@@ -974,8 +981,8 @@ MaybeError CommandBuffer::CaptureCreationParameters(CaptureContext& captureConte
                 schema::CommandBufferCommandResolveQuerySetCmd data{{
                     .data = {{
                         .querySetId = captureContext.GetId(cmd.querySet.Get()),
-                        .firstQuery = cmd.firstQuery,
-                        .queryCount = cmd.queryCount,
+                        .firstQuery = uint32_t{cmd.firstQuery},
+                        .queryCount = uint32_t{cmd.queryCount},
                         .destinationId = captureContext.GetId(cmd.destination.Get()),
                         .destinationOffset = cmd.destinationOffset,
                     }},
@@ -1006,8 +1013,8 @@ ResultOrError<WGPUCommandBuffer> CommandBuffer::Encode() {
     WGPUCommandEncoder innerEncoder =
         wgpu.deviceCreateCommandEncoder(ToBackend(GetDevice())->GetInnerHandle(), nullptr);
 
-    size_t nextComputePassNumber = 0;
-    size_t nextRenderPassNumber = 0;
+    PassIndex nextComputePassNumber{0u};
+    PassIndex nextRenderPassNumber{0u};
 
     Command type;
     while (mCommands.NextCommandId(&type)) {
@@ -1092,21 +1099,22 @@ ResultOrError<WGPUCommandBuffer> CommandBuffer::Encode() {
             case Command::ResolveQuerySet: {
                 auto cmd = mCommands.NextCommand<ResolveQuerySetCmd>();
                 wgpu.commandEncoderResolveQuerySet(
-                    innerEncoder, ToBackend(cmd->querySet)->GetInnerHandle(), cmd->firstQuery,
-                    cmd->queryCount, ToBackend(cmd->destination)->GetInnerHandle(),
-                    cmd->destinationOffset);
+                    innerEncoder, ToBackend(cmd->querySet)->GetInnerHandle(),
+                    uint32_t{cmd->firstQuery}, uint32_t{cmd->queryCount},
+                    ToBackend(cmd->destination)->GetInnerHandle(), cmd->destinationOffset);
                 break;
             }
             case Command::WriteTimestamp: {
                 auto cmd = mCommands.NextCommand<WriteTimestampCmd>();
-                wgpu.commandEncoderWriteTimestamp(
-                    innerEncoder, ToBackend(cmd->querySet)->GetInnerHandle(), cmd->queryIndex);
+                wgpu.commandEncoderWriteTimestamp(innerEncoder,
+                                                  ToBackend(cmd->querySet)->GetInnerHandle(),
+                                                  uint32_t{cmd->queryIndex});
                 break;
             }
             case Command::InsertDebugMarker: {
                 auto cmd = mCommands.NextCommand<InsertDebugMarkerCmd>();
-                char* label = mCommands.NextData<char>(cmd->length + 1);
-                wgpu.commandEncoderInsertDebugMarker(innerEncoder, {label, cmd->length});
+                std::string_view label = NextNullTerminatedString(&mCommands, cmd->length);
+                wgpu.commandEncoderInsertDebugMarker(innerEncoder, {label.data(), label.size()});
                 break;
             }
             case Command::PopDebugGroup: {
@@ -1116,16 +1124,16 @@ ResultOrError<WGPUCommandBuffer> CommandBuffer::Encode() {
             }
             case Command::PushDebugGroup: {
                 auto cmd = mCommands.NextCommand<PushDebugGroupCmd>();
-                char* label = mCommands.NextData<char>(cmd->length + 1);
-                wgpu.commandEncoderPushDebugGroup(innerEncoder, {label, cmd->length});
+                std::string_view label = NextNullTerminatedString(&mCommands, cmd->length);
+                wgpu.commandEncoderPushDebugGroup(innerEncoder, {label.data(), label.size()});
                 break;
             }
             case Command::WriteBuffer: {
                 auto cmd = mCommands.NextCommand<WriteBufferCmd>();
-                auto data = mCommands.NextData<uint8_t>(cmd->size);
+                Span<const uint8_t> data = mCommands.NextData<uint8_t>(cmd->size);
                 wgpu.commandEncoderWriteBuffer(innerEncoder,
                                                ToBackend(cmd->buffer)->GetInnerHandle(),
-                                               cmd->offset, data, cmd->size);
+                                               cmd->offset, data.data(), data.size());
                 break;
             }
             default:

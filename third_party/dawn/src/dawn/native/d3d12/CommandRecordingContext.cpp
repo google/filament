@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/CommandRecordingContext.h"
+#include "src/dawn/native/d3d12/CommandRecordingContext.h"
 
 #include <profileapi.h>
 #include <sysinfoapi.h>
@@ -33,13 +33,14 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/Defer.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/HeapD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/Defer.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/HeapD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::d3d12 {
 
@@ -81,8 +82,7 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
     if (error.IsError()) {
         DAWN_TRY(std::move(error));
     }
-    DAWN_TRY(device->GetResidencyManager()->EnsureHeapsAreResident(mHeapsPendingUsage.data(),
-                                                                   mHeapsPendingUsage.size()));
+    DAWN_TRY(device->GetResidencyManager()->EnsureHeapsAreResident(mHeapsPendingUsage));
 
     if (device->IsToggleEnabled(Toggle::RecordDetailedTimingInTraceEvents)) {
         uint64_t gpuTimestamp;
@@ -101,7 +101,7 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
         LARGE_INTEGER cpuFrequencyLargeInteger;
         commandQueue->GetTimestampFrequency(&gpuFrequency);
         QueryPerformanceFrequency(&cpuFrequencyLargeInteger);  // Supported since Windows 2000
-        cpuFrequency = cpuFrequencyLargeInteger.QuadPart;
+        cpuFrequency = sign_cast(cpuFrequencyLargeInteger.QuadPart);
 
         std::string timingInfo = absl::StrFormat(
             "UTC Time: %u/%u/%u %02u:%02u:%02u.%03u, File Time: %u, CPU "
@@ -114,9 +114,9 @@ MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
                 fileTimeNonPrecise.dwLowDateTime,
             cpuTimestamp, gpuTimestamp, cpuFrequency, gpuFrequency);
 
-        TRACE_EVENT_INSTANT1(device->GetPlatform(), General,
-                             "d3d12::CommandRecordingContext::ExecuteCommandList Detailed Timing",
-                             "Timing", timingInfo.c_str());
+        TRACE_EVENT_INSTANT(DAWN_TRACE_CATEGORY(),
+                            "d3d12::CommandRecordingContext::ExecuteCommandList Detailed Timing",
+                            "Timing", timingInfo.c_str());
     }
 
     ID3D12CommandList* d3d12CommandList = GetCommandList();

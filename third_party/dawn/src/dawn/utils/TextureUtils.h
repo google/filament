@@ -32,11 +32,12 @@
 
 #include <array>
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
+#include "src/utils/platform.h"
 
 namespace dawn::utils {
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 inline constexpr std::array<wgpu::TextureFormat, 101> kAllTextureFormats = {
     wgpu::TextureFormat::R8Unorm,
     wgpu::TextureFormat::R8Snorm,
@@ -139,7 +140,7 @@ inline constexpr std::array<wgpu::TextureFormat, 101> kAllTextureFormats = {
     wgpu::TextureFormat::ASTC12x10UnormSrgb,
     wgpu::TextureFormat::ASTC12x12Unorm,
     wgpu::TextureFormat::ASTC12x12UnormSrgb};
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 inline constexpr std::array<wgpu::TextureFormat, 41> kFormatsInCoreSpec = {
     wgpu::TextureFormat::R8Unorm,
@@ -272,7 +273,7 @@ inline constexpr std::array<wgpu::TextureFormat, 2> kDepthAndStencilFormats = {
 constexpr std::array<wgpu::TextureFormat, 3> kTier1TestFormats8Bit = {
     wgpu::TextureFormat::R8Snorm, wgpu::TextureFormat::RG8Snorm, wgpu::TextureFormat::RGBA8Snorm};
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 constexpr std::array<wgpu::TextureFormat, 6> kTier1TestFormats16Bit = {
     wgpu::TextureFormat::R16Unorm,    wgpu::TextureFormat::R16Snorm,
     wgpu::TextureFormat::RG16Unorm,   wgpu::TextureFormat::RG16Snorm,
@@ -308,7 +309,7 @@ constexpr std::array<wgpu::TextureFormat, 15> kTier2AdditionalStorageFormats = {
     wgpu::TextureFormat::RGBA16Sint, wgpu::TextureFormat::RGBA16Float,
     wgpu::TextureFormat::RGBA32Uint, wgpu::TextureFormat::RGBA32Sint,
     wgpu::TextureFormat::RGBA32Float};
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 class SubsamplingFactor {
   public:
@@ -349,14 +350,14 @@ bool TextureFormatSupportsResolveTarget(const wgpu::Device& device,
 bool IsUnorm16TextureFormat(wgpu::TextureFormat textureFormat);
 bool IsSnorm16TextureFormat(wgpu::TextureFormat textureFormat);
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 bool IsMultiPlanarFormat(wgpu::TextureFormat textureFormat);
 uint32_t GetMultiPlaneTextureBitDepth(wgpu::TextureFormat textureFormat);
 uint32_t GetMultiPlaneTextureNumPlanes(wgpu::TextureFormat textureFormat);
 uint32_t GetMultiPlaneTextureBytesPerElement(wgpu::TextureFormat textureFormat, size_t plane);
 SubsamplingFactor GetMultiPlaneTextureSubsamplingFactor(wgpu::TextureFormat textureFormat,
                                                         size_t plane);
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 uint32_t GetTexelBlockSizeInBytes(wgpu::TextureFormat textureFormat);
 uint32_t GetTextureFormatBlockWidth(wgpu::TextureFormat textureFormat);

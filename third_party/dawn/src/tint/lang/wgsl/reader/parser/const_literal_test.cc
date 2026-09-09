@@ -25,16 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include <cstring>
 
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/wgsl/reader/parser/helper_test.h"
+#include "src/tint/utils/memory/bitcast.h"
+#include "src/utils/compiler.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
 
@@ -53,11 +50,9 @@ double MakeDouble(uint64_t sign, uint64_t biased_exponent, uint64_t mantissa) {
     const uint64_t mantissa_bits = (mantissa & 0xFFFFFFFFFFFFFull);
 
     uint64_t bits = sign_bit | exponent_bits | mantissa_bits;
-    double result = 0.0;
-    static_assert(sizeof(result) == sizeof(bits),
+    static_assert(sizeof(double) == sizeof(bits),
                   "expected double and uint64_t to be the same size");
-    std::memcpy(&result, &bits, sizeof(bits));
-    return result;
+    return tint::Bitcast<double>(bits);
 }
 
 TEST_F(WGSLParserTest, ConstLiteral_Int) {

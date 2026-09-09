@@ -25,20 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/BlitDepthToDepth.h"
+#include "src/dawn/native/BlitDepthToDepth.h"
 
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Strings.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/BlockInfo.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/InternalPipelineStore.h"
-#include "dawn/native/RenderPassEncoder.h"
-#include "dawn/native/RenderPipeline.h"
+#include "src/dawn/common/Strings.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/BlockInfo.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/InternalPipelineStore.h"
+#include "src/dawn/native/RenderPassEncoder.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 
@@ -112,11 +112,11 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
                             const TexelExtent3D& copyExtent) {
     DAWN_ASSERT(device->IsLockedByCurrentThreadIfNeeded());
     // DAWN_ASSERT that the texture have depth and are not multisampled.
-    DAWN_ASSERT(src.texture->GetFormat().HasDepth());
-    DAWN_ASSERT(dst.texture->GetFormat().HasDepth());
-    DAWN_ASSERT(src.texture->GetSampleCount() == 1u);
-    DAWN_ASSERT(dst.texture->GetSampleCount() == 1u);
-    DAWN_ASSERT(!copyExtent.IsEmpty());
+    DAWN_CHECK(src.texture->GetFormat().HasDepth());
+    DAWN_CHECK(dst.texture->GetFormat().HasDepth());
+    DAWN_CHECK(src.texture->GetSampleCount() == 1u);
+    DAWN_CHECK(dst.texture->GetSampleCount() == 1u);
+    DAWN_CHECK(!copyExtent.IsEmpty());
 
     // Note: because depth texture subresources must be copied in full, this blit
     // does not need to handle copy subrects.
@@ -139,10 +139,10 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
     // sampled as the source instead.
     ityp::vector<TexelCount, Ref<TextureViewBase>> srcViews;
     srcViews.reserve(copyExtent.depthOrArrayLayers);
-    for (TexelCount z = TexelCount{0}; z < copyExtent.depthOrArrayLayers; ++z) {
+    for (TexelCount z = TexelCount{0u}; z < copyExtent.depthOrArrayLayers; ++z) {
         TexelCount layer = src.origin.z + z;
         Ref<TextureViewBase> srcView;
-        if (layer == TexelCount{0}) {
+        if (layer == TexelCount{0u}) {
             // The zero'th slice. We can use the original texture.
             TextureViewDescriptor viewDesc = {};
             viewDesc.aspect = wgpu::TextureAspect::DepthOnly;
@@ -156,8 +156,8 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
             intermediateTexDesc.format = src.texture->GetFormat().format;
             intermediateTexDesc.usage =
                 wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
-            intermediateTexDesc.size = {static_cast<uint32_t>(copyExtent.width),
-                                        static_cast<uint32_t>(copyExtent.height)};
+            intermediateTexDesc.size = {dchecked_cast<uint32_t>(copyExtent.width),
+                                        dchecked_cast<uint32_t>(copyExtent.height)};
 
             Ref<TextureBase> intermediateTexture;
             DAWN_TRY_ASSIGN(intermediateTexture, device->CreateTexture(&intermediateTexDesc));
@@ -167,7 +167,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
                 TexelCopyTextureInfo intermediateSrc;
                 intermediateSrc.texture = src.texture.Get();
                 intermediateSrc.mipLevel = src.mipLevel;
-                intermediateSrc.origin = {0, 0, static_cast<uint32_t>(layer)};
+                intermediateSrc.origin = {0, 0, dchecked_cast<uint32_t>(layer)};
                 intermediateSrc.aspect = wgpu::TextureAspect::All;
 
                 TexelCopyTextureInfo intermediateDst;
@@ -192,7 +192,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
     }
 
     // For each copied layer, blit from the source into the destination.
-    for (TexelCount z = TexelCount{0}; z < copyExtent.depthOrArrayLayers; ++z) {
+    for (TexelCount z = TexelCount{0u}; z < copyExtent.depthOrArrayLayers; ++z) {
         Ref<BindGroupBase> bindGroup;
         {
             BindGroupEntry bgEntry = {};
@@ -201,8 +201,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
 
             BindGroupDescriptor bgDesc = {};
             bgDesc.layout = bgl.Get();
-            bgDesc.entryCount = 1;
-            bgDesc.entries = &bgEntry;
+            bgDesc.entries = SpanFromRef(bgEntry);
             DAWN_TRY_ASSIGN(bindGroup,
                             device->CreateBindGroup(&bgDesc, UsageValidationMode::Internal));
         }
@@ -211,7 +210,7 @@ MaybeError BlitDepthToDepth(DeviceBase* device,
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = wgpu::TextureViewDimension::e2D;
-            viewDesc.baseArrayLayer = static_cast<uint32_t>(dst.origin.z + z);
+            viewDesc.baseArrayLayer = dchecked_cast<uint32_t>(dst.origin.z + z);
             viewDesc.arrayLayerCount = 1;
             viewDesc.baseMipLevel = dst.mipLevel;
             viewDesc.mipLevelCount = 1;

@@ -49,6 +49,8 @@ function(meson_target TARGET_NAME)
 
     set(MESON_ARGS
         "setup"
+        "--wrap-mode=nodownload"
+        "--reconfigure"
         "${MESON_BUILD_DIR}"
         "${ARG_SOURCE_DIR}"
         "--prefix=${MESON_INSTALL_DIR}"
@@ -75,6 +77,16 @@ function(meson_target TARGET_NAME)
             set(LLVM_STRIP_PATH "llvm-strip")
         endif()
 
+        set(LLVM_CONFIG_PATH "${DAWN_THIRD_PARTY_DIR}/llvm-dev/bin/llvm-config")
+        if (NOT EXISTS "${LLVM_CONFIG_PATH}")
+            message(FATAL_ERROR "Could not find required llvm-config at ${LLVM_CONFIG_PATH}")
+        endif()
+
+        set(ZSTD_DIR "${DAWN_THIRD_PARTY_DIR}/zstd")
+        set(ZSTD_PKGCONFIG_DIR "${ZSTD_DIR}/lib/pkgconfig")
+        set(ZSTD_LIB_DIR "${ZSTD_DIR}/lib")
+        set(ZSTD_INCLUDE_DIR "${ZSTD_DIR}/include")
+
         set(NATIVE_FILE_CONTENT
             "[binaries]\n"
             "c = '${CC_PATH}'\n"
@@ -82,11 +94,22 @@ function(meson_target TARGET_NAME)
             "ar = '${LLVM_AR_PATH}'\n"
             "strip = '${LLVM_STRIP_PATH}'\n"
             "pkg-config = 'pkg-config'\n"
+            "llvm-config = '${LLVM_CONFIG_PATH}'\n"
             "python = ['vpython3', '-vpython-spec', '${PROJECT_SOURCE_DIR}/.vpython3']\n"
+            "\n"
+            "[properties]\n"
+            "pkg_config_path = ['${ZSTD_PKGCONFIG_DIR}']\n"
+            "\n"
+            "[built-in options]\n"
+            "c_args = ['-I${ZSTD_INCLUDE_DIR}']\n"
+            "cpp_args = ['-I${ZSTD_INCLUDE_DIR}']\n"
+            "c_link_args = ['-L${ZSTD_LIB_DIR}']\n"
+            "cpp_link_args = ['-L${ZSTD_LIB_DIR}']\n"
         )
 
         set(NATIVE_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_native.ini")
-        file(WRITE "${NATIVE_FILE_PATH}" "${NATIVE_FILE_CONTENT}")
+        string(JOIN "" NATIVE_FILE_CONTENT_STR ${NATIVE_FILE_CONTENT})
+        file(WRITE "${NATIVE_FILE_PATH}" "${NATIVE_FILE_CONTENT_STR}")
 
         list(APPEND MESON_ARGS
             "--native-file"

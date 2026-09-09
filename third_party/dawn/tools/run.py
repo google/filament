@@ -59,12 +59,28 @@ def main() -> int:
     if sys.platform == 'win32':
         go_binary += '.exe'
 
+    tool_dir = os.path.relpath(os.path.join(CMD_DIR, args.tool_name),
+                               DAWN_ROOT)
+    # Go expects package paths relative to module root to start with './' or
+    # '../'. On Windows, absolute paths starting with a drive letter (e.g.,
+    # 'C:\') are mistaken by Go for package import paths. Therefore, represent
+    # the package path as a relative path starting with './' and using forward
+    # slashes.
+    tool_dir = './' + tool_dir.replace(os.path.sep, '/')
+
     cmd = [
         go_binary,
         'run',
-        os.path.join(CMD_DIR, args.tool_name),
+        tool_dir,
     ]
     cmd.extend(unknown_args)
+
+    # Disable CGO since it causes problems when cross-compiling (see https://crbug.com/516926043).
+    os.environ['CGO_ENABLED'] = '0'
+    # Force Go modules to be ON so package imports within the dawn module
+    # resolve correctly, overriding any potential system-wide or user-wide
+    # environment settings like GO111MODULE=off.
+    os.environ['GO111MODULE'] = 'on'
 
     proc = subprocess.run(cmd, check=False, cwd=DAWN_ROOT)
     return proc.returncode

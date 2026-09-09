@@ -27,9 +27,9 @@
 
 #include <memory>
 
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "gmock/gmock.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
 
 namespace dawn {
 namespace {

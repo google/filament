@@ -30,7 +30,7 @@
 
 #import <Foundation/NSObject.h>
 
-#include "dawn/common/RefBase.h"
+#include "src/dawn/common/RefBase.h"
 
 #if !defined(__OBJC__)
 #error "NSRef can only be used in Objective C/C++ code."
@@ -86,8 +86,8 @@ namespace dawn {
 template <typename T>
 struct NSRefTraits {
     static constexpr T kNullValue = nullptr;
-    static void AddRef(T value) { [value retain]; }
-    static void Release(T value) { [value release]; }
+    static void AddRef(T value) { [static_cast<NSObject*>(value) retain]; }
+    static void Release(T value) { [static_cast<NSObject*>(value) release]; }
 };
 
 template <typename T>

@@ -165,7 +165,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ConversionPolyfill(Module& ir, const ConversionPolyfillConfig& config) {
-    core::ir::AssertValid(ir, kConversionPolyfillCapabilities, "before core.ConversionPolyfill");
+    core::ir::AssertValid(ir, "before core.ConversionPolyfill");
 
     State{config, ir}.Process();
 

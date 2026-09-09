@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_BINDGROUPLAYOUTGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_BINDGROUPLAYOUTGL_H_
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SlabAllocator.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/opengl/BindGroupGL.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SlabAllocator.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/opengl/BindGroupGL.h"
 
 namespace dawn::native::opengl {
 

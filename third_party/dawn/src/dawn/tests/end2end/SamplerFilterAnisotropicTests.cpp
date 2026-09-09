@@ -28,11 +28,11 @@
 #include <cmath>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -137,7 +137,7 @@ class SamplerFilterAnisotropicTest : public DawnTest {
 
             const utils::RGBA8 color = colors[level];
 
-            std::vector<utils::RGBA8> data(rowPixels * texHeight, color);
+            std::vector<utils::RGBA8> data(static_cast<size_t>(rowPixels) * texHeight, color);
             wgpu::Buffer stagingBuffer =
                 utils::CreateBufferFromData(device, data.data(), data.size() * sizeof(utils::RGBA8),
                                             wgpu::BufferUsage::CopySrc);
@@ -295,6 +295,8 @@ TEST_P(SamplerFilterAnisotropicTest, SlantedPlaneMipmap) {
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode() &&
                              HasToggleEnabled("gl_force_es_31_and_no_extensions"));
     DAWN_SUPPRESS_TEST_IF(IsWARP());
+    // Fails on Xclipse with ANGLE Vulkan.
+    DAWN_SUPPRESS_TEST_IF(IsSamsung() && IsOpenGLES() && IsANGLE());
 
     const uint16_t maxAnisotropyLists[] = {1, 2, 16, 128};
     for (uint16_t t : maxAnisotropyLists) {

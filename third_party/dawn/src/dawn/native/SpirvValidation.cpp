@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/SpirvValidation.h"
+#include "src/dawn/native/SpirvValidation.h"
 
 #include <memory>
 #include <spirv-tools/libspirv.hpp>
@@ -34,10 +34,7 @@
 
 namespace dawn::native {
 
-MaybeError ValidateSpirv(LogEmitter* logEmitter,
-                         const uint32_t* spirv,
-                         size_t wordCount,
-                         bool spv14) {
+MaybeError ValidateSpirv(LogEmitter* logEmitter, Span<const uint32_t> spirv, bool spv14) {
     spvtools::SpirvTools spirvTools(spv14 ? SPV_ENV_VULKAN_1_1_SPIRV_1_4 : SPV_ENV_VULKAN_1_1);
     spirvTools.SetMessageConsumer([logEmitter](spv_message_level_t level, const char*,
                                                const spv_position_t& position,
@@ -70,10 +67,10 @@ MaybeError ValidateSpirv(LogEmitter* logEmitter,
     spvtools::ValidatorOptions val_opts;
     val_opts.SetFriendlyNames(false);
 
-    const bool valid = spirvTools.Validate(spirv, wordCount, val_opts);
+    const bool valid = spirvTools.Validate(spirv.data(), spirv.size(), val_opts);
     // Dump the generated SPIRV if it is invalid.
     if (!valid) {
-        DumpSpirv(logEmitter, spirv, wordCount, &spirvTools);
+        DumpSpirv(logEmitter, spirv, &spirvTools);
     }
 
     DAWN_INVALID_IF(!valid, "Produced invalid SPIRV. Please file a bug at https://crbug.com/tint.");
@@ -82,8 +79,7 @@ MaybeError ValidateSpirv(LogEmitter* logEmitter,
 }
 
 void DumpSpirv(LogEmitter* logEmitter,
-               const uint32_t* spirv,
-               size_t wordCount,
+               Span<const uint32_t> spirv,
                spvtools::SpirvTools* spirvTools) {
     std::unique_ptr<spvtools::SpirvTools> inplaceSpirvTools;
     if (spirvTools == nullptr) {
@@ -95,7 +91,7 @@ void DumpSpirv(LogEmitter* logEmitter,
     std::ostringstream dumpedMsg;
     std::string disassembly;
     if (spirvTools->Disassemble(
-            spirv, wordCount, &disassembly,
+            spirv.data(), spirv.size(), &disassembly,
             SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_INDENT)) {
         dumpedMsg << "/* Dumped SPIRV disassembly */\n" << disassembly;
     } else {

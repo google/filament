@@ -52,6 +52,10 @@ class MemoryTracker {
     const static size_t UNKNOWN_ALLOCATION = std::numeric_limits<size_t>::max();
     size_t allocation_count = 0;
     size_t call_count = 0;
+    bool fail_next_growing_reallocation = false;
+    bool fail_growing_reallocation_after_skips = false;
+    size_t growing_reallocations_to_skip = 0;
+    bool poison_growing_reallocations = false;
     std::unordered_map<void*, AllocationDetails> allocations;
 
     void* allocate(size_t size, size_t alignment, VkSystemAllocationScope alloc_scope) {
@@ -82,6 +86,17 @@ class MemoryTracker {
         size_t original_size = elem->second.requested_size_bytes;
 
         // We only care about the case where realloc is used to increase the size
+        if (size >= original_size && fail_next_growing_reallocation) {
+            fail_next_growing_reallocation = false;
+            return nullptr;
+        }
+        if (size >= original_size && fail_growing_reallocation_after_skips) {
+            if (growing_reallocations_to_skip == 0) {
+                fail_growing_reallocation_after_skips = false;
+                return nullptr;
+            }
+            growing_reallocations_to_skip--;
+        }
         if (size >= original_size && settings.should_fail_after_set_number_of_calls && call_count == settings.fail_after_calls)
             return nullptr;
         call_count++;
@@ -97,6 +112,11 @@ class MemoryTracker {
             allocation_count--;  // allocate() increments this, we we don't want that
             call_count--;        // allocate() also increments this, we don't want that
             memcpy(new_alloc, pOriginal, original_size);
+            if (poison_growing_reallocations && size > original_size) {
+                // The loader does not zero the region an app pfnReallocation grows, so fill it with a non-zero
+                // pattern to make any read of an unwritten grown slot deterministic.
+                memset(static_cast<char*>(new_alloc) + original_size, 0xff, size - original_size);
+            }
             allocations.erase(elem);
             return new_alloc;
         }
@@ -156,6 +176,29 @@ class MemoryTracker {
     VkAllocationCallbacks* get() noexcept { return &callbacks; }
 
     bool empty() noexcept { return allocation_count == 0; }
+
+    // Arm a single failure for the next reallocation that grows an existing block. Used to force the used-object
+    // list resize inside loader_get_next_available_entry to fail without disturbing prior allocations.
+    void arm_next_growing_reallocation_failure() noexcept {
+        std::lock_guard<std::mutex> lg(main_mutex);
+        fail_next_growing_reallocation = true;
+    }
+
+    // Arm a single failure for a later growing reallocation, allowing skip_count earlier growing reallocations
+    // to succeed first. Lets a test target a resize that is not the first one in a single loader call, eg the
+    // per-ICD debug list resize that runs after the used-object status list resize.
+    void arm_growing_reallocation_failure_after(size_t skip_count) noexcept {
+        std::lock_guard<std::mutex> lg(main_mutex);
+        fail_growing_reallocation_after_skips = true;
+        growing_reallocations_to_skip = skip_count;
+    }
+
+    // Fill the newly grown region of every growing reallocation with a non-zero pattern, matching what an app
+    // pfnReallocation that does not zero grown memory would leave behind.
+    void poison_grown_reallocations() noexcept {
+        std::lock_guard<std::mutex> lg(main_mutex);
+        poison_growing_reallocations = true;
+    }
 
     // Static callbacks
     static VKAPI_ATTR void* VKAPI_CALL public_allocation(void* pUserData, size_t size, size_t alignment,
@@ -240,9 +283,8 @@ TEST(Allocation, EnumeratePhysicalDevices) {
 TEST(Allocation, InstanceAndDevice) {
     FrameworkEnvironment env{};
     env.add_icd(TEST_ICD_PATH_VERSION_2)
-        .add_physical_device(PhysicalDevice{"physical_device_0"}
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false})
-                                 .finish());
+        .add_physical_device(
+            PhysicalDevice{"physical_device_0"}.add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false}));
 
     MemoryTracker tracker;
     {
@@ -289,9 +331,8 @@ TEST(Allocation, InstanceAndDevice) {
 TEST(Allocation, InstanceButNotDevice) {
     FrameworkEnvironment env{};
     env.add_icd(TEST_ICD_PATH_VERSION_2)
-        .add_physical_device(PhysicalDevice{"physical_device_0"}
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false})
-                                 .finish());
+        .add_physical_device(
+            PhysicalDevice{"physical_device_0"}.add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false}));
 
     MemoryTracker tracker;
     {
@@ -338,9 +379,8 @@ TEST(Allocation, InstanceButNotDevice) {
 TEST(Allocation, DeviceButNotInstance) {
     FrameworkEnvironment env{};
     env.add_icd(TEST_ICD_PATH_VERSION_2)
-        .add_physical_device(PhysicalDevice{"physical_device_0"}
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false})
-                                 .finish());
+        .add_physical_device(
+            PhysicalDevice{"physical_device_0"}.add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false}));
 
     const char* layer_name = "VK_LAYER_implicit";
     env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
@@ -509,6 +549,128 @@ TEST(Allocation, CreateSurfaceIntentionalAllocFail) {
     }
 }
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL noop_debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT,
+                                                                VkDebugUtilsMessageTypeFlagsEXT,
+                                                                const VkDebugUtilsMessengerCallbackDataEXT*, void*) {
+    return VK_FALSE;
+}
+
+// When a debug messenger create can't reserve a slot (the used-object status list is full and its resize is
+// refused), the error rollback used to be gated on the pNextIndex allocation instead of on a slot actually
+// being reserved. With next_index left at 0 the rollback destroyed the ICD handle of the messenger already
+// living in slot 0 - a driver-side double free once the application later destroyed that live messenger.
+TEST(Allocation, DebugUtilsMessengerReservationFailKeepsLiveMessenger) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2)
+        .set_min_icd_interface_version(5)
+        .add_instance_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+        .add_physical_device({});
+
+    MemoryTracker tracker{};
+
+    VkInstance instance = VK_NULL_HANDLE;
+    InstanceCreateInfo inst_create_info{};
+    inst_create_info.add_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkCreateInstance(inst_create_info.get(), tracker.get(), &instance));
+
+    PFN_vkCreateDebugUtilsMessengerEXT create_messenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+        env.vulkan_functions.vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
+    PFN_vkDestroyDebugUtilsMessengerEXT destroy_messenger = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+        env.vulkan_functions.vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
+    ASSERT_NE(create_messenger, nullptr);
+    ASSERT_NE(destroy_messenger, nullptr);
+
+    VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    messenger_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT;
+    messenger_info.pfnUserCallback = noop_debug_utils_callback;
+
+    // The used-object status list starts with room for 32 entries, so filling it makes the next reservation grow it.
+    std::vector<VkDebugUtilsMessengerEXT> messengers;
+    for (uint32_t i = 0; i < 32; i++) {
+        VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
+        ASSERT_EQ(VK_SUCCESS, create_messenger(instance, &messenger_info, nullptr, &messenger));
+        messengers.push_back(messenger);
+    }
+
+    auto& icd_details = env.get_test_icd(0).created_instance_details.begin()->second;
+    ASSERT_EQ(icd_details.messenger_handles.size(), 32u);
+
+    // Make the used-object list resize fail so the reservation fails after pNextIndex is already allocated.
+    tracker.arm_next_growing_reallocation_failure();
+    VkDebugUtilsMessengerEXT failed_messenger = VK_NULL_HANDLE;
+    ASSERT_EQ(VK_ERROR_OUT_OF_HOST_MEMORY, create_messenger(instance, &messenger_info, nullptr, &failed_messenger));
+
+    // No slot was reserved, so the still-live messenger occupying slot 0 must remain untouched in the ICD.
+    EXPECT_EQ(icd_details.messenger_handles.size(), 32u);
+
+    for (auto messenger : messengers) {
+        destroy_messenger(instance, messenger, nullptr);
+    }
+    EXPECT_EQ(icd_details.messenger_handles.size(), 0u);
+    env.vulkan_functions.vkDestroyInstance(instance, tracker.get());
+    ASSERT_TRUE(tracker.empty());
+}
+
+// Each ICD keeps its own debug_utils_messenger_list, resized one ICD at a time inside the create loop. If a
+// create fails after the used-object slot was reserved but before an ICD's list has been grown to cover the
+// reserved index (eg that ICD's resize is refused), the error rollback indexed list[next_index] without
+// checking that ICD's list capacity, reading past the end of the smaller allocation. Force the per-ICD resize
+// to fail on the entry that first needs the list grown and confirm the rollback stays in bounds.
+TEST(Allocation, DebugUtilsMessengerCreateRollbackStaysInBounds) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2)
+        .set_min_icd_interface_version(5)
+        .add_instance_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+        .add_physical_device({});
+
+    MemoryTracker tracker{};
+
+    VkInstance instance = VK_NULL_HANDLE;
+    InstanceCreateInfo inst_create_info{};
+    inst_create_info.add_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkCreateInstance(inst_create_info.get(), tracker.get(), &instance));
+
+    PFN_vkCreateDebugUtilsMessengerEXT create_messenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+        env.vulkan_functions.vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
+    PFN_vkDestroyDebugUtilsMessengerEXT destroy_messenger = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+        env.vulkan_functions.vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
+    ASSERT_NE(create_messenger, nullptr);
+    ASSERT_NE(destroy_messenger, nullptr);
+
+    VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    messenger_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT;
+    messenger_info.pfnUserCallback = noop_debug_utils_callback;
+
+    // Both the used-object status list and the per-ICD list start with room for 32 entries, so the 33rd create
+    // is the first that grows them.
+    std::vector<VkDebugUtilsMessengerEXT> messengers;
+    for (uint32_t i = 0; i < 32; i++) {
+        VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
+        ASSERT_EQ(VK_SUCCESS, create_messenger(instance, &messenger_info, nullptr, &messenger));
+        messengers.push_back(messenger);
+    }
+
+    auto& icd_details = env.get_test_icd(0).created_instance_details.begin()->second;
+    ASSERT_EQ(icd_details.messenger_handles.size(), 32u);
+
+    // Let the used-object list resize succeed (so the slot is reserved) but fail the following per-ICD list
+    // resize, leaving that ICD's list too small for the reserved index when the rollback runs.
+    tracker.arm_growing_reallocation_failure_after(1);
+    VkDebugUtilsMessengerEXT failed_messenger = VK_NULL_HANDLE;
+    ASSERT_EQ(VK_ERROR_OUT_OF_HOST_MEMORY, create_messenger(instance, &messenger_info, nullptr, &failed_messenger));
+
+    // The 32 live messengers are untouched by the rollback and still destroy cleanly.
+    EXPECT_EQ(icd_details.messenger_handles.size(), 32u);
+    for (auto messenger : messengers) {
+        destroy_messenger(instance, messenger, nullptr);
+    }
+    EXPECT_EQ(icd_details.messenger_handles.size(), 0u);
+    env.vulkan_functions.vkDestroyInstance(instance, tracker.get());
+    ASSERT_TRUE(tracker.empty());
+}
+
 // Test failure during vkCreateInstance to make sure we don't leak memory if
 // one of the out-of-memory conditions trigger.
 TEST(Allocation, CreateInstanceIntentionalAllocFailWithSettingsFilePresent) {
@@ -543,6 +705,36 @@ TEST(Allocation, CreateInstanceIntentionalAllocFailWithSettingsFilePresent) {
         ASSERT_TRUE(tracker.empty());
         fail_index++;
     }
+}
+
+// An active layer configuration in the settings file routes layer selection through
+// enable_correct_layers_from_settings, which reads VK_INSTANCE_LAYERS itself. On Windows loader_getenv
+// allocates through the application's allocator, so that read has to be released like the ones in
+// loader_enable_instance_layers and loader_validate_instance_extensions.
+TEST(Allocation, SettingsLayerConfigurationWithInstanceLayersEnvVar) {
+    FrameworkEnvironment env{FrameworkSettings{}.set_log_filter("error,warn")};
+    env.add_icd(TEST_ICD_PATH_VERSION_2);
+
+    const char* layer_name = "VK_LAYER_TestLayer";
+    env.add_explicit_layer(
+        {}, ManifestLayer{}.add_layer(
+                ManifestLayer::LayerDescription{}.set_name(layer_name).set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)));
+
+    env.update_loader_settings(
+        env.loader_settings.add_app_specific_setting(AppSpecificSettings{}.add_stderr_log_filter("all").add_layer_configuration(
+            LoaderSettingsLayerConfiguration{}
+                .set_name(layer_name)
+                .set_control("on")
+                .set_path(env.get_shimmed_layer_manifest_path(0)))));
+
+    EnvVarWrapper instance_layers_env_var{"VK_INSTANCE_LAYERS", layer_name};
+
+    MemoryTracker tracker{};
+    {
+        InstWrapper inst{env.vulkan_functions, tracker.get()};
+        ASSERT_NO_FATAL_FAILURE(inst.CheckCreate());
+    }
+    ASSERT_TRUE(tracker.empty());
 }
 
 // Test failure during vkCreateInstance & surface creation to make sure we don't leak memory if
@@ -633,12 +825,10 @@ TEST(Allocation, DriverEnvVarIntentionalAllocFail) {
 TEST(Allocation, CreateDeviceIntentionalAllocFail) {
     FrameworkEnvironment env{FrameworkSettings{}.set_log_filter("error,warn")};
     env.add_icd(TEST_ICD_PATH_VERSION_2)
-        .add_physical_device(PhysicalDevice{"physical_device_0"}
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false})
-                                 .finish())
-        .add_physical_device(PhysicalDevice{"physical_device_1"}
-                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false})
-                                 .finish());
+        .add_physical_device(
+            PhysicalDevice{"physical_device_0"}.add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false}))
+        .add_physical_device(
+            PhysicalDevice{"physical_device_1"}.add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, false}));
 
     const char* layer_name = "VK_LAYER_implicit";
     env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
@@ -951,6 +1141,33 @@ TEST(Allocation, EnumeratePhysicalDevicesIntentionalAllocFail) {
         ASSERT_TRUE(tracker.empty());
         reached_the_end = true;
     }
+}
+
+// A layer device_extension entry with no "entrypoints" leaves loader_dev_ext_props::entrypoints unwritten.
+// The first 32 list slots come from a zero-filled allocation, but the 33rd lands in the region grown by the app
+// pfnReallocation, which the loader does not zero. Freeing the discovered layer then walks that indeterminate
+// loader_string_list. Poison the grown region so the read is deterministic.
+TEST(Allocation, LayerDeviceExtensionsWithoutEntrypoints) {
+    FrameworkEnvironment env{};
+    env.add_icd(TEST_ICD_PATH_VERSION_2);
+
+    std::vector<ManifestLayer::LayerDescription::Extension> layer_exts;
+    for (uint32_t i = 0; i < 40; i++) {
+        layer_exts.emplace_back(std::string("VK_TEST_dev_ext_") + std::to_string(i), i + 1);
+    }
+    env.add_explicit_layer(ManifestOptions{}.set_json_name("test_dev_ext_layer.json"),
+                           ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
+                                                         .set_name("VK_LAYER_test_dev_ext")
+                                                         .set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)
+                                                         .add_device_extensions(layer_exts)));
+
+    MemoryTracker tracker;
+    tracker.poison_grown_reallocations();
+    {
+        InstWrapper inst{env.vulkan_functions, tracker.get()};
+        ASSERT_NO_FATAL_FAILURE(inst.CheckCreate());
+    }
+    ASSERT_TRUE(tracker.empty());
 }
 #if defined(WIN32)
 // Test failure during vkCreateInstance and vkCreateDevice to make sure we don't

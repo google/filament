@@ -206,6 +206,21 @@ GPUAdapterInfo.prototype.description;
 GPUAdapterInfo.prototype.subgroupMinSize;
 /** @type {number} */
 GPUAdapterInfo.prototype.subgroupMaxSize;
+/** @type {Iterator<GPUSubgroupMatrixConfig>} */
+GPUAdapterInfo.prototype.subgroupMatrixConfigs;
+
+/** @constructor */
+function GPUSubgroupMatrixConfig() {}
+/** @type {string} */
+GPUSubgroupMatrixConfig.prototype.componentType;
+/** @type {string} */
+GPUSubgroupMatrixConfig.prototype.resultComponentType;
+/** @type {number} */
+GPUSubgroupMatrixConfig.prototype.M;
+/** @type {number} */
+GPUSubgroupMatrixConfig.prototype.N;
+/** @type {number} */
+GPUSubgroupMatrixConfig.prototype.K;
 
 /** @constructor */
 function GPU() {}

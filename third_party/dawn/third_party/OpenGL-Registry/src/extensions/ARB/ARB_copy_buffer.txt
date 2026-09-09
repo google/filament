@@ -1,0 +1,254 @@
+Name
+
+    ARB_copy_buffer
+
+Name Strings
+
+    GL_ARB_copy_buffer
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Rob Barris, Blizzard Entertainment
+    Bruce Merry, ARM
+    Eric Werness, NVIDIA
+    Greg Roth, NVIDIA
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on March 19, 2009.
+
+Version
+
+    Last Modified Date: September 6, 2017
+    Author Revision: 7
+
+Number
+
+    ARB Extension #59
+
+Dependencies
+
+    Written based on the wording of the OpenGL 3.0 (August 11, 2008 draft)
+    specification.
+
+Overview
+
+    This extension provides a mechanism to do an accelerated copy from one
+    buffer object to another. This may be useful to load buffer objects
+    in a "loading thread" while minimizing cost and synchronization effort
+    in the "rendering thread."
+
+IP Status
+
+    No known IP claims.
+
+New Tokens
+
+    Accepted by the target parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData,
+    GetBufferPointerv, MapBufferRange, FlushMappedBufferRange,
+    GetBufferParameteriv, BindBufferRange, BindBufferBase,
+    and CopyBufferSubData:
+
+    COPY_READ_BUFFER                    0x8F36
+    COPY_WRITE_BUFFER                   0x8F37
+
+New Procedures and Functions
+
+    void CopyBufferSubData(enum readtarget, enum writetarget,
+                           intptr readoffset, intptr writeoffset,
+                           sizeiptr size);
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (Rasterization)
+
+    Add a new subsection "Copying Between Buffers" to section 2.9:
+
+    All or part of one buffer object's data store may be copied to the
+    data store of another buffer object by calling
+
+    void CopyBufferSubData(enum readtarget, enum writetarget,
+                           intptr readoffset, intptr writeoffset,
+                           sizeiptr size);
+
+    with readtarget and writetarget each set to one of the targets
+    ARRAY_BUFFER, COPY_READ_BUFFER, COPY_WRITE_BUFFER,
+    ELEMENT_ARRAY_BUFFER, PIXEL_PACK_BUFFER, PIXEL_UNPACK_BUFFER,
+    TEXTURE_BUFFER, TRANSFORM_FEEDBACK_BUFFER, or UNIFORM_BUFFER. While
+    any of these targets may be used, the COPY_READ_BUFFER and
+    COPY_WRITE_BUFFER targets are provided specifically for copies, so
+    that they can be done without affecting other buffer binding targets
+    that may be in use. writeoffset and size specify the range of data
+    in the buffer object bound to writetarget that is to be replaced, in
+    terms of basic machine units. readoffset and size specify the range
+    of data in the buffer object bound to readtarget that is to be
+    copied to the corresponding region of writetarget.
+
+    An INVALID_VALUE error is generated if any of readoffset,
+    writeoffset, or size are negative, if readoffset+size exceeds the
+    size of the buffer object bound to readtarget, or if
+    writeoffset+size exceeds the size of the buffer object bound to
+    writetarget.
+
+    An INVALID_VALUE error is generated if the same buffer object is
+    bound to both readtarget and writetarget, and the ranges
+    [readoffset, readoffset+size) and [writeoffset, writeoffset+size)
+    overlap.
+
+    An INVALID_OPERATION error is generated if zero is bound to
+    readtarget or writetarget.
+
+    An INVALID_OPERATION error is generated if the buffer objects bound
+    to either readtarget or writetarget are mapped.
+
+Additions to Chapter 5 of the OpenGL 3.0 Specification (Special Functions)
+
+    Add to the list (page 310) of "Vertex Buffer Objects" commands "not
+    compiled into the display list but are executed immediately":
+
+        CopyBufferSubData
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    The following single command is sent to the server as
+    a glxsingle request:
+
+    CopyBufferSubData
+
+        1       CARD8           opcode
+        1       221             GLX opcode
+        2       10              request length
+        4       GLX_CONTEXT_TAG context tag
+        8       CARD64          readoffset
+        8       CARD64          writeoffset
+        8       CARD64          size
+        4       ENUM            readtarget
+        4       ENUM            writetarget
+
+Errors
+
+    The error INVALID_VALUE is generated by CopyBufferSubData if
+    readoffset, writeoffset, or size are less than zero, or if
+    readoffset+size is greater than the value of BUFFER_SIZE of
+    readtarget/readBuffer, or if writeoffset+size is greater than the
+    value of BUFFER_SIZE of writetarget/writeBuffer.
+
+    The error INVALID_OPERATION is generated by CopyBufferSubData if
+    either readtarget/readBuffer or writetarget/writeBuffer are mapped.
+
+    The error INVALID_VALUE is generated by CopyBufferSubData if
+    readtarget/readBuffer and writetarget/writeBuffer are the same
+    buffer object, and the ranges [readoffset, readoffset+size) and
+    [writeoffset, writeoffset+size) overlap.
+
+New State
+
+    (add to table 6.52, Miscellaneous State, p. 390)
+
+                                            Initial
+    Get Value           Type    Get Command Value   Description                 Sec.    Attribute
+    ----------------    ----    ----------- ------- --------------------------- ------  ---------
+    COPY_READ_BUFFER    Z+      GetIntegerv 0       Buffer object bound to the  2.9     none
+                                                    copy buffer "read" binding
+                                                    point
+    COPY_WRITE_BUFFE    Z+      GetIntegerv 0       Buffer object bound to the  2.9     none
+                                                    copy buffer "write"
+                                                    binding point
+
+Usage Examples
+
+    Replace BufferSubData with a non-cache-polluting update:
+
+        BindBuffer(COPY_READ_BUFFER, tempBuffer);
+        BufferData(COPY_READ_BUFFER, updateSize, NULL, STREAM_DRAW);
+        // this may return a WriteCombined mapping!
+        ptr = MapBuffer(COPY_READ_BUFFER, WRITE_ONLY);
+        // fill ptr
+        UnmapBuffer(COPY_READ_BUFFER);
+
+        BindBuffer(COPY_WRITE_BUFFER, vtxBuffer);
+        // this copy ideally requires no CPU work on the data itself.
+        CopyBufferSubData(COPY_READ_BUFFER, COPY_WRITE_BUFFER,
+                          0, writeoffset, updateSize);
+
+Issues
+
+    1) What should the new targets and parameters be named? READ/WRITE?
+       SOURCE/DEST? Something else?
+
+    RESOLVED: READ and WRITE, because it's consistent with the <access>
+    parameters and state.
+
+    2) How is this extension useful?
+
+    This can be a desirable replacement to BufferSubData if there are
+    large updates that will pollute the CPU cache. If generating the data
+    can be offloaded to another thread, then the CPU cost of the update
+    in the rendering thread can be very small.
+
+    This can also be an alternate mechanism to MapBufferRange with the
+    MAP_UNSYNCHRONIZED_BIT, by allowing the CPU to write into a temp
+    buffer and then scheduling the update to be in-band with the
+    rendering. MAP_UNSYNCHRONIZED_BIT can lead to hard-to-detect
+    synchronization bugs if the GPU hasn't finished consuming the data
+    that is overwritten (Write After Read hazard). Also, mapping a buffer
+    may, on some implementations, require forcing the data store into a
+    memory space more local to the CPU than to the GPU, which can adversely
+    affect rendering performance.
+
+    Finally, if an implementation supports concurrent data transfers in
+    one context/thread while doing rendering in another context/thread,
+    this extension may be used to move data from system memory to video
+    memory in preparation for copying it into another buffer, or texture,
+    etc., in the rendering thread.
+
+    (3) Why don't the new tokens and entry points in this extension have
+       "ARB" suffixes like other ARB extensions?
+
+        RESOLVED: Unlike most ARB extensions, this is a strict subset of
+        functionality already approved in OpenGL 3.1. This extension
+        exists only to support that functionality on older hardware that
+        cannot implement a full OpenGL 3.1 driver. Since there are no
+        possible behavior changes between the ARB extension and core
+        features, source code compatibility is improved by not using
+        suffixes on the extension.
+
+Revision History
+
+    Revision 1, 2008/09/09
+     - Initial draft
+    Revision 2, 2008/09/26
+     - Make EXT_direct_state_access interaction explicit.
+    Revision 3, 2008/10/10
+     - Fix missing entry points for the new targets.
+    Revision 4, 2009/03/13
+     - Move Named* entry point to EXT_direct_state_access.
+    Revision 5, 2009/03/19
+     - ARBify and remove ARB suffix from entry points and tokens.
+    Revision 6, 2009/06/03
+     - Add buffer target list and fix capitalization differences on
+       parameter names per feedback from Jonathan Knispel
+    Revision 7, 2017/09/06
+     - Add GLX protocol.

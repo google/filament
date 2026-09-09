@@ -27,10 +27,10 @@
 
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -302,23 +302,24 @@ class DrawVertexAndIndexBufferOOBValidationTests : public ValidationTest {
     // stride, buffer size, SetVertexBuffer size and offset.
     const std::vector<VertexBufferParams> kVertexParamsList = {
         // For stride = kFloat32x4Stride
-        {kFloat32x4Stride, 3 * kFloat32x4Stride, 0, wgpu::kWholeSize, 3},
+        {kFloat32x4Stride, 3ULL * kFloat32x4Stride, 0, wgpu::kWholeSize, 3},
         // Non-zero offset
-        {kFloat32x4Stride, 4 * kFloat32x4Stride, kFloat32x4Stride, wgpu::kWholeSize, 3},
+        {kFloat32x4Stride, 4ULL * kFloat32x4Stride, kFloat32x4Stride, wgpu::kWholeSize, 3},
         // Non-default size
-        {kFloat32x4Stride, 4 * kFloat32x4Stride, 0, 3 * kFloat32x4Stride, 3},
+        {kFloat32x4Stride, 4ULL * kFloat32x4Stride, 0, 3ULL * kFloat32x4Stride, 3},
         // Non-zero offset and size
-        {kFloat32x4Stride, 5 * kFloat32x4Stride, kFloat32x4Stride, 3 * kFloat32x4Stride, 3},
-        // For stride = 2 * kFloat32x4Stride
-        {(2 * kFloat32x4Stride), 3 * (2 * kFloat32x4Stride), 0, wgpu::kWholeSize, 3},
+        {kFloat32x4Stride, 5ULL * kFloat32x4Stride, kFloat32x4Stride, 3ULL * kFloat32x4Stride, 3},
+        // For stride = 2ULL * kFloat32x4Stride
+        {(2ULL * kFloat32x4Stride), 3ULL * (2ULL * kFloat32x4Stride), 0, wgpu::kWholeSize, 3},
         // Non-zero offset
-        {(2 * kFloat32x4Stride), 4 * (2 * kFloat32x4Stride), (2 * kFloat32x4Stride),
+        {(2ULL * kFloat32x4Stride), 4ULL * (2ULL * kFloat32x4Stride), (2ULL * kFloat32x4Stride),
          wgpu::kWholeSize, 3},
         // Non-default size
-        {(2 * kFloat32x4Stride), 4 * (2 * kFloat32x4Stride), 0, 3 * (2 * kFloat32x4Stride), 3},
+        {(2ULL * kFloat32x4Stride), 4ULL * (2ULL * kFloat32x4Stride), 0,
+         3ULL * (2ULL * kFloat32x4Stride), 3},
         // Non-zero offset and size
-        {(2 * kFloat32x4Stride), 5 * (2 * kFloat32x4Stride), (2 * kFloat32x4Stride),
-         3 * (2 * kFloat32x4Stride), 3},
+        {(2ULL * kFloat32x4Stride), 5ULL * (2ULL * kFloat32x4Stride), (2ULL * kFloat32x4Stride),
+         3ULL * (2ULL * kFloat32x4Stride), 3},
         // For (strideCount - 1) * arrayStride + lastStride <= bound buffer size < strideCount *
         // arrayStride
         {(kFloat32x4Stride + 4), 2 * (kFloat32x4Stride + 4) + kFloat32x4Stride, 0, wgpu::kWholeSize,
@@ -329,23 +330,24 @@ class DrawVertexAndIndexBufferOOBValidationTests : public ValidationTest {
     // Parameters list for instance-step-mode buffer.
     const std::vector<VertexBufferParams> kInstanceParamsList = {
         // For stride = kFloat32x2Stride
-        {kFloat32x2Stride, 5 * kFloat32x2Stride, 0, wgpu::kWholeSize, 5},
+        {kFloat32x2Stride, 5ULL * kFloat32x2Stride, 0, wgpu::kWholeSize, 5},
         // Non-zero offset
-        {kFloat32x2Stride, 6 * kFloat32x2Stride, kFloat32x2Stride, wgpu::kWholeSize, 5},
+        {kFloat32x2Stride, 6ULL * kFloat32x2Stride, kFloat32x2Stride, wgpu::kWholeSize, 5},
         // Non-default size
-        {kFloat32x2Stride, 6 * kFloat32x2Stride, 0, 5 * kFloat32x2Stride, 5},
+        {kFloat32x2Stride, 6ULL * kFloat32x2Stride, 0, 5ULL * kFloat32x2Stride, 5},
         // Non-zero offset and size
-        {kFloat32x2Stride, 7 * kFloat32x2Stride, kFloat32x2Stride, 5 * kFloat32x2Stride, 5},
-        // For stride = 3 * kFloat32x2Stride
-        {(3 * kFloat32x2Stride), 5 * (3 * kFloat32x2Stride), 0, wgpu::kWholeSize, 5},
+        {kFloat32x2Stride, 7ULL * kFloat32x2Stride, kFloat32x2Stride, 5ULL * kFloat32x2Stride, 5},
+        // For stride = 3ULL * kFloat32x2Stride
+        {(3ULL * kFloat32x2Stride), 5ULL * (3ULL * kFloat32x2Stride), 0, wgpu::kWholeSize, 5},
         // Non-zero offset
-        {(3 * kFloat32x2Stride), 6 * (3 * kFloat32x2Stride), (3 * kFloat32x2Stride),
+        {(3ULL * kFloat32x2Stride), 6ULL * (3ULL * kFloat32x2Stride), (3ULL * kFloat32x2Stride),
          wgpu::kWholeSize, 5},
         // Non-default size
-        {(3 * kFloat32x2Stride), 6 * (3 * kFloat32x2Stride), 0, 5 * (3 * kFloat32x2Stride), 5},
+        {(3ULL * kFloat32x2Stride), 6ULL * (3ULL * kFloat32x2Stride), 0,
+         5ULL * (3ULL * kFloat32x2Stride), 5},
         // Non-zero offset and size
-        {(3 * kFloat32x2Stride), 7 * (3 * kFloat32x2Stride), (3 * kFloat32x2Stride),
-         5 * (3 * kFloat32x2Stride), 5},
+        {(3ULL * kFloat32x2Stride), 7ULL * (3ULL * kFloat32x2Stride), (3ULL * kFloat32x2Stride),
+         5ULL * (3ULL * kFloat32x2Stride), 5},
         // For (strideCount - 1) * arrayStride + lastStride <= bound buffer size < strideCount *
         // arrayStride
         {(kFloat32x2Stride + 4), 2 * (kFloat32x2Stride + 4) + kFloat32x2Stride, 0, wgpu::kWholeSize,
@@ -363,7 +365,7 @@ class DrawVertexAndIndexBufferOOBValidationTests : public ValidationTest {
 TEST_F(DrawVertexAndIndexBufferOOBValidationTests, DrawBasic) {
     wgpu::RenderPipeline pipeline = CreateBasicRenderPipeline();
 
-    wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
 
     {
         // Implicit size
@@ -461,7 +463,7 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, ZeroAttribute) {
     wgpu::RenderPipeline pipeline =
         CreateRenderPipelineWithBufferDesc({{kFloat32x4Stride, wgpu::VertexStepMode::Vertex, {}}});
 
-    wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
 
     {
         // Valid
@@ -479,7 +481,7 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, ZeroAttribute) {
 // Verify vertex buffers don't need to be set to unused (hole) slots for Draw
 TEST_F(DrawVertexAndIndexBufferOOBValidationTests, UnusedSlots) {
     // Set vertex buffer only to the second slot
-    wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
     VertexBufferList vertexBufferList = {{1, vertexBuffer, 0, wgpu::kWholeSize}};
 
     {
@@ -507,7 +509,7 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, DrawIndexedBasic) {
     wgpu::Buffer indexBuffer = CreateBuffer(12 * sizeof(uint32_t), wgpu::BufferUsage::Index);
 
     // Build vertex buffer for 3 vertices
-    wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
     VertexBufferList vertexBufferList = {{0, vertexBuffer, 0, wgpu::kWholeSize}};
 
     IndexBufferDesc indexBufferDesc = {indexBuffer, wgpu::IndexFormat::Uint32};
@@ -525,9 +527,9 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, DrawIndexedIndexBufferOOB) {
         // Build index buffer use given params
         wgpu::Buffer indexBuffer = CreateBuffer(params.indexBufferSize, wgpu::BufferUsage::Index);
         // Build vertex buffer for 3 vertices
-        wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
+        wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
         // Build vertex buffer for 5 instances
-        wgpu::Buffer instanceBuffer = CreateBuffer(5 * kFloat32x2Stride);
+        wgpu::Buffer instanceBuffer = CreateBuffer(5ULL * kFloat32x2Stride);
 
         VertexBufferList vertexBufferList = {{0, vertexBuffer, 0, wgpu::kWholeSize},
                                              {1, instanceBuffer, 0, wgpu::kWholeSize}};
@@ -576,7 +578,7 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, DrawIndexedVertexBufferOOB) {
             constexpr uint64_t indexStride = sizeof(uint32_t);
 
             // Build index buffer for 12 indexes
-            wgpu::Buffer indexBuffer = CreateBuffer(12 * indexStride, wgpu::BufferUsage::Index);
+            wgpu::Buffer indexBuffer = CreateBuffer(12ULL * indexStride, wgpu::BufferUsage::Index);
             // Build vertex buffer for vertices
             wgpu::Buffer vertexBuffer = CreateBuffer(vertexParams.bufferSize);
             // Build vertex buffer for instances
@@ -629,10 +631,10 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, DrawIndexedZeroAttribute) {
     IndexBufferDesc indexBufferDesc = {indexBuffer, wgpu::IndexFormat::Uint32};
 
     // Build vertex buffer for 3 vertices
-    wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
 
     // Build vertex buffer for 3 instances
-    wgpu::Buffer instanceBuffer = CreateBuffer(3 * kFloat32x2Stride);
+    wgpu::Buffer instanceBuffer = CreateBuffer(3ULL * kFloat32x2Stride);
 
     {
         // Valid
@@ -658,8 +660,8 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, DrawIndexedUnusedSlots) {
     IndexBufferDesc indexBufferDesc = {indexBuffer, wgpu::IndexFormat::Uint32};
 
     // Set vertex buffers only to the second and third slots
-    wgpu::Buffer vertexBuffer = CreateBuffer(3 * kFloat32x4Stride);
-    wgpu::Buffer instanceBuffer = CreateBuffer(3 * kFloat32x2Stride);
+    wgpu::Buffer vertexBuffer = CreateBuffer(3ULL * kFloat32x4Stride);
+    wgpu::Buffer instanceBuffer = CreateBuffer(3ULL * kFloat32x2Stride);
     VertexBufferList vertexBufferList = {{1, vertexBuffer, 0, wgpu::kWholeSize},
                                          {2, instanceBuffer, 0, wgpu::kWholeSize}};
 
@@ -732,7 +734,7 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, ZeroArrayStrideVertexBuffer) 
             constexpr uint64_t indexStride = sizeof(uint32_t);
 
             // Build index buffer for 12 indexes
-            wgpu::Buffer indexBuffer = CreateBuffer(12 * indexStride, wgpu::BufferUsage::Index);
+            wgpu::Buffer indexBuffer = CreateBuffer(12ULL * indexStride, wgpu::BufferUsage::Index);
             // Build vertex buffer for vertices
             wgpu::Buffer vertexBuffer = CreateBuffer(vertexParams.bufferSize);
             // Build vertex buffer for instances
@@ -888,17 +890,17 @@ TEST_F(DrawVertexAndIndexBufferOOBValidationTests, SetBufferMultipleTime) {
     uint32_t indexStride = sizeof(uint32_t);
 
     // Build index buffer for 11 indexes
-    wgpu::Buffer indexBuffer11 = CreateBuffer(11 * indexStride, wgpu::BufferUsage::Index);
+    wgpu::Buffer indexBuffer11 = CreateBuffer(11ULL * indexStride, wgpu::BufferUsage::Index);
     // Build index buffer for 12 indexes
-    wgpu::Buffer indexBuffer12 = CreateBuffer(12 * indexStride, wgpu::BufferUsage::Index);
+    wgpu::Buffer indexBuffer12 = CreateBuffer(12ULL * indexStride, wgpu::BufferUsage::Index);
     // Build vertex buffer for 2 vertices
-    wgpu::Buffer vertexBuffer2 = CreateBuffer(2 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer2 = CreateBuffer(2ULL * kFloat32x4Stride);
     // Build vertex buffer for 3 vertices
-    wgpu::Buffer vertexBuffer3 = CreateBuffer(3 * kFloat32x4Stride);
+    wgpu::Buffer vertexBuffer3 = CreateBuffer(3ULL * kFloat32x4Stride);
     // Build vertex buffer for 4 instances
-    wgpu::Buffer instanceBuffer4 = CreateBuffer(4 * kFloat32x2Stride);
+    wgpu::Buffer instanceBuffer4 = CreateBuffer(4ULL * kFloat32x2Stride);
     // Build vertex buffer for 5 instances
-    wgpu::Buffer instanceBuffer5 = CreateBuffer(5 * kFloat32x2Stride);
+    wgpu::Buffer instanceBuffer5 = CreateBuffer(5ULL * kFloat32x2Stride);
 
     // Test for setting vertex buffer for multiple times
     {

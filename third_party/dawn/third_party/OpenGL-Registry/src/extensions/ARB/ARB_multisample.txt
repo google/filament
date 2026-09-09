@@ -1,0 +1,644 @@
+Name
+
+    ARB_multisample
+
+Name Strings
+
+    GL_ARB_multisample
+    GLX_ARB_multisample
+    WGL_ARB_multisample
+
+Contact
+
+    Dale Kirkland, NVIDIA (dkirkland 'at' nvidia.com)
+    Bill Armstrong, E&S (armstron 'at' es.com)
+    Michael Gold, NVIDIA (gold 'at' nvidia.com)
+    Jon Leech, SGI (ljp 'at' sgi.com)
+    Paula Womack, 3dfx (paulaw 'at' 3dfx.com)
+
+Notice
+
+    Copyright (c) 1999-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by ARB on 12/8/1999.
+    GLX protocol must still be defined.
+
+Version
+
+    Last Modified Date: March 12, 2002
+    Author Revision: 0.6
+
+    Based on:  SGIS_Multisample Specification
+               Date: 1994/11/22 Revision: 1.14
+
+Number
+
+    ARB Extension #5
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+    WGL_EXT_pixel_format is required.
+
+Overview
+
+    This extension provides a mechanism to antialias all GL primitives:
+    points, lines, polygons, bitmaps, and images.  The technique is to
+    sample all primitives multiple times at each pixel.  The color
+    sample values are resolved to a single, displayable color each time
+    a pixel is updated, so the antialiasing appears to be automatic at
+    the application level.  Because each sample includes depth and
+    stencil information, the depth and stencil functions perform
+    equivalently to the single-sample mode.
+
+    An additional buffer, called the multisample buffer, is added to
+    the framebuffer.  Pixel sample values, including color, depth, and
+    stencil values, are stored in this buffer.  When the framebuffer
+    includes a multisample buffer, it does not also include separate
+    depth or stencil buffers, even if the multisample buffer does not
+    store depth or stencil values.  Color buffers (left/right, front/
+    back, and aux) do coexist with the multisample buffer, however.
+
+    Multisample antialiasing is most valuable for rendering polygons,
+    because it requires no sorting for hidden surface elimination, and
+    it correctly handles adjacent polygons, object silhouettes, and
+    even intersecting polygons.  If only points or lines are being
+    rendered, the "smooth" antialiasing mechanism provided by the base
+    GL may result in a higher quality image.  This extension is
+    designed to allow multisample and smooth antialiasing techniques
+    to be alternated during the rendering of a single scene.
+
+IP Status
+
+    TBD
+
+Issues
+
+    1. Multiple passes have been taken out.  Is this acceptable?
+
+       RESOLUTION:  Yes.  This can be added back with an additional
+       extension if needed.
+
+    2. Would SampleAlphaARB be a better name for the function
+       SampleMaskARB?  If so, the name SAMPLE_MASK_ARB should also be
+       changed to SAMPLE_ALPHA_ARB.
+
+       RESOLUTION:  Names containing "mask" were changed to use
+       "coverage" instead.
+
+    3. Should the SampleCoverageARB function be changed to allow
+       blending between more than two objects?
+
+       RESOLUTION:  Not addressed by this extension.  An additional
+       extension has been proposed that allows a coverage range for
+       each object.  The coverage range is a min and max value that
+       can be used to blend multiple objects at different level-of-
+       detail fading.  The SampleCoverageARB function will layer on
+       this new extension.
+
+New Procedures and Functions
+
+    void SampleCoverageARB(clampf value,
+                           boolean invert);
+
+New Tokens
+
+    Accepted by the <attribList> parameter of glXChooseVisual, and by
+    the <attrib> parameter of glXGetConfig:
+
+        GLX_SAMPLE_BUFFERS_ARB               100000
+        GLX_SAMPLES_ARB                      100001
+
+    Accepted by the <piAttributes> parameter of
+    wglGetPixelFormatAttribivEXT, wglGetPixelFormatAttribfvEXT, and
+    the <piAttribIList> and <pfAttribIList> of wglChoosePixelFormatEXT:
+
+        WGL_SAMPLE_BUFFERS_ARB               0x2041
+        WGL_SAMPLES_ARB                      0x2042
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MULTISAMPLE_ARB                      0x809D
+        SAMPLE_ALPHA_TO_COVERAGE_ARB         0x809E
+        SAMPLE_ALPHA_TO_ONE_ARB              0x809F
+        SAMPLE_COVERAGE_ARB                  0x80A0
+
+    Accepted by the <mask> parameter of PushAttrib:
+
+        MULTISAMPLE_BIT_ARB                  0x20000000
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+        SAMPLE_BUFFERS_ARB                   0x80A8
+        SAMPLES_ARB                          0x80A9
+        SAMPLE_COVERAGE_VALUE_ARB            0x80AA
+        SAMPLE_COVERAGE_INVERT_ARB           0x80AB
+
+Additions to Chapter 2 of the 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2.1 Specification (Rasterization)
+
+    If SAMPLE_BUFFERS_ARB is a value of one, the rasterization of all
+    GL primitives is changed, and is referred to as multisample
+    rasterization.  Otherwise, primitive rasterization operates as it is
+    described in the GL specification, and is referred to as single-
+    sample rasterization.  The value of SAMPLE_BUFFERS_ARB is an
+    implementation dependent constant, and is queried by calling
+    GetIntegerv with <pname> set to SAMPLE_BUFFERS_ARB.  This value is
+    the same as GLX_SAMPLE_BUFFERS_ARB or WGL_SAMPLE_BUFFERS_ARB for
+    the visual or pixel format associated with the context.
+
+    During multisample rendering the contents of a pixel fragment are
+    changed in two ways.  First, each fragment includes a coverage
+    value with SAMPLES_ARB bits.  The value of SAMPLES_ARB is an
+    implementation-dependent constant, and is queried by calling
+    GetIntegerv with <pname> set to SAMPLES_ARB.  Second, each fragment
+    includes SAMPLES_ARB depth values, instead of the single depth
+    value that is maintained in single-sample rendering mode.  Each
+    pixel fragment thus consists of integer x and y grid coordinates,
+    a color, SAMPLES_ARB depth values, texture coordinates, and a
+    coverage value with a maximum of SAMPLES_ARB bits.
+
+    The behavior of multisample rasterization is a function of
+    MULTISAMPLE_ARB, which is enabled and disabled by calling Enable or
+    Disable, with <cap> set to MULTISAMPLE_ARB.  Its value is queried
+    using IsEnabled, with <cap> set to MULTISAMPLE_ARB.
+
+    If MULTISAMPLE_ARB is disabled, multisample rasterization of all
+    primitives is equivalent to single-sample rasterization, except
+    that the fragment coverage value is set to full coverage.  The
+    depth values may all be set to the single value that would have
+    been assigned by single-sample rasterization, or they may be
+    assigned as described below for multisample rasterization.
+
+    If MULTISAMPLE_ARB is enabled, multisample rasterization of all
+    primitives differs substantially from single-sample rasterization.
+    It is understood that each pixel in the framebuffer has SAMPLES_ARB
+    locations associated with it.  These locations are exact positions,
+    rather than regions or areas, and each is referred to as a sample
+    point. The sample points associated with a pixel may be located
+    inside or outside of the unit square that is considered to bound
+    the pixel. Furthermore, the relative locations of sample points
+    may be identical for each pixel in the framebuffer, or they may
+    differ.
+
+    If the sample locations differ per pixel, they should be aligned to
+    window, not screen, boundaries.  Otherwise rendering results will
+    be window-position specific.  The invariance requirement described
+    in section 3.1 is relaxed for all enabled multisample rendering,
+    because the sample locations may be a function of pixel location.
+
+    It is not possible to query the actual sample locations of a pixel.
+
+    Point Multisample Rasterization
+    [Insert before section 3.3.1]
+
+    If MULTISAMPLE_ARB is enabled, and SAMPLE_BUFFERS_ARB is a value of
+    one, then points are rasterized using the following algorithm,
+    regardless of whether point antialiasing (POINT_SMOOTH) is enabled
+    or disabled.  Point rasterization produces a fragment for each
+    framebuffer pixel with one or more sample points that intersect the
+    region lying within the circle having diameter equal to the current
+    point width and centered at the point's (Xw,Yw).  Coverage bits
+    that correspond to sample points that intersect the circular region
+    are 1, other coverage bits are 0.  All depth values of the fragment
+    are assigned the depth value of the point being rasterized. Other
+    data associated with each fragment are the data associated with the
+    point being rasterized.
+
+    Point size range and number of gradations are equivalent to those
+    supported for antialiased points.
+
+    Line Multisample Rasterization
+    [Insert before section 3.4.3]
+
+    If MULTISAMPLE_ARB is enabled, and SAMPLE_BUFFERS_ARB is a value of
+    one, then lines are rasterized using the following algorithm,
+    regardless of whether line antialiasing (LINE_SMOOTH) is enabled
+    or disabled. Line rasterization produces a fragment for each
+    framebuffer pixel with one or more sample points that intersect the
+    rectangular region that is described in the Antialiasing section of
+    3.4.2 (Other Line Segment Features).  If line stippling is enabled,
+    the rectangular region is subdivided into adjacent unit-length
+    rectangles, with some rectangles eliminated according to the
+    procedure given under Line Stipple, where "fragment" is replaced
+    by "rectangle".
+
+    Coverage bits that correspond to sample points that intersect a
+    retained rectangle are 1, other coverage bits are 0.  Each depth
+    value is produced by substituting the corresponding sample location
+    into equation 3.1, then using the result to evaluate equation 3.3.
+    The data associated with each fragment are otherwise computed by
+    evaluating equation 3.1 at the fragment center, then substituting
+    into equation 3.2.
+
+    Line width range and number of gradations are equivalent to those
+    supported for antialiased lines.
+
+    Polygon Multisample Rasterization
+    [Insert before section 3.5.6]
+
+    If MULTISAMPLE_ARB is enabled, and SAMPLE_BUFFERS_ARB is a value of
+    one, then polygons are rasterized using the following algorithm,
+    regardless of whether polygon antialiasing (POLYGON_SMOOTH) is
+    enabled or disabled. Polygon rasterization produces a fragment for
+    each framebuffer pixel with one or more sample points that satisfy
+    the point sampling criteria described in section 3.5.1, including
+    the special treatment for sample points that lie on a polygon
+    boundary edge.  If a polygon is culled, based on its orientation
+    and the CullFace mode, then no fragments are produced during
+    rasterization. Fragments are culled by the polygon stipple just as
+    they are for aliased and antialiased polygons.
+
+    Coverage bits that correspond to sample points that satisfy the
+    point sampling criteria are 1, other coverage bits are 0.  Each
+    depth value is produced by substituting the corresponding sample
+    location into the barycentric equations described in section 3.5.1,
+    using the approximation to equation 3.4 that omits w components.
+    The data associated with each fragment are otherwise computed by
+    barycentric evaluation using the fragment's center point.
+
+    The rasterization described above applies only to the FILL state of
+    PolygonMode.  For POINT and LINE, the rasterizations described in
+    the Point Multisample Rasterization and the Line Multisample
+    Rasterization sections apply.
+
+    Pixel Rectangle Multisample Rasterization
+    [Insert before section 3.6.5]
+
+    If MULTISAMPLE_ARB is enabled, and SAMPLE_BUFFERS_ARB is a value of
+    one, then pixel rectangles are rasterized using the following
+    algorithm. Let (Xrp,Yrp) be the current raster position.  (If the
+    current raster position is invalid, then DrawPixels is ignored.)
+    If a particular group (index or components) is the nth in a row and
+    belongs to the mth row, consider the region in window coordinates
+    bounded by the rectangle with corners
+
+      (Xrp + Zx*n, Yrp + Zy*m)
+
+    and
+
+      (Xrp + Zx*(n+1), Yrp + Zy*(m+1))
+
+    where Zx and Zy are the pixel zoom factors specified by PixelZoom,
+    and may each be either positive or negative.  A fragment
+    representing group n,m is produced for each framebuffer pixel with
+    one or more sample points that lie inside, or on the bottom or
+    left boundary, of this rectangle.  Each fragment so produced takes
+    its associated data from the group and from the current raster
+    position, in a manner consistent with the discussion in the
+    Conversion to Fragments subsection of section 3.6.4 of the GL
+    specification.  All depth sample values are assigned the same
+    value, taken either from the group (if it is a depth component
+    group) or from the current raster position (if it is not).
+
+    A single pixel rectangle will generate multiple, perhaps very many
+    fragments for the same framebuffer pixel, depending on the pixel
+    zoom factors.
+
+    Bitmap Multisample Rasterization
+    [Insert at the end section 3.7]
+
+    If MULTISAMPLE_ARB is enabled, and SAMPLE_BUFFERS_ARB is a value of
+    one, then bitmaps are rasterized using the following algorithm.  If
+    the current raster position is invalid, the bitmap is ignored.
+    Otherwise, a screen-aligned array of pixel-size rectangles is
+    constructed, with its lower-left corner at (Xrp,Yrp), and its upper
+    right corner at (Xrp+w,Yrp+h), where w and h are the width and
+    height of the bitmap. Rectangles in this array are eliminated if
+    the corresponding bit in the bitmap is zero, and are retained
+    otherwise.  Bitmap rasterization produces a fragment for each
+    framebuffer pixel with one or more sample points either inside or
+    on the bottom or left edge of a retained rectangle.
+
+    Coverage bits that correspond to sample points either inside or on
+    the bottom or left edge of a retained rectangle are 1, other
+    coverage bits are 0.  The associated data for each fragment are
+    those associated with the current raster position.  Once the
+    fragments have been produced, the current raster position is
+    updated exactly as it is in the single-sample rasterization case.
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Multisample Fragment Operations
+    [Insert after section 4.1.2]
+
+    This step modifies fragment alpha and coverage values based on the
+    values of SAMPLE_ALPHA_TO_COVERAGE_ARB, SAMPLE_ALPHA_TO_ONE_ARB,
+    SAMPLE_COVERAGE_ARB, SAMPLE_COVERAGE_VALUE_ARB, and
+    SAMPLE_COVERAGE_INVERT_ARB.  No changes to the fragment alpha or
+    coverage values are made at this step if MULTISAMPLE_ARB is
+    disabled, or if SAMPLE_BUFFERS_ARB is not a value of one.
+
+    SAMPLE_ALPHA_TO_COVERAGE_ARB, SAMPLE_ALPHA_TO_ONE_ARB, and
+    SAMPLE_COVERAGE_ARB are enabled and disabled by calling Enable and
+    Disable with <cap> specified as one of the three token values. All
+    three values are queried by calling IsEnabled, with <cap> set to
+    the desired token value. If SAMPLE_ALPHA_TO_COVERAGE_ARB is
+    enabled, the fragment alpha value is used to generate a temporary
+    coverage value, which is then ANDed with the fragment coverage
+    value.  Otherwise the fragment coverage value is unchanged at
+    this point.
+
+    This specification does not require a specific algorithm for
+    converting an alpha value to a temporary coverage value.  It is
+    intended that the number of 1's in the temporary coverage be
+    proportional to the alpha value, with all 1's corresponding to the
+    maximum alpha value, and all 0's corresponding to an alpha value
+    of 0.  It is also intended that the algorithm be pseudo-random in
+    nature, to avoid image artifacts due to regular coverage sample
+    locations.  The algorithm can and probably should be different
+    at different pixel locations.  If it does differ, it should be
+    defined relative to window, not screen, coordinates, so that
+    rendering results are invariant with respect to window position.
+
+    Next, if SAMPLE_ALPHA_TO_ONE_ARB is enabled, fragment alpha is
+    replaced by the maximum representable alpha value.  Otherwise,
+    fragment alpha value is not changed.
+
+    Finally, if SAMPLE_COVERAGE_ARB is enabled, the fragment coverage
+    is ANDed with another temporary coverage.  This temporary coverage
+    is generated in the same manner as the one described above, but as
+    a function of the value of SAMPLE_COVERAGE_VALUE_ARB.  The function
+    need not be identical, but it must have the same properties of
+    proportionality and invariance.  If SAMPLE_COVERAGE_INVERT_ARB is
+    TRUE, the temporary coverage is inverted (all bit values are
+    inverted) before it is ANDed with the fragment coverage.
+
+    The values of SAMPLE_COVERAGE_VALUE_ARB and
+    SAMPLE_COVERAGE_INVERT_ARB are specified simultaneously by calling
+    SampleCoverageARB, with <value> set to the desired coverage value,
+    and <invert> set to TRUE or FALSE. <value> is clamped to [0,1]
+    before being stored as SAMPLE_COVERAGE_VALUE_ARB.
+    SAMPLE_COVERAGE_VALUE_ARB is queried by calling GetFloatv with
+    <pname> set to SAMPLE_COVERAGE_VALUE_ARB.
+    SAMPLE_COVERAGE_INVERT_ARB is queried by calling GetBooleanv with
+    <pname> set to SAMPLE_COVERAGE_INVERT_ARB.
+
+    Multisample Fragment Operations
+    [Insert after section 4.1.8]
+
+    If the DrawBuffers mode is NONE, no change is made to any
+    multisample or color buffer.  Otherwise, fragment processing is as
+    described below.
+
+    If MULTISAMPLE_ARB is enabled, and SAMPLE_BUFFERS_ARB is one, the
+    stencil test, depth test, blending, and dithering operations
+    are performed for each pixel sample, rather than just once for each
+    fragment.  Failure of the stencil or depth test results in
+    termination of the processing of that sample, rather than
+    discarding of the fragment.  All operations are performed on the
+    color, depth, and stencil values stored in the multisample buffer
+    (to be described in a following section).  The contents of the
+    color buffers are not modified at this point.
+
+    Stencil, depth, blending, and dithering operations are performed
+    for a pixel sample only if that sample's fragment coverage bit is
+    a value of 1.  If the corresponding coverage bit is 0, no
+    operations are performed for that sample.  Depth operations use
+    the fragment depth value that is specific for each sample.  The
+    single fragment color value is used for all sample operations,
+    however, as is the current stencil value.
+
+    If MULTISAMPLE_ARB is disabled, and SAMPLE_BUFFERS_ARB is one, the
+    fragment may be treated exactly as described above, with
+    optimization possible because the fragment coverage must be set
+    to full coverage. Further optimization is allowed, however.  An
+    implementation may choose to identify a centermost sample, and to
+    perform stencil and depth tests on only that sample.  Regardless
+    of the outcome of the stencil test, all multisample buffer stencil
+    sample values are set to the appropriate new stencil value.  If
+    the depth test passes, all multisample buffer depth sample values
+    are set to the depth of the fragment's centermost sample's depth
+    value, and all multisample buffer color sample values are set to
+    the color value of the incoming fragment.  Otherwise, no change is
+    made to any multisample buffer color or depth value.
+
+    After all operations have been completed on the multisample buffer,
+    the color sample values are combined to produce a single color
+    value, and that value is written into each color buffer that is
+    currently enabled, based on the DrawBuffers mode.  An
+    implementation may defer the writing of the color buffer until a
+    later time, but the state of the framebuffer must behave as if the
+    color buffer was updated as each fragment was processed.  The
+    method of combination is not specified, though a simple average
+    computed independently for each color component is recommended.
+
+    Fine Control of Multisample Buffer Updates
+    [Insert at the end of section 4.2.2]
+
+    When SAMPLE_BUFFERS_ARB is one, ColorMask, DepthMask, and
+    StencilMask control the modification of values in the multisample
+    buffer.  The color mask has no effect on modifications to the color
+    buffers.  If the color mask is entirely disabled, the color sample
+    values must still be combined (as described above) and the result
+    used to replace the color values of the buffers enabled by
+    DrawBuffers.
+
+    Clearing the Multisample Buffer
+    [Insert as a subsection for section 4.2.3]
+
+    The color samples of the multisample buffer are cleared when one or
+    more color buffers are cleared, as specified by the Clear mask bit
+    COLOR_BUFFER_BIT and the DrawBuffers mode.  If the DrawBuffers mode
+    is NONE, the color samples of the multisample buffer cannot be
+    cleared.
+
+    Clear mask bits DEPTH_BUFFER_BIT and STENCIL_BUFFER_BIT indicate
+    that the depth and stencil samples of the multisample buffer are to
+    be cleared.  If Clear mask bit DEPTH_BUFFER_BIT is specified, and
+    if the DrawBuffers mode is not NONE, then the multisample depth
+    buffer samples are cleared.  Likewise, if Clear mask bit
+    STENCIL_BUFFER_BIT is specified, and if the DrawBuffers mode is
+    not NONE, then the multisample stencil buffer is cleared.
+
+    Reading Pixels
+    [These changes are made to the text in section 4.3.2, following the
+    subheading Obtaining Pixels from the Framebuffer.]
+
+    Follow the sentence "If there is no depth buffer, the error
+    INVALID_OPERATION occurs." with: If there is a multisample buffer
+    (SAMPLE_BUFFERS_ARB is 1) then values are obtained from the depth
+    samples in this buffer.  It is recommended that the depth value
+    of the centermost sample be used, though implementations may choose
+    any function of the depth sample values at each pixel.
+
+    Follow the sentence "if there is no stencil buffer, the error
+    INVALID_OPERATION occurs." with: If there is a multisample buffer,
+    then values are obtained from the stencil samples in this buffer.
+    It is recommended that the stencil value of the centermost sample
+    be used, though implementations may choose any function of the
+    stencil sample values at each pixel.
+
+    [This extension makes no change to the way that color values are
+    obtained from the framebuffer.]
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State
+Requests)
+
+    An additional group of state variables, MULTISAMPLE_BIT_ARB, is
+    defined by this extension.  When PushAttrib is called with bit
+    MULTISAMPLE_BIT_ARB set, the multisample group of state variables
+    is pushed onto the attribute stack.  When PopAttrib is called,
+    these state variables are restored to their previous values if
+    they were pushed.  Some multisample state is included in the
+    ENABLE_BIT group as well. In order to avoid incompatibility with
+    GL implementations that do not support SGIS_multisample,
+    ALL_ATTRIB_BITS does not include MULTISAMPLE_BIT_ARB.
+
+Additions to the GLX Specification
+
+    The parameter GLX_SAMPLE_BUFFERS_ARB is added to glXGetConfig.
+    When queried, by calling glXGetConfig with <attrib> set to
+    GLX_SAMPLE_BUFFERS_ARB, it returns the number of multisample
+    buffers included in the visual.  For a normal visual, the return
+    value is zero. A return value of one indicates that a single
+    multisample buffer is available.  The number of samples per pixel
+    is queried by calling glXGetConfig with <attrib> set to
+    GLX_SAMPLES_ARB.  It is understood that the number of color, depth,
+    and stencil bits per sample in the multisample buffer are as
+    specified by the GLX_*_SIZE parameters.  It is also understood that
+    there are no single-sample depth or stencil buffers associated with
+    this visual -- the only depth and stencil buffers are those in the
+    multisample buffer.  GLX_SAMPLES_ARB is zero if
+    GLX_SAMPLE_BUFFERS_ARB is zero.
+
+    glXChooseVisual accepts GLX_SAMPLE_BUFFERS_ARB in <attribList>,
+    followed by the minimum number of multisample buffers that can be
+    accepted.  Visuals with the smallest number of multisample buffers
+    that meets or exceeds the specified minimum number are preferred.
+    Currently operation with more than one multisample buffer is
+    undefined, so the returned value will be either zero or one.
+
+    glXChooseVisual accepts GLX_SAMPLES_ARB in <attribList>, followed
+    by the minimum number of samples that can be accepted in the
+    multisample buffer.  Visuals with the smallest number of samples
+    that meets or exceeds the specified minimum number are preferred.
+
+    If the color samples in the multisample buffer store fewer bits
+    than are stored in the color buffers, this fact will not be
+    reported accurately.  Presumably a compression scheme is being
+    employed, and is expected to maintain an aggregate resolution
+    equal to that of the color buffers.
+
+GLX Protocol
+
+    One new GL rendering commands is added. The following command is
+    sent to the server as part of a glXRender request:
+
+        SampleCoverageARB
+            2           12              rendering command length
+            2           229             rendering command opcode
+            4           FLOAT32         value
+            1           BOOL            invert
+            3                           unused
+
+Additions to the WGL Specification
+
+    The parameter WGL_SAMPLE_BUFFERS_ARB is added to
+    wglGetPixelFormatAttrib*v. When queried, by calling
+    wglGetPixelFormatAttrib*v with <piAttributes> set to
+    WGL_SAMPLE_BUFFERS_ARB, it returns the number of multisample
+    buffers included in the pixel format.  For a normal pixel format,
+    the return value is zero.  A return value of one indicates that a
+    single multisample buffer is available.  The number of samples per
+    pixel is queried by calling wglGetPixelFormatAttrib*v with
+    <piAttributes> set to WGL_SAMPLES_ARB.  It is understood that the
+    number of color, depth, and stencil bits per sample in the
+    multisample buffer are as specified by the WGL_*_SIZE parameters.
+    It is also understood that there are no single-sample depth or
+    stencil buffers associated with this visual -- the only depth and
+    stencil buffers are those in the multisample buffer.
+    WGL_SAMPLES_ARB is zero if WGL_SAMPLE_BUFFERS_ARB is zero.
+
+    wglChoosePixelFormatEXT accepts WGL_SAMPLE_BUFFERS_ARB in
+    <piAttribIList> and <pfAttribIList> with the corresponding value
+    set to the minimum number of multisample buffers that can be
+    accepted.  Pixel formats with the smallest number of multisample
+    buffers that meets or exceeds the specified minimum number are
+    preferred. Currently operation with more than one multisample
+    buffer is undefined, so the returned value will be either zero or
+    one.
+
+    If the color samples in the multisample buffer store fewer bits
+    than are stored in the color buffers, this fact will not be
+    reported accurately.  Presumably a compression scheme is being
+    employed, and is expected to maintain an aggregate resolution
+    equal to that of the color buffers.
+
+Errors
+
+    INVALID_OPERATION is generated if SampleCoverageARB is called
+    between the execution of Begin and the execution of the
+    corresponding End.
+
+New State
+
+    Get Value                       Get Command    Type    Initial Value    Attribute
+    ---------                       -----------    ----    -------------    ---------
+    MULTISAMPLE_ARB                 IsEnabled      B       TRUE             multisample/enable
+    SAMPLE_ALPHA_TO_COVERAGE_ARB    IsEnabled      B       FALSE            multisample/enable
+    SAMPLE_ALPHA_TO_ONE_ARB         IsEnabled      B       FALSE            multisample/enable
+    SAMPLE_COVERAGE_ARB             IsEnabled      B       FALSE            multisample/enable
+    SAMPLE_COVERAGE_VALUE_ARB       GetFloatv      R+      1                multisample
+    SAMPLE_COVERAGE_INVERT_ARB      GetBooleanv    B       FALSE            multisample
+
+New Implementation Dependent State
+
+    Get Value                Get Command    Type    Minimum Value
+    ---------                -----------    ----    -------------
+    SAMPLE_BUFFERS_ARB       GetIntegerv    Z+      0
+    SAMPLES_ARB              GetIntegerv    Z+      0
+
+Conformance Testing
+
+    TBD
+
+Revision History
+
+    09/20/1999  0.1
+        - First ARB draft based on the original SGI draft.
+
+    10/1/1999   0.2
+        - Added query for the number of passes.
+
+    11/8/1999   0.3
+        - Fixed numerous typos reported by E&S.
+
+    12/7/1999   0.4
+        - Removed the multiple pass feature.
+        - Resolved the working group issues at the ARB meeting.
+        - Added language that stated that SAMPLE_BUFFERS_ARB is the
+          same value as either GLX_SAMPLE_BUFFERS_ARB or
+          WGL_SAMPLE_BUFFERS_ARB.
+
+    12/15/1999  0.5
+        - Added back in the statement about ALL_ATTRIB_BITS not
+          including MULTISAMPLE_BIT_ARB.
+
+    03/12/2002  0.6
+        - Added GLX protocol for SampleCoverageARB. Updated contact
+          information.

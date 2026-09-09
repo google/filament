@@ -37,7 +37,13 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using SpirvReader_VectorElementPointerTest = core::ir::transform::TransformTest;
+class SpirvReader_VectorElementPointerTest : public core::ir::transform::TransformTest {
+  protected:
+    void SetUp() override {
+        core::ir::transform::TransformTest::SetUp();
+        mod.properties.Add(core::ir::Property::kAllowVectorElementPointer);
+    }
+};
 
 TEST_F(SpirvReader_VectorElementPointerTest, NonPointerAccess) {
     auto* vec = b.FunctionParam("vec", ty.vec4u());

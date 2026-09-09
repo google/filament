@@ -33,8 +33,8 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/ShaderModule.h"
 #include "dawn/native/wgpu_structs_autogen.h"
+#include "src/dawn/native/ShaderModule.h"
 
 // A bunch of ToWGPU helper functions to convert dawn::native descriptors to WGPU C descriptors.
 

@@ -59,6 +59,29 @@ static const unsigned char UTF8_THREE_BYTE_MASK = 248;  // 0xF8;
 static const unsigned char UTF8_DATA_BYTE_CODE = 128;   // 0x80;
 static const unsigned char UTF8_DATA_BYTE_MASK = 192;   // 0xC0;
 
+// 32-bit FNV-1a (https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function). Mirrored
+// byte-for-byte in Python as loader_hash_string() in scripts/generators/loader_extension_generator.py,
+// which precomputes the hash constants embedded in loader/generated/vk_loader_extensions.c - keep both in
+// sync or those constants stop matching this function (see HashString.MatchesGeneratorEmbeddedConstants in
+// tests/loader_hash_string_tests.cpp).
+//
+// Used as a cheap pre-filter before the strcmp confirmation when resolving entry point names
+// (vkGet{Instance,Device}ProcAddr): a hash match still falls through to a switch/case-guarded strcmp before
+// anything is returned, so a collision can never produce a wrong lookup - at worst it costs one extra
+// strcmp. Bounded by MaxLoaderStringLength so a non-NUL-terminated or adversarially long input can't make
+// this scan past a bounded byte count the way an unbounded `while (*str)` would. MaxLoaderStringLength is
+// an unrelated pre-existing constant reused here for convenience, not a bound derived from entry point
+// name lengths; every real entry point name is far shorter than the cap, so this never changes the hash
+// of a valid name.
+static inline uint32_t loader_hash_string(const char *str) {
+    uint32_t hash = 2166136261u;
+    for (uint32_t i = 0; i < (uint32_t)MaxLoaderStringLength && str[i]; ++i) {
+        hash ^= (uint8_t)str[i];
+        hash *= 16777619u;
+    }
+    return hash;
+}
+
 // form of all dynamic lists/arrays
 // only the list element should be changed
 struct loader_generic_list {
@@ -198,6 +221,8 @@ struct loader_layer_properties {
     struct loader_string_list override_paths;
     bool is_override;
     bool keep;
+    // Set while this meta-layer is being expanded, used to break cyclic component references.
+    bool is_being_expanded;
     struct loader_string_list blacklist_layer_names;
     struct loader_string_list app_key_paths;
 };
@@ -250,9 +275,6 @@ struct loader_device {
         bool ext_debug_marker_enabled;
         bool ext_debug_utils_enabled;
         bool ext_full_screen_exclusive_enabled;
-        bool version_1_1_enabled;
-        bool version_1_2_enabled;
-        bool version_1_3_enabled;
     } driver_extensions;
 
     struct loader_device *next;

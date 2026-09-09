@@ -488,7 +488,7 @@ void ValidateResult(std::optional<T> result, std::optional<T> expect, bool float
             EXPECT_EQ(*result, *expect);
         } else {
             if (float_comp) {
-                EXPECT_FLOAT_EQ(*result, *expect);
+                EXPECT_FLOAT_EQ(static_cast<float>(*result), static_cast<float>(*expect));
             } else {
                 EXPECT_EQ(*result, *expect);
             }

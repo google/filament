@@ -26,20 +26,22 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
+#include <bit>
 #include <cstring>
 #include <limits>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
 
-constexpr static unsigned int kRTSize = 16;
+constexpr size_t kRTSize = 16;
 
 class DrawQuad {
   public:
@@ -167,6 +169,9 @@ class RenderPassLoadOpTests : public DawnTest {
 
 // Tests clearing, loading, and drawing into color attachments
 TEST_P(RenderPassLoadOpTests, ColorClearThenLoadAndDraw) {
+    // TODO(crbug.com/523272949): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // Part 1: clear once, check to make sure it's cleared
     utils::ComboRenderPassDescriptor renderPassClearZero({renderTargetView});
     auto commandsClearZeroEncoder = device.CreateCommandEncoder();
@@ -316,8 +321,8 @@ TEST_P(RenderPassLoadOpTests, LoadOpClearIntegerFormatsOutOfBound_Uint8) {
 // Test clearing a color attachment on Sint8 formats (R8Sint, RG8Sint, RGBA8Sint) when the clear
 // values are out of bound.
 TEST_P(RenderPassLoadOpTests, LoadOpClearIntegerFormatsOutOfBound_Sint8) {
-    constexpr int16_t kSint8Max = std::numeric_limits<int8_t>::max();
-    constexpr int16_t kSint8Min = std::numeric_limits<int8_t>::min();
+    constexpr int16_t kSint8Max{std::numeric_limits<int8_t>::max()};
+    constexpr int16_t kSint8Min{std::numeric_limits<int8_t>::min()};
 
     using TestCase = std::tuple<wgpu::TextureFormat, wgpu::Color, std::array<int8_t, 4>>;
     constexpr std::array<TestCase, 7> kTestCases = {{
@@ -498,7 +503,7 @@ TEST_P(RenderPassLoadOpTests, LoadOpClearWithBig32BitIntegralValuesOnMultipleCol
         kMaxUInt32RepresentableInFloat - 2, kMaxUInt32RepresentableInFloat - 3};
     std::array<uint32_t, 4> expectedDataForRGBA32Float;
     for (uint32_t i = 0; i < expectedDataForRGBA32Float.size(); ++i) {
-        expectedDataForRGBA32Float[i] = *(reinterpret_cast<uint32_t*>(&testColorForRGBA32Float[i]));
+        expectedDataForRGBA32Float[i] = std::bit_cast<uint32_t>(testColorForRGBA32Float[i]);
     }
 
     struct AttachmentCase {
@@ -509,8 +514,9 @@ TEST_P(RenderPassLoadOpTests, LoadOpClearWithBig32BitIntegralValuesOnMultipleCol
             static_assert(sizeof(int32_t) * expData.size() == sizeof(attachmentCase.mExpData));
             attachmentCase.mFormat = format;
             attachmentCase.mClearValue = clearValue;
-            memcpy(attachmentCase.mExpData, reinterpret_cast<const uint8_t*>(expData.data()),
-                   sizeof(attachmentCase.mExpData));
+            DAWN_UNSAFE_TODO(memcpy(attachmentCase.mExpData,
+                                    reinterpret_cast<const uint8_t*>(expData.data()),
+                                    sizeof(attachmentCase.mExpData)));
             return attachmentCase;
         }
         static AttachmentCase Uint(wgpu::TextureFormat format,
@@ -520,8 +526,9 @@ TEST_P(RenderPassLoadOpTests, LoadOpClearWithBig32BitIntegralValuesOnMultipleCol
             static_assert(sizeof(uint32_t) * expData.size() == sizeof(attachmentCase.mExpData));
             attachmentCase.mFormat = format;
             attachmentCase.mClearValue = clearValue;
-            memcpy(attachmentCase.mExpData, reinterpret_cast<const uint8_t*>(expData.data()),
-                   sizeof(attachmentCase.mExpData));
+            DAWN_UNSAFE_TODO(memcpy(attachmentCase.mExpData,
+                                    reinterpret_cast<const uint8_t*>(expData.data()),
+                                    sizeof(attachmentCase.mExpData)));
             return attachmentCase;
         }
 

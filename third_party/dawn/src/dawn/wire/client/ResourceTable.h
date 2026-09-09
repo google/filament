@@ -32,28 +32,29 @@
 
 #include <vector>
 
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/wire/client/ObjectBase.h"
 
 namespace dawn::wire::client {
 
 class Device;
+struct ResourceTableDescriptor;
 
 class ResourceTable final : public ObjectBase {
   public:
-    static WGPUResourceTable Create(Device* device, const WGPUResourceTableDescriptor* descriptor);
+    static ResourceTable* Create(Device* device, const ResourceTableDescriptor* descriptor);
 
     ResourceTable(const ObjectBaseParams& params,
                   Device* device,
-                  const WGPUResourceTableDescriptor* descriptor);
+                  const ResourceTableDescriptor* descriptor);
     ~ResourceTable() override;
 
     ObjectType GetObjectType() const override;
 
     // WebGPU API
     void APIDestroy();
-    WGPUStatus APIUpdate(uint32_t slot, const WGPUBindingResource* resource);
-    uint32_t APIInsertBinding(const WGPUBindingResource* resource);
-    WGPUStatus APIRemoveBinding(uint32_t slot);
+    wgpu::Status APIUpdate(uint32_t slot, const BindingResource* resource);
+    uint32_t APIInsert(const BindingResource* resource);
+    wgpu::Status APIRemove(uint32_t slot);
     uint32_t APIGetSize() const;
 
   private:

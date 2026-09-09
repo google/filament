@@ -1,0 +1,173 @@
+//* Copyright 2026 The Dawn & Tint Authors
+//*
+//* Redistribution and use in source and binary forms, with or without
+//* modification, are permitted provided that the following conditions are met:
+//*
+//* 1. Redistributions of source code must retain the above copyright notice, this
+//*    list of conditions and the following disclaimer.
+//*
+//* 2. Redistributions in binary form must reproduce the above copyright notice,
+//*    this list of conditions and the following disclaimer in the documentation
+//*    and/or other materials provided with the distribution.
+//*
+//* 3. Neither the name of the copyright holder nor the names of its
+//*    contributors may be used to endorse or promote products derived from
+//*    this software without specific prior written permission.
+//*
+//* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+//* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+//* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+//* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+//* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+//* This file is NOT intended to be used as a template on its own. Instead, it
+//* should be included by implementing api_structs.h files in relevant
+//* implementations templates.
+//*
+//* The templates below expect that Object types are either named in camel case
+//* or aliased as such, i.e. an object of type "buffer" will expect a
+//* corresponding "Buffer" type either forward declared directly or aliased.
+
+{%- from 'dawn/cpp_macros.tmpl' import as_annotated_dawnType, as_dawnType, wgpu_string_members with context -%}
+{%- macro render_cpp_default_value(member, forced_default_value="") -%}
+    //* Apply default values over undefined when dealing with the internal Dawn
+    //* headers to avoid needing to do the additional step of
+    //* resolving trivial defaults internally.
+    {%- if forced_default_value -%}
+        {{" "}}= {{forced_default_value}};
+    {%- elif member.annotation in ["*", "const*", "const*const*"] or member.default_value == "nullptr" -%}
+        {{" "}}= {};
+    {%- elif member.type.category == "object" and member.optional -%}
+        {{" "}}= {};
+    {%- elif member.type.category == "callback info" -%}
+        {{" "}}= WGPU_{{member.name.SNAKE_CASE()}}_INIT;
+    {%- elif member.type.category == "enum" -%}
+        {%- if member.default_value != None -%}
+            {{" "}}= wgpu::{{as_cppType(member.type.name)}}::{{as_cppEnum(Name(member.default_value))}};
+        {%- elif member.type.hasUndefined -%}
+            {{" "}}= wgpu::{{as_cppType(member.type.name)}}::{{as_cppEnum(Name("undefined"))}};
+        {%- else -%}
+            {{" "}}= {};
+        {%- endif -%}
+    {%- elif member.type.category == "bitmask" -%}
+        {%- if member.default_value != None -%}
+            {{" "}}= wgpu::{{as_cppType(member.type.name)}}::{{as_cppEnum(Name(member.default_value))}};
+        {%- else -%}
+            //* Bitmask types should currently always default to "none" if not
+            //* explicitly set.
+            {{" "}}= wgpu::{{as_cppType(member.type.name)}}::{{as_cppEnum(Name("none"))}};
+        {%- endif -%}
+    {%- elif member.type.category == "native" and member.default_value != None -%}
+        //* Check to see if the default value is a known constant.
+        {%- set constant = find_by_name(by_category["constant"], member.default_value) -%}
+        {%- if constant -%}
+            {{" "}}= wgpu::k{{constant.name.CamelCase()}};
+        {%- else -%}
+            {{" "}}= {{member.default_value}};
+        {%- endif -%}
+    {%- elif member.default_value != None -%}
+        {{" "}}= {{member.default_value}};
+    {%- else -%}
+        {{assert(member.default_value == None)}};
+    {%- endif -%}
+{%- endmacro -%}
+
+using wgpu::ChainedStruct;
+using wgpu::ChainedStructOut;
+
+struct StringView {
+    char const * data = nullptr;
+    size_t length = WGPU_STRLEN;
+
+    {{wgpu_string_members("StringView", True) | indent}}
+    // Equality operators, mostly for testing. Note that this tests
+    // strict pointer-pointer equality if the struct contains member pointers.
+    bool operator==(const StringView& rhs) const;
+};
+
+//* Special structures that are manually written above.
+{% set SpecialStructures = ["string view"] -%}
+
+// NOLINTBEGIN(bugprone-invalid-enum-default-initialization)
+
+{% for type in by_category["structure"] if type.name.get() not in SpecialStructures %}
+    {% set CppType = as_cppType(type.name) %}
+    {% if type.chained %}
+        {% set chainedStructType = "ChainedStructOut" if type.chained == "out" else "ChainedStruct" %}
+        struct {{CppType}} : {{chainedStructType}} {
+            {{CppType}}() {
+                sType = wgpu::SType::{{type.name.CamelCase()}};
+            }
+    {% else %}
+        struct {{CppType}} {
+            {% if type.has_free_members_function %}
+                {{CppType}}() = default;
+            {% endif %}
+    {% endif %}
+        {% if type.has_free_members_function %}
+            ~{{CppType}}();
+            {{CppType}}(const {{CppType}}&) = delete;
+            {{CppType}}& operator=(const {{CppType}}&) = delete;
+            {{CppType}}({{CppType}}&&);
+            {{CppType}}& operator=({{CppType}}&&);
+
+        {% endif %}
+        {% if type.extensible %}
+            {% set chainedStructType = "ChainedStructOut" if type.output else "ChainedStruct const" %}
+            {{chainedStructType}} * nextInChain = nullptr;
+        {% endif %}
+
+        {% for member in type.members %}
+            //* Align the first member after ChainedStruct to match the C struct layout.
+            //* It has to be aligned both to its natural and ChainedStruct's alignment.
+            {% if type.chained and loop.first %}
+                alignas(wgpu::{{CppType}}::kFirstMemberAlignment)
+            {% endif %}
+            //* Special case handling for bind group layout entry which has special defaults.
+            {% if type.name.get() == "bind group layout entry" %}
+                {% if member.name.canonical_case() == "buffer" %}
+                    {% set forced_default_value = "{ nullptr, wgpu::BufferBindingType::BindingNotUsed, false, 0 }" %}
+                {% elif member.name.canonical_case() == "sampler" %}
+                    {% set forced_default_value = "{ nullptr, wgpu::SamplerBindingType::BindingNotUsed }" %}
+                {% elif member.name.canonical_case() == "texture" %}
+                    {% set forced_default_value = "{ nullptr, wgpu::TextureSampleType::BindingNotUsed, wgpu::TextureViewDimension::e2D, false }" %}
+                {% elif member.name.canonical_case() == "storage texture" %}
+                    {% set forced_default_value = "{ nullptr, wgpu::StorageTextureAccess::BindingNotUsed, wgpu::TextureFormat::Undefined, wgpu::TextureViewDimension::e2D }" %}
+                {% endif %}
+            {% endif %}
+            {%- if (member.spanify | default(True)) and member.is_length %}
+                //* Skip as it's included in the span just below.
+            {% else %}
+                {{as_annotated_dawnType(member)}}{{render_cpp_default_value(member, forced_default_value)}}
+            {% endif %}
+        {% endfor %}
+
+        // Equality operators, mostly for testing. Note that this tests
+        // strict pointer-pointer equality if the struct contains member pointers.
+        bool operator==(const {{CppType}}& rhs) const;
+        {% if type.has_free_members_function %}
+
+            private:
+              inline void FreeMembers();
+        {% endif %}
+    };
+
+{% endfor %}
+// NOLINTEND(bugprone-invalid-enum-default-initialization)
+
+// Fully qualify FreeMember function names for the generated code.
+{% for type in by_category["structure"] if type.has_free_members_function %}
+    void API{{as_MethodSuffix(type.name, Name("free members"))}}({{as_cType(type.name)}});
+{% endfor %}
+
+// Aliased FreeMember functions for templated code.
+{% for type in by_category["structure"] if type.has_free_members_function %}
+    inline void APIFreeMembers({{as_cType(type.name)}} s) {
+        API{{as_MethodSuffix(type.name, Name("free members"))}}(s);
+    }
+{% endfor %}

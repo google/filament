@@ -31,14 +31,14 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/PassResourceUsage.h"
-#include "dawn/native/ResourceMemoryAllocation.h"
-#include "dawn/native/Texture.h"
-#include "dawn/native/vulkan/ExternalHandle.h"
-#include "dawn/native/vulkan/SharedTextureMemoryVk.h"
-#include "dawn/native/vulkan/external_memory/MemoryService.h"
-#include "dawn/native/vulkan/external_semaphore/SemaphoreService.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/PassResourceUsage.h"
+#include "src/dawn/native/ResourceMemoryAllocation.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/vulkan/ExternalHandle.h"
+#include "src/dawn/native/vulkan/SharedTextureMemoryVk.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryService.h"
+#include "src/dawn/native/vulkan/external_semaphore/SemaphoreService.h"
 
 namespace dawn::native::vulkan {
 
@@ -54,7 +54,10 @@ ResultOrError<wgpu::TextureFormat> FormatFromVkFormat(const Device* device, VkFo
 VkImageUsageFlags VulkanImageUsage(const DeviceBase* device,
                                    wgpu::TextureUsage usage,
                                    const Format& format);
-VkImageLayout VulkanImageLayout(const Format& format, wgpu::TextureUsage usage);
+VkImageCreateFlags VulkanImageCreateFlags(const DeviceBase* device,
+                                          wgpu::TextureUsage usage,
+                                          const Format& format,
+                                          uint32_t sampleCount);
 VkImageLayout VulkanImageLayoutForDepthStencilAttachment(const Format& format,
                                                          bool depthReadOnly,
                                                          bool stencilReadOnly);
@@ -113,6 +116,8 @@ class Texture : public TextureBase {
 
     void SetIsExternalSwapchainTexture(bool isSwapChainTexture);
 
+    VkImageLayout VulkanImageLayout(wgpu::TextureUsage usage) const;
+
     // Dawn API
     void SetLabelImpl() override;
 
@@ -120,8 +125,6 @@ class Texture : public TextureBase {
     Texture(Device* device, const UnpackedPtr<TextureDescriptor>& descriptor);
 
     void DestroyImpl(DestroyReason reason) override;
-    MaybeError PinImpl(wgpu::TextureUsage usage) override;
-    void UnpinImpl() override;
 
     MaybeError ClearTexture(CommandRecordingContext* recordingContext,
                             const SubresourceRange& range,
@@ -246,11 +249,11 @@ class ImportedTextureBase : public Texture {
     // The layouts to use for the queue ownership transfer barrier when a texture is used the first
     // time after being imported. The layouts must match the ones from the queue ownership transfer
     // barrier done for the export operation.
-    VkImageLayout mPendingAcquireOldLayout;
-    VkImageLayout mPendingAcquireNewLayout;
+    VkImageLayout mPendingAcquireOldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageLayout mPendingAcquireNewLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     // Which of FOREIGN or EXTERNAL queue family to use when exporting.
-    uint32_t mExportQueueFamilyIndex;
+    uint32_t mExportQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     // The layout requested for the export, or UNDEFINED if the receiver can handle whichever layout
     // was current.
     VkImageLayout mDesiredExportLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -329,6 +332,8 @@ class TextureView final : public TextureViewBase, public WeakRefSupport<TextureV
     ResultOrError<VkImageView> GetOrCreate2DViewOn3D(uint32_t depthSlice = 0u);
 
     bool IsYCbCrFilterable() const override;
+
+    VkImageLayout VulkanImageLayout(wgpu::TextureUsage usage) const;
 
     // Unique per-device.
     uint64_t GetTextureViewId() const { return mTextureViewId; }

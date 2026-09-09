@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_QUEUEMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_QUEUEMOCK_H_
 
-#include "dawn/native/Queue.h"
 #include "gmock/gmock.h"
+#include "src/dawn/native/Queue.h"
 
 namespace dawn::native {
 
@@ -40,16 +40,15 @@ class QueueMock : public QueueBase {
     QueueMock(DeviceMock* device, const QueueDescriptor* descriptor);
     ~QueueMock() override;
 
-    MOCK_METHOD(MaybeError, SubmitImpl, (uint32_t, CommandBufferBase* const*), (override));
+    MOCK_METHOD(MaybeError, SubmitImpl, (Span<CommandBufferBase* const>), (override));
     MOCK_METHOD(MaybeError,
                 WriteBufferImpl,
-                (BufferBase*, uint64_t, const void*, size_t),
+                (BufferBase*, uint64_t, Span<const std::byte>),
                 (override));
     MOCK_METHOD(MaybeError,
                 WriteTextureImpl,
                 (const TexelCopyTextureInfo&,
-                 const void*,
-                 size_t,
+                 Span<const std::byte>,
                  const TexelCopyBufferLayout&,
                  const Extent3D&),
                 (override));

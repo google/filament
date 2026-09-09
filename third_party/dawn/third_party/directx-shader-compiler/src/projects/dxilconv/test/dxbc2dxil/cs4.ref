@@ -1,0 +1,152 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.ResRet.i32 = type { i32, i32, i32, i32, i32 }
+%dx.types.CBufRet.i32 = type { i32, i32, i32, i32 }
+%dx.types.u32 = type { i32 }
+%dx.types.i8x16 = type { [16 x i8] }
+
+@TGSM0 = internal addrspace(3) global [7680 x i8] undef, align 4
+@llvm.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 0) to i8*)], section "llvm.metadata"
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %1 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+  %2 = call i32 @dx.op.threadId.i32(i32 93, i32 0)
+  %3 = shl i32 %2, 7
+  %4 = call i32 @dx.op.groupId.i32(i32 94, i32 1)
+  %5 = shl i32 %4, 10
+  %6 = add i32 %5, %3
+  %7 = call i32 @dx.op.threadIdInGroup.i32(i32 95, i32 2)
+  %8 = add i32 %6, %7
+  %9 = call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96)
+  %10 = add i32 %8, %9
+  %11 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %10, i32 undef)
+  %12 = extractvalue %dx.types.ResRet.i32 %11, 0
+  %13 = call float @dx.op.bitcastI32toF32(i32 126, i32 %12)
+  %14 = fptoui float %13 to i32
+  %15 = call float @dx.op.bitcastI32toF32(i32 126, i32 %14)
+  %16 = call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96)
+  %17 = mul i32 %16, 20
+  %18 = add i32 %17, 16
+  %19 = getelementptr [7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 %18
+  %20 = bitcast i8 addrspace(3)* %19 to float addrspace(3)*
+  store float %15, float addrspace(3)* %20, align 4
+  %21 = call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96)
+  %22 = mul i32 %21, 20
+  %23 = add i32 %22, 16
+  %24 = call i32 @dx.op.threadId.i32(i32 93, i32 0)
+  %25 = getelementptr [7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 %23
+  %26 = bitcast i8 addrspace(3)* %25 to i32 addrspace(3)*
+  %27 = atomicrmw add i32 addrspace(3)* %26, i32 %24 monotonic
+  %28 = mul i32 %21, 20
+  %29 = add i32 %28, 16
+  %30 = call i32 @dx.op.threadId.i32(i32 93, i32 0)
+  %31 = getelementptr [7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 %29
+  %32 = bitcast i8 addrspace(3)* %31 to i32 addrspace(3)*
+  %33 = atomicrmw or i32 addrspace(3)* %32, i32 %30 monotonic
+  %34 = uitofp i32 %27 to float
+  %35 = fadd fast float %34, %13
+  %36 = mul i32 %21, 20
+  %37 = add i32 %36, 16
+  %38 = call i32 @dx.op.groupId.i32(i32 94, i32 1)
+  %39 = call i32 @dx.op.threadId.i32(i32 93, i32 0)
+  %40 = getelementptr [7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 %37
+  %41 = bitcast i8 addrspace(3)* %40 to i32 addrspace(3)*
+  %42 = cmpxchg i32 addrspace(3)* %41, i32 %38, i32 %39 monotonic monotonic
+  %43 = mul i32 %21, 20
+  %44 = add i32 %43, 16
+  %45 = call i32 @dx.op.groupId.i32(i32 94, i32 1)
+  %46 = call i32 @dx.op.threadId.i32(i32 93, i32 0)
+  %47 = getelementptr [7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 %44
+  %48 = bitcast i8 addrspace(3)* %47 to i32 addrspace(3)*
+  %49 = cmpxchg i32 addrspace(3)* %48, i32 %45, i32 %46 monotonic monotonic
+  %50 = extractvalue { i32, i1 } %49, 0
+  call void @dx.op.barrier(i32 80, i32 11)
+  %51 = uitofp i32 %50 to float
+  %52 = fadd fast float %51, %35
+  %53 = call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96)
+  %54 = call %dx.types.CBufRet.i32 @dx.op.cbufferLoadLegacy.i32(i32 59, %dx.types.Handle %1, i32 0)
+  %55 = extractvalue %dx.types.CBufRet.i32 %54, 0
+  %56 = add i32 %53, %55
+  %57 = mul i32 %56, 20
+  %58 = add i32 %57, 16
+  %59 = getelementptr [7680 x i8], [7680 x i8] addrspace(3)* @TGSM0, i32 0, i32 %58
+  %60 = bitcast i8 addrspace(3)* %59 to float addrspace(3)*
+  %61 = load float, float addrspace(3)* %60, align 4
+  %62 = call i32 @dx.op.bitcastF32toI32(i32 127, float %61)
+  %63 = uitofp i32 %62 to float
+  %64 = fadd fast float %63, %52
+  %65 = call i32 @dx.op.bitcastF32toI32(i32 127, float %64)
+  call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle %0, i32 %10, i32 undef, i32 %65, i32 undef, i32 undef, i32 undef, i8 1)
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.threadId.i32(i32, i32) #1
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.i32(i32, i32, i32) #2
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.groupId.i32(i32, i32) #1
+
+; Function Attrs: nounwind readonly
+declare i32 @dx.op.tempRegLoad.i32(i32, i32) #0
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.threadIdInGroup.i32(i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.flattenedThreadIdInGroup.i32(i32) #1
+
+; Function Attrs: nounwind readonly
+declare %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32, %dx.types.Handle, i32, i32) #0
+
+; Function Attrs: nounwind readonly
+declare float @dx.op.tempRegLoad.f32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f32(i32, i32, float) #2
+
+; Function Attrs: noduplicate nounwind
+declare void @dx.op.barrier(i32, i32) #3
+
+; Function Attrs: nounwind readonly
+declare %dx.types.CBufRet.i32 @dx.op.cbufferLoadLegacy.i32(i32, %dx.types.Handle, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.bufferStore.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32, i32, i8) #2
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.bitcastI32toF32(i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.bitcastF32toI32(i32, float) #1
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }
+attributes #3 = { noduplicate nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!7}
+!llvm.ident = !{!10}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"cs", i32 6, i32 0}
+!2 = !{null, !3, !5, null}
+!3 = !{!4}
+!4 = !{i32 0, %dx.types.u32 addrspace(1)* undef, !"U0", i32 0, i32 0, i32 1, i32 11, i1 false, i1 false, i1 false, null}
+!5 = !{!6}
+!6 = !{i32 0, %dx.types.i8x16 addrspace(2)* undef, !"CB0", i32 0, i32 0, i32 1, i32 16, null}
+!7 = !{void ()* @main, !"main", null, !2, !8}
+!8 = !{i32 0, i64 256, i32 4, !9}
+!9 = !{i32 16, i32 8, i32 3}
+!10 = !{!"dxbc2dxil 1.2"}

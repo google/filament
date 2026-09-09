@@ -28,9 +28,8 @@
 #ifndef SRC_DAWN_WIRE_CLIENT_LIMITSANDFEATURES_H_
 #define SRC_DAWN_WIRE_CLIENT_LIMITSANDFEATURES_H_
 
-#include <webgpu/webgpu.h>
-
 #include "absl/container/flat_hash_set.h"
+#include "dawn/wire/client/wgpu_structs_autogen.h"
 
 namespace dawn::wire::client {
 
@@ -39,19 +38,19 @@ class LimitsAndFeatures {
     LimitsAndFeatures();
     ~LimitsAndFeatures();
 
-    WGPUStatus GetLimits(WGPULimits* limits) const;
-    bool HasFeature(WGPUFeatureName feature) const;
-    void ToSupportedFeatures(WGPUSupportedFeatures* supportedFeatures) const;
+    wgpu::Status GetLimits(Limits* limits) const;
+    bool HasFeature(wgpu::FeatureName feature) const;
+    void ToSupportedFeatures(SupportedFeatures* supportedFeatures) const;
 
-    void SetLimits(const WGPULimits* limits);
-    void SetFeatures(const WGPUFeatureName* features, uint32_t featuresCount);
+    void SetLimits(const Limits* limits);
+    void SetFeatures(Span<const wgpu::FeatureName> features);
 
   private:
     // TODO(crbug.com/421950205): Use dawn::utils::ComboLimits here.
-    WGPULimits mLimits;
-    WGPUCompatibilityModeLimits mCompatLimits;
-    WGPUDawnTexelCopyBufferRowAlignmentLimits mTexelCopyBufferRowAlignmentLimits;
-    absl::flat_hash_set<WGPUFeatureName> mFeatures;
+    Limits mLimits;
+    CompatibilityModeLimits mCompatLimits;
+    DawnTexelCopyBufferRowAlignmentLimits mTexelCopyBufferRowAlignmentLimits;
+    absl::flat_hash_set<wgpu::FeatureName> mFeatures;
 };
 
 }  // namespace dawn::wire::client

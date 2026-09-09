@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_QUERYHELPER_H_
 #define SRC_DAWN_NATIVE_QUERYHELPER_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ObjectBase.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ObjectBase.h"
 
 namespace dawn::native {
 
@@ -37,23 +37,18 @@ class BufferBase;
 class CommandEncoder;
 
 struct TimestampParams {
-    TimestampParams(uint32_t first,
-                    uint32_t count,
-                    uint32_t offset,
-                    uint32_t quantizationMask,
-                    float period);
+    TimestampParams(uint32_t count, uint32_t offset, uint32_t quantizationMask, float period);
 
-    uint32_t first;
-    uint32_t count;
-    uint32_t offset;
-    uint32_t quantizationMask;
-    uint32_t multiplier;
-    uint32_t rightShift;
+    uint32_t count = 0;
+    uint32_t offset = 0;
+    uint32_t quantizationMask = 0;
+    uint32_t multiplier = 0;
+    uint32_t rightShift = 0;
 };
 
 MaybeError EncodeConvertTimestampsToNanoseconds(CommandEncoder* encoder,
+                                                uint32_t queryCount,
                                                 BufferBase* timestamps,
-                                                BufferBase* availability,
                                                 BufferBase* params);
 
 }  // namespace dawn::native

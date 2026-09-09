@@ -94,11 +94,18 @@ message TypeMatrix {
     uint32 element_type = 3;  // Module.types
 }
 
+enum ArrayCountKind {
+    Runtime = 0;
+    Constant = 1;
+    Override = 2;
+}
+
 message TypeArray {
     reserved 2;          // TODO(422199551): Remove in v2
     reserved "stride";   // TODO(422199551): Remove in v2
     uint32 element = 1;  // Module.types
     uint32 count = 3;
+    optional ArrayCountKind count_kind = 4;  // TODO(422199551): Make required in v2.
 }
 
 message TypeBindingArray {
@@ -136,7 +143,8 @@ message TypeDepthTexture {
 message TypeSampledTexture {
     TextureDimension dimension = 1;
     uint32 sub_type = 2;  // Module.types
-    TextureFilterable filterable = 3;
+    reserved 3;
+    reserved "filterable";
 }
 
 message TypeMultisampledTexture {
@@ -160,7 +168,8 @@ message TypeExternalTexture {}
 
 message TypeSampler {
     SamplerKind kind = 1;
-    SamplerFiltering filtering = 2;
+    reserved 2;
+    reserved "filtering";
 }
 
 message TypeInputAttachment {
@@ -174,7 +183,10 @@ message TypeSubgroupMatrix {
 }
 
 message TypeBuffer {
-    uint32 count = 1;
+    reserved 1;
+    reserved "count";
+    uint32 size = 2;
+    ArrayCountKind size_kind = 3;
 }
 
 enum TypeBuiltinStruct {
@@ -230,6 +242,13 @@ message FunctionParameter {
 message BlockParameter {
     uint32 type = 1;  // Module.types
     optional string name = 2;
+}
+
+message TemplateParameter {
+    oneof kind {
+        uint32 type = 1;  // Module.types
+        Majorness majorness = 2;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -335,9 +354,12 @@ message Instruction {
         InstructionContinue continue = 27;
         InstructionBreakIf break_if = 28;
         InstructionUnreachable unreachable = 29;
+        InstructionOverride override = 30;
+        InstructionConstExprIf const_expr_if = 31;
     }
     reserved 9;
     reserved "bitcast";
+    optional uint32 alignment = 32;
 }
 
 message InstructionReturn {}
@@ -371,7 +393,9 @@ message InstructionUserCall {}
 
 message InstructionBuiltinCall {
     BuiltinFn builtin = 1;
-    repeated uint32 explicit_template_params = 2;  // Module.types
+    reserved 2;
+    reserved "explicit_template_params";
+    repeated TemplateParameter explicit_template_parameters = 3;
 }
 
 message InstructionLoad {}
@@ -387,6 +411,11 @@ message InstructionSwizzle {
 }
 
 message InstructionIf {
+    optional uint32 true = 1;   // Module.blocks
+    optional uint32 false = 2;  // Module.blocks
+}
+
+message InstructionConstExprIf {
     optional uint32 true = 1;   // Module.blocks
     optional uint32 false = 2;  // Module.blocks
 }
@@ -427,6 +456,10 @@ message InstructionBreakIf {
 }
 
 message InstructionUnreachable {}
+
+message InstructionOverride {
+    optional uint32 override_id = 1;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -474,6 +507,11 @@ enum AccessControl {
     read_write = 2;
 }
 
+enum Majorness {
+    row_major = 0;
+    col_major = 1;
+}
+
 enum UnaryOp {
     complement = 0;
     negation = 1;
@@ -512,6 +550,7 @@ enum TextureDimension {
     cube_array = 5;
 }
 
+// Note, this is unused but keeps the linter happey
 enum TextureFilterable {
     filterable_undefined = 0;
     filterable = 1;
@@ -566,6 +605,7 @@ enum SamplerKind {
     comparison = 1;
 }
 
+// Note, this is unused but keeps the linter happey
 enum SamplerFiltering {
     filtering_undefined = 0;
     filtering = 1;
@@ -778,4 +818,5 @@ enum BuiltinFn {
     atomic_store_min = 160;
     bitcast = 161;
     buffer_array_view = 162;
+    add_sat = 163;
 }

@@ -1,0 +1,257 @@
+Name
+
+    EXT_buffer_age
+
+Name Strings
+
+    GLX_EXT_buffer_age
+
+Notice
+
+    Copyright 2011,2012 Intel Cooperation. All rights reserved.
+
+Contributors
+
+    Robert Bragg
+    Neil Roberts
+    James Jones
+
+Contacts
+
+    Robert Bragg, Intel (robert.bragg 'at' intel.com)
+
+Status
+
+    Draft
+
+Version
+
+    8 - Sept 20, 2012
+
+Number
+
+    427
+
+Dependencies
+
+    Requires GLX 1.4
+
+    This extension is written against the wording of the GLX 1.4
+    Specification.
+
+    GLX_OML_swap_method trivially interacts with this extension.
+
+Overview
+
+    The aim of this extension is to expose enough information to
+    applications about how the driver manages the set of front and
+    back buffers associated with a given surface to allow applications
+    to re-use the contents of old frames and minimize how much must be
+    redrawn for the next frame.
+
+    There are lots of different ways for a driver to manage these
+    buffers, from double buffering, different styles of triple
+    buffering and even n-buffering or simply single buffer rendering.
+    We also need to consider that power management events or memory
+    pressure events might also result in some of the buffers not
+    currently in-use being freed.
+
+    This extension lets applications query the age of the back buffer
+    contents for a GLX surface as the number of frames elapsed since
+    the contents were most recently defined. The back buffer can
+    either be reported as invalid (has an age of 0) or it may be
+    reported to contain the contents from n frames prior to the
+    current frame.
+
+    Once the application has queried the buffer age, the age of
+    contents remains valid until the end of the frame for all pixels
+    that continue to pass the pixel ownership test.
+
+    For example if you consider a double buffered application drawing
+    a small spinning icon, but everything else in the scene is static.
+    If we know that 2 buffers are continuously being recycled each
+    time glXSwapBuffers is called then even though 100s of frames may
+    need to be drawn to animate the icon it can be seen that the two
+    buffers are remaining unchanged except within the bounds of the
+    icon. In this scenario ideally the application would simply
+    perform an incremental update of the old buffer instead of
+    redundantly redrawing all the static parts of the scene. The
+    problem up until now though has been that GLX doesn't report how
+    buffers may be recycled so it wasn't safe for applications to try
+    and reuse their contents. Now applications can keep track of all
+    the regions that have changed over the last n frames and by
+    knowing the age of the buffer they know how to efficiently repair
+    buffers that are re-cycled instead of redrawing the entire scene.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    GLX_BACK_BUFFER_AGE_EXT    0x20F4
+
+Additions to Section 3.3.6 of the GLX 1.4 Specification (Querying Attributes)
+
+    Add the following text to the description for glXQueryDrawable
+
+        Querying GLX_BACK_BUFFER_AGE_EXT returns the age of the color
+        contents of the current back-buffer as the number of frames
+        elapsed since it was most recently defined. Applications can,
+        under certain conditions described below, use this age to
+        safely rely on the contents of old back-buffers to potentially
+        reduce the amount of redrawing they do each frame. A frame is
+        the period between calls to any of the functions in table 3.X,
+        hereafter referred to as "frame boundaries."
+
+        Function name
+        --------------------
+        glXSwapBuffers
+        glXSwapBuffersMscOML
+
+        Table 3.X, Frame Boundary Functions
+
+        Buffers' ages are initialized to 0 at buffer creation time.
+        When a frame boundary is reached, the following occurs before
+        any exchanging or copying of color buffers:
+
+            * The current back buffer's age is set to 1.
+            * Any other color buffers' ages are incremented by 1 if
+              their age was previously greater than 0.
+
+        For the purposes of buffer age tracking, a buffer's content
+        is considered defined when its age transitions to a value
+        greater than 0.
+
+        For example, with a double buffered surface and an
+        implementation that swaps via buffer exchanges, the age would
+        usually be 2. With a triple buffered surface the age would
+        usually be 3. An age of 1 means the previous swap was
+        implemented as a copy. An age of 0 means the buffer has only
+        just been initialized and the contents are undefined. Single
+        buffered drawables have no frame boundaries and therefore
+        always have an age of 0.
+
+        Frame boundaries are the only events that can set a buffer's
+        age to a positive value. Once GLX_BACK_BUFFER_AGE_EXT has been
+        queried then it can be assumed that the age will remain valid
+        until the next frame boundary. GLX implementations are
+        permitted, but not required, to reset the buffer age in
+        response to pixel ownership test changes for any pixels within
+        the drawable, or if new pixels are added to or removed from
+        the drawable, i.e., the drawable is resized. A reset of this
+        nature does not affect the age of pixels that pass the pixel
+        ownership test before and after the event that caused the
+        reset.  In other words, applications can assume that no event
+        will invalidate the content of pixels that continuously pass
+        the pixel test between when the buffer age was queried and the
+        following frame boundary.
+
+        It is up to applications to track pixel ownership using data
+        collected from window configuration, expose, and any other
+        relevant X events.
+
+        If the GLX implementation decides to free un-used back-buffers
+        when the system is under memory pressure or in response to
+        power-management events then GLX will return an age of 0 when
+        it allocates a new buffer at the start of a new frame.
+
+        GLX_BACK_BUFFER_AGE_EXT state, while a property of the GLX
+        drawable that owns the buffers, lives in the address space of
+        the current GL server context.  That is, if a GLX drawable is
+        used with multiple direct-rendering contexts in separate
+        processes, the buffer age is not guaranteed to be
+        synchronized across the processes.  Similarly, if a GLX
+        drawable is used with both an indirect and a direct context,
+        the buffer age may depend on which context the drawable is
+        bound to when it is queried. However, binding and unbinding a
+        drawable to and from one or more contexts in the same address
+        space will not affect the ages of any buffers in that
+        drawable.
+
+    Add the following text to the last paragraph of the description for
+    glXQueryDrawable describing error conditions.
+
+        If querying GLX_BACK_BUFFER_AGE_EXT and <draw> is not bound to
+        the calling thread's current context a GLXBadDrawable error is
+        generated.
+
+Dependencies on OpenGL
+
+    None
+
+Dependencies on GLX_OML_sync_control
+
+    If GLX_OML_sync_control is not supported, glXSwapBuffersMscOML is
+    removed from Table 3.X.
+
+Issues
+
+    1) How can an application know that all pixels of a re-usable
+       buffer were originally owned by the current context?
+
+        RESOLVED: It is up to the application to track pixel
+        ownership using existing X11 events, such as expose or
+        configure notify events.
+
+    2) What are the semantics if the buffer age attribute is queried
+       for a drawable that isn't bound to the calling thread's
+       context?
+
+        RESOLVED: we report a GLXBadDrawable error.
+
+    3) Is the buffer age tracked in the GLX client or the GLX server?
+
+        RESOLVED: Querying the buffer age needs to be a fast
+        operation, so it makes sense to track it in the GLX client.
+        However, GLX implementations without support for direct
+        rendering likely won't have any per-drawable client state.
+        Therefore, the buffer age is tracked in the same address space
+        as the current GL server context.  For direct rendering, this
+        is the GLX client. For indirect rendering, it is the GLX
+        server.  The buffer age is not synchronized between the two
+        when changing contexts.
+
+    4) What is the buffer age of a single buffered drawable?
+
+        RESOLVED: 0.  This falls out implicitly from the buffer age
+        calculations, which dictate that a buffer's age starts at 0,
+        and is only incremented by frame boundaries.  Since frame
+        boundary functions do not affect single buffered drawables,
+        their age will always be 0.
+
+    5) What guarantees are provided after querying the buffer age?
+
+        RESOLVED: The buffer age of pixels which continue to pass the
+        pixel ownership test must remain valid until the next frame
+        boundary otherwise applications can't be absolutely sure of
+        the consistency of their rendered content.  Implementations
+        may reset the queryable age of the buffer when pixel ownership
+        changes occur.  This is further clarified in section 3.3.6
+
+Revision History
+
+    Version 1, 07/02/2012
+      - First draft
+    Version 2, 08/03/2012
+      - Document that once the age is queried it remains valid until
+        the end of the frame.
+    Version 3, 08/03/2012
+      - Clarify that only buffers who's contents were fully owned by
+        the context are tracked.
+    Version 4 21/03/2012
+      - Document that an error will be generated if querying the age
+        for a drawable not bound to the current context.
+    Version 5 21/08/2012
+      - Relax pixel ownership requirements
+      - Slightly tweak and explicitly document buffer age calculation
+      - Note that buffer age is tracked in the GLX client when using
+        direct rendering.
+    Version 6 11/09/2012
+      - Clarify guarantees once the age has been queried
+    Version 7 17/09/2012
+      - Further clarify pixel age vs. buffer age
+      - Rename GLX_BUFFER_AGE_EXT to GLX_BACK_BUFFER_AGE_EXT
+      - Assign value to GLX_BACK_BUFFER_AGE_EXT
+    Version 8 20/09/2012
+      - Remove overly precise definition of buffer age

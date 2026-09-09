@@ -1,0 +1,4 @@
+enum majorness {
+  col_major
+  row_major
+}

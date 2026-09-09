@@ -25,14 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 
 #include <utility>
 
-#include "dawn/common/Log.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/end2end/BufferHostMappedPointerTests.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/end2end/BufferHostMappedPointerTests.h"
+#include "src/utils/log.h"
 
 namespace dawn {
 namespace {
@@ -74,10 +74,8 @@ class VMBackend : public BufferHostMappedPointerTestBackend {
         if (dawn::native::CheckIsErrorForTesting(buffer.Get())) {
             DeallocMemory();
         } else {
-            mDisposeCallback.Use([&](auto callback) {
-                EXPECT_CALL(*callback, Call(ptr))
-                    .WillOnce(testing::InvokeWithoutArgs(DeallocMemory));
-            });
+            mDisposeCallback.Use(
+                [&](auto callback) { EXPECT_CALL(*callback, Call(ptr)).WillOnce(DeallocMemory); });
         }
 
         return std::make_pair(std::move(buffer), hostMappedDesc.pointer);
@@ -119,10 +117,10 @@ class MMapBackend : public BufferHostMappedPointerTestBackend {
         HANDLE tmpFileHandle = CreateFile(tmpFileName,                   // file name
                                           GENERIC_READ | GENERIC_WRITE,  // open for read write
                                           0,                             // do not share
-                                          NULL,                          // default security
+                                          nullptr,                       // default security
                                           CREATE_ALWAYS,                 // overwrite existing
                                           FILE_ATTRIBUTE_NORMAL,         // normal file
-                                          NULL);                         // no template
+                                          nullptr);                      // no template
         EXPECT_NE(tmpFileHandle, INVALID_HANDLE_VALUE);
 
         LARGE_INTEGER largeSize = {};
@@ -160,10 +158,8 @@ class MMapBackend : public BufferHostMappedPointerTestBackend {
         if (dawn::native::CheckIsErrorForTesting(buffer.Get())) {
             DeallocMemory();
         } else {
-            mDisposeCallback.Use([&](auto callback) {
-                EXPECT_CALL(*callback, Call(ptr))
-                    .WillOnce(testing::InvokeWithoutArgs(DeallocMemory));
-            });
+            mDisposeCallback.Use(
+                [&](auto callback) { EXPECT_CALL(*callback, Call(ptr)).WillOnce(DeallocMemory); });
         }
 
         return std::make_pair(std::move(buffer), hostMappedDesc.pointer);
@@ -223,10 +219,8 @@ class NamedSharedMemoryBackend : public BufferHostMappedPointerTestBackend {
         if (dawn::native::CheckIsErrorForTesting(buffer.Get())) {
             DeallocMemory();
         } else {
-            mDisposeCallback.Use([&](auto callback) {
-                EXPECT_CALL(*callback, Call(ptr))
-                    .WillOnce(testing::InvokeWithoutArgs(DeallocMemory));
-            });
+            mDisposeCallback.Use(
+                [&](auto callback) { EXPECT_CALL(*callback, Call(ptr)).WillOnce(DeallocMemory); });
         }
 
         return std::make_pair(std::move(buffer), hostMappedDesc.pointer);

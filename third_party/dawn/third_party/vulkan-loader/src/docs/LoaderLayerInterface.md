@@ -25,6 +25,7 @@
   - [Fuchsia Layer Discovery](#fuchsia-layer-discovery)
   - [macOS Layer Discovery](#macos-layer-discovery)
     - [Example macOS Implicit Layer Search Path](#example-macos-implicit-layer-search-path)
+    - [Use App Bundled Layers exclusively](#use-app-bundled-layers-exclusively)
   - [Layer Filtering](#layer-filtering)
     - [Layer Enable Filtering](#layer-enable-filtering)
     - [Layer Disable Filtering](#layer-disable-filtering)
@@ -452,6 +453,15 @@ following:
   /usr/local/share/vulkan/implicit_layer.d
   /usr/share/vulkan/implicit_layer.d
 ```
+
+#### Use App Bundled Layers exclusively
+
+By default, the Vulkan Loader searches various system and user paths
+for layer manifests. Defining the environment variable
+`VK_LOADER_SEARCH_ONLY_IN_BUNDLE` makes the Vulkan Loader only search
+for layer manifests in `(bundle)/Contents/Resources/`. This is
+intended for applications including layers inside of the app bundle
+so that any layers elsewhere on the system do not affect the app.
 
 ### Layer Filtering
 

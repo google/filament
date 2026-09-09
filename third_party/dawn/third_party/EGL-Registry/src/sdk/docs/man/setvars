@@ -1,0 +1,5 @@
+#!/usr/bin/tcsh
+# Set variables for comparisons
+set egl=/home/tree/khronos/registry/trunk/public/egl/sdk/docs/man/xhtml
+set es=/home/tree/khronos/ogles/trunk/sdk/docs/man3/docbook4/xhtml
+set esnew=/home/tree/khronos/ogles/trunk/sdk/docs/man3/html

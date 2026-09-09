@@ -1,0 +1,33 @@
+// RUN: %dxc  %S/Inputs/smoke.hlsl  /D "semantic = SV_Position" /T vs_6_0 /Zi /Qembed_debug /DDX12 /Fo %t.define.cso
+
+// Strip Root Signature from compiled object
+// RUN: %dxc %t.define.cso /dumpbin /Qstrip_rootsignature /Fo %t.norootsignature.cso
+// RUN:%dxa  -listparts %t.norootsignature.cso | FileCheck %s --check-prefix=NO_RS
+
+// NO_RS:Part count
+// NO_RS-NOT:RTS0
+
+// Extract rootsignature from compiled object
+// RUN: %dxc %t.define.cso /dumpbin /extractrootsignature /Fo %t.rootsig.cso
+// RUN:%dxa  -listparts %t.rootsig.cso | FileCheck %s --check-prefix=RS_PART
+
+
+// Add rootsignature to compiled object
+// RUN: %dxc %t.norootsignature.cso /dumpbin /setrootsignature %t.rootsig.cso /Fo %t.merged.cso
+// RUN:%dxa  -listparts %t.merged.cso | FileCheck %s --check-prefix=RS_PART
+
+// RS_PART:Part count
+// RS_PART:RTS0
+
+
+// Verify root signature for smoke.cso
+// RUN: %dxc %t.define.cso /dumpbin /verifyrootsignature %t.rootsig.cso
+// RUN: %dxc %t.norootsignature.cso /dumpbin /verifyrootsignature %t.rootsig.cso
+
+// Set root signature when already has one should succeed
+// RUN: %dxc %t.define.cso /dumpbin /setrootsignature %t.rootsig.cso /Fo %t.smoke.rsadded.cso
+// Make sure %t.smoke.rsadded.cso exist.
+// RUN: ls %t.smoke.rsadded.cso
+
+// Set mismatched root signature when already has one should fail
+// RUN: not %dxc %t.define.cso /dumpbin /setrootsignature %t.NonUniformRootSig.cso /Fo %t.smoke.rsadded.cso

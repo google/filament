@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/platform/WorkerThread.h"
+#include "src/dawn/platform/WorkerThread.h"
 
 #include <functional>
 #include <iterator>
 #include <utility>
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
 
 namespace dawn::platform {
 
@@ -150,6 +150,7 @@ std::unique_ptr<WaitableEvent> AsyncWorkerThreadPool::PostWorkerTask(
                     return static_cast<AsyncWorkerThreadPool*>(self)->TaskHandlingJobLoop();
                 },
                 this));
+            taskTracking->numJobs++;
         }
     });
 
@@ -169,7 +170,7 @@ std::unique_ptr<JobHandle> AsyncWorkerThreadPool::PostWorkerJob(PostWorkerJobCal
 
 JobStatus AsyncWorkerThreadPool::TaskHandlingJobLoop() {
     // By default, wait for 100ms between yielding.
-    static constexpr Nanoseconds kWaitDuration = Nanoseconds(100000000);
+    static constexpr Nanoseconds kWaitDuration = Nanoseconds(100000000u);
 
     Ref<AsyncTaskHandleImpl> task = nullptr;
     mTaskTracking.Use<NotifyType::None>([&](auto taskTracking) {

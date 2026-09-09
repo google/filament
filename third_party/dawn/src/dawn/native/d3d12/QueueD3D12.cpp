@@ -25,22 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/QueueD3D12.h"
+#include "src/dawn/native/d3d12/QueueD3D12.h"
 
 #include <limits>
 #include <utility>
 
-#include "dawn/common/Math.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/CommandBufferD3D12.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/SharedFenceD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/CommandBufferD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/SharedFenceD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d12 {
 
@@ -70,7 +71,7 @@ MaybeError Queue::Initialize() {
     // value.
     mCommandQueue.As(&mD3d12SharingContract);
 
-    DAWN_TRY(CheckHRESULT(d3d12Device->CreateFence(uint64_t(kBeginningOfGPUTime),
+    DAWN_TRY(CheckHRESULT(d3d12Device->CreateFence(uint64_t{kBeginningOfGPUTime},
                                                    D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&mFence)),
                           "D3D12 create fence"));
 
@@ -107,17 +108,17 @@ ID3D12SharingContract* Queue::GetSharingContract() const {
     return mD3d12SharingContract.Get();
 }
 
-MaybeError Queue::SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) {
+MaybeError Queue::SubmitImpl(Span<CommandBufferBase* const> commands) {
     CommandRecordingContext* commandContext = GetPendingCommandContext();
-    ExecutionSerial pendingSerial = GetPendingCommandSerial();
+    [[maybe_unused]] ExecutionSerial pendingSerial = GetPendingCommandSerial();
 
-    TRACE_EVENT_BEGIN1(GetDevice()->GetPlatform(), Recording, "CommandBufferD3D12::RecordCommands",
-                       "serial", uint64_t(pendingSerial));
-    for (uint32_t i = 0; i < commandCount; ++i) {
-        DAWN_TRY(ToBackend(commands[i])->RecordCommands(commandContext));
+    {
+        TRACE_EVENT(DAWN_TRACE_CATEGORY("recording"), "CommandBufferD3D12::RecordCommands",
+                    "serial", uint64_t{pendingSerial});
+        for (CommandBufferBase* commandBuffer : commands) {
+            DAWN_TRY(ToBackend(commandBuffer)->RecordCommands(commandContext));
+        }
     }
-    TRACE_EVENT_END1(GetDevice()->GetPlatform(), Recording, "CommandBufferD3D12::RecordCommands",
-                     "serial", uint64_t(pendingSerial));
 
     return SubmitPendingCommandsImpl();
 }
@@ -148,8 +149,8 @@ MaybeError Queue::NextSerial() {
 
     IncrementLastSubmittedCommandSerial();
 
-    TRACE_EVENT1(device->GetPlatform(), General, "D3D12Device::SignalFence", "serial",
-                 uint64_t(GetLastSubmittedCommandSerial()));
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "D3D12Device::SignalFence", "serial",
+                uint64_t(GetLastSubmittedCommandSerial()));
 
     return CheckHRESULT(
         mCommandQueue->Signal(mFence.Get(), uint64_t(GetLastSubmittedCommandSerial())),
@@ -185,7 +186,7 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
     }
 
     if (completedSerial <= GetCompletedCommandSerial()) {
-        return ExecutionSerial(0);
+        return ExecutionSerial(0u);
     }
 
     DAWN_TRY(RecycleSystemEventReceivers(completedSerial));

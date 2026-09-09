@@ -28,10 +28,10 @@
 #include <algorithm>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -42,6 +42,9 @@ constexpr wgpu::TextureFormat kFormat = wgpu::TextureFormat::RGBA8Unorm;
 class Texture3DTests : public DawnTest {};
 
 TEST_P(Texture3DTests, Sampling) {
+    // TODO(crbug.com/523272959): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
     // Set up pipeline. Two triangles will be drawn via the pipeline. They will fill the entire
@@ -175,10 +178,15 @@ TEST_P(Texture3DTests, LatestMipClampsDepthSizeForStorageTextures) {
 
 // Test 3d texture slices used as render attachments.
 TEST_P(Texture3DTests, Rendering) {
-    // TODO(crbug.com/dawn/2275): D3D12 debug layer reports the same subresource of 3d texture
-    // cannot be written at the same time, which is a bug of D3D12 debug layer.
-    // Remove this suppression once the issue is fixed.
-    DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsBackendValidationEnabled());
+    // TODO(crbug.com/523272959): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
+    // crbug.com/42241218: The D3D12 debug layer incorrectly identifies different slices of a 3D
+    // texture as the same subresource, which prevents writing to them as multiple render targets in
+    // a single pass. This was resolved in Windows version 26200.8246 (D3D12 debug layer
+    // 26100.8115).
+    DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsBackendValidationEnabled() &&
+                          !IsWindowsVersionAtLeast(26200u, 8246u));
 
     // Set up pipeline. Bottom-left triangle will be drawn via the pipeline.
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
@@ -248,7 +256,7 @@ TEST_P(Texture3DTests, Rendering) {
     queue.Submit(1, &commands);
 
     uint32_t mipSize = std::max(kRTSize >> viewDescriptor.baseMipLevel, 1u);
-    std::vector<utils::RGBA8> expected(mipSize * mipSize);
+    std::vector<utils::RGBA8> expected(static_cast<size_t>(mipSize) * mipSize);
     // Only bottom-left triangle should be drawn with green color (0, 255, 0, 255), other pixels
     // stay red color (255, 0, 0, 255).
     for (uint32_t i = 0; i < mipSize; ++i) {

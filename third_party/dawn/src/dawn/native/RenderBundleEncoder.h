@@ -28,21 +28,23 @@
 #ifndef SRC_DAWN_NATIVE_RENDERBUNDLEENCODER_H_
 #define SRC_DAWN_NATIVE_RENDERBUNDLEENCODER_H_
 
-#include "dawn/native/EncodingContext.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/RenderBundle.h"
-#include "dawn/native/RenderEncoderBase.h"
+#include "src/dawn/native/EncodingContext.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/RenderBundle.h"
+#include "src/dawn/native/RenderEncoderBase.h"
 
 namespace dawn::native {
 
-MaybeError ValidateRenderBundleEncoderDescriptor(DeviceBase* device,
-                                                 const RenderBundleEncoderDescriptor* descriptor);
+ResultOrError<UnpackedPtr<RenderBundleEncoderDescriptor>> ValidateRenderBundleEncoderDescriptor(
+    DeviceBase* device,
+    const RenderBundleEncoderDescriptor* descriptor);
 
 class RenderBundleEncoder final : public RenderEncoderBase {
   public:
-    static Ref<RenderBundleEncoder> Create(DeviceBase* device,
-                                           const RenderBundleEncoderDescriptor* descriptor);
+    static Ref<RenderBundleEncoder> Create(
+        DeviceBase* device,
+        const UnpackedPtr<RenderBundleEncoderDescriptor>& descriptor);
     static Ref<RenderBundleEncoder> MakeError(DeviceBase* device, StringView label);
 
     ~RenderBundleEncoder() override;
@@ -56,8 +58,11 @@ class RenderBundleEncoder final : public RenderEncoderBase {
     RenderPassResourceUsage AcquireRenderPassUsages();
     IndirectDrawMetadata AcquireIndirectDrawMetadata();
 
+    bool UsesResourceTable() const;
+
   private:
-    RenderBundleEncoder(DeviceBase* device, const RenderBundleEncoderDescriptor* descriptor);
+    RenderBundleEncoder(DeviceBase* device,
+                        const UnpackedPtr<RenderBundleEncoderDescriptor>& descriptor);
     RenderBundleEncoder(DeviceBase* device, ErrorTag errorTag, StringView label);
 
     void DestroyImpl(DestroyReason reason) override;
@@ -69,6 +74,8 @@ class RenderBundleEncoder final : public RenderEncoderBase {
 
     // Temporarily store for validation and will be moved to RenderBundle afterwards.
     RenderPassResourceUsage mUsages;
+
+    bool mUsesResourceTable = false;
 };
 
 }  // namespace dawn::native

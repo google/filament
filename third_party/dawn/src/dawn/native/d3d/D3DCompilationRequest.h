@@ -33,10 +33,10 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "dawn/native/Adapter.h"
-#include "dawn/native/CacheRequest.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/CacheRequest.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 #include "tint/tint.h"
 
 namespace dawn::native::stream {
@@ -72,10 +72,11 @@ using InterStageShaderVariablesMask = std::bitset<tint::hlsl::writer::kMaxInterS
     X(tint::hlsl::writer::Options, tintOptions)                                      \
     X(LimitsForCompilationRequest, limits)                                           \
     X(UnsafeUnserializedValue<LimitsForCompilationRequest>, adapterSupportedLimits)  \
+    X(uint32_t, minSubgroupSize)                                                     \
     X(uint32_t, maxSubgroupSize)                                                     \
-    X(uint32_t, minExplicitComputeSubgroupSize)                                      \
-    X(uint32_t, maxExplicitComputeSubgroupSize)                                      \
-    X(uint32_t, maxComputeWorkgroupSubgroups)                                        \
+    X(uint32_t, waveLaneCountMin)                                                    \
+    X(uint32_t, waveLaneCountMax)                                                    \
+    X(bool, usesSubgroupMatrix)                                                      \
     X(bool, disableSymbolRenaming)                                                   \
     X(bool, dumpShaders)                                                             \
     X(bool, dumpShadersOnFailure)

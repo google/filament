@@ -267,7 +267,7 @@ VkResult parse_additional_drivers(const struct loader_instance* inst, cJSON* set
     loader_settings->additional_driver_count = additional_driver_count;
 
     loader_settings->additional_drivers = loader_instance_heap_calloc(
-        inst, sizeof(loader_settings_layer_configuration) * additional_driver_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        inst, sizeof(loader_settings_driver_configuration) * additional_driver_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (NULL == loader_settings->additional_drivers) {
         res = VK_ERROR_OUT_OF_HOST_MEMORY;
         goto out;
@@ -406,10 +406,14 @@ VkResult parse_device_configurations(const struct loader_instance* inst, cJSON* 
         if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
             goto out;
         } else if (res != VK_SUCCESS) {
+            // Skip a malformed entry rather than discarding every device configuration in the file
+            res = VK_SUCCESS;
             continue;
         }
         i++;
     }
+    // Only the first i entries were successfully parsed; the trailing entries are unpopulated
+    loader_settings->device_configuration_count = (uint32_t)i;
     loader_settings->device_configurations_active = true;
 out:
     if (res != VK_SUCCESS) {
@@ -981,6 +985,10 @@ TEST_FUNCTION_EXPORT VkResult get_settings_layers(const struct loader_instance* 
             continue;
         }
 
+        if (!is_json(layer_config->path, strlen(layer_config->path))) {
+            continue;
+        }
+
         cJSON* json = NULL;
         VkResult local_res = loader_get_json(inst, layer_config->path, &json);
         if (VK_ERROR_OUT_OF_HOST_MEMORY == local_res) {
@@ -1265,6 +1273,10 @@ VkResult enable_correct_layers_from_settings(const struct loader_instance* inst,
         }
     }
 out:
+    if (vk_instance_layers_env != NULL) {
+        loader_free_getenv(vk_instance_layers_env, inst);
+    }
+
     return res;
 }
 

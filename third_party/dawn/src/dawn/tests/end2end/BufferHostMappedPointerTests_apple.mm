@@ -27,10 +27,10 @@
 
 #include <mach/mach.h>
 
-#include "dawn/common/Log.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/end2end/BufferHostMappedPointerTests.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/end2end/BufferHostMappedPointerTests.h"
+#include "src/utils/log.h"
 
 namespace dawn {
 namespace {
@@ -73,10 +73,8 @@ class VMBackend : public BufferHostMappedPointerTestBackend {
         if (dawn::native::CheckIsErrorForTesting(buffer.Get())) {
             DeallocMemory();
         } else {
-            mDisposeCallback.Use([&](auto callback) {
-                EXPECT_CALL(*callback, Call(ptr))
-                    .WillOnce(testing::InvokeWithoutArgs(DeallocMemory));
-            });
+            mDisposeCallback.Use(
+                [&](auto callback) { EXPECT_CALL(*callback, Call(ptr)).WillOnce(DeallocMemory); });
         }
 
         return std::make_pair(std::move(buffer), hostMappedDesc.pointer);

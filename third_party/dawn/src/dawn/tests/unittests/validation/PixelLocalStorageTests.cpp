@@ -28,10 +28,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/NonMovable.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn {
 namespace {
@@ -533,7 +533,7 @@ TEST_F(PixelLocalStorageTest, PLSStateAttachmentInBoundsOfTotalSize) {
 
     // Check that overflows don't incorrectly pass the validation.
     {
-        PLSSpec spec = {4, {{uint64_t(0) - uint64_t(4), wgpu::TextureFormat::R32Uint}}};
+        PLSSpec spec = {4, {{uint64_t{0} - uint64_t{4}, wgpu::TextureFormat::R32Uint}}};
         ASSERT_DEVICE_ERROR(MakePipelineLayout(spec));
         ASSERT_DEVICE_ERROR(RecordPLSRenderPass(spec));
     }

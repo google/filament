@@ -29,19 +29,25 @@
 #define SRC_DAWN_NATIVE_STREAM_SOURCE_H_
 
 #include <cstddef>
+#include <span>
 
-#include "dawn/native/Error.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native::stream {
 
 // Interface for a deserialization source.
 class Source {
   public:
+    Source() = default;
+    Source(const Source&) = default;
+    Source& operator=(const Source&) = default;
+    Source(Source&&) = default;
+    Source& operator=(Source&&) = default;
+
+    virtual ~Source() = default;
+
     // Try to read `bytes` space from the source. The data must live as long as `Source.
-    // Returns MaybeError and writes result to |ptr| because ResultOrError uses
-    // a tagged pointer that must be 4-byte aligned. This function writes out |ptr|
-    // which may not be aligned.
-    virtual MaybeError Read(const void** ptr, size_t bytes) = 0;
+    virtual ResultOrError<std::span<const std::byte>> Read(size_t bytes) = 0;
 };
 
 }  // namespace dawn::native::stream

@@ -25,8 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include <string>
+
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+
+using testing::HasSubstr;
 
 namespace dawn {
 namespace {
@@ -58,6 +62,61 @@ TEST_P(DebugMarkerTests, NoFailureWithoutDebugToolAttached) {
 
     wgpu::CommandBuffer commands = encoder.Finish();
     queue.Submit(1, &commands);
+}
+
+TEST_P(DebugMarkerTests, StringDeletedAfterPushDebugGroup) {
+    // Check that the error message still contains the marker after deleting the string passed in
+    // argument. Also overwrite the string in case small-string optimization makes the test happen
+    // to pass otherwise.
+    DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
+
+    // CommandEncoder::PushDebugGroup.
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        {
+            std::string marker = "foo";
+            encoder.PushDebugGroup(std::string_view(marker));
+            marker[0] = 'b';
+        }
+        encoder.InjectValidationError("Whatever");
+        encoder.PopDebugGroup();
+
+        ASSERT_DEVICE_ERROR_MSG(encoder.Finish(), HasSubstr("foo"));
+    }
+
+    // ComputePassEncoder::PushDebugGroup.
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        {
+            std::string marker = "foo";
+            pass.PushDebugGroup(std::string_view(marker));
+            marker[0] = 'b';
+        }
+        pass.DispatchWorkgroups(1);
+        pass.End();
+        encoder.PopDebugGroup();
+
+        ASSERT_DEVICE_ERROR_MSG(encoder.Finish(), HasSubstr("foo"));
+    }
+
+    // RenderPassEncoder::PushDebugGroup.
+    {
+        utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 4, 4);
+
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass.renderPassInfo);
+        {
+            std::string marker = "foo";
+            pass.PushDebugGroup(std::string_view(marker));
+            marker[0] = 'b';
+        }
+        pass.Draw(1);
+        pass.End();
+        encoder.PopDebugGroup();
+
+        ASSERT_DEVICE_ERROR_MSG(encoder.Finish(), HasSubstr("foo"));
+    }
 }
 
 DAWN_INSTANTIATE_TEST(DebugMarkerTests,

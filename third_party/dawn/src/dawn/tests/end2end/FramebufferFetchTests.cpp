@@ -28,9 +28,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -102,7 +102,60 @@ TEST_P(FramebufferFetchTests, Basic) {
 
     // The 10 points should have successfully used framebuffer fetch to do increment ten times
     // without races.
-    EXPECT_TEXTURE_EQ(uint32_t(10), texture, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{10}, texture, {0, 0});
+}
+
+// Check that FramebufferFetch works correctly when switching between pipelines that use and do not
+// use FramebufferFetch within the same render pass.
+TEST_P(FramebufferFetchTests, RenderPassWithMixedPipelines) {
+    // Pipeline without FramebufferFetch that uses blending to add 10 (10/255.0) to the attachment.
+    utils::ComboRenderPipelineDescriptor pDesc1;
+    InitForSinglePoint(&pDesc1);
+    pDesc1.cFragment.module = utils::CreateShaderModule(device, R"(
+        @fragment fn main() -> @location(0) vec4f {
+            return vec4f(10.0 / 255.0, 0.0, 0.0, 0.0);
+        }
+    )");
+    pDesc1.cBlends[0].color.srcFactor = wgpu::BlendFactor::One;
+    pDesc1.cBlends[0].color.dstFactor = wgpu::BlendFactor::One;
+    pDesc1.cBlends[0].color.operation = wgpu::BlendOperation::Add;
+    pDesc1.cBlends[0].alpha = pDesc1.cBlends[0].color;
+    pDesc1.cTargets[0].format = wgpu::TextureFormat::RGBA8Unorm;
+    pDesc1.cTargets[0].blend = &pDesc1.cBlends[0];
+    wgpu::RenderPipeline pipeline1 = device.CreateRenderPipeline(&pDesc1);
+
+    // Pipeline with FramebufferFetch that adds one (1/255.0) to the attachment.
+    utils::ComboRenderPipelineDescriptor pDesc2;
+    InitForSinglePoint(&pDesc2);
+    pDesc2.cFragment.module = utils::CreateShaderModule(device, kExt + R"(
+        @fragment fn main(@color(0) in : vec4f) -> @location(0) vec4f {
+            return in + vec4f(1.0 / 255.0, 0.0, 0.0, 0.0);
+        }
+    )");
+    pDesc2.cTargets[0].format = wgpu::TextureFormat::RGBA8Unorm;
+    wgpu::RenderPipeline pipeline2 = device.CreateRenderPipeline(&pDesc2);
+
+    wgpu::Texture texture = MakeAttachment(wgpu::TextureFormat::RGBA8Unorm);
+
+    utils::ComboRenderPassDescriptor passDesc({texture.CreateView()});
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&passDesc);
+    // 1st invocation of pipeline1: adds 10. (Value: 10)
+    pass.SetPipeline(pipeline1);
+    pass.Draw(1);
+    // Invocation of pipeline2: increments by 1 five times. (Value: 15)
+    pass.SetPipeline(pipeline2);
+    pass.Draw(5);
+    // 2nd invocation of pipeline1: adds 10. (Value: 25)
+    pass.SetPipeline(pipeline1);
+    pass.Draw(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    // The result should be 10 + 5 + 10 = 25.
+    EXPECT_TEXTURE_EQ(utils::RGBA8(25, 0, 0, 0), texture, {0, 0});
 }
 
 // Check that it is post-blend framebuffer fetch
@@ -201,10 +254,10 @@ TEST_P(FramebufferFetchTests, MultipleAttachments) {
 
     // The 10 points should have successfully used framebuffer fetch to do increment ten times
     // without races.
-    EXPECT_TEXTURE_EQ(uint32_t(0), texture0, {0, 0});
-    EXPECT_TEXTURE_EQ(uint32_t(10), texture1, {0, 0});
-    EXPECT_TEXTURE_EQ(uint32_t(20), texture2, {0, 0});
-    EXPECT_TEXTURE_EQ(uint32_t(30), texture3, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{0}, texture0, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{10}, texture1, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{20}, texture2, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{30}, texture3, {0, 0});
 }
 
 // Check with multiple render attachments
@@ -264,8 +317,8 @@ TEST_P(FramebufferFetchTests, VariousFormats) {
 
     // The 10 points should have successfully used framebuffer fetch to do in/decrement ten times
     // without races.
-    EXPECT_TEXTURE_EQ(uint32_t(10), texture0, {0, 0});
-    EXPECT_TEXTURE_EQ(int32_t(-10), texture1, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{10}, texture0, {0, 0});
+    EXPECT_TEXTURE_EQ(int32_t{-10}, texture1, {0, 0});
     EXPECT_TEXTURE_EQ(static_cast<float>(10), texture2, {0, 0});
     EXPECT_TEXTURE_EQ(utils::RGBA8(10, 10, 10, 10), texture3, {0, 0});
 }
@@ -318,8 +371,62 @@ TEST_P(FramebufferFetchTests, LoadAndStoreOpsReallyItsLoadAndDiscard) {
 
     // The first attachment is discard, but it's value of (ten increments + loaded value) is in the
     // second attachment.
-    EXPECT_TEXTURE_EQ(uint32_t(0), texture0, {0, 0});
-    EXPECT_TEXTURE_EQ(uint32_t(10 + 1789), texture1, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{0}, texture0, {0, 0});
+    EXPECT_TEXTURE_EQ(uint32_t{10 + 1789}, texture1, {0, 0});
+}
+
+// Checks that with the framebuffer fetch feature enabled and a multisampled color attachment, a
+// fragment shader that doesn't use @color doesn't increase the sample shading rate.
+TEST_P(FramebufferFetchTests, MultisampledAttachmentNoSampleShading) {
+    // Metal doesn't guarantee that the fragment shader will only run once for a multi-sampled draw.
+    // The atomic variable causes the shader to run 4x with Metal+ARM and this test fails.
+    DAWN_SUPPRESS_TEST_IF(IsMacOS());
+
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Storage}});
+
+    utils::ComboRenderPipelineDescriptor pDesc;
+    InitForSinglePoint(&pDesc);
+    pDesc.layout = utils::MakePipelineLayout(device, {bgl});
+    pDesc.multisample.count = 4;
+    pDesc.cTargets[0].format = wgpu::TextureFormat::RGBA8Unorm;
+    pDesc.cFragment.module = utils::CreateShaderModule(device, kExt + R"(
+        @group(0) @binding(0) var<storage, read_write> invocationCount : atomic<u32>;
+
+        @fragment fn addOne() -> @location(0) vec4f {
+            atomicAdd(&invocationCount, 1);
+            return vec4(1 / 255.0);
+        }
+    )");
+
+    pDesc.cFragment.entryPoint = "addOne";
+    wgpu::RenderPipeline addOnePipeline = device.CreateRenderPipeline(&pDesc);
+
+    // Create the buffer that will contain the number of invocations.
+    wgpu::BufferDescriptor bufDesc;
+    bufDesc.size = 4;
+    bufDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer invocationBuffer = device.CreateBuffer(&bufDesc);
+    wgpu::BindGroup bg = utils::MakeBindGroup(device, bgl, {{0, invocationBuffer}});
+
+    wgpu::Texture attachment = MakeAttachment(wgpu::TextureFormat::RGBA8Unorm, {1, 1}, 4);
+    wgpu::Texture resolve = MakeAttachment(wgpu::TextureFormat::RGBA8Unorm);
+
+    utils::ComboRenderPassDescriptor passDesc({attachment.CreateView()});
+    passDesc.cColorAttachments[0].resolveTarget = resolve.CreateView();
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&passDesc);
+    pass.SetBindGroup(0, bg);
+    // This FS shouldn't use sample shading and should run once.
+    pass.SetPipeline(addOnePipeline);
+    pass.Draw(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_EQ(1, invocationBuffer, 0);
+    EXPECT_TEXTURE_EQ(utils::RGBA8(1, 1, 1, 1), resolve, {0, 0});
 }
 
 // Test the behavior with multisampling.
@@ -395,7 +502,72 @@ TEST_P(FramebufferFetchTests, MultisamplingIsSampleRasterization) {
                       {0, 0});
 }
 
-DAWN_INSTANTIATE_TEST(FramebufferFetchTests, MetalBackend());
+// Test that the backend correctly handles many framebuffer fetch render pipelines being created
+// concurrently for the same number of color attachments.
+TEST_P(FramebufferFetchTests, CreateRenderPipelineInParallel) {
+    // TODO(crbug.com/42240634): DawnWire doesn't support thread safe API yet.
+    DAWN_TEST_UNSUPPORTED_IF(UsesWire());
+
+    constexpr uint32_t kNumThreads = 16;
+
+    wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
+        @vertex fn vs() -> @builtin(position) vec4f {
+            return vec4f(0, 0, 0, 1);
+        }
+    )");
+
+    // Use distinct fragment shaders so the pipelines are not deduplicated by the frontend cache and
+    // every thread reaches the backend pipeline initialization.
+    std::vector<wgpu::ShaderModule> fsModules(kNumThreads);
+    for (uint32_t i = 0; i < kNumThreads; ++i) {
+        std::string source = kExt + R"(
+            @fragment fn main(@color(0) in : u32) -> @location(0) u32 {
+                return in + )" +
+                             std::to_string(i + 1) +
+                             R"(;
+            }
+        )";
+        fsModules[i] = utils::CreateShaderModule(device, source.c_str());
+    }
+
+    std::vector<wgpu::RenderPipeline> pipelines(kNumThreads);
+    utils::RunInParallel(kNumThreads, [&](uint32_t index) {
+        utils::ComboRenderPipelineDescriptor pDesc;
+        pDesc.vertex.module = vsModule;
+        pDesc.primitive.topology = wgpu::PrimitiveTopology::PointList;
+        pDesc.cFragment.module = fsModules[index];
+        pDesc.cTargets[0].format = wgpu::TextureFormat::R32Uint;
+        pipelines[index] = device.CreateRenderPipeline(&pDesc);
+    });
+
+    // Verify each created pipeline executes correctly.
+    for (uint32_t i = 0; i < kNumThreads; ++i) {
+        ASSERT_NE(nullptr, pipelines[i].Get());
+
+        wgpu::Texture texture = MakeAttachment(wgpu::TextureFormat::R32Uint);
+        utils::ComboRenderPassDescriptor passDesc({texture.CreateView()});
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&passDesc);
+        pass.SetPipeline(pipelines[i]);
+        pass.Draw(1);
+        pass.End();
+
+        wgpu::CommandBuffer commands = encoder.Finish();
+        queue.Submit(1, &commands);
+
+        EXPECT_TEXTURE_EQ(uint32_t{i + 1}, texture, {0, 0});
+    }
+}
+
+// TODO(crbug.com/42241389): Add a test that uses FramebufferFetch and ResourceTable in the same
+// pipeline.
+
+DAWN_INSTANTIATE_TEST(FramebufferFetchTests,
+                      MetalBackend(),
+                      VulkanBackend({}, {"vulkan_use_dynamic_rendering"}),
+                      VulkanBackend({},
+                                    {"vulkan_use_dynamic_rendering",
+                                     "vulkan_use_rasterization_order_attachment_access"}));
 
 }  // anonymous namespace
 }  // namespace dawn

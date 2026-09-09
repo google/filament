@@ -77,7 +77,7 @@ class Loop final : public Castable<Loop, ControlInstruction> {
 
     /// Constructor
     /// @param id the instruction id
-    /// @param i the initializer block
+    /// @param i the initializer block. Must not be a MultiInBlock.
     /// @param b the body block
     /// @param c the continuing block
     Loop(Id id, ir::Block* i, ir::MultiInBlock* b, ir::MultiInBlock* c);
@@ -92,39 +92,39 @@ class Loop final : public Castable<Loop, ControlInstruction> {
     /// @copydoc ControlInstruction::ForeachBlock
     void ForeachBlock(const std::function<void(const ir::Block*)>& cb) const override;
 
-    /// @returns the switch initializer block
+    /// @returns the loop initializer block
     ir::Block* Initializer() { return initializer_; }
 
-    /// @returns the switch initializer block
+    /// @returns the loop initializer block
     const ir::Block* Initializer() const { return initializer_; }
 
     /// @returns true if the loop uses an initializer block. If true, then the Loop first branches
     /// to the initializer block, otherwise it first branches to the body block.
     bool HasInitializer() const;
 
-    /// @param block the new switch initializer block
+    /// @param block the new loop initializer block. Must not be a MultiInBlock.
     void SetInitializer(ir::Block* block);
 
-    /// @returns the switch start block
+    /// @returns the loop start block
     ir::MultiInBlock* Body() { return body_; }
 
-    /// @returns the switch start block
+    /// @returns the loop start block
     const ir::MultiInBlock* Body() const { return body_; }
 
-    /// @param block the new switch body block
+    /// @param block the new loop body block
     void SetBody(ir::MultiInBlock* block);
 
-    /// @returns the switch continuing block
+    /// @returns the loop continuing block
     ir::MultiInBlock* Continuing() { return continuing_; }
 
-    /// @returns the switch continuing block
+    /// @returns the loop continuing block
     const ir::MultiInBlock* Continuing() const { return continuing_; }
 
     /// @returns true if the loop uses an continuing block. If true, then the Loop first branches
     /// to the continuing block, otherwise it first branches to the body block.
     bool HasContinuing() const;
 
-    /// @param block the new switch continuing block
+    /// @param block the new loop continuing block
     void SetContinuing(ir::MultiInBlock* block);
 
     /// @returns the friendly name for the instruction

@@ -95,9 +95,9 @@ TEST_F(ConstantTest_Composite, Index) {
     ASSERT_EQ(composite->Index(2), nullptr);
 
     EXPECT_TRUE(composite->Index(0)->Is<Scalar<f32>>());
-    EXPECT_EQ(composite->Index(0)->As<Scalar<f32>>()->ValueOf(), 1.0);
+    EXPECT_EQ(composite->Index(0)->As<Scalar<f32>>()->ValueOf(), 1.0f);
     EXPECT_TRUE(composite->Index(1)->Is<Scalar<f32>>());
-    EXPECT_EQ(composite->Index(1)->As<Scalar<f32>>()->ValueOf(), 0.0);
+    EXPECT_EQ(composite->Index(1)->As<Scalar<f32>>()->ValueOf(), 0.0f);
 }
 
 TEST_F(ConstantTest_Composite, Clone) {

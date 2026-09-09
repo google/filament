@@ -25,14 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include "src/tint/utils/memory/bump_allocator.h"
 
 #include "gtest/gtest.h"
+#include "src/utils/compiler.h"
 
 namespace tint {
 namespace {
@@ -44,7 +40,8 @@ TEST_F(BumpAllocatorTest, AllocationSizes) {
     for (size_t n : {1u, 0x10u, 0x100u, 0x1000u, 0x10000u, 0x100000u,  //
                      2u, 0x34u, 0x567u, 0x8912u, 0x34567u, 0x891234u}) {
         auto ptr = allocator.Allocate(n);
-        memset(ptr, 0x42, n);
+        // SAFETY: allocator.Allocate(n) allocates exactly n bytes, so writing n bytes is safe.
+        DAWN_UNSAFE_BUFFERS(memset(ptr, 0x42, n));
     }
 }
 
@@ -60,7 +57,8 @@ TEST_F(BumpAllocatorTest, AllocationSizesAroundBlockSize) {
          }) {
         BumpAllocator allocator;
         auto* ptr = allocator.Allocate(n);
-        memset(ptr, 0x42, n);
+        // SAFETY: allocator.Allocate(n) allocates exactly n bytes, so writing n bytes is safe.
+        DAWN_UNSAFE_BUFFERS(memset(ptr, 0x42, n));
     }
 }
 

@@ -31,12 +31,13 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -61,7 +62,7 @@ class ExpectFloatWithTolerance : public detail::Expectation {
 
         for (size_t i = 0; i < mExpected.size(); ++i) {
             float expectedValue = mExpected[i];
-            float actualValue = actual[i];
+            float actualValue = DAWN_UNSAFE_TODO(actual[i]);
 
             if (!FloatsMatch(expectedValue, actualValue)) {
                 testing::AssertionResult result = testing::AssertionFailure()
@@ -108,7 +109,7 @@ class ExpectFloat16 : public detail::Expectation {
 
         for (size_t i = 0; i < mExpected.size(); ++i) {
             uint16_t expectedValue = mExpected[i];
-            uint16_t actualValue = actual[i];
+            uint16_t actualValue = DAWN_UNSAFE_TODO(actual[i]);
 
             if (!Floats16Match(expectedValue, actualValue)) {
                 testing::AssertionResult result = testing::AssertionFailure()
@@ -122,7 +123,7 @@ class ExpectFloat16 : public detail::Expectation {
     }
 
   private:
-    bool Floats16Match(float expected, float actual) {
+    bool Floats16Match(uint16_t expected, uint16_t actual) {
         if (IsFloat16NaN(expected)) {
             return IsFloat16NaN(actual);
         }
@@ -145,7 +146,7 @@ class ExpectRG11B10Ufloat : public detail::Expectation {
 
         for (size_t i = 0; i < mExpected.size(); ++i) {
             uint32_t expectedValue = mExpected[i];
-            uint32_t actualValue = actual[i];
+            uint32_t actualValue = DAWN_UNSAFE_TODO(actual[i]);
 
             if (!RG11B10UfloatMatch(expectedValue, actualValue)) {
                 testing::AssertionResult result = testing::AssertionFailure()
@@ -212,6 +213,11 @@ class ExpectRG11B10Ufloat : public detail::Expectation {
 
 class TextureFormatTest : public DawnTest {
   protected:
+    void SetUp() override {
+        DawnTest::SetUp();
+        // TODO(crbug.com/523211967): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+    }
     // Structure containing all the information that tests need to know about the format.
     struct FormatTestInfo {
         wgpu::TextureFormat format;
@@ -306,7 +312,8 @@ class TextureFormatTest : public DawnTest {
                                                                 wgpu::BufferUsage::CopySrc);
 
         // Create the texture that we will render results to
-        DAWN_ASSERT(expectedRenderDataSize == width * renderFormatInfo.texelByteSize);
+        DAWN_ASSERT(expectedRenderDataSize ==
+                    static_cast<size_t>(width) * renderFormatInfo.texelByteSize);
 
         wgpu::TextureDescriptor renderTargetDesc;
         renderTargetDesc.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::RenderAttachment;
@@ -963,10 +970,15 @@ TEST_P(TextureFormatTest, RG11B10Ufloat) {
         {wgpu::TextureFormat::RG11B10Ufloat, 4, TextureComponentType::Float, 4}, textureData,
         uncompressedData);
 
-    // TODO(https://crbug.com/swiftshader/147) Rendering INFINITY and NaN isn't handled
-    // correctly by swiftshader
     if ((IsVulkan() && IsSwiftshader()) || IsANGLE()) {
+        // TODO(https://crbug.com/swiftshader/147) Rendering INFINITY and NaN isn't handled
+        // correctly by swiftshader
         WarningLog() << "Skip Rendering test because Swiftshader doesn't render INFINITY "
+                        "and NaN correctly for RG11B10Ufloat texture format.";
+    } else if (IsVulkan() && IsMesaSoftware()) {
+        // TODO(crbug.com/550575670): Rendering INFINITY and NaN doesn't seem to be handled properly
+        // in Mesa either. Diff: expected: 0xf87e0000, actual: 0xffffe400.
+        WarningLog() << "Skip Rendering test because Mesa doesn't render INFINITY "
                         "and NaN correctly for RG11B10Ufloat texture format.";
     } else {
         DoFormatRenderingTest(

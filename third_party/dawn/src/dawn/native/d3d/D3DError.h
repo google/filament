@@ -30,8 +30,8 @@
 
 #include <winerror.h>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ErrorInjector.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ErrorInjector.h"
 
 namespace dawn::native::d3d {
 

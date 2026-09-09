@@ -166,16 +166,25 @@ safe_VkInstanceCreateInfo::safe_VkInstanceCreateInfo(const VkInstanceCreateInfo*
     if (copy_pnext) {
         pNext = SafePnextCopy(in_struct->pNext, copy_state);
     }
-    char** tmp_ppEnabledLayerNames = new char*[in_struct->enabledLayerCount];
-    for (uint32_t i = 0; i < enabledLayerCount; ++i) {
-        tmp_ppEnabledLayerNames[i] = SafeStringCopy(in_struct->ppEnabledLayerNames[i]);
+    if (in_struct->enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[in_struct->enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(in_struct->ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledLayerNames = tmp_ppEnabledLayerNames;
-    char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+
+    if (in_struct->enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
     if (in_struct->pApplicationInfo) pApplicationInfo = new safe_VkApplicationInfo(in_struct->pApplicationInfo);
 }
 
@@ -197,16 +206,25 @@ safe_VkInstanceCreateInfo::safe_VkInstanceCreateInfo(const safe_VkInstanceCreate
     enabledExtensionCount = copy_src.enabledExtensionCount;
     pNext = SafePnextCopy(copy_src.pNext);
 
-    char** tmp_ppEnabledLayerNames = new char*[copy_src.enabledLayerCount];
-    for (uint32_t i = 0; i < enabledLayerCount; ++i) {
-        tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src.ppEnabledLayerNames[i]);
+    if (copy_src.enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[copy_src.enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src.ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledLayerNames = tmp_ppEnabledLayerNames;
-    char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+
+    if (copy_src.enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
     if (copy_src.pApplicationInfo) pApplicationInfo = new safe_VkApplicationInfo(*copy_src.pApplicationInfo);
 }
 
@@ -236,16 +254,25 @@ safe_VkInstanceCreateInfo& safe_VkInstanceCreateInfo::operator=(const safe_VkIns
     enabledExtensionCount = copy_src.enabledExtensionCount;
     pNext = SafePnextCopy(copy_src.pNext);
 
-    char** tmp_ppEnabledLayerNames = new char*[copy_src.enabledLayerCount];
-    for (uint32_t i = 0; i < enabledLayerCount; ++i) {
-        tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src.ppEnabledLayerNames[i]);
+    if (copy_src.enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[copy_src.enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src.ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledLayerNames = tmp_ppEnabledLayerNames;
-    char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+
+    if (copy_src.enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
     if (copy_src.pApplicationInfo) pApplicationInfo = new safe_VkApplicationInfo(*copy_src.pApplicationInfo);
 
     return *this;
@@ -292,16 +319,25 @@ void safe_VkInstanceCreateInfo::initialize(const VkInstanceCreateInfo* in_struct
     enabledExtensionCount = in_struct->enabledExtensionCount;
     pNext = SafePnextCopy(in_struct->pNext, copy_state);
 
-    char** tmp_ppEnabledLayerNames = new char*[in_struct->enabledLayerCount];
-    for (uint32_t i = 0; i < enabledLayerCount; ++i) {
-        tmp_ppEnabledLayerNames[i] = SafeStringCopy(in_struct->ppEnabledLayerNames[i]);
+    if (in_struct->enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[in_struct->enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(in_struct->ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledLayerNames = tmp_ppEnabledLayerNames;
-    char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+
+    if (in_struct->enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
     if (in_struct->pApplicationInfo) pApplicationInfo = new safe_VkApplicationInfo(in_struct->pApplicationInfo);
 }
 
@@ -313,16 +349,25 @@ void safe_VkInstanceCreateInfo::initialize(const safe_VkInstanceCreateInfo* copy
     enabledExtensionCount = copy_src->enabledExtensionCount;
     pNext = SafePnextCopy(copy_src->pNext);
 
-    char** tmp_ppEnabledLayerNames = new char*[copy_src->enabledLayerCount];
-    for (uint32_t i = 0; i < enabledLayerCount; ++i) {
-        tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src->ppEnabledLayerNames[i]);
+    if (copy_src->enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[copy_src->enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src->ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledLayerNames = tmp_ppEnabledLayerNames;
-    char** tmp_ppEnabledExtensionNames = new char*[copy_src->enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src->ppEnabledExtensionNames[i]);
+
+    if (copy_src->enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[copy_src->enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src->ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
     if (copy_src->pApplicationInfo) pApplicationInfo = new safe_VkApplicationInfo(*copy_src->pApplicationInfo);
 }
 
@@ -429,17 +474,30 @@ safe_VkDeviceCreateInfo::safe_VkDeviceCreateInfo(const VkDeviceCreateInfo* in_st
       queueCreateInfoCount(in_struct->queueCreateInfoCount),
       pQueueCreateInfos(nullptr),
       enabledLayerCount(in_struct->enabledLayerCount),
-      ppEnabledLayerNames(in_struct->ppEnabledLayerNames),
       enabledExtensionCount(in_struct->enabledExtensionCount),
       pEnabledFeatures(nullptr) {
     if (copy_pnext) {
         pNext = SafePnextCopy(in_struct->pNext, copy_state);
     }
-    char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+    if (in_struct->enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[in_struct->enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(in_struct->ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+
+    if (in_struct->enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
+    }
     if (queueCreateInfoCount && in_struct->pQueueCreateInfos) {
         pQueueCreateInfos = new safe_VkDeviceQueueCreateInfo[queueCreateInfoCount];
         for (uint32_t i = 0; i < queueCreateInfoCount; ++i) {
@@ -459,7 +517,7 @@ safe_VkDeviceCreateInfo::safe_VkDeviceCreateInfo()
       queueCreateInfoCount(),
       pQueueCreateInfos(nullptr),
       enabledLayerCount(),
-      ppEnabledLayerNames(),
+      ppEnabledLayerNames(nullptr),
       enabledExtensionCount(),
       ppEnabledExtensionNames(nullptr),
       pEnabledFeatures(nullptr) {}
@@ -470,16 +528,29 @@ safe_VkDeviceCreateInfo::safe_VkDeviceCreateInfo(const safe_VkDeviceCreateInfo& 
     queueCreateInfoCount = copy_src.queueCreateInfoCount;
     pQueueCreateInfos = nullptr;
     enabledLayerCount = copy_src.enabledLayerCount;
-    ppEnabledLayerNames = copy_src.ppEnabledLayerNames;
     enabledExtensionCount = copy_src.enabledExtensionCount;
     pEnabledFeatures = nullptr;
     pNext = SafePnextCopy(copy_src.pNext);
 
-    char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+    if (copy_src.enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[copy_src.enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src.ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+
+    if (copy_src.enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
+    }
     if (queueCreateInfoCount && copy_src.pQueueCreateInfos) {
         pQueueCreateInfos = new safe_VkDeviceQueueCreateInfo[queueCreateInfoCount];
         for (uint32_t i = 0; i < queueCreateInfoCount; ++i) {
@@ -497,6 +568,12 @@ safe_VkDeviceCreateInfo& safe_VkDeviceCreateInfo::operator=(const safe_VkDeviceC
 
     if (pQueueCreateInfos) delete[] pQueueCreateInfos;
 
+    if (ppEnabledLayerNames) {
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            delete[] ppEnabledLayerNames[i];
+        }
+        delete[] ppEnabledLayerNames;
+    }
     if (ppEnabledExtensionNames) {
         for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
             delete[] ppEnabledExtensionNames[i];
@@ -511,16 +588,29 @@ safe_VkDeviceCreateInfo& safe_VkDeviceCreateInfo::operator=(const safe_VkDeviceC
     queueCreateInfoCount = copy_src.queueCreateInfoCount;
     pQueueCreateInfos = nullptr;
     enabledLayerCount = copy_src.enabledLayerCount;
-    ppEnabledLayerNames = copy_src.ppEnabledLayerNames;
     enabledExtensionCount = copy_src.enabledExtensionCount;
     pEnabledFeatures = nullptr;
     pNext = SafePnextCopy(copy_src.pNext);
 
-    char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+    if (copy_src.enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[copy_src.enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src.ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+
+    if (copy_src.enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[copy_src.enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src.ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
+    }
     if (queueCreateInfoCount && copy_src.pQueueCreateInfos) {
         pQueueCreateInfos = new safe_VkDeviceQueueCreateInfo[queueCreateInfoCount];
         for (uint32_t i = 0; i < queueCreateInfoCount; ++i) {
@@ -538,6 +628,12 @@ safe_VkDeviceCreateInfo& safe_VkDeviceCreateInfo::operator=(const safe_VkDeviceC
 safe_VkDeviceCreateInfo::~safe_VkDeviceCreateInfo() {
     if (pQueueCreateInfos) delete[] pQueueCreateInfos;
 
+    if (ppEnabledLayerNames) {
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            delete[] ppEnabledLayerNames[i];
+        }
+        delete[] ppEnabledLayerNames;
+    }
     if (ppEnabledExtensionNames) {
         for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
             delete[] ppEnabledExtensionNames[i];
@@ -551,6 +647,12 @@ safe_VkDeviceCreateInfo::~safe_VkDeviceCreateInfo() {
 void safe_VkDeviceCreateInfo::initialize(const VkDeviceCreateInfo* in_struct, [[maybe_unused]] PNextCopyState* copy_state) {
     if (pQueueCreateInfos) delete[] pQueueCreateInfos;
 
+    if (ppEnabledLayerNames) {
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            delete[] ppEnabledLayerNames[i];
+        }
+        delete[] ppEnabledLayerNames;
+    }
     if (ppEnabledExtensionNames) {
         for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
             delete[] ppEnabledExtensionNames[i];
@@ -564,16 +666,29 @@ void safe_VkDeviceCreateInfo::initialize(const VkDeviceCreateInfo* in_struct, [[
     queueCreateInfoCount = in_struct->queueCreateInfoCount;
     pQueueCreateInfos = nullptr;
     enabledLayerCount = in_struct->enabledLayerCount;
-    ppEnabledLayerNames = in_struct->ppEnabledLayerNames;
     enabledExtensionCount = in_struct->enabledExtensionCount;
     pEnabledFeatures = nullptr;
     pNext = SafePnextCopy(in_struct->pNext, copy_state);
 
-    char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+    if (in_struct->enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[in_struct->enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(in_struct->ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+
+    if (in_struct->enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[in_struct->enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(in_struct->ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
+    }
     if (queueCreateInfoCount && in_struct->pQueueCreateInfos) {
         pQueueCreateInfos = new safe_VkDeviceQueueCreateInfo[queueCreateInfoCount];
         for (uint32_t i = 0; i < queueCreateInfoCount; ++i) {
@@ -592,16 +707,29 @@ void safe_VkDeviceCreateInfo::initialize(const safe_VkDeviceCreateInfo* copy_src
     queueCreateInfoCount = copy_src->queueCreateInfoCount;
     pQueueCreateInfos = nullptr;
     enabledLayerCount = copy_src->enabledLayerCount;
-    ppEnabledLayerNames = copy_src->ppEnabledLayerNames;
     enabledExtensionCount = copy_src->enabledExtensionCount;
     pEnabledFeatures = nullptr;
     pNext = SafePnextCopy(copy_src->pNext);
 
-    char** tmp_ppEnabledExtensionNames = new char*[copy_src->enabledExtensionCount];
-    for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
-        tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src->ppEnabledExtensionNames[i]);
+    if (copy_src->enabledLayerCount > 0) {
+        char** tmp_ppEnabledLayerNames = new char*[copy_src->enabledLayerCount];
+        for (uint32_t i = 0; i < enabledLayerCount; ++i) {
+            tmp_ppEnabledLayerNames[i] = SafeStringCopy(copy_src->ppEnabledLayerNames[i]);
+        }
+        ppEnabledLayerNames = tmp_ppEnabledLayerNames;
+    } else {
+        ppEnabledLayerNames = nullptr;
     }
-    ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+
+    if (copy_src->enabledExtensionCount > 0) {
+        char** tmp_ppEnabledExtensionNames = new char*[copy_src->enabledExtensionCount];
+        for (uint32_t i = 0; i < enabledExtensionCount; ++i) {
+            tmp_ppEnabledExtensionNames[i] = SafeStringCopy(copy_src->ppEnabledExtensionNames[i]);
+        }
+        ppEnabledExtensionNames = tmp_ppEnabledExtensionNames;
+    } else {
+        ppEnabledExtensionNames = nullptr;
+    }
     if (queueCreateInfoCount && copy_src->pQueueCreateInfos) {
         pQueueCreateInfos = new safe_VkDeviceQueueCreateInfo[queueCreateInfoCount];
         for (uint32_t i = 0; i < queueCreateInfoCount; ++i) {

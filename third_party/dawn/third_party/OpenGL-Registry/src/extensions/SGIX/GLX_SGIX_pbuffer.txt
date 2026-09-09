@@ -1,0 +1,602 @@
+Name
+
+    SGIX_pbuffer
+
+Name Strings
+
+    GLX_SGIX_pbuffer
+
+Version
+
+    Version 1.29, 2009/11/19
+
+Number
+
+    50
+
+Dependencies
+
+    SGIX_FBConfig is required
+    SGIS_multisample affects the definition of this extension
+
+Overview
+
+    This extension defines pixel buffers (GLXPbuffers, or pbuffer for
+    short). GLXPbuffers are additional non-visible rendering buffers for an
+    OpenGL renderer.  GLXPbuffers are equivalent to GLXPixmaps with the
+    following exceptions:
+
+    1.	There is no associated X pixmap. Also, since a GLXPbuffer is a GLX
+        resource, it may not be possible to render to it using X or an 
+   	X extension other than GLX.
+
+    2.	The format of the color buffers and the type and size of any
+     	associated ancillary buffers for a GLXPbuffer can only be
+        described with a GLXFBConfig -- an X Visual cannot be used.
+
+    3.	It is possible to create a GLXPbuffer whose contents may be 
+	asynchronously lost at any time.
+
+    4.  GLXPbuffers can be rendered to using either direct or indirect
+        rendering contexts.
+
+    5.  The allocation of a GLXPbuffer can fail if there are insufficient
+	resources (i.e., all the pbuffer memory has been allocated and 
+	the implementation does not virtualize pbuffer memory.)
+
+    The intent of the pbuffer semantics is to enable implementations to
+    allocate pbuffers in non-visible frame buffer memory.  These
+    pbuffers are intended to be "static" resources, in that a program
+    will typically allocate them only once, rather than as a part of its
+    rendering loop.  (But they should be deallocated when the program is
+    no longer using them -- for example, if the program is iconified.)
+    The frame buffer resources that are associated with a pbuffer are 
+    also static, and are deallocated only when the pbuffer is destroyed, 
+    or, in the case of a "unpreserved" pbuffer, as a result of X server 
+    activity that changes its frame buffer requirements.
+
+
+Issues
+
+    *   Should the optimum width and height be fixed sizes or a multiple?
+   
+    *   Any better names for GLX_BUFFER_CLOBBER_MASK_SGIX, etc?
+
+    UM  Should we add a command so an application can set the behavior
+        when a deep window buffer (e.g., depth buffer or multisample buffer)
+        is clobbered by a pbuffer? The choices would be "preserved" or
+        "unpreserved". 
+ 
+    *   When a pbuffer interferes with a window's ancillary buffer should
+        the action -- swapped or saved -- be specified or left as
+	implementation dependent?
+    
+
+New Procedures and Functions
+
+    GLXPbuffer glXCreateGLXPbufferSGIX(Display *dpy,
+				       GLXFBConfig config,
+				       unsigned int width,
+				       unsigned int height,
+				       int *attrib_list);
+
+    void glXDestroyGLXPbufferSGIX(Display *dpy,
+			          GLXPbuffer pbuf);
+
+    void glXQueryGLXPbufferSGIX(Display *dpy,
+			        GLXPbuffer pbuf,
+			        int attribute,
+			        unsigned int *value);
+
+    void glXSelectEventSGIX(Display *dpy,
+	  		    GLXDrawable drawable,
+			    unsigned long mask);
+
+    void glXGetSelectedEventSGIX(Display *dpy,
+  		                 GLXDrawable drawable,
+			         unsigned long *mask);
+
+
+New Tokens
+
+    Accepted by the <attribute> parameter of glXGetFBConfigAttribSGIX:
+
+        GLX_MAX_PBUFFER_WIDTH_SGIX		0x8016
+        GLX_MAX_PBUFFER_HEIGHT_SGIX		0x8017
+        GLX_MAX_PBUFFER_PIXELS_SGIX		0x8018
+        GLX_OPTIMAL_PBUFFER_WIDTH_SGIX		0x8019
+        GLX_OPTIMAL_PBUFFER_HEIGHT_SGIX		0x801A
+
+    Returned by glXGetFBConfigAttribSGIX (when <attribute> is set to 
+    GLX_DRAWABLE_TYPE_SGIX) and accepted by the <attrib_list> parameter of 
+    glXChooseFBConfigSGIX (following the GLX_DRAWABLE_TYPE_SGIX token):
+
+	GLX_PBUFFER_BIT_SGIX			0x00000004
+
+    Accepted by the <attrib_list> parameter of glXCreateGLXPbufferSGIX
+    and by the <attribute> parameter of glXQueryGLXPbufferSGIX:
+
+        GLX_PRESERVED_CONTENTS_SGIX		0x801B
+        GLX_LARGEST_PBUFFER_SGIX		0x801C
+
+    Accepted by the <attribute> parameter of glXQueryGLXPbufferSGIX:
+
+        GLX_WIDTH_SGIX 				0x801D
+        GLX_HEIGHT_SGIX				0x801E
+	GLX_EVENT_MASK_SGIX			0x801F
+
+    Accepted by the <mask> parameter of glXSelectEventSGIX and returned
+    in the <mask> parameter of glXGetSelectedEventSGIX:
+
+	GLX_BUFFER_CLOBBER_MASK_SGIX  		0x08000000
+
+    Returned in the <event_type> field of a "buffer clobber" event:
+
+	GLX_DAMAGED_SGIX 			0x8020
+	GLX_SAVED_SGIX				0x8021
+
+    Returned in the <draw_type> field of a "buffer clobber" event:
+
+        GLX_WINDOW_SGIX				0x8022
+	GLX_PBUFFER_SGIX			0x8023
+
+    Returned in the <mask> field of a "buffer clobber" event:
+
+	GLX_FRONT_LEFT_BUFFER_BIT_SGIX		0x00000001
+	GLX_FRONT_RIGHT_BUFFER_BIT_SGIX		0x00000002
+	GLX_BACK_LEFT_BUFFER_BIT_SGIX		0x00000004
+	GLX_BACK_RIGHT_BUFFER_BIT_SGIX		0x00000008
+	GLX_AUX_BUFFERS_BIT_SGIX		0x00000010
+	GLX_DEPTH_BUFFER_BIT_SGIX		0x00000020
+	GLX_STENCIL_BUFFER_BIT_SGIX		0x00000040
+	GLX_ACCUM_BUFFER_BIT_SGIX		0x00000080
+	GLX_SAMPLE_BUFFERS_BIT_SGIX		0x00000100
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    [Add the following to section 3.2.2 on Configuration Management]
+
+    [Add to glXGetFBConfigAttribSGIX]:
+
+    GLX_MAX_PBUFFER_WIDTH_SGIX and GLX_MAX_PBUFFER_HEIGHT_SGIX indicate the
+    maximum width and height that can be passed into glXCreateGLXPbufferSGIX and
+    GLX_MAX_PBUFFER_PIXELS_SGIX indicates the maximum number of pixels (width x
+    hieght) for a GLXPbuffer. Note that an implementation may return a value for
+    GLX_MAX_PBUFFER_PIXELS_SGIX that is less than the maximum width times the
+    maximum height. Also, the value for GLX_MAX_PBUFFER_PIXELS_SGIX is static
+    and assumes that no other pbuffers or X resources are contending for the
+    framebuffer memory. Thus it may not be possible to allocate a pbuffer of
+    the size given by GLX_MAX_PBUFFER_PIXELS_SGIX.
+
+    On some implementations, there may be an optimum width and height to use
+    when allocating a pbuffer. (For example, the implementation may use fixed
+    size tiles to allocate pbuffers.) Use GLX_OPTIMAL_PBUFFER_WIDTH_SGIX and
+    GLX_OPTIMAL_PBUFFER_HEIGHT_SGIX to determine this width and height. If the
+    values are zero then there is no optimal value.
+
+    [Add to glXChooseFBConfigSGIX]:
+
+    If GLX_OPTIMAL_PBUFFER_WIDTH_SGIX and/or GLX_OPTIMAL_PBUFFER_HEIGHT_SGIX 
+    are specified in <attrib_list> then they are ignored.
+
+    [Additions to tables 2 and 3, given in SGIX_FBConfig]
+
+      Attribute                       Type        Description
+      ---------                       ----        -----------
+      GLX_BUFFER_SIZE                 integer     depth of the color buffer
+      GLX_LEVEL                       integer     frame buffer level
+      GLX_DOUBLEBUFFER                boolean     True if color buffers have
+						  front/back pairs
+      GLX_STEREO                      boolean     True if color buffers have
+				      		  left/right pairs
+      GLX_AUX_BUFFERS                 integer     number of auxiliary color
+						  buffers 
+      GLX_RED_SIZE                    integer     number of bits of Red if in
+      						  RGB mode
+      GLX_GREEN_SIZE                  integer     number of bits of Green if in
+      						  RGB mode
+      GLX_BLUE_SIZE                   integer     number of bits of Blue if in
+      						  RGB mode
+      GLX_ALPHA_SIZE                  integer     number of bits of Alpha if in
+      						  RGB mode
+      GLX_DEPTH_SIZE                  integer     number of bits in the depth
+      						  buffer
+      GLX_STENCIL_SIZE                integer     number of bits in the stencil
+      						  buffer
+      GLX_ACCUM_RED_SIZE              integer     number of bits of Red in the
+       						  accumulation buffer
+      GLX_ACCUM_GREEN_SIZE            integer     number of bits of Green in the
+      						  accumulation buffer
+      GLX_ACCUM_BLUE_SIZE             integer     number of bits of Blue in the
+      accumulation buffer
+      GLX_ACCUM_ALPHA_SIZE            integer     number of bits of Alpha in the
+      						  accumulation buffer
+      GLX_SAMPLE_BUFFERS_SGIS         integer     number of multisample buffers
+      GLX_SAMPLES_SGIS                integer     number of samples stored in
+						  each multisample buffer
+      GLX_X_VISUAL_TYPE_EXT           integer     X visual type of the
+						  associated visual
+      GLX_TRANSPARENT_TYPE_EXT        enum        GLX_NONE_EXT,
+                                                  TRANSPARENT_RGB_EXT, or 
+                                                  TRANSPARENT_INDEX_EXT
+      GLX_TRANSPARENT_INDEX_VALUE_EXT integer     transparent index value.
+      GLX_TRANSPARENT_RED_VALUE_EXT   color       transparent color value.
+      GLX_TRANSPARENT_GREEN_VALUE_EXT color       transparent color value.
+      GLX_TRANSPARENT_BLUE_VALUE_EXT  color       transparent color value.
+      GLX_TRANSPARENT_ALPHA_VALUE_EXT color       transparent color value.
+      GLX_VISUAL_CAVEAT_EXT           enum        GLX_NONE_EXT or
+      						  GLX_SLOW_VISUAL_EXT
+      GLX_DRAWABLE_TYPE_SGIX          bitmask     mask indicating which GLX
+      						  drawables are supported. Valid
+						  bits are GLX_WINDOW_BIT_SGIX and
+                                                  GLX_PIXMAP_BIT_SGIX
+      GLX_RENDER_TYPE_SGIX            bitmask     mask indicating which OpenGL
+      						  rendering modes are supported.
+						  Valid bits are GLX_RGBA_BIT_SGIX
+						  and GLX_COLOR_INDEX_SGIX.
+      GLX_X_RENDERABLE_SGIX           boolean     True if X can render to drawable
+      GLX_MAX_PBUFFER_WIDTH_SGIX      integer	  maximum width of GLXPbuffer
+      GLX_MAX_PBUFFER_HEIGHT_SGIX     integer	  maximum height of GLXPbuffer
+      GLX_MAX_PBUFFER_PIXELS_SGIX     integer	  maximum size of GLXPbuffer
+      GLX_OPTIMAL_PBUFFER_WIDTH_SGIX  integer     best width to use when
+						  creating pbuffer, or zero if
+						  all widths are equally good.
+      GLX_OPTIMAL_PBUFFER_HEIGHT_SGIX integer     best height to use when creating 
+						  pbuffer, or zero if all
+						  heights are equally good.
+
+      Table 3: GLX configuration attributes for GLXFBConfigs (Note that
+               GLX_RGBA and GLX_USE_GL are not supported)
+
+      Attribute                               Default             Match Criteria
+      ---------                               -------             --------------
+      GLX_BUFFER_SIZE                         0                   minimum
+      GLX_LEVEL                               0                   exact
+      GLX_DOUBLEBUFFER                        don't care          exact
+      GLX_STEREO                              False               exact
+      GLX_AUX_BUFFERS                         0                   minimum
+      GLX_RED_SIZE                            0                   minimum
+      GLX_GREEN_SIZE                          0                   minimum
+      GLX_BLUE_SIZE                           0                   minimum
+      GLX_ALPHA_SIZE                          0                   minimum
+      GLX_DEPTH_SIZE                          0                   minimum
+      GLX_STENCIL_SIZE                        0                   minimum
+      GLX_ACCUM_RED_SIZE                      0                   minimum
+      GLX_ACCUM_GREEN_SIZE                    0                   minimum
+      GLX_ACCUM_BLUE_SIZE                     0                   minimum
+      GLX_ACCUM_ALPHA_SIZE                    0                   minimum
+      GLX_SAMPLE_BUFFERS_SGIS                 0                   minimum
+      GLX_SAMPLES_SGIS                        0                   minimum
+      GLX_X_VISUAL_TYPE_EXT                   don't care          exact
+      GLX_TRANSPARENT_PIXEL_EXT               GLX_NONE_EXT        exact
+      GLX_TRANSPARENT_INDEX_VALUE_EXT         don't care          exact
+      GLX_TRANSPARENT_RED_VALUE_EXT           don't care          exact
+      GLX_TRANSPARENT_GREEN_VALUE_EXT         don't care          exact
+      GLX_TRANSPARENT_BLUE_VALUE_EXT          don't care          exact
+      GLX_TRANSPARENT_ALPHA_VALUE_EXT         don't care          exact
+      GLX_VISUAL_CAVEAT_EXT                   don't care          exact
+      GLX_DRAWABLE_TYPE_SGIX                  GLX_WINDOW_BIT_SGIX minimum
+      GLX_RENDER_TYPE_SGIX                    GLX_RGBA_BIT_SGIX   minimum
+      GLX_X_RENDERABLE_SGIX                   don't care          exact
+      GLX_FBCONFIG_ID_SGIX                    don't care          exact
+      GLX_MAX_PBUFFER_WIDTH_SGIX      	      0 		  minimum
+      GLX_MAX_PBUFFER_HEIGHT_SGIX    	      0			  minimum
+      GLX_MAX_PBUFFER_PIXELS_SGIX             0 		  minimum
+      GLX_OPTIMAL_PBUFFER_WIDTH_SGIX          ignored		  ignored
+      GLX_OPTIMAL_PBUFFER_HEIGHT_SGIX         ignored		  ignored
+
+      Table 4: Default values and match criteria for GLX configuration
+               attributes for GLXFBConfigs 
+
+
+    [Add the following to section 3.2.3 on Offscreen Rendering]
+
+    To create a GLXPbuffer call:
+
+        GLXPbuffer glXCreateGLXPbufferSGIX(Display *dpy,
+				           GLXFBConfig config,
+				           unsigned int width,
+				           unsigned int height,
+				           int *attrib_list);
+
+    This creates a single GLXPbuffer and returns its XID. <width> and <height>
+    specify the pixel width and height of the rectangular pbuffer and
+    <attrib_list> specifies a list of attributes for the pbuffer. Currently
+    only two attributes can be specified in <attrib_list>:
+    GLX_PRESERVED_CONTENTS_SGIX and GLX_LARGEST_PBUFFER_SGIX.
+
+    <attrib_list> can be either NULL, in which case all the attributes assume
+    their default values as described below.  If it not NULL then its format is
+    similar to the attribute list paramter of glXChooseFBConfigSGIX: each
+    attribute is immediately followed by the corresponding desired value and the
+    list is terminated with None.
+
+    Use GLX_LARGEST_PBUFFER_SGIX to get the largest available pbuffer when
+    the allocation of the pbuffer would otherwise fail.  The width or height
+    of the allocated pbuffer never exceed <width> and <height>,
+    respectively. Use glXQueryGLXPbufferSGIX to retrieve the dimensions of the
+    allocated pbuffer.  By default, GLX_LARGEST_PBUFFER_SGIX is False.
+    
+    If the GLX_PRESERVED_CONTENTS_SGIX attribute is set to False in
+    <attrib_list>, then an "unpreserved" pbuffer is created and the contents
+    of the pbuffer may be lost at any time. If this attribute is not
+    specified, or if it is specified as True in <attrib_list>, then when a
+    resource conflict occurs the contents of the pbuffer will be preserved
+    (most likely by swapping out portions of the buffer to main memory).  In
+    either case, the client can register to receive a "buffer clobber" event
+    which is generated when the pbuffer contents have been preserved or have
+    been damaged. (See the event description.)
+
+    The resulting pbuffer will contain color buffers and ancillary as
+    specified by <config>.  Note that pbuffers use framebuffer
+    resources so applications should consider deallocating them when
+    they are not in use.
+
+    It is possible to create a pbuffer with back buffers and to swap
+    the front and back buffers by calling glXSwapBuffers.  The contents
+    of the back buffers are undefined after such a swap.  (Pbuffers are
+    the same as windows in this respect.)
+
+    Any GLX rendering context created with a GLXFBConfig or X Visual that is
+    "compatible" with the <config> may be used to render into the pbuffer. (See
+    description of glXCreateContextWithConfigSGIX, glXMakeCurrent and
+    glXMakeCurrentReadSGI for definition of "compatible".)  If a pbuffer is
+    created with GLX_PRESERVED_CONTENTS_SGIX set to False, then portion of the
+    buffer contents may be lost at any time due to frame buffer resource
+    conflicts.  Once the contents of a "non preserved" pbuffer has been lost it
+    is considered to be in a "damaged" state.  It is not an error to render to a
+    pbuffer that is in this state but the effect of rendering to it is
+    undefined. It is also not an error to query the pixel contents of such a
+    pbuffer, but the values of the returned pixels are undefined.  Note, that
+    while this specification allows for non preserved pbuffers to be damaged as
+    a result of other pbuffer activity, the intent is to only have visible
+    windows activity "damage" pbuffers.
+
+    Since the contents of a "unpreserved" pbuffer can be lost at anytime 
+    with only asynchronous notification (via the "buffer clobber" event), the 
+    only way a client can guarantee that valid pixels are read back with 
+    glReadPixels is by grabbing the X server. (Note that this operation is 
+    potentially expensive and should not be done frequently. Also, since this 
+    locks out other X clients, it should only be done for short periods of 
+    time.) Clients that don't wish to do this can check if the data returned 
+    by glReadPixels is valid by calling XSync and then checking the event 
+    queue for "buffer clobber" events (assuming that these events had been 
+    pulled off of the queue prior to the glReadPixels call). 
+    
+    When glXCreateGLXPbufferSGIX fails to create a GLXPbuffer due to
+    insufficient resources, a BadAlloc error is generated and None is
+    returned. If <config> is not a valid GLXFBConfig then a GLXBadFBConfigSGIX
+    error is generated; if <config> does not support GLXPbuffers then a BadMatch
+    error is generated.
+
+    A GLXPbuffer is destroyed by calling:
+
+        void glXDestroyGLXPbufferSGIX(Display *dpy,
+			              GLXPbuffer pbuf);
+
+    The GLXPbuffer will be destroyed once it is no longer current to any
+    client. When a GLXPbuffer is destroyed, any memory resources that are
+    attached to it are freed, and its XID is made available for reuse.
+
+    If <pbuf> is not a valid GLXPbuffer then a GLXBadPbufferSGIX error
+    is generated.
+
+    To query an attribute associated with a GLXPbuffer call
+
+        void glXQueryGLXPbufferSGIX(Display* dpy,
+			            GLXPbuffer pbuf,
+			            int attribute,
+			            unsigned int *value);
+
+    <attribute> must be set to one of GLX_WIDTH_SGIX, GLX_HEIGHT_SGIX,
+    GLX_PRESERVED_CONTENTS_SGIX, GLX_LARGEST_PBUFFER_SGIX, or
+    GLX_FBCONFIG_ID_SGIX.
+
+    To get the GLXFBConfig for a GLXPbuffer, first retrieve the i.d.  for the
+    FBConfig and then call glXChooseFBConfigSGIX.
+
+    If <pbuf> is not a valid GLXPbuffer then a GLXBadPbufferSGIX error is
+    generated.
+
+
+    [Add new section, Events]
+
+    A client can ask to receive GLX events on a window or GLXPbuffer.
+
+      void glXSelectEventSGIX(Display *dpy,
+	  		      GLXDrawable drawable,
+			      unsigned long mask);
+
+    Currently only one GLX event, GLX_BUFFER_CLOBBER_MASK_SGIX, can be selected:
+
+      typdef struct {
+	int event_type;	      /* GLX_DAMAGED_SGIX or GLX_SAVED_SGIX */
+        int draw_type;        /* GLX_WINDOW_SGIX or GLX_PBUFFER_SGIX */
+	unsigned long serial; /* # of last request processed by server */
+	Bool send_event;      /* event was generated by a SendEvent request */
+        Display *display;     /* display the event was read from */
+        GLXDrawable drawable; /* i.d. of Drawable */
+        unsigned int mask;    /* mask indicating which buffers are affected*/
+        int x, y;
+        int width, height;
+        int count;            /* if nonzero, at least this many more */
+      } GLXBufferClobberEventSGIX;
+
+    A single X server operation can cause several "buffer clobber" events to be
+    sent. (e.g., a single pbuffer may be damaged and cause multiple "buffer
+    clobber" events to be generated). Each event specifies one region of the
+    GLXDrawable that was affected by the X Server operation. <mask> indicates
+    which color or ancillary buffers were affected. All the "buffer clobber"
+    events generated by a single X server action are guaranteed to be contiguous
+    in the event queue. The conditions under which this event is generated and
+    the event <type> varies, depending on the type of the GLXDrawable.
+
+    For "preserved" pbuffers, a "buffer clobber" event, with <type>
+    GLX_SAVED_SGIX, is generated whenever the contents of a pbuffer has to be
+    moved to avoid being damaged.  The event(s) describes which portions of the
+    pbuffer were affected. Clients who receive many "buffer clobber" events,
+    referring to different save actions, should consider freeing the pbuffer
+    resource in order to prevent the system from thrashing due to insufficient
+    resources.
+
+    For an "unpreserved" pbuffer a "buffer clobber" event, with <type>
+    GLX_DAMAGED_SGIX, is generated whenever a portion of the pbuffer becomes
+    invalid.
+
+    For Windows, "buffer clobber" events, with <type> GLX_DAMAGED_SGIX or
+    GLX_SAVED_SGIX, occur whenever an ancillary buffer, associated with the
+    window, gets clobbered or moved out of offscreen memory. The event contains
+    information indicating which color or ancillary buffers, and which
+    portions of those buffers, were affected.
+
+    Calling glXSelectEventSGIX overrides any previous event mask that was set by
+    the client for <drawable>. Note that a separate event mask is maintained for
+    each client that requested "clobber events" for <drawable>.
+
+    If <drawable> is not a valid GLXPbuffer or a valid Window, a GLXBadDrawable
+    error is generated.
+
+    To find out which GLX events are selected for a window or GLXPbuffer call
+
+      void glXGetSelectedEventSGIX(Display *dpy,
+	  		           GLXDrawable drawable,
+			           unsigned long *mask);
+
+
+GLX Protocol
+
+	Four new GLX protocol commands are added.
+
+	CreateGLXPbufferSGIX
+	    1		CARD8		opcode (X assigned)
+	    1		17		GLX opcode (glXVendorPrivateWithReply)
+	    2		8 + 2n		request length
+	    4		65543		vendor specific opcode
+	    4				unused
+	    4		CARD32		screen
+	    4		GLX_FBCONFIG	fbconfig
+	    4		GLX_PBUFFER	pbuffer
+	    4		CARD32		width
+	    4		CARD32		height
+	    8 * n	LISTofATTRIB	properties
+	   
+	     Where n is the number of token/value pairs.  Each token value is
+	     either a CARD32, BOOL32, or INT32, followed by an attribute
+	     value which is also either a CARD32, BOOL32, or INT32.
+
+
+	DestroyGLXPbufferSGIX
+	    1		CARD8		opcode (X assigned)
+	    1		17		GLX opcode (glXVendorPrivateWithReply)
+	    2		4		request length
+	    4		65544		vendor specific opcode
+	    4				unused
+	    4		GLX_PBUFFER	pbuffer
+
+	
+	ChangeDrawableAttributesSGIX
+	    1		CARD8		opcode (X assigned)
+	    1		17		GLX opcode (glXVendorPrivateWithReply)
+	    2		4 + 2*n		request length
+	    4		65545		vendor specific opcode
+	    4				unused
+	    4		GLX_DRAWABLE	drawable
+	    8 * n	LISTofATTRIB	properties
+
+	     Where n is the number of token/value pairs.  Each token value is
+	     either a CARD32, BOOL32, or INT32, followed by an attribute
+	     value which is also either a CARD32, BOOL32, or INT32.
+
+
+	GetDrawableAttributesSGIX
+	    1		CARD8		opcode (X assigned)
+	    1		17		GLX opcode (glXVendorPrivateWithReply)
+	    2		4 + 2n		request length
+	    4		65546		vendor specific opcode
+	    4				unused
+	    4		GLX_DRAWABLE	drawable
+	  =>
+	    1		1		reply
+	    1				unused
+	    2		CARD16		sequence number
+	    4		2*n		length
+	    4		CARD32		numAttribs
+	    20				unused
+	    8 * n	LISTofATTRIB	properties
+	
+	     Where n is the number of token/value pairs.  Each token value is
+	     either a CARD32, BOOL32, or INT32, followed by an attribute
+	     value which is also either a CARD32, BOOL32, or INT32.
+
+    One new event is added:
+
+	BEC is the base event code for the extension, as returned by
+	XQueryExtension.
+
+	GLX_BUFFER_CLOBBER_MASK_SGIX
+	    1		BEC+16		code
+	    1				unused
+	    2		CARD16		sequence number
+	    2		CARD16		event_type
+			0x8017		GLX_DAMAGED_SGIX
+			0x8018		GLX_SAVED_SGIX
+	    2		CARD16		draw_type
+			0x8019		GLX_WINDOW_SGIX
+                        0x801A		GLX_PBUFFER_SGIX
+	    4		GLX_DRAWABLE    drawable
+            4		BITFIELD	mask
+	    2		CARD16		x
+	    2		CARD16		y
+	    2		CARD16		width
+	    2		CARD16		height
+	    2		CARD16		count
+	    6				unused
+
+Dependencies on SGIS_multisample
+
+    If SGIS_multisample is not supported, references to
+    GLX_SAMPLE_BUFFERS_BIT_SGIX in this document are invalid and should be
+    ignored.
+
+Errors
+
+    One new GLX errors is introduced:
+
+        GLXBadPbufferSGIX
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Version 1.29, 2009/11/19 - clarify that BEC in the
+    GLX_BUFFER_CLOBBER_MASK_SGIX event protocol is returned from
+    XQueryExtension, matching the GLX_ARB_create_context spec language.
+
+    Version 1.28, 1997/03/20 - final spec as shipped by SGI.

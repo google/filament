@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/VulkanExtensions.h"
+#include "src/dawn/native/vulkan/VulkanExtensions.h"
 
 #include <array>
 #include <limits>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/vulkan_platform.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native::vulkan {
 
@@ -155,6 +155,9 @@ static constexpr std::array<DeviceExtInfo, kDeviceExtCount> sDeviceExtInfos{{
     {DeviceExt::CooperativeMatrix, "VK_KHR_cooperative_matrix"},
     {DeviceExt::MultisampledRenderToSingleSampled, "VK_EXT_multisampled_render_to_single_sampled"},
     {DeviceExt::PhysicalDeviceDrm, "VK_EXT_physical_device_drm"},
+    {DeviceExt::RasterizationOrderAttachmentAccess, "VK_EXT_rasterization_order_attachment_access"},
+    {DeviceExt::MaximalReconvergence, "VK_KHR_shader_maximal_reconvergence"},
+    {DeviceExt::SubgroupUniformControlFlow, "VK_KHR_shader_subgroup_uniform_control_flow"},
 
     {DeviceExt::ExternalMemoryAndroidHardwareBuffer,
      "VK_ANDROID_external_memory_android_hardware_buffer"},
@@ -221,6 +224,7 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
             case DeviceExt::ShaderBufferInt64Atomics:
             case DeviceExt::VulkanMemoryModel:
             case DeviceExt::CooperativeMatrix:
+            case DeviceExt::RasterizationOrderAttachmentAccess:
             case DeviceExt::ShaderFloatControls:
             case DeviceExt::DescriptorIndexing:
             case DeviceExt::CreateRenderPass2:
@@ -232,6 +236,8 @@ DeviceExtSet EnsureDependencies(const DeviceExtSet& advertisedExts,
             case DeviceExt::QueueFamilyForeign:
             case DeviceExt::PhysicalDeviceDrm:
             case DeviceExt::ExtendedDynamicState:
+            case DeviceExt::MaximalReconvergence:
+            case DeviceExt::SubgroupUniformControlFlow:
                 hasDependencies = true;
                 break;
 

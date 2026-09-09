@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_GLSL_WRITER_PRINTER_PRINTER_H_
 #define SRC_TINT_LANG_GLSL_WRITER_PRINTER_PRINTER_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/glsl/writer/common/output.h"
 #include "src/tint/utils/result.h"
 
@@ -41,13 +40,6 @@ struct Options;
 }  // namespace tint::glsl::writer
 
 namespace tint::glsl::writer {
-
-// The capabilities that might be needed due to raising.
-const core::ir::Capabilities kPrinterCapabilities{
-    core::ir::Capability::kAllowHandleVarsWithoutBindings,
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kLoosenValidationForShaderIO,
-};
 
 /// @returns the generated GLSL shader on success, or failure
 /// @param module the Tint IR module to generate

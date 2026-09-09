@@ -28,11 +28,11 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -59,8 +59,7 @@ class ImmediateDataBufferLengthTest : public DawnTest {
         // Create a result buffer.
         // Maximum: 2 draw calls, 3 storage buffers and 4 immediates.
         wgpu::BufferDescriptor bufferDesc;
-        bufferDesc.size =
-            kMaxExecutionTime * kResultSizeInExpectation * kImmediateConstantElementByteSize;
+        bufferDesc.size = kMaxExecutionTime * kResultSizeInExpectation * kImmediateElementByteSize;
         bufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
         mResultBuffer = device.CreateBuffer(&bufferDesc);
     }
@@ -96,7 +95,7 @@ class ImmediateDataBufferLengthTest : public DawnTest {
 
     // Helper to create unified shader with compute, vertex, and fragment entry points
     // This shader contains arrayLength() calls to query storage buffer sizes and
-    // accesses immediate constants. Both data types are written to a shared result buffer
+    // accesses immediates. Both data types are written to a shared result buffer
     // to verify they don't interfere with each other during GPU uploads.
     wgpu::ShaderModule CreateUnifiedShaderModule(uint32_t immediateCount, uint32_t bufferCount) {
         std::string bufferDeclarations;
@@ -219,7 +218,7 @@ class ImmediateDataBufferLengthTest : public DawnTest {
         plDesc.bindGroupLayouts = layouts;
 
         // Calculate exact size needed and +1 for drawIndex/dispatchIndex parameter.
-        plDesc.immediateSize = (immediateCount + 1) * kImmediateConstantElementByteSize;
+        plDesc.immediateSize = (immediateCount + 1) * kImmediateElementByteSize;
 
         return device.CreatePipelineLayout(&plDesc);
     }
@@ -262,11 +261,10 @@ class ImmediateDataBufferLengthTest : public DawnTest {
         resultIndex++;
     }
 
-    static constexpr uint32_t kMaxExecutionTime = 2u;
-    static constexpr uint32_t kMaxImmediateCount = 4u;
-    static constexpr uint32_t kMaxStorageBufferCount = 3u;
-    static constexpr uint32_t kResultSizeInExpectation =
-        kMaxImmediateCount + kMaxStorageBufferCount;
+    static constexpr size_t kMaxExecutionTime = 2u;
+    static constexpr size_t kMaxImmediateCount = 4u;
+    static constexpr size_t kMaxStorageBufferCount = 3u;
+    static constexpr size_t kResultSizeInExpectation = kMaxImmediateCount + kMaxStorageBufferCount;
 
     std::vector<wgpu::Buffer> mStorageBuffers;
     wgpu::Buffer mResultBuffer;
@@ -283,7 +281,7 @@ class ImmediateDataBufferLengthTest : public DawnTest {
 
 class ImmediateDataBufferLengthComputePipelineTest : public ImmediateDataBufferLengthTest {
   protected:
-    // Helper to create compute pipelines with different numbers of immediate constants and storage
+    // Helper to create compute pipelines with different numbers of immediates and storage
     // buffers
     wgpu::ComputePipeline CreateComputePipeline(uint32_t immediateCount, uint32_t bufferCount) {
         wgpu::ComputePipelineDescriptor pipelineDesc;
@@ -331,7 +329,7 @@ class ImmediateDataBufferLengthRenderPipelineTest : public ImmediateDataBufferLe
         mRenderTargetView = mRenderTarget.CreateView();
     }
 
-    // Helper to create render pipelines with different numbers of immediate constants and storage
+    // Helper to create render pipelines with different numbers of immediates and storage
     // buffers
     wgpu::RenderPipeline CreateRenderPipeline(uint32_t immediateCount, uint32_t bufferCount) {
         utils::ComboRenderPipelineDescriptor pipelineDesc;

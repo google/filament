@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_PAGEABLED3D12_H_
 #define SRC_DAWN_NATIVE_D3D12_PAGEABLED3D12_H_
 
-#include "dawn/common/LinkedList.h"
 #include "dawn/native/D3D12Backend.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/common/LinkedList.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 // This class is used to represent ID3D12Pageable allocations, and also serves as a node within
@@ -76,14 +76,14 @@ class Pageable : public LinkNode<Pageable> {
 
   private:
     // mLastUsage denotes the last time this pageable was recorded for use.
-    ExecutionSerial mLastUsage = ExecutionSerial(0);
+    ExecutionSerial mLastUsage = ExecutionSerial(0u);
     // mLastSubmission denotes the last time this pageable was submitted to the GPU. Note that
     // although this variable often contains the same value as mLastUsage, it can differ in some
     // situations. When some asynchronous APIs (like WriteBuffer) are called, mLastUsage is
     // updated upon the call, but the backend operation is deferred until the next submission
     // to the GPU. This makes mLastSubmission unique from mLastUsage, and allows us to
     // accurately identify when a pageable can be evicted.
-    ExecutionSerial mLastSubmission = ExecutionSerial(0);
+    ExecutionSerial mLastSubmission = ExecutionSerial(0u);
     MemorySegment mMemorySegment;
     uint32_t mResidencyLockRefCount = 0;
     uint64_t mSize = 0;

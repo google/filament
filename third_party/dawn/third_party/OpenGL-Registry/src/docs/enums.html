@@ -1,0 +1,133 @@
+<html>
+
+<head>
+<title>OpenGL Enumerant Allocation Policies</title>
+</head>
+
+<body>
+<h1>OpenGL Enumerant Allocation Policies</h1>
+
+<p> If an OpenGL vendor defines a single-vendor OpenGL or GLX extension
+    that requires one or more new enumerant values, then each of those
+    values must be contained in a block of enumerant values that has
+    been allocated by Khronos for the exclusive use of that vendor.
+    Khronos maintains a registry of such allocations. To allocate
+    enumerants, file a request against project 'registry' in the Khronos
+    Bugzilla. If you are unable to access Bugzilla, you may submit a
+    request via email to &quot;registry 'at' khronos.org&quot;. However,
+    response time to email requests is unpredictable.
+
+<p> OpenGL and OpenGL ES use enumerant values in the range [0,24575], as
+    well as reusing some enumerant values in the range [32768,65535].
+    The latter values were initially assigned to extensions which later
+    became part of the OpenGL core. Enumerant values are grouped into
+    blocks of 16 values, and each block begins with a value that is a
+    multiple of 16. Most blocks in the range [0,24575] are unused, and
+    reserved for use with future versions of OpenGL.
+
+<p> Historically, enumerant values for some single-vendor extensions
+    were allocated in blocks of 1000, beginning with the block
+    [102000,102999] and progressing upward. Values in this range cannot
+    be represented as 16-bit unsigned integers. This imposes a
+    significant and unnecessary performance penalty on some
+    implementations. Such blocks that have already been allocated to
+    vendors will remain allocated unless and until the vendor
+    voluntarily releases the entire block, but no further blocks in this
+    range will be allocated.
+
+<h3>Allocating Enumerants</h3>
+
+<p> Enumerant values for single-vendor extensions will be allocated upon
+    request in blocks of 16 values, beginning with the block
+    [32768,32783] and progressing upward. There are a limited number of
+    available blocks in the more desirable 16-bit range [32768,65535],
+    so do not request enumerants until you actually require them to ship
+    an extension, or request more than you need.
+
+
+<p> Vendors must adhere to the following guidelines for requesting and
+    using enumerants:
+
+<ul>
+
+<li> No extension can be shipped using OpenGL or GLX enumerant values
+    that have not been allocated by the Registrar.
+
+<li> The Registrar will allocate official enumerant values for an
+    extension only when there is a commitment to release that extension.
+    Prior to this point, development work on the extension should be
+    done using temporarily assigned enumerant values. Enumerant values
+    in the range [0x6000,0x7FFF] (e.g. [24576,32767] are reserved for
+    temporary use, and will never be assigned to any shipping core or
+    extension enumerant.
+
+<li> An extension specification, following the <a
+    href="template.html">template</a>, must exist prior to releasing an
+    extension. The specification will ideally include all fields from
+    the template; if this is proving difficult due to lack of
+    familiarity with the appropriate API Specification, please consult
+    with other implementers on the corresponding Khronos Working Group
+    mailing list. Vendors are strongly encouraged to submit this
+    specification to the registry.
+
+<li> Minimize the number of unused enumerant values in an allocated
+    block.
+
+<li> Do not request blocks solely to reserve enumerants against
+    anticipated future use. If you are likely to need a large contiguous
+    block of enumerants in the future, this should be discussed with the
+    Registrar.
+
+<li> If a vendor determines that it does not need a block of enumerant
+    values that has been previously allocated to that vendor, the vendor
+    may voluntarily return the entire block for future reallocation.
+
+<li> If an extension is promoted from single-vendor to multi-vendor
+    <tt>EXT</tt> or <tt>ARB</tt> status, the following rule applies: for
+    each enumerant that is present in both the single-vendor version and
+    the multi-vendor version, a new multi-vendor extension enumerant
+    will be defined with the same value as the single-vendor extension
+    enumerant. The name of the new enumerant will be the name of the
+    extension enumerant with the suffix <tt>EXT</tt> or <tt>ARB</tt>
+    replacing the vendor-specific suffix.
+
+    <p> Here, <i>promoted</i> is taken to mean that use of the
+    single-vendor and multi-vendor enumerants is semantically
+    equivalent, e.g. the effects of such use on GL and framebuffer state
+    are identical. If this is not true, new values should be assigned to
+    the multi-vendor enumerants. The intent is that it should be
+    possible for the single-vendor and multi-vendor versions of the
+    extension to coexist in a single implementation.
+
+<li> If an extension becomes part of a new version of OpenGL,
+    the following rule applies: for each enumerant that is present in
+    both the extension and the new version of OpenGL, the ARB will
+    choose one of the following two options:
+
+    <ul>
+    <li> Define a new OpenGL enumerant with the same value as the
+	extension enumerant. The name of the new enumerant will be the
+	name of the extension enumerant with the extension suffix
+	deleted.
+
+    <li> Define a new OpenGL enumerant with a previously unused value in
+	the range [0,32767]. The name of the new enumerant will be the
+	name of the extension enumerant with the extension suffix
+	deleted.
+    </ul>
+
+<li> If a group of vendors introduces an extension, one of the vendors
+    in the group must be designated as the "lead vendor" for that
+    extension. The lead vendor will then allocate enumerant values for
+    the extension in the same way that it would allocate enumerant
+    values for a single-vendor extension.
+</ul>
+
+<p> If at some future time all blocks up to [99984,99999] have been
+allocated, allocations of blocks of 16 values will continue in an upward
+direction, skipping over any block of 16 values that contains one or
+more values from a currently allocated 1000-value block.
+
+<p> Last modified August 13, 2006 by Jon Leech
+</body>
+</html>

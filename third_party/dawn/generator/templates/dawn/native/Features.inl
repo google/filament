@@ -27,7 +27,7 @@
 
 namespace dawn::native {
 
-wgpu::FeatureName ToAPI(Feature feature) {
+wgpu::FeatureName ToCppAPI(Feature feature) {
   switch (feature) {
     {% for enum in types["feature name"].values if (enum.valid and not is_enum_value_proxy(enum)) %}
       case Feature::{{as_cppEnum(enum.name)}}:
@@ -39,7 +39,7 @@ wgpu::FeatureName ToAPI(Feature feature) {
   DAWN_UNREACHABLE();
 }
 
-Feature FromAPI(wgpu::FeatureName feature) {
+Feature FromCppAPI(wgpu::FeatureName feature) {
   switch (feature) {
     {% for enum in types["feature name"].values if not is_enum_value_proxy(enum) %}
       case wgpu::FeatureName::{{as_cppEnum(enum.name)}}:

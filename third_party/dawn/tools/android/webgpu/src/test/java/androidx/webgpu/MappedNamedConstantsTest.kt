@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package androidx.webgpu
 
 import java.net.URL
@@ -6,15 +22,16 @@ import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.companionObjectInstance
-import kotlin.reflect.full.primaryConstructor
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import android.annotation.SuppressLint
 import kotlin.test.fail
 import org.junit.Test
 
 /**
  * Yield all classes under the specified namespace.
  */
+@SuppressLint("ZipName")
 private fun classNames(namespace: String) = sequence {
     // Use the thread's class loader to find all the class resource files.
     val classLoader = Thread.currentThread().contextClassLoader!!
@@ -27,13 +44,15 @@ private fun classNames(namespace: String) = sequence {
 
         // Find the class files inside the jar file.
         for (entry in JarFile(url.file).entries()) {
-            if (entry.name.endsWith(".class")) {  // Not every file is a class.
-                yield(entry.name.removeSuffix(".class").replace('/', '.'))
+            val name = entry.name
+            if (name.endsWith(".class")) {  // Not every file is a class.
+                yield(name.removeSuffix(".class").replace('/', '.'))
             }
         }
     }
 }
 
+@OptIn(ExperimentalWebGpuApi::class)
 class MappedNamedConstantsTest {
 
     val TYPES_WITH_MAPPED_NAMED_CONSTANTS = arrayOf(
@@ -61,6 +80,7 @@ class MappedNamedConstantsTest {
         DeviceLostReason::class,
         ErrorFilter::class,
         ErrorType::class,
+        ExternalTextureRotation::class,
         FeatureLevel::class,
         FeatureName::class,
         FilterMode::class,

@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
+#include "src/dawn/native/d3d12/CPUDescriptorHeapAllocationD3D12.h"
 
-#include "dawn/native/Error.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native::d3d12 {
 
@@ -45,12 +45,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE CPUDescriptorHeapAllocation::OffsetFrom(
     uint32_t offsetInDescriptorCount) const {
     DAWN_ASSERT(IsValid());
     D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = mBaseDescriptor;
-    cpuHandle.ptr += sizeIncrementInBytes * offsetInDescriptorCount;
+    cpuHandle.ptr += SIZE_T{sizeIncrementInBytes} * offsetInDescriptorCount;
     return cpuHandle;
 }
 
 uint32_t CPUDescriptorHeapAllocation::GetHeapIndex() const {
-    DAWN_ASSERT(mHeapIndex >= 0);
+    DAWN_ASSERT(mHeapIndex < kNoHeapIndex);
     return mHeapIndex;
 }
 

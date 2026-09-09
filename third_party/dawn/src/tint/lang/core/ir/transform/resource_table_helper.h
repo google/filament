@@ -35,8 +35,9 @@
 
 namespace tint::core::ir::transform {
 
-std::optional<tint::ResourceTableConfig> GenerateResourceTableConfig(tint::core::ir::Module& mod);
-
+std::optional<tint::ResourceTableConfig> GenerateResourceTableConfig(
+    tint::core::ir::Module& mod,
+    bool treat_samplers_as_filtering);
 }
 
 #endif  // SRC_TINT_LANG_CORE_IR_TRANSFORM_RESOURCE_TABLE_HELPER_H_

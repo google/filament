@@ -33,6 +33,7 @@
 
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/type/manager.h"
+#include "src/tint/utils/result.h"
 
 namespace tint::core::ir::transform {
 
@@ -73,12 +74,13 @@ struct ShaderIOBackendState {
     bool HasOutputs() const { return !outputs.IsEmpty(); }
 
     /// Finalize the shader inputs and create any state needed for the new entry point function.
-    /// @returns the list of function parameters for the new entry point
-    virtual Vector<FunctionParam*, 4> FinalizeInputs() = 0;
+    /// @returns the list of function parameters for the new entry point on success, otherwise a
+    /// failure reason
+    virtual Result<Vector<FunctionParam*, 4>> FinalizeInputs() = 0;
 
     /// Finalize the shader outputs and create state needed for the new entry point function.
-    /// @returns the return type for the new entry point
-    virtual const type::Type* FinalizeOutputs() = 0;
+    /// @returns the return type for the new entry point on success, otherwise a failure reason
+    virtual Result<const type::Type*> FinalizeOutputs() = 0;
 
     /// Get the value of the input at index @p idx
     /// @param builder the IR builder for new instructions
@@ -165,7 +167,9 @@ using MakeBackendStateFunc = std::unique_ptr<ShaderIOBackendState>(Module&, Func
 
 /// @param module the module to transform
 /// @param make_backend_state a function that creates a backend state object
-void RunShaderIOBase(Module& module, std::function<MakeBackendStateFunc> make_backend_state);
+/// @returns Success if all sub-tasks succeed, otherwise propagates the failure reason
+Result<SuccessType> RunShaderIOBase(Module& module,
+                                    std::function<MakeBackendStateFunc> make_backend_state);
 
 }  // namespace tint::core::ir::transform
 

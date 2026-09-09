@@ -28,14 +28,16 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_RECORDABLE_OBJECT_H_
 #define SRC_DAWN_NATIVE_WEBGPU_RECORDABLE_OBJECT_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/webgpu/Serialization.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/webgpu/Serialization.h"
 
 namespace dawn::native::webgpu {
 
 class CaptureContext;
 class RecordableObject {
   public:
+    virtual ~RecordableObject() = default;
+
     explicit RecordableObject(schema::ObjectType objectType);
     schema::ObjectType GetObjectType() const;
 

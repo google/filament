@@ -25,25 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
 
 #include <CoreVideo/CVPixelBuffer.h>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/IOSurfaceUtils.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/Platform.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/metal/BufferMTL.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/QueueMTL.h"
-#include "dawn/native/metal/SharedFenceMTL.h"
-#include "dawn/native/metal/SharedTextureMemoryMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/IOSurfaceUtils.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/metal/BufferMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/dawn/native/metal/SharedFenceMTL.h"
+#include "src/dawn/native/metal/SharedTextureMemoryMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
+#include "src/utils/platform.h"
 
 namespace dawn::native::metal {
 
@@ -78,27 +78,6 @@ MTLTextureUsage MetalTextureUsage(const Format& format, wgpu::TextureUsage usage
     }
 
     return result;
-}
-
-MTLTextureType MetalTextureViewType(wgpu::TextureViewDimension dimension,
-                                    unsigned int sampleCount) {
-    switch (dimension) {
-        case wgpu::TextureViewDimension::e1D:
-            return MTLTextureType1D;
-        case wgpu::TextureViewDimension::e2D:
-            return (sampleCount > 1) ? MTLTextureType2DMultisample : MTLTextureType2D;
-        case wgpu::TextureViewDimension::e2DArray:
-            return MTLTextureType2DArray;
-        case wgpu::TextureViewDimension::Cube:
-            return MTLTextureTypeCube;
-        case wgpu::TextureViewDimension::CubeArray:
-            return MTLTextureTypeCubeArray;
-        case wgpu::TextureViewDimension::e3D:
-            return MTLTextureType3D;
-
-        case wgpu::TextureViewDimension::Undefined:
-            DAWN_UNREACHABLE();
-    }
 }
 
 MTLTextureSwizzle MetalTextureSwizzle(wgpu::ComponentSwizzle swizzle) {
@@ -708,7 +687,7 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
 
             DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
                 uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
-                    memset(reservation.mappedPointer, clearColor, uploadSize);
+                    std::ranges::fill(reservation.mappedData, std::byte(clearColor));
 
                     id<MTLBuffer> buffer = ToBackend(reservation.buffer)->GetMTLBuffer();
                     for (uint32_t level = range.baseMipLevel;
@@ -812,7 +791,7 @@ MaybeError TextureView::Initialize(const UnpackedPtr<TextureViewDescriptor>& des
         mMtlTextureView = mtlTexture;
     } else {
         MTLTextureType textureViewType =
-            MetalTextureViewType(descriptor->dimension, texture->GetSampleCount());
+            MetalTextureViewType(descriptor->dimension, texture->GetSampleCount() > 1);
         std::optional<MTLTextureSwizzleChannels> mtlSwizzle = ComputeMetalSwizzle();
 
         MTLPixelFormat viewFormat = MetalPixelFormat(device, descriptor->format);

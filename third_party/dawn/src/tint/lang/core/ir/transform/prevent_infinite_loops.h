@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_PREVENT_INFINITE_LOOPS_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_PREVENT_INFINITE_LOOPS_H_
 
-#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,13 +36,6 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
-
-/// The capabilities that the transform can support.
-const Capabilities kPreventInfiniteLoopsCapabilities{
-    Capability::kAllowDuplicateBindings,
-    Capability::kAllow8BitIntegers,
-    Capability::kAllow16BitIntegers,
-};
 
 /// PreventInfiniteLoops is a transform that injects an additional exit condition into loops that
 /// may be infinite, to prevent downstream compilers from making bad assumptions due to the

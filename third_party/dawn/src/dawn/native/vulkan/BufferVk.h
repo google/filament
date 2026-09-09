@@ -29,11 +29,11 @@
 #define SRC_DAWN_NATIVE_VULKAN_BUFFERVK_H_
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/SerialQueue.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/ResourceMemoryAllocation.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/ResourceMemoryAllocation.h"
 
 namespace dawn::native::vulkan {
 
@@ -114,8 +114,8 @@ class Buffer final : public BufferBase {
     void DestroyImpl(DestroyReason reason) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointerImpl() override;
-    MaybeError UploadData(uint64_t bufferOffset, const void* data, size_t size) override;
+    Span<std::byte> GetMappedRangeImpl(size_t offset, size_t size) override;
+    MaybeError UploadData(uint64_t bufferOffset, Span<const std::byte> data) override;
 
     VkBuffer mHandle = VK_NULL_HANDLE;
     ResourceMemoryAllocation mMemoryAllocation;

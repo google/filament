@@ -36,6 +36,7 @@
 #include "dawn/native/DawnNative.h"
 #include "src/dawn/node/interop/NodeAPI.h"
 #include "src/dawn/node/interop/WebGPU.h"
+#include "src/utils/compiler.h"
 
 namespace wgpu::binding {
 

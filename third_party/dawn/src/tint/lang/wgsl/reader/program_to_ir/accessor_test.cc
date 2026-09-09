@@ -648,9 +648,8 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_MultiElementSwizzleOfSwizzle) {
   $B1: {
     %a:ptr<function, vec3<f32>, read_write> = var undef
     %3:vec3<f32> = load %a
-    %4:vec3<f32> = swizzle %3, zyx
-    %5:vec2<f32> = swizzle %4, yy
-    %b:vec2<f32> = let %5
+    %4:vec2<f32> = swizzle %3, yy
+    %b:vec2<f32> = let %4
     ret
   }
 }
@@ -685,11 +684,8 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_MultiElementSwizzle_MiddleOfChain) 
   $B1: {
     %a:ptr<function, MyStruct, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %a, 1u
-    %4:vec4<f32> = load %3
-    %5:vec3<f32> = swizzle %4, zyx
-    %6:vec2<f32> = swizzle %5, yx
-    %7:f32 = access %6, 0u
-    %b:f32 = let %7
+    %4:f32 = load_vector_element %3, 1u
+    %b:f32 = let %4
     ret
   }
 }

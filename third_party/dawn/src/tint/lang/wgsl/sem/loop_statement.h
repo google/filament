@@ -68,6 +68,7 @@ class LoopContinuingBlockStatement final
     ~LoopContinuingBlockStatement() override;
 
     /// @returns the AST node
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::BlockStatement* Declaration() const;
 };
 

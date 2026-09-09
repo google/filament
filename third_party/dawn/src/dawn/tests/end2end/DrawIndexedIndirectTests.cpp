@@ -27,10 +27,11 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderBundleEncoderDescriptor.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderBundleEncoderDescriptor.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -175,7 +176,7 @@ TEST_P(DrawIndexedIndirectTest, BaseVertex) {
 
     const int negFour = -4;
     uint32_t unsignedNegFour;
-    std::memcpy(&unsignedNegFour, &negFour, sizeof(int));
+    DAWN_UNSAFE_TODO(std::memcpy(&unsignedNegFour, &negFour, sizeof(int)));
 
     // Test negative baseVertex
     // Test a draw with only the first 3 indices of the first quad (bottom left triangle)
@@ -718,6 +719,115 @@ DAWN_INSTANTIATE_TEST(DrawIndexedIndirectTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
+                      VulkanBackend(),
+                      WebGPUBackend());
+
+class DrawIndexedIndirectTest_IndirectFirstInstance : public DawnTest {
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::IndirectFirstInstance};
+    }
+};
+
+// Test that makes sure indirect-draw validation merges passes correctly.
+// A bug was found in D3D12 where it would merge passes despite kDuplicateBaseVertexInstance being
+// different between the passes. Note that the test did not reproduce a failure, which is likely due
+// to GPU driver robustness; however, the logic was indeed incorrect. Presumably on GPUs that do not
+// implement such robustness, an OOB read would be possible.
+TEST_P(DrawIndexedIndirectTest_IndirectFirstInstance, IndirectDrawValidationMergesMatchingPasses) {
+    DAWN_ASSERT(device.HasFeature(wgpu::FeatureName::IndirectFirstInstance));
+
+    // Test expects validation to be enabled
+    DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("skip_validation"));
+
+    // Create pNo pipeline (no vertex_index)
+    wgpu::ShaderModule modNo = utils::CreateShaderModule(device, R"(
+        @vertex fn vs() -> @builtin(position) vec4f {
+            // No vertex_index / instance_index builtin -> dup=false on D3D12.
+            return vec4f(0.0, 0.0, 0.0, 1.0);
+        }
+        @fragment fn fs() -> @location(0) vec4f {
+            return vec4f(0.0, 0.0, 0.0, 1.0);
+        }
+    )");
+
+    // Create pDup pipeline (uses vertex_index)
+    wgpu::ShaderModule modDup = utils::CreateShaderModule(device, R"(
+        struct VOut {
+            @builtin(position) pos : vec4f,
+            @location(0) @interpolate(flat) vidx : u32,
+        };
+        @vertex fn vs(@builtin(vertex_index) vi : u32) -> VOut {
+            // Reading @builtin(vertex_index) sets usesVertexIndex=true in the
+            // compiled D3D12 shader, so this pipeline gets the 7-u32
+            // ExecuteIndirect signature. After the OOB index fetch, vi carries the
+            // OOB-read index value (SV_VertexID) -- exfiltratable here.
+            var o : VOut;
+            o.pos = vec4f(0.0, 0.0, 0.0, 1.0);
+            o.vidx = vi;
+            return o;
+        }
+        @fragment fn fs(in : VOut) -> @location(0) vec4f {
+            return vec4f(f32(in.vidx & 255u) / 255.0, 0.0, 0.0, 1.0);
+        }
+    )");
+
+    utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
+
+    utils::ComboRenderPipelineDescriptor descNo;
+    descNo.vertex.module = modNo;
+    descNo.cFragment.module = modNo;
+    descNo.primitive.topology = wgpu::PrimitiveTopology::PointList;
+    descNo.cTargets[0].format = renderPass.colorFormat;
+    wgpu::RenderPipeline pNo = device.CreateRenderPipeline(&descNo);
+
+    utils::ComboRenderPipelineDescriptor descDup;
+    descDup.vertex.module = modDup;
+    descDup.cFragment.module = modDup;
+    descDup.primitive.topology = wgpu::PrimitiveTopology::PointList;
+    descDup.cTargets[0].format = renderPass.colorFormat;
+    wgpu::RenderPipeline pDup = device.CreateRenderPipeline(&descDup);
+
+    // Index buffer: 1 MiB uint16 -> numIndexBufferElements = 524288.
+    const uint32_t NUM_IDX = 524288;
+    std::vector<uint16_t> idxData(NUM_IDX);
+    for (size_t i = 0; i < NUM_IDX; ++i) {
+        idxData[i] = static_cast<uint16_t>(i);
+    }
+    wgpu::Buffer idxBuf = utils::CreateBufferFromData(
+        device, idxData.data(), idxData.size() * sizeof(uint16_t), wgpu::BufferUsage::Index);
+
+    // Indirect buffer with three 5-u32 DrawIndexedIndirect records.
+    wgpu::Buffer indBuf = utils::CreateBufferFromData<uint32_t>(
+        device, wgpu::BufferUsage::Indirect | wgpu::BufferUsage::CopyDst,
+        {0, 0, 0, 0, 0,                 // record 0: harmless no-op for pNo
+         0, 1, NUM_IDX, 1, 0xFFFFFFFF,  // record 1: dup=true config (merged)
+         0, 0, 0, 0, 0});               // record 2: zeros
+
+    wgpu::CommandEncoder enc = device.CreateCommandEncoder();
+    wgpu::RenderPassEncoder pass = enc.BeginRenderPass(&renderPass.renderPassInfo);
+    pass.SetIndexBuffer(idxBuf, wgpu::IndexFormat::Uint16);
+
+    pass.SetPipeline(pNo);
+    pass.DrawIndexedIndirect(indBuf, 0);
+
+    pass.SetPipeline(pDup);
+    pass.DrawIndexedIndirect(indBuf, 20);
+    pass.DrawIndexedIndirect(indBuf, 40);
+
+    pass.End();
+    wgpu::CommandBuffer commands = enc.Finish();
+    queue.Submit(1, &commands);
+
+    // If the bug triggers, the driver will read 7-u32 records and execute a draw with a large
+    // number of vertices, overdrawing at the center of the viewport. Since we expect no pixels to
+    // be drawn (indexCount = 0 in record 1), the center pixel should remain clear.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8(0, 0, 0, 0), renderPass.color, 2, 2);
+}
+
+DAWN_INSTANTIATE_TEST(DrawIndexedIndirectTest_IndirectFirstInstance,
+                      D3D12Backend(),
+                      MetalBackend(),
+                      OpenGLBackend(),
                       VulkanBackend(),
                       WebGPUBackend());
 

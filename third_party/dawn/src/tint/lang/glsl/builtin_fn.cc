@@ -60,10 +60,14 @@ const char* str(BuiltinFn i) {
             return "floatBitsToInt";
         case BuiltinFn::kFloatBitsToUint:
             return "floatBitsToUint";
+        case BuiltinFn::kFloat16BitsToUint16:
+            return "float16BitsToUint16";
         case BuiltinFn::kIntBitsToFloat:
             return "intBitsToFloat";
         case BuiltinFn::kUintBitsToFloat:
             return "uintBitsToFloat";
+        case BuiltinFn::kUint16BitsToFloat16:
+            return "uint16BitsToFloat16";
         case BuiltinFn::kBitCount:
             return "bitCount";
         case BuiltinFn::kBitfieldExtract:
@@ -130,6 +134,8 @@ const char* str(BuiltinFn i) {
             return "equal";
         case BuiltinFn::kNotEqual:
             return "notEqual";
+        case BuiltinFn::kUaddCarry:
+            return "uaddCarry";
     }
     return "<unknown>";
 }
@@ -158,13 +164,16 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
 
         case BuiltinFn::kImageStore:
+        case BuiltinFn::kUaddCarry:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kLength:
         case BuiltinFn::kFloatBitsToInt:
         case BuiltinFn::kFloatBitsToUint:
+        case BuiltinFn::kFloat16BitsToUint16:
         case BuiltinFn::kIntBitsToFloat:
         case BuiltinFn::kUintBitsToFloat:
+        case BuiltinFn::kUint16BitsToFloat16:
         case BuiltinFn::kBitCount:
         case BuiltinFn::kBitfieldExtract:
         case BuiltinFn::kBitfieldInsert:

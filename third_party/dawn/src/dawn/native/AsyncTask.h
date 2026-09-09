@@ -35,12 +35,12 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/NonCopyable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/native/Error.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/Error.h"
+#include "src/utils/non_copyable.h"
 
 namespace dawn::platform {
 class WaitableEvent;
@@ -59,7 +59,8 @@ class AsyncTaskManager;
 
 enum class AsyncTaskState : uint8_t {
     Pending = 0,
-    Completed = 1,
+    CompletedTask = 1,
+    CompletedCallbacks = 2,
 };
 
 using AsyncTaskFunction = std::function<void()>;
@@ -69,9 +70,18 @@ class AsyncTask : public RefCounted {
   public:
     AsyncTask(AsyncTaskManager* taskManager, AsyncTaskFunction task);
 
+    // This only guarantees that the task has completed. It does NOT guarantee that all completion
+    // callbacks have completed.
     bool IsCompleted() const;
+
+    // This call guarantees that the task, and all completion callbacks that were added before this
+    // call are completed. It cannot guarantee that completion callbacks that are added after this
+    // call are completed since it is possible to add them after the task has already completed in
+    // the first place.
     void Wait();
 
+    // Adds a completion callback that will be called when the task is completed. If the task is
+    // already completed when this is called, the completion callback will be called inline.
     void AddCompletionCallback(AsyncTaskCompletionCallback completionCallback);
 
   private:

@@ -25,31 +25,31 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/ShaderModuleMTL.h"
+#include "src/dawn/native/metal/ShaderModuleMTL.h"
 
 #include <tint/tint.h>
 
 #include <sstream>
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/CacheRequest.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/TintUtils.h"
-#include "dawn/native/metal/BindGroupLayoutMTL.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/PipelineLayoutMTL.h"
-#include "dawn/native/metal/RenderPipelineMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
-#include "dawn/native/stream/BlobSource.h"
-#include "dawn/native/stream/ByteVectorSink.h"
-#include "dawn/native/utils/WGPUHelpers.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/CacheRequest.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/TintUtils.h"
+#include "src/dawn/native/metal/BindGroupLayoutMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/ImmediatesLayoutMTL.h"
+#include "src/dawn/native/metal/PipelineLayoutMTL.h"
+#include "src/dawn/native/metal/RenderPipelineMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/native/stream/BlobSource.h"
+#include "src/dawn/native/stream/ByteVectorSink.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
 
 namespace dawn::native::metal {
 namespace {
@@ -62,6 +62,7 @@ using OptionalVertexPullingTransformConfig = std::optional<tint::VertexPullingCo
     X(UnsafeUnserializedValue<ShaderModuleBase::ScopedUseTintProgram>, inputProgram) \
     X(LimitsForCompilationRequest, limits)                                           \
     X(UnsafeUnserializedValue<LimitsForCompilationRequest>, adapterSupportedLimits)  \
+    X(uint32_t, minSubgroupSize)                                                     \
     X(uint32_t, maxSubgroupSize)                                                     \
     X(bool, usesSubgroupMatrix)                                                      \
     X(bool, useStrictMath)                                                           \
@@ -141,7 +142,7 @@ tint::msl::writer::ArrayLengthOptions GenerateArrayLengthOptions(const PipelineL
                 case wgpu::BufferBindingType::ReadOnlyStorage:
                 case kInternalReadOnlyStorageBufferBinding:
                     arrayLength.bindpoint_to_size_index.emplace(
-                        tint::BindingPoint{uint32_t(group), uint32_t(bindingInfo.binding)},
+                        tint::BindingPoint{uint32_t{group}, uint32_t{bindingInfo.binding}},
                         layout->GetBindingIndexInfo(stage)[group][index]);
                     break;
 
@@ -197,15 +198,15 @@ std::unordered_map<uint32_t, tint::msl::writer::ArgumentBufferInfo> GenerateArgu
                 [&](const BufferBindingInfo& binding) {
                     if (binding.hasDynamicOffset) {
                         argBufferInfo.binding_info_to_offset_index.insert(
-                            {uint32_t(bindingIndex), curDynamicOffset++});
+                            {uint32_t{bindingIndex}, curDynamicOffset++});
                     }
                 },
                 [&](const SamplerBindingInfo& bindingInfo) {},
                 [&](const StaticSamplerBindingInfo& bindingInfo) {},
                 [&](const TextureBindingInfo& bindingInfo) {}, [](const TexelBufferBindingInfo&) {},
                 [&](const StorageTextureBindingInfo& bindingInfo) {},
-                [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); },
-                [](const ExternalTextureBindingInfo&) { DAWN_CHECK(false); });
+                [](const InputAttachmentBindingInfo&) { DAWN_UNREACHABLE(); },
+                [](const ExternalTextureBindingInfo&) { DAWN_UNREACHABLE(); });
         }
         info.insert({static_cast<uint32_t>(group), argBufferInfo});
     }
@@ -222,7 +223,7 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
     const RenderPipeline* renderPipeline,
     const BindingInfoArray& moduleBindingInfo,
     bool useStrictMath,
-    const ImmediateConstantMask& pipelineImmediateMask) {
+    const ImmediateMask& pipelineImmediateMask) {
     std::ostringstream errorStream;
     errorStream << "Tint MSL failure:\n";
 
@@ -232,7 +233,7 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
         GenerateBindingRemapping(layout, stage, [&](BindGroupIndex group, BindingIndex index) {
             if (useArgumentBuffers) {
                 return tint::BindingPoint{
-                    .group = uint32_t(group),
+                    .group = uint32_t{group},
                     .binding = ToMTLArgumentBufferIndex(index),
                 };
             } else {
@@ -260,8 +261,8 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
 
             // Tell Tint to map (kPullingBufferBindingSet, slot) to this MSL buffer index.
             tint::BindingPoint srcBindingPoint{
-                .group = uint32_t(kPullingBufferBindingSet),
-                .binding = uint8_t(slot),
+                .group = uint32_t{kPullingBufferBindingSet},
+                .binding = uint8_t{slot},
             };
             tint::BindingPoint dstBindingPoint{
                 .group = 0,
@@ -279,12 +280,11 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
     }
 
     if (!arrayLengthFromConstants.bindpoint_to_size_index.empty()) {
-        // Based on Immediate block layouts describes in PipelineLayoutMTL.h, it requires
-        // vec4<u32> array aligns to 16 bytes.
         arrayLengthFromConstants.buffer_sizes_offset =
-            RoundUp(pipelineImmediateMask.count() * kImmediateConstantElementByteSize, 16);
+            GetImmediateBufferSizesByteOffset(pipelineImmediateMask);
     }
 
+    // Type should match src/tint/lang/msl/writer/common/options.h
     std::unordered_map<uint32_t, uint32_t> pixelLocalAttachments;
     if (stage == SingleShaderStage::Fragment && layout->HasPixelLocalStorage()) {
         const AttachmentState* attachmentState = renderPipeline->GetAttachmentState();
@@ -293,8 +293,8 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
         std::vector<ColorAttachmentIndex> storageAttachmentPacking =
             attachmentState->ComputeStorageAttachmentPackingInColorAttachments();
 
-        for (size_t i = 0; i < storageAttachmentSlots.size(); i++) {
-            pixelLocalAttachments[i] = uint8_t(storageAttachmentPacking[i]);
+        for (uint32_t i = 0; i < storageAttachmentSlots.size(); i++) {
+            pixelLocalAttachments[i] = uint8_t{storageAttachmentPacking[i]};
         }
     }
 
@@ -330,12 +330,20 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
     req.tintOptions.bindings = std::move(bindings);
     req.tintOptions.vertex_pulling_config = std::move(vertexPullingTransformConfig);
 
-    // Set internal immediate constant offsets
-    if (HasImmediateConstants(&RenderImmediateConstants::clampFragDepth, pipelineImmediateMask)) {
+    // Set internal immediate offsets
+    if (stage == SingleShaderStage::Fragment &&
+        HasImmediates(&RenderImmediates::clampFragDepth, pipelineImmediateMask)) {
         uint32_t offsetStartBytes = GetImmediateByteOffsetInPipeline(
-            &RenderImmediateConstants::clampFragDepth, pipelineImmediateMask);
-        req.tintOptions.depth_range_offsets = {
-            offsetStartBytes, offsetStartBytes + kImmediateConstantElementByteSize};
+            &RenderImmediates::clampFragDepth, pipelineImmediateMask);
+        req.tintOptions.depth_range_offsets = {offsetStartBytes,
+                                               offsetStartBytes + kImmediateElementByteSize};
+    }
+    if (stage == SingleShaderStage::Compute) {
+        req.tintOptions.non_constant_zero_offset = GetImmediateByteOffsetInPipeline(
+            &ComputeImmediates::nonConstantZero, pipelineImmediateMask);
+    } else {
+        req.tintOptions.non_constant_zero_offset = GetImmediateByteOffsetInPipeline(
+            &RenderImmediates::nonConstantZero, pipelineImmediateMask);
     }
 
     req.tintOptions.use_argument_buffers = useArgumentBuffers;
@@ -357,6 +365,12 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
         device->IsToggleEnabled(Toggle::MetalPolyfillTanhF16);
     req.tintOptions.workarounds.replace_workgroup_bool_with_u32 =
         device->IsToggleEnabled(Toggle::MetalReplaceWorkgroupBoolWithU32);
+    req.tintOptions.workarounds.collapse_subgroup_min_max =
+        device->IsToggleEnabled(Toggle::CollapseSubgroupMinMax);
+    req.tintOptions.workarounds.fix_u32_div_mod =
+        device->IsToggleEnabled(Toggle::MetalFixU32DivMod);
+    req.tintOptions.workarounds.polyfill_bool_vec_dynamic_store =
+        device->IsToggleEnabled(Toggle::MetalPolyfillBoolVecDynamicStore);
 
     req.tintOptions.extensions.disable_demote_to_helper =
         device->IsToggleEnabled(Toggle::DisableDemoteToHelper);
@@ -364,13 +378,14 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
     req.limits = LimitsForCompilationRequest::Create(device->GetLimits().v1);
     req.adapterSupportedLimits = UnsafeUnserializedValue(
         LimitsForCompilationRequest::Create(device->GetAdapter()->GetLimits().v1));
+    req.minSubgroupSize = device->GetAdapter()->GetPhysicalDevice()->GetSubgroupMinSize();
     req.maxSubgroupSize = device->GetAdapter()->GetPhysicalDevice()->GetSubgroupMaxSize();
 
     CacheResult<MslCompilation> mslCompilation;
     DAWN_TRY_LOAD_OR_RUN(
         mslCompilation, device, std::move(req), MslCompilation::FromValidatedBlob,
         [](MslCompilationRequest r) -> ResultOrError<MslCompilation> {
-            TRACE_EVENT0(r.platform.UnsafeGetValue(), General, "tint::msl::writer::Generate");
+            TRACE_EVENT(DAWN_TRACE_CATEGORY(), "tint::msl::writer::Generate");
             // Requires Tint Program here right before actual using.
             auto shaderModule = r.inputProgram.UnsafeGetValue();
             auto inputProgram = shaderModule->GetTintProgram();
@@ -413,6 +428,31 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
                                 ValidateComputeStageWorkgroupSize(
                                     result->workgroup_info, r.usesSubgroupMatrix, r.maxSubgroupSize,
                                     r.limits, r.adapterSupportedLimits.UnsafeGetValue()));
+
+                if (!result->workgroup_allocations.empty()) {
+                    DAWN_ASSERT(result->workgroup_allocations.size() == 1);
+
+                    uint32_t maxComputeWorkgroupStorageSize =
+                        r.limits.maxComputeWorkgroupStorageSize;
+                    uint64_t size = result->workgroup_allocations.front();
+                    DAWN_INTERNAL_ERROR_IF(
+                        size > maxComputeWorkgroupStorageSize,
+                        "The total combined workgroup storage (%u bytes) size with all workgroup "
+                        "variables combined into a single structure is larger than the maximum "
+                        "allowed (%u bytes).%s",
+                        size, maxComputeWorkgroupStorageSize,
+                        DAWN_INCREASE_LIMIT_MESSAGE(r.adapterSupportedLimits.UnsafeGetValue(),
+                                                    maxComputeWorkgroupStorageSize, size));
+                }
+
+                if (result->workgroup_info.subgroup_size.has_value()) {
+                    uint32_t explicitSubgroupSize = result->workgroup_info.subgroup_size.value();
+                    DAWN_INVALID_IF(
+                        explicitSubgroupSize < r.minSubgroupSize ||
+                            explicitSubgroupSize > r.maxSubgroupSize,
+                        "The subgroup_size attribute (%u) is not in the allowed range ([%u, %u]).",
+                        explicitSubgroupSize, r.minSubgroupSize, r.maxSubgroupSize);
+                }
             }
 
             auto msl = std::move(result->msl);
@@ -462,12 +502,12 @@ ResultOrError<CacheResult<MslCompilation>> TranslateToMSL(
 MaybeError ShaderModule::CreateFunction(SingleShaderStage stage,
                                         const ProgrammableStage& programmableStage,
                                         const PipelineLayout* layout,
-                                        const ImmediateConstantMask& pipelineImmediateMask,
+                                        const ImmediateMask& pipelineImmediateMask,
                                         ShaderModule::MetalFunctionData* out,
                                         uint32_t sampleMask,
                                         const RenderPipeline* renderPipeline) {
-    TRACE_EVENT1(GetDevice()->GetPlatform(), General, "metal::ShaderModule::CreateFunction",
-                 "label", utils::GetLabelForTrace(GetLabel()));
+    TRACE_EVENT(DAWN_TRACE_CATEGORY(), "metal::ShaderModule::CreateFunction", "label",
+                utils::GetLabelForTrace(GetLabel()));
 
     DAWN_ASSERT(!IsError());
     DAWN_ASSERT(out);
@@ -530,7 +570,7 @@ MaybeError ShaderModule::CreateFunction(SingleShaderStage stage,
     NSPRef<id<MTLLibrary>> library;
     platform::metrics::DawnHistogramTimer timer(GetDevice()->GetPlatform());
     {
-        TRACE_EVENT0(GetDevice()->GetPlatform(), General, "MTLDevice::newLibraryWithSource");
+        TRACE_EVENT(DAWN_TRACE_CATEGORY(), "MTLDevice::newLibraryWithSource");
         library = AcquireNSPRef([mtlDevice newLibraryWithSource:mslSource.Get()
                                                         options:compileOptions.Get()
                                                           error:&error]);
@@ -552,7 +592,7 @@ MaybeError ShaderModule::CreateFunction(SingleShaderStage stage,
         [[NSString alloc] initWithUTF8String:mslCompilation->remappedEntryPointName.c_str()]);
 
     {
-        TRACE_EVENT0(GetDevice()->GetPlatform(), General, "MTLLibrary::newFunctionWithName");
+        TRACE_EVENT(DAWN_TRACE_CATEGORY(), "MTLLibrary::newFunctionWithName");
         out->function = AcquireNSPRef([*library newFunctionWithName:name.Get()]);
         // TODO(372181030): Remove this unnecessary check when we understand why the MTLFunction
         // might be nil here.

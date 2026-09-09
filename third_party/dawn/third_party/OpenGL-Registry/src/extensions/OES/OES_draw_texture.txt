@@ -1,0 +1,608 @@
+Name
+
+    OES_draw_texture
+
+Name Strings
+
+    GL_OES_draw_texture
+
+Contact
+
+    Tom Olson (t-olson 'at' ti.com)
+
+Notice
+
+    Copyright (c) 2004-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Ratified by the Khronos BOP, Aug 5, 2004.
+
+Version
+
+    Last Modified Date: 21 July 2004
+    Author Revision 0.96
+
+Number
+
+    OpenGL ES Extension #7
+
+Dependencies
+
+    OES_fixed_point is required.
+    EXT_fog_coord affects the definition of this extension.
+    This extension is written against the OpenGL 1.3 and
+    OpenGL ES 1.0 Specifications.
+
+Overview
+
+    This extension defines a mechanism for writing pixel
+    rectangles from one or more textures to a rectangular
+    region of the screen.  This capability is useful for
+    fast rendering of background paintings, bitmapped font
+    glyphs, and 2D framing elements in games.  This
+    extension is primarily intended for use with OpenGL ES.
+
+    The extension relies on a new piece of texture state
+    called the texture crop rectangle, which defines a
+    rectangular subregion of a texture object.  These
+    subregions are used as sources of pixels for the texture
+    drawing function.
+
+    Applications use this extension by configuring the
+    texture crop rectangle for one or more textures via
+    ActiveTexture() and TexParameteriv() with pname equal to
+    TEXTURE_CROP_RECT_OES.  They then request a drawing
+    operation using DrawTex{sifx}[v]OES().  The effect of
+    the latter function is to generate a screen-aligned
+    target rectangle, with texture coordinates chosen to map
+    the texture crop rectangle(s) linearly to fragments in
+    the target rectangle.  The fragments are then processed
+    in accordance with the fragment pipeline state.
+
+IP Status
+
+    No known IP issues.
+
+Issues
+
+    (1) Should we pass a texture name to the draw function,
+        or use the currently bound texture?
+
+        RESOLVED. Use the textures bound to currently
+        enabled texture units.  This makes it easy for
+        drivers to implement DrawTex*() using existing
+        texture hardware.  If we didn't do this, they would
+        have to save and restore the state of the texture
+        unit(s).
+
+    (2) Doesn't DrawPixels make this extension unnecessary?
+
+        RESOLVED.  No.  DrawPixels is hard to support 
+        efficiently in hardware because the source pixels
+        are in application memory.  Also, the pixel setup
+        pipeline (PixelTransfer, PixelMap etc.) is redundant
+        for the intended applications.  Also, PixelZoom 
+        looks ugly when the zoom factors are large, and there
+        is no way to control filtering.  Using textures and
+        texture units solves all of these problems.
+
+    (3) Doesn't ARB_point_sprite make this extension unnecessary?
+
+        RESOLVED. No.  Key differences include:
+        * ARB_point_sprite uses the entire source texture to
+          paint a point, i.e. its texture coordinates range
+          from 0.0 to 1.0.  This extension allows a
+          subregion of a texture to be used as the source.
+        * ARB_point_sprite sprites are limited by the
+          maximum point size, which may be small.  This
+          extension is limited only by the maximum supported
+          texture size and the screen size.
+        * ARB_point_sprite sprites are square.  This
+          extension supports general rectangles as sprite
+          shapes.
+        * ARB_point_sprite sprites are clipped as points, so
+          if the center of a sprite falls outside the
+          frustrum, nothing is drawn.  This extension draws
+          any portion of a sprite that lies within the
+          viewing frustrum.  (There is a well-known
+          work-around for this, but it's ugly.)
+
+    (4) How is the texture sampled?  
+
+        RESOLVED.  It is sampled like a normal texture, and
+        not like an image sent to DrawPixels.  This
+        facilitates implementing with texture hardware.
+
+    (5) How does this work when multisampling is enabled?
+
+        RESOLVED. Implementations should generate
+        multisample texture coordinates using the same
+        method they use in normal texture mapping.
+        Approximations are acceptable, e.g. they may use the
+        same texture value for all samples associated with a
+        fragment generated by DrawTex*(), even if they use
+        another policy for multisampled triangle rendering.
+
+    (6) Do we really want the full fragment pipeline to be
+        active?
+
+        RESOLVED. Yes, on grounds of orthogonality and
+        simplicity.  Again, this makes it easy for existing
+        hardware to implement the extension.
+
+    (7) How does this interact with user clip planes?
+
+        RESOLVED.  User clip planes are ignored. This is a
+        screen-level operation, so geometric entities like
+        clip planes are irrelevant.
+
+    (8) How does this interact with mip-mapping?
+
+        RESOLVED.  It behaves exactly as in texturing.
+        This is really easy to do as LOD is a constant
+        across the target rectangle.
+ 
+    (9) What happens when multiple texture units are
+        enabled?
+
+        RESOLVED. All enabled texture units participate in
+        generating the final fragment color.  Each unit
+        generates its own s,t based on its texture's crop
+        rectangle.
+
+   (10) Should the target location be specified by the
+        current raster position (RasterPos or WindowPos), 
+        or by arguments to DrawTex*OES()?
+
+        RESOLVED.  Use arguments passed to DrawTex*. In the
+        intended uses, the target will be set once per call,
+        so using arguments saves one inner loop function
+        call.
+
+   (11) Do we want stretch-blt capability?
+
+        RESOLVED. Yes.  Supply a window size as well as
+        window position to DrawTex*()
+
+   (12) OpenGL ES issue: WindowPos (if we use it) adds 16
+        entry points ({23}{sifd}[v]), which seems like a lot
+        even if they are trivial.  Can we live with a
+        subset?  (Note that the 'd' versions go away, but
+        they are replaced by 'x' versions.)
+
+        RESOLVED. Moot, as we do not use WindowPos.  But the
+        intent was to add only 3{si}[v] versions (four entry
+        points).  This is not orthogonal and may be
+        surprising.  But there is no intent to support
+        sub-pixel placement of rectangles, so the {fx}
+        versions are superfluous.  {2} versions are easy to
+        express using {3} versions.  Vector and individual
+        argument versions are kept to reduce the surprise
+        factor, and because constructing calls to a v-type
+        function is a huge pain if you don't already have
+        the data in vector format.
+
+   (13) TexCropRect*OES adds eight entry points.  Can we live
+        with a subset?  For the intended use, integer values
+        suffice, so the {fx} versions are superfluous.  But
+        orthogonality and 'least-astonishment' are virtues
+        too.
+
+        RESOLVED. Moot. Replace with TexParameteriv().
+
+   (14) Would it be better to remove the texture crop
+        rectangle from the state, and instead pass
+        parameters to DrawTextureOES()?
+
+        RESOLVED. No.  Drawing the same pixel pattern multiple
+        times is a plausible usage scenario.
+
+   (15) Should texture crop rect parameters be stored internally
+        as integers, or as float/fixed?  I.e. should we allow
+        the crop rect to include fractional texels?  This is
+        more flexible, but is not the intended use.  Software
+        implementations would have to add a test for the (normal)
+        special case of integer bounds.
+        
+        RESOLVED.  Integer only.  Texture crop rect is
+        conceptually a subregion of an integer grid, so its
+        natural coordinates are integers.
+
+   (16) Should we have a single global crop rect, or one per
+        texture unit?  
+
+        RESOLVED.  Neither.  We should have one per texture,
+        with TexParameter setting the rect for the currently
+        active texture.  It isn't a lot of state, it
+        attaches the rect to a specific texture (which makes
+        sense) rather than a texture unit (which doesn't),
+        it is more orthogonal, and it allows tex coords to
+        be meaningful (if not actually useful) when multiple
+        texture units are enabled.
+
+   (17) Should the destination rectangle specified by
+        DrawTex*() be defined as integer only like the crop
+        rectangle, or should its parameters be real-valued?
+
+        RESOLVED.  Real-valued.  Since we now support
+        stretch-blit, we want the ability to animate the
+        scaling factor smoothly.  If the destination rectangle
+        size is rounded to an integer, you won't get smooth
+        animation.
+
+New Procedures and Functions 
+
+  Added to OpenGL 1.3 and OpenGL ES 1.0:
+
+    void DrawTex{sifx}OES(T X, T Y, T Z, T W, T H);
+    void DrawTex{sifx}vOES(T* coords);
+
+  Added to OpenGL ES 1.0:
+
+    void TexParameter{ifx}v(enum target, enum pname, T param);
+
+
+New Types
+
+  None
+
+
+New Tokens
+
+  Accepted by the <pname> parameter of TexParameter()
+  and GetTexParameter():
+
+    TEXTURE_CROP_RECT_OES        0x8B9D
+
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification
+(OpenGL Operation):
+
+  None
+
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification
+(Rasterization): 
+
+  In Table 3.19: Texture parameters and their values, p. 133,
+  add this line at the end of the table:
+
+  Name                     Type             Legal Values
+  --------------------------------------------------------
+  TEXTURE_CROP_RECT_OES    4 integers       any value
+
+
+  In section 3.8.4, Texture Parameters, after paragraph 3
+  (page 132) insert new paragraph:
+
+  The texture parameter TEXTURE_CROP_RECT_OES controls the
+  operation of DrawTex{sifx}[v]OES(), as described in
+  section 5.7.  It has no effect on the rasterization of
+  other primitives.
+
+  
+Additions to Chapter 4 of the OpenGL 1.3 Specification
+(Per-Fragment Operations and the Frame Buffer): 
+
+  None
+
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification
+(Special Functions):
+
+  In Chapter 5, paragraph one, replace the last two words
+  ("and hints.") with the words "hints, and texture
+  rectangle drawing."
+
+  After section 5.6, p. 196, insert:
+
+  5.7 Texture Rectangle Drawing
+
+    OpenGL supports drawing sub-regions of a texture to
+    rectangular regions of the screen using the texturing
+    pipeline.  Source region size and content are determined
+    by the texture crop rectangle(s) of the enabled
+    texture(s) (see section 3.8.14).
+
+    The functions 
+
+    void DrawTex{sifx}OES(T Xs, T Ys, T Zs, T Ws, T Hs);
+    void DrawTex{sifx}vOES(T *coords);
+
+    draw a texture rectangle to the screen.  Xs, Ys, and Zs
+    specify the position of the affected screen rectangle.
+    Xs and Ys are given directly in window (viewport)
+    coordinates.  Zs is mapped to window depth Zw as follows:
+
+                 { n,                 if z <= 0
+            Zw = { f,                 if z >= 1
+                 { n + z * (f - n),   otherwise
+
+    where <n> and <f> are the near and far values of
+    DEPTH_RANGE.  Ws and Hs specify the width and height of
+    the affected screen rectangle in pixels.  These values
+    may be positive or negative; however, if either (Ws <=
+    0) or (Hs <= 0), the INVALID_VALUE error is generated.
+
+    Calling one of the DrawTex functions generates a
+    fragment for each pixel that overlaps the screen
+    rectangle bounded by (Xs, Ys) and (Xs + Ws), (Ys + Hs).
+    For each generated fragment, the depth is given by Zw
+    as defined above, and the color by the current color.
+    
+    If EXT_fog_coord is supported, and FOG_COORDINATE_SOURCE_EXT
+    is set to FOG_COORINATE_EXT, then the fragment distance for
+    fog purposes is set to CURRENT_FOG_COORDINATE. Otherwise,
+    the fragment distance for fog purposes is set to 0.
+    
+    Texture coordinates for each texture unit are computed
+    as follows:
+
+    Let X and Y be the screen x and y coordinates of each
+    sample point associated with the fragment.  Let Wt and
+    Ht be the width and height in texels of the texture
+    currently bound to the texture unit.  (If the texture is
+    a mipmap, let Wt and Ht be the dimensions of the level
+    specified by TEXTURE_BASE_LEVEL.)  Let Ucr, Vcr, Wcr and
+    Hcr be (respectively) the four integers that make up the
+    texture crop rectangle parameter for the currently bound
+    texture.  The fragment texture coordinates (s, t, r, q)
+    are given by
+
+    s = (Ucr + (X - Xs)*(Wcr/Ws)) / Wt
+    t = (Vcr + (Y - Ys)*(Hcr/Hs)) / Ht
+    r = 0
+    q = 1
+
+    In the specific case where X, Y, Xs and Ys are all
+    integers, Wcr/Ws and Hcr/Hs are both equal to one, the
+    base level is used for the texture read, and fragments
+    are sampled at pixel centers, implementations are
+    required to ensure that the resulting u, v texture
+    indices are also integers.  This results in a one-to-one
+    mapping of texels to fragments.
+
+    Note that Wcr and/or Hcr can be negative.  The formulas
+    given above for s and t still apply in this case.  The
+    result is that if Wcr is negative, the source rectangle
+    for DrawTex operations lies to the left of the reference
+    point (Ucr, Vcr) rather than to the right of it, and
+    appears right-to-left reversed on the screen after a
+    call to DrawTex.  Similarly, if Hcr is negative, the
+    source rectangle lies below the reference point (Ucr,
+    Vcr) rather than above it, and appears upside-down on
+    the screen.
+
+    Note also that s, t, r, and q are computed for each
+    fragment as part of DrawTex rendering.  This implies
+    that the texture matrix is ignored and has no effect on
+    the rendered result.
+
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification
+(State and State Requests):
+
+  None
+
+
+Additions to Appendix A of the OpenGL 1.3 Specification
+(Invariance):
+
+  None
+
+
+Additions to the AGL/GLX/WGL Specifications:
+
+  None
+
+
+Additions to Chapter 2 of the OpenGL ES 1.0 Specification
+(OpenGL Operation):
+
+  None
+
+
+Additions to Chapter 3 of the OpenGL ES 1.0 Specification
+(Rasterization):
+
+  After the fourth paragraph of section 3.8, Texturing,
+  p. 17, insert a new paragraph:
+
+  DrawTexOES is supported.
+
+  In the (unnamed) table of supported texture functions,
+  p. 19, delete the entry for TexParameter{i[v] fv}(), and
+  replace the entry for TexParameterf() with the following:
+
+  OpenGL 1.3                                           Common    Common-Lite
+  ------------------------------------------------     ------    -----------
+  TexParameter{if}[v](enum target, enum param, T param)
+    target = TEXTURE_2D, pname = TEXTURE_CROP_RECT_OES (check)     (check)
+    target = TEXTURE_1D, TEXTURE_3D, TEXTURE_CUBE_MAP     -           -
+    pname = TEXTURE_MIN_FILTER, TEXTURE_MAG_FILTER     (check)     (check)
+    pname = TEXTURE_WRAP_S, TEXTURE_WRAP_T             (check)     (check)
+    pname = TEXTURE_BORDER_COLOR                          -           -
+    pname = TEXTURE_MIN_LOD, TEXTURE_MAX_LOD              -           -
+    pname = TEXTURE_BASE_LEVEL, TEXTURE_MAX_LEVEL         -           -
+    pname = TEXTURE_WRAP_R                                -           -
+    pname = TEXTURE_PRIORITY                              -           -
+
+  In the same table, modify the entry for
+  GetTexParameter{if}v() to read as follows:
+
+  OpenGL 1.3                                               Common   Common-Lite
+  -------------------------------------------------------  ------   -----------
+  GetTexParameter{if}v(enum target, enum param, T *params) (check)   (dagger)
+
+
+Additions to Chapter 4 of the OpenGL ES 1.0 Specification
+(Per-Fragment Operations and the Frame Buffer):
+
+  None
+
+
+Additions to Chapter 5 of the OpenGL ES 1.0 Specification
+(Special Functions):
+
+  None
+
+
+Additions to Chapter 6 of the OpenGL ES 1.0 Specification
+(State and State Requests):
+
+  At the end of table 6.15, Texture Objects (cont.), p. 36,
+  insert a new entry:
+
+  State                                           Exposed   Queriable
+  -------------------------------------------     -------   ---------
+  TEXTURE_CROP_RECT_OES                           (check)    (check)
+
+
+  Replace the fourth paragraph of Chapter 7, Core Additions and
+  Extensions, p. 46, with the following:
+
+  The Common and Common-Lite profiles add subsets of the
+  OES_byte_coordinates, OES_fixed_point, and
+  OES_single_precision ES-specific extensions as core
+  additions; OES_readFormat and
+  OES_compressed_paletted_texture as required profile
+  extensions; and OES_query_matrix and OES_draw_texture as
+  optional profile extensions.
+
+
+Additions to Chapter 7 of the OpenGL ES 1.0 Specification
+(Core Additions and Extensions):
+
+  At the end of Table 7.1: OES Extension Disposition, add a
+  new entry:
+
+  Extension Name                     Common            Common-Lite
+  ------------------------     ------------------  ------------------
+  OES_draw_texture             optional extension  optional extension    
+
+
+  After section 7.6, Query Matrix, insert
+
+
+  7.7 Draw Texture
+
+  The optional OES_draw_texture extension allows rectangular
+  subregions of a texture to be written to the screen using
+  the fragment pipeline.  Texture coordinates are generated
+  for each fragment in the destination rectangle, such that
+  texels in the source texture are mapped linearly to pixels
+  on the screen.
+
+
+GLX Protocol
+
+  None
+
+
+Errors
+
+  None
+
+
+Dependencies on OES_fixed_point
+
+  The DrawTex{sifx}[v]() function makes use of the 'x'
+  suffix and (in that form) accepts parameters of type fixed,
+  as defined in OES_fixed_point.
+
+
+Dependencies on EXT_fog_coord
+  
+  EXT_fog_coord affects the distance that is used in the fog
+  equations for fragments generated by DrawTex{sifx}[v]().
+  If EXT_fog_coord is not supported, the fog distance for
+  each fragment is set to zero.  If EXT_fog_coord is
+  supported, the fog distance depends on the value of
+  FOG_COORDINATE_SOURCE_EXT.  If the latter is set to
+  FRAGMENT_DEPTH_EXT, the fog distance is again set to zero.
+  If FOG_COORDINATE_SOURCE_EXT is set to FOG_COORDINATE_EXT,
+  the distance is set to CURRENT_FOG_COORDINATE.
+
+
+New State
+
+  (table 6.16, Texture Objects (cont.), p. 224):
+
+                                             Initial
+  Get Value         Type   Get Command       Value       Description   Sec   Attribute
+  ---------         ----   -----------       ---------   -----------   ---   ---------
+  TEXTURE_CROP_RECT  4xZ   GetTexParameteriv 0,0,0,0     texture crop  5.7   texture
+                                                         rectangle
+
+New Implementation Dependent State
+
+    None.
+
+
+Revision History
+
+    July 21, 2004 (v0.96)
+        - Modified to say that if Ws or Hs < 0 then an 
+          INVALID_VALUE error is generated
+
+    July  16, 2004 (v0.95)
+        - Corrected a bug in the text description of DrawTex
+          with negative crop rectangle width or height.  Thanks
+          to Petri Kero for the catch.
+
+    July  14, 2004 (v0.9)
+        - added a Zs parameter to the destination rectangle
+          location specification.  This allows applications
+          to control the depth coordinate of fragments generated
+          by DrawTex().
+        - Removed DOS-mode carriage returns.  
+
+    June  29, 2004 (v0.8)
+        - Corrected dependencies to comply with ARB recommended
+          practice for extensions.
+        - Restructured the "Additions to the OpenGL ES 1.0 Spec"
+          sections to separate changes by chapter, following
+          ARB recommended practice for OpenGL and
+          GLX specifications.
+        - Modified TexParameter usage to be consistent with
+          OpenGL ES 1.1.
+        - Added a dependency on EXT_fog_coord.
+        - Inserted enumerant value.
+
+    June  16, 2004 (v0.7)
+        - Modified to make texture crop rectangle part of
+          texture state (set by TexParameter) rather than by
+          an ad hoc function (TexCropRectOES).
+        - Modified to provide stretch-blit functionality.
+
+    May   28, 2004 (v0.6)
+        - Formalized changes to 1.3 and ES 1.0 specs.
+          Modified to take screen coordinate arguments
+          rather than using the current raster position.
+          
+    May   19, 2004 (v0.5)
+        - Simplified to support only one-to-one source
+          blit.  Sprite functionality was moved to a
+          separate proposal.
+
+    May    4, 2004 (v0.4)
+        - Rewrote to use explicit source and destination
+          rectangles instead of overloading PixelZoom.
+          Made current raster rectangle explicit and 
+          provided both screen space and object space
+          ways to define it.
+
+    April 13, 2004
+        - Initial version (v0.3)

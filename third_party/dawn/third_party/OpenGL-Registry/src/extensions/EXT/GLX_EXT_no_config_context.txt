@@ -1,0 +1,299 @@
+Name
+
+    EXT_no_config_context
+
+Name Strings
+
+    GLX_EXT_no_config_context
+
+Contributors
+
+    Adam Jackson
+    Kyle Brenneman
+    James Jones
+    Alex Goins
+
+    This extension is derived from EGL_KHR_no_config_context, whose
+    contributors include:
+
+    Etay Meiri
+    Alon Or-bach
+    Jeff Vigil
+    Ray Smith
+    Michael Gold
+    James Jones
+    Daniel Kartch
+    Adam Jackson
+    Jon Leech
+
+Contact
+
+    Adam Jackson <ajax@redhat.com>
+
+IP Status
+
+    No known IP claims.
+
+Status
+
+    Complete.
+
+Version
+
+    Version 8, 2020/10/05
+
+Number
+
+    OpenGL Extension #553
+
+Dependencies
+
+    GLX_ARB_create_context is required.
+
+    Interacts with GLX_ARB_fbconfig_float.
+
+    Interacts with GLX_EXT_fbconfig_packed_float.
+
+    This extension is written against the GLX 1.4 Specification.
+
+    Some of the capabilities of these extensions are only available when
+    creating OpenGL or OpenGL ES contexts supporting specific versions or
+    capabilities. All such restrictions are documented in the body of this
+    extension specification.
+
+Overview
+
+    Modern GPUs allow contexts to render to almost any combination of
+    supported color and auxiliary buffer formats. Traditionally GLX context
+    creation is done with respect to a GLXFBConfig specifying buffer formats,
+    and constrains contexts to only work with drawables created with a
+    "compatible" config.
+
+    This extension allows creation of GL & ES contexts without specifying a
+    GLXFBConfig.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the GLX_ARB_create_context Specification
+
+    To the paragraph beginning "If glXCreateContextAttribsARB succeeds",
+    append:
+
+    "If <config> is NULL, the context will be created without reference to a
+    config. In this case, the attribute list must include GLX_SCREEN, naming
+    the screen for the context; if GLX_SCREEN is not specified, or
+    GLX_RENDER_TYPE is specified, BadValue is generated."
+
+Additions to the GLX 1.4 Specification
+
+    In section 2.1 "Rendering Contexts and Drawing Surfaces", modify the
+    5th paragraph:
+
+    "A rendering context can be used with any GLXDrawable that it is
+    compatible with (subject to the restrictions discussed in the section on
+    address space and the restrictions discussed under glXCreatePixmap). A
+    drawable and context are compatible if either of the following sets of
+    conditions are true:
+
+    * The context was created with NULL GLXFBConfig
+
+    * The drawable and context are on the same screen
+
+    or:
+
+    [...]"
+
+    Append a new paragraph to the end of section 2.1 "Rendering Contexts
+    and Drawing Surfaces":
+
+    "If NULL was specified as the GLXFBConfig at creation, the resulting
+    context is said to be created <without reference to a config>. In this
+    case, the context must pass the required conformance tests for the version
+    of OpenGL/OpenGL ES it supports, and must support being made current
+    without a drawable. Such support is guaranteed for OpenGL ES 2.0
+    implementations supporting the GL_OES_surfaceless_context extension,
+    OpenGL ES 3.0 and later versions of OpenGL ES, and OpenGL 3.0 and later
+    versions of OpenGL. Such contexts are compatible with any drawable on the
+    same screen, though the version of OpenGL or OpenGL ES in use may impose
+    further restrictions. For example, forward-compatible OpenGL 3.0 contexts
+    can not render to color index drawables, even if color index GLXFBConfigs
+    are available."
+
+    In section 3.3.7 "Rendering Contexts" in the discussion of glXQueryContext,
+    to the paragraph beginning "The values and types", append:
+
+    "If the context was created without reference to a config, the value
+    of GLX_RENDER_TYPE will be GLX_DONT_CARE, and the values of
+    GLX_FBCONFIG_ID and GLX_VISUAL_ID_EXT will be None."
+
+Interactions with GLX_ARB_fbconfig_float
+
+    A context created without reference to a config may be used to render to
+    drawables whose config has GLX_RGBA_FLOAT_BIT_ARB set.
+
+Interactions with GLX_EXT_fbconfig_packed_float
+
+    A context created without reference to a config may be used to render to
+    drawables whose config has GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT set.
+
+Errors
+
+    No new error types are added.
+
+GLX Protocol
+
+    No new requests are added.
+
+    For GLXCreateContextAttribsARB, normally the client library derives the
+    <screen> field in the request from the specified fbconfig. When the
+    fbconfig is NULL, the GLX_SCREEN attribute and the <screen> field must
+    match, or BadValue is generated. This implies that the client library is
+    responsible for pulling the screen number out of the attribute list, since
+    glXCreateContextAttribsARB does not have an explicit screen parameter.
+
+Issues
+
+ 1) Should non-conformant no-config contexts be allowed to be created?
+
+    RESOLVED: No. We are not encouraging non-conformant contexts. This is
+    not a change, in the sense that CreateContextAttribs already does not
+    accept GLX_NON_CONFORMANT_CONFIG as an attribute.
+
+    What is required is: a no-context config bound to a drawable whose
+    config is conformant, or to no drawable, must be conformant.
+
+ 2) Are no-config contexts constrained to those GL & ES implementations
+    which can support them?
+
+    RESOLVED: Yes. ES2 + OES_surfaceless_context, ES 3.0, and GL 3.0 all
+    support binding a context without a drawable. This implies that they
+    don't need to know drawable attributes at context creation time.
+
+    In principle, equivalent functionality could be possible with ES 1.x +
+    OES_surfaceless_context. This extension makes no promises about that. An
+    implementation wishing to reliably support this combination, or a similarly
+    permissive combination for GL < 3.0, should indicate so with an additional
+    GLX extension.
+
+ 3) For an OpenGL or OpenGL ES context created with no config, what is the
+    initial state of GL_DRAW_BUFFER and GL_READ_BUFFER for the default
+    framebuffer?
+
+    RESOLVED: This is an implementation detail rather than a spec issue.
+    glReadBuffer/glDrawBuffer have undefined results if called without a
+    current context. The GL_DRAW_BUFFER and GL_READ_BUFFER are set on the
+    first glXMakeCurrent call and can be updated in glReadBuffer and
+    glDrawBuffers calls after that. Therefore, the attribute value with
+    which the context is created is irrelevant from the point of view of the
+    spec and is left up to the implementation.
+
+ 4) Can glXMakeCurrent alter the GL_DRAW_BUFFER and GL_READ_BUFFER state of
+    the default framebuffer?
+
+    RESOLVED: Yes, but only on the first call to glXMakeCurrent. The two
+    relevant excerpts from the OpenGL 3.2 Core Profile Specification.
+    From Section 4.2.1 Selecting a Buffer for Writing:
+
+        For the default framebuffer, in the initial state the draw buffer
+        for fragment color zero is BACK if there is a back buffer; FRONT if
+        there is no back buffer; and NONE if no default framebuffer is
+        associated with the context.
+
+    From 4.3.3 Pixel Draw/Read State:
+
+        For the default framebuffer, in the initial state the read buffer is
+        BACK if there is a back buffer; FRONT if there is no back buffer;
+        and NONE if no default framebuffer is associated with the context.
+
+    Based on the above excerpts on the first call to glXMakeCurrent the
+    GL_DRAW_BUFFER and GL_READ_BUFFER are set to: GL_NONE if the drawable is
+    NULL, GL_BACK if the drawable is double buffered, GL_FRONT if the drawable
+    is single buffered. Following calls to glReadBuffer and glDrawBuffers
+    change the GL_DRAW_BUFFER and GL_READ_BUFFER attributes and these values
+    persist even when the application change the current context.
+
+ 5) Should we add a glXCreateGenericContext which is the same as
+    glXCreateContext but without the config parameter?
+
+    RESOLVED: No.
+
+ 6) Can no-config contexts share state with contexts that have a config?
+
+    RESOLVED: Yes, to the extent that the implementation would allow such
+    sharing if the contexts had the same config and compatible attributes.
+
+    GLX_ARB_create_context has this to say about the <share_context> parameter:
+
+    "* If the server context state for <share_context> exists in an address
+       space that cannot be shared with the newly created context, if
+       <share_context> was created on a different screen than the one
+       referenced by <config>, or if the contexts are otherwise incompatible
+       (for example, one context being associated with a hardware device
+       driver and the other with a software renderer), BadMatch is generated."
+
+    For this extension, "otherwise incompatible" might include mismatched GL
+    or ES versions, or versions that do not support making a context current
+    without a drawable. (This list is not intended to be exhaustive.)
+
+    Other extensions like GLX_ARB_create_context_no_error and
+    GLX_ARB_create_context_robustness place additional restrictions on
+    share context compatibility; this extension does not relax them.
+
+ 7) What drawable types can be made current with a no-config context?
+
+    RESOLVED: Any drawable created relative to a supported config can be made
+    current with a no-config context.
+
+ 8) Can you create a no-config context with glXCreate{,New}Context?
+
+    RESOLVED: No. GLX contexts are per-screen. Although the corresponding
+    requests include the screen number, there is no way to specify it from
+    the function signature, the client library derives it from the visual
+    or the fbconfig. Only glXCreateContextAttribsARB is expressive enough.
+
+ 9) Can you specify a no-config context with a specific GLX_RENDER_TYPE?
+
+    RESOLVED: No. It might be possible to implement, but there seems to be
+    little point.
+
+Revision History
+
+    Version 8, 2020/10/05 (Adam Jackson)
+    - Add extension number
+
+    Version 7, 2017/12/05 (Adam Jackson)
+    - Mark complete.
+
+    Version 6, 2017/10/04 (Adam Jackson)
+    - Clarify the float fbconfig extension interaction language
+
+    Version 5, 2017/10/03 (Adam Jackson)
+    - s/GLX_NO_CONFIG_EXT/NULL/
+    - s/surface/drawable/
+    - Plain GL 3.0 doesn't fully drop color index, forward-compatible 3.0 does
+    - Clarify the interaction with non-conformant configs
+    - Reword references to "client API", which is an EGLism
+    - Add disclaimers about creating or sharing state with ES1 or GL<3 contexts
+    - Miscellaneous typo fixes
+
+    Version 4, 2017/09/26 (Adam Jackson)
+    - Tighten the GLX protocol to require the two screen numbers to match
+
+    Version 3, 2017/09/21 (Adam Jackson)
+    - Restrict no-config contexts to glXCreateContextAttribsARB
+    - Add the GLX_VISUAL_ID_EXT case to glXQueryContext
+    - Forbid no-config contexts with a specific render type
+    - Get the screen from the attribute list not the <screen> request field
+
+    Version 2, 2017/09/21 (Adam Jackson)
+    - Add the GLX_FBCONFIG_ID case to glXQueryContext
+    - Document the GLX protocol encoding
+
+    Version 1, 2017/09/20 (Adam Jackson)
+    - Clone from version 9 of EGL_KHR_no_config_context

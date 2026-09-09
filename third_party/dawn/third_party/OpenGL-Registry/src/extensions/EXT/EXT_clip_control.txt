@@ -1,0 +1,190 @@
+Name
+
+    EXT_clip_control
+
+Name Strings
+
+    GL_EXT_clip_control
+
+Contact
+
+    Chad Versace, Google <chadversary@google.com>
+
+Contributors
+
+    David Reveman, Google <reveman@google.com>
+    Daniel Koch, NVIDIA
+    See also GL_ARB_clip_control.
+
+Notice
+
+    Copyright (c) 2017 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: 2017-10-10
+    Revision: 2
+
+Number
+
+    OpenGL ES Extension #290
+
+Dependencies
+
+    Requires OpenGL ES 2.0.
+
+    This extension is written against the OpenGL ES 3.2 Specification.
+
+Overview
+
+    This extension provides additional clip control modes to configure how
+    clip space is mapped to window space.  This extension's goal is to 1)
+    allow OpenGL to effectively match Direct3D's coordinate system
+    conventions, and 2) potentially improve the numerical precision of the Z
+    coordinate mapping.
+
+    This extension is a port of GL_ARB_clip_control to OpenGL ES. For the
+    complete overview of this extension, refer to the "Overview" section of
+    GL_ARB_clip_control.
+
+Differences from GL_ARB_clip_control
+
+    Append the EXT suffix to all new symbols.
+
+    Remove references to features not found in OpenGL ES 3.2: DEPTH_CLAMP and
+    and Begin/End,
+
+    Renumber sections to match the OpenGL ES 3.2 Specification.
+
+New Procedures and Functions
+
+    void ClipControlEXT(enum origin, enum depth);
+
+New Tokens
+
+    Accepted by the <origin> parameter of ClipControlEXT:
+
+        LOWER_LEFT_EXT                              0x8CA1
+        UPPER_LEFT_EXT                              0x8CA2
+
+    Accepted by the <depth> parameter of ClipControlEXT:
+
+        NEGATIVE_ONE_TO_ONE_EXT                     0x935E
+        ZERO_TO_ONE_EXT                             0x935F
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, and
+    GetFloatv:
+
+        CLIP_ORIGIN_EXT                             0x935C
+        CLIP_DEPTH_MODE_EXT                         0x935D
+
+Additions to the OpenGL ES 3.2 Specification, Chapter 12 (Fixed-Function Vertex
+Post-Processing):
+
+ -- Modify section 12.3 "Primitive Clipping"
+
+    Insert before the 1st paragraph:
+
+    "The command
+
+        ClipControlEXT(enum origin, enum depth);
+
+    controls the clipping volume behavior.  /origin/ must be either
+    LOWER_LEFT_EXT or UPPER_LEFT_EXT, otherwise the error INVALID_ENUM is
+    generated.  /depth/ must be either NEGATIVE_ONE_TO_ONE_EXT or
+    ZERO_TO_ONE_EXT, otherwise the error INVALID_ENUM is generated.
+
+      These parameters update the clip control origin and
+    depth mode respectively.  The state required for clip control is one
+    bit for clip control origin and one bit for clip control depth mode.
+    The initial value of the clip control origin is LOWER_LEFT_EXT and the
+    initial value of the depth mode is NEGATIVE_ONE_TO_ONE_EXT.
+
+    Replace the first paragraph with:
+
+    "Primitives are clipped to the clip volume. In clip coordinates,
+    the view volume is defined by
+
+        -w_c <= x_c <= w_c
+        -w_c <= y_c <= w_c
+         z_m <= z_c <= w_c
+
+     where z_m is -w_c when the clip control depth mode is
+     NEGATIVE_ONE_TO_ONE_EXT and z_m is 0 when the mode is ZERO_TO_ONE_EXT."
+
+ -- Modify section 12.5 "Coordinate Transformations"
+
+    Replace the 3rd paragraph with (where ^T means transpose):
+
+    "If a vertex in clip coordinates is given by (x_c y_c z_c w_c)^T
+    then the vertex's normalized device coordinates are (x_d y_d z_d)^T =
+    (x_c/w_c f*y_c/w_c z_c/w_c)^T where /f/ is +1 when the clip control
+    origin is LOWER_LEFT_EXT and -1 when the origin is UPPER_LEFT_EXT."
+
+ -- Modify section 12.5.1 "Controlling the Viewport"
+
+    Replace the 2nd sentence of the 1st paragraph with (where ^T means
+    transpose):
+
+    "The vertex's window coordinates, (x_w y_w z_w)^T are given by:
+
+        ( x_w )     ( p_x/2 x_d + o_x )
+        ( y_w )  =  ( p_y/2 y_d + o_y )
+        ( z_w )     (     s z_d + b   )
+
+    where s is (f-n)/2 and b is (n+f)/2 when the clip control depth mode
+    is NEGATIVE_ONE_TO_ONE_EXT; or s is (f-n) and b is n when the mode
+    is ZERO_TO_ONE_EXT."
+
+Additions to the OpenGL ES 3.2 Specification, Chapter 13 (Fixed-Function
+Primitive Assembly and Rasterization):
+
+ -- Modify section 13.7.1 "Basic Polygon Rasterization"
+
+    Replace the 3rd sentence of the 1st paragraph with:
+
+    "One way to compute this area is
+
+               n-1
+               ___
+               \
+      a = 1/2 f \  x^i_w * y^i(+)1_w - x^i(+)1_w * y^i_w
+                /
+               /__
+
+    where f is +1 when the clip control origin is LOWER_LEFT_EXT and -1 when
+    the origin is UPPER_LEFT_EXT, x^i_w and y^i_w are the x and y window
+    coordinates of the ith vertex of the n-vertex polygon (vertices
+    are numbered starting at zero for purposes of this computation),
+    and i(+)1 is (i+1) mod n."
+
+Errors
+
+    The error INVALID_ENUM is generated by ClipControlEXT if origin is not
+    LOWER_LEFT_EXT or UPPER_LEFT_EXT.
+
+    The error INVALID_ENUM is generated by ClipControlEXT if depth is not
+    NEGATIVE_ONE_TO_ONE_EXT or ZERO_TO_ONE_EXT.
+
+New State
+
+    Get Value            Type  Get Command  Initial Value            Description      Sec
+    -------------------  ----  -----------  -----------------------  ---------------  ----
+    CLIP_ORIGIN_EXT        Z2  GetIntegerv  LOWER_LEFT_EXT           Clip origin      12.4
+    CLIP_DEPTH_MODE_EXT    Z2  GetIntegerv  NEGATIVE_ONE_TO_ONE_EXT  Clip depth mode  12.4
+
+Issues
+
+    See the issue list in GL_ARB_clip_control.
+
+Revision History
+
+    1. 2017-08-08 (Chad Versace)
+        - First draft. Port of GL_ARB_clip_control to OpenGL ES.
+    2. 2017-10-10 (Daniel Koch)
+        - Added some missing EXT suffixes, remove mention of GetDoublev

@@ -31,6 +31,14 @@ import("${dawn_root}/generator/dawn_generator.gni")
 
 dawn_json_generator("emdawnwebgpu_headers_gen") {
   target = "emdawnwebgpu_headers"
+  inputs = [
+    "${dawn_template_dir}/api_cpp_chained_struct.h",
+    "${dawn_template_dir}/api_cpp_print.h",
+    "${dawn_template_dir}/api_cpp.h",
+    "${dawn_template_dir}/api.h",
+    "${dawn_template_dir}/BSD_LICENSE",
+    "${dawn_template_dir}/dawn/cpp_macros.tmpl",
+  ]
   outputs = [
     "src/emdawnwebgpu/include/dawn/webgpu_cpp_print.h",
     "src/emdawnwebgpu/include/webgpu/webgpu.h",
@@ -40,7 +48,7 @@ dawn_json_generator("emdawnwebgpu_headers_gen") {
 }
 
 copy("emdawnwebgpu_headers_copy") {
-  sources = [ "../../include/webgpu/webgpu_enum_class_bitmasks.h" ]
+  sources = [ "${dawn_root}/include/webgpu/webgpu_enum_class_bitmasks.h" ]
   outputs = [ "$target_gen_dir/include/webgpu/webgpu_enum_class_bitmasks.h" ]
 }
 
@@ -57,6 +65,11 @@ source_set("emdawnwebgpu_headers") {
 
 dawn_json_generator("emdawnwebgpu_js_gen") {
   target = "emdawnwebgpu_js"
+  inputs = [
+    "${dawn_template_dir}/emdawnwebgpu/library_webgpu_enum_tables.js",
+    "${dawn_template_dir}/emdawnwebgpu/library_webgpu_generated_sig_info.js",
+    "${dawn_template_dir}/emdawnwebgpu/struct_info_webgpu.json",
+  ]
   outputs = [
     "src/emdawnwebgpu/struct_info_webgpu.json",
     "src/emdawnwebgpu/library_webgpu_enum_tables.js",
@@ -169,11 +182,11 @@ if (is_wasm) {
       "--js-library=" +
           rebase_path("${target_gen_dir}/library_webgpu_generated_sig_info.js"),
       "--js-library=" + rebase_path(
-              "../../third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js"),
+              "${dawn_root}/third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js"),
 
       # Closure externs to avoid minifying WebGPU API symbols
       "--closure-args=--externs=" + rebase_path(
-              "../../third_party/emdawnwebgpu/pkg/webgpu/src/webgpu-externs.js"),
+              "${dawn_root}/third_party/emdawnwebgpu/pkg/webgpu/src/webgpu-externs.js"),
     ]
   }
 
@@ -197,12 +210,14 @@ if (is_wasm) {
       ":emdawnwebgpu_js_gen",
       ":library_webgpu_generated_struct_info",
     ]
-    sources = get_target_outputs(":emdawnwebgpu_headers_gen") +
-              get_target_outputs(":emdawnwebgpu_headers_copy") +
-              [ "../../third_party/emdawnwebgpu/pkg/webgpu/src/webgpu.cpp" ]
+    sources =
+        get_target_outputs(":emdawnwebgpu_headers_gen") +
+        get_target_outputs(":emdawnwebgpu_headers_copy") +
+        [ "${dawn_root}/third_party/emdawnwebgpu/pkg/webgpu/src/webgpu.cpp" ]
     inputs = [
-      # TODO(crbug.com/371024051): Changing these files doesn't seem to trigger a relink. Why?
-      "../../third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js",
+      # TODO(crbug.com/371024051): Changing these files doesn't seem to trigger
+      # a relink. Why?
+      "${dawn_root}/third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js",
     ]
   }
 
@@ -228,9 +243,10 @@ if (is_wasm) {
     # installed. Dawn bots don't have either of those.
     use_closure = true
     if (host_os == "mac") {
-      use_closure = exec_script("../../third_party/gn/emsdk/can-use-closure.py",
-                                [],
-                                "value")
+      use_closure =
+          exec_script("${dawn_root}/third_party/gn/emsdk/can-use-closure.py",
+                      [],
+                      "value")
     }
     if (use_closure) {
       ldflags += [ "--closure=1" ]
@@ -257,8 +273,8 @@ if (is_wasm) {
     public_configs = [ ":emdawnwebgpu_base_test_config" ]
     public_deps = [
       ":emdawnwebgpu",
-      "../dawn/tests:gmock_main",
-      "../dawn/utils:wgpu_utils",
+      "${dawn_root}/src/dawn/utils:wgpu_utils",
+      "${dawn_root}/src/utils:gmock_main",
     ]
     sources = [
       "tests/FuturesTests.cpp",
@@ -284,9 +300,11 @@ if (is_wasm) {
     ]
   }
 
-  # A "sample" that makes real (bogus) API calls to serve as a basic code size test.
+  # A "sample" that makes real (bogus) API calls to serve as a basic code size
+  # test.
   dawn_json_generator("emdawnwebgpu_link_test_cpp_gen") {
     target = "emdawnwebgpu_link_test_cpp"
+    inputs = [ "${dawn_template_dir}/emdawnwebgpu/LinkTest.cpp" ]
     outputs = [ "src/emdawnwebgpu/LinkTest.cpp" ]
   }
   executable("emdawnwebgpu_link_test") {

@@ -25,19 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/BufferMTL.h"
+#include "src/dawn/native/metal/BufferMTL.h"
 
 #include <limits>
 
-#include "dawn/common/Math.h"
-#include "dawn/common/Platform.h"
-#include "dawn/native/CallbackTaskManager.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/metal/CommandRecordingContext.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/QueueMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/CallbackTaskManager.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/metal/CommandRecordingContext.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
+#include "src/utils/compiler.h"
+#include "src/utils/platform.h"
 
 namespace dawn::native::metal {
 // The size of uniform buffer and storage buffer need to be aligned to 16 bytes which is the
@@ -134,14 +135,14 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
         auto scopedUseDuringCreation = UseInternal();
         CommandRecordingContext* commandContext =
             ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext();
-        ClearBuffer(commandContext, uint8_t(1u));
+        ClearBuffer(commandContext, uint8_t{1});
     }
 
     // Initialize the padding bytes to zero.
     if (GetDevice()->IsToggleEnabled(Toggle::LazyClearResourceOnFirstUse) && !mappedAtCreation) {
-        uint32_t paddingBytes = GetAllocatedSize() - GetSize();
+        size_t paddingBytes = GetAllocatedSize() - GetSize();
         if (paddingBytes > 0) {
-            uint32_t clearSize = Align(paddingBytes, 4);
+            size_t clearSize = Align(paddingBytes, 4);
             uint64_t clearOffset = GetAllocatedSize() - clearSize;
 
             auto scopedUseDuringCreation = UseInternal();
@@ -209,15 +210,18 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
     // The real mapped pointer is never returned for zero sized buffers. MappedAtCreation buffers
     // are initialized in BufferBase already.
     if (NeedsInitialization() && GetSize() > 0 && newState == BufferState::Mapped) {
-        std::memset(GetMappedPointerImpl(), 0, GetAllocatedSize());
+        std::ranges::fill(GetMappedRangeImpl(0, GetAllocatedSize()), std::byte(0u));
         GetDevice()->IncrementLazyClearCountForTesting();
         SetInitialized(true);
     }
     return {};
 }
 
-void* Buffer::GetMappedPointerImpl() {
-    return [*mMtlBuffer contents];
+Span<std::byte> Buffer::GetMappedRangeImpl(size_t offset, size_t size) {
+    // SAFETY: For mappable buffers, MTLBuffer::contents points at MTLBuffer::length valid bytes.
+    Span<std::byte> wholeRange = DAWN_UNSAFE_BUFFERS(
+        {static_cast<std::byte*>([*mMtlBuffer contents]), [*mMtlBuffer length]});
+    return wholeRange.subspan(offset, size);
 }
 
 void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
@@ -283,7 +287,7 @@ bool Buffer::EnsureDataInitializedAsDestination(CommandRecordingContext* command
 void Buffer::InitializeToZero(CommandRecordingContext* commandContext) {
     DAWN_ASSERT(NeedsInitialization());
 
-    ClearBuffer(commandContext, uint8_t(0u));
+    ClearBuffer(commandContext, uint8_t{0});
 
     SetInitialized(true);
     GetDevice()->IncrementLazyClearCountForTesting();

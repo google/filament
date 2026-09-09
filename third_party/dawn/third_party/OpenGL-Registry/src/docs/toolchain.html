@@ -1,0 +1,95 @@
+<html>
+
+<head>
+<title>Docbook Toolchain for Khronos Documents</title>
+</head>
+
+<body>
+<h1>What is Docbook?</h1>
+
+<p> <a href="http://www.docbook.org/">Docbook</a> is a widely used XML
+    schema for technical documentation(*). It is an open source project
+    with a great deal of supporting infrastructure and documentation.
+    Start with the <a href="http://www.dpawson.co.uk/docbook/">Docbook
+    FAQ</a> and the canonical text <a
+    href="http://docbook.org/tdg/">DocBook: The Definitive Guide</a>
+    (since we are using Docbook 4.x, read version 2.0 of the Guide).
+
+
+<p> Like LaTeX, Docbook is a structural description of a document.
+    Docbook does <b>not</b> define formatting. Using XSL stylesheets,
+    Docbook documents can be transformed into many other formats such as
+    XHTML, PDF, Unix nroff man pages, and Windows HTML Help.
+
+<p> Khronos has agreed to use Docbook as the format for new man pages
+    and technical specifications created within the group.
+    This document captures basic information about Docbook
+    and the toolchain required to use it.
+
+<p> (*) Actually, there are SGML and Relax NG schemas for Docbook
+    as well. However, for Khronos' purposes we concentrate on
+    the XML schema.
+
+
+<h1>Docbook Editors</h1>
+
+<p> Since Docbook documents are XML, it is possible (and perhaps
+    desirable for smaller documents) to simply use a text editor and
+    mark up XML by hand. Emacs is reputed to have a Docbook and/or XML
+    editing mode which may be useful.
+
+<p> There are a variety of free and commercial XML editors. Some are
+    described in the <a
+    href="http://www.dpawson.co.uk/docbook/reference.html#d17e1366">Docbook
+    FAQ</a>. We have experimented with the free Standard version of <a
+    href="http://www.xmlmind.com/xmleditor/">XMLMind</a> with some
+    success; unlike many of the other options, XMLMind understands the
+    Docbook schema and can render Docbook documents in a WYSIWYG-like
+    fashion, in addition to the straight XML structure editor.
+
+
+<h1>Docbook Schema</h1>
+
+<p> There are many versions of the Docbook XML Schema. We are currently
+    using Docbook 4.3 with MathML 2.0 support. See the DOCTYPE
+    declaration in the sample documents for the specific DTDs.
+
+
+<h1>XSL Stylesheets</h1>
+
+<p> To transform Docbook documents into final viewable formats, we use
+    the standard <a
+    href="http://wiki.docbook.org/topic/DocBookXslStylesheets"> Modular
+    Docbook XSL stylesheets</a> (version 1.69). These are available
+    prepackaged for modern Linux systems (although you may have to
+    manually select the packages) as well as for the Cygwin environment
+    on Windows. We are using version 1.69 of the stylesheets.
+
+<p> (<b>Note:</b> need links to Cygwin / Red Hat / other Linux distro?
+    packages).
+
+
+<h1>Tools</h1>
+
+<p> The Docbook 4.3 DTD is also prepackaged for most systems. Some
+    additional work is required to install the Docbook 4.3+MathML 2.0
+    DTD (details to be added).
+
+    (<b>Note:</b> need links to Cygwin / Red Hat / other Linux distro? packages).
+
+<p> To transform a Docbook document with the XSL Stylesheets,
+    a processor like <a href="http://wiki.docbook.org/topic/xsltproc">
+    xsltproc</a> or Saxon is required. Again, xsltproc
+    is prepackaged.
+
+    (<b>Note:</b> again, need links to Cygwin / Red Hat / other Linux
+    distro? packages).
+
+<h1>Examples</h1>
+
+<p> A simple example package containing a Docbook document (sample man
+    page) and Makefile to transform it are <b>here (link TBD)</b>.
+
+<p> Last modified August 13, 2006 by Jon Leech
+</body>
+</html>

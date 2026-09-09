@@ -29,11 +29,13 @@
 #include <webgpu/webgpu_cpp.h>
 #include <webgpu/webgpu_enum_class_bitmasks.h>
 
+#include <array>
 #include <cmath>
 #include <limits>
 #include <vector>
 
-#include "dawn/common/Math.h"
+#include "src/dawn/common/Math.h"
+#include "src/utils/compiler.h"
 
 namespace wgpu {
 
@@ -119,6 +121,9 @@ TEST(Math, Log2Ceil) {
 
 // Tests for IsPowerOfTwo
 TEST(Math, IsPowerOfTwo) {
+    static_assert(IsPowerOfTwo(1));
+    static_assert(!IsPowerOfTwo(3));
+
     ASSERT_TRUE(IsPowerOfTwo(1));
     ASSERT_TRUE(IsPowerOfTwo(2));
     ASSERT_FALSE(IsPowerOfTwo(3));
@@ -144,10 +149,10 @@ TEST(Math, NextPowerOfTwo) {
 TEST(Math, AlignPtr) {
     constexpr size_t kTestAlignment = 8;
 
-    char buffer[kTestAlignment * 4];
+    std::array<char, kTestAlignment * 4> buffer;
 
     for (size_t i = 0; i < 2 * kTestAlignment; ++i) {
-        char* unaligned = &buffer[i];
+        char* unaligned = &DAWN_UNSAFE_TODO(buffer[i]);
         char* aligned = AlignPtr(unaligned, kTestAlignment);
 
         ASSERT_GE(aligned - unaligned, 0);
@@ -158,6 +163,8 @@ TEST(Math, AlignPtr) {
 
 // Tests for Align
 TEST(Math, Align) {
+    static_assert(Align(77u, 4) == 80u);
+
     // 0 aligns to 0
     ASSERT_EQ(Align(0u, 4), 0u);
     ASSERT_EQ(Align(0u, 256), 0u);
@@ -255,10 +262,10 @@ TEST(Math, AlignSizeofN) {
 TEST(Math, IsPtrAligned) {
     constexpr size_t kTestAlignment = 8;
 
-    char buffer[kTestAlignment * 4];
+    std::array<char, kTestAlignment * 4> buffer;
 
     for (size_t i = 0; i < 2 * kTestAlignment; ++i) {
-        char* unaligned = &buffer[i];
+        char* unaligned = &DAWN_UNSAFE_TODO(buffer[i]);
         char* aligned = AlignPtr(unaligned, kTestAlignment);
 
         ASSERT_EQ(IsPtrAligned(unaligned, kTestAlignment), unaligned == aligned);
@@ -268,17 +275,17 @@ TEST(Math, IsPtrAligned) {
 // Tests for IsAligned
 TEST(Math, IsAligned) {
     // 0 is aligned
-    ASSERT_TRUE(IsAligned(0, 4));
-    ASSERT_TRUE(IsAligned(0, 256));
-    ASSERT_TRUE(IsAligned(0, 512));
+    ASSERT_TRUE(IsAligned(0u, 4));
+    ASSERT_TRUE(IsAligned(0u, 256));
+    ASSERT_TRUE(IsAligned(0u, 512));
 
     // Multiples are aligned
-    ASSERT_TRUE(IsAligned(8, 8));
-    ASSERT_TRUE(IsAligned(16, 8));
-    ASSERT_TRUE(IsAligned(24, 8));
-    ASSERT_TRUE(IsAligned(256, 256));
-    ASSERT_TRUE(IsAligned(512, 256));
-    ASSERT_TRUE(IsAligned(768, 256));
+    ASSERT_TRUE(IsAligned(8u, 8));
+    ASSERT_TRUE(IsAligned(16u, 8));
+    ASSERT_TRUE(IsAligned(24u, 8));
+    ASSERT_TRUE(IsAligned(256u, 256));
+    ASSERT_TRUE(IsAligned(512u, 256));
+    ASSERT_TRUE(IsAligned(768u, 256));
 
     // Alignment with 1 is always aligned
     for (uint32_t i = 0; i < 128; ++i) {
@@ -287,7 +294,7 @@ TEST(Math, IsAligned) {
 
     // Everything in the range (align, 2*align) is not aligned
     for (uint32_t i = 1; i < 64; ++i) {
-        ASSERT_FALSE(IsAligned(64 + i, 64));
+        ASSERT_FALSE(IsAligned(64u + i, 64));
     }
 }
 

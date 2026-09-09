@@ -111,7 +111,7 @@ TEST_F(IR_CoreBuiltinCallTest, CloneNoArgs) {
 
 TEST_F(IR_CoreBuiltinCallTest, CloneWithExplicitParams) {
     auto* builtin = b.Call(mod.Types().i32(), core::BuiltinFn::kAbs, 1_u);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());

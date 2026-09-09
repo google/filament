@@ -31,9 +31,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -340,7 +340,7 @@ class ComputeMultipleDispatchesTests : public DawnTestWithParams<Params> {
 
         bindGroupLayout = utils::MakeBindGroupLayout(
             device, {{0, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Uniform,
-                      /* hasDynamicOffset = */ true},
+                      /*bufferHasDynamicOffset=*/true},
                      {1, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Storage}});
 
         wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor;
@@ -504,7 +504,7 @@ class ComputeMultipleDispatchesTests : public DawnTestWithParams<Params> {
                 indirectBufferData[indirectStart] > maxComputeWorkgroupsPerDimension ||
                 indirectBufferData[indirectStart + 1] > maxComputeWorkgroupsPerDimension ||
                 indirectBufferData[indirectStart + 2] > maxComputeWorkgroupsPerDimension) {
-                std::copy(kSentinelData.begin(), kSentinelData.end(), expected.begin() + o);
+                std::ranges::copy(kSentinelData, expected.begin() + o);
             } else {
                 expected[o] = indirectBufferData[indirectStart];
                 expected[o + 1] = indirectBufferData[indirectStart + 1];

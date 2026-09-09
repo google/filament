@@ -30,12 +30,46 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/native/QuerySet.h"
+#include <vector>
+
+#include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/QuerySet.h"
 
 namespace dawn::native::metal {
 
 class Device;
+
+// CounterSampleBufferAllocator is designed to work around Apple Metal's strict driver limit of
+// 32 MTLCounterSampleBuffer allocations per process. Instead of creating a new counter sample
+// buffer for every timestamp QuerySet, this allocator pools large, shared MTLCounterSampleBuffer
+// objects and sub-allocates contiguous slices within them. When all sub-allocated ranges in a
+// pooled buffer are deallocated, the underlying MTLCounterSampleBuffer is released.
+// TODO(crbug.com/537774848): Share this pool across multiple wgpu::Device instances to fully
+// respect the per-process allocation limits.
+class CounterSampleBufferAllocator {
+  public:
+    struct Allocation {
+        id<MTLCounterSampleBuffer> buffer = nil;
+        uint32_t baseIndex = 0;
+    };
+
+    explicit CounterSampleBufferAllocator(Device* device);
+    ~CounterSampleBufferAllocator();
+
+    ResultOrError<Allocation> Allocate(uint32_t count);
+    void Deallocate(const Allocation& allocation, uint32_t count);
+
+  private:
+    struct PoolBuffer {
+        NSPRef<id<MTLCounterSampleBuffer>> buffer;
+        std::vector<bool> occupied;
+        uint32_t occupiedCount = 0;
+    };
+
+    raw_ptr<Device> mDevice;
+    std::vector<PoolBuffer> mPool;
+};
 
 class QuerySet final : public QuerySetBase {
   public:
@@ -46,6 +80,7 @@ class QuerySet final : public QuerySetBase {
 
     id<MTLBuffer> GetVisibilityBuffer() const;
     id<MTLCounterSampleBuffer> GetCounterSampleBuffer() const;
+    uint32_t GetSampleIndex(QueryIndex queryIndex) const;
 
   private:
     using QuerySetBase::QuerySetBase;
@@ -58,6 +93,7 @@ class QuerySet final : public QuerySetBase {
 
     NSPRef<id<MTLBuffer>> mVisibilityBuffer;
 
+    CounterSampleBufferAllocator::Allocation mCounterSampleBufferAllocation;
     id<MTLCounterSampleBuffer> mCounterSampleBuffer = nullptr;
 };
 

@@ -33,9 +33,9 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/TypedInteger.h"
-#include "dawn/native/BackendConnection.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/native/BackendConnection.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn::native::d3d {
 
@@ -49,7 +49,7 @@ class Backend : public BackendConnection {
 
     IDXGIFactory4* GetFactory() const;
 
-    const PlatformFunctions* GetFunctions() const;
+    const PlatformFunctions* GetFunctionsBase() const;
     MaybeError EnsureFXC();
 
     std::vector<Ref<PhysicalDeviceBase>> DiscoverPhysicalDevices(

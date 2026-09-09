@@ -32,13 +32,13 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/WeakRefSupport.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/WeakRefSupport.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -105,7 +105,7 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
 
     Ref<InstanceBase> mInstance;
     Ref<PhysicalDeviceBase> mPhysicalDevice;
-    wgpu::FeatureLevel mFeatureLevel;
+    wgpu::FeatureLevel mFeatureLevel = wgpu::FeatureLevel::Undefined;
     bool mUseTieredLimits = false;
     // Limits for the adapter, tiered if mUseTieredLimits is set.
     CombinedLimits mLimits;
@@ -116,7 +116,7 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
     // Adapter toggles state.
     TogglesState mTogglesState;
 
-    wgpu::PowerPreference mPowerPreference;
+    wgpu::PowerPreference mPowerPreference = wgpu::PowerPreference::Undefined;
 
     // The adapter becomes "consumed" once it has successfully been used to
     // create a device.

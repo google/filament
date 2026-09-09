@@ -31,12 +31,12 @@
 #include <list>
 #include <memory>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/RingBufferAllocator.h"
-#include "dawn/native/d3d12/IntegerTypes.h"
-#include "dawn/native/d3d12/PageableD3D12.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/RingBufferAllocator.h"
+#include "src/dawn/native/d3d12/IntegerTypes.h"
+#include "src/dawn/native/d3d12/PageableD3D12.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 // |ShaderVisibleDescriptorAllocator| allocates a variable-sized block of descriptors from a GPU
 // descriptor heap pool.
@@ -100,7 +100,7 @@ class ShaderVisibleDescriptorAllocator {
 
   private:
     struct SerialDescriptorHeap {
-        ExecutionSerial heapSerial;
+        ExecutionSerial lastUseSerial;
         std::unique_ptr<ShaderVisibleDescriptorHeap> heap;
     };
 
@@ -117,7 +117,7 @@ class ShaderVisibleDescriptorAllocator {
     // The serial value of 0 means the shader-visible heaps have not been allocated.
     // This value is never returned in the GPUDescriptorHeapAllocation after
     // AllocateGPUDescriptors() is called.
-    HeapVersionID mHeapSerial = HeapVersionID(0);
+    HeapVersionID mHeapSerial = HeapVersionID(0u);
 
     uint32_t mSizeIncrement;
 

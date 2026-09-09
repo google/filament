@@ -46,6 +46,7 @@ class GPUComputePipeline final : public interop::GPUComputePipeline {
     GPUComputePipeline(wgpu::ComputePipeline pipeline, std::string label);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::ComputePipeline&() const { return pipeline_; }
 
     // interop::GPUComputePipeline interface compliance

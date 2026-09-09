@@ -32,7 +32,9 @@
 #include <string>
 #include <vector>
 
+#if TINT_BUILD_WGSL_WRITER
 #include "src/tint/lang/wgsl/writer/common/options.h"
+#endif
 #include "src/tint/utils/result.h"
 
 namespace tint {
@@ -43,12 +45,14 @@ void Initialize();
 /// Shutdown uninitializes the Tint library. Call after using the Tint API.
 void Shutdown();
 
+#if TINT_BUILD_WGSL_WRITER
 /// Convert a SPIR-V binary to a WGSL shader module string.
 /// @param spirv the SPIR-V binary
 /// @param wgsl_options the options to use for generating WGSL
 /// @returns the WGSL module, or a failure
 tint::Result<std::string> SpirvToWgsl(const std::vector<uint32_t>& spirv,
                                       const wgsl::writer::Options& wgsl_options = {});
+#endif
 
 }  // namespace tint
 

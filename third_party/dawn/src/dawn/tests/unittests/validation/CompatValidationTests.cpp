@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <sstream>
 #include <string>
@@ -33,9 +34,10 @@
 
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -489,50 +491,56 @@ TEST_F(CompatValidationTest, CanNotUseTooManyTextureSamplerCombos) {
         uint32_t maxTexturesPerShaderStage =
             limits.maxSampledTexturesPerShaderStage - (test.numExternalTextures * 3);
         auto numCombos = test.numCombos;
-        std::vector<std::string> textureDeclarations[2];
-        std::vector<std::string> samplerDeclarations[2];
-        std::vector<std::string> usages[2];
+        std::array<std::vector<std::string>, 2> textureDeclarations;
+        std::array<std::vector<std::string>, 2> samplerDeclarations;
+        std::array<std::vector<std::string>, 2> usages;
         for (uint32_t stage = 0; stage < 2; ++stage) {
             uint32_t count = 0;
             for (uint32_t t = 0; count < numCombos && t < maxTexturesPerShaderStage; ++t) {
-                textureDeclarations[stage].push_back(
-                    absl::StrFormat("@group(%u) @binding(%u) var t%u_%u: texture_2d<f32>;",
-                                    stage * 2, t, stage, t));
+                DAWN_UNSAFE_TODO(textureDeclarations[stage])
+                    .push_back(
+                        absl::StrFormat("@group(%u) @binding(%u) var t%u_%u: texture_2d<f32>;",
+                                        stage * 2, t, stage, t));
                 for (uint32_t s = 0; count < numCombos && t < limits.maxSamplersPerShaderStage;
                      ++s) {
                     if (t == 0) {
-                        samplerDeclarations[stage].push_back(
-                            absl::StrFormat("@group(%u) @binding(%u) var s%u_%u: sampler;",
-                                            (stage * 2) + 1, s, stage, s));
+                        DAWN_UNSAFE_TODO(samplerDeclarations[stage])
+                            .push_back(
+                                absl::StrFormat("@group(%u) @binding(%u) var s%u_%u: sampler;",
+                                                (stage * 2) + 1, s, stage, s));
                     }
-                    usages[stage].push_back(
-                        absl::StrFormat("c += textureSampleLevel(t%u_%u, s%u_%u, vec2f(0), 0);",
-                                        stage, t, stage, s));
+                    DAWN_UNSAFE_TODO(usages[stage])
+                        .push_back(
+                            absl::StrFormat("c += textureSampleLevel(t%u_%u, s%u_%u, vec2f(0), 0);",
+                                            stage, t, stage, s));
                     ++count;
                 }
             }
 
             for (uint32_t t = 0; t < test.numNonSamplerUsages; ++t) {
-                if (t >= textureDeclarations[stage].size()) {
-                    textureDeclarations[stage].push_back(
-                        absl::StrFormat("@group(%u) @binding(%u) var t%u_%u: texture_2d<f32>;",
-                                        stage * 2, t, stage, t));
+                if (t >= DAWN_UNSAFE_TODO(textureDeclarations[stage]).size()) {
+                    DAWN_UNSAFE_TODO(textureDeclarations[stage])
+                        .push_back(
+                            absl::StrFormat("@group(%u) @binding(%u) var t%u_%u: texture_2d<f32>;",
+                                            stage * 2, t, stage, t));
                 }
-                usages[stage].push_back(
-                    absl::StrFormat("c += textureLoad(t%u_%u, vec2u(0), 0);", stage, t));
+                DAWN_UNSAFE_TODO(usages[stage])
+                    .push_back(absl::StrFormat("c += textureLoad(t%u_%u, vec2u(0), 0);", stage, t));
             }
 
             for (uint32_t t = 0; t < test.numExternalTextures; ++t) {
                 if (t == 0 || !test.useSameExternalTexture) {
-                    auto et = textureDeclarations[stage].size() + t;
-                    textureDeclarations[stage].push_back(
-                        absl::StrFormat("@group(%u) @binding(%u) var e%u_%u: texture_external;",
-                                        stage * 2, et, stage, t));
+                    auto et = DAWN_UNSAFE_TODO(textureDeclarations[stage]).size() + t;
+                    DAWN_UNSAFE_TODO(textureDeclarations[stage])
+                        .push_back(
+                            absl::StrFormat("@group(%u) @binding(%u) var e%u_%u: texture_external;",
+                                            stage * 2, et, stage, t));
                 }
-                usages[stage].push_back(
-                    absl::StrFormat("c += textureSampleBaseClampToEdge(e%u_%u, s%u_%u, vec2f(0));",
-                                    stage, test.useSameExternalTexture ? 0 : t, stage,
-                                    test.useSameExternalTexture ? t : 0));
+                DAWN_UNSAFE_TODO(usages[stage])
+                    .push_back(absl::StrFormat(
+                        "c += textureSampleBaseClampToEdge(e%u_%u, s%u_%u, vec2f(0));", stage,
+                        test.useSameExternalTexture ? 0 : t, stage,
+                        test.useSameExternalTexture ? t : 0));
             }
         }
 
@@ -1709,7 +1717,7 @@ TEST_P(CompatTextureViewValidationTests, InvalidTextureBindingViewDimensionDescr
 
 class CompatTextureViewDimensionValidationTests : public CompatTextureViewValidationTests {
   protected:
-    void TestBindingTextureViewDimensions(
+    void TestTextureBindingTextureViewDimensions(
         const uint32_t depth,
         const wgpu::TextureViewDimension textureBindingViewDimension,
         const wgpu::TextureViewDimension viewDimension,
@@ -1720,8 +1728,39 @@ class CompatTextureViewDimensionValidationTests : public CompatTextureViewValida
                           ? wgpu::TextureViewDimension::e2D
                           : viewDimension}});
 
-        wgpu::Texture texture = CreateTextureWithViewDimension(depth, wgpu::TextureDimension::e2D,
-                                                               textureBindingViewDimension);
+        wgpu::Texture texture = CreateTextureWithViewDimension(
+            depth, wgpu::TextureDimension::e2D, textureBindingViewDimension,
+            wgpu::TextureFormat::RGBA8Unorm, wgpu::TextureUsage::TextureBinding);
+
+        wgpu::TextureViewDescriptor viewDesc = {};
+        viewDesc.dimension = viewDimension;
+
+        if (success) {
+            utils::MakeBindGroup(device, layout, {{0, texture.CreateView(&viewDesc)}});
+        } else {
+            ASSERT_DEVICE_ERROR(
+                utils::MakeBindGroup(device, layout, {{0, texture.CreateView(&viewDesc)}}),
+                testing::HasSubstr("must match textureBindingViewDimension"));
+        }
+
+        texture.Destroy();
+    }
+
+    void TestStorageBindingTextureViewDimensions(
+        const uint32_t depth,
+        const wgpu::TextureViewDimension textureBindingViewDimension,
+        const wgpu::TextureViewDimension viewDimension,
+        bool success) {
+        wgpu::BindGroupLayout layout = utils::MakeBindGroupLayout(
+            device, {{0, wgpu::ShaderStage::Compute, wgpu::StorageTextureAccess::ReadWrite,
+                      wgpu::TextureFormat::R32Uint,
+                      viewDimension == wgpu::TextureViewDimension::Undefined
+                          ? wgpu::TextureViewDimension::e2D
+                          : viewDimension}});
+
+        wgpu::Texture texture = CreateTextureWithViewDimension(
+            depth, wgpu::TextureDimension::e2D, textureBindingViewDimension,
+            wgpu::TextureFormat::R32Uint, wgpu::TextureUsage::StorageBinding);
 
         wgpu::TextureViewDescriptor viewDesc = {};
         viewDesc.dimension = viewDimension;
@@ -1744,10 +1783,14 @@ class CompatTextureViewDimensionValidationTests : public CompatTextureViewValida
         bool success,
         const char* expectedSubstr) {
         if (success) {
-            CreateTextureWithViewDimension(depth, dimension, textureBindingViewDimension);
+            CreateTextureWithViewDimension(depth, dimension, textureBindingViewDimension,
+                                           wgpu::TextureFormat::RGBA8Unorm,
+                                           wgpu::TextureUsage::TextureBinding);
         } else {
             ASSERT_DEVICE_ERROR(
-                CreateTextureWithViewDimension(depth, dimension, textureBindingViewDimension),
+                CreateTextureWithViewDimension(depth, dimension, textureBindingViewDimension,
+                                               wgpu::TextureFormat::RGBA8Unorm,
+                                               wgpu::TextureUsage::TextureBinding),
                 testing::HasSubstr(expectedSubstr));
         }
     }
@@ -1774,16 +1817,16 @@ class CompatTextureViewDimensionValidationTests : public CompatTextureViewValida
     wgpu::Texture CreateTextureWithViewDimension(
         const uint32_t depth,
         const wgpu::TextureDimension dimension,
-        const wgpu::TextureViewDimension textureBindingViewDimension) {
-        constexpr wgpu::TextureFormat viewFormat = wgpu::TextureFormat::RGBA8Unorm;
-
+        const wgpu::TextureViewDimension textureBindingViewDimension,
+        const wgpu::TextureFormat format,
+        wgpu::TextureUsage usage) {
         wgpu::TextureDescriptor textureDesc;
         textureDesc.size = {1, 1, depth};
         textureDesc.dimension = dimension;
-        textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
-        textureDesc.usage = wgpu::TextureUsage::TextureBinding;
+        textureDesc.format = format;
+        textureDesc.usage = usage;
         textureDesc.viewFormatCount = 1;
-        textureDesc.viewFormats = &viewFormat;
+        textureDesc.viewFormats = &format;
 
         wgpu::TextureBindingViewDimension textureBindingViewDimensionDesc;
 
@@ -1853,41 +1896,55 @@ TEST_P(CompatTextureViewDimensionValidationTests, CubeViewMoreWhereLayersIsNot6)
 }
 
 TEST_P(CompatTextureViewDimensionValidationTests, OneLayerIs2DView) {
-    TestBindingTextureViewDimensions(1, wgpu::TextureViewDimension::Undefined,
-                                     wgpu::TextureViewDimension::e2D, true);
+    TestTextureBindingTextureViewDimensions(1, wgpu::TextureViewDimension::Undefined,
+                                            wgpu::TextureViewDimension::e2D, true);
+    TestStorageBindingTextureViewDimensions(1, wgpu::TextureViewDimension::Undefined,
+                                            wgpu::TextureViewDimension::e2D, true);
 }
 
 // Test 2 layer texture gets a 2d-array viewDimension
 TEST_P(CompatTextureViewDimensionValidationTests, TwoLayersIs2DArrayView) {
-    TestBindingTextureViewDimensions(2, wgpu::TextureViewDimension::Undefined,
-                                     wgpu::TextureViewDimension::e2DArray, true);
+    TestTextureBindingTextureViewDimensions(2, wgpu::TextureViewDimension::Undefined,
+                                            wgpu::TextureViewDimension::e2DArray, true);
+    TestStorageBindingTextureViewDimensions(2, wgpu::TextureViewDimension::Undefined,
+                                            wgpu::TextureViewDimension::e2DArray, true);
 }
 
 // Test 6 layer texture gets a 2d-array viewDimension
 TEST_P(CompatTextureViewDimensionValidationTests, SixLayersIs2DArrayView) {
-    TestBindingTextureViewDimensions(6, wgpu::TextureViewDimension::Undefined,
-                                     wgpu::TextureViewDimension::e2DArray, true);
+    TestTextureBindingTextureViewDimensions(6, wgpu::TextureViewDimension::Undefined,
+                                            wgpu::TextureViewDimension::e2DArray, true);
+    TestStorageBindingTextureViewDimensions(6, wgpu::TextureViewDimension::Undefined,
+                                            wgpu::TextureViewDimension::e2DArray, true);
 }
 
 // Test 2d texture can not be viewed as 2D array. Unless FlexibleTextureViews is enabled.
 TEST_P(CompatTextureViewDimensionValidationTests, TwoDTextureViewDimensionCanNotBeViewedAs2DArray) {
-    TestBindingTextureViewDimensions(1, wgpu::TextureViewDimension::e2D,
-                                     wgpu::TextureViewDimension::e2DArray,
-                                     HasFlexibleTextureViews());
+    TestTextureBindingTextureViewDimensions(1, wgpu::TextureViewDimension::e2D,
+                                            wgpu::TextureViewDimension::e2DArray,
+                                            HasFlexibleTextureViews());
+    TestStorageBindingTextureViewDimensions(1, wgpu::TextureViewDimension::e2D,
+                                            wgpu::TextureViewDimension::e2DArray,
+                                            HasFlexibleTextureViews());
 }
 
 // Test 2d-array texture can not be viewed as cube. Unless FlexibleTextureViews is enabled.
 TEST_P(CompatTextureViewDimensionValidationTests,
        TwoDArrayTextureViewDimensionCanNotBeViewedAsCube) {
-    TestBindingTextureViewDimensions(6, wgpu::TextureViewDimension::e2DArray,
-                                     wgpu::TextureViewDimension::Cube, HasFlexibleTextureViews());
+    TestTextureBindingTextureViewDimensions(6, wgpu::TextureViewDimension::e2DArray,
+                                            wgpu::TextureViewDimension::Cube,
+                                            HasFlexibleTextureViews());
+    // Cube textures cannot be bound as storage at all; tested elsewhere.
 }
 
 // Test cube texture can not be viewed as 2d-array. Unless FlexibleTextureViews is enabled.
 TEST_P(CompatTextureViewDimensionValidationTests, CubeTextureViewDimensionCanNotBeViewedAs2DArray) {
-    TestBindingTextureViewDimensions(6, wgpu::TextureViewDimension::Cube,
-                                     wgpu::TextureViewDimension::e2DArray,
-                                     HasFlexibleTextureViews());
+    TestTextureBindingTextureViewDimensions(6, wgpu::TextureViewDimension::Cube,
+                                            wgpu::TextureViewDimension::e2DArray,
+                                            HasFlexibleTextureViews());
+    TestStorageBindingTextureViewDimensions(6, wgpu::TextureViewDimension::Cube,
+                                            wgpu::TextureViewDimension::e2DArray,
+                                            HasFlexibleTextureViews());
 }
 
 TEST_P(CompatTextureViewValidationTests, CanNotDrawDifferentAspectSameTextureSameBindGroup) {
@@ -1971,7 +2028,7 @@ TEST_F(CompatCompressedCopyT2BAndCopyT2TValidationTests, CanNotCopyCompressedTex
         wgpu::Texture texture = device.CreateTexture(&descriptor);
 
         wgpu::BufferDescriptor bufferDescriptor;
-        bufferDescriptor.size = 256 * 4;
+        bufferDescriptor.size = 256ULL * 4;
         bufferDescriptor.usage = wgpu::BufferUsage::CopyDst;
         wgpu::Buffer buffer = device.CreateBuffer(&bufferDescriptor);
 

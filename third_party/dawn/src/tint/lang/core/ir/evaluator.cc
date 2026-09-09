@@ -155,8 +155,8 @@ Evaluator::EvalResult Evaluator::EvalConstruct(core::ir::Construct* c) {
 
     auto mat_vec = [&](const core::type::Type* type,
                        core::intrinsic::CtorConv intrinsic) -> constant::Eval::Result {
-        auto op =
-            table.Lookup(intrinsic, Vector{type}, arg_types, core::EvaluationStage::kOverride);
+        auto op = table.Lookup(intrinsic, Vector<TemplateParameter, 1>{type}, arg_types,
+                               core::EvaluationStage::kOverride);
         if (op != Success) {
             AddError(SourceOf(c)) << "unable to find intrinsic for construct: " << op.Failure();
             return Failure();
@@ -190,6 +190,9 @@ Evaluator::EvalResult Evaluator::EvalConstruct(core::ir::Construct* c) {
             if (!result_ty->Is<core::type::Scalar>()) {
                 AddError(SourceOf(c)) << "unhandled type constructor";
                 return core::constant::Eval::Result(nullptr);
+            }
+            if (arg_values.IsEmpty()) {
+                return const_eval_.Zero(result_ty, arg_values, SourceOf(c));
             }
             // For scalars, this must be an identity constructor.
             if (arg_values[0]->Type() != result_ty) {

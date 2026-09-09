@@ -25,29 +25,32 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/BufferVk.h"
+#include "src/dawn/native/vulkan/BufferVk.h"
 
 #include <algorithm>
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/GPUInfo.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/QueueVk.h"
-#include "dawn/native/vulkan/ResourceHeapVk.h"
-#include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/QueueVk.h"
+#include "src/dawn/native/vulkan/ResourceHeapVk.h"
+#include "src/dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::vulkan {
 
@@ -195,15 +198,15 @@ VkMappedMemoryRange GetMappedMemoryRange(const ResourceMemoryAllocation& allocat
                                          size_t offset,
                                          size_t size,
                                          size_t nonCoherentAtomSize) {
-    DAWN_ASSERT(IsAligned(allocation.GetOffset(), nonCoherentAtomSize));
+    DAWN_CHECK(IsAligned(allocation.GetOffset(), nonCoherentAtomSize));
 
     // `offset` must always be a multiple of nonCoherentAtomSize. `size` must either be a multiple
     // of nonCoherentAtomSize or offset+size must be equal to the size of the allocation.
-    size_t fullOffset = allocation.GetOffset() + offset;
+    size_t fullOffset = checked_cast<size_t>(allocation.GetOffset()) + offset;
     size_t alignedOffset = AlignDown(fullOffset, nonCoherentAtomSize);
     size_t alignedSize = Align(size + (fullOffset - alignedOffset), nonCoherentAtomSize);
 
-    size_t allocationSize = allocation.GetInfo().mRequestedSize;
+    size_t allocationSize = checked_cast<size_t>(allocation.GetInfo().mRequestedSize);
     if (alignedOffset + alignedSize > allocationSize) {
         alignedSize = allocationSize - alignedOffset;
     }
@@ -252,7 +255,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
 
     // Allocate at least 4 bytes so clamped accesses are always in bounds.
     // Also, Vulkan requires the size to be non-zero.
-    size = std::max(size, uint64_t(4u));
+    size = std::max(size, uint64_t{4});
 
     if (size > std::numeric_limits<uint64_t>::max() - kAlignment) {
         // Alignment would overlow.
@@ -272,7 +275,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
     // VkmemoryRequirements. See https://gitlab.khronos.org/vulkan/vulkan/issues/1904
     // Any size with one of two top bits of VkDeviceSize set is a HUGE allocation and we can
     // safely return an OOM error.
-    if (mAllocatedSize & (uint64_t(3) << uint64_t(62))) {
+    if (mAllocatedSize.value() & (uint64_t{3} << uint64_t{62})) {
         return DAWN_OUT_OF_MEMORY_ERROR("Buffer size is HUGE and could cause overflows");
     }
 
@@ -280,13 +283,13 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
     createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     createInfo.pNext = nullptr;
     createInfo.flags = 0;
-    createInfo.size = mAllocatedSize;
+    createInfo.size = mAllocatedSize.value();
     // Add CopyDst for non-mappable buffer initialization with mappedAtCreation
     // and robust resource initialization.
     createInfo.usage = VulkanBufferUsage(GetInternalUsage() | wgpu::BufferUsage::CopyDst);
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.queueFamilyIndexCount = 0;
-    createInfo.pQueueFamilyIndices = 0;
+    createInfo.pQueueFamilyIndices = nullptr;
 
     Device* device = ToBackend(GetDevice());
     DAWN_TRY(CheckVkOOMThenSuccess(
@@ -318,25 +321,27 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
 
     // The buffers with mappedAtCreation == true will be initialized in BufferBase::MapAtCreation().
     if (!mappedAtCreation) {
-        uint32_t paddingClearSize = Align(GetAllocatedSize() - GetSize(), 4);
+        size_t paddingClearSize = checked_cast<size_t>(Align(GetAllocatedSize() - GetSize(), 4));
         uint64_t paddingClearOffset = GetAllocatedSize() - paddingClearSize;
 
         if (mHostVisible && GetSize() > 0) {
             // For host visible buffers do initialization on CPU to avoid a GPU write that
             // interferes with using the UploadData() fast path.
             if (device->IsToggleEnabled(Toggle::NonzeroClearResourcesOnCreationForTesting)) {
-                DAWN_TRY(MapMemoryAndPerformOperation(
-                    0, mAllocatedSize,
-                    [](std::span<uint8_t> mapped) { std::ranges::fill(mapped, 0x01); }));
+                DAWN_TRY(
+                    MapMemoryAndPerformOperation(0, checked_cast<size_t>(mAllocatedSize.value()),
+                                                 [](std::span<std::byte> mapped) {
+                                                     std::ranges::fill(mapped, std::byte(0x01));
+                                                 }));
             }
             if (device->IsToggleEnabled(Toggle::LazyClearResourceOnFirstUse) &&
                 paddingClearSize > 0) {
-                DAWN_TRY(
-                    MapMemoryAndPerformOperation(paddingClearOffset, paddingClearSize,
-                                                 [&paddingClearSize](std::span<uint8_t> mapped) {
-                                                     DAWN_ASSERT(mapped.size() == paddingClearSize);
-                                                     std::ranges::fill(mapped, 0x0);
-                                                 }));
+                DAWN_TRY(MapMemoryAndPerformOperation(
+                    checked_cast<size_t>(paddingClearOffset), paddingClearSize,
+                    [&paddingClearSize](std::span<std::byte> mapped) {
+                        DAWN_CHECK(mapped.size() == paddingClearSize);
+                        std::ranges::fill(mapped, std::byte(0x0));
+                    }));
             }
         } else {
             if (device->IsToggleEnabled(Toggle::NonzeroClearResourcesOnCreationForTesting)) {
@@ -373,11 +378,11 @@ MaybeError Buffer::InitializeHostMapped(const BufferHostMappedPointer* hostMappe
     createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     createInfo.pNext = &externalMemoryCreateInfo;
     createInfo.flags = 0;
-    createInfo.size = mAllocatedSize;
+    createInfo.size = mAllocatedSize.value();
     createInfo.usage = VulkanBufferUsage(GetInternalUsage());
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.queueFamilyIndexCount = 0;
-    createInfo.pQueueFamilyIndices = 0;
+    createInfo.pQueueFamilyIndices = nullptr;
 
     Device* device = ToBackend(GetDevice());
     DAWN_TRY(CheckVkOOMThenSuccess(
@@ -411,15 +416,17 @@ MaybeError Buffer::InitializeHostMapped(const BufferHostMappedPointer* hostMappe
     // - is device-local on UMA
     // - cannot be non-device-local on non-UMA
     MemoryKind requestKind = MemoryKind::Linear;
-    int memoryTypeIndex =
+    auto maybeMemoryTypeIndex =
         device->GetResourceMemoryAllocator()->FindBestTypeIndex(requirements, requestKind);
-    DAWN_INVALID_IF(memoryTypeIndex < 0, "Failed to find suitable memory type.");
+    DAWN_INTERNAL_ERROR_IF(!maybeMemoryTypeIndex.has_value(),
+                           "Unable to find an appropriate memory type for import.");
+    uint32_t memoryTypeIndex = maybeMemoryTypeIndex.value();
 
     // Make a device memory wrapping the host pointer.
     VkMemoryAllocateInfo allocateInfo;
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.pNext = nullptr;
-    allocateInfo.allocationSize = mAllocatedSize;
+    allocateInfo.allocationSize = mAllocatedSize.value();
     allocateInfo.memoryTypeIndex = memoryTypeIndex;
 
     VkImportMemoryHostPointerInfoEXT importMemoryHostPointerInfo;
@@ -559,7 +566,7 @@ BufferBarrier Buffer::TrackUsageAndGetResourceBarrier(wgpu::BufferUsage usage,
 
 bool Buffer::IsCPUWritableAtCreation() const {
     // TODO(enga): Handle CPU-visible memory on UMA
-    return mMemoryAllocation.GetMappedPointer() != nullptr;
+    return mMemoryAllocation.GetMappedSpan().data() != nullptr;
 }
 
 MaybeError Buffer::MapAtCreationImpl() {
@@ -576,7 +583,8 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
     // The real mapped pointer is never returned for zero sized buffers. MappedAtCreation buffers
     // are initialized in BufferBase already.
     if (NeedsInitialization() && GetSize() > 0 && newState == BufferState::Mapped) {
-        std::memset(GetMappedPointerImpl(), 0, GetAllocatedSize());
+        std::ranges::fill(GetMappedRangeImpl(0, checked_cast<size_t>(GetAllocatedSize())),
+                          std::byte(0u));
         GetDevice()->IncrementLazyClearCountForTesting();
         SetInitialized(true);
 
@@ -588,7 +596,8 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
                 device->GetDeviceInfo().properties.limits.nonCoherentAtomSize;
 
             VkMappedMemoryRange range =
-                GetMappedMemoryRange(mMemoryAllocation, 0, GetAllocatedSize(), nonCoherentAtomSize);
+                GetMappedMemoryRange(mMemoryAllocation, 0, checked_cast<size_t>(GetAllocatedSize()),
+                                     checked_cast<size_t>(nonCoherentAtomSize));
 
             device->fn.FlushMappedMemoryRanges(device->GetVkDevice(), 1, &range);
         }
@@ -604,8 +613,9 @@ MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
             VkDeviceSize nonCoherentAtomSize =
                 device->GetDeviceInfo().properties.limits.nonCoherentAtomSize;
 
-            VkMappedMemoryRange range = GetMappedMemoryRange(mMemoryAllocation, MapOffset(),
-                                                             MapSize(), nonCoherentAtomSize);
+            VkMappedMemoryRange range =
+                GetMappedMemoryRange(mMemoryAllocation, MapOffset(), MapSize(),
+                                     checked_cast<size_t>(nonCoherentAtomSize));
 
             device->fn.InvalidateMappedMemoryRanges(device->GetVkDevice(), 1, &range);
         }
@@ -620,21 +630,19 @@ void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
         VkDeviceSize nonCoherentAtomSize =
             device->GetDeviceInfo().properties.limits.nonCoherentAtomSize;
 
-        VkMappedMemoryRange range =
-            GetMappedMemoryRange(mMemoryAllocation, MapOffset(), MapSize(), nonCoherentAtomSize);
+        VkMappedMemoryRange range = GetMappedMemoryRange(mMemoryAllocation, MapOffset(), MapSize(),
+                                                         checked_cast<size_t>(nonCoherentAtomSize));
 
         device->fn.FlushMappedMemoryRanges(device->GetVkDevice(), 1, &range);
     }
 }
 
-void* Buffer::GetMappedPointerImpl() {
-    uint8_t* memory = mMemoryAllocation.GetMappedPointer();
-    DAWN_ASSERT(memory != nullptr);
-    return memory;
+Span<std::byte> Buffer::GetMappedRangeImpl(size_t offset, size_t size) {
+    return mMemoryAllocation.GetMappedSpan().subspan(offset, size);
 }
 
-MaybeError Buffer::UploadData(uint64_t bufferOffset, const void* data, size_t size) {
-    if (size == 0) {
+MaybeError Buffer::UploadData(uint64_t bufferOffset, Span<const std::byte> data) {
+    if (data.empty()) {
         return {};
     }
 
@@ -651,32 +659,35 @@ MaybeError Buffer::UploadData(uint64_t bufferOffset, const void* data, size_t si
 
     if (isInUse || hasPendingWrites || !mHostVisible) {
         // Write to scratch buffer and copy into final destination buffer.
-        return BufferBase::UploadData(bufferOffset, data, size);
+        return BufferBase::UploadData(bufferOffset, data);
     }
 
     // Buffer does not have any pending uses and is CPU writable. We can map the buffer directly
     // and write the contents, skipping the scratch buffer.
 
     // If the buffer needs initialization request the full buffer is mapped.
-    bool needsZeroInitialization = NeedsInitialization() && size < GetSize();
-    uint64_t mapSize = needsZeroInitialization ? mAllocatedSize : size;
+    bool needsZeroInitialization = NeedsInitialization() && data.size() < GetSize();
+    uint64_t mapSize = needsZeroInitialization ? mAllocatedSize.value() : data.size();
     uint64_t mapOffset = needsZeroInitialization ? 0 : bufferOffset;
 
-    return MapMemoryAndPerformOperation(mapOffset, mapSize, [&](std::span<uint8_t> mapped) {
-        uint64_t dstOffset = 0;
-        if (needsZeroInitialization) {
-            DAWN_ASSERT(mapped.size() == mAllocatedSize);
-            std::ranges::fill(mapped, 0x0);
-            GetDevice()->IncrementLazyClearCountForTesting();
-            dstOffset = bufferOffset;
-        }
-        // The buffer is always initialized here, either by explicit zero initialization
-        // above or memcpy below.
-        SetInitialized(true);
+    return MapMemoryAndPerformOperation(
+        checked_cast<size_t>(mapOffset), checked_cast<size_t>(mapSize),
+        [&](std::span<std::byte> mapped) {
+            uint64_t dstOffset = 0;
+            if (needsZeroInitialization) {
+                DAWN_ASSERT(mapped.size() == mAllocatedSize);
+                std::ranges::fill(mapped, std::byte(0x0));
+                GetDevice()->IncrementLazyClearCountForTesting();
+                dstOffset = bufferOffset;
+            }
+            // The buffer is always initialized here, either by explicit zero initialization
+            // above or memcpy below.
+            SetInitialized(true);
 
-        DAWN_ASSERT(mapped.size() >= dstOffset + size);
-        memcpy(mapped.data() + dstOffset, data, size);
-    });
+            DAWN_ASSERT(mapped.size() >= dstOffset + data.size());
+            // TODO(https://crbug.com/524406299): Use Span::CopyFrom.
+            DAWN_UNSAFE_TODO(memcpy(mapped.data() + dstOffset, data.data(), data.size()));
+        });
 }
 
 template <typename F>
@@ -690,17 +701,17 @@ MaybeError Buffer::MapMemoryAndPerformOperation(uint64_t requestedOffset,
     DAWN_ASSERT(GetLastUsageSerial() <= device->GetQueue()->GetCompletedCommandSerial());
 
     VkDeviceMemory deviceMemory = ToBackend(mMemoryAllocation.GetResourceHeap())->GetMemory();
-    uint8_t* memory = nullptr;
+    Span<std::byte> memory;
     uint64_t realOffset = requestedOffset;
 
     if (isMappable) {
         // Mappable buffers are already persistently mapped.
-        memory = mMemoryAllocation.GetMappedPointer();
+        memory = mMemoryAllocation.GetMappedSpan();
     } else {
         // TODO(crbug.com/dawn/774): Persistently map frequently updated buffers instead of
         // mapping/unmapping each time.
         VkDeviceSize offset = mMemoryAllocation.GetOffset();
-        VkDeviceSize mapSize = mAllocatedSize;
+        VkDeviceSize mapSize = mAllocatedSize.value();
         if (mHostCoherent) {
             // We can map only the part of the buffer we need to upload the data.
             // We avoid this for non-coherent memory as the mapping needs to be aligned to
@@ -714,14 +725,17 @@ MaybeError Buffer::MapMemoryAndPerformOperation(uint64_t requestedOffset,
         DAWN_TRY(CheckVkSuccess(device->fn.MapMemory(device->GetVkDevice(), deviceMemory, offset,
                                                      mapSize, 0, &mappedPointer),
                                 "vkMapMemory"));
-        memory = static_cast<uint8_t*>(mappedPointer);
+        // SAFETY: A successful call to vkMapMemory returns a pointer to `size` bytes of mapped
+        // data. (of the full allocation when size == VK_WHOLE_SIZE).
+        memory = DAWN_UNSAFE_BUFFERS(
+            {static_cast<std::byte*>(mappedPointer), checked_cast<size_t>(mapSize)});
     }
 
     VkMappedMemoryRange mappedMemoryRange = {};
     mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mappedMemoryRange.memory = deviceMemory;
     mappedMemoryRange.offset = mMemoryAllocation.GetOffset();
-    mappedMemoryRange.size = mAllocatedSize;
+    mappedMemoryRange.size = mAllocatedSize.value();
     if (!mHostCoherent) {
         // For non-coherent memory we need to explicitly invalidate the memory range to make
         // available GPU writes visible.
@@ -729,7 +743,7 @@ MaybeError Buffer::MapMemoryAndPerformOperation(uint64_t requestedOffset,
     }
 
     // Pass a span that is exactly the offset/size requested even if a larger range was mapped.
-    op(std::span(memory + realOffset, requestedSize));
+    op(memory.subspan(checked_cast<size_t>(realOffset), checked_cast<size_t>(requestedSize)));
 
     if (!mHostCoherent) {
         // For non-coherent memory we need to explicitly flush the memory range to make the host

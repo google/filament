@@ -1,0 +1,238 @@
+Name
+
+    ARB_shading_language_100
+
+Name Strings
+
+    GL_ARB_shading_language_100
+
+Contact
+
+    John Kessenich, 3Dlabs, Inc. (johnk 'at' 3dlabs.com)
+    Barthold Lichtenbelt, NVIDIA (blichtenbelt 'at' nvidia.com)
+    Jon Leech, SGI (ljp 'at' sgi.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    Microsoft claims to own unspecified intellectual property related to
+    programmable shading.
+
+Status
+
+    Complete. Approved by the ARB on June 11, 2003.
+    Updated revision 8 approved by the ARB on June 17, 2004.
+
+Version
+
+    Last Modified Date: April 6, 2004
+    Revision: 8
+
+Number
+
+    ARB Extension #33
+
+Dependencies
+
+    This extension is written against the OpenGL 1.5 Specification
+
+    ARB_shader_objects, ARB_fragment_shader, and ARB_vertex_shader are
+    required to utilize the OpenGL Shading Language associated with this
+    extension.
+
+Overview
+
+    This extension string indicates that the OpenGL Shading Language is
+    supported. The Shading Language is defined by a separate specification
+    document which can be downloaded from
+
+        http://www.opengl.org/documentation/oglsl.html
+
+Issues
+
+    1) How do we indicate revisions in the supported version of the Shading
+       Language?
+
+        RESOLVED: Add a SHADING_LANGUAGE_VERSION query. This query was not
+        present in the initial version of the extension. Therefore,
+        applications should be prepared to detect an INVALID_ENUM error
+        being raised by glGetString(GL_SHADING_LANGUAGE_VERSION). If this
+        error is raised, but ARB_shading_language_100 is defined in the
+        EXTENSIONS string, the application can assume that the initial
+        release of the Shading Language (1.00, which was numbered "1.051"
+        corresponding to document revision 51) is supported.
+
+    2) What is the format of the SHADING_LANGUAGE_VERSION string? How does
+       it map onto the release number of the shading language specification?
+
+        RESOLVED: Identical to the VERSION string format:
+        "major.minor[.release] [vendor info]". The release number is an
+        optional vendor release number, not the shading language
+        specification document release number (which is never visible to
+        apps).
+
+        The "1.051" release number of the initial Shading Language
+        specification document corresponds to a SHADING_LANGUAGE_VERSION
+        string of "1.00", since "51" was the revision number of the
+        document, not the minor number.
+
+        Going forward, the specification and query must always use the same
+        encoding for major and minor numbers. The second release of the
+        specification will be labelled "version 1.10, document revision 55",
+        and the corresponding SHADING_LANGUAGE_VERSION string will be "1.10"
+        (we chose to bump the minor version directly to 10 to avoid problems
+        with leading 0s, and confusion with the old "1.051" document release
+        number).
+
+        Document release and vendor release numbers need not have any
+        relation to each other, since they represent changes other than
+        functionality, such as bug fixes and optimizations (for the
+        implementation), and typos and errata for the specification).
+
+        Functional changes to the shading language must always be indicated
+        by an increase in the specification minor version number. Such
+        changes may or may not correspond to changes to the core OpenGL
+        version number as well, depending on whether or not they are visible
+        in the OpenGL API.
+
+    3) Should SHADING_LANGUAGE_VERSION be added to the state tables?
+
+        RESOLVED: Yes. The other GetString queries (VERSION, EXTENSIONS,
+        RENDERER, and VENDOR), which have been omitted in the past, should
+        also be added, along with a new type code for string state values.
+
+    4) What should the exact wording of the "IP Status" language be?
+
+        Microsoft has made claims towards the low-level vertex shader and
+        towards the generic programming framework proposed but not accepted
+        into OpenGL 1.4, although that framework did not specify an actual
+        shading language. Additional verbal statements made by Dave Aronson
+        suggest that Microsoft may feel its claims extend to all
+        programmable shading implementations. In fairness to implementers,
+        we need to note the possibility of such a claim while also noting
+        our lack of any specific information about what IP is being claimed.
+
+New Tokens
+
+    Accepted by the <name> parameter of GetString:
+
+        SHADING_LANGUAGE_VERSION_ARB            0x8B8C
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and State
+Requests)
+
+    Modify Section 6.1.11, Pointer and String Queries
+
+    ... returns a pointer to a static string describing some aspect of the
+    current GL connection(1).
+       {footnote 1: Applications making copies of these static strings
+        should never use a fixed-length buffer, because the strings may grow
+        unpredictably over time resulting in buffer overflow when copying.
+        This is particularly true of the EXTENSIONS string, which has become
+        extremely long in some GL implementations.}
+    The possible values for <name> are VENDOR, RENDERER, VERSION,
+    SHADING_LANGUAGE_VERSION, and EXTENSIONS. The format of the RENDERER and
+    VENDOR strings is implementation dependent. The EXTENSIONS string
+    contains a space separated list of extension names (the extension names
+    themselves do not contain any spaces). The VERSION and
+    SHADING_LANGUAGE_VERSION strings are laid out as follows:
+
+        <version number><space><vendor-specific information>
+
+    The version number is either of the form <major_number.minor_number> or
+    <major_number.minor_number.release_number>, where the numbers all have
+    one or more digits. The <release_number> and vendor specific information
+    are optional. However, if present, then they pertain to the server and
+    their format and contents are implementation dependent.
+
+
+    Add to Table 6.3, State variable types
+
+        Type code   Explanation
+        ---------   ----------------------
+            S       NULL-terminated string
+
+Errors
+
+    The error INVALID_ENUM may be generated by GetString if <name> is
+    SHADING_LANGUAGE_VERSION, but only the initial version of this extension
+    is supported. In this case, the implementation will support the initial
+    release (version 1.00, document version labelled "1.051") of the OpenGL
+    Shading Language.
+
+New Implementation Dependent State
+
+    Added to table 6.30 (Implementation Dependent Values)
+
+    Get Value                Type  Get Command  Minimum Description          Sec.    Attrib
+                                                Value
+    ---------                ----  -----------  ------- -----------          ----    ------
+    EXTENSIONS               S     GetString       -    Supported extensions 6.1.11  -
+    RENDERER                 S     GetString       -    Renderer string      6.1.11  -
+    SHADING_LANGUAGE_VERSION S     GetString       -    Shading Language     6.1.11  -
+        _ARB                                            version supported
+    VENDOR                   S     GetString       -    Vendor string        6.1.11  -
+    VERSION                  S     GetString       -    OpenGL version       6.1.11  -
+                                                        supported
+
+Revision History
+
+   Date: 2004/04/06
+   Revision: 8
+      - Corrected several typos and noted an additional reason for going to
+        minor release number 10 instead of 1 (ambiguity relative to the
+        initial "1.051" document release number).
+
+   Date: 2004/04/06
+   Revision: 7
+      - Clarified that the release_number field is also vendor information,
+        and that the major.minor notation of the query and the shading
+        language specification must match in the future. Noted that not
+        supporting the query implies that version 1.00 of the shading
+        language is supported.
+
+   Date: 2004/04/05
+   Revision: 6
+      - Fixed some typos. Changed errors section to require that the initial
+        version of the shading language be supported if the
+        SHADING_LANGUAGE_VERSION query fails, but the extension is
+        supported.
+
+   Date: 2004/04/02
+   Revision: 5
+      - Assigned enum value to SHADING_LANGUAGE_VERSION. Corrected
+        SHADER_VERSION to SHADING_LANGUAGE_VERSION in one place previously
+        missed.
+
+   Date: 2004/03/26
+   Revision: 4
+      - Changed query from SHADER_VERSION to SHADING_LANGUAGE_VERSION to
+        match extension name. Added an issue to determine exact wording of
+        the IP Status comment.
+
+   Date: 2004/03/19
+   Revision: 3
+      - Resolved issues 2 and 3. Required that future shading language
+        specification version numbers match the SHADER_VERSION format.
+        Corrected omission of other GetString queries from the state tables.
+
+   Date: 2004/03/14
+   Revision: 2
+      - Corrected URL to refer to opengl.org instead of 3dlabs.com.
+      - Added SHADER_VERSION string query. Defined format of the shader
+        version string and described fallback behavior for older
+        implementations of the extension.

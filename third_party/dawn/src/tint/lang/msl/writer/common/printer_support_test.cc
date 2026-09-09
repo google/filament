@@ -62,7 +62,6 @@ INSTANTIATE_TEST_SUITE_P(
         MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(any)"},
         MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(any)",
                        core::BuiltinDepthMode::kUndefined},
-        MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(any)", core::BuiltinDepthMode::kAny},
         MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(greater)",
                        core::BuiltinDepthMode::kGreater},
         MslBuiltinData{core::BuiltinValue::kFragDepth, "depth(less)",

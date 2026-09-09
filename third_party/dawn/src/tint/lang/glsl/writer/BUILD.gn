@@ -57,6 +57,9 @@ if (tint_build_glsl_writer) {
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/type",
+      "${tint_src_dir}/lang/glsl/writer/common",
+      "${tint_src_dir}/lang/glsl/writer/printer",
+      "${tint_src_dir}/lang/glsl/writer/raise",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
@@ -64,22 +67,15 @@ if (tint_build_glsl_writer) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
-
-    if (tint_build_glsl_writer) {
-      deps += [
-        "${tint_src_dir}/lang/glsl/writer/common",
-        "${tint_src_dir}/lang/glsl/writer/printer",
-        "${tint_src_dir}/lang/glsl/writer/raise",
-      ]
-    }
   }
 }
 if (tint_build_unittests) {
-  if (tint_build_glsl_writer && tint_build_glsl_validator) {
+  if (tint_build_glsl_validator && tint_build_glsl_writer) {
     tint_unittests_source_set("unittests") {
       sources = [
         "access_test.cc",
@@ -90,6 +86,7 @@ if (tint_build_unittests) {
         "constructor_test.cc",
         "convert_test.cc",
         "function_test.cc",
+        "helper_test.h",
         "if_test.cc",
         "loop_test.cc",
         "switch_test.cc",
@@ -107,6 +104,12 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/core/intrinsic",
         "${tint_src_dir}/lang/core/ir",
         "${tint_src_dir}/lang/core/type",
+        "${tint_src_dir}/lang/glsl",
+        "${tint_src_dir}/lang/glsl/intrinsic",
+        "${tint_src_dir}/lang/glsl/ir",
+        "${tint_src_dir}/lang/glsl/validate",
+        "${tint_src_dir}/lang/glsl/writer",
+        "${tint_src_dir}/lang/glsl/writer/common",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
         "${tint_src_dir}/utils/diagnostic",
@@ -114,37 +117,30 @@ if (tint_build_unittests) {
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/symbol",
         "${tint_src_dir}/utils/text",
       ]
-
-      if (tint_build_glsl_validator) {
-        sources += [ "helper_test.h" ]
-        deps += [ "${tint_src_dir}/lang/glsl/validate" ]
-      }
-
-      if (tint_build_glsl_writer) {
-        deps += [
-          "${tint_src_dir}/lang/glsl/writer",
-          "${tint_src_dir}/lang/glsl/writer/common",
-        ]
-      }
     }
   }
 }
-if (tint_build_glsl_writer) {
+if (tint_build_fuzzers && tint_build_glsl_writer) {
   tint_fuzz_source_set("fuzz") {
     sources = [ "writer_fuzz.cc" ]
     deps = [
       "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
-      "${tint_src_dir}/cmd/fuzz/ir:fuzz",
+      "${tint_src_dir}/cmd/fuzz/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/type",
+      "${tint_src_dir}/lang/glsl/writer",
+      "${tint_src_dir}/lang/glsl/writer/common",
+      "${tint_src_dir}/lang/glsl/writer/helpers",
+      "${tint_src_dir}/lang/glsl/writer/printer",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/bytes",
       "${tint_src_dir}/utils/containers",
@@ -153,18 +149,10 @@ if (tint_build_glsl_writer) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
-
-    if (tint_build_glsl_writer) {
-      deps += [
-        "${tint_src_dir}/lang/glsl/writer",
-        "${tint_src_dir}/lang/glsl/writer/common",
-        "${tint_src_dir}/lang/glsl/writer/helpers",
-        "${tint_src_dir}/lang/glsl/writer/printer",
-      ]
-    }
   }
 }

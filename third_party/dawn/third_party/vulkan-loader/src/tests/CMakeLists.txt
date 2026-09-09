@@ -81,6 +81,7 @@ add_executable(
         loader_alloc_callback_tests.cpp
         loader_envvar_tests.cpp
         loader_get_proc_addr_tests.cpp
+        loader_hash_string_tests.cpp
         loader_debug_ext_tests.cpp
         loader_handle_validation_tests.cpp
         loader_layer_tests.cpp
@@ -92,6 +93,7 @@ add_executable(
         loader_wsi_tests.cpp)
 target_link_libraries(test_regression PUBLIC testing_dependencies)
 target_compile_definitions(test_regression PUBLIC VK_NO_PROTOTYPES)
+target_include_directories(test_regression PRIVATE ${CMAKE_SOURCE_DIR}/loader ${CMAKE_SOURCE_DIR}/loader/generated)
 
 add_executable(
     test_fuzzing

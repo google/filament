@@ -25,16 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d/SharedFenceD3D.h"
+#include "src/dawn/native/d3d/SharedFenceD3D.h"
 
 #include <utility>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/d3d/DeviceD3D.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/d3d/DeviceD3D.h"
 
 namespace dawn::native::d3d {
 
-SharedFence::SharedFence(Device* device, StringView label, utils::SystemHandle ownedHandle)
+SharedFence::SharedFence(Device* device, StringView label, SystemHandle ownedHandle)
     : SharedFenceBase(device, label), mHandle(std::move(ownedHandle)) {}
 
 MaybeError SharedFence::ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& info) const {

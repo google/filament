@@ -28,13 +28,14 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_COMPUTEPIPELINEGL_H_
 #define SRC_DAWN_NATIVE_D3D11_COMPUTEPIPELINEGL_H_
 
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/CreatePipelineAsyncEvent.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {
 
 class Device;
+class PipelineStateTracker;
 class ScopedSwapStateCommandRecordingContext;
 
 class ComputePipeline final : public ComputePipelineBase {
@@ -43,7 +44,7 @@ class ComputePipeline final : public ComputePipelineBase {
         Device* device,
         const UnpackedPtr<ComputePipelineDescriptor>& descriptor);
 
-    void ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext);
+    void ApplyNow(PipelineStateTracker* tracker);
 
     ID3D11ComputeShader* GetD3D11ComputeShaderForTesting();
 

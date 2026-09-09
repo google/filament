@@ -250,11 +250,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ConvertPrintToLog(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllowDuplicateBindings,
-                },
-                "before msl.ConvertPrintToLog");
+    AssertValid(ir, "before msl.ConvertPrintToLog");
 
     State{ir}.Process();
 

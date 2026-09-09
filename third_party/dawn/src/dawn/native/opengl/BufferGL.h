@@ -30,9 +30,9 @@
 
 #include <vector>
 
-#include "dawn/native/Buffer.h"
-#include "dawn/native/opengl/opengl_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 
@@ -66,13 +66,17 @@ class Buffer final : public BufferBase {
     void DestroyImpl(DestroyReason reason) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointerImpl() override;
+    Span<std::byte> GetMappedRangeImpl(size_t mapOffset, size_t mapSize) override;
 
     MaybeError InitializeToZero();
 
     GLuint mBuffer = 0;
-    raw_ptr<void> mMappedData = nullptr;
-    std::vector<char> mCPUStaging;  // used for GLDefer
+    // TODO(https://crbug.com/526537224): Use RawSpan.
+    Span<std::byte> mMappedData;
+    size_t mMappedDataOffsetInBuffer = 0u;
+    // Used as staging for mMappedData when running in GLDefer mode. Copied to the actual mapping
+    // when executing GL commands.
+    std::vector<std::byte> mCPUStaging;
 };
 
 }  // namespace dawn::native::opengl

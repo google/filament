@@ -25,19 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/ExternalTexture.h"
+#include "src/dawn/native/ExternalTexture.h"
 
 #include <algorithm>
 #include <utility>
 
-#include "dawn/common/Log.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/Device.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/Queue.h"
-#include "dawn/native/Texture.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/native/utils/WGPUHelpers.h"
+#include "src/dawn/common/ColorSpace.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/native/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
@@ -69,13 +70,13 @@ MaybeError ValidateExternalTextureDescriptor(const DeviceBase* device,
 
     DAWN_TRY(device->ValidateObject(descriptor->plane0));
 
-    DAWN_INVALID_IF(!descriptor->gamutConversionMatrix,
+    DAWN_INVALID_IF(descriptor->gamutConversionMatrix.empty(),
                     "The gamut conversion matrix must be non-null.");
 
-    DAWN_INVALID_IF(!descriptor->srcTransferFunctionParameters,
+    DAWN_INVALID_IF(descriptor->srcTransferFunctionParameters.empty(),
                     "The source transfer function parameters must be non-null.");
 
-    DAWN_INVALID_IF(!descriptor->dstTransferFunctionParameters,
+    DAWN_INVALID_IF(descriptor->dstTransferFunctionParameters.empty(),
                     "The destination transfer function parameters must be non-null.");
 
     DAWN_TRY(ValidateExternalTexturePlane(descriptor->plane0));
@@ -106,7 +107,7 @@ MaybeError ValidateExternalTextureDescriptor(const DeviceBase* device,
 
     if (descriptor->plane1) {
         DAWN_INVALID_IF(
-            !descriptor->yuvToRgbConversionMatrix,
+            descriptor->yuvToRgbConversionMatrix.empty(),
             "When more than one plane is set, the YUV-to-RGB conversion matrix must be non-null.");
 
         DAWN_TRY(device->ValidateObject(descriptor->plane1));
@@ -177,13 +178,14 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
 
     // TODO(https://crbug.com/496604550): Make the conversion matrix required, users can pass the
     // identity if needed.
-    math::Mat3x4f yMat = {
-        {1, 0, 0, 0},  //
-        {0, 1, 0, 0},  //
-        {0, 0, 1, 0},  //
-    };
-    if (descriptor->yuvToRgbConversionMatrix) {
-        const float* yMatIn = descriptor->yuvToRgbConversionMatrix;
+    auto yMat = math::Mat3x4f::FromRows({
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1},
+        {0, 0, 0},
+    });
+    if (!descriptor->yuvToRgbConversionMatrix.empty()) {
+        auto yMatIn = descriptor->yuvToRgbConversionMatrix;
         yMat = {
             {yMatIn[0], yMatIn[1], yMatIn[2], yMatIn[3]},  //
             {yMatIn[4], yMatIn[5], yMatIn[6], yMatIn[7]},  //
@@ -195,12 +197,12 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
     // Cr, 1. Reorder them by appending a "swizzling" matrix first.
     if (descriptor->plane0->GetTexture()->GetFormat().format ==
         wgpu::TextureFormat::OpaqueYCbCrAndroid) {
-        constexpr math::Mat4x4f kUndoVulkanSwizzle = {
-            {0, 1, 0, 0},
+        constexpr auto kUndoVulkanSwizzle = math::Mat4x4f::FromRows({
             {0, 0, 1, 0},
             {1, 0, 0, 0},
+            {0, 1, 0, 0},
             {0, 0, 0, 1},
-        };
+        });
         yMat = math::Mul(kUndoVulkanSwizzle, yMat);
     }
 
@@ -209,7 +211,7 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
     // Gamut correction is performed by multiplying a 3x3 matrix passed from Chromium. The
     // matrix was computed by multiplying the appropriate source and destination gamut
     // matrices sourced from ui/gfx/color_space.cc.
-    const float* gMat = descriptor->gamutConversionMatrix;
+    auto gMat = descriptor->gamutConversionMatrix;
     params.gamutConversionMatrix = {{gMat[0], gMat[1], gMat[2]},  //
                                     {gMat[3], gMat[4], gMat[5]},  //
                                     {gMat[6], gMat[7], gMat[8]}};
@@ -221,7 +223,7 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
     //    return pow(A * x + B, G) + E
     //
     // Constants are passed from Chromium and originally sourced from ui/gfx/color_space.cc
-    auto ToTransferFunctionParams = [](const float* params) -> TransferFunctionParams {
+    auto ToTransferFunctionParams = [](Span<const float, 7> params) -> TransferFunctionParams {
         TransferFunctionMode mode = TransferFunctionMode::Gamma;
 
         // TODO(https://crbug.com/496604550): Passing the mode as a negative value for G is a hack.
@@ -249,6 +251,16 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
     params.dstTransferFunction =
         ToTransferFunctionParams(descriptor->dstTransferFunctionParameters);
 
+    // Configure the HLG OOTF to perform a gamma 1.2 on the Rec2020 luminance.
+    // TODO(https://crbug.com/521494707): Make the parameters configurable.
+    if (params.srcTransferFunction.mode == TransferFunctionMode::HLG) {
+        // The factors to compute Y from RGB are derived from the YCbCr to RGB matrix.
+        constexpr math::Vec3f yFactors = kYCbCrToRGB_Rec2020.Inverse().Transposed()[0];
+        // Gamma is 1.2, which means that Y is multiplied 0.2 times to the color to achieve a total
+        // of 1.2 gamma.
+        params.ootfParam = {yFactors[0], yFactors[1], yFactors[2], 0.2f};
+    }
+
     // Compute the various transforms and bounds used for sampling and loading operations. They make
     // them appear as if operating on a `apparentSize` texture but instead they are all happening in
     // a transformed and cropped rectangle of the planes. Perform all 2D operations in homogeneous
@@ -260,10 +272,14 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
     if (params.numPlanes == 2) {
         plane1Extent = descriptor->plane1->GetSingleSubresourceVirtualSize();
     }
-    auto plane0Size = Vec2f(plane0Extent.width, plane0Extent.height);
-    auto plane1Size = Vec2f(plane1Extent.width, plane1Extent.height);
-    auto cropOrigin = Vec2f(descriptor->cropOrigin.x, descriptor->cropOrigin.y);
-    auto cropSize = Vec2f(descriptor->cropSize.width, descriptor->cropSize.height);
+    auto plane0Size =
+        Vec2f(static_cast<float>(plane0Extent.width), static_cast<float>(plane0Extent.height));
+    auto plane1Size =
+        Vec2f(static_cast<float>(plane1Extent.width), static_cast<float>(plane1Extent.height));
+    auto cropOrigin = Vec2f(static_cast<float>(descriptor->cropOrigin.x),
+                            static_cast<float>(descriptor->cropOrigin.y));
+    auto cropSize = Vec2f(static_cast<float>(descriptor->cropSize.width),
+                          static_cast<float>(descriptor->cropSize.height));
 
     // Offset the coordinates so the center texel is at the origin, so we can apply rotations and
     // y-flips. After translation, coordinates range from [-0.5 .. +0.5] in both U and V.
@@ -352,7 +368,8 @@ ExternalTextureParams ComputeExternalTextureParams(const ExternalTextureDescript
 ResultOrError<Ref<BufferBase>> MakeParamsBufferForSimpleView(DeviceBase* device,
                                                              Ref<TextureViewBase> textureView) {
     const Extent3D textureSize = textureView->GetSingleSubresourceVirtualSize();
-    std::array<float, 12> placeholderConstantArray;
+    std::array<float, 7> placeholderConstantArray7 = {};
+    std::array<float, 9> placeholderConstantArray9 = {};
 
     // Make a fake ExternalTextureDescriptor for the view that reuses the code computing uniform
     // parameters passed to the shader.
@@ -362,9 +379,9 @@ ResultOrError<Ref<BufferBase>> MakeParamsBufferForSimpleView(DeviceBase* device,
     desc.cropSize = {textureSize.width, textureSize.height};
     desc.apparentSize = {textureSize.width, textureSize.height};
     desc.doYuvToRgbConversionOnly = true;
-    desc.srcTransferFunctionParameters = placeholderConstantArray.data();
-    desc.dstTransferFunctionParameters = placeholderConstantArray.data();
-    desc.gamutConversionMatrix = placeholderConstantArray.data();
+    desc.srcTransferFunctionParameters = placeholderConstantArray7;
+    desc.dstTransferFunctionParameters = placeholderConstantArray7;
+    desc.gamutConversionMatrix = placeholderConstantArray9;
 
     ExternalTextureParams params = ComputeExternalTextureParams(&desc);
     return utils::CreateBufferFromData(device, "Dawn_Simple_Texture_View_Params_Buffer",

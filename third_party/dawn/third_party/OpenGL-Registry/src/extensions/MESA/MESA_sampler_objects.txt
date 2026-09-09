@@ -1,0 +1,105 @@
+Name
+
+    MESA_sampler_objects
+
+Name Strings
+
+    GL_MESA_sampler_objects
+
+Contact
+
+    Adam Jackson <ajax@redhat.com>
+
+Contributors
+
+    Emma Anholt
+    The contributors to ARB_sampler_objects and OpenGL ES 3
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         14 Sep 2021
+    Author Revision:            3
+
+Number
+
+    OpenGL ES Extension #344
+
+Dependencies
+
+    OpenGL ES 2.0 is required.
+
+    This extension interacts with:
+      - EXT_shadow_samplers
+      - EXT_texture_filter_anisotropic
+      - EXT_texture_sRGB_decode
+      - OES_texture_border_clamp
+
+Overview
+
+    This extension makes the sampler object subset of OpenGL ES 3.0 available
+    in OpenGL ES 2.0 contexts. As the intent is to allow access to the API
+    without necessarily requiring additional renderer functionality, some
+    sampler state that would be mandatory in GLES 3 is dependent on the
+    presence of additional extensions. Under GLES 3.0 or above this extension's
+    name string may be exposed for compatibility, but it is otherwise without
+    effect.
+
+    Refer to the OpenGL ES 3.0 specification for API details not covered here.
+
+New Procedures and Functions
+
+    void glGenSamplers (GLsizei count, GLuint *samplers);
+    void glDeleteSamplers (GLsizei count, const GLuint *samplers);
+    GLboolean glIsSampler (GLuint sampler);
+    void glBindSampler (GLuint unit, GLuint sampler);
+    void glSamplerParameteri (GLuint sampler, GLenum pname, GLint param);
+    void glSamplerParameteriv (GLuint sampler, GLenum pname, const GLint *param);
+    void glSamplerParameterf (GLuint sampler, GLenum pname, GLfloat param);
+    void glSamplerParameterfv (GLuint sampler, GLenum pname, const GLfloat *param);
+    void glGetSamplerParameteriv (GLuint sampler, GLenum pname, GLint *params);
+    void glGetSamplerParameterfv (GLuint sampler, GLenum pname, GLfloat *params);
+
+    Note that these names are exactly as in ES3, with no MESA suffix.
+
+New Tokens
+
+            SAMPLER_BINDING                                 0x8919
+
+Interactions
+
+    If EXT_shadow_samplers is not supported then TEXTURE_COMPARE_MODE and
+    TEXTURE_COMPARE_FUNC will generate INVALID_ENUM.
+
+    If EXT_texture_filter_anisotropic is not supported then
+    TEXTURE_MAX_ANISOTROPY_EXT will generate INVALID_ENUM.
+
+    If EXT_texture_sRGB_decode is not supported then TEXTURE_SRGB_DECODE_EXT
+    will generate INVALID_ENUM.
+
+    If OES_texture_border_clamp is not supported then TEXTURE_BORDER_COLOR
+    will generate INVALID_ENUM.
+
+Issues
+
+    1) Why bother?
+
+    Sampler objects, at least in Mesa, are generically supported without any
+    driver-dependent requirements, so enabling this is essentially free. This
+    simplifies application support for otherwise GLES2 hardware, and for
+    drivers in development that haven't yet achieved GLES3.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ---------------------------------------------
+      1   2019/10/22  ajax      Initial revision
+      2   2019/11/14  ajax      Add extension interactions:
+                                  - EXT_shadow_samplers
+                                  - EXT_texture_filter_anisotropic
+                                  - EXT_texture_sRGB_decode
+                                  - OES_texture_border_clamp
+      3   2021/09/14  ajax      Expand the justification and ES3 interaction

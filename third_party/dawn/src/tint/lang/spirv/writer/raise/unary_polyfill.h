@@ -38,20 +38,12 @@ class Module;
 
 namespace tint::spirv::writer::raise {
 
-// The capabilities that the transform can support.
-const core::ir::Capabilities kPolyfillUnaryCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-};
-
 /// Configuration for the UnaryPolyfill transform.
 struct UnaryPolyfillConfig {
-    /// If true, polyfill f32 negation with bit manipulation.
-    bool polyfill_f32_negation = false;
-    /// If true, polyfill f32 abs with sign() * x.
-    bool polyfill_f32_abs = false;
+    /// If true, polyfill f32 and f16 negation with bit manipulation.
+    bool polyfill_float_negation = false;
+    /// If true, polyfill f32 and f16 abs.
+    bool polyfill_float_abs = false;
 };
 
 /// UnaryPolyfill is a transform that replaces unary instructions with polyfills.

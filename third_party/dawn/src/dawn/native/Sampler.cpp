@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Sampler.h"
+#include "src/dawn/native/Sampler.h"
 
 #include <cmath>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/ObjectContentHasher.h"
-#include "dawn/native/ValidationUtils.h"
 #include "dawn/native/ValidationUtils_autogen.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/ObjectContentHasher.h"
+#include "src/dawn/native/ValidationUtils.h"
 
 namespace dawn::native {
 
@@ -77,6 +77,17 @@ MaybeError ValidateSamplerDescriptor(DeviceBase* device, const SamplerDescriptor
 
         DAWN_INVALID_IF(ycbcr->externalFormat == 0 && ycbcr->vkFormat == 0,
                         "Both VkFormat and VkExternalFormatANDROID are undefined.");
+
+        DAWN_INVALID_IF(descriptor->addressModeU != wgpu::AddressMode::ClampToEdge,
+                        "addressModeU must be ClampToEdge for YCbCr samplers.");
+        DAWN_INVALID_IF(descriptor->addressModeV != wgpu::AddressMode::ClampToEdge,
+                        "addressModeV must be ClampToEdge for YCbCr samplers.");
+        DAWN_INVALID_IF(descriptor->addressModeW != wgpu::AddressMode::ClampToEdge,
+                        "addressModeW must be ClampToEdge for YCbCr samplers.");
+
+        DAWN_INVALID_IF(descriptor->maxAnisotropy > 1,
+                        "maxAnisotropy (%d) must be 1 for YCbCr samplers.",
+                        descriptor->maxAnisotropy);
     }
 
     return {};
@@ -100,7 +111,7 @@ SamplerBase::SamplerBase(DeviceBase* device,
       mMaxAnisotropy(descriptor->maxAnisotropy) {
     if (auto* yCbCrVkDescriptor = Unpack(descriptor).Get<YCbCrVkDescriptor>()) {
         mIsYCbCr = true;
-        mYCbCrVkDescriptor = yCbCrVkDescriptor->WithTrivialFrontendDefaults();
+        mYCbCrVkDescriptor = WithTrivialFrontendDefaults(*yCbCrVkDescriptor);
         mYCbCrVkDescriptor.nextInChain = nullptr;
     }
 }
@@ -153,7 +164,7 @@ bool SamplerBase::IsYCbCr() const {
 }
 
 YCbCrVkDescriptor SamplerBase::GetYCbCrVkDescriptor() const {
-    DAWN_ASSERT(IsYCbCr());
+    DAWN_CHECK(IsYCbCr());
     return mYCbCrVkDescriptor;
 }
 
@@ -183,10 +194,10 @@ bool SamplerBase::EqualityFunc::operator()(const SamplerBase* a, const SamplerBa
         return true;
     }
 
-    DAWN_ASSERT(!std::isnan(a->mLodMinClamp));
-    DAWN_ASSERT(!std::isnan(b->mLodMinClamp));
-    DAWN_ASSERT(!std::isnan(a->mLodMaxClamp));
-    DAWN_ASSERT(!std::isnan(b->mLodMaxClamp));
+    DAWN_CHECK(!std::isnan(a->mLodMinClamp));
+    DAWN_CHECK(!std::isnan(b->mLodMinClamp));
+    DAWN_CHECK(!std::isnan(a->mLodMaxClamp));
+    DAWN_CHECK(!std::isnan(b->mLodMaxClamp));
 
     // NOTE: For simplicity, we always check the state of the YCbCr descriptor.
     // If the client did not pass in a YCbCr descriptor, `mIsYCbCr` will be

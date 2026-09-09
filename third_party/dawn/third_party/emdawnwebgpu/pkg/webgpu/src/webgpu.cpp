@@ -233,12 +233,10 @@ class Ref {
   ~Ref() { Release(mValue); }
 
   // Constructors from nullptr.
-  // NOLINTNEXTLINE(runtime/explicit)
-  constexpr Ref(std::nullptr_t) : Ref() {}
+  explicit(false) constexpr Ref(std::nullptr_t) : Ref() {}
 
   // Constructors from T*.
-  // NOLINTNEXTLINE(runtime/explicit)
-  Ref(T* value) : mValue(value) { AddRef(value); }
+  explicit(false) Ref(T* value) : mValue(value) { AddRef(value); }
   Ref<T>& operator=(T* value) {
     Set(value);
     return *this;
@@ -1813,6 +1811,11 @@ void wgpuAdapterInfoFreeMembers(WGPUAdapterInfo value) {
   // The strings are allocated via a single malloc, so freeing the first pointer
   // frees all of the strings in the struct.
   free(const_cast<char*>(value.vendor.data));
+}
+
+void wgpuAdapterPropertiesSubgroupMatrixConfigsFreeMembers(
+    WGPUAdapterPropertiesSubgroupMatrixConfigs ext) {
+  free(const_cast<WGPUSubgroupMatrixConfig*>(ext.configs));
 }
 
 void wgpuSupportedFeaturesFreeMembers(WGPUSupportedFeatures value) {

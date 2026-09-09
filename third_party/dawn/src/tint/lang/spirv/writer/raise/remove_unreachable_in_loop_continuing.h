@@ -38,14 +38,6 @@ class Module;
 
 namespace tint::spirv::writer::raise {
 
-// The capabilities that the transform can support.
-const core::ir::Capabilities kRemoveUnreachableInLoopContinuingCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-};
-
 /// RemoveUnreachableInLoopContinuing is a transform that replaces unreachable statements that are
 /// nested inside a loop continuing block, as SPIR-V's structured control flow rules prohibit this.
 /// @param module the module to transform

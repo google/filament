@@ -689,5 +689,49 @@ TEST_F(SpirvParserTest, LogicalNot_Vector) {
 )");
 }
 
+TEST_F(SpirvParserTest, IsNan_Error) {
+    auto result = Run(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+       %void = OpTypeVoid
+       %bool = OpTypeBool
+        %f32 = OpTypeFloat 32
+        %one = OpConstant %f32 1
+    %ep_type = OpTypeFunction %void
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+          %1 = OpIsNan %bool %one
+               OpReturn
+               OpFunctionEnd
+)");
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              "IsNan is not supported because NaNs cannot be represented in WGSL");
+}
+
+TEST_F(SpirvParserTest, IsInf_Error) {
+    auto result = Run(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+       %void = OpTypeVoid
+       %bool = OpTypeBool
+        %f32 = OpTypeFloat 32
+        %one = OpConstant %f32 1
+    %ep_type = OpTypeFunction %void
+       %main = OpFunction %void None %ep_type
+ %main_start = OpLabel
+          %1 = OpIsInf %bool %one
+               OpReturn
+               OpFunctionEnd
+)");
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason,
+              "IsInf is not supported because Infinities cannot be represented in WGSL");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

@@ -31,8 +31,8 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "dawn/common/HashUtils.h"
 #include "dawn/wire/Wire.h"
+#include "src/dawn/common/HashUtils.h"
 
 namespace dawn::wire {
 
@@ -45,15 +45,16 @@ struct ObjectHandle : public Handle {
     ObjectHandle();
     ObjectHandle(ObjectId objId, ObjectGeneration objGeneration);
 
-    explicit ObjectHandle(const volatile ObjectHandle& rhs);
+    explicit(false) ObjectHandle(const volatile ObjectHandle& rhs);
     ObjectHandle& operator=(const volatile ObjectHandle& rhs);
+    volatile ObjectHandle& operator=(const volatile ObjectHandle& rhs) volatile;
 
     ObjectHandle(const ObjectHandle& rhs);
     ObjectHandle& operator=(const ObjectHandle& rhs);
+    volatile ObjectHandle& operator=(const ObjectHandle& rhs) volatile;
 
     // Allow direct conversion from the base Handle type.
-    // NOLINTNEXTLINE(runtime/explicit)
-    ObjectHandle(const Handle& rhs);
+    explicit(false) ObjectHandle(const Handle& rhs);
 
     // MSVC has a bug where it thinks the volatile copy assignment is a duplicate.
     // Workaround this by forwarding to a different function AssignFrom.
@@ -61,8 +62,14 @@ struct ObjectHandle : public Handle {
     ObjectHandle& operator=(const T& rhs) {
         return AssignFrom(rhs);
     }
+    template <typename T>
+    volatile ObjectHandle& operator=(const T& rhs) volatile {
+        return AssignFrom(rhs);
+    }
     ObjectHandle& AssignFrom(const ObjectHandle& rhs);
     ObjectHandle& AssignFrom(const volatile ObjectHandle& rhs);
+    volatile ObjectHandle& AssignFrom(const ObjectHandle& rhs) volatile;
+    volatile ObjectHandle& AssignFrom(const volatile ObjectHandle& rhs) volatile;
 
     bool IsValid() const;
 };

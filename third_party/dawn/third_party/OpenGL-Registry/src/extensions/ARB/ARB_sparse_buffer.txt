@@ -1,0 +1,252 @@
+Name
+
+    ARB_sparse_buffer
+
+Name Strings
+
+    GL_ARB_sparse_buffer
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Christophe Riccio, Unity
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Last Modified Date:         5/31/2016
+    Author Revision:            4
+
+Number
+
+    ARB Extension #172
+
+Dependencies
+
+    OpenGL 4.4 is required.
+
+    This extension interacts with EXT_direct_state_access.
+
+    This extension interacts with ARB_direct_state_access.
+
+    This extension is written against the OpenGL 4.4 (core) specification.
+
+Overview
+
+    The ARB_sparse_texture extension adds to GL a mechanism to decouple the
+    virtual and physical storage requirements of textures and allows an
+    application to create partially populated textures that would
+    over-subscribe available graphics memory if made fully resident. This
+    extension provides like functionality for buffer objects, allowing
+    applications to manage buffer object storage in a similar manner.
+
+New Procedures and Functions
+
+        void BufferPageCommitmentARB(enum target,
+                                     intptr offset,
+                                     sizeiptr size,
+                                     boolean commit);
+
+New Tokens
+
+    Accepted as part of the the <flags> parameter to BufferStorage
+
+        SPARSE_STORAGE_BIT_ARB                                  0x0400
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetFloatv,
+    GetIntegerv, and GetInteger64v:
+
+        SPARSE_BUFFER_PAGE_SIZE_ARB                             0x82F8
+
+Additions to Chapter 6 of the OpenGL 4.4 (core) Specification (Buffer Objects)
+
+    In Section 6.2, "Creating and Modifying Buffer Object Data Stores", add
+    the following to the list of flags accepted by the <flags> parameter
+    to BufferStorage:
+
+        SPARSE_STORAGE_BIT_ARB The data store of the buffer object is sparse,
+        consisting only of a virtual allocation. Physical storage for buffer
+        contents may be later allocated and assigned using
+        BufferPageCommitmentARB. Initially, the entire data store is
+        uncommitted. As a side effect, the data specified in the <data>
+        parameter is discarded, although the GL may still acces the client's
+        address space within the specified region.
+
+        If <flags> contains SPARSE_STORAGE_BIT_ARB, then it may not also
+        contain any combination of MAP_READ_BIT or MAP_WRITE_BIT.
+
+    Add the following to the end of the description of BufferSubData.
+
+        If the target of the operation is sparse and the range specified by
+    <offset> and <size> includes uncommited regions, data destined for those
+    regions is silently discarded.
+
+    Add the following introduction and description of BufferPageCommitmentARB:
+
+        The command
+
+        void BufferPageCommitmentARB(enum target,
+                                     intptr offset,
+                                     sizeiptr size,
+                                     boolean commit);
+
+    may be used to commit and de-commit regions of sparse buffer storage.
+    <target> is set to one of the targets listed in table 6.1. <offset> and
+    <size> indicate the range of the data store's virtual allocation to commit.
+    <offset> must be an integer multiple of the implementation dependent
+    constant SPARSE_BUFFER_PAGE_SIZE_ARB, and <size> must either be a multiple
+    of SPARSE_BUFFER_PAGE_SIZE_ARB, or extend to the end of the buffer's
+    data store. If <commit> is TRUE, then pages contained in the specified
+    range become committed and become physically backed. If <commit> is
+    FALSE, then physical storage associated with the data store in the
+    specified region may be freed and those pages become uncommitted. Newly
+    committed pages have undefined content. However, redundantly committing
+    pages does not alter their content.
+
+        Additionally, the commands
+
+        void NamedBufferPageCommitmentEXT(uint buffer,
+                                          intptr offset,
+                                          sizeiptr size,
+                                          boolean commit);
+
+        void NamedBufferPageCommitmentARB(uint buffer,
+                                          intptr offset,
+                                          sizeiptr size,
+                                          boolean commit);
+
+    behaves similarly to BufferPageCommitmentARB except that the target of
+    the operation is the buffer whose name is specified by <buffer>.
+
+    Add subsection 6.4.1 "Effects of Accessing Uncommitted Regions of Sparse
+    Buffers"
+
+        When a buffer object's SPARSE_STORAGE_BIT_ARB is TRUE, it may be
+    fully or partially uncommitted. Unless otherwise noted, reads from
+    uncommitted regions of a sparse buffer, whether through fixed-function
+    logic or shader access return undefined values, but otherwise do not
+    negatively affect GL operation. Further, unless otherwise noted, attempts
+    to write to such regions are silently ignored. Exceptions to this behavior
+    are noted in the relevant sections of this specification.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD.
+
+Errors
+
+    INVALID_ENUM is generated by BufferPageCommitmentARB if <target> is not one
+    of the accepted buffer targets.
+
+    INVALID_VALUE is generated by BufferStorage if <flags> contains
+    SPARSE_STORAGE_BIT_ARB and <flags> also contains any combination of
+    MAP_READ_BIT or MAP_WRITE_BIT.
+
+    INVALID_OPERATION is generated by BufferPageCommitmentARB if the
+    SPARSE_STORAGE_BIT_ARB of the buffer bound to <target> is FALSE.
+
+    INVALID_VALUE is generated by BufferPageCommitmentARB if <offset> is not
+    an integer multiple of SPARSE_BUFFER_PAGE_SIZE_ARB, or if <size> is not
+    an integer multiple of SPARSE_BUFFER_PAGE_SIZE_ARB and does not extend
+    to the end of the buffer's data store.
+
+    INVALID_VALUE is generated by BufferPageCommitmentARB if either of
+    <offset> or <size> is negative, or if <offset> + <size> is greater than the
+    value of BUFFER_SIZE for the buffer bound to <target>.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    Append to Table 23.55, Implementation Dependent Values
+
+    +-----------------------------------+-------+----------------+----------------+-----------------------------------------+------+
+    | Get Value                         | Type  | Get Command    | Minimum Value  | Description                             | Sec. |
+    +-----------------------------------+-------+----------------+----------------+-----------------------------------------+------+
+    | SPARSE_BUFFER_PAGE_SIZE_ARB       | Z+    | GetIntegerv    | 65536 **       | Page size of sparse buffers in bytes.   | 6.2  |
+    +-----------------------------------+-------+----------------+----------------+-----------------------------------------+------+
+
+    ** The value of SPARSE_BUFFER_PAGE_SIZE_ARB is the largest allowed value.
+    Smaller values are permitted and it is recommended to implementors that it
+    be a power of two.
+
+Usage Examples
+
+    TBD
+
+Dependencies on GL_EXT_direct_state_access
+
+    If GL_EXT_direct_state_access is not supported, remove references to
+    NamedBufferPageCommitmentEXT.
+
+
+Dependencies on GL_ARB_direct_state_access
+
+    If GL_ARB_direct_state_access is not supported, remove references to
+    NamedBufferPageCommitmentARB.
+
+
+Issues
+
+    1) What is the effect of reading from or writing to an uncommitted region
+       of a buffer's data store.
+
+       RESOLVED: This is defined (or undefined) on a case-by case basis. If it
+       is not defined in this specification, then reads return undefined data,
+       but never interrupt the GL, and writes are silently ignored. Atomics
+       with return constitute a read-modify-write cycle, where the read
+       produces undefined results and the write is discarded.
+
+    2) Should mapping a sparse buffer be allowed? What is the defined content
+       as seen for the client for unmapped parts of the buffer?
+
+       RESOLVED: No, it's not possible to map a sparse buffer at all. Such
+       functionality could always be added by a future extension. In this
+       extension, we disallow creation of a mappable sparse buffer, which in
+       turns will cause MapBuffer{Range} to fail if a mapping attempt is
+       made.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ---------------------------------------------
+      4   5/31/2016   Jon Leech Change dependency from GL 1.5 + ARB_vbo to
+                                GL 4.4 (Bug 14117).
+      3   5/16/2014   criccio   Added interactions with
+                                GL_ARB_direct_state_access
+      2   4/17/2014   gsellers  Make it illegal to create a mappable sparse
+                                buffer. Add DSA entry point. Change name of
+                                SPARSE_BUFFER_PAGE_SIZE_ARB. Allow <size> in
+                                BufferPageCommitmentARB to go to the end of
+                                the buffer.
+      1   1/1/2014    gsellers  Initial revision

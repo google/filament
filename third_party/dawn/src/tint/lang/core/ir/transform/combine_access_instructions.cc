@@ -80,13 +80,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> CombineAccessInstructions(Module& ir) {
-    core::ir::AssertValid(ir,
-                          core::ir::Capabilities{
-                              core::ir::Capability::kAllowDuplicateBindings,
-                              core::ir::Capability::kAllowNonCoreTypes,
-                              core::ir::Capability::kAllow8BitIntegers,
-                          },
-                          "before core.CombineAccessInstructions");
+    core::ir::AssertValid(ir, "before core.CombineAccessInstructions");
 
     State{ir}.Process();
 

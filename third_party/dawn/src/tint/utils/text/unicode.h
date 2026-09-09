@@ -46,6 +46,7 @@ struct CodePoint {
     inline explicit CodePoint(uint32_t v) : value(v) {}
 
     /// @returns the code point value
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator uint32_t() const { return value; }
 
     /// Assignment operator
@@ -106,6 +107,14 @@ size_t Encode(CodePoint code_point, std::span<uint8_t> buffer);
 /// @returns true if all the utf-8 code points in the string are ASCII
 /// (code-points 0x00..0x7f).
 bool IsASCII(std::string_view);
+
+/// @returns true if the string is a valid identifier (starts with a letter or underscore,
+/// followed by letters, numbers, or underscores).
+bool IsIdentifier(std::string_view);
+
+/// @returns true if the string is a valid WGSL identifier.
+/// @see https://www.w3.org/TR/WGSL/#identifiers
+bool IsWGSLIdentifier(std::string_view);
 
 }  // namespace utf8
 

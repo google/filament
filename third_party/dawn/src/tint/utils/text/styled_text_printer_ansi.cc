@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include <array>
 #include <cstring>
 
@@ -38,6 +33,7 @@
 #include "src/tint/utils/text/styled_text_printer.h"
 #include "src/tint/utils/text/styled_text_theme.h"
 #include "src/tint/utils/text/text_style.h"
+#include "src/utils/compiler.h"
 
 namespace tint {
 namespace {
@@ -102,7 +98,9 @@ class Printer24Bit : public StyledTextPrinter {
                     fprintf(file_, ESCAPE "[22m");
                 }
             }
-            fwrite(text.data(), 1, text.size(), file_);
+            // SAFETY: The source buffer is text.data() and its length is text.size(), which is
+            // bounds-safe for this write.
+            DAWN_UNSAFE_BUFFERS(fwrite(text.data(), 1, text.size(), file_));
         });
         fprintf(file_, ESCAPE "[m");
         fflush(file_);
@@ -188,7 +186,9 @@ class Printer8Bit : public StyledTextPrinter {
                     fprintf(file_, ESCAPE "[22m");
                 }
             }
-            fwrite(text.data(), 1, text.size(), file_);
+            // SAFETY: The source buffer is text.data() and its length is text.size(), which is
+            // bounds-safe for this write.
+            DAWN_UNSAFE_BUFFERS(fwrite(text.data(), 1, text.size(), file_));
         });
         fprintf(file_, ESCAPE "[m");
         fflush(file_);

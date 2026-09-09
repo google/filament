@@ -1,0 +1,32 @@
+From: Barthold Lichtenbelt <barthold.lichtenbelt 'at' 3dlabs.com>
+Date: Wed, 01 Dec 1999 10:32:55 -0700
+
+3Dlabs extension support for:
+
+Permedia3 Create!, Oxygen VX1, Oxygen GVX1, Oxygen GVX210
+---------------------------------------------------------
+
+GL_Autodesk_valid_back_buffer_hint *
+GL_EXT_bgra
+GL_EXT_blend_minmax
+GL_EXT_blend_subtract
+GL_EXT_paletted_texture
+GL_EXT_polygon_offset
+GL_EXT_shared_texture_palette
+GL_EXT_texture3D
+GL_EXT_texture_edge_clamp
+GL_EXT_texture_env_add
+GL_EXT_texture_env_combine
+GL_EXT_texture_object
+GL_EXT_vertex_array
+GL_KTX_buffer_region *
+GL_WIN_swap_hint
+
+* WinNT only. All other ones are for Win9x and WinNT.
+
+OpenGL extensions for Permedia3 Create! and Oxygen VX1 only
+-----------------------------------------------------------
+
+GL_ARB_multitexture
+GL_Autodesk_facet_normal
+GL_SGIS_multitexture

@@ -61,7 +61,8 @@ struct State {
     std::unique_ptr<ShaderIOBackendState> backend{};
 
     /// Process the module.
-    void Process() {
+    /// @returns Success if all of the sub-tasks succeed, otherwise propagates the failure reason
+    Result<SuccessType> Process() {
         // Collect all structures before the transform has run, so that we can strip their shader IO
         // attributes later.
         Vector<const type::Struct*, 16> structures_to_strip;
@@ -80,7 +81,7 @@ struct State {
                 continue;
             }
 
-            ProcessEntryPoint(func, make_backend_state(ir, func));
+            TINT_CHECK_RESULT(ProcessEntryPoint(func, make_backend_state(ir, func)));
         }
 
         // Remove IO attributes from all structure members that had them prior to this transform.
@@ -90,12 +91,15 @@ struct State {
                 const_cast<core::type::StructMember*>(member)->ResetAttributes();
             }
         }
+
+        return Success;
     }
 
     /// Process an entry point.
     /// @param f the original entry point function
     /// @param bs the backend state object
-    void ProcessEntryPoint(Function* f, std::unique_ptr<ShaderIOBackendState> bs) {
+    /// @returns Success if all of the sub-tasks succeed, otherwise propagates the failure reason
+    Result<SuccessType> ProcessEntryPoint(Function* f, std::unique_ptr<ShaderIOBackendState> bs) {
         TINT_SCOPED_ASSIGNMENT(ep, f);
         backend = std::move(bs);
         TINT_DEFER(backend = nullptr);
@@ -107,6 +111,7 @@ struct State {
         // Add an output for the vertex point size if needed.
         std::optional<uint32_t> vertex_point_size_index;
         if (ep->IsVertex() && backend->NeedsVertexPointSize()) {
+            ir.properties.Add(core::ir::Property::kAllowPointSizeBuiltin);
             vertex_point_size_index =
                 backend->AddOutput(ir.symbols.New("vertex_point_size"), ty.f32(),
                                    core::IOAttributes{
@@ -114,12 +119,12 @@ struct State {
                                    });
         }
 
-        auto new_params = backend->FinalizeInputs();
-        auto* new_ret_ty = backend->FinalizeOutputs();
+        TINT_CHECK_RESULT_UNWRAP(new_params, backend->FinalizeInputs());
+        TINT_CHECK_RESULT_UNWRAP(new_ret_ty, backend->FinalizeOutputs());
 
         // Skip entry points with no new inputs or outputs.
         if (!backend->HasInputs() && !backend->HasOutputs()) {
-            return;
+            return Success;
         }
 
         // Rename the old function and remove its pipeline stage, workgroup size and subgroup size,
@@ -157,6 +162,8 @@ struct State {
 
         // Return the new result.
         wrapper.Return(wrapper_ep, backend->MakeReturnValue(wrapper));
+
+        return Success;
     }
 
     /// Gather the shader inputs.
@@ -334,8 +341,9 @@ core::ir::Value* ShaderIOBackendState::PolyfillGlobalInvocationIndex(
     return tint_global_invocation_index;
 }
 
-void RunShaderIOBase(Module& module, std::function<MakeBackendStateFunc> make_backend_state) {
-    State{make_backend_state, module}.Process();
+Result<SuccessType> RunShaderIOBase(Module& module,
+                                    std::function<MakeBackendStateFunc> make_backend_state) {
+    return State{make_backend_state, module}.Process();
 }
 
 ShaderIOBackendState::~ShaderIOBackendState() = default;

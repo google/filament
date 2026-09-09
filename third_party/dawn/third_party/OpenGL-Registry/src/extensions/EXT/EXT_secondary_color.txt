@@ -1,0 +1,406 @@
+Name
+
+    EXT_secondary_color
+
+Name Strings
+
+    GL_EXT_secondary_color
+
+Version
+
+    NVIDIA Date: February 24, 2000
+    $Date: 1999/06/21 19:57:47 $ $Revision: 1.8 $
+
+Number
+
+    145
+
+Dependencies
+
+    Either EXT_separate_specular_color or OpenGL 1.2 is required, to specify
+    the "Color Sum" stage and other handling of the secondary color. This is
+    written against the 1.2 specification (available from www.opengl.org).
+
+Overview
+
+    This extension allows specifying the RGB components of the secondary
+    color used in the Color Sum stage, instead of using the default
+    (0,0,0,0) color. It applies only in RGBA mode and when LIGHTING is
+    disabled.
+
+Issues
+
+  * Can we use the secondary alpha as an explicit fog weighting factor?
+
+        ISVs prefer a separate interface (see GL_EXT_fog_coord). The current
+        interface specifies only the RGB elements, leaving the option of a
+        separate extension for SecondaryColor4() entry points open (thus
+        the apparently useless ARRAY_SIZE state entry).
+
+        There is an unpleasant asymmetry with Color3() - one assumes A =
+        1.0, the other assumes A = 0.0 - but this appears unavoidable given
+        the 1.2 color sum specification language. Alternatively, the color
+        sum language could be rewritten to not sum secondary A.
+
+  * What about multiple "color iterators" for use with aggrandized
+    multitexture implementations?
+
+        We may need this eventually, but the secondary color is well defined
+        and a more generic interface doesn't seem justified now.
+
+  * Interleaved array formats?
+
+        No. The multiplicative explosion of formats is too great.
+
+  * Do we want to be able to query the secondary color value? How does it
+    interact with lighting?
+
+        The secondary color is not part of the GL state in the
+        separate_specular_color extension that went into OpenGL 1.2. There,
+        it can't be queried or obtained via feedback.
+
+        The secondary_color extension is slightly more general-purpose, so
+        the secondary color is explicitly in the GL state and can be queried
+        - but it's still somewhat limited and can't be obtained via
+        feedback, for example.
+
+New Procedures and Functions
+
+    void SecondaryColor3[bsifd ubusui]EXT(T components)
+    void SecondaryColor3[bsifd ubusui]vEXT(T components)
+    void SecondaryColorPointerEXT(int size, enum type, sizei stride,
+                                  void *pointer)
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        COLOR_SUM_EXT                       0x8458
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        CURRENT_SECONDARY_COLOR_EXT         0x8459
+        SECONDARY_COLOR_ARRAY_SIZE_EXT      0x845A
+        SECONDARY_COLOR_ARRAY_TYPE_EXT      0x845B
+        SECONDARY_COLOR_ARRAY_STRIDE_EXT    0x845C
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+        SECONDARY_COLOR_ARRAY_POINTER_EXT   0x845D
+
+    Accepted by the <array> parameter of EnableClientState and
+    DisableClientState:
+
+        SECONDARY_COLOR_ARRAY_EXT           0x845E
+
+Additions to Chapter 2 of the 1.2 Draft Specification (OpenGL Operation)
+
+  These changes describe a new current state type, the secondary color, and
+  the commands to specify it:
+
+  - (2.6, p. 12) Second paragraph changed to:
+
+        "Each vertex is specified with two, three, or four coordinates. In
+        addition, a current normal, current texture coordinates, current
+        color, and current secondary color may be used in processing each
+        vertex."
+
+    Third paragraph, second sentence changed to:
+
+        "These associated colors are either based on the current color and
+        current secondary color, or produced by lighting, depending on
+        whether or not lighting is enabled."
+
+  - 2.6.3, p. 19) First paragraph changed to
+
+        "The only GL commands that are allowed within any Begin/End pairs
+        are the commands for specifying vertex coordinates, vertex colors,
+        normal coordinates, and texture coordinates (Vertex, Color,
+        SecondaryColorEXT, Index, Normal, TexCoord)..."
+
+  - (2.7, p. 20) Starting with the fourth paragraph, change to:
+
+        "Finally, there are several ways to set the current color and
+        secondary color. The GL stores a current single-valued color index
+        as well as a current four-valued RGBA color and secondary color.
+        Either the index or the color and secondary color are significant
+        depending as the GL is in color index mode or RGBA mode. The mode
+        selection is made when the GL is initialized.
+
+        The commands to set RGBA colors and secondary colors are:
+
+            void Color[34][bsifd ubusui](T components)
+            void Color[34][bsifd ubusui]v(T components)
+            void SecondaryColor3[bsifd ubusui]EXT(T components)
+            void SecondaryColor3[bsifd ubusui]vEXT(T components)
+
+        The color command has two major variants: Color3 and Color4. The
+        four value versions set all four values. The three value versions
+        set R, G, and B to the provided values; A is set to 1.0. (The
+        conversion of integer color components (R, G, B, and A) to
+        floating-point values is discussed in section 2.13.)
+
+        The secondary color command has only the three value versions.
+        Secondary A is always set to 0.0.
+
+        Versions of the Color and SecondaryColorEXT commands that take
+        floating-point values accept values nominally between 0.0 and
+        1.0...."
+
+    The last paragraph is changed to read:
+
+        "The state required to support vertex specification consists of four
+        floating-point numbers to store the current texture coordinates s,
+        t, r, and q, four floating-point values to store the current RGBA
+        color, four floating-point values to store the current RGBA
+        secondary color, and one floating-point value to store the current
+        color index. There is no notion of a current vertex, so no state is
+        devoted to vertex coordinates. The initial values of s, t, and r of
+        the current texture coordinates are zero; the initial value of q is
+        one. The initial current normal has coordinates (0,0,1). The initial
+        RGBA color is (R,G,B,A) = (1,1,1,1). The initial RGBA secondary
+        color is (R,G,B,A) = (0,0,0,0). The initial color index is 1."
+
+  - (2.8, p. 21) Added secondary color command for vertex arrays:
+
+    Change first paragraph to read:
+
+        "The vertex specification commands described in section 2.7 accept
+        data in almost any format, but their use requires many command
+        executions to specify even simple geometry. Vertex data may also be
+        placed into arrays that are stored in the client's address space.
+        Blocks of data in these arrays may then be used to specify multiple
+        geometric primitives through the execution of a single GL command.
+        The client may specify up to seven arrays: one each to store edge
+        flags, texture coordinates, colors, secondary colors, color indices,
+        normals, and vertices. The commands"
+
+    Add to functions listed following first paragraph:
+
+        void SecondaryColorPointerEXT(int size, enum type, sizei stride,
+                                      void *pointer)
+
+    Add to table 2.4 (p. 22):
+
+        Command                     Sizes   Types
+        -------                     -----   -----
+        SecondaryColorPointerEXT    3       byte,ubyte,short,ushort,int,uint,
+                                            float,double
+
+    Starting with the second paragraph on p. 23, change to add
+    SECONDARY_COLOR_ARRAY_EXT:
+
+        "An individual array is enabled or disabled by calling one of
+
+            void EnableClientState(enum array)
+            void DisableClientState(enum array)
+
+        with array set to EDGE_FLAG_ARRAY, TEXTURE_COORD_ARRAY, COLOR_ARRAY,
+        SECONDARY_COLOR_ARRAY_EXT, INDEX_ARRAY, NORMAL_ARRAY, or
+        VERTEX_ARRAY, for the edge flag, texture coordinate, color,
+        secondary color, color index, normal, or vertex array, respectively.
+
+        The ith element of every enabled array is transferred to the GL by
+        calling
+
+            void ArrayElement(int i)
+
+        For each enabled array, it is as though the corresponding command
+        from section 2.7 or section 2.6.2 were called with a pointer to
+        element i. For the vertex array, the corresponding command is
+        Vertex<size><type>v, where <size> is one of [2,3,4], and <type> is
+        one of [s,i,f,d], corresponding to array types short, int, float,
+        and double respectively. The corresponding commands for the edge
+        flag, texture coordinate, color, secondary color, color index, and
+        normal arrays are EdgeFlagv, TexCoord<size><type>v,
+        Color<size><type>v, SecondaryColor3<type>vEXT, Index<type>v, and
+        Normal<type>v, respectively..."
+
+    Change pseudocode on p. 27 to disable secondary color array for
+    canned interleaved array formats. After the lines
+
+            DisableClientState(EDGE_FLAG_ARRAY);
+            DisableClientState(INDEX_ARRAY);
+
+        insert the line
+
+            DisableClientState(SECONDARY_COLOR_ARRAY_EXT);
+
+    Substitute "seven" for every occurence of "six" in the final paragraph
+    on p. 27.
+
+  - (2.12, p. 41) Add secondary color to the current rasterpos state.
+
+    Change the last paragraph to read
+
+        "The current raster position requires five single-precision
+        floating-point values for its x_w, y_w, and z_w window coordinates,
+        its w_c clip coordinate, and its eye coordinate distance, a single
+        valid bit, a color (RGBA color, RGBA secondary color, and color
+        index), and texture coordinates for associated data. In the initial
+        state, the coordinates and texture coordinates are both $(0,0,0,1)$,
+        the eye coordinate distance is 0, the valid bit is set, the
+        associated RGBA color is $(1,1,1,1)$, the associated RGBA secondary
+        color is $(0,0,0,0)$, and the associated color index color is 1. In
+        RGBA mode, the associated color index always has its initial value;
+        in color index mode, the RGBA color and and secondary color always
+        maintain their initial values."
+
+  - (2.13, p. 43) Change second paragraph to acknowledge two colors when
+    lighting is disabled:
+
+        "Next, lighting, if enabled, produces either a color index or
+        primary and secondary colors. If lighting is disabled, the current
+        color index or current color (primary color) and current secondary
+        color are used in further processing. After lighting, RGBA colors
+        are clamped..."
+
+  - (Figure 2.8, p. 42) Change to show primary and secondary RGBA colors in
+    both lit and unlit paths.
+
+  - (2.13.1, p. 44) Change so that the second paragraph starts:
+
+    "Lighting may be in one of two states:
+
+     1. Lighting Off. In this state, the current color and current secondary
+        color are assigned to the vertex primary color and vertex secondary
+        color, respectively.
+
+     2. ..."
+
+  - (2.13.1, p. 48) Change the sentence following equation 2.5 (for spot_i)
+    so that color sum is implicitly enabled when SEPARATE_SPECULAR_COLOR is
+    set:
+
+    "All computations are carried out in eye coordinates. When c_es =
+    SEPARATE_SPECULAR_COLOR, it is as if color sum (see section 3.9) were
+    enabled, regardless of the value of COLOR_SUM_EXT."
+
+
+  - (3.9, p. 136) Change the first paragraph to read
+
+    "After texturing, a fragment has two RGBA colors: a primary color c_pri
+    (which texturing, if enabled, may have modified) and a secondary color
+    c_sec.
+
+    If color sum is enabled, the components of these two colors are summed
+    to produce a single post-texturing RGBA color c (the A component of the
+    secondary color is always 0). The components of c are then clamped to
+    the range [0,1]. If color sum is disabled, then c_pri is assigned to the
+    post texturing color. Color sum is enabled or disabled using the generic
+    Enable and Disable commands, respectively, with the symbolic constant
+    COLOR_SUM_EXT.
+
+    The state required is a single bit indicating whether color sum is
+    enabled or disabled. In the initial state, color sum is disabled."
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+  None
+
+Additions to the GLX Specification
+
+  None
+
+GLX Protocol
+
+    Eight new GL rendering commands are added. The following commands
+    are sent to the server as part of a glXRender request:
+
+        SecondaryColor3bvEXT
+            2           8               rendering command length
+            2           4126            rendering command opcode
+            1           INT8            v[0]
+            1           INT8            v[1]
+            1           INT8            v[2]
+            1                           unused
+
+        SecondaryColor3svEXT
+            2           12              rendering command length
+            2           4127            rendering command opcode
+            2           INT16           v[0]
+            2           INT16           v[1]
+            2           INT16           v[2]
+            2                           unused
+
+        SecondaryColor3ivEXT
+            2           16              rendering command length
+            2           4128            rendering command opcode
+            4           INT32           v[0]
+            4           INT32           v[1]
+            4           INT32           v[2]
+
+        SecondaryColor3fvEXT
+            2           16              rendering command length
+            2           4129            rendering command opcode
+            4           FLOAT32         v[0]
+            4           FLOAT32         v[1]
+            4           FLOAT32         v[2]
+
+        SecondaryColor3dvEXT
+            2           28              rendering command length
+            2           4130            rendering command opcode
+            8           FLOAT64         v[0]
+            8           FLOAT64         v[1]
+            8           FLOAT64         v[2]
+
+        SecondaryColor3ubvEXT
+            2           8               rendering command length
+            2           4131            rendering command opcode
+            1           CARD8           v[0]
+            1           CARD8           v[1]
+            1           CARD8           v[2]
+            1                           unused
+
+        SecondaryColor3usvEXT
+            2           12               rendering command length
+            2           4132            rendering command opcode
+            2           CARD16          v[0]
+            2           CARD16          v[1]
+            2           CARD16          v[2]
+            2                           unused
+
+        SecondaryColor3uivEXT
+            2           16               rendering command length
+            2           4133            rendering command opcode
+            4           CARD32          v[0]
+            4           CARD32          v[1]
+            4           CARD32          v[2]
+
+Errors
+
+    INVALID_VALUE is generated if SecondaryColorPointerEXT parameter <size>
+    is not 3.
+
+    INVALID_ENUM is generated if SecondaryColorPointerEXT parameter <type>
+    is not BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT,
+    FLOAT, or DOUBLE.
+
+    INVALID_VALUE is generated if SecondaryColorPointerEXT parameter
+    <stride> is negative.
+
+New State
+
+(table 6.5, p. 195)
+    Get Value                   Type    Get Command     Initial Value   Description     Sec Attribute
+    ---------                   ----    -----------     -------------   -----------     --- ---------
+    CURRENT_SECONDARY_COLOR_EXT C       GetIntegerv,    (0,0,0,0)       Current         2.7 current
+                                        GetFloatv                       secondary color
+
+(table 6.6, p. 197)
+    Get Value                           Type    Get Command     Initial Value   Description                     Sec Attribute
+    ---------                           ----    -----------     -------------   -----------                     --- ---------
+    SECONDARY_COLOR_ARRAY_EXT           B       IsEnabled       False           Sec. color array enable         2.8 vertex-array
+    SECONDARY_COLOR_ARRAY_SIZE_EXT      Z+      GetIntegerv     3               Sec. colors per vertex          2.8 vertex-array
+    SECONDARY_COLOR_ARRAY_TYPE_EXT      Z8      GetIntegerv     FLOAT           Type of sec. color components   2.8 vertex-array
+    SECONDARY_COLOR_ARRAY_STRIDE_EXT    Z+      GetIntegerv     0               Stride between sec. colors      2.8 vertex-array
+    SECONDARY_COLOR_ARRAY_POINTER_EXT   Y       GetPointerv     0               Pointer to the sec. color array 2.8 vertex-array
+
+(table 6.8, p. 198)
+    Get Value                   Type    Get Command     Initial Value   Description     Sec Attribute
+    ---------                   ----    -----------     -------------   -----------     --- ---------
+    COLOR_SUM_EXT               B       IsEnabled       False           True if color   3.9 fog/enable
+                                                                        sum enabled

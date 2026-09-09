@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_BINDGROUPGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_BINDGROUPGL_H_
 
-#include "dawn/common/PlacementAllocated.h"
-#include "dawn/native/BindGroup.h"
+#include "src/dawn/common/PlacementAllocated.h"
+#include "src/dawn/native/BindGroup.h"
 
 namespace dawn::native::opengl {
 

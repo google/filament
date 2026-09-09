@@ -30,7 +30,7 @@
 
 #include "dawn/native/NullBackend.h"
 
-#include "dawn/native/null/DeviceNull.h"
+#include "src/dawn/native/null/DeviceNull.h"
 
 namespace dawn::native::null {
 

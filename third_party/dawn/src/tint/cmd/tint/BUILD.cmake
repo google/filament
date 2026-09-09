@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)
 ################################################################################
 # Target:    tint_cmd_tint_cmd
 # Kind:      cmd
+# Condition: TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER
 ################################################################################
 tint_add_target(tint_cmd_tint_cmd cmd
   cmd/tint/main.cc
@@ -49,16 +51,15 @@ tint_target_add_dependencies(tint_cmd_tint_cmd cmd
   tint_cmd_common
   tint_lang_core
   tint_lang_core_constant
+  tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_type
-  tint_lang_hlsl_writer_common
   tint_lang_wgsl
   tint_lang_wgsl_ast
   tint_lang_wgsl_inspector
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
-  tint_lang_wgsl_writer_common
   tint_utils
   tint_utils_command
   tint_utils_containers
@@ -67,6 +68,7 @@ tint_target_add_dependencies(tint_cmd_tint_cmd cmd
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_strconv
   tint_utils_symbol
@@ -77,11 +79,11 @@ tint_target_add_external_dependencies(tint_cmd_tint_cmd cmd
   "src_utils"
 )
 
-if(TINT_BUILD_GLSL_VALIDATOR)
+if(TINT_BUILD_GLSL_VALIDATOR AND TINT_BUILD_GLSL_WRITER)
   tint_target_add_dependencies(tint_cmd_tint_cmd cmd
     tint_lang_glsl_validate
   )
-endif(TINT_BUILD_GLSL_VALIDATOR)
+endif(TINT_BUILD_GLSL_VALIDATOR AND TINT_BUILD_GLSL_WRITER)
 
 if(TINT_BUILD_GLSL_WRITER)
   tint_target_add_dependencies(tint_cmd_tint_cmd cmd
@@ -95,6 +97,7 @@ if(TINT_BUILD_HLSL_WRITER)
   tint_target_add_dependencies(tint_cmd_tint_cmd cmd
     tint_lang_hlsl_validate
     tint_lang_hlsl_writer
+    tint_lang_hlsl_writer_common
   )
 endif(TINT_BUILD_HLSL_WRITER)
 
@@ -135,7 +138,10 @@ endif(TINT_BUILD_WGSL_READER)
 if(TINT_BUILD_WGSL_WRITER)
   tint_target_add_dependencies(tint_cmd_tint_cmd cmd
     tint_lang_wgsl_writer
+    tint_lang_wgsl_writer_common
   )
 endif(TINT_BUILD_WGSL_WRITER)
 
 tint_target_set_output_name(tint_cmd_tint_cmd cmd "tint")
+
+endif(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)

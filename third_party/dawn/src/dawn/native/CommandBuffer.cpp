@@ -25,18 +25,17 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandBuffer.h"
 
-#include <utility>
-
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Format.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/Texture.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/Texture.h"
 
 namespace dawn::native {
 
@@ -85,7 +84,7 @@ void CommandBufferBase::SetEncoderLabel(std::string encoderLabel) {
 }
 
 MaybeError CommandBufferBase::ValidateCanUseInSubmitNow() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
 
     DAWN_INVALID_IF(!IsAlive(), "%s cannot be submitted more than once.", this);
     return {};
@@ -94,15 +93,16 @@ MaybeError CommandBufferBase::ValidateCanUseInSubmitNow() const {
 void CommandBufferBase::DestroyImpl(DestroyReason reason) {
     // These metadatas hold raw_ptr to the commands, so they need to be cleared first.
     mIndirectDrawMetadata.clear();
-    FreeCommands(&mCommands);
     mResourceUsages = {};
+
+    FreeCommands(&mCommands);
 }
 
 const CommandBufferResourceUsage& CommandBufferBase::GetResourceUsages() const {
     return mResourceUsages;
 }
 
-const std::vector<IndirectDrawMetadata>& CommandBufferBase::GetIndirectDrawMetadata() {
+const ityp::vector<PassIndex, IndirectDrawMetadata>& CommandBufferBase::GetIndirectDrawMetadata() {
     return mIndirectDrawMetadata;
 }
 
@@ -114,7 +114,7 @@ bool IsCompleteSubresourceCopiedTo(const TextureBase* texture,
                                    const TexelExtent3D& copySize,
                                    const uint32_t mipLevel,
                                    Aspect aspect) {
-    DAWN_ASSERT(HasOneBit(aspect) || aspect == (Aspect::Depth | Aspect::Stencil));
+    DAWN_CHECK(HasOneBit(aspect) || aspect == (Aspect::Depth | Aspect::Stencil));
 
     TexelExtent3D extent = texture->GetMipLevelSingleSubresourcePhysicalSize(mipLevel, aspect);
 
@@ -144,14 +144,14 @@ SubresourceRange GetSubresourcesAffectedByCopy(const TextureCopy& copy,
                                                const TexelExtent3D& copySize) {
     switch (copy.texture->GetDimension()) {
         case wgpu::TextureDimension::e1D:
-            DAWN_ASSERT(copy.origin.z == TexelCount{0} &&
-                        copySize.depthOrArrayLayers == TexelCount{1});
-            DAWN_ASSERT(copy.mipLevel == 0);
+            DAWN_CHECK(copy.origin.z == TexelCount{0u} &&
+                       copySize.depthOrArrayLayers == TexelCount{1u});
+            DAWN_CHECK(copy.mipLevel == 0);
             return {copy.aspect, {0, 1}, {0, 1}};
         case wgpu::TextureDimension::e2D:
             return {copy.aspect,
-                    {static_cast<uint32_t>(copy.origin.z),
-                     static_cast<uint32_t>(copySize.depthOrArrayLayers)},
+                    {dchecked_cast<uint32_t>(copy.origin.z),
+                     dchecked_cast<uint32_t>(copySize.depthOrArrayLayers)},
                     {copy.mipLevel, 1}};
         case wgpu::TextureDimension::e3D:
             return {copy.aspect, {0, 1}, {copy.mipLevel, 1}};
@@ -163,46 +163,65 @@ SubresourceRange GetSubresourcesAffectedByCopy(const TextureCopy& copy,
 
 MaybeError LazyClearRenderPassAttachments(DeviceBase* device,
                                           BeginRenderPassCmd* renderPass,
-                                          LazyClearTexture3DHelper clearTexture3D) {
+                                          LazyClearTextureHelper clearTexture) {
     if (!device->IsToggleEnabled(Toggle::LazyClearResourceOnFirstUse)) {
         return {};
     }
+
+    // Detect if a renderArea has been set that only covers part of the render pass attachments.
+    // If so we'll be expanding the renderArea to full dimensions to enforce native driver clears
+    // for any uninitialized attachments below, while preserving dynamic scissor clipping.
+    bool partialRenderArea = (renderPass->renderArea.x != 0 || renderPass->renderArea.y != 0 ||
+                              renderPass->renderArea.width != renderPass->width ||
+                              renderPass->renderArea.height != renderPass->height);
 
     for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
         auto& attachmentInfo = renderPass->colorAttachments[i];
         TextureViewBase* view = attachmentInfo.view.Get();
         bool hasResolveTarget = attachmentInfo.resolveTarget != nullptr;
 
-        DAWN_ASSERT(view->GetLayerCount() == 1);
-        DAWN_ASSERT(view->GetLevelCount() == 1);
+        DAWN_CHECK(view->GetLayerCount() == 1);
+        DAWN_CHECK(view->GetLevelCount() == 1);
         SubresourceRange range = view->GetSubresourceRange();
         TextureBase* texture = view->GetTexture();
 
-        // If the loadOp is Load, but the subresource is not initialized, use Clear instead.
-        if (attachmentInfo.loadOp == wgpu::LoadOp::Load &&
-            !texture->IsSubresourceContentInitialized(range)) {
-            attachmentInfo.loadOp = wgpu::LoadOp::Clear;
-            attachmentInfo.clearColor = {0.f, 0.f, 0.f, 0.f};
-        }
-
-        // For 3D textures, rendering to a single depthSlice marks the entire mip level as
-        // initialized. If it wasn't already initialized, we must clear the other slices
-        // before the render pass starts.
-        // TODO(500975625): Optimize this.
-        if (texture->GetDimension() == wgpu::TextureDimension::e3D &&
-            !texture->IsSubresourceContentInitialized(range)) {
-            DAWN_TRY(clearTexture3D(texture, range));
+        if (!texture->IsSubresourceContentInitialized(range)) {
+            if (texture->GetDimension() == wgpu::TextureDimension::e3D) {
+                // For 3D textures, rendering to a single depthSlice marks the entire mip level as
+                // initialized. If it wasn't already initialized, we must clear the other slices
+                // before the render pass starts.
+                // TODO(500975625): Optimize this.
+                DAWN_TRY(clearTexture(texture, range));
+            } else {
+                if (partialRenderArea) {
+                    renderPass->forceFullRenderArea = true;
+                }
+                if (attachmentInfo.loadOp == wgpu::LoadOp::Load) {
+                    // If the loadOp is Load, but the subresource is not initialized, use Clear
+                    // instead.
+                    attachmentInfo.loadOp = wgpu::LoadOp::Clear;
+                    attachmentInfo.clearColor = {0.0, 0.0, 0.0, 0.0};
+                }
+            }
         }
 
         if (hasResolveTarget) {
-            // We need to set the resolve target to initialized so that it does not get
-            // cleared later in the pipeline. The texture will be resolved from the
-            // source color attachment, which will be correctly initialized.
             TextureViewBase* resolveView = attachmentInfo.resolveTarget.Get();
-            DAWN_ASSERT(resolveView->GetLayerCount() == 1);
-            DAWN_ASSERT(resolveView->GetLevelCount() == 1);
-            resolveView->GetTexture()->SetIsSubresourceContentInitialized(
-                true, resolveView->GetSubresourceRange());
+            DAWN_CHECK(resolveView->GetLayerCount() == 1);
+            DAWN_CHECK(resolveView->GetLevelCount() == 1);
+            if (!resolveView->GetTexture()->IsSubresourceContentInitialized(
+                    resolveView->GetSubresourceRange())) {
+                if (partialRenderArea) {
+                    // Using a renderArea that only partially covers the attachment means that the
+                    // resolve target won't have the full subresource copied over.
+                    renderPass->forceFullRenderArea = true;
+                }
+                // We need to set the resolve target to initialized so that it does not get
+                // cleared later in the pipeline. The texture will be resolved from the
+                // source color attachment, which will be correctly initialized.
+                resolveView->GetTexture()->SetIsSubresourceContentInitialized(
+                    true, resolveView->GetSubresourceRange());
+            }
         }
 
         switch (attachmentInfo.storeOp) {
@@ -223,8 +242,8 @@ MaybeError LazyClearRenderPassAttachments(DeviceBase* device,
     if (renderPass->attachmentState->HasDepthStencilAttachment()) {
         auto& attachmentInfo = renderPass->depthStencilAttachment;
         TextureViewBase* view = attachmentInfo.view.Get();
-        DAWN_ASSERT(view->GetLayerCount() == 1);
-        DAWN_ASSERT(view->GetLevelCount() == 1);
+        DAWN_CHECK(view->GetLayerCount() == 1);
+        DAWN_CHECK(view->GetLevelCount() == 1);
         SubresourceRange range = view->GetSubresourceRange();
 
         SubresourceRange depthRange = range;
@@ -235,16 +254,24 @@ MaybeError LazyClearRenderPassAttachments(DeviceBase* device,
 
         // If the depth stencil texture has not been initialized, we want to use loadop
         // clear to init the contents to 0's
-        if (!view->GetTexture()->IsSubresourceContentInitialized(depthRange) &&
-            attachmentInfo.depthLoadOp == wgpu::LoadOp::Load) {
-            attachmentInfo.clearDepth = 0.0f;
-            attachmentInfo.depthLoadOp = wgpu::LoadOp::Clear;
+        if (!view->GetTexture()->IsSubresourceContentInitialized(depthRange)) {
+            if (attachmentInfo.depthLoadOp == wgpu::LoadOp::Load) {
+                attachmentInfo.clearDepth = 0.0f;
+                attachmentInfo.depthLoadOp = wgpu::LoadOp::Clear;
+            }
+            if (partialRenderArea) {
+                renderPass->forceFullRenderArea = true;
+            }
         }
 
-        if (!view->GetTexture()->IsSubresourceContentInitialized(stencilRange) &&
-            attachmentInfo.stencilLoadOp == wgpu::LoadOp::Load) {
-            attachmentInfo.clearStencil = 0u;
-            attachmentInfo.stencilLoadOp = wgpu::LoadOp::Clear;
+        if (!view->GetTexture()->IsSubresourceContentInitialized(stencilRange)) {
+            if (attachmentInfo.stencilLoadOp == wgpu::LoadOp::Load) {
+                attachmentInfo.clearStencil = 0u;
+                attachmentInfo.stencilLoadOp = wgpu::LoadOp::Clear;
+            }
+            if (partialRenderArea) {
+                renderPass->forceFullRenderArea = true;
+            }
         }
 
         view->GetTexture()->SetIsSubresourceContentInitialized(
@@ -262,15 +289,19 @@ MaybeError LazyClearRenderPassAttachments(DeviceBase* device,
                 continue;
             }
 
-            DAWN_ASSERT(view->GetLayerCount() == 1);
-            DAWN_ASSERT(view->GetLevelCount() == 1);
+            DAWN_CHECK(view->GetLayerCount() == 1);
+            DAWN_CHECK(view->GetLevelCount() == 1);
             const SubresourceRange& range = view->GetSubresourceRange();
 
             // If the loadOp is Load, but the subresource is not initialized, use Clear instead.
-            if (attachmentInfo.loadOp == wgpu::LoadOp::Load &&
-                !view->GetTexture()->IsSubresourceContentInitialized(range)) {
-                attachmentInfo.loadOp = wgpu::LoadOp::Clear;
-                attachmentInfo.clearColor = {0.f, 0.f, 0.f, 0.f};
+            if (!view->GetTexture()->IsSubresourceContentInitialized(range)) {
+                if (attachmentInfo.loadOp == wgpu::LoadOp::Load) {
+                    attachmentInfo.loadOp = wgpu::LoadOp::Clear;
+                    attachmentInfo.clearColor = {0.0, 0.0, 0.0, 0.0};
+                }
+                if (partialRenderArea) {
+                    renderPass->forceFullRenderArea = true;
+                }
             }
 
             switch (attachmentInfo.storeOp) {
@@ -292,7 +323,7 @@ MaybeError LazyClearRenderPassAttachments(DeviceBase* device,
 }
 
 bool IsFullBufferOverwrittenInTextureToBufferCopy(const CopyTextureToBufferCmd* copy) {
-    DAWN_ASSERT(copy != nullptr);
+    DAWN_CHECK(copy != nullptr);
     return IsFullBufferOverwrittenInTextureToBufferCopy(copy->source, copy->destination,
                                                         copy->copySize);
 }
@@ -307,8 +338,8 @@ bool IsFullBufferOverwrittenInTextureToBufferCopy(const TextureCopy& source,
 
     const TypedTexelBlockInfo& blockInfo = GetBlockInfo(source);
     BlockExtent3D copySize = blockInfo.ToBlock(copySize_in);
-    const bool multiSlice = copySize.depthOrArrayLayers > BlockCount{1};
-    const bool multiRow = multiSlice || copySize.height > BlockCount{1};
+    const bool multiSlice = copySize.depthOrArrayLayers > BlockCount{1u};
+    const bool multiRow = multiSlice || copySize.height > BlockCount{1u};
 
     if (multiSlice && destination.rowsPerImage > copySize.height) {
         // There are gaps between slices that aren't overwritten
@@ -350,6 +381,23 @@ std::array<uint32_t, 4> ConvertToUnsignedIntegerColor(dawn::native::Color color)
         static_cast<uint32_t>(color.r), static_cast<uint32_t>(color.g),
         static_cast<uint32_t>(color.b), static_cast<uint32_t>(color.a)};
     return outputValue;
+}
+
+void UpdateQueryAvailability(const WriteTimestampCmd* cmd) {
+    cmd->querySet->MarkQueryAvailable(cmd->queryIndex);
+}
+
+void UpdateQueryAvailability(const EndOcclusionQueryCmd* cmd) {
+    cmd->querySet->MarkQueryAvailable(cmd->queryIndex);
+}
+
+void UpdateQueryAvailability(const TimestampWrites& writes) {
+    if (writes.beginningOfPassWriteIndex != kQuerySetIndexUndefinedTyped) {
+        writes.querySet->MarkQueryAvailable(writes.beginningOfPassWriteIndex);
+    }
+    if (writes.endOfPassWriteIndex != kQuerySetIndexUndefinedTyped) {
+        writes.querySet->MarkQueryAvailable(writes.endOfPassWriteIndex);
+    }
 }
 
 }  // namespace dawn::native

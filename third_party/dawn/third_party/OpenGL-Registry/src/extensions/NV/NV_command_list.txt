@@ -1,0 +1,1107 @@
+Name
+
+    NV_command_list
+
+Name Strings
+
+    GL_NV_command_list
+
+Contact
+
+    Pierre Boudier, NVIDIA (pboudier 'at' nvidia.com)
+    Christoph Kubisch, NVIDIA (ckubisch 'at' nvidia.com)
+    Tristan Lorach, NVIDIA (tlorach 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Corentin Wallez, NVIDIA
+    Markus Tavenrath, NVIDIA
+    Mark Kilgard, NVIDIA
+    Joseph Emmons, NVIDIA
+    Thomas Ludwig, MAXON
+
+Status
+
+    Shipping with NVIDIA driver release 347.88 (March 2015)
+
+Version
+
+    Last Modified Date: November 3, 2015
+    Revision: 6
+
+Number
+
+    OpenGL Extension #477
+
+Dependencies
+
+    This extension interacts with NV_vertex_buffer_unified_memory.
+    
+    This extension interacts with NV_uniform_buffer_unified_memory.
+    
+    This extension interacts with NV_parameter_buffer_object.
+    
+    This extension interacts with ARB_robust_buffer_access_behavior
+    
+    This extension interacts with NV_bindless_texture and ARB_bindless_texture
+    
+    This extension interacts with NV_shader_buffer_load
+    
+    This extension interacts with ARB_shader_draw_parameters
+    
+    The extension is written against the OpenGL 4.4 Specification, 
+    Compatibility Profile.
+
+Overview
+
+    This extension adds a few new features designed to provide very low 
+    overhead batching and replay of rendering commands and state changes:
+
+    - A state object, which stores a pre-validated representation of the
+      the state of (almost) the entire pipeline.
+
+    - A more flexible and extensible MultiDrawIndirect (MDI) type of mechanism, using
+      a token-based command stream, allowing to setup binding state and emit draw calls.
+
+    - A set of functions to execute a list of the token-based command streams with state object
+      changes interleaved with the streams.
+
+    - Command lists enabling compilation and reuse of sequences of command
+      streams and state object changes.
+
+    Because state objects reflect the state of the entire pipeline, it is 
+    expected that they can be pre-validated and executed efficiently. It is 
+    also expected that when state objects are combined into a command list,
+    the command list can diff consecutive state objects to produce a reduced/
+    optimized set of state changes specific to that transition.
+
+    The token-based command stream can also be stored in regular buffer objects
+    and therefore be modified by the server itself. This allows more 
+    complex work creation than the original MDI approach, which was limited
+    to emitting draw calls only.
+
+New Procedures and Functions
+
+    void CreateStatesNV(sizei n, uint *states);
+    void DeleteStatesNV(sizei n, const uint *states);
+    boolean IsStateNV(uint state);
+
+    void StateCaptureNV(uint state, enum mode);
+
+    uint   GetCommandHeaderNV(enum tokenID, uint size);
+    ushort GetStageIndexNV(enum shadertype);
+    
+    void DrawCommandsNV(enum primitiveMode, uint buffer, const intptr* indirects, const sizei* sizes, 
+                        uint count);
+    void DrawCommandsAddressNV(enum primitiveMode, const uint64* indirects, const sizei* sizes, 
+                               uint count);
+
+    void DrawCommandsStatesNV(uint buffer, const intptr* indirects, const sizei* sizes, 
+                                   const uint* states, const uint* fbos, uint count);
+    void DrawCommandsStatesAddressNV(const uint64* indirects, const sizei* sizes, 
+                                     const uint* states, const uint* fbos, uint count);
+
+    void CreateCommandListsNV(sizei n, uint *lists);
+    void DeleteCommandListsNV(sizei n, const uint *lists);
+    boolean IsCommandListNV(uint list);
+    
+    void ListDrawCommandsStatesClientNV(uint list, uint segment, const void** indirects, 
+                                        const sizei* sizes, const uint* states, const uint* fbos, uint count);
+    
+    void CommandListSegmentsNV(uint list, uint segments);
+    void CompileCommandListNV(uint list);
+    void CallCommandListNV(uint list);
+  
+New Tokens
+
+    Used in DrawCommandsStates buffer formats, in
+    GetCommandHeaderNV to return the header:
+
+
+      TERMINATE_SEQUENCE_COMMAND_NV                      0x0000
+      NOP_COMMAND_NV                                     0x0001
+      DRAW_ELEMENTS_COMMAND_NV                           0x0002
+      DRAW_ARRAYS_COMMAND_NV                             0x0003
+      DRAW_ELEMENTS_STRIP_COMMAND_NV                     0x0004
+      DRAW_ARRAYS_STRIP_COMMAND_NV                       0x0005
+      DRAW_ELEMENTS_INSTANCED_COMMAND_NV                 0x0006
+      DRAW_ARRAYS_INSTANCED_COMMAND_NV                   0x0007
+      ELEMENT_ADDRESS_COMMAND_NV                         0x0008
+      ATTRIBUTE_ADDRESS_COMMAND_NV                       0x0009
+      UNIFORM_ADDRESS_COMMAND_NV                         0x000a
+      BLEND_COLOR_COMMAND_NV                             0x000b
+      STENCIL_REF_COMMAND_NV                             0x000c
+      LINE_WIDTH_COMMAND_NV                              0x000d
+      POLYGON_OFFSET_COMMAND_NV                          0x000e
+      ALPHA_REF_COMMAND_NV                               0x000f
+      VIEWPORT_COMMAND_NV                                0x0010
+      SCISSOR_COMMAND_NV                                 0x0011
+      FRONT_FACE_COMMAND_NV                              0x0012
+          
+
+Additions to Chapter 5 of the OpenGL 4.4 (Compatibility) Specification
+(Shared Objects and Multiple Contexts)
+
+    Add state objects and command lists to the set of objects that can not be 
+    shared between contexts.
+    
+Additions to Chapter 7 of the OpenGL 4.4 (Compatibility) Specification
+(Shared Objects and Multiple Contexts)
+
+    Modify Section 7.12.2, Shader Memory Access Synchronization
+    
+    (modify list of barrier bits)
+    
+    * COMMAND_BARRIER_BIT: Command data sourced from buffer objects by
+      Draw*Indirect, DispatchComputeIndirect and DrawCommands*NV commands 
+      after the barrier will reflect data written by shaders prior to the 
+      barrier. The buffer objects affected by this bit are derived from the
+      DRAW_INDIRECT_BUFFER and DISPATCH_INDIRECT_BUFFER bindings, or 
+      from the arguments passed to DrawCommands*NV.
+
+Additions to Chapter 10 of the OpenGL 4.4 (Compatibility) Specification 
+(Drawing Commands)
+
+Add a new Section 10.X (Indirect Draw Commands With State Changes)
+
+Add a new subsection 10.X.1 (State Objects)
+
+    The current state of the rendering pipeline can be captured into a state 
+    object for later reuse with a new set of drawing commands. The name space
+    for state objects is the unsigned integers, with zero reserved. The 
+    command:
+
+        void CreateStatesNV(sizei n, uint *states);
+
+    returns <n> previously unused state object names in <states>, and creates
+    a state object in the initial state for each name.
+
+    State objects are deleted by calling
+
+        void DeleteStatesNV(sizei n, const uint *states);
+
+    <states> contains <n> names of state objects to be deleted. Once a state
+    object is deleted it has no contents and its name is again unused. Unused 
+    names in <states> are silently ignored, as is the value zero.
+
+    All the states that can be set via DrawCommandsStatesNV (as defined in 
+    Section 10.X.2) are excluded from the captured state and will be inherited 
+    from the most recent commands or GL context state. Binding state is, however,
+    never inherited from GL context, only from commands.
+
+    
+    The command 
+    
+        void StateCaptureNV(uint state, enum basicmode);
+
+    captures the current state of the rendering pipeline into the object 
+    indicated by <state>. <basicmode> indicates the basic Begin mode that this
+    state object must be used with, see Table 10.X.1.2 for compatibility
+    between primitive modes and basic modes.
+  
+        Table 10.X.1.2 (Primitive mode compatibility)
+
+        basic primitive mode        | compatible primitive mode
+        ---------------------------------------------------------------------
+        POINTS                      | POINTS
+        LINES                       | LINES
+                                    | LINE_STRIP
+                                    | LINE_LOOP
+        TRIANGLES                   | TRIANGLES
+                                    | TRIANGLE_STRIP
+                                    | TRIANGLE_FAN
+        QUADS                       | QUADS
+                                    | QUAD_STRIP
+        PATCHES                     | PATCHES
+        LINES_ADJACENCY             | LINES_ADJACENCY
+                                    | LINES_STRIP_ADJACENCY
+        TRIANGLES_ADJACENCY         | TRIANGLES_ADJACENCY
+                                    | TRIANGLES_STRIP_ADJACENCY
+
+    This rendering state includes:
+
+    - Vertex attribute enable state, formats, types, relative offsets and strides.
+      
+    - Primitive state such as primitive restart and patch parameters, provoking vertex.
+      
+    - Immediate vertex attribute values as provided by glVertexAttrib* or
+      glVertexAttribI*
+      
+    - All active program binaries except compute (either from the active 
+      program pipeline or from UseProgram) with their current subroutine 
+      configuration.
+    
+    - Rasterization, multisample fragment operation, depth, stencil, and 
+      blending state.
+      
+    - Rasterization state such as stippling and polygon modes and offsets.
+
+    - Viewport, scissor, and depth range state.
+
+    - Framebuffer attachment configuration: attachment state including attachment 
+      formats, drawbuffer state, and target/layer information, but not including 
+      actual attachments or sizes of attachments (these are stored separately).
+     
+    - Framebuffer attachment textures (but not their residency state).
+    
+    It does NOT include:
+
+    - Bound vertex buffers or vertex unified addresses, or their offsets,
+      or bound index buffers/addresses.
+
+    - Other program-related bindings, such as shader storage buffers, atomic counter buffers, texture
+      and sampler bindings.
+
+    - Default-block uniform values from active programs
+
+    - Blending constant color, front and back stencil reference values, alpha test threshold.
+
+    - Polygon offset values.
+
+    - Viewport and scissor rectangle for viewport index zero.
+
+    Essentially all state that can be manupulated by the commands listed in 10.X.2 (Drawing with Commands)
+    is excluded from the state capture.
+     
+    INVALID_ENUM is generated if <mode> is not a basic primitive mode, as listed
+    in Table 10.X.1.2.
+    INVALID_OPERATION is generated if the default framebuffer is bound as either draw or read buffer.
+    INVALID_OPERATION is generated if transform feedback is enabled.
+    INVALID_OPERATION is generated if occlusion query is enabled.
+    INVALID_OPERATION is generated if the current active program or program pipeline
+    makes use of SHADER_STORAGE_BUFFER, ATOMIC_COUNTER_BUFFER or has uniforms defined
+    in the default uniform-block, or uniforms inheriting from fixed function state 
+    (gl_ModelView etc.).
+    INVALID_OPERATION is generated if the current active program or program pipeline
+    uses uniform blocks that did not have the "commandBindableNV" flag set (see
+    "Modifications to the OpenGL Shading Language Specification" section).
+    INVALID_OPERATION is generated if neither program, nor program pipeline
+    objects are actively used.
+
+Add a new subsection 10.X.2 (Drawing with Commands)
+    
+        void DrawCommandsNV(enum mode, uint buffer, const intptr* indirects, const sizei* sizes, 
+                            uint count);
+        void DrawCommandsAddressNV(enum mode, const uint64* indirects, const sizei* sizes, 
+                                   uint count);
+
+    These commands accept arrays of buffer addresses (either an array of 
+    offsets <indirects> into a buffer named by <buffer>, or an array of GPU 
+    addresses <indirects>), and an array of sequence lengths in <sizes>. 
+    All arrays have <count> entries.
+    The current binding state of vertex, element and uniform buffers will not be
+    effective but must be set via commands within the buffer, other state will
+    however be inherited from the current OpenGL context.
+
+    INVALID_ENUM is generated if <mode> is not an accepted value.
+    INVALID_VALUE is generated if <buffer> is not a valid buffer object.
+    INVALID_OPERATION is generated if a geometry shader is active and <mode> is 
+    incompatible with the input primitive type of the geometry shader in the currently
+    installed program object.
+    INVALID_OPERATION is generated if the default (zero) frame buffer object is
+    currently bound as DRAW_FRAMEBUFFER, a non-zero frame buffer object is required.
+    
+    DrawCommandsNV and DrawCommandsAddressNV are equivalent to:
+
+        Save current GL state;
+        enum indexType = UNSIGNED_SHORT;
+        for (uint i = 0; i < count; i++) {
+            uint64 address = address computed from <buffer>+<indirects>[i];
+            
+            indexType = DrawCommandSequenceNV(<mode>, indexType, address, sizes[i]);
+        }
+        Restore current GL state;
+        
+    The command:
+
+        enum DrawCommandSequenceNV(enum mode, enum indexType, void *address, sizei size);
+
+    does not exist in the GL, but is used to describe functionality in the rest
+    of this section. 
+    
+    DrawCommandSequenceNV is a flexible and extensible command that executes
+    simple state changes and draw commands based on a tokenized format. The
+    loop above illustrates that the state changes from one invocation will
+    influence the next. All rendering is peformed as if the client states for
+    VERTEX_ATTRIB_ARRAY_UNIFIED_NV, ELEMENT_ARRAY_UNIFIED_NV and 
+    UNIFORM_BUFFER_UNIFIED_NV are enabled.
+    
+    It is defined by the following pseudo code, tokens, and structures:
+
+
+    Table 10.X.2 (Token values and command structure names)
+
+      tokenID                               | Command
+      ---------------------------------------------------------------------
+        TERMINATE_SEQUENCE_COMMAND_NV       | TerminateSequenceCommandNV
+        NOP_COMMAND_NV                      | NOPCommandNV
+        DRAW_ELEMENTS_COMMAND_NV            | DrawElementsCommandNV
+        DRAW_ARRAYS_COMMAND_NV              | DrawArraysCommandNV
+        DRAW_ELEMENTS_STRIP_COMMAND_NV      | DrawElementsCommandNV
+        DRAW_ARRAYS__STRIP_COMMAND_NV       | DrawArraysCommandNV
+        DRAW_ELEMENTS_INSTANCED_COMMAND_NV  | DrawElementsInstancedCommandNV
+        DRAW_ARRAYS_INSTANCED_COMMAND_NV    | DrawArraysInstancedCommandNV
+        ELEMENT_ADDRESS_COMMAND_NV          | ElementAddressCommandNV
+        ATTRIBUTE_ADDRESS_COMMAND_NV        | AttributeAddressCommandNV
+        UNIFORM_ADDRESS_COMMAND_NV          | UniformAddressCommandNV
+        BLEND_COLOR_COMMAND_NV              | BlendColorCommandNV
+        STENCIL_REF_COMMAND_NV              | StencilRefCommandNV
+        LINE_WIDTH_COMMAND_NV               | LineWidthCommandNV
+        POLYGON_OFFSET_COMMAND_NV           | PolygonOffsetCommandNV
+        ALPHA_REF_COMMAND_NV                | AlphaRefCommandNV
+        VIEWPORT_COMMAND_NV                 | ViewportCommandNV
+        SCISSOR_COMMAND_NV                  | ScissorCommandNV
+        FRONT_FACE_COMMAND_NV               | FrontFaceCommandNV
+
+
+        Tight packing is used for all structures
+        
+        typedef struct {
+          uint  header;
+        } TerminateSequenceCommandNV;
+
+        typedef struct {
+          uint  header;
+        } NOPCommandNV;
+        
+        typedef  struct {
+          uint  header;
+          uint  count;
+          uint  firstIndex;
+          uint  baseVertex;
+        } DrawElementsCommandNV;
+
+        typedef  struct {
+          uint  header;
+          uint  count;
+          uint  first;
+        } DrawArraysCommandNV;
+        
+        typedef  struct {
+          uint  header;
+          uint  mode;
+          uint  count;
+          uint  instanceCount;
+          uint  firstIndex;
+          uint  baseVertex;
+          uint  baseInstance;
+        } DrawElementsInstancedCommandNV;
+
+        typedef  struct {
+          uint  header;
+          uint  mode;
+          uint  count;
+          uint  instanceCount;
+          uint  first;
+          uint  baseInstance;
+        } DrawArraysInstancedCommandNV;
+
+        typedef struct {
+          uint  header;
+          uint  addressLo;
+          uint  addressHi;
+          uint  typeSizeInByte;
+        } ElementAddressCommandNV;
+
+        typedef struct {
+          uint  header;
+          uint  index;
+          uint  addressLo;
+          uint  addressHi;
+        } AttributeAddressCommandNV;
+
+        typedef struct {
+          uint    header;
+          ushort  index;
+          ushort  stage;
+          uint    addressLo;
+          uint    addressHi;
+        } UniformAddressCommandNV;
+
+        typedef struct {
+          uint  header;
+          float red;
+          float green;
+          float blue;
+          float alpha;
+        } BlendColorCommandNV;
+
+        typedef struct {
+          uint  header;
+          uint  frontStencilRef;
+          uint  backStencilRef;
+        } StencilRefCommandNV;
+        
+        typedef struct {
+          uint  header;
+          float lineWidth;
+        } LineWidthCommandNV;
+
+        typedef struct {
+          uint  header;
+          float scale;
+          float bias;
+        } PolygonOffsetCommandNV;
+        
+        typedef struct {
+          uint  header;
+          float alphaRef;
+        } AlphaRefCommandNV;
+
+        typedef struct {
+          uint  header;
+          uint  x;
+          uint  y;
+          uint  width;
+          uint  height;
+        } ViewportCommandNV; // only ViewportIndex 0
+
+        typedef struct {
+          uint  header;
+          uint  x;
+          uint  y;
+          uint  width;
+          uint  height;
+        } ScissorCommandNV; // only ViewportIndex 0
+
+        typedef struct {
+          uint  header;
+          uint  frontFace; // 0 for CW, 1 for CCW
+        } FrontFaceCommandNV;
+
+        enum DrawCommandSequenceNV(enum mode, enum indexType, void *address, sizei size)
+        {
+          enum modeStrip;
+          if      (mode == TRIANGLES)            modeStrip = TRIANGLE_STRIP;
+          else if (mode == LINES)                modeStrip = LINE_STRIP;
+          else if (mode == LINES_ADJACENCY)      modeStrip = LINE_STRIP_ADJACENCY;
+          else if (mode == TRIANGLES_ADJACENCY)  modeStrip = TRIANGLE_STRIP_ADJACENCY;
+          else if (mode == QUADS)                modeStrip = QUAD_STRIP;
+          else    modeStrip = mode;
+
+          enum modeSpecial;
+          if      (mode == LINES)      modeSpecial = LINE_LOOP;
+          else if (mode == TRIANGLES)  modeSpecial = TRIANGLE_FAN;
+          else    modeSpecial = mode;
+
+          void *current = address;
+          
+          while (current != (ubyte *)address + size) {
+            uint    header  = *(uint*)current;
+
+            switch( GetTokenType(header)){
+            case TERMINATE_SEQUENCE_NV:
+              {
+                return indexType;
+              }
+              break;
+            case NOP_COMMAND_NV:
+            
+              break;
+            case DRAW_ELEMENTS_COMMAND_NV:
+              {
+                DrawElementsCommandNV* cmd = (DrawElementsCommandNV*)current;
+                DrawElementsBaseVertex(mode, cmd->count, indexType, (void*)(cmd->firstIndex * sizeofindextype), cmd->baseVertex);
+              }
+              break;
+            case DRAW_ARRAYS_COMMAND_NV:
+              {
+                DrawArraysCommandNV* cmd = (DrawArraysCommandNV*)current;
+                DrawArrays(mode, cmd->first, cmd->count);
+              }
+              break;
+            case DRAW_ELEMENTS_STRIP_COMMAND_NV:
+              {
+                DrawElementsCommandNV* cmd = (DrawElementsCommandNV*)current;
+                DrawElementsBaseVertex(modeStrip, cmd->count, indexType, (void*)(cmd->firstIndex * sizeofindextype), cmd->baseVertex);
+              }
+              break;
+            case DRAW_ARRAYS_STRIP_COMMAND_NV:
+              {
+                DrawArraysCommandNV* cmd = (DrawArraysCommandNV*)current;
+                DrawArrays(modeStrip, cmd->first, cmd->count);
+              }
+              break;
+            case DRAW_ELEMENTS_INSTANCED_COMMAND_NV:
+              {
+                // undefined behavior if (cmd->mode != mode && cmd->mode != modeStrip && cmd->mode != modeSpecial)
+                
+                DrawElementsInstancedCommandNV* cmd = (DrawElementsInstancedCommandNV*)current;
+                DrawElementsIndirect(cmd->mode, indexType, &cmd->count);
+              }
+              break;
+            case DRAW_ARRAYS_INSTANCED_COMMAND_NV:
+              {
+                // undefined behavior if (cmd->mode != mode && cmd->mode != modeStrip && cmd->mode != modeSpecial)
+                
+                DrawArraysInstancedCommandNV* cmd = (DrawArraysInstancedCommandNV*)current;
+                DrawArraysIndirect(cmd->mode, &cmd->count);
+              }
+              break;
+            case ELEMENT_ADDRESS_COMMAND_NV:
+              {
+                ElementAddressCommandNV* cmd = (ElementAddressCommandNV*)current;
+                switch(cmd->typeSizeInByte){
+                  case 1: indexType = UNSIGNED_BYTE;  break;
+                  case 2: indexType = UNSIGNED_SHORT; break;
+                  case 4: indexType = UNSIGNED_INT;   break;
+                }
+                BufferAddressRangeNV(ELEMENT_ARRAY_ADDRESS_NV, 0, uint64(cmd->addressLo) | (uint64(cmd->addressHi)<<32), 0x7FFFFFFF);
+              }
+              break;
+            case ATTRIBUTE_ADDRESS_COMMAND_NV:
+              {
+                AttributeAddressCommandNV* cmd = (AttributeAddressCommandNV*)current;
+                BufferAddressRangeNV(VERTEX_ATTRIB_ARRAY_ADDRESS_NV, cmd->index, uint64(cmd->addressLo) | (uint64(cmd->addressHi)<<32), 0x7FFFFFFF);
+              }
+              break;
+            case UNIFORM_ADDRESS_COMMAND_NV:
+              {
+                UniformAddressCommandNV* cmd = (UniformAddressCommandNV*)current;
+                BufferAddressRangeNV(UNIFORM_BUFFER_ADDRESS_NV, cmd->index, uint64(cmd->addressLo) | (uint64(cmd->addressHi)<<32), 0x10000);
+              }
+              break;
+            case BLEND_COLOR_COMMAND_NV:
+              {
+                BlendColorCommandNV* cmd = (BlendColorCommandNV*)current;
+                BlendColor(cmd->red,cmd->green,cmd->blue,cmd->alpha);
+              }
+              break;
+            case STENCIL_REF_COMMAND_NV:
+              {
+                StencilRefCommandNV* cmd = (StencilRefCommandNV*)current;
+                StencilFuncSeparate(FRONT, asIs, cmd->frontStencilRef, asIs);
+                StencilFuncSeparate(BACK,  asIs, cmd->backStencilRef,  asIs);
+              }
+              break;
+            case LINE_WIDTH_COMMAND_NV:
+              {
+                LineWidthCommandNV* cmd = (LineWidthCommandNV*)current;
+                LineWidth(cmd->lineWidth);
+              }
+              break;
+            case POLYGON_OFFSET_COMMAND_NV:
+              {
+                PolygonOffsetCommandNV* cmd = (PolygonOffsetCommandNV*)current;
+                PolygonOffset(cmd->scale,cmd->bias);
+              }
+              break;
+            case ALPHA_REF_COMMAND_NV:
+              {
+                AlphaRefCommandNV* cmd = (AlphaRefCommandNV*)current;
+                AlphaFunc(asIs, cmd->alphaRef);
+              }
+              break
+            case VIEWPORT_COMMAND_NV:
+              {
+                ViewportCommandNV* cmd = (ViewportCommandNV*)current;
+                Viewport  (cmd->x,cmd->y,cmd->width,cmd->height);
+              }
+              break;
+            case SCISSOR_COMMAND_NV:
+              {
+                ScissorCommandNV* cmd = (ScissorCommandNV*)current;
+                Scissor(cmd->x,cmd->y,cmd->width,cmd->height);
+              }
+              break;
+            case FRONT_FACE_COMMAND_NV:
+              {
+                FrontFaceCommandNV* cmd = (FrontFaceCommandNV*)current;
+                FrontFace(cmd->frontFace ? CW : CCW);
+              }
+              break;
+            }
+
+            current = (ubyte *)current + GetTokenSize(header);
+          }
+          
+          return indexType;
+        }
+    
+    None of the commands called by DrawCommandSequenceNV may generate their
+    appropriate errors, providing erroneous data as parameters
+    or generating state that normally would create errors when executed
+    by the server can produce undefined results and may cause program
+    termination.
+    The residency of all resources referenced directly (buffer addresses inside tokens) 
+    or indirectly (texture handles inside uniform buffer objects) must be managed
+    explicitly.
+    
+    
+    (XXX should we add something similar to CheckFramebufferStatus? for
+     debugging, that tests the content in software and throws error + offset into buffer
+     triggering the error)
+    
+    All BufferAddressRangeNV calls issued by DrawCommandSequenceNV are 
+    effective independent of their appropriate client state being enabled or not.
+
+    
+    uint GetCommandHeaderNV(enum tokenID, uint size)
+    
+    Returns the encoded 32bit header value for a given command; the returned
+    value is implementation specific.
+    The <size> is only provided as basic consistency check, since the size of each 
+    structure is fixed and no padding is allowed. The value is the sum of the 
+    header and the command specific structure.
+    INVALID_ENUM is generated if <tokenID> is not one of the values listed under Table 10.X.2.
+    INVALID_VALUE is thrown if the <size> does not match the fixed 
+    size of a command defined by the spec.
+    
+    ushort GetStageIndexNV(enum shadertype)
+    
+    Returns the 16bit value for a specific shader stage; the returned value
+    is implementation specific. The value is to be used with the stage field
+    within UniformAddressCommandNV tokens.
+    
+Add a new subsection 10.X.3 (Drawing with Commands and State Objects)
+
+    State objects may be used in rendering with the commands:
+
+        void DrawCommandsStatesNV(uint buffer, const intptr* indirects, const sizei* sizes, 
+                                       const uint* states, const uint* fbos, uint count);
+        void DrawCommandsStatesAddressNV(const uint64* indirects, const sizei* sizes, 
+                                              const uint* states, const uint* fbos, uint count);
+
+    These commands accept arrays of buffer addresses (either an array of 
+    offsets <indirects> into a buffer named by <buffer>, or an array of GPU 
+    addresses <indirects>), an array of sequence lengths in <sizes>, and an 
+    array of state object names in <states>, of which all names must be non-zero.
+    Frame buffer object names are stored in <fbos> and can
+    be either zero or non-zero. All arrays have <count> entries.
+    The residency of textures used as attachment inside the state object's 
+    captured fbo or the passed fbo must managed explicitly. 
+    
+    INVALID_VALUE is generated if one entry of <states> is zero.
+    INVALID_OPERATION is generated if the fbo configuration from <fbos>
+    mismatches the configuration inside the corresponding state object
+    from <states>.
+    
+    DrawCommandsStatesNV and DrawCommandsStatesAddressNV are equivalent to:
+
+        Save current GL state;
+        enum indexType = UNSIGNED_SHORT;
+        for (uint i = 0; i < count; i++) {
+            fbo         = LookupFbo(fbos[i]);
+            stateObject = LookupStateObject(states[i]);
+            
+            if ( i == 0){
+              Set full state captured by stateObject;
+            }
+            else {
+              Set difference of state going from <states>[i-1] to current stateObject, 
+            }
+            
+            if ( fbo == 0) {
+              BindFramebuffer(FRAMEBUFFER, stateObject.fbo.name);
+            }
+            else if ( stateObject.fbo.configuration == fbo.configuration ){
+              // The configuration excludes attachment textures and size information, however
+              // includes attached texture formats and other state (see StateCaptureNV).
+              
+              BindFramebuffer(FRAMEBUFFER, fbo.name);
+            }
+            else {
+              // Only compatible fbo states can be used.
+              
+              generate ERROR INVALID_OPERATION;
+              return;
+            }
+            
+            enum mode = primitive mode from stateObject
+        
+            uint64 address = address computed from <buffer>+<indirects>[i];
+            
+            indexType = DrawCommandSequenceNV(mode, indexType, address, sizes[i]);
+        }
+        Restore current GL state;
+    
+    where LookupFbo and LookupStateObject return the driver's internal fbo
+    and stateObject object and stateObject.fbo is the driver's fbo state
+    object and fbo.configuration and fbo.name are the current configuration
+    of a fbo and the fbo's name respectively.
+
+Add a new section 10.X.4 (Command Lists)
+
+    A list of DrawCommandsStates* commands may be compiled into a command
+    list, for further optimization and efficient reuse. The name space for 
+    command lists is the unsigned integers, with zero reserved. The command:
+
+        void CreateCommandListsNV(sizei n, uint *lists);
+
+    returns <n> previously unused command list names in <lists>, and creates
+    a command list in the initial state for each name.
+
+    Command lists are deleted by calling
+
+        void DeleteCommandListsNV(sizei n, const uint *lists);
+
+    <lists> contains <n> names of command lists to be deleted. Once a command
+    list is deleted it has no contents and its name is again unused. Unused 
+    names in <lists> are silently ignored, as is the value zero.
+
+    The command
+
+        void CommandListSegmentsNV(uint list, uint segments);
+
+    indicates that <list> will have <segments> number of segments, each
+    of which is a list of command sequences that it enqueues. This must be
+    called before any commands are enqueued. In the initial state, a command 
+    list has a single segment.
+
+    A command list's initial state allows it to enqueue commands, but not to 
+    be executed. The following command can be enqueued:
+
+        void ListDrawCommandsStatesClientNV(uint list, uint segment, const void** indirects, 
+                                              const sizei* sizes, const uint* states, const uint* fbos,
+                                              uint count);
+
+    A list has multiple segments and each segment enqueues an ordered list of 
+    command sequences. This command enqueues the equivalent of the DrawCommandsStatesNV 
+    commands into the list indicated by <list> on the segment indicated by <segment> 
+    except that the sequence data is copied from the sequences pointed to by the <indirects> 
+    pointer. The <indirects> pointer should point to a list of size <count> of pointers, 
+    each of which should point to a command sequence. 
+
+    The pre-validated state from <states> is saved into the command list, rather 
+    than a reference to the state object (i.e. the state objects or fbos could be 
+    deleted and the command list would be unaffected). This includes native
+    GPU addresses for all textures indirectly referenced through the fbos
+    passed or state objects' fbos attachments, therefore a recompile of the command list
+    is required if such referenced textures change their allocation (for example
+    due to resizing), as well as explicit management of the residency of
+    the textures prior CallCommandListNV.
+    
+    ListDrawCommandsStatesClientNV performs a by-value copy of the
+    indirect data based on the provided client-side pointers. In this case 
+    the content is fully immutable, while the buffer-based versions can
+    change the content of the buffers at any later time.
+
+    The command
+
+        void CompileCommandListNV(uint list);
+
+    make the list indicated by <list> switch from allowing collection of 
+    commands to allowing its execution. At this time, the implementation may
+    generate optimized commands to transition between states as efficiently
+    as possible. Lists may be executed with the command
+
+        void CallCommandListNV(uint list);
+
+    This executes the command list indicated by <list>, which operates as if
+    the DrawCommandsStates* commands were replayed in the order they were 
+    enqueued on each segment, starting from segment zero and proceeding to the 
+    maximum segment. All buffer or texture resources' residency must be 
+    managed explicitly, including texture attachments of the effective 
+    fbos during list enqueuing.
+
+    
+Modifications to the OpenGL Shading Language Specification, Version 4.40
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_NV_command_list : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_NV_command_list          1
+    
+    
+    Modify Section 4.4.5, "Uniform and Shader Storage Block Layout Qualifiers"
+
+    (modify first paragraph, p.78) Layout qualifiers can be used for uniform
+    and shader storage blocks, but not for non-block uniform declarations.
+    The layout qualifier identifiers (and shared keyword) for uniform and
+    shader storage blocks are
+
+      layout-qualifier-id
+        shared
+        packed
+        std140
+        std430
+        row_major
+        column_major
+        binding = integer-constant-expression
+        offset  = integer-constant-expression
+        align   = integer-constant-expression
+        commandBindableNV
+    
+    (add paragraph prior "When multiple arguments", p. 80) 
+    The commandBindableNV qualifier enables the associated uniform block
+    to be updated via UniformAddressCommandNVs when executing 
+    DrawCommandsStatesNV. When commandBindableNV is enabled the <binding> 
+    identifier must be provided for each block, only its value will 
+    correspond with the index field of a UniformAddressCommandNV.
+    A link time error will be thrown if an index is greater or equal to
+    MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS_NV.
+    Changing the binding point by the OpenGL API may not influence this 
+    associated index value and may cause UniformAddressCommandNVs to have
+    undefined behavior.
+    
+Dependencies on OpenGL 4.4 (Core Profile)
+
+    If only the core profile of OpenGL 4.4 is supported, references to
+    functionality deprecated by OpenGL 3.0 (built-in input/output/uniform variables
+    corresponding to fixed-function vertex attributes, fixed-function
+    vertex and fragment processing) should be removed and/or replaced with 
+    functionality supported in the core profile.  In such an environment, the 
+    QUADS primitive type is not supported by the StateCaptureNV function. StateCaptureNV will
+    also ignore all references to deprecated state such as line stippling.
+    The ALPHA_REF_COMMAND_NV is not allowed to be used, therefore GetCommandHeaderNV will
+    return an error if the token enum is passed.
+    
+Interactions with NV_shader_buffer_load
+    
+    The GPU addresses used in ELEMENT_ADDRESS_COMMAND_NV,
+    ATTRIBUTE_ADDRESS_COMMAND_NV and UNIFORM_ADDRESS_COMMAND_NV 
+    can be queried via the API provided in this extension. Furthermore
+    the same API must be used to ensure residency of such buffers
+    when draw commands using such addresses are issued.
+
+Interactions with NV_bindless_texture or ARB_bindless_texture
+    
+    Residency of fbo attachment textures referenced in state objects
+    or command lists must be managed explicitly using the API provided
+    by either of these extensions.
+
+Interactions with NV_parameter_buffer_object
+  
+    The UNIFORM_ADDRESS_COMMAND_NV described in (Drawing with Commands), will affect
+    the PROGRAM_PARAMETER_BUFFER of the target stage defined within the command
+    token.
+ 
+Interactions with ARB_robust_buffer_access_behavior
+
+    The buffer setups performed by ELEMENT_ADDRESS_COMMAND_NV,
+    ATTRIBUTE_ADDRESS_COMMAND_NV and UNIFORM_ADDRESS_COMMAND_NV
+    do not provide the required buffer ranges for robust buffer
+    access. Therefore draw calls executed under this type of 
+    buffer setup will not respect the robust buffer access rules.
+    
+Interactions with ARB_shader_draw_parameters
+
+    The drawing operations performed through this extension will not support
+    setting of the built-in GLSL values that were added by 
+    ARB_shader_draw_parameters (gl_BaseInstanceARB, gl_BaseVertexARB, gl_DrawIDARB).
+    Accessing these variables will result in undefined values.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+
+New State
+
+    None.
+
+Issues
+
+    1) What motivates the design?
+
+    The primary goal is to be able to reuse pre-validated command buffers. Other
+    APIs and proposals have addressed this with various incarnations of command 
+    lists or state objects, but a recurring problem is that interactions between
+    various stages of the pipeline prevent this prevalidation and reuse. These 
+    interactions are often hardware-specific (and differ from vendor to vendor 
+    or even generation to generation) and new interactions are introduced by 
+    new features that were not imagined when the prevalidation scheme was 
+    proposed.
+
+    We attempt to address this by having a monolithic state object that 
+    encompasses (almost) the entire state of the pipeline. This should provide
+    enough information for all implementations to do any needed cross-
+    validation. We try to create these in a way that minimizes the new API 
+    footprint - since we want ALL state (including any added in the future), we
+    just capture it from the current state of the context.
+
+    We expect that a captured state object will be represented as a list of 
+    commands to send to the GPU. While that list of commands may be fairly 
+    large, it is also well-suited to filtering redundant changes when switching
+    from one state object to another (filtering may occur on the GPU, or by 
+    some processing on the CPU). We anticipate that filtering will be applied
+    when compiling a command list, but it is likely that some (perhaps less 
+    aggressive) filtering will also occur in unlisted DrawCommandsStates 
+    commands.
+
+    2) Should binding state be captured?
+
+    Binding state should not be captured, for multiple reasons. 
+    
+    The memory management performed by the driver as part of legacy command 
+    execution is expensive and not well-suited for the prevalidation of
+    commands. This can be replaced by explicit bindless memory management 
+    APIs (e.g. Make*Resident).
+
+    Resource bindings also require behind-the-scenes management of internal
+    GPU structures like texture handles. Again, this can be replaced by the 
+    bindless APIs.
+
+    3) What FBO state should be captured?
+
+    We definitely want to capture enough information to be able to do any
+    state-based recompiles of the fragment shader, which would include 
+    drawbuffer state and format state. However, it is not desirable to have
+    all properties of the FBO be captured, e.g. if attachment width/height
+    were captured then state objects could become invalid if the window shape
+    changed 
+
+    RESOLVED: state objects reference the FBO configuration, but passing 
+    other compatible FBOs during rendering is possible. Furthermore the
+    VIEWPORT_COMMAND_NV allows setting the appropriate viewport state.
+
+    4) Can UBOs be accessed? How?
+
+    RESOLVED: We want to encourage the "first level of the scene graph" information read
+    by shaders to be accessed with fast UBO memory accesses. 
+    UNIFORM_ADDRESS_COMMAND_NV provides this mechanism.
+
+    5) What about Compute?
+
+    Compute does not have the same complex state interactions that the graphics
+    pipeline has, so it is not included in this extension. 
+
+    6) What dynamic state should be allowed?
+
+    There are some state values which are pretty much raw integer/floating 
+    point data, where requiring a unique state object for each value would
+    drastically bloat the number of state objects needed and break batching.
+    We allow for a few such values to be set in the token command buffer 
+    rather than in the state object. The current list is motivated by similar
+    state in other APIs, and may not be complete.
+
+    7) What are the "segments" in command lists?
+
+    These are multiple "starting points" for appending commands to the list,
+    which are ultimately replayed in order by segments. This may be useful to 
+    build a multipass rendering algorithm with only a single traversal of the
+    scene graph.
+
+    8) When are state objects consumed into the list?
+
+    This could either occur as the command is appended to the list, or during
+    CompileCommandListNV.
+    
+    RESOLVED: At ListDrawCommandsStatesClientNV time.
+
+    9) Do we want to have multiple modes in the same dispatch ?
+
+    RESOLVED: yes, state-objects with different modes can be used, allowing
+    fast transitioning between those. Furthermore, it is possible to mix
+    LINES/LINE_STRIP/LINE_LOOP or TRIANGLES/TRIANGLE_STRIP/TRIANGLE_FAN and others
+    using the same state object, as long as their base primitive mode is the same.
+    
+    10) Do we want to allow mixing DrawArrays and DrawElements in the same
+    dispatch ?
+
+    RESOLVED: yes.
+    
+    11) What happens if the token buffer is modified while it is being dispatched ?
+
+    RESOLVED: there is no guarantee of coherency, so undefined behavior.
+    
+    12) I would like to change states in the middle; how do I do this ?
+    
+    RESOLVED: you can select a new state object or state tokens, but you cannot change
+    state in the indirect buffer itself.
+    
+    13) Is the token buffer multithread safe; does it scale ?
+    
+    RESOLVED: yes. it is trivial to allocate a token buffer per thread, and then submit
+    them in the main thread sequentially. since the implementation is not involved
+    when the application writes to them, the only thread safety requirements are in
+    the application itself.
+    Command lists and state objects are, however, currently not context share-able,
+    though as rendering is much more efficient now, the main dispatching thread can
+    spend the time on preparing state objects prior drawing. The cost of glStateCaptureNV
+    is no worse than a classic API draw call, and exploiting temporal coherence not too
+    many states would be "new" frame to frame, but instead cached states can be reused.
+    
+    14) Can I reuse token buffer multiple times ?
+    
+    RESOLVED: yes.
+     
+    15) Should we use a fixed length decoding or at the very least a size in the header ?
+    
+    RESOLVED: fixed length is used. As basic consistency check the size is also passed to header generation.
+    The NOP command can be used to pad structures to custom sizes.
+
+    16) Can I do buffer updates in a single DrawCommands call ?
+    
+    RESOLVED: NO. 
+    Updating memory in general requires synchronization, and having lots of
+    updates inside a single DrawCommands would become a performance bottleneck.
+
+    17) I want to implement some occlusion scheme and skip some of the draws; how do I do this ?
+    
+    RESOLVED: this extension does not offer a conditional render facility, but this can be
+    implemented by using NOP or preferably TERMINATE_SEQUENCE commands in the stream.
+    
+    18) I want to implement some level of detail scheme; is that possible ?
+    
+    RESOLVED: you can use NOP or TERMINATE_SEQUENCE to skip the level of details that you don't want to draw.
+
+    19) Why can't I just get a token to change the state, and avoid specifying lists of
+    state and indirect buffers ?
+    
+    RESOLVED: Getting a token to specify a state switch imply that the application would
+    have access to a virtual address of state changes. This would potentially open security
+    issue, since part of the validation may involve complex sequence of programming.
+
+    20) Instead of void** which means all commands must be stored in one buffer, could GLuint64** be used
+    when EnableClientState(DRAW_INDIRECT_UNIFIED_NV) is set? This would allow managing different command
+    buffers independently.
+
+    RESOLVED: separate Address command added
+
+    21) How big can each indirect command list's buffer size be? 
+
+    RESOLVED: no limit required.
+
+    22) How to retrieve the "index" within UniformAddressCommandNV, or is that the GL binding point?
+   
+    RESOLVED: added commandBindableNV layout qualifier in GLSL for uniform blocks to ensure fixed binding unit.
+    Also added stage value to command.
+
+    23) In what condition is the state left, that is modified by tokens, after the dispatch call?
+
+    RESOLVED: state is reset.
+    
+    24) How does working with this extension look like
+    
+    You will find related samples at https://github.com/nvpro-samples
+    
+    25) How can I use textures, images, shader storage or atomic counter buffers in combination with state objects?
+
+    Textures and images are covered via NV/ARB_bindless_texture, you can store their handles inside uniform buffers.
+    Shader storage and atomic counter buffers are currently not directly exposed, however NV_gpu_shader5 allows
+    storing pointers to such buffers inside uniform buffers as well. Atomic counters can be replaced by regular
+    atomic increments.
+
+    Alternatively use DrawCommandsNV or DrawCommandsAddressNV, which does support any GLSL programs with these
+    resource bindings, as well as default-block uniforms.
+
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+     6    11/3/2015   ckubisch  Rephrase what stateobjects capture and what not
+     5    8/17/2015   ckubisch  correct errors for DrawCommandsNV and DrawCommandsAddressNV
+                                rendering to default framebuffer is not allowed. Clarify
+                                which state is inherited (updated Issue 25).
+     4    6/18/2015   ckubisch  Add missing interaction with ARB_shader_draw_parameters
+     3    5/27/2015   jemmons   Multiple minor fixes and clarifications
+     2    4/16/2015   pboudier  Fix incorrect type (size_t is now sizei) in ListDrawCommandsStatesClientNV
+     1                pboudier  concept
+                      jbolz     base spec
+                      ckubisch  detailed spec
+                      mjk       Internal revisions

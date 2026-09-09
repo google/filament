@@ -77,10 +77,10 @@ struct State {
 
             if (src_type == dst_type) {
                 ReplaceBitcastWithValue(bitcast);
-            } else if (src_type->DeepestElement()->Is<core::type::F16>()) {
-                ReplaceBitcastWithFromF16Polyfill(bitcast);
-            } else if (dst_deepest->Is<core::type::F16>()) {
-                ReplaceBitcastWithToF16Polyfill(bitcast);
+            } else if (src_type->DeepestElement()->Size() == 2) {
+                ReplaceBitcastWithFrom16BitPolyfill(bitcast);
+            } else if (dst_deepest->Size() == 2) {
+                ReplaceBitcastWithTo16BitPolyfill(bitcast);
             } else if (src_type->DeepestElement()->Is<core::type::F32>()) {
                 ReplaceBitcastFromF32(bitcast);
             } else if (dst_type->DeepestElement()->Is<core::type::F32>()) {
@@ -152,8 +152,8 @@ struct State {
         bitcast->Destroy();
     }
 
-    core::ir::Function* CreateBitcastFromF16(const core::type::Type* src_type,
-                                             const core::type::Type* dst_type) {
+    core::ir::Function* CreateBitcastFrom16Bit(const core::type::Type* src_type,
+                                               const core::type::Type* dst_type) {
         return bitcast_funcs_.GetOrAdd(
             BitcastType{{src_type, dst_type}}, [&]() -> core::ir::Function* {
                 TINT_IR_ASSERT(ir, src_type->Is<core::type::Vector>());
@@ -165,7 +165,7 @@ struct State {
                 //   return ivec2(r);
                 // }
 
-                auto fn_name = b.ir.symbols.New("tint_bitcast_from_f16").Name();
+                auto fn_name = b.ir.symbols.New("tint_bitcast_from_16bit").Name();
 
                 auto* f = b.Function(fn_name, dst_type);
                 auto* src = b.FunctionParam("src", src_type);
@@ -174,18 +174,28 @@ struct State {
                 b.Append(f->Block(), [&] {
                     auto* src_vec = src_type->As<core::type::Vector>();
 
+                    // If we're starting with u16, it is easier to bitcast to f16 and use the
+                    // packing functions.
+                    core::ir::Value* input = src;
+                    if (src_type->DeepestElement()->Is<core::type::U16>()) {
+                        input = b.Call<glsl::ir::BuiltinCall>(ty.MatchWidth(ty.f16(), src_type),
+                                                              glsl::BuiltinFn::kUint16BitsToFloat16,
+                                                              src)
+                                    ->Result();
+                    }
+
                     core::ir::Value* packed = nullptr;
                     if (src_vec->Width() == 2) {
-                        packed = b.Call<glsl::ir::BuiltinCall>(ty.u32(),
-                                                               glsl::BuiltinFn::kPackFloat2X16, src)
+                        packed = b.Call<glsl::ir::BuiltinCall>(
+                                      ty.u32(), glsl::BuiltinFn::kPackFloat2X16, input)
                                      ->Result();
                     } else if (src_vec->Width() == 4) {
                         auto* left =
                             b.Call<glsl::ir::BuiltinCall>(ty.u32(), glsl::BuiltinFn::kPackFloat2X16,
-                                                          b.Swizzle(ty.vec2h(), src, {0, 1}));
+                                                          b.Swizzle(ty.vec2h(), input, {0, 1}));
                         auto* right =
                             b.Call<glsl::ir::BuiltinCall>(ty.u32(), glsl::BuiltinFn::kPackFloat2X16,
-                                                          b.Swizzle(ty.vec2h(), src, {2, 3}));
+                                                          b.Swizzle(ty.vec2h(), input, {2, 3}));
                         packed = b.Construct(ty.vec2u(), left, right)->Result();
                     } else {
                         TINT_IR_UNREACHABLE(ir);
@@ -204,18 +214,30 @@ struct State {
             });
     }
 
-    void ReplaceBitcastWithFromF16Polyfill(core::ir::CoreBuiltinCall* bitcast) {
+    void ReplaceBitcastWithFrom16BitPolyfill(core::ir::CoreBuiltinCall* bitcast) {
         auto* src_type = bitcast->Args()[0]->Type();
         auto* dst_type = bitcast->Result()->Type();
 
-        auto* f = CreateBitcastFromF16(src_type, dst_type);
+        if (src_type->DeepestElement()->Size() == dst_type->DeepestElement()->Size()) {
+            BuiltinFn fn = dst_type->DeepestElement()->Is<core::type::F16>()
+                               ? BuiltinFn::kUint16BitsToFloat16
+                               : BuiltinFn::kFloat16BitsToUint16;
+            b.InsertBefore(bitcast, [&] {
+                b.CallWithResult<glsl::ir::BuiltinCall>(bitcast->DetachResult(), fn,
+                                                        bitcast->Args()[0]);
+            });
+            bitcast->Destroy();
+            return;
+        }
+
+        auto* f = CreateBitcastFrom16Bit(src_type, dst_type);
         b.InsertBefore(bitcast,
                        [&] { b.CallWithResult(bitcast->DetachResult(), f, bitcast->Args()[0]); });
         bitcast->Destroy();
     }
 
-    core::ir::Function* CreateBitcastToF16(const core::type::Type* src_type,
-                                           const core::type::Type* dst_type) {
+    core::ir::Function* CreateBitcastTo16Bit(const core::type::Type* src_type,
+                                             const core::type::Type* dst_type) {
         return bitcast_funcs_.GetOrAdd(
             BitcastType{{src_type, dst_type}}, [&]() -> core::ir::Function* {
                 TINT_IR_ASSERT(ir, dst_type->Is<core::type::Vector>());
@@ -229,7 +251,9 @@ struct State {
                 //   return f16vec4(v_xy.x, v_xy.y, v_zw.x, v_zw.y);
                 // }
 
-                auto fn_name = b.ir.symbols.New("tint_bitcast_to_f16").Name();
+                auto fn_name = b.ir.symbols.New("tint_bitcast_to_16bit").Name();
+
+                auto* dst_f16_type = ty.MatchWidth(ty.f16(), dst_type);
 
                 auto* f = b.Function(fn_name, dst_type);
                 auto* src = b.FunctionParam("src", src_type);
@@ -253,10 +277,16 @@ struct State {
                             ty.vec2h(), glsl::BuiltinFn::kUnpackFloat2X16,
                             b.Swizzle(ty.u32(), conv, {1}));
 
-                        val = b.Construct(dst_type, left, right)->Result();
+                        val = b.Construct(dst_f16_type, left, right)->Result();
                     } else {
                         val = b.Call<glsl::ir::BuiltinCall>(ty.vec2h(),
                                                             glsl::BuiltinFn::kUnpackFloat2X16, conv)
+                                  ->Result();
+                    }
+
+                    if (dst_type != dst_f16_type) {
+                        val = b.Call<glsl::ir::BuiltinCall>(
+                                   dst_type, glsl::BuiltinFn::kFloat16BitsToUint16, val)
                                   ->Result();
                     }
                     b.Return(f, val);
@@ -265,11 +295,15 @@ struct State {
             });
     }
 
-    void ReplaceBitcastWithToF16Polyfill(core::ir::CoreBuiltinCall* bitcast) {
+    void ReplaceBitcastWithTo16BitPolyfill(core::ir::CoreBuiltinCall* bitcast) {
         auto* src_type = bitcast->Args()[0]->Type();
         auto* dst_type = bitcast->Result()->Type();
 
-        auto* f = CreateBitcastToF16(src_type, dst_type);
+        // 16-bit to 16-bit casts should be handled by ReplaceBitcastWithFrom16BitPolyFill
+        TINT_IR_ASSERT(ir,
+                       src_type->DeepestElement()->Size() != dst_type->DeepestElement()->Size());
+
+        auto* f = CreateBitcastTo16Bit(src_type, dst_type);
         b.InsertBefore(bitcast,
                        [&] { b.CallWithResult(bitcast->DetachResult(), f, bitcast->Args()[0]); });
         bitcast->Destroy();
@@ -279,11 +313,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BitcastPolyfill(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings,
-                                       core::ir::Capability::kAllowDuplicateBindings,
-                                       core::ir::Capability::kLoosenValidationForShaderIO},
-                "before glsl.BitcastPolyfill");
+    AssertValid(ir, "before glsl.BitcastPolyfill");
 
     State{ir}.Process();
 

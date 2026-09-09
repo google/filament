@@ -201,6 +201,16 @@ const core::type::Type* Manager::MatchWidth(const core::type::Type* el_ty, size_
     return el_ty;
 }
 
+const core::type::Type* Manager::ShaderScalarType(const core::type::SubgroupMatrix* mat) {
+    if (mat->Type()->Is<I8>()) {
+        return i32();
+    }
+    if (mat->Type()->Is<U8>()) {
+        return u32();
+    }
+    return mat->Type();
+}
+
 const core::type::Vector* Manager::vec(const core::type::Type* inner, uint32_t size) {
     return Get<core::type::Vector>(inner, size);
 }
@@ -260,12 +270,6 @@ const core::type::Vector* Manager::vec4u() {
 const core::type::SampledTexture* Manager::sampled_texture(TextureDimension dim,
                                                            const core::type::Type* type) {
     return Get<core::type::SampledTexture>(dim, type);
-}
-
-const core::type::SampledTexture* Manager::sampled_texture(TextureDimension dim,
-                                                           const core::type::Type* type,
-                                                           TextureFilterable filterable) {
-    return Get<core::type::SampledTexture>(dim, type, filterable);
 }
 
 const core::type::MultisampledTexture* Manager::multisampled_texture(TextureDimension dim,

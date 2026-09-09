@@ -1,0 +1,1434 @@
+Name
+
+    ARB_internalformat_query2
+
+Name Strings
+
+    GL_ARB_internalformat_query2
+
+Contact
+
+    Daniel Koch (dkoch 'at' nvidia 'dot' com)
+
+Contributors
+
+    Christophe Riccio, AMD
+    Bruce Merry
+    Yuan Wang, IMG
+    Pat Brown, NVIDIA
+    Piers Daniel, NVIDIA
+    Daniel Koch, TransGaming
+    Jon Leech, Khronos
+    Members of the ARB Working group.
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: October 12, 2018
+    Revision: 20
+
+Number
+
+    ARB Extension #131
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    ARB_internalformat_query is required.
+
+    This extension is written against the OpenGL 4.2 (Core Profile)
+    Specification.
+
+    OES_texture_3D, ARB_framebuffer_object, EXT_texture_sRGB,
+    ARB_framebuffer_sRGB, ARB_texture_sRGB_decode,
+    EXT_texture_sRGB_decode, ARB_tessellation_shader,
+    ARB_geometry_shader4, ARB_compute_shader, EXT_texture_array,
+    ARB_texture_cube_map_array, ARB_texture_multisample,
+    ARB_texture_rectangle, ARB_texture_buffer_object,
+    ARB_texture_gather, ARB_debug_output, KHR_debug,
+    ARB_clear_buffer_object, ARB_texture_compression_bptc,
+    ARB_texture_compression_rgtc, ARB_stencil_texturing,
+    ARB_depth_texture, OES_depth_texture, ARB_texture_view,
+    ARB_texture_storage, ARB_texture_storage_multisample,
+    ARB_shader_image_load_store, EXT_direct_state_access,
+    EXT_texture_compression_s3tc, ARB_ES3_compatibility,
+    KHR_texture_compression_astc_ldr, and core specifications
+    that incorporate these extensions affect the definition
+    of this extension.
+
+Overview
+
+    This extension extends the GetInternalformativ query that was added in
+    the ARB_internalformat_query extension to provide applications with more 
+    granular per-format capability information.
+
+    This extension allows the remainder of the texture-style targets to
+    be specified along with any possible internal format. 
+    We add queries for additional properties supported for an internal
+    format in addition to the multisample-related information that was
+    added in ARB_internalformat_query.
+
+    The goals of this extension are to: 
+
+    a) provide a mechanism for implementations to declare support *above* the
+       minimum required by the specification
+
+    b) provide API to allow universally constant information to be queried
+
+    c) provide a user-friendly way of finding out about version- or 
+       implementation-specific limitations. 
+
+    While much of this information can be determined for a single GL version
+    by careful examination of the specification, support for many of these 
+    properties has been gradually introduced over a number of API
+    revisions. This can observed when considering the range in functionality
+    between the various versions of GL 2, 3, and 4, as well as GL ES 2 and 3.
+
+    In the case of an application which wishes to be scalable and able to run
+    on a variety of possible GL or GL ES versions without being specifically
+    tailored for each version, it must either have knowledge of the
+    specifications built up into either the code or tables, or it must do
+    a number of tests on startup to determine which capabilities are present.
+
+    In OpenGL, other than the course-grained extension mechanism, many 
+    limitations of, or limited support for, an internalformat can only 
+    be signaled by failing an operation or by operating at reduced
+    performance.  Thus, such tests often involve attempts to create resources,
+    using them in specific ways and benchmarking the operations to
+    find out if it is supported in the desired form, and at a required 
+    performance level. The extension provides a way for these properties
+    and caveats to be directly queried from the implementation.
+
+    This extension is NOT intended to allow implementations to only support
+    a subset of features that are required by a specific GL version, nor is
+    it intended to replace the proper use of extension checks for optional
+    functionality.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void GetInternalformati64v(enum target, enum internalformat,
+                               enum pname, sizei bufSize, int64 *params);
+
+New Types
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameter of GetInternalformativ
+    and GetInternalformati64v:
+
+        TEXTURE_1D                                      0x0DE0
+        TEXTURE_1D_ARRAY                                0x8C18
+        TEXTURE_2D                                      0x0DE1
+        TEXTURE_2D_ARRAY                                0x8C1A
+        TEXTURE_3D                                      0x806F
+        TEXTURE_CUBE_MAP                                0x8513
+        TEXTURE_CUBE_MAP_ARRAY                          0x9009
+        TEXTURE_RECTANGLE                               0x84F5
+        TEXTURE_BUFFER                                  0x8C2A
+        RENDERBUFFER                                    0x8D41
+        TEXTURE_2D_MULTISAMPLE                          0x9100
+        TEXTURE_2D_MULTISAMPLE_ARRAY                    0x9102
+
+    Accepted by the <pname> parameter of GetInternalformativ
+    and GetInternalformati64v:
+
+        SAMPLES                                         0x80A9 
+        NUM_SAMPLE_COUNTS                               0x9380
+        INTERNALFORMAT_SUPPORTED                        0x826F  
+        INTERNALFORMAT_PREFERRED                        0x8270  
+        INTERNALFORMAT_RED_SIZE                         0x8271  
+        INTERNALFORMAT_GREEN_SIZE                       0x8272  
+        INTERNALFORMAT_BLUE_SIZE                        0x8273  
+        INTERNALFORMAT_ALPHA_SIZE                       0x8274  
+        INTERNALFORMAT_DEPTH_SIZE                       0x8275  
+        INTERNALFORMAT_STENCIL_SIZE                     0x8276  
+        INTERNALFORMAT_SHARED_SIZE                      0x8277  
+        INTERNALFORMAT_RED_TYPE                         0x8278  
+        INTERNALFORMAT_GREEN_TYPE                       0x8279  
+        INTERNALFORMAT_BLUE_TYPE                        0x827A  
+        INTERNALFORMAT_ALPHA_TYPE                       0x827B  
+        INTERNALFORMAT_DEPTH_TYPE                       0x827C  
+        INTERNALFORMAT_STENCIL_TYPE                     0x827D  
+        MAX_WIDTH                                       0x827E  
+        MAX_HEIGHT                                      0x827F  
+        MAX_DEPTH                                       0x8280  
+        MAX_LAYERS                                      0x8281  
+        MAX_COMBINED_DIMENSIONS                         0x8282  
+        COLOR_COMPONENTS                                0x8283  
+        DEPTH_COMPONENTS                                0x8284  
+        STENCIL_COMPONENTS                              0x8285  
+        COLOR_RENDERABLE                                0x8286  
+        DEPTH_RENDERABLE                                0x8287  
+        STENCIL_RENDERABLE                              0x8288  
+        FRAMEBUFFER_RENDERABLE                          0x8289  
+        FRAMEBUFFER_RENDERABLE_LAYERED                  0x828A  
+        FRAMEBUFFER_BLEND                               0x828B  
+        READ_PIXELS                                     0x828C  
+        READ_PIXELS_FORMAT                              0x828D  
+        READ_PIXELS_TYPE                                0x828E  
+        TEXTURE_IMAGE_FORMAT                            0x828F  
+        TEXTURE_IMAGE_TYPE                              0x8290  
+        GET_TEXTURE_IMAGE_FORMAT                        0x8291  
+        GET_TEXTURE_IMAGE_TYPE                          0x8292  
+        MIPMAP                                          0x8293  
+        MANUAL_GENERATE_MIPMAP                          0x8294
+        AUTO_GENERATE_MIPMAP                            0x8295  
+        COLOR_ENCODING                                  0x8296  
+        SRGB_READ                                       0x8297  
+        SRGB_WRITE                                      0x8298  
+        SRGB_DECODE_ARB                                 0x8299  
+        FILTER                                          0x829A  
+        VERTEX_TEXTURE                                  0x829B  
+        TESS_CONTROL_TEXTURE                            0x829C  
+        TESS_EVALUATION_TEXTURE                         0x829D  
+        GEOMETRY_TEXTURE                                0x829E  
+        FRAGMENT_TEXTURE                                0x829F  
+        COMPUTE_TEXTURE                                 0x82A0  
+        TEXTURE_SHADOW                                  0x82A1  
+        TEXTURE_GATHER                                  0x82A2  
+        TEXTURE_GATHER_SHADOW                           0x82A3  
+        SHADER_IMAGE_LOAD                               0x82A4  
+        SHADER_IMAGE_STORE                              0x82A5  
+        SHADER_IMAGE_ATOMIC                             0x82A6  
+        IMAGE_TEXEL_SIZE                                0x82A7  
+        IMAGE_COMPATIBILITY_CLASS                       0x82A8  
+        IMAGE_PIXEL_FORMAT                              0x82A9  
+        IMAGE_PIXEL_TYPE                                0x82AA  
+        IMAGE_FORMAT_COMPATIBILITY_TYPE                 0x90C7
+        SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST             0x82AC  
+        SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST           0x82AD  
+        SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE            0x82AE  
+        SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE          0x82AF  
+        TEXTURE_COMPRESSED                              0x86A1
+        TEXTURE_COMPRESSED_BLOCK_WIDTH                  0x82B1  
+        TEXTURE_COMPRESSED_BLOCK_HEIGHT                 0x82B2  
+        TEXTURE_COMPRESSED_BLOCK_SIZE                   0x82B3  
+        CLEAR_BUFFER                                    0x82B4  
+        TEXTURE_VIEW                                    0x82B5  
+        VIEW_COMPATIBILITY_CLASS                        0x82B6  
+
+    Returned as possible responses for various <pname> queries
+    to GetInternalformativ and GetInternalformati64v
+        FULL_SUPPORT                                    0x82B7  
+        CAVEAT_SUPPORT                                  0x82B8  
+        IMAGE_CLASS_4_X_32                              0x82B9  
+        IMAGE_CLASS_2_X_32                              0x82BA  
+        IMAGE_CLASS_1_X_32                              0x82BB  
+        IMAGE_CLASS_4_X_16                              0x82BC  
+        IMAGE_CLASS_2_X_16                              0x82BD  
+        IMAGE_CLASS_1_X_16                              0x82BE  
+        IMAGE_CLASS_4_X_8                               0x82BF  
+        IMAGE_CLASS_2_X_8                               0x82C0  
+        IMAGE_CLASS_1_X_8                               0x82C1  
+        IMAGE_CLASS_11_11_10                            0x82C2  
+        IMAGE_CLASS_10_10_10_2                          0x82C3  
+        VIEW_CLASS_128_BITS                             0x82C4  
+        VIEW_CLASS_96_BITS                              0x82C5  
+        VIEW_CLASS_64_BITS                              0x82C6  
+        VIEW_CLASS_48_BITS                              0x82C7  
+        VIEW_CLASS_32_BITS                              0x82C8  
+        VIEW_CLASS_24_BITS                              0x82C9  
+        VIEW_CLASS_16_BITS                              0x82CA  
+        VIEW_CLASS_8_BITS                               0x82CB  
+        VIEW_CLASS_S3TC_DXT1_RGB                        0x82CC  
+        VIEW_CLASS_S3TC_DXT1_RGBA                       0x82CD  
+        VIEW_CLASS_S3TC_DXT3_RGBA                       0x82CE  
+        VIEW_CLASS_S3TC_DXT5_RGBA                       0x82CF  
+        VIEW_CLASS_RGTC1_RED                            0x82D0  
+        VIEW_CLASS_RGTC2_RG                             0x82D1  
+        VIEW_CLASS_BPTC_UNORM                           0x82D2  
+        VIEW_CLASS_BPTC_FLOAT                           0x82D3
+    [interactions with ARB_ES3_compatibility]
+        VIEW_CLASS_EAC_R11                              0x9383
+        VIEW_CLASS_EAC_RG11                             0x9384
+        VIEW_CLASS_ETC2_RGB                             0x9385
+        VIEW_CLASS_ETC2_RGBA                            0x9386
+        VIEW_CLASS_ETC2_EAC_RGBA                        0x9387
+    [interactions with KHR_texture_compression_astc_ldr]
+        VIEW_CLASS_ASTC_4x4_RGBA                        0x9388
+        VIEW_CLASS_ASTC_5x4_RGBA                        0x9389
+        VIEW_CLASS_ASTC_5x5_RGBA                        0x938A
+        VIEW_CLASS_ASTC_6x5_RGBA                        0x938B
+        VIEW_CLASS_ASTC_6x6_RGBA                        0x938C
+        VIEW_CLASS_ASTC_8x5_RGBA                        0x938D
+        VIEW_CLASS_ASTC_8x6_RGBA                        0x938E
+        VIEW_CLASS_ASTC_8x8_RGBA                        0x938F
+        VIEW_CLASS_ASTC_10x5_RGBA                       0x9390
+        VIEW_CLASS_ASTC_10x6_RGBA                       0x9391
+        VIEW_CLASS_ASTC_10x8_RGBA                       0x9392
+        VIEW_CLASS_ASTC_10x10_RGBA                      0x9393
+        VIEW_CLASS_ASTC_12x10_RGBA                      0x9394
+        VIEW_CLASS_ASTC_12x12_RGBA                      0x9395
+
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Compatibility Profile)
+Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    Replace Section 6.1.15 "Internal Format Queries" with the following:
+
+    "Information about implementation-dependent support for internal formats
+    can be queried with the commands
+
+        void GetInternalformativ(enum target, enum internalformat,
+                                 enum pname, sizei bufSize, int *params);
+        void GetInternalformati64v(enum target, enum internalformat,
+                                   enum pname, sizei bufSize, int64 *params);
+
+    <internalformat> can be any value. The INTERNALFORMAT_SUPPORTED <pname>
+    can be used to determine if the internal format is supported, and the 
+    other <pnames> are defined in terms of whether or not the format is
+    supported.
+   
+    <target> indicates the usage of the <internalformat>, and must be one of
+    the targets listed in Table 6.xx, otherwise the INVALID_ENUM error is
+    generated.
+
+      Target                         Usage
+      -----------------              ------
+      TEXTURE_1D                     1D texture
+      TEXTURE_1D_ARRAY               1D array texture
+      TEXTURE_2D                     2D texture
+      TEXTURE_2D_ARRAY               2D array texture
+      TEXTURE_2D_MULTISAMPLE         2D multisample texture
+      TEXTURE_2D_MULTISAMPLE_ARRAY   2D multisample array texture
+      TEXTURE_3D                     3D texture
+      TEXTURE_BUFFER                 buffer texture
+      TEXTURE_CUBE_MAP               cube map texture
+      TEXTURE_CUBE_MAP_ARRAY         cube map array texture
+      TEXTURE_RECTANGLE              rectangle texture
+      RENDERBUFFER                   renderbuffer
+
+      Table 6.xx: Possible targets that <internalformat> can be used with
+      and the corresponding usage meaning. 
+
+    No more than <bufSize> integers will be written into <params>. If
+    more data are available, they will be ignored and no error will be
+    generated.
+
+    <pname> indicates the information to query. The following list provides
+    the valid values for <pname>, defines the meaning and the possible 
+    responses. In the following descriptions, the term /resource/ is used 
+    to generically refer to an object of the appropriate type that has 
+    been created with <internalformat> and <target>.  If the particualar
+    <target> and <internalformat> combination do not make sense, or if
+    a particular type of <target> is not supported by the implementation
+    the "unsupported" answer should be given. This is not an error.
+
+    All properties can be queried via either GetInternalformat* command.
+    Data conversions are done as defined in section 6.1.2.
+
+    For <pname> queries that return information about supported type of 
+    operation in <params>, they have the following meanings:
+
+    - NONE: the requested capability is not supported at all by the
+      implementation.
+
+    - CAVEAT_SUPPORT: the requested capability is supported by the 
+      implementation, but there may be some implementation-specific
+      caveats that make support less than optimal. For example using
+      the feature may result in reduced performance (relative to other
+      formats or features), such as software rendering or other mechanisms
+      of emulating the desired feature. 
+
+      If a query reports that there is a caveat and the debug output 
+      functionality is enabled (see section 5.5 or ARB_debug_output), 
+      the GL will generate a debug output message describing the caveat.
+      The message has the source DEBUG_SOURCE_API, the type 
+      DEBUG_TYPE_PERFORMANCE, and an implementation-dependent ID.
+
+    - FULL_SUPPORT: the requested capability is fully supported by the
+      implementation.
+
+    The following are the supported values for <pname>:
+
+    - INTERNALFORMAT_SUPPORTED: If <internalformat> is an internal format
+      that is supported by the implementation in at least some subset of 
+      possible operations, TRUE is written to <params>.  If <internalformat>
+      if not a valid token for any internal format usage, FALSE is returned.
+
+      <internalformats> that must be supported (in GL 4.2 or later) include
+      the following: 
+       - "sized internal formats" from Table 3.12, 3.13, and 3.15,
+       - any specific "compressed internal format" from Table 3.14,
+       - any "image unit format" from Table 3.21.
+       - any generic "compressed internal format" from Table 3.14, if the
+         implementation accepts it for any texture specification commands, and
+       - unsized or base internal format, if the implementation accepts 
+         it for texture or image specification. 
+
+      In other words, any <internalformat> accepted by any of the commands:
+        ClearBufferData, ClearBufferSubData,
+        CompressedTexImage1D, CompressedTexImage2D, CompressedTexImage3D,
+        CopyTexImage1D, CopyTexImage2D,
+        RenderbufferStorage, RenderbufferStorageMultisample,
+        TexBuffer,
+        TexImage1D, TexImage2D, TexImage3D,
+        TexImage2DMultisample, TexImage3DMultisample,
+        TexStorage1D, TexStorage2D, TexStorage3D,
+        TexStorage2DMultisample, TexStorage3DMultisample
+        TextureView,
+        ClearNamedBufferDataEXT, ClearNamedBufferSubDataEXT,
+        TextureImage1DEXT, TextureImage2DEXT, TextureImage3DEXT
+        CopyTextureImage1DEXT, CopyTextureImage2DEXT, 
+        MultiTexImage1DEXT, MultiTexImage2DEXT, MultiTexImage3DEXT
+        CompressedTextureImage3DEXT, CompressedTextureImage2DEXT, CompressedTextureImage1DEXT,
+        CompressedMultiTexImage3DEXT, CompressedMultiTexImage2DEXT, CompressedMultiTexImage1DEXT
+        TextureBufferEXT, MultiTexBufferEXT,
+        NamedRenderbufferStorageEXT, NamedRenderbufferStorageMultisampleEXT,
+        NamedRenderbufferStorageMultisampleCoverageEXT,
+        CopyMultiTexImage1DEXT, CopyMultiTexImage2DEXT,
+        TextureStorage1DEXT, TextureStorage2DEXT, TextureStorage3DEXT,
+        TextureStorage2DMultisampleEXT, TextureStorage3DMultisampleEXT, and
+      any valid <format> accepted by BindImageTexture, must be supported.
+
+    - NUM_SAMPLE_COUNTS: The number of sample counts that would be
+      returned by querying SAMPLES is returned in <params>.
+      * If <internalformat> is not color-renderable, depth-renderable, or
+        stencil-renderable (as defined in section 4.4.4), or if <target>
+        does not support multiple samples (ie other than TEXTURE_2D_MULTISAMPLE,
+        TEXTURE_2D_MULTISAMPLE_ARRAY, or RENDERBUFFER), 0 is returned.
+
+    - SAMPLES: The sample counts supported for this <internalformat> and
+      <target> are written into <params>, in descending order. Only
+      positive values are returned.
+      * Note that querying SAMPLES with a <bufSize> of 1 will return just
+        the maximum supported number of samples for this format.
+      * The maximum value in SAMPLES is guaranteed to be at least the lowest
+        of the following:
+        - The value of GetIntegerv(MAX_INTEGER_SAMPLES), if <internalformat>
+          is a signed or unsigned integer format.
+        - The value of GetIntegerv(MAX_DEPTH_TEXTURE_SAMPLES), if
+          <internalformat> is a depth/stencil-renderable format and <target>
+          is TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY.
+        - The value of GetIntegerv(MAX_COLOR_TEXTURE_SAMPLES), if
+          <internalformat> is a color-renderable format and <target> is
+          TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY.
+        - The value of GetIntegerv(MAX_SAMPLES).
+      * If <internalformat> is not color-renderable, depth-renderable, or
+        stencil-renderable (as defined in section 4.4.4), or if <target>
+        does not support multiple samples (ie other than TEXTURE_2D_MULTISAMPLE,
+        TEXTURE_2D_MULTISAMPLE_ARRAY, or RENDERBUFFER), <params> is not
+        modified.
+
+    - INTERNALFORMAT_PREFERRED: The implementation-preferred internal format
+      for representing resources of the specified <internalformat> is returned
+      in <params>. The preferred internal format should have no less precision
+      than the requested one. If the specified <internalformat> is already
+      a preferred format, or is there is no better format that is compatible,
+      the queried <internalformat> value is written to <params>.  If the 
+      <internalformat> is not supported, NONE is returned.
+
+    - INTERNALFORMAT_RED_SIZE
+    - INTERNALFORMAT_GREEN_SIZE
+    - INTERNALFORMAT_BLUE_SIZE
+    - INTERNALFORMAT_ALPHA_SIZE
+    - INTERNALFORMAT_DEPTH_SIZE
+    - INTERNALFORMAT_STENCIL_SIZE
+    - INTERNALFORMAT_SHARED_SIZE
+      For uncompressed internal formats, queries of these values return the
+      actual resolutions that would be used for storing image array components
+      for the resource.  
+      For compressed internal formats, the resolutions returned specify the 
+      component resolution of an uncompressed internal format that produces
+      an image of roughly the same quality as the compressed algorithm.
+      For textures this query will return the same information as querying
+      GetTexLevelParameter{if}v for TEXTURE_*_SIZE would return (except in
+      such cases where GetTexLevelParameter{if}v doesn't support such a query).
+      If the internal format is unsupported, or if a particular component is
+      not present in the format, 0 is written to <params>.
+
+    - INTERNALFORMAT_RED_TYPE
+    - INTERNALFORMAT_GREEN_TYPE
+    - INTERNALFORMAT_BLUE_TYPE
+    - INTERNALFORMAT_ALPHA_TYPE
+    - INTERNALFORMAT_DEPTH_TYPE
+    - INTERNALFORMAT_STENCIL_TYPE
+      For uncompressed internal formats, queries for these values return the
+      data type used to store the component.
+      For compressed internal formats the types returned specify how components
+      are interpreted after decompression. 
+      For textures this query returns the same information as querying
+      GetTexLevelParameter{if}v for TEXTURE_*_TYPE would return (except in
+      such cases where GetTexLevelParameter{if}v doesn't support such a
+      query). Possible values return include, NONE, SIGNED_NORMALIZED,
+      UNSIGNED_NORMALIZED, FLOAT, INT, UNSIGNED_INT, representing missing,
+      signed normalized fixed point, unsigned normalized fixed point, 
+      floating-point, signed unnormalized integer and unsigned unnormalized
+      integer components. NONE is returned for all component types if the
+      format is unsupported.
+
+    - MAX_WIDTH: The maximum supported width for the resource is returned in
+      <params>. For resources with only one-dimension, this one dimension is
+      considered the width. If the resource is unsupported, zero is returned.
+
+    - MAX_HEIGHT: The maximum supported height for the resource is returned in
+      <params>. For resources with two or more dimensions, the second dimension
+      is considered the height. If the resource does not have at least two
+      dimensions, or if the resource is unsupported, zero is returned.
+
+    - MAX_DEPTH: The maximum supported depth for the resource is returned in
+      <params>. For resources with three or more dimensions, the third 
+      dimension is considered the depth. If the resource does not have at least
+      three dimensions, or if the resource is unsupported, zero is returned.
+
+    - MAX_LAYERS: The maximum supported number of layers for the resource is
+      returned in <params>. For 1D array targets, the value returned is the
+      same as the MAX_HEIGHT. For 2D and cube array targets, the value returned
+      is the same as the MAX_DEPTH. If the resource does not support layers, 
+      or if the resource is unsupported, zero is returned. 
+
+    - MAX_COMBINED_DIMENSIONS: The maximum combined dimensions for the resource
+      is returned in <params>. The combined dimensions is the product of the
+      individual dimensions of the resource. For multisampled surfaces the
+      number of samples is considered an additional dimension. Note that the
+      value returned can be >= 2^32 and should be queried with the 64-bit query.
+      This value should be considered a recommendations for applications. There
+      may be system-dependant reasons why allocations larger than this size may
+      fail, even if there might appear to be sufficient memory available when
+      queried via some other means. This also does not provide a guarantee that
+      allocations smaller than this will succeed because this value is not
+      affected by existing resource allocations.
+      For 1D targets this is the maximum single dimension.
+      For 1D array targets this is the maximum combined width and layers.
+      For 2D targets this is the maximum combined width and height.
+      For 2D multisample targets this is the combined width, height and samples.
+      For 2D array targets this is the max combined width, height and layers.
+      For 2D multisample array targets, this is the max combined width, height,
+      layers and samples.
+      For 3D targets this is the maximum combined width, height and depth. 
+      For cube map targets this is the maximum combined width, height and 
+      faces.
+      For cube map array targets this is the maximum width, height and
+      layer-faces.
+      If the resource is unsupported, zero is returned.
+ 
+    - COLOR_COMPONENTS: If the internal format contains any color components 
+      (R, G, B, or A), TRUE is returned in <params>. If the internal format is
+      unsupported or contains no color components, FALSE is returned.
+
+    - DEPTH_COMPONENTS: If the internal format contains a depth component (D),
+      TRUE is returned in <params>. If the internal format is unsupported or
+      contains no depth component, FALSE is returned.
+
+    - STENCIL_COMPONENTS: If the internal format contains a stencil component
+      (S), TRUE is returned in <params>. If the internal format is unsupported
+      or contains no stencil component, FALSE is returned.
+
+    - COLOR_RENDERABLE: If <internalformat> is color-renderable (as defined in
+      section 4.4.4), TRUE is returned in <params>.  If the internal format is 
+      unsupported, or the internal format is not color-renderable, FALSE 
+      is returned.
+
+    - DEPTH_RENDERABLE: If <internalformat> is depth-renderable (as defined in
+      section 4.4.4), TRUE is returned in <params>. If the internal format is
+      unsupported, or if the internal format is not depth-renderable, FALSE
+      is returned.
+
+    - STENCIL_RENDERABLE: If <internalformat> is stencil-renderable (as
+      defined in section 4.4.4), TRUE is returned in <params>. If the internal
+      format is unsupported, or if the internal format is not stencil-
+      renderable, FALSE is returned.
+
+    - FRAMEBUFFER_RENDERABLE: The support for rendering to the resource via
+      framebuffer attachment is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource is unsupported, NONE is returned.
+
+    - FRAMEBUFFER_RENDERABLE_LAYERED: The support for layered rendering to
+      the resource via framebuffer attachment is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource is unsupported, NONE is returned.
+
+    - FRAMEBUFFER_BLEND: The support for rendering to the resource
+      via framebuffer attachment when blending is enabled is returned in
+      <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource is unsupported, NONE is returned.
+
+    - READ_PIXELS: The support for reading pixels from the resource when it is
+      attached to a framebuffer is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource is unsupported, NONE is returned.
+
+    - READ_PIXELS_FORMAT: The <format> to pass to ReadPixels to obtain the best
+      performance and image quality when reading from framebuffers with
+      <internalformat> is returned in <params>.
+      Possible values include any value that is legal to pass for the <format>
+      parameter to ReadPixels, or NONE if <internalformat> is not supported
+      or can never be a valid source for ReadPixels.
+
+    - READ_PIXELS_TYPE: The <type> to pass to ReadPixels to obtain the best
+      performance and image quality when reading from framebuffers with
+      <internalformat> is returned in <params>.
+      Possible values include any value that is legal to pass for the <type>
+      parameter to ReadPixels, or NONE if the internal format is not supported
+      or can never be a source for ReadPixels.
+
+    - TEXTURE_IMAGE_FORMAT: The implementation-preferred <format> to pass to 
+      TexImage*D or TexSubImage*D when specifying texture image data for
+      this resource is returned in <params>.
+      Possible values include any value that is legal to pass for the <format>
+      parameter to the Tex*Image*D commands, or NONE if the resource is
+      not supported for this operation.
+      
+    - TEXTURE_IMAGE_TYPE: The implementation-preferred <type> to pass to 
+      TexImage*D or TexSubImage*D when specifying texture image data for 
+      this resource is returned in <params>.
+      Possible values include any value that is legal to pass for the <type>
+      parameter to the Tex*Image*D commands, or NONE if the resource is
+      not supported for this operation.
+
+    - GET_TEXTURE_IMAGE_FORMAT: The implementation-preferred <format> to pass to
+      GetTexImage when querying texture image data from this resource.
+      Possible values include any value that is legal to pass for the <format>
+      parameter to GetTexImage, or NONE if the resource does not support
+      this operation, or if GetTexImage is not supported.
+
+    - GET_TEXTURE_IMAGE_TYPE: The implementation-preferred <type> to pass to
+      GetTexImage when querying texture image data from this resource.
+      Possible values include any value that is legal to pass for the <type>
+      parameter to GetTexImage, or NONE if the resource does not support
+      this operation, or if GetTexImage is not supported.
+
+    - MIPMAP: If the resource supports mipmaps, TRUE is returned in <params>.
+      If the resource is not supported, or if mipmaps are not supported for
+      this type of resource, FALSE is returned.
+
+    - MANUAL_GENERATE_MIPMAP: The support for manually generating mipmaps for
+      the resource is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource is not supported, or if the operation is not supported,
+      NONE is returned.
+
+    - AUTO_GENERATE_MIPMAP: The support for automatic generation of mipmaps
+      for the resource is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource is not supported, or if the operation is not supported,
+      NONE is returned.
+
+    - COLOR_ENCODING: The color encoding for the resource is returned in
+      <params>.  Possible values for color buffers are LINEAR or SRGB, 
+      for linear or sRGB-encoded color components, respectively. For non-color
+      formats (such as depth or stencil), or for unsupported resources,
+      the value NONE is returned.
+
+    - SRGB_READ: The support for converting from sRGB colorspace on read
+      operations (see section 3.9.18) from the resource is returned in 
+      <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SRGB_WRITE: The support for converting to sRGB colorspace on write
+      operations to the resource is returned in <params>.
+      This indicates that writing to framebuffers with this internalformat 
+      will encode to sRGB color spaces when FRAMEBUFFER_SRGB is enabled (see
+      section 4.1.8).
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+      
+    - SRGB_DECODE_ARB: The support for toggling whether sRGB decode happens at
+      sampling time (see EXT/ARB_texture_sRGB_decode) for the resource is
+      returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - FILTER: The support for filter types other than NEAREST or 
+      NEAREST_MIPMAP_NEAREST for the resource is written to <params>.
+      This indicates if sampling from such resources supports setting the
+      MIN/MAG filters to LINEAR values.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+      
+    - VERTEX_TEXTURE: The support for using the resource as a source for 
+      texture sampling in a vertex shader is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - TESS_CONTROL_TEXTURE: The support for using the resource as a source for 
+      texture sampling in a tessellation control shader is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - TESS_EVALUATION_TEXTURE: The support for using the resource as a source
+      for texture sampling in a tessellation evaluation shader is written to
+      <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - GEOMETRY_TEXTURE: The support for using the resource as a source for 
+      texture sampling in a geometry shader is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - FRAGMENT_TEXTURE: The support for using the resource as a source for 
+      texture sampling in a fragment shader is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - COMPUTE_TEXTURE: The support for using the resource as a source for 
+      texture sampling in a compute shader is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - TEXTURE_SHADOW: The support for using the resource with shadow samplers
+      is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - TEXTURE_GATHER: The support for using the resource with texture gather 
+      operations is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+      
+    - TEXTURE_GATHER_SHADOW: The support for using resource with texture gather
+      operations with shadow samplers is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SHADER_IMAGE_LOAD: The support for using the resource with image load
+      operations in shaders is written to <params>.
+      In this case the <internalformat> is the value of the <format> parameter
+      that would be passed to BindImageTexture.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SHADER_IMAGE_STORE: The support for using the resource with image store
+      operations in shaders is written to <params>.
+      In this case the <internalformat> is the value of the <format> parameter
+      that is passed to BindImageTexture.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SHADER_IMAGE_ATOMIC: The support for using the resource with atomic
+      memory operations from shaders is written to <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - IMAGE_TEXEL_SIZE: The size of a texel when the resource when used as
+      an image texture is returned in <params>.  This is the value from the
+      /Size/ column in Table 3.22. If the resource is not supported for image
+      textures, or if image textures are not supported, zero is returned.
+
+    - IMAGE_COMPATIBILITY_CLASS: The compatibility class of the resource when
+      used as an image texture is returned in <params>.  This corresponds to 
+      the value from the /Class/ column in Table 3.22. The possible values
+      returned are IMAGE_CLASS_4_X_32, IMAGE_CLASS_2_X_32, IMAGE_CLASS_1_X_32,
+      IMAGE_CLASS_4_X_16, IMAGE_CLASS_2_X_16, IMAGE_CLASS_1_X_16, 
+      IMAGE_CLASS_4_X_8, IMAGE_CLASS_2_X_8, IMAGE_CLASS_1_X_8,
+      IMAGE_CLASS_11_11_10, and IMAGE_CLASS_10_10_10_2, which correspond to 
+      the 4x32, 2x32, 1x32, 4x16, 2x16, 1x16, 4x8, 2x8, 1x8, the class 
+      (a) 11/11/10 packed floating-point format, and the class (b) 
+      10/10/10/2 packed formats, respectively. 
+      If the resource is not supported for image textures, or if image 
+      textures are not supported, NONE is returned.
+     
+    - IMAGE_PIXEL_FORMAT: The pixel format of the resource when used as an
+      image texture is returned in <params>.  This is the value
+      from the /Pixel format/ column in Table 3.22. If the resource is not
+      supported for image textures, or if image textures are not supported,
+      NONE is returned.
+
+    - IMAGE_PIXEL_TYPE: The pixel type of the resource when used as an
+      image texture is returned in <params>.  This is the value from 
+      the /Pixel type/ column in Table 3.22. If the resource is not supported
+      for image textures, or if image textures are not supported, NONE is
+      returned.
+
+    - IMAGE_FORMAT_COMPATIBILITY_TYPE: The matching criteria use for the
+      resource when used as an image textures is returned in <params>. This
+      is equivalent to calling GetTexParameter with <value> set to 
+      IMAGE_FORMAT_COMPATIBILITY_TYPE. Possible values are
+      IMAGE_FORMAT_COMPATIBILITY_BY_SIZE or IMAGE_FORMAT_COMPATIBILITY_BY_CLASS.
+      If the resource is not supported for image textures, or if image textures
+      are not supported, NONE is returned.
+
+    - SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST: The support for using the resource
+      both as a source for texture sampling while it is bound as a buffer for
+      depth test is written to <params>. For example, a depth (or stencil)
+      texture could be bound simultaneously for texturing while it is bound as
+      a depth (and/or stencil) buffer without causing a feedback loop, provided
+      that depth writes are disabled.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST: The support for using the resource
+      both as a source for texture sampling while it is bound as a buffer for
+      stencil test is written to <params>. For example, a depth (or stencil)
+      texture could be bound simultaneously for texturing while it is bound as
+      a depth (and/or stencil) buffer without causing a feedback loop,
+      provided that stencil writes are disabled.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE: The support for using the resource
+      both as a source for texture sampling while performing depth writes to
+      the resources is written to <params>.  For example, a depth-stencil
+      texture could be bound simultaneously for stencil texturing while it
+      is bound as a depth buffer. Feedback loops cannot occur because sampling 
+      a stencil texture only returns the stencil portion, and thus writes to
+      the depth buffer do not modify the stencil portions.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE: The support for using the resource
+      both as a source for texture sampling while performing stencil writes to
+      the resources is written to <params>.  For example, a depth-stencil
+      texture could be bound simultaneously for depth-texturing while it is
+      bound as a stencil buffer. Feedback loops cannot occur because sampling
+      a depth texture only returns the depth portion, and thus writes to
+      the stencil buffer could not modify the depth portions.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - TEXTURE_COMPRESSED: If <internalformat> is a compressed format
+      that is supported for this type of resource, TRUE is returned in 
+      <params>. If the internal format is not compressed, or the type of
+      resource is not supported, FALSE is returned.
+
+    - TEXTURE_COMPRESSED_BLOCK_WIDTH: If the resource contains a compressed
+      format, the width of a compressed block (in bytes) is returned in
+      <params>. If the internal format is not compressed, or the resource
+      is not supported, 0 is returned.
+
+    - TEXTURE_COMPRESSED_BLOCK_HEIGHT: If the resource contains a compressed
+      format, the height of a compressed block (in bytes) is returned in
+      <params>. If the internal format is not compressed, or the resource
+      is not supported, 0 is returned.
+
+    - TEXTURE_COMPRESSED_BLOCK_SIZE: If the resource contains a compressed
+      format the number of bytes per block is returned in <params>.  If the
+      internal format is not compressed, or the resource is not supported,
+      0 is returned. 
+      (combined with the above, allows the bitrate to be computed, and may be
+      useful in conjunction with ARB_compressed_texture_pixel_storage).
+
+    - CLEAR_BUFFER: The support for using the resource with ClearBuffer*Data
+      commands is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+
+    - TEXTURE_VIEW: The support for using the resource with the TextureView
+      command is returned in <params>.
+      Possible values returned are FULL_SUPPORT, CAVEAT_SUPPORT, or NONE.
+      If the resource or operation is not supported, NONE is returned.
+ 
+    - VIEW_COMPATIBILITY_CLASS: The compatibility class of the resource when
+      used as a texture view is returned in <params>. The compatibility
+      class is one of the values from the /Class/ column of Table 3.X.2
+      (added by the ARB_texture_view extension). If
+      the resource has no other formats that are compatible, the resource
+      does not support views, or if texture views are not supported, NONE is
+      returned.
+
+    If <pname> is not one of the preceeding names, the error INVALID_ENUM
+    is generated."
+
+Additions to Appendix A of the OpenGL 4.2 (Core Profile) Specification
+(Invariance)
+
+    None.
+
+Additions to Appendix D of the OpenGL 4.2 (Core Profile) Specification
+(Shared Objects and Multiple Contexts)
+
+    None.
+
+GLX Protocol
+
+    XXX - TODO.
+
+Dependencies on OpenGL ES 2.0
+    Queries involving any of the following enums for <target>:
+      - TEXTURE_1D
+      - TEXTURE_3D
+      - TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY
+      - TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY
+      - TEXTURE_RECTANGLE
+      - TEXTURE_BUFFER
+    or any of the following <pnames>:
+      - GET_TEXTURE_IMAGE_FORMAT, GET_TEXTURE_IMAGE_TYPE
+      - MAX_LAYERS
+      - FRAMEBUFFER_RENDERABLE_LAYERED
+      - AUTO_GENERATE_MIPMAP
+      - SRGB_READ, SRGB_WRITE
+      - TESS_CONTROL_TEXTURE, TESS_EVALUATION_TEXTURE
+      - GEOMETRY_TEXTURE
+      - COMPUTE_TEXTURE
+      - TEXTURE_SHADOW, TEXTURE_GATHER, TEXTURE_GATHER_SHADOW
+      - SHADER_IMAGE_LOAD, SHADER_IMAGE_STORE, SHADER_IMAGE_ATOMIC
+      - IMAGE_TEXEL_SIZE, IMAGE_PIXEL_FORMAT, IMAGE_PIXEL_TYPE
+      - IMAGE_COMPATIBILITY_CLASS, IMAGE_FORMAT_COMPATIBILITY_TYPE
+      - CLEAR_BUFFER
+      - TEXTURE_VIEW, VIEW_COMPATIBILITY_CLASS
+    return the appropriate "unsupported" response.
+    Queries for unsupported features/targets do NOT set errors.
+
+Dependencies on OES_texture_3D
+    - adds support for TEXTURE_3D targets in OpenGL ES 2.0 implementations.
+
+Dependencies on OpenGL ES 3.0
+    Queries involving any of the following enums for <target>:
+      - TEXTURE_1D
+      - TEXTURE_1D_ARRAY, TEXTURE_CUBE_MAP_ARRAY
+      - TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY
+      - TEXTURE_RECTANGLE
+      - TEXTURE_BUFFER
+    or any of the following <pnames>:
+      - GET_TEXTURE_IMAGE_FORMAT, GET_TEXTURE_IMAGE_TYPE
+      - AUTO_GENERATE_MIPMAP
+      - TESS_CONTROL_TEXTURE, TESS_EVALUATION_TEXTURE
+      - GEOMETRY_TEXTURE
+      - COMPUTE_TEXTURE
+      - TEXTURE_GATHER, TEXTURE_GATHER_SHADOW
+      - SHADER_IMAGE_LOAD, SHADER_IMAGE_STORE, SHADER_IMAGE_ATOMIC
+      - IMAGE_TEXEL_SIZE, IMAGE_PIXEL_FORMAT, IMAGE_PIXEL_TYPE
+      - IMAGE_COMPATIBILITY_CLASS, IMAGE_FORMAT_COMPATIBILITY_TYPE
+      - CLEAR_BUFFER
+      - TEXTURE_VIEW, VIEW_COMPATIBILITY_CLASS
+    return the appropriate "unsupported" response.
+    Queries for unsupported features/targets do NOT set errors.
+
+    If the <pname> is SRGB_WRITE, ignore references to FRAMEBUFFER_SRGB.
+
+Dependencies on OpenGL 2.0
+    Queries involving any of the following enums for <target>:
+      - TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY
+      - TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY
+      - TEXTURE_RECTANGLE
+      - TEXTURE_BUFFER
+      - RENDERBUFFER
+    or any of the following <pnames>:
+      - MAX_LAYERS
+      - FRAMEBUFFER_RENDERABLE
+      - FRAMEBUFFER_RENDERABLE_LAYERED
+      - FRAMEBUFFER_BLEND
+      - MANUAL_GENERATE_MIPMAP
+      - SRGB_READ, SRGB_WRITE
+      - TESS_CONTROL_TEXTURE, TESS_EVALUATION_TEXTURE
+      - GEOMETRY_TEXTURE
+      - COMPUTE_TEXTURE
+      - TEXTURE_SHADOW, TEXTURE_GATHER, TEXTURE_GATHER_SHADOW
+      - SHADER_IMAGE_LOAD, SHADER_IMAGE_STORE, SHADER_IMAGE_ATOMIC
+      - IMAGE_TEXEL_SIZE, IMAGE_PIXEL_FORMAT, IMAGE_PIXEL_TYPE
+      - IMAGE_COMPATIBILITY_CLASS, IMAGE_FORMAT_COMPATIBILITY_TYPE
+      - CLEAR_BUFFER
+      - TEXTURE_VIEW, VIEW_COMPATIBILITY_CLASS
+    return the appropriate "unsupported" response.
+    Queries for unsupported features/targets do NOT set errors.
+
+Dependencies on OpenGL 3.0
+    Queries involving any of the following enums for <target>:
+      - TEXTURE_CUBE_MAP_ARRAY
+      - TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY
+      - TEXTURE_RECTANGLE
+      - TEXTURE_BUFFER
+    or any of the following <pnames>:
+      - TESS_CONTROL_TEXTURE, TESS_EVALUATION_TEXTURE
+      - GEOMETRY_TEXTURE
+      - COMPUTE_TEXTURE
+      - TEXTURE_SHADOW, TEXTURE_GATHER, TEXTURE_GATHER_SHADOW
+      - SHADER_IMAGE_LOAD, SHADER_IMAGE_STORE, SHADER_IMAGE_ATOMIC
+      - IMAGE_TEXEL_SIZE, IMAGE_PIXEL_FORMAT, IMAGE_PIXEL_TYPE
+      - IMAGE_COMPATIBILITY_CLASS, IMAGE_FORMAT_COMPATIBILITY_TYPE
+      - CLEAR_BUFFER
+      - TEXTURE_VIEW, VIEW_COMPATIBILITY_CLASS
+    return the appropriate "unsupported" response.
+    Queries for unsupported features/targets do NOT set errors.
+
+Dependencies on OpenGL 3.2 (Core Profile)
+    In core profiles for OpenGL 3.2 and later versions, queries
+    for the AUTO_GENERATE_MIPMAP <pname> return the appropriate
+    unsupported response.
+
+Dependencies on OpenGL 4.0
+    Queries involving any of the following <pnames>:
+      - COMPUTE_TEXTURE
+      - SHADER_IMAGE_LOAD, SHADER_IMAGE_STORE, SHADER_IMAGE_ATOMIC
+      - IMAGE_TEXEL_SIZE, IMAGE_PIXEL_FORMAT, IMAGE_PIXEL_TYPE
+      - IMAGE_COMPATIBILITY_CLASS, IMAGE_FORMAT_COMPATIBILITY_TYPE
+      - CLEAR_BUFFER
+      - TEXTURE_VIEW, VIEW_COMPATIBILITY_CLASS
+    return the appropriate "unsupported" response.
+    Queries for unsupported features/targets do NOT set errors.
+
+Dependencies on ARB_framebuffer_object
+    If ARB_framebuffer_object, EXT_framebuffer_object or equivalent
+    functionality is not supported, queries involving the RENDERBUFFER
+    <target> or the following <pnames>: 
+      - FRAMEBUFFER_RENDERABLE
+      - FRAMEBUFFER_RENDERABLE_LAYERED
+      - FRAMEBUFFER_BLEND
+      - MANUAL_GENERATE_MIPMAP
+    return the appropriate "unsupported" response.
+
+Dependencies on EXT_texture_sRGB
+    If EXT_texture_sRGB or equivalent functionality is not supported,
+    queries for the SRGB_READ <pname> and for sRGB internalformats
+    return the appropriate "unsupported" response.
+
+Dependencies on ARB_framebuffer_sRGB
+    If ARB_framebuffer_sRGB or equivalent functionality is not supported,
+    queries for the SRGB_WRITE <pname> return the appropriate "unsupported"
+    response.
+
+Dependencies on ARB/EXT_texture_sRGB_decode
+    If ARB_texture_sRGB_decode or EXT_texture_sRGB_decode or equivalent
+    functionality is not supported, queries for the SRGB_DECODE_ARB <pname>
+    set the INVALID_ENUM error. (N.B. this is different from all other
+    extension interactions because this functionality is not present
+    in any core specification, and thus it behaves as an unrecognized
+    token rather than as an unsupported feature.)
+
+Dependencies on ARB_tessellation_shader
+    If ARB_tessellation_shader or equivalent functionality is not supported,
+    queries for the TESS_CONTROL_TEXTURE and TESS_EVALUATION_TEXTURE <pnames>,
+    return the appropriate "unsupported" response.
+
+Dependencies on ARB_geometry_shader4
+    If ARB_geometry_shader4 or equivalent functionality is not supported,
+    queries for the GEOMETRY_TEXTURE <pname> will return the appropriate
+    "unsupported" response.
+
+Dependencies on ARB_compute_shader
+    If ARB_compute_shader or equivalent functionality is not supported,
+    queries for the COMPUTE_TEXTURE <pname> will return the appropriate
+    "unsupported" response.
+
+Dependencies on EXT_texture_array
+    If EXT_texture_array or equivalent functionality is not supported,
+    queries for the TEXTURE_1D_ARRAY and TEXTURE_2D_ARRAY <targets> and
+    for the FRAMEBUFFER_RENDERABLE_LAYERED <pname> return the appropriate
+    "unsupported" response.  In addition, the MAX_LAYERS query will return
+    zero.
+
+Dependencies on ARB_texture_cube_map_array
+    If ARB_texture_cube_map_array or equivalent functionality is not supported,
+    queries for the TEXTURE_CUBE_MAP_ARRAY <target> will return the
+    appropriate "unsupported" response.
+
+Dependencies on ARB_texture_multisample
+    If ARB_texture_multisample or equivalent functionality is not supported,
+    queries for the TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY
+    <target> parameter will return the appropriate unsupported response.
+
+Dependencies on ARB_texture_rectangle
+    If ARB_texture_rectange or equivalent functionality is not supported,
+    queries for the TEXTURE_RECTANGLE <target> parameter will return the
+    appropriate unsupported response.
+
+Dependencies on ARB_texture_buffer_object
+    If ARB_texture_buffer_object or equivalent functionality is not supported,
+    queries for the TEXTURE_BUFFER <target> parameter will return the
+    appropriate unsupported response. Ignore all references to TexBuffer.
+
+Dependencies on ARB_texture_gather
+    If ARB_texture_gather or equivalent functionality is not supported,
+    queries for the TEXTURE_GATHER <pname> return the appropriate
+    unsupported response.
+
+Dependecies on ARB_debug_output
+    If ARB_debug_output, KHR_debug or equivalent functionality is not
+    supported, ignore all references to debug output messages.
+
+Dependencies on ARB_clear_buffer_object
+    If ARB_clear_buffer_object or equivalent functionality is not supported,
+    queries for the CLEAR_BUFFER <pname> return the appropriate
+    unsupported response.  Ignore all references to ClearBufferData and
+    ClearBufferSubData, ClearNamedBufferDataEXT, and ClearNamedBufferSubDataEXT.
+
+Dependencies on ARB_texture_compression_bptc
+    If ARB_texture_compression_bptc or equivalent functionality is not
+    supported, ignore all references to VIEW_CLASS_BPTC_UNORM and
+    VIEW_CLASS_BPTC_FLOAT.
+
+Dependencies on ARB_texture_compression_rgtc
+    If ARB_texture_compression_rgtc or equivalent functionality is not
+    supported, ignore all references to VIEW_CLASS_RGTC1_RED and
+    VIEW_CLASS_RGTC2_RG.
+
+Dependencies on ARB_ES3_compatibility
+    If ARB_ES3_compatibility or equivalent functionality is not supported,
+    ingore all references to VIEW_CLASS_EAC_R11, VIEW_CLASS_EAC_RG11,
+    VIEW_CLASS_ETC2_RGB, VIEW_CLASS_ETC2_RGBA, and VIEW_CLASS_ETC2_EAC_RGBA.
+
+Dependencies on KHR_texture_compression_astc_ldr
+    If KHR_texture_compression_astc_ldr or equivalent functionality is not
+    supported, ignore all references to VIEW_CLASS_ASTC_4x4_RGBA,
+    VIEW_CLASS_ASTC_5x4_RGBA, VIEW_CLASS_ASTC_5x5_RGBA,
+    VIEW_CLASS_ASTC_6x5_RGBA, VIEW_CLASS_ASTC_6x6_RGBA,
+    VIEW_CLASS_ASTC_8x5_RGBA, VIEW_CLASS_ASTC_8x6_RGBA, VIEW_CLASS_ASTC_8x8_RGBA,
+    VIEW_CLASS_ASTC_10x5_RGBA, VIEW_CLASS_ASTC_10x6_RGBA,
+    VIEW_CLASS_ASTC_10x8_RGBA, VIEW_CLASS_ASTC_10x10_RGBA,
+    VIEW_CLASS_ASTC_12x10_RGBA, and VIEW_CLASS_ASTC_12x12_RGBA.
+
+Dependencies on ARB_stencil_texturing
+    If ARB_stencil_texturing or equivalent functionality is not supported,
+    ignore all references to stencil texturing.
+
+Dependencies on ARB_depth_texture and OES_depth_texture
+    If ARB_depth_texture, OES_depth_texture or equivalent functionality is
+    no supported, ignore all references to depth texturing.
+
+Dependencies on ARB_texture_view 
+    If ARB_texture_view or equivalent functionality is not supported,
+    queries for the TEXTURE_VIEW and VIEW_COMPATIBILITY_CLASS <pname> values
+    return the appropriate unsupported response. Ignore all references
+    to TextureView.
+
+Dependencies on ARB_texture_storage
+    If ARB_texture_storage, EXT_texture_storage or equivalent functionality
+    is not supported, ignore all references to TexStorage1D, TexStorage2D,
+    TexStorage3D, TextureStorage1DEXT, TextureStorage2DEXT, and
+    TextureStorage3DEXT.
+
+Dependencies on ARB_texture_storage_multisample
+    If ARB_texture_storage_multisample or equivalent functionality is not
+    supported, ignore all references to TexStorage2DMultisample, 
+    TexImage3DMultisample, TextureStorage2DMultisampleEXT, and 
+    TextureStorage3DMultisampleEXT.
+
+Dependencies on ARB_shader_image_load_store
+    If ARB_shader_image_load_store or equivalent functionality is not
+    supported, queries for the following <pname> values:
+      - SHADER_IMAGE_LOAD
+      - SHADER_IMAGE_STORE
+      - SHADER_IMAGE_ATOMIC
+      - IMAGE_TEXEL_SIZE
+      - IMAGE_COMPATIBILITY_CLASS
+      - IMAGE_PIXEL_FORMAT
+      - IMAGE_PIXEL_TYPE
+      - IMAGE_FORMAT_COMPATIBILITY_TYPE
+    return the appropriate unsupported response.
+    Ignore all references to BindImageTexture.
+
+Dependencies on EXT_direct_state_access
+    If EXT_direct_state_access or equivalent functionality is not supported,
+    ignore all references to:
+        ClearNamedBufferDataEXT, ClearNamedBufferSubDataEXT,
+        TextureImage1DEXT, TextureImage2DEXT, TextureImage3DEXT,
+        CopyTextureImage1DEXT, CopyTextureImage2DEXT, 
+        MultiTexImage1DEXT, MultiTexImage2DEXT, MultiTexImage3DEXT,
+        CompressedTextureImage3DEXT, CompressedTextureImage2DEXT, 
+        CompressedTextureImage1DEXT, CompressedMultiTexImage3DEXT,
+        CompressedMultiTexImage2DEXT, CompressedMultiTexImage1DEXT
+        TextureBufferEXT, MultiTexBufferEXT,
+        NamedRenderbufferStorageEXT, NamedRenderbufferStorageMultisampleEXT,
+        NamedRenderbufferStorageMultisampleCoverageEXT,
+        CopyMultiTexImage1DEXT, CopyMultiTexImage2DEXT,
+        TextureStorage1DEXT, TextureStorage2DEXT, TextureStorage3DEXT,
+        TextureStorage2DMultisampleEXT, and TextureStorage3DMultisampleEXT.
+
+Dependencies on EXT_texture_compression_s3tc
+    If EXT_texture_compression_s3tc or equivalent functionality is not
+    supported, ignore all references to VIEW_CLASS_S3TC_DXT1_RGBA, 
+    VIEW_CLASS_S3TC_DXT1_RGB, VIEW_CLASS_S3TC_DXT3_RGBA, and 
+    VIEW_CLASS_S3TC_DXT5_RGBA.
+
+Errors
+
+    The INVALID_ENUM error is generated if the <target> parameter to
+    GetInternalformati*v is not one of the targets listed in Table 6.xx.
+
+    The INVALID_ENUM error is generated if the <pname> parameter is
+    not one of the listed possibilities.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Sample Code
+
+    TBD
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    1) What should this extension be called?
+
+    DISCUSSION: Some options that come to mind: 
+       ARB_internalformat_query2
+       ARB_internalformat_query_extended
+    RESOLVED: use ARB_internalformat_query2.
+
+    2) Should the <internalformat> parameter take "base internal formats" from
+    Table 3.11, any of the "generic" compressed formats, or any other unsized 
+    tokens? What about allowing *any* possible value for <internalformat> so
+    that list of formats queryable is not tied to any particular GL version?
+
+    DISCUSSION: Tying the internalformats accepted to various tables in one 
+    specific version of the spec makes it difficult to determine what should
+    be supported when this is implemented against other versions of the specs
+    and even worse when you consider extensions which add new formats but 
+    which may not have updated the tables.
+
+    RESOLVED: It will be simpler and more useful to allow the query to take
+    any enum value for the INTERNALFORMAT_SUPPORTED <pname> and then define
+    the behaviour of all the other queries in terms of "supported internal
+    formats".
+
+    "base internal" formats, "generic compressed" formats and unsized
+    formats (such as RGBA or RGB_COMPRESSED) are all possible, provided the
+    implementation supports them for texture or image specification, and will 
+    return appropriate information based on the internal format that the
+    particular implementation would map them to internally if used as such.
+
+    3 a) What if the combination of <target> and <pname> is invalid/nonsense
+         (e.g. any texture related query on RENDERBUFFER)?
+      b) What if the <target>/<pname> make sense, but the <internalformat>
+         does not for that <pname> (e.g. COLOR_ENCODING for non-color internal
+         format)?
+
+    RESOLVED. If the combinations of parameters does not make sense the
+    reponse best representing "not supported" or "not applicable" is returned
+    as defined for each <pname>.
+    In general:
+     - size- or count-based queries will return zero,
+     - support-, format- or type-based queries will return NONE,
+     - boolean-based queries will return FALSE, and 
+     - list-based queries return no entries.
+
+    4) Should we expose a way for an implementation to describe what the
+    caveats might be on a particular operation?
+
+    RESOLVED. If ARB_debug_output or equivalent functionality is present
+    and enabled, the caveat will be written to the debug output log.
+    The message has the source DEBUG_SOURCE_API, the type 
+    DEBUG_TYPE_PERFORMANCE, and an implementation-dependent ID.
+
+    5) Do layers generalize in the MAX_COMBINED_DIMENSIONS? How do cube map
+    faces and multisample resources work?
+
+    RESOLVED.  Yes layers generalize in the MAX_COMBINED_DIMENSIONS, as do
+    cube map faces and multiple samples.  
+    The calculation for cube maps is: width x height x 6.
+    The calculation for cube map arrays is: width x height x layers x 6.
+    The calculation for 2D multisample arrays is: width x height x layers x samples.
+
+    6) Is the READ_PIXELS query useful, should we replace it with
+    READ_PIXELS_FORMAT and READ_PIXELS_TYPE, or have all three of them?
+
+    RESOLVED. The READ_PIXELS_FORMAT and READ_PIXELS_TYPE queries have been
+    added. READ_PIXELS still has value because an implementation may want
+    to be able to report a caveat on the performance or lack of support.
+
+    7) There some <pnames> which it makes no sense to be qualified by
+    a per-format/target scope, how should we handle them? 
+    e.g. MAX_WIDTH and MAX_HEIGHT might be the same for all formats.
+    e.g. properties like AUTO_GENERATE_MIPMAP and MANUAL_GENERATE_MIPMAP might
+     depend only on the GL version.
+
+    DISCUSSION:
+    A) Just use this entry point as is, if there are no per-format or
+    target differences, it is perfectly acceptable to have the implementation
+    return the same information for all valid parameters. This does
+    allow implementations to report caveats that may exist for some
+    formats but not others, even though all formats/targets may be supported.
+    B) Introduce new entry point(s) which can report on some general 
+    properties. 
+
+    RESOLVED: Option A, just the one entry point. It doesn't hurt to
+    give the implementation the ability to report more information.
+
+    8) In GL 4.2 MAX_TEXTURE_3D_SIZE is 2048 (2^11) so the 
+    MAX_COMBINED_DIMENSIONS could be as high as 2^11*2^11*2^11 = 2^33. 
+    The MAX_TEXTURE_SIZE is 16384 (2^14) and MAX_ARRAY_TEXTURE_LAYERS is 
+    2048 (2^11) so the MAX_COMBINED_DIMENSIONS could be 2^14*2^14*2^11 
+    = 2^39. Thus it is possible for the combined dimensions to exceed 
+    32-bits. What should be reported in cases like this?
+
+    DISCUSSION: If the max combined size is great than 2^32, the resource
+    could take at least 2^32 bytes or 4GB of memory. While it is currently
+    unlikely that implementation would actually support resources of this 
+    size, it is plausible that within a few years it would be possible to 
+    exceed this with a single allocation. Possible alternatives:
+    A) Saturate the reported value at a max of 2^31 (since <pname> is GLint).
+    B) Add a 64-bit version of the query.
+    C) Add a HI and LO query to allow generatation of a 64-bit value.
+    D) Remove this query.
+    E) use other units? (MB)
+
+    Some other APIs have a maximum allocation size which may be 128 MB or
+    1/4 or the dedicated VRAM. Option A is not very appealing since it
+    limits the usefulness of the query when it is most needed. No interest
+    in Option C. Option E is undesireable since it is too granular for
+    lower-dimensioned resources. General consensus was either option B or D.
+
+    RESOLVED: Option B is specified as it is expected that is query will
+    be useful.
+
+    9) Is a MULTISAMPLE query useful?
+
+    RESOLVED: No. The same information can be obtained by querying if
+    NUM_SAMPLE_COUNTS and checking if it is greater than zero.
+
+   10) Is TEXTURE_SHADOW useful?
+
+    RESOLVED: Yes. While DEPTH_COMPONENTS tells you if the texture has depth
+    in it, some implementations may have caveats to report for shadow lookups.
+    For example there may be caveats that depend on the depth size, or some
+    hardware may not be able to do non-shadowed look ups and must emulate it
+    in the shader. Additionally some versions of the API do not support
+    shadow samplers.
+
+   11) Do we need a list of interactions with all extensions?
+   
+    DISCUSSION: All pnames will always be supported, but return false/not-
+    supported. Interactions with specific extensions and pnames will be
+    noted in the interactions section.
+
+   12) We have a way to query the component sizes and types, should we have
+    a way to query the component orderings?
+
+    RESOLVED. No. It is unclear what value this would add, and an
+    implementation could already choose to expose this via the 
+    TEXTURE_IMAGE_FORMAT and TEXTURE_IMAGE_TYPE queries.
+
+   13) What does the value returned for the MAX_COMBINED_DIMENSIONS
+    actually mean?  Does this mean that if you try to create a texture
+    with more samples or texels than this it is guaranteed to fail
+    (possibly with OUT_OF_MEMORY)? Or is it just a recommendation that
+    says it might fail?
+
+    RESOLVED. This is a recommendation for applications. There are 
+    system-dependant reasons why allocations larger than this size may
+    result in failures even if there might appear to be sufficient memory
+    available when queried via some other means. At the same time, some
+    systems may not have a single hard-limit on the allocation size and
+    it may be a combination of hardware and/or software limitations.
+    This value also does not a guarantee that allocations smaller than
+    this will succeed because it does not factor in the current available
+    memory. Applications should be able to reliably allocate resources
+    that fall under this limit, providing there is sufficient memory
+    available at the time of the allocation.
+
+   14) Can we add some queries for various forms of buffer support, for
+    example vertex attributes, element arrays or transform feedback? 
+    Some implementations may have caveats they could report for some
+    formats.
+
+    RESOLVED: Deferred. While this is interesting, it is too late for
+    this version. It is also unclear if we could use the current
+    entry points which are more targetted at textures and renderbuffers
+    and keyed off an <internalformat>.  We don't typically use an
+    internalformat for buffers.
+
+   15) Should we have separate values for FILTER, such as TEXTURE_MAG_FILTER
+    and TEXTURE_MIN_FILTER?
+
+    RESOLVED: No. The FITLER query is more about whether or not multi-texel
+    filtering is directly supported. We don't expect implmentations to
+    be able to support it for MIN filters but not for MAG, or vice versa.
+
+   16) What should we do in cases where a command is defined in terms of
+    GetTexLevelParameter, but GetTexLevelParameter doesn't support the target
+    (eg TEXTURE_BUFFER in versions of GL prior to 3.1) or there is no
+    corresponding pname (such as TEXTURE_STENCIL_TYPE)?
+
+    RESOLVED: GetInternalFormat* should return the correct information for the
+    specific query, it shouldn't be limited by the set of tokens that happen to
+    be legal for GetTexLevelParameter. This was just used a method of
+    reducing specification language duplication, and noting that the queries
+    are effectively the same.
+
+Revision History
+
+    Rev.  Date        Author    Changes
+    ----  ----------  --------  --------------------------------------------
+     20   10/12/2018  dgkoch    Add tokens for ETC2/EAC and ASTC VIEW_CLASSES
+                                as interactions with ARB_ES3_compatibility
+                                and KHR_texture_compression_astc_ldr.
+     19   02/14/2018  dgkoch    Add issue 16, clarify references to
+                                GetTexLevelParameter (gitlab/opengl/api/65)
+     18   07/15/2013  Jon Leech Remove redundant list of VIEW_CLASS_* tokens 
+                                (Bug 10518).
+     17   07/11/2013  Jon Leech Clarify relationship between VIEW_CLASS_*
+                                tokens and ARB_texture_view (Bug 10518).
+     16   07/26/2012  dgkoch    rename GENERATE_MIPMAP to MANUAL_GENERATE_MIPMAP 
+                                for clarity and restore previous token (9330)
+     15   07/24/2012  dgkoch    Fix several token values (bug 9325)
+     14   07/20/2012  dgkoch    Add _ARB suffix to SRGB_DECODE
+     13   07/17/2012  dgkoch    Finish adding extension/version interactions.
+                                SRGB_DECODE is only valid if extension supported (bug 9293).
+     12   07/10/2012  Jon Leech Change _BIT token names to _BITS (bug 9266).
+     11   06/15/2012  dgkoch    Grammar fixes noticed in review (bug 9158).
+     10   06/11/2012  dgkoch    Resolved Issue 13 and updated relevant spec language
+                                Added Issue 14 and 15 and renamed some tokens (bug 9138)
+     9    06/06/2012  dgkoch    renamed 64-bit query for consistency
+                                Resolved Issue 8, and added a bit of related language.
+                                Added Issue 13.
+     8    05/07/2012  dgkoch    minor token renaming, misc wording improvements
+                                started added extension interactions
+     7    05/05/2012  dgkoch    added 64-bit entry point
+                                allow any enum for internalformat
+                                specify 'unsupported' responses for all queries
+                                add errors
+                                resolved issues as per Apr-12 F2F
+                                added clear buffer, image and view related queries
+     6    04/25/2012  dgkoch    remove MULTISAMPLE (redundant with NUM_SAMPLES > 0)
+                                remove meta queries
+                                add issues 9-11
+                                added READ_PIXELS_FORMAT, READ_PIXELS_TYPE
+                                added TEXTURE_IMAGE_FORMAT, TEXTURE_IMAGE_TYPE
+                                added GET_TEXTURE_IMAGE_FORMAT, GET_TEXTURE_IMAGE_TYPE
+                                changed ACTUAL_INTERNALFORMAT to PREFERRED_INTERNALFORMAT
+                                added INTERNALFORMAT_x_SIZE/TYPE for 
+                                  RED/GREEN/BLUE/ALPHA/DEPTH/STENCIL/SHARED
+     5    04/05/2012  dgkoch    Update overview, issue 7.
+     4    04/04/2012  dgkoch    Incorporate feedback from bmerry (Bug 8595)
+     3    01/23/2012  dgkoch    Continue adding more details
+     2    01/23/2012  dgkoch    Add more details
+     1    10/13/2011  dgkoch    Initial draft
+

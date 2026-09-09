@@ -34,6 +34,8 @@
 #include "src/dawn/node/binding/GPUBuffer.h"
 #include "src/dawn/node/binding/GPUComputePipeline.h"
 #include "src/dawn/node/binding/GPUQuerySet.h"
+#include "src/dawn/node/binding/GPUResourceTable.h"
+#include "src/utils/compiler.h"
 
 namespace wgpu::binding {
 
@@ -113,7 +115,7 @@ void GPUComputePassEncoder::setBindGroup(
     }
 
     enc_.SetBindGroup(index, bg, dynamicOffsetsDataLength,
-                      dynamicOffsetsData.Data() + dynamicOffsetsDataStart);
+                      DAWN_UNSAFE_TODO(dynamicOffsetsData.Data() + dynamicOffsetsDataStart));
 }
 
 void GPUComputePassEncoder::setImmediates(Napi::Env env,
@@ -127,6 +129,19 @@ void GPUComputePassEncoder::setImmediates(Napi::Env env,
     }
 
     enc_.SetImmediates(rangeOffset, dataSpan.data(), dataSpan.size());
+}
+
+void GPUComputePassEncoder::setResourceTable(
+    Napi::Env env,
+    std::optional<interop::Interface<interop::GPUResourceTable>> table) {
+    Converter conv(env);
+
+    wgpu::ResourceTable resourceTable{};
+    if (!conv(resourceTable, table)) {
+        return;
+    }
+
+    enc_.SetResourceTable(resourceTable);
 }
 
 void GPUComputePassEncoder::pushDebugGroup(Napi::Env, std::string groupLabel) {

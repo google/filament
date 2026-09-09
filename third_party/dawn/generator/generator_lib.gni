@@ -24,6 +24,10 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import("//third_party/jinja2/jinja2.gni")
+import("../scripts/dawn_overrides_with_defaults.gni")
+
+dawn_template_dir = "${dawn_root}/generator/templates"
 
 # Template to help invoking code generators based on generator_lib.py
 # Internal use only, this should only be called from templates implementing
@@ -36,6 +40,11 @@
 #
 #   outputs: List of expected outputs, generation will fail if there is a
 #     mistmatch.
+#
+#   inputs: List of additional input files that the generator depends on.
+#     Any templates or JSON files read by the generator must be listed here.
+#     Glob patterns (e.g. "*third_party/jinja2/*") can be used to allow
+#     over-specified dependencies that may not always be read.
 #
 #   deps: additional deps for the code generation targets.
 #
@@ -76,7 +85,7 @@ template("generator_lib_action") {
   if (defined(invoker.root_dir)) {
     _generator_args += [
       "--root-dir",
-      rebase_path(_root_dir, root_build_dir),
+      rebase_path(invoker.root_dir, root_build_dir),
     ]
   }
 
@@ -126,6 +135,43 @@ template("generator_lib_action") {
     rebase_path(_expected_outputs_file, root_build_dir),
   ]
 
+  # To support remote execution and ensure build correctness, we write the
+  # list of expected inputs to a file. The generator will read this file
+  # and assert that the actual files it read match exactly with this list.
+  # This prevents silent dependency omissions (missing inputs).
+  _expected_inputs = [
+    invoker.script,
+    "${invoker.generator_lib_dir}/generator_lib.py",
+
+    # Allow any jinja2/markupsafe to be over-specified (they are in inputs for
+    # RBE, but not all of them are always read).
+    "*third_party/jinja2/*",
+    "*third_party/markupsafe/*",
+  ]
+  if (defined(invoker.inputs)) {
+    _expected_inputs += invoker.inputs
+  }
+
+  _rebased_expected_inputs = []
+  foreach(input, _expected_inputs) {
+    _has_wildcard = string_replace(input, "*", "") != input
+    if (_has_wildcard) {
+      # Keep glob patterns as-is without rebasing, so they can be matched
+      # as raw patterns in the generator.
+      _rebased_expected_inputs += [ input ]
+    } else {
+      _rebased_expected_inputs += [ rebase_path(input, root_build_dir) ]
+    }
+  }
+
+  _expected_inputs_file = "${_gen_dir}/${target_name}.expected_inputs"
+  write_file(_expected_inputs_file, _rebased_expected_inputs)
+
+  _generator_args += [
+    "--expected-inputs-file",
+    rebase_path(_expected_inputs_file, root_build_dir),
+  ]
+
   # The code generator invocation that will write the JSON tarball, check the
   # outputs are what's expected and write a depfile for Ninja.
   action(_json_tarball_target) {
@@ -136,9 +182,18 @@ template("generator_lib_action") {
     if (defined(invoker.deps)) {
       deps = invoker.deps
     }
-    if (defined(invoker.inputs)) {
-      inputs = invoker.inputs
+    _physical_inputs = []
+    foreach(input, _expected_inputs) {
+      _has_wildcard = string_replace(input, "*", "") != input
+      if (!_has_wildcard) {
+        _physical_inputs += [ input ]
+      }
     }
+
+    inputs = [
+               _expected_outputs_file,
+               _expected_inputs_file,
+             ] + jinja2_sources + _physical_inputs
   }
 
   # Extract the JSON tarball into the gen_dir

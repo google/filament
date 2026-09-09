@@ -38,7 +38,10 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using IR_VectorizeScalarMatrixConstructorsTest = TransformTest;
+struct IR_VectorizeScalarMatrixConstructorsTest : public TransformTest {
+  protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
+};
 
 TEST_F(IR_VectorizeScalarMatrixConstructorsTest, NoModify_NoOperands) {
     auto* mat = ty.mat3x3<f32>();

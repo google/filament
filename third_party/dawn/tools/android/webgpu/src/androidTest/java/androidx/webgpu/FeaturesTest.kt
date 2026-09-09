@@ -19,6 +19,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.webgpu.helper.createWebGpu
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,28 +32,45 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class FeaturesTest {
-    /**
-     * Test that the features requested match the features in the adapter are present on the device.
-     */
-    @Test
-    fun featuresTest() {
-        val requiredFeatures = intArrayOf(FeatureName.TextureCompressionASTC)
-        runBlocking {
-            val webGpu =
-                createWebGpu(
-                    deviceDescriptor = GPUDeviceDescriptor(
-                        requiredFeatures = requiredFeatures,
-                        deviceLostCallback = null,
-                        deviceLostCallbackExecutor = Executor(Runnable::run),
-                        uncapturedErrorCallback = null,
-                        uncapturedErrorCallbackExecutor = Executor(Runnable::run)
-                    )
-                )
-            val device = webGpu.device
-            val deviceFeatures = device.getFeatures().features
-            requiredFeatures.forEach {
-                assert(deviceFeatures.contains(it)) { "Requested feature $it available on device" }
-            }
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
+
+  /**
+   * Test that the features requested match the features in the adapter are present on the device.
+   */
+  @Test
+  fun featuresTest() {
+    val requiredFeatures = intArrayOf(FeatureName.TextureCompressionASTC)
+    runBlocking {
+      val webGpu =
+        createWebGpu(
+          dispatcher = dispatcher,
+          deviceDescriptor = GPUDeviceDescriptor(
+            requiredFeatures = requiredFeatures,
+            deviceLostCallback = null,
+            deviceLostCallbackExecutor = Executor(Runnable::run),
+            uncapturedErrorCallback = null,
+            uncapturedErrorCallbackExecutor = Executor(Runnable::run)
+          )
+        )
+      val device = webGpu.device
+      val job = testScope.launch {
+        webGpu.processEventsLoop()
+      }
+      try {
+        val unused = webGpu.execute {
+          val deviceFeatures = device.getFeatures().features
+          requiredFeatures.forEach {
+            assert(deviceFeatures.contains(it)) { "Requested feature $it available on device" }
+          }
         }
+      } finally {
+        webGpu.close()
+        job.cancel()
+        (dispatcher as? ExecutorCoroutineDispatcher)?.close()
+      }
     }
+  }
 }

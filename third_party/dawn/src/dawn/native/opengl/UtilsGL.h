@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_UTILSGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_UTILSGL_H_
 
-#include "dawn/native/Format.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 struct OpenGLFunctions;
@@ -51,6 +51,12 @@ MaybeError CopyImageSubData(const OpenGLFunctions& gl,
 bool HasAnisotropicFiltering(const OpenGLFunctions& gl);
 
 const char* GLErrorAsString(GLenum error);
+const char* GLFramebufferStatusAsString(GLenum status);
+
+// Checks that the framebuffer bound to `target` is complete, returning an internal error
+// otherwise. The check is unconditional so that callers relying on subsequent framebuffer
+// operations having taken effect never proceed past an incomplete framebuffer.
+MaybeError CheckFramebufferComplete(const OpenGLFunctions& gl, GLenum target);
 
 // Clear all errors on the context, emits logs only
 void ClearErrors(const OpenGLFunctions& gl,

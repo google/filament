@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/core/ir/transform/binary_polyfill.h"
 
+#include <vector>
+
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -64,43 +66,34 @@ struct State {
     /// Process the module.
     void Process() {
         // Find the binary instructions that need to be polyfilled.
-        Vector<ir::CoreBinary*, 64> worklist;
+        std::vector<std::function<void()>> worklist;
+        worklist.reserve(128);
         for (auto* inst : ir.Instructions()) {
-            if (auto* binary = inst->As<ir::CoreBinary>()) {
-                switch (binary->Op()) {
-                    case BinaryOp::kDivide:
-                    case BinaryOp::kModulo:
-                        if (config.int_div_mod &&
-                            binary->Result()->Type()->IsIntegerScalarOrVector()) {
-                            worklist.Push(binary);
-                        }
-                        break;
-                    case BinaryOp::kShiftLeft:
-                    case BinaryOp::kShiftRight:
-                        if (config.bitshift_modulo) {
-                            worklist.Push(binary);
-                        }
-                        break;
-                    default:
-                        break;
-                }
+            core::ir::CoreBinary* binary = inst->As<ir::CoreBinary>();
+            if (binary == nullptr) {
+                continue;
             }
-        }
 
-        // Polyfill the binary instructions that we found.
-        for (auto* binary : worklist) {
             switch (binary->Op()) {
                 case BinaryOp::kDivide:
                 case BinaryOp::kModulo:
-                    IntDivMod(binary);
+                    if (config.int_div_mod && binary->Result()->Type()->IsIntegerScalarOrVector()) {
+                        worklist.push_back([this, binary] { IntDivMod(binary); });
+                    }
                     break;
                 case BinaryOp::kShiftLeft:
                 case BinaryOp::kShiftRight:
-                    MaskShiftAmount(binary);
+                    if (config.bitshift_modulo) {
+                        worklist.push_back([this, binary] { MaskShiftAmount(binary); });
+                    }
                     break;
                 default:
                     break;
             }
+        }
+
+        for (auto& cb : worklist) {
+            cb();
         }
     }
 
@@ -199,7 +192,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(Module& ir, const BinaryPolyfillConfig& config) {
-    core::ir::AssertValid(ir, kBinaryPolyfillCapabilities, "before core.BinaryPolyfill");
+    core::ir::AssertValid(ir, "before core.BinaryPolyfill");
 
     State{config, ir}.Process();
 

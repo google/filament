@@ -98,8 +98,8 @@ set(private_headers
     "Features.h"
     "Format.h"
     "Forward.h"
-    "ImmediateConstantsLayout.h"
-    "ImmediateConstantsTracker.h"
+    "ImmediatesLayout.h"
+    "ImmediatesTracker.h"
     "IndirectDrawMetadata.h"
     "IndirectDrawValidationEncoder.h"
     "Instance.h"
@@ -218,8 +218,7 @@ set(sources
     "ExternalTexture.cpp"
     "Features.cpp"
     "Format.cpp"
-    "ImmediateConstantsLayout.cpp"
-    "ImmediateConstantsTracker.cpp"
+    "ImmediatesLayout.cpp"
     "IndirectDrawMetadata.cpp"
     "IndirectDrawValidationEncoder.cpp"
     "Instance.cpp"
@@ -227,6 +226,7 @@ set(sources
     "Limits.cpp"
     "ObjectBase.cpp"
     "ObjectContentHasher.cpp"
+    "PassResourceUsage.cpp"
     "PassResourceUsageTracker.cpp"
     "PerStage.cpp"
     "PhysicalDevice.cpp"
@@ -258,7 +258,6 @@ set(sources
     "SharedTextureMemory.cpp"
     "stream/BlobSource.cpp"
     "stream/ByteVectorSink.cpp"
-    "stream/Stream.cpp"
     "Subresource.cpp"
     "Surface.cpp"
     "SwapChain.cpp"
@@ -379,8 +378,10 @@ if (DAWN_ENABLE_D3D11)
         "d3d11/DeviceD3D11.h"
         "d3d11/DeviceInfoD3D11.h"
         "d3d11/Forward.h"
+        "d3d11/ImmediatesLayoutD3D11.h"
         "d3d11/PhysicalDeviceD3D11.h"
         "d3d11/PipelineLayoutD3D11.h"
+        "d3d11/PipelineStateTrackerD3D11.h"
         "d3d11/PlatformFunctionsD3D11.h"
         "d3d11/QuerySetD3D11.h"
         "d3d11/QueueD3D11.h"
@@ -406,6 +407,7 @@ if (DAWN_ENABLE_D3D11)
         "d3d11/DeviceInfoD3D11.cpp"
         "d3d11/PhysicalDeviceD3D11.cpp"
         "d3d11/PipelineLayoutD3D11.cpp"
+        "d3d11/PipelineStateTrackerD3D11.cpp"
         "d3d11/PlatformFunctionsD3D11.cpp"
         "d3d11/QuerySetD3D11.cpp"
         "d3d11/QueueD3D11.cpp"
@@ -440,10 +442,12 @@ if (DAWN_ENABLE_D3D12)
         "d3d12/GPUDescriptorHeapAllocationD3D12.h"
         "d3d12/HeapAllocatorD3D12.h"
         "d3d12/HeapD3D12.h"
+        "d3d12/ImmediatesLayoutD3D12.h"
         "d3d12/IntegerTypes.h"
         "d3d12/PageableD3D12.h"
         "d3d12/PhysicalDeviceD3D12.h"
         "d3d12/PipelineLayoutD3D12.h"
+        "d3d12/PipelineLayoutHandle.h"
         "d3d12/PlatformFunctionsD3D12.h"
         "d3d12/QuerySetD3D12.h"
         "d3d12/QueueD3D12.h"
@@ -483,6 +487,7 @@ if (DAWN_ENABLE_D3D12)
         "d3d12/PageableD3D12.cpp"
         "d3d12/PhysicalDeviceD3D12.cpp"
         "d3d12/PipelineLayoutD3D12.cpp"
+        "d3d12/PipelineLayoutHandle.cpp"
         "d3d12/PlatformFunctionsD3D12.cpp"
         "d3d12/QuerySetD3D12.cpp"
         "d3d12/QueueD3D12.cpp"
@@ -522,6 +527,7 @@ if (DAWN_ENABLE_METAL)
         "metal/ComputePipelineMTL.h"
         "metal/DeviceMTL.h"
         "metal/Forward.h"
+        "metal/ImmediatesLayoutMTL.h"
         "metal/MultiDrawEncoder.h"
         "metal/MultiDrawEncoder.mm"
         "metal/PhysicalDeviceMTL.h"
@@ -616,6 +622,7 @@ if (DAWN_ENABLE_WEBGPU_ON_WEBGPU)
         "webgpu/ShaderModuleWGPU.h"
         "webgpu/SharedFenceWGPU.h"
         "webgpu/SharedTextureMemoryWGPU.h"
+        "webgpu/SwapChainWGPU.h"
         "webgpu/ToWGPU.h"
         "webgpu/TextureWGPU.h"
         "webgpu/WebGPUError.h"
@@ -643,12 +650,13 @@ if (DAWN_ENABLE_WEBGPU_ON_WEBGPU)
         "webgpu/ShaderModuleWGPU.cpp"
         "webgpu/SharedFenceWGPU.cpp"
         "webgpu/SharedTextureMemoryWGPU.cpp"
+        "webgpu/SwapChainWGPU.cpp"
         "webgpu/ToWGPU.cpp"
         "webgpu/TextureWGPU.cpp"
     )
 endif()
 
-if ((DAWN_ENABLE_OPENGL OR DAWN_ENABLE_VULKAN) AND DAWN_ENABLE_SPIRV_VALIDATION)
+if (DAWN_ENABLE_SPIRV_VALIDATION)
     list(APPEND private_headers
         "SpirvValidation.h"
     )
@@ -689,6 +697,7 @@ if (DAWN_ENABLE_OPENGL)
         "opengl/EGLFunctions.h"
         "opengl/Forward.h"
         "opengl/GLFormat.h"
+        "opengl/ImmediatesLayoutGL.h"
         "opengl/IntegerTypes.h"
         "opengl/opengl_platform.h"
         "opengl/OpenGLFunctions.h"
@@ -767,6 +776,8 @@ if (DAWN_ENABLE_VULKAN)
         "vulkan/FencedDeleter.h"
         "vulkan/Forward.h"
         "vulkan/FramebufferCache.h"
+        "vulkan/FramebufferFetchHelper.h"
+        "vulkan/ImmediatesLayoutVk.h"
         "vulkan/MemoryTypeSelector.h"
         "vulkan/PhysicalDeviceVk.h"
         "vulkan/PipelineCacheVk.h"
@@ -812,6 +823,7 @@ if (DAWN_ENABLE_VULKAN)
         "vulkan/DeviceVk.cpp"
         "vulkan/FencedDeleter.cpp"
         "vulkan/FramebufferCache.cpp"
+        "vulkan/FramebufferFetchHelper.cpp"
         "vulkan/MemoryTypeSelector.cpp"
         "vulkan/PhysicalDeviceVk.cpp"
         "vulkan/PipelineCacheVk.cpp"
@@ -926,6 +938,7 @@ set(dawn_native_private_depends
 # The same object files are reused to build
 # 1. dawn_native (which gets used by tests, samples, benchmarks)
 # 2. webgpu_dawn bundle (which gets installed via CMake install rules)
+# All dependencies on dawn_native_objects should be private.
 dawn_add_library(
   dawn_native_objects
   UTILITY_TARGET dawn_internal_config
@@ -938,8 +951,10 @@ dawn_add_library(
     ${sources}
   DEPENDS
     ${dawn_native_public_depends}
-  PRIVATE_DEPENDS
+
+    # These are public so that internal usages of dawn_native_objects inherit the dependencies.
     ${dawn_native_private_depends}
+  PRIVATE_DEPENDS
     ${conditional_private_platform_depends}
 )
 
@@ -949,10 +964,9 @@ dawn_add_library(
   SOURCES
     ${dawn_component_srcs}
   DEPENDS
-    dawn::dawn_native_objects
     ${dawn_native_public_depends}
   PRIVATE_DEPENDS
-    ${dawn_native_private_depends}
+    dawn::dawn_native_objects
     ${conditional_private_platform_depends}
 )
 
@@ -972,9 +986,39 @@ if (DAWN_ENABLE_D3D12)
         target_compile_definitions(dawn_native_objects PRIVATE "DAWN_USE_BUILT_DXC")
         add_dependencies(dawn_native copy_dxil_dll)
     endif()
+    if (DAWN_USE_AGILITY_SDK)
+        target_compile_definitions(dawn_native PRIVATE "DAWN_USE_AGILITY_SDK")
+        target_compile_definitions(dawn_native_objects PRIVATE "DAWN_USE_AGILITY_SDK")
+        target_include_directories(dawn_native_objects PRIVATE "${DAWN_AGILITY_SDK_DIR}/src/build/native/include")
+
+        # Determine the architecture-specific DLL source directory
+        if (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
+            set(_agility_sdk_bin_dir "${DAWN_AGILITY_SDK_DIR}/src/build/native/bin/arm64")
+        elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(_agility_sdk_bin_dir "${DAWN_AGILITY_SDK_DIR}/src/build/native/bin/win32")
+        else()
+            set(_agility_sdk_bin_dir "${DAWN_AGILITY_SDK_DIR}/src/build/native/bin/x64")
+        endif()
+
+        get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+        if (isMultiConfig)
+            set(_agility_sdk_out_dir "${CMAKE_BINARY_DIR}/$<CONFIG>/D3D12")
+        else()
+            set(_agility_sdk_out_dir "${CMAKE_BINARY_DIR}/D3D12")
+        endif()
+
+        add_custom_target(copy_agility_sdk_dlls
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${_agility_sdk_out_dir}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${_agility_sdk_bin_dir}/D3D12Core.dll"
+                "${_agility_sdk_bin_dir}/d3d12SDKLayers.dll"
+                "${_agility_sdk_out_dir}"
+            COMMENT "Copying Agility SDK DLLs to ${_agility_sdk_out_dir}")
+        add_dependencies(dawn_native copy_agility_sdk_dlls)
+    endif()
 endif()
 
-if ((DAWN_ENABLE_OPENGL OR DAWN_ENABLE_VULKAN) AND DAWN_ENABLE_SPIRV_VALIDATION)
+if (DAWN_ENABLE_SPIRV_VALIDATION)
     target_compile_definitions(dawn_native PRIVATE "DAWN_ENABLE_SPIRV_VALIDATION")
     target_compile_definitions(dawn_native_objects PRIVATE "DAWN_ENABLE_SPIRV_VALIDATION")
 endif()
@@ -1019,7 +1063,6 @@ if (DAWN_BUILD_MONOLITHIC_LIBRARY)
         ${dawn_native_public_depends}
       PRIVATE_DEPENDS
         dawn::dawn_native_objects
-        ${dawn_native_private_depends}
         ${conditional_private_platform_depends}
     )
 

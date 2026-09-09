@@ -25,23 +25,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/QueueGL.h"
+#include "src/dawn/native/opengl/QueueGL.h"
 
 #include <vector>
 
-#include "dawn/native/BlitBufferToDepthStencil.h"
-#include "dawn/native/CommandBuffer.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/opengl/BufferGL.h"
-#include "dawn/native/opengl/CommandBufferGL.h"
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/native/opengl/EGLFunctions.h"
-#include "dawn/native/opengl/PhysicalDeviceGL.h"
-#include "dawn/native/opengl/SharedFenceEGL.h"
-#include "dawn/native/opengl/TextureGL.h"
-#include "dawn/native/opengl/UtilsGL.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/native/BlitBufferToDepthStencil.h"
+#include "src/dawn/native/CommandBuffer.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/opengl/BufferGL.h"
+#include "src/dawn/native/opengl/CommandBufferGL.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/opengl/EGLFunctions.h"
+#include "src/dawn/native/opengl/PhysicalDeviceGL.h"
+#include "src/dawn/native/opengl/SharedFenceEGL.h"
+#include "src/dawn/native/opengl/TextureGL.h"
+#include "src/dawn/native/opengl/UtilsGL.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::opengl {
 
@@ -76,38 +78,38 @@ Queue::Queue(Device* device, const QueueDescriptor* descriptor) : QueueBase(devi
     }
 }
 
-MaybeError Queue::SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) {
+MaybeError Queue::SubmitImpl(Span<CommandBufferBase* const> commands) {
     Device* device = ToBackend(GetDevice());
-    return device->EnqueueAndFlushGL(
-        [this, commandCount, commands](const OpenGLFunctions& gl) -> MaybeError {
-            TRACE_EVENT_BEGIN0(GetDevice()->GetPlatform(), Recording, "CommandBufferGL::Execute");
-            for (uint32_t i = 0; i < commandCount; ++i) {
-                DAWN_TRY(ToBackend(commands[i])->Execute(gl));
+    return device->EnqueueAndFlushGL([commands](const OpenGLFunctions& gl) -> MaybeError {
+        {
+            TRACE_EVENT(DAWN_TRACE_CATEGORY("recording"), "CommandBufferGL::Execute");
+            for (CommandBufferBase* commandBuffer : commands) {
+                DAWN_TRY(ToBackend(commandBuffer)->Execute(gl));
             }
-            TRACE_EVENT_END0(GetDevice()->GetPlatform(), Recording, "CommandBufferGL::Execute");
-            return {};
-        });
+        }
+        return {};
+    });
 }
 
 MaybeError Queue::WriteBufferImpl(BufferBase* buffer,
                                   uint64_t bufferOffset,
-                                  const void* data,
-                                  size_t size) {
-    DAWN_TRY(ToBackend(buffer)->EnsureDataInitializedAsDestination(bufferOffset, size));
+                                  Span<const std::byte> data) {
+    DAWN_TRY(ToBackend(buffer)->EnsureDataInitializedAsDestination(bufferOffset, data.size()));
     buffer->MarkUsedInPendingCommands();
     return ToBackend(GetDevice())
-        ->EnqueueGL(data, size,
+        ->EnqueueGL(data,
                     [buffer = Ref<Buffer>(ToBackend(buffer)), bufferOffset](
-                        const OpenGLFunctions& gl, const void* data, size_t size) -> MaybeError {
+                        const OpenGLFunctions& gl, Span<const std::byte> data) -> MaybeError {
                         DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, buffer->GetHandle()));
-                        DAWN_GL_TRY(gl, BufferSubData(GL_ARRAY_BUFFER, bufferOffset, size, data));
+                        DAWN_GL_TRY(
+                            gl, BufferSubData(GL_ARRAY_BUFFER, checked_cast<GLintptr>(bufferOffset),
+                                              checked_cast<GLsizeiptr>(data.size()), data.data()));
                         return {};
                     });
 }
 
 MaybeError Queue::WriteTextureImpl(const TexelCopyTextureInfo& destination,
-                                   const void* data,
-                                   size_t dataSize,
+                                   Span<const std::byte> data,
                                    const TexelCopyBufferLayout& dataLayout,
                                    const Extent3D& writeSizePixel) {
     TextureCopy textureCopy;
@@ -140,11 +142,11 @@ MaybeError Queue::WriteTextureImpl(const TexelCopyTextureInfo& destination,
             // So the x,y,z origins and mipLevel are always 0.
             destinationDataTexture.mipLevel = 0;
             destinationDataTexture.origin = {0, 0, 0};
-            DAWN_TRY_CONTEXT(WriteTextureImpl(destinationDataTexture, data, dataSize, dataLayout,
-                                              writeSizePixel),
-                             "writing to stencil aspect of %s using blit workaround when writing "
-                             "to an intermediate r8uint texture.",
-                             textureCopy.texture.Get());
+            DAWN_TRY_CONTEXT(
+                WriteTextureImpl(destinationDataTexture, data, dataLayout, writeSizePixel),
+                "writing to stencil aspect of %s using blit workaround when writing "
+                "to an intermediate r8uint texture.",
+                textureCopy.texture.Get());
         }
 
         // Blit from R8Uint texture to the stencil texture.
@@ -158,7 +160,7 @@ MaybeError Queue::WriteTextureImpl(const TexelCopyTextureInfo& destination,
         Ref<CommandBufferBase> commandBuffer;
         DAWN_TRY_ASSIGN(commandBuffer, commandEncoder->Finish());
         CommandBufferBase* commands = commandBuffer.Get();
-        APISubmit(1, &commands);
+        APISubmit(SpanFromRef(commands));
         return {};
     }
 
@@ -172,14 +174,14 @@ MaybeError Queue::WriteTextureImpl(const TexelCopyTextureInfo& destination,
     }
 
     return device->EnqueueGL(
-        data, dataSize,
+        data,
         [ensureInitialized, dest = Ref<Texture>(ToBackend(destination.texture)), range, textureCopy,
          dataLayout = TexelCopyBufferLayout(dataLayout), writeSizePixel = Extent3D(writeSizePixel)](
-            const OpenGLFunctions& gl, const void* data, size_t dataSize) -> MaybeError {
+            const OpenGLFunctions& gl, Span<const std::byte> data) -> MaybeError {
             if (ensureInitialized) {
                 DAWN_TRY(dest->EnsureSubresourceContentInitialized(gl, range));
             }
-            return DoTexSubImage(gl, textureCopy, data, dataLayout, writeSizePixel);
+            return DoTexSubImage(gl, textureCopy, data.data(), dataLayout, writeSizePixel);
         });
 }
 
@@ -288,12 +290,12 @@ ResultOrError<Ref<SharedFence>> Queue::GetOrCreateSharedFence(ExecutionSerial la
             // the sync.
             DAWN_GL_TRY(gl, Flush());
 
-            utils::SystemHandle handle;
+            SystemHandle handle;
             if (type == wgpu::SharedFenceType::SyncFD) {
                 EGLint fd;
                 DAWN_TRY_ASSIGN(fd, sync->DupFD(gl));
 
-                handle = utils::SystemHandle::Acquire(fd);
+                handle = SystemHandle::Acquire(fd);
             }
             return AcquireRef(new SharedFenceEGL(ToBackend(GetDevice()), "Internal EGLSync", type,
                                                  std::move(handle), sync));
@@ -318,7 +320,7 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
     // Queue::SubmitImpl(), it's safe to use ExecuteGL().
     return device->ExecuteGL(SubmitMode::Passive, [&](const OpenGLFunctions& gl) -> auto {
         return mFencesInFlight.Use([&](auto fencesInFlight) -> ResultOrError<ExecutionSerial> {
-            ExecutionSerial fenceSerial{0};
+            ExecutionSerial fenceSerial{0u};
             while (!fencesInFlight->empty()) {
                 auto [sync, tentativeSerial] = fencesInFlight->front();
 
@@ -326,7 +328,7 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
                 // as we see one that's not ready.
                 GLenum result;
                 DAWN_TRY_ASSIGN(result,
-                                sync->ClientWait(gl, EGL_SYNC_FLUSH_COMMANDS_BIT, Nanoseconds(0)));
+                                sync->ClientWait(gl, EGL_SYNC_FLUSH_COMMANDS_BIT, Nanoseconds(0u)));
                 if (result == EGL_TIMEOUT_EXPIRED) {
                     return fenceSerial;
                 }

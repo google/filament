@@ -3,16 +3,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 //
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
+//  1. Redistributions of source code must retain the above copyright notice, this
+//     list of conditions and the following disclaimer.
 //
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-// 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from
-//    this software without specific prior written permission.
+//  3. Neither the name of the copyright holder nor the names of its
+//     contributors may be used to endorse or promote products derived from
+//     this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -196,8 +196,18 @@ type TemplateEnumParam struct {
 	Matcher  *EnumMatcher // Optional
 }
 
-func (t *TemplateEnumParam) AST() ast.TemplateParam     { return t.ASTParam }
-func (t *TemplateEnumParam) TemplateKind() TemplateKind { return NumberTemplate }
+func (t *TemplateEnumParam) AST() ast.TemplateParam { return t.ASTParam }
+func (t *TemplateEnumParam) TemplateKind() TemplateKind {
+	// Most enums are just treated as numbers. The core enums with def files are
+	// generated as specific template kinds to allow functions to be templated on
+	// them.
+	k := NumberTemplate
+	switch t.Enum.Name {
+	case "access", "address_space", "subgroup_matrix_kind", "majorness", "texel_format":
+		k = TemplateKind(t.Enum.Name)
+	}
+	return k
+}
 
 // Format implements the fmt.Formatter interface
 func (t *TemplateEnumParam) Format(w fmt.State, verb rune) {
@@ -205,6 +215,26 @@ func (t *TemplateEnumParam) Format(w fmt.State, verb rune) {
 	if t.Enum != nil {
 		fmt.Fprint(w, ": ")
 		fmt.Fprint(w, *t.Enum)
+	}
+}
+
+// TemplateEnumEntryParam is a specific template enum parameter
+// Used during permutation when an explicit template is an enum.
+type TemplateEnumEntryParam struct {
+	Name     string
+	ASTParam ast.TemplateParam
+	Entry    *FullyQualifiedName
+}
+
+func (t *TemplateEnumEntryParam) AST() ast.TemplateParam     { return t.ASTParam }
+func (t *TemplateEnumEntryParam) TemplateKind() TemplateKind { return NumberTemplate }
+
+// Format implements the fmt.Formatter interface
+func (t *TemplateEnumEntryParam) Format(w fmt.State, verb rune) {
+	fmt.Fprint(w, t.Name)
+	if t.Entry != nil {
+		fmt.Fprint(w, ": ")
+		fmt.Fprint(w, *t.Entry)
 	}
 }
 
@@ -363,7 +393,8 @@ func (f FullyQualifiedName) Format(w fmt.State, verb rune) {
 	}
 }
 
-// TemplateParam is a TemplateEnumParam, TemplateTypeParam or TemplateNumberParam
+// TemplateParam is a TemplateEnumParam, TemplateEnumEntryParam,
+// TemplateTypeParam or TemplateNumberParam
 type TemplateParam interface {
 	Named
 	TemplateKind() TemplateKind
@@ -386,14 +417,15 @@ type Named interface {
 	GetName() string
 }
 
-func (*Enum) isNamed()                {}
-func (*EnumEntry) isNamed()           {}
-func (*Type) isNamed()                {}
-func (*TypeMatcher) isNamed()         {}
-func (*EnumMatcher) isNamed()         {}
-func (*TemplateTypeParam) isNamed()   {}
-func (*TemplateEnumParam) isNamed()   {}
-func (*TemplateNumberParam) isNamed() {}
+func (*Enum) isNamed()                   {}
+func (*EnumEntry) isNamed()              {}
+func (*Type) isNamed()                   {}
+func (*TypeMatcher) isNamed()            {}
+func (*EnumMatcher) isNamed()            {}
+func (*TemplateTypeParam) isNamed()      {}
+func (*TemplateEnumParam) isNamed()      {}
+func (*TemplateEnumEntryParam) isNamed() {}
+func (*TemplateNumberParam) isNamed()    {}
 
 // GetName returns the name of the Enum
 func (e *Enum) GetName() string { return e.Name }
@@ -415,6 +447,9 @@ func (t *TemplateTypeParam) GetName() string { return t.Name }
 
 // GetName returns the name of the TemplateEnumParam
 func (t *TemplateEnumParam) GetName() string { return t.Name }
+
+// GetName returns the name of the TemplateEnumEntryParam
+func (t *TemplateEnumEntryParam) GetName() string { return t.Name }
 
 // GetName returns the name of the TemplateNumberParam
 func (t *TemplateNumberParam) GetName() string { return t.Name }

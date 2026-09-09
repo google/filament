@@ -33,6 +33,7 @@
 
 #include "src/dawn/node/binding/Converter.h"
 #include "src/dawn/node/binding/Errors.h"
+#include "src/utils/numeric.h"
 
 namespace wgpu::binding {
 
@@ -74,7 +75,8 @@ interop::Promise<void> GPUBuffer::mapAsync(Napi::Env env,
     pending_map_.emplace(ctx->promise);
 
     buffer_.MapAsync(
-        mode, offset, rangeSize, wgpu::CallbackMode::AllowProcessEvents,
+        mode, dawn::checked_cast<size_t>(uint64_t{offset}), dawn::checked_cast<size_t>(rangeSize),
+        wgpu::CallbackMode::AllowProcessEvents,
         [ctx = std::move(ctx), this](wgpu::MapAsyncStatus status, wgpu::StringView) {
             // The promise may already have been resolved with an AbortError if there was an early
             // destroy() or early unmap().
@@ -121,14 +123,17 @@ interop::ArrayBuffer GPUBuffer::getMappedRange(Napi::Env env,
         }
     }
 
-    auto* ptr = (desc_.usage & wgpu::BufferUsage::MapWrite)
-                    ? buffer_.GetMappedRange(offset, s)
-                    : const_cast<void*>(buffer_.GetConstMappedRange(offset, s));
+    auto* ptr =
+        (desc_.usage & wgpu::BufferUsage::MapWrite)
+            ? buffer_.GetMappedRange(dawn::checked_cast<size_t>(uint64_t{offset}),
+                                     dawn::checked_cast<size_t>(s))
+            : const_cast<void*>(buffer_.GetConstMappedRange(
+                  dawn::checked_cast<size_t>(uint64_t{offset}), dawn::checked_cast<size_t>(s)));
     if (!ptr) {
         Errors::OperationError(env).ThrowAsJavaScriptException();
         return {};
     }
-    auto array_buffer = Napi::ArrayBuffer::New(env, ptr, s);
+    auto array_buffer = Napi::ArrayBuffer::New(env, ptr, dawn::checked_cast<size_t>(s));
     // TODO(crbug.com/dawn/1135): Ownership here is the wrong way around.
     mappings_.emplace_back(Mapping{start, end, Napi::Persistent(array_buffer)});
     return array_buffer;

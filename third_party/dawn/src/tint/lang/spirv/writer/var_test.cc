@@ -512,12 +512,15 @@ TEST_F(SpirvWriterTest, ImmediateVar) {
     auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
-               OpDecorate %v_block Block
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+               OpMemberDecorate %tint_symbol_tint_explicit_layout 0 Offset 0
+               OpDecorate %tint_symbol_tint_explicit_layout Block
 )");
     EXPECT_INST(R"(
-    %v_block = OpTypeStruct %int                    ; Block
-%_ptr_PushConstant_v_block = OpTypePointer PushConstant %v_block
-          %1 = OpVariable %_ptr_PushConstant_v_block PushConstant
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1       ; ArrayStride 4
+%tint_symbol_tint_explicit_layout = OpTypeStruct %_arr_uint_uint_1  ; Block
+%_ptr_PushConstant_tint_symbol_tint_explicit_layout = OpTypePointer PushConstant %tint_symbol_tint_explicit_layout
+          %1 = OpVariable %_ptr_PushConstant_tint_symbol_tint_explicit_layout PushConstant
 )");
 }
 
@@ -541,9 +544,87 @@ TEST_F(SpirvWriterTest, ImmedaiteVar_Load) {
     auto result = Generate();
     ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
-          %8 = OpAccessChain %_ptr_PushConstant_int %1 %uint_0
-       %load = OpLoad %int %8 None
-               OpReturnValue %load
+         %11 = OpAccessChain %_ptr_PushConstant__arr_uint_uint_1 %1 %uint_0
+         %14 = OpAccessChain %_ptr_PushConstant_uint %11 %uint_0
+         %16 = OpLoad %uint %14 None
+         %17 = OpBitcast %int %16
+               OpReturnValue %17
+)");
+}
+
+TEST_F(SpirvWriterTest, ImmediateVar_F16_Load) {
+    auto* v = b.Var("v", ty.ptr<immediate, f16>());
+    mod.root_block->Append(v);
+
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Load(v));
+        b.Return(eb);
+    });
+
+    Options options;
+    options.minimum_immediate_size = 4u;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+         %11 = OpAccessChain %_ptr_PushConstant__arr_uint_uint_1 %1 %uint_0
+         %14 = OpAccessChain %_ptr_PushConstant_uint %11 %uint_0
+         %16 = OpLoad %uint %14 None
+         %19 = OpBitcast %v2half %16
+          %x = OpCompositeExtract %half %19 0
+)");
+}
+
+TEST_F(SpirvWriterTest, ImmediateVar_Vec3F16_Load) {
+    auto* v = b.Var("v", ty.ptr<immediate, vec3<f16>>());
+    mod.root_block->Append(v);
+
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Load(v));
+        b.Return(eb);
+    });
+
+    Options options;
+    options.minimum_immediate_size = 8u;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+         %11 = OpAccessChain %_ptr_PushConstant__arr_uint_uint_2 %1 %uint_0
+         %14 = OpAccessChain %_ptr_PushConstant_uint %11 %uint_0
+         %16 = OpLoad %uint %14 Aligned 8
+         %17 = OpAccessChain %_ptr_PushConstant__arr_uint_uint_2 %1 %uint_0
+         %18 = OpAccessChain %_ptr_PushConstant_uint %17 %uint_1
+         %20 = OpLoad %uint %18 None
+         %22 = OpCompositeConstruct %v2uint %16 %20
+         %25 = OpBitcast %v4half %22
+          %x = OpVectorShuffle %v3half %25 %25 0 1 2
+)");
+}
+
+TEST_F(SpirvWriterTest, ImmediateVar_Vec4F16_Load) {
+    auto* v = b.Var("v", ty.ptr<immediate, vec4<f16>>());
+    mod.root_block->Append(v);
+
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Load(v));
+        b.Return(eb);
+    });
+
+    Options options;
+    options.minimum_immediate_size = 8u;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_INST(R"(
+         %11 = OpAccessChain %_ptr_PushConstant__arr_uint_uint_2 %1 %uint_0
+         %14 = OpAccessChain %_ptr_PushConstant_uint %11 %uint_0
+         %16 = OpLoad %uint %14 Aligned 8
+         %17 = OpAccessChain %_ptr_PushConstant__arr_uint_uint_2 %1 %uint_0
+         %18 = OpAccessChain %_ptr_PushConstant_uint %17 %uint_1
+         %20 = OpLoad %uint %18 None
+         %22 = OpCompositeConstruct %v2uint %16 %20
+          %x = OpBitcast %v4half %22
 )");
 }
 

@@ -1,0 +1,1573 @@
+Name
+
+    NV_fragment_program_option
+
+Name Strings
+
+    GL_NV_fragment_program_option
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified:      05/27/2005
+    NVIDIA Revision:    4
+
+Number
+
+    303
+
+Dependencies
+
+    ARB_fragment_program is required.
+
+Overview
+
+    This extension provides additional fragment program functionality
+    to extend the standard ARB_fragment_program language and execution
+    environment.  ARB programs wishing to use this added functionality
+    need only add:
+
+        OPTION NV_fragment_program;
+
+    to the beginning of their fragment programs.
+
+    The functionality provided by this extension, which is roughly
+    equivalent to that provided by the NV_fragment_program extension,
+    includes:
+
+      * increased control over precision in arithmetic computations and
+        storage,
+
+      * data-dependent conditional writemasks,
+
+      * an absolute value operator on scalar and swizzled operand loads,
+
+      * instructions to compute partial derivatives, and perform texture
+        lookups using specified partial derivatives,
+
+      * fully orthogonal "set on" instructions,
+
+      * instructions to compute reflection vector and perform a 2D
+        coordinate transform, and
+
+      * instructions to pack and unpack multiple quantities into a single
+        component.
+
+Issues
+
+    Why is this a separate extension, rather than just an additional
+    feature of NV_fragment_program?
+
+      RESOLVED:  The NV_fragment_program specification was complete
+      (with a published implementation) prior to the completion of
+      ARB_fragment_program.  Future NVIDIA fragment program extensions
+      should contain extensions to the ARB_fragment_program execution
+      environment as a standard feature.
+
+    Should a similar option be provided to expose ARB_fragment_program
+    features not found in NV_fragment_program (e.g., state bindings,
+    certain "macro" instructions) under the NV_fragment_program
+    interface?
+
+      RESOLVED:  No.  Why not just write an ARB program?
+
+    The ARB_fragment_program spec has a minor grammar bug that requires
+    that inline scalar constants used as scalar operands include a
+    component selector.  In other words, you have to say "11.0.x" to
+    use the constant "11.0".  What should we do here?
+
+      RESOLVED:  The NV_fragment_program_option grammar will correct
+      this problem, which should be fixed in future revisions to the
+      ARB language.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Modify Section 3.11.2 of ARB_fragment_program (Fragment Program
+    Grammar and Restrictions):
+
+    (mostly add to existing grammar rules, modify a few existing grammar
+    rules -- changes marked with "***")
+    
+    <optionName>            ::= "NV_fragment_program"
+
+    <TexInstruction>        ::= <TXDop_instruction>
+
+    <VECTORop>              ::= "DDX"
+                              | "DDY"
+                              | "PK2H"
+                              | "PK2US"
+                              | "PK4B"
+                              | "PK4UB"
+
+    <SCALARop>              ::= "UP2H"
+                              | "UP2US"
+                              | "UP4B"
+                              | "UP4UB"
+
+    <BINop>                 ::= "RFL"
+                              | "SEQ"
+                              | "SFL"
+                              | "SGT"
+                              | "SLE"
+                              | "SNE"
+                              | "STR"
+
+    <TRIop>                 ::= "X2D"
+
+    <TXDop_instruction>     ::= <TXDop> <instResult> "," <instOperandV> "," 
+                                <instOperandV> "," <instOperandV> "," 
+                                <texTarget>
+
+    <TXDop>                 ::= "TXD"
+
+    <killCond>              ::= <ccTest>
+
+    <instOperandV>          ::= <instOperandAbsV>
+
+    <instOperandAbsV>       ::= <optSign> "|" <instOperandBaseV> "|"
+
+    <instOperandS>          ::= <instOperandAbsS>
+
+    <instOperandAbsS>       ::= <optSign> "|" <instOperandBaseS> "|"
+
+    <instResult>            ::= <instResultCC>
+
+    <instResultCC>          ::= <instResultBase> <ccMask>
+
+    <TEMP_statement>        ::= <varSize> "TEMP" <varNameList>
+
+    <OUTPUT_statement>      ::= <varSize> "OUTPUT" <establishName> "=" 
+                                  <resultUseD>
+
+    <varSize>               ::= "SHORT"
+                              | "LONG"
+
+    <paramUseV>             ::= <constantScalar> 
+                                  (*** instead of <constantScalar>
+                                       <swizzleSuffix>)
+
+    <paramUseS>             ::= <constantScalar> 
+                                  (*** instead of <constantScalar>
+                                       <scalarSuffix>)
+
+    <ccMask>                ::= "(" <ccTest> ")"
+
+    <ccTest>                ::= <ccMaskRule> <swizzleSuffix>
+
+    <ccMaskRule>            ::= "EQ"
+                              | "GE"
+                              | "GT"
+                              | "LE"
+                              | "LT"
+                              | "NE"
+                              | "TR"
+                              | "FL"
+
+    (modify language describing reserved keywords) The following strings
+    are reserved keywords and may not be used as identifiers:
+
+        ALIAS, ATTRIB, END, OPTION, OUTPUT, PARAM, TEMP, fragment,
+        program, result, state, and texture.
+
+    Additionally, all the instruction names (and variants) listed in
+    Table X.5 are reserved.
+
+    Modify Section 3.11.3.3, Fragment Program Temporaries
+
+    (replace second paragraph) Fragment program temporary variables
+    can be declared explicitly using the <TEMP_statement> grammar
+    rule.  Each such statement can declare one or more temporaries.
+    Temporary declaration can optionally specify a variable size,
+    using the <varSize> grammar rule.  Variables declared as "SHORT"
+    will represented with at least 16 bits per component (5 bits of
+    exponent, 10 bits of mantissa).  Variables declared as "LONG" will be
+    represented with at least 32 bits per component (8 bits of exponent,
+    23 bits of mantissa).  Fragment program temporary variables can not
+    be declared implicitly.
+
+    Modify Section 3.11.3.4, Fragment Program Results
+
+    (replace second paragraph) Fragment program result variables
+    can be declared explicitly using the <OUTPUT_statement> grammar
+    rule, or implicitly using the <resultBinding> grammar rule in an
+    executable instruction.  Explicit result variable declaration can
+    optionally specify a variable size, using the <varSize> grammar rule.
+    Variables declared as "SHORT" will represented with at least 16
+    bits per component (5 bits of exponent, 10 bits of mantissa).
+    Variables declared as "LONG" will be represented with at least
+    32 bits per component (8 bits of exponent, 23 bits of mantissa).
+    Each fragment program result variable is bound to a fragment attribute
+    used in subsequent back-end processing.  The set of fragment program
+    result variable bindings is given in Table X.3.
+
+    (add to the end of a section) A fragment program will fail to load if
+    contains instructions writing to variables bound to the same result,
+    but declared with different sizes.
+
+    Add New Section 3.11.3.X, Condition Code Register (insert after
+    Section 3.11.3.4, Fragment Program Results)
+
+    The fragment program condition code register is a single
+    four-component vector.  Each component of this register is one of four
+    enumerated values: GT (greater than), EQ (equal), LT (less than),
+    or UN (unordered).  The condition code register can be used to mask
+    writes to registers and to evaluate conditional branches.
+
+    Most fragment program instructions can optionally update the condition
+    code register.  When a fragment program instruction updates the
+    condition code register, a condition code component is set to LT if
+    the corresponding component of the result is less than zero, EQ if it
+    is equal to zero, GT if it is greater than zero, and UN if it is NaN
+    (not a number).
+
+    The condition code register is initialized to a vector of EQ values
+    each time a fragment program executes.
+    
+    Modify Section 3.11.4, Fragment Program Execution Environment
+
+    (modify instruction table) There are fifty-two fragment program
+    instructions.  Fragment program instructions may have up to sixteen
+    variants, including a suffix of "R", "H", or "X" to specify arithmetic
+    precision (section 3.11.4.X), a suffix of "C" to allow an update
+    of the condition code register (section 3.11.3.X), and a suffix of
+    "_SAT" to clamp the result vector components to the range [0,1]
+    (section 3.11.4.3).  For example, the sixteen forms of the "ADD"
+    instruction are "ADD", "ADDR", "ADDH", "ADDX", "ADDC", "ADDRC",
+    "ADDHC", "ADDXC", "ADD_SAT", "ADDR_SAT", "ADDH_SAT", "ADDX_SAT",
+    "ADDC_SAT", "ADDRC_SAT", "ADDHC_SAT", and "ADDXC_SAT".The instructions
+    and their respective input and output parameters are summarized in
+    Table X.5.
+
+               Modifiers
+      Instr.   R H X C S  Inputs  Output   Description
+      -------  - - - - -  ------  ------   --------------------------------
+      ABS      X X X X X  v       v        absolute value
+      ADD      X X X X X  v,v     v        add
+      CMP      - - - - X  v,v,v   v        compare
+      COS      X X - X X  s       ssss     cosine with reduction to [-PI,PI]
+      DDX      X X - X X  v       v        partial derivative relative to X
+      DDY      X X - X X  v       v        partial derivative relative to Y
+      DP3      X X X X X  v,v     ssss     3-component dot product
+      DP4      X X X X X  v,v     ssss     4-component dot product
+      DPH      X X X X X  v,v     ssss     homogeneous dot product
+      DST      X X - X X  v,v     v        distance vector
+      EX2      X X - X X  s       ssss     exponential base 2
+      FLR      X X X X X  v       v        floor
+      FRC      X X X X X  v       v        fraction
+      KIL      - - - - -  v or c  -        kill fragment
+      LG2      X X - X X  s       ssss     logarithm base 2
+      LIT      X X - X X  v       v        compute light coefficients
+      LRP      X X X X X  v,v,v   v        linear interpolation
+      MAD      X X X X X  v,v,v   v        multiply and add
+      MAX      X X X X X  v,v     v        maximum
+      MIN      X X X X X  v,v     v        minimum
+      MOV      X X X X X  v       v        move
+      MUL      X X X X X  v,v     v        multiply
+      PK2H     - - - - -  v       ssss     pack two 16-bit floats
+      PK2US    - - - - -  v       ssss     pack two unsigned 16-bit scalars
+      PK4B     - - - - -  v       ssss     pack four signed 8-bit scalars
+      PK4UB    - - - - -  v       ssss     pack four unsigned 8-bit scalars
+      POW      X X - X X  s,s     ssss     exponentiate
+      RCP      X X - X X  s       ssss     reciprocal
+      RFL      X X - X X  v,v     v        reflection vector
+      RSQ      X X - X X  s       ssss     reciprocal square root
+      SCS      - - - - X  s       ss--     sine/cosine without reduction
+      SEQ      X X X X X  v,v     v        set on equal
+      SFL      X X X X X  v,v     v        set on false
+      SGE      X X X X X  v,v     v        set on greater than or equal
+      SGT      X X X X X  v,v     v        set on greater than
+      SIN      X X - X X  s       ssss     sine with reduction to [-PI,PI]
+      SLE      X X X X X  v,v     v        set on less than or equal
+      SLT      X X X X X  v,v     v        set on less than
+      SNE      X X X X X  v,v     v        set on not equal
+      STR      X X X X X  v,v     v        set on true
+      SUB      X X X X X  v,v     v        subtract
+      SWZ      - - - - X  v       v        extended swizzle
+      TEX      - - - X X  v       v        texture sample
+      TXB      - - - X X  v       v        texture sample with bias
+      TXD      - - - X X  v,v,v   v        texture sample w/partials      
+      TXP      - - - X X  v       v        texture sample with projection
+      UP2H     - - - X X  s       v        unpack two 16-bit floats
+      UP2US    - - - X X  s       v        unpack two unsigned 16-bit scalars
+      UP4B     - - - X X  s       v        unpack four signed 8-bit scalars
+      UP4UB    - - - X X  s       v        unpack four unsigned 8-bit scalars
+      X2D      X X - X X  v,v,v   v        2D coordinate transformation
+      XPD      - - - - X  v,v     v        cross product
+
+      Table X.5:  Summary of fragment program instructions.  The columns
+      "R", "H", "X", "C", and "S" indicate whether the "R", "H", or "X"
+      precision modifiers, the C condition code update modifier, and the
+      "_SAT" saturation modifier, respectively, are supported for the
+      opcode.  In the input/output columns, "v" indicates a floating-point
+      vector input or output, "s" indicates a floating-point scalar
+      input, "ssss" indicates a scalar output replicated across a
+      4-component result vector, "ss--" indicates two scalar outputs in
+      the first two components, and "c" indicates a condition code test.
+      Instructions describe as "texture sample" also specify a texture
+      image unit identifier and a texture target.
+
+    Modify Section 3.11.4.1, Fragment Program Operands
+
+    (add prior to the discussion of negation) A component-wise absolute
+    value operation can optionally performed on the operand if the operand
+    is surrounded with two "|" characters.  For example, "|src|" indicates
+    that a component-wise absolute value operation should be performed on
+    the variable named "src".  In terms of the grammar, this operation
+    is performed if the <instOperandV> or <instOperandS> grammar rules
+    match <instOperandAbsV> or <instOperandAbsS>, respectively.
+
+    (modify operand load pseudo-code) The following pseudo-code spells
+    out the operand generation process.  In the example, "float" is a
+    floating-point scalar type, while "floatVec" is a four-component
+    vector.  "source" refers to the register used for the operand,
+    matching the <srcReg> rule.  "abs" is TRUE if an absolute value
+    operation should be performed on the operand (<instOperandAbsV> or
+    <instOperandAbsS> rules) "negate" is TRUE if the <optionalSign> rule
+    in <scalarSrcReg> or <swizzleSrcReg> matches "-" and FALSE otherwise.
+    The ".c***", ".*c**", ".**c*", ".***c" modifiers refer to the x,
+    y, z, and w components obtained by the swizzle operation; the ".c"
+    modifier refers to the single component selected for a scalar load.
+
+      floatVec VectorLoad(floatVec source)
+      {
+          floatVec operand;
+
+          operand.x = source.c***;
+          operand.y = source.*c**;
+          operand.z = source.**c*;
+          operand.w = source.***c;
+          if (abs) {
+             operand.x = abs(operand.x);
+             operand.y = abs(operand.y);
+             operand.z = abs(operand.z);
+             operand.w = abs(operand.w);
+          }
+          if (negate) {
+             operand.x = -operand.x;
+             operand.y = -operand.y;
+             operand.z = -operand.z;
+             operand.w = -operand.w;
+          }
+
+          return operand;
+      }
+
+      float ScalarLoad(floatVec source) 
+      {
+          float operand;
+
+          operand = source.c;
+          if (abs) {
+            operand = abs(operand);
+          if (negate) {
+            operand = -operand;
+          }
+
+          return operand;
+      }
+
+    Add New Section 3.11.4.X, Fragment Program Operation Precision
+    (insert after Section 3.11.4,2, Fragment Program Parameter Arrays)
+
+    Fragment program implementations may be able to perform instructions
+    with different levels of arithmetic precision.  The "R", "H", and
+    "X" opcode precision modifiers (Section 3.11.4) specify the minimum
+    precision used to perform arithmetic operations.  Instructions with
+    an "R" precision modifiers will be carried out at no less than
+    IEEE single-precision floating-point (8 bits of exponent, 23 bits
+    of mantissa).  Instructions with an "H" precision modifier will
+    be carried out at no less than 16-bit floating-point precision (5
+    bits of exponent, 10 bits of mantissa).  Instructions with an "X"
+    precision modifier will be carried out at no less than signed 12-bit
+    fixed-point precision (two's complement with 10 fraction bits).
+
+    If the result of a computation overflows the range of numbers
+    supported by the instruction precision, the result will be +/-INF
+    (infinity) for "R" and "H" precision, or -2048/1024 or +2047/1024 for
+    "X" precision.
+
+    If no precision modifier is specified, the instruction will be carried
+    out with at least as much precision as the destination variable.
+
+    Rewrite Section 3.11.4.3,  Fragment Program Destination Register
+    Update
+
+    Most fragment program instructions write a 4-component result vector
+    to a single temporary or fragment result register.  Writes to
+    individual components of the destination register are controlled
+    by individual component write masks specified as part of the
+    instruction.
+
+    The component write mask is specified by the <optionalMask> rule
+    found in the <maskedDstReg> rule.  If the optional mask is "",
+    all components are enabled.  Otherwise, the optional mask names
+    the individual components to enable.  The characters "x", "y",
+    "z", and "w" match the x, y, z, and w components, respectively.
+    For example, an optional mask of ".xzw" indicates that the x, z,
+    and w components should be enabled for writing but the y component
+    should not.  The grammar requires that the destination register mask
+    components must be listed in "xyzw" order.
+
+    The condition code write mask is specified by the <ccMask> rule found
+    in the <instResultCC> rule.  The condition code register is loaded and
+    swizzled according to the swizzle codes specified by <swizzleSuffix>.
+    Each component of the swizzled condition code is tested according to
+    the rule given by <ccMaskRule>.  <ccMaskRule> may have the values
+    "EQ", "NE", "LT", "GE", LE", or "GT", which mean to enable writes
+    if the corresponding condition code field evaluates to equal,
+    not equal, less than, greater than or equal, less than or equal,
+    or greater than, respectively.  Comparisons involving condition
+    codes of "UN" (unordered) evaluate to true for "NE" and false
+    otherwise.  For example, if the condition code is (GT,LT,EQ,GT)
+    and the condition code mask is "(NE.zyxw)", the swizzle operation
+    will load (EQ,LT,GT,GT) and the mask will thus will enable writes on
+    the y, z, and w components.  In addition, "TR" always enables writes
+    and "FL" always disables writes, regardless of the condition code.
+    If the condition code mask is empty, it is treated as "(TR)".
+
+    Each component of the destination register is updated with the result
+    of the fragment program instruction if and only if the component is
+    enabled for writes by both the component write mask and the condition
+    code write mask.  Otherwise, the component of the destination register
+    remains unchanged.
+
+    A fragment program instruction can also optionally update the
+    condition code register.  The condition code is updated if
+    the condition code register update suffix "C" is present in the
+    instruction.  The instruction "ADDC" will update the condition code;
+    the otherwise equivalent instruction "ADD" will not.  If condition
+    code updates are enabled, each component of the destination register
+    enabled for writes is compared to zero.  The corresponding component
+    of the condition code is set to "LT", "EQ", or "GT", if the written
+    component is less than, equal to, or greater than zero, respectively.
+    Condition code components are set to "UN" if the written component is
+    NaN (not a number).  Values of -0.0 and +0.0 both evaluate to "EQ".
+    If a component of the destination register is not enabled for writes,
+    the corresponding condition code component is also unchanged.
+
+    In the following example code,
+
+        # R1=(-2, 0, 2, NaN)              R0                  CC
+        MOVC R0, R1;               # ( -2,  0,   2, NaN) (LT,EQ,GT,UN)
+        MOVC R0.xyz, R1.yzwx;      # (  0,  2, NaN, NaN) (EQ,GT,UN,UN)
+        MOVC R0 (NE), R1.zywx;     # (  0,  0, NaN,  -2) (EQ,EQ,UN,LT)
+
+    the first instruction writes (-2,0,2,NaN) to R0 and updates the
+    condition code to (LT,EQ,GT,UN).  The second instruction, only the
+    "x", "y", and "z" components of R0 and the condition code are updated,
+    so R0 ends up with (0,2,NaN,NaN) and the condition code ends up with
+    (EQ,GT,UN,UN).  In the third instruction, the condition code mask
+    disables writes to the x component (its condition code field is "EQ"),
+    so R0 ends up with (0,0,NaN,-2) and the condition code ends up with
+    (EQ,EQ,UN,LT).
+
+    The following pseudocode illustrates the process of writing a result
+    vector to the destination register.  In the pseudocode, "instrmask"
+    refers to the component write mask given by the <optWriteMask>
+    rule.  "ccMaskRule" refers to the condition code mask rule given
+    by <ccMask> and "updatecc" is TRUE if and only if condition code
+    updates are enabled.  "result", "destination", and "cc" refer to
+    the result vector, the register selected by <dstRegister> and the
+    condition code, respectively.  Condition codes do not exist in the
+    VP1 execution environment.
+
+      boolean TestCC(CondCode field) {
+          switch (ccMaskRule) {
+          case "EQ":  return (field == "EQ");
+          case "NE":  return (field != "EQ");
+          case "LT":  return (field == "LT");
+          case "GE":  return (field == "GT" || field == "EQ");
+          case "LE":  return (field == "LT" || field == "EQ");
+          case "GT":  return (field == "GT");
+          case "TR":  return TRUE;
+          case "FL":  return FALSE;
+          case "":    return TRUE;
+          }
+      }
+
+      enum GenerateCC(float value) {
+        if (value == NaN) {
+          return UN;
+        } else if (value < 0) {
+          return LT;
+        } else if (value == 0) {
+          return EQ;
+        } else {
+          return GT;
+        }
+      }
+
+      void UpdateDestination(floatVec destination, floatVec result)
+      {
+          floatVec merged;
+          ccVec    mergedCC;
+
+          // Merge the converted result into the destination register, under
+          // control of the compile- and run-time write masks.
+          merged = destination;
+          mergedCC = cc;
+          if (instrMask.x && TestCC(cc.c***)) {
+              merged.x = result.x;
+              if (updatecc) mergedCC.x = GenerateCC(result.x);
+          }
+          if (instrMask.y && TestCC(cc.*c**)) {
+              merged.y = result.y;
+              if (updatecc) mergedCC.y = GenerateCC(result.y);
+          }
+          if (instrMask.z && TestCC(cc.**c*)) {
+              merged.z = result.z;
+              if (updatecc) mergedCC.z = GenerateCC(result.z);
+          }
+          if (instrMask.w && TestCC(cc.***c)) {
+              merged.w = result.w;
+              if (updatecc) mergedCC.w = GenerateCC(result.w);
+          }
+
+          // Write out the new destination register and condition code.
+          destination = merged;
+          cc = mergedCC;
+      }
+
+    Add to Section 3.11.4.5 of ARB_fragment_program (Fragment Program
+    Options):
+
+    Section 3.11.4.5.3, NV_fragment_program Option
+
+    If a fragment program specifies the "NV_fragment_program" option,
+    the grammar will be extended to support the features found in the
+    NV_fragment_program extension not present in the ARB_fragment_program
+    extension, including:
+
+      * the availability of the following instructions:
+
+          - DDX (partial derivative relative to X), 
+          - DDY (partial derivative relative to Y), 
+          - PK2H (pack as two half floats),
+          - PK2US (pack as two unsigned shorts), 
+          - PK4B (pack as four signed bytes),
+          - PK4UB (pack as four unsigned bytes), 
+          - RFL (reflection vector), 
+          - SEQ (set on equal to), 
+          - SFL (set on false), 
+          - SGT (set on greater than),
+          - SLE (set on less than or equal to),
+          - SNE (set on not equal to),
+          - STR (set on true),
+          - TXD (texture lookup with computed partial derivatives),
+          - UP2H (unpack two half floats),
+          - UP2US (unpack two unsigned shorts),
+          - UP4B (unpack four signed bytes),
+          - UP4UB (unpack four unsigned bytes), and
+          - X2D (2D coordinate transformation),
+
+      * opcode precision suffixes "R", "H", and "X", to specify
+        the precision of arithmetic operations ("R" specifies 32-bit
+        floating-point computations, "H" specifies 16-bit floating-point
+        computations, and "X" specifies 12-bit signed fixed-point
+        computations with 10 fraction bits),
+
+      * the availability of the "SHORT" and "LONG" variable precision
+        keywords to control the size of a variable's components,
+
+      * a four-component condition code register to hold the sign of
+        result vector components (useful for comparisons),
+
+      * a condition code update opcode suffix "C", where the results of
+        the instruction are used to update the condition code register,
+
+      * a condition code write mask operator, where the condition code
+        register is swizzled and tested, and the test results are used
+        to mask register writes,
+
+      * an absolute value operator on scalar and swizzled source inputs
+
+    The added functionality is identical to that provided by the
+    NV_fragment_program extension specification.
+
+    Modify Section 3.11.5,  Fragment Program ALU Instruction Set
+
+    Section 3.11.5.30,  DDX:  Derivative Relative to X
+
+    The DDX instruction computes approximate partial derivatives of the
+    four components of the single operand with respect to the X window
+    coordinate to yield a result vector.  The partial derivatives are
+    evaluated at the center of the pixel.
+
+      f = VectorLoad(op0);
+      result = ComputePartialX(f);
+
+    Note that the partial derivates obtained by this instruction are
+    approximate, and derivative-of-derivate instruction sequences may
+    not yield accurate second derivatives.
+
+    Section 3.11.5.31,  DDY:  Derivative Relative to Y
+
+    The DDY instruction computes approximate partial derivatives of the
+    four components of the single operand with respect to the Y window
+    coordinate to yield a result vector.  The partial derivatives are
+    evaluated at the center of the pixel.
+
+      f = VectorLoad(op0);
+      result = ComputePartialY(f);
+
+    Note that the partial derivates obtained by this instruction are
+    approximate, and derivative-of-derivate instruction sequences may
+    not yield accurate second derivatives.
+
+    Section 3.11.5.32,  PK2H:  Pack Two 16-bit Floats
+
+    The PK2H instruction converts the "x" and "y" components of
+    the single operand into 16-bit floating-point format, packs the
+    bit representation of these two floats into a 32-bit value, and
+    replicates that value to all four components of the result vector.
+    The PK2H instruction can be reversed by the UP2H instruction below.
+
+      tmp0 = VectorLoad(op0);
+      /* result obtained by combining raw bits of tmp0.x, tmp0.y */
+      result.x = RawBits(tmp0.x) | (RawBits(tmp0.y) << 16);
+      result.y = RawBits(tmp0.x) | (RawBits(tmp0.y) << 16);
+      result.z = RawBits(tmp0.x) | (RawBits(tmp0.y) << 16);
+      result.w = RawBits(tmp0.x) | (RawBits(tmp0.y) << 16);
+
+    A fragment program will fail to load if it contains a PK2H instruction
+    that writes its results to a variable declared as "SHORT".
+
+    Section 3.11.5.33,  PK2US:  Pack Two Unsigned 16-bit Scalars
+
+    The PK2US instruction converts the "x" and "y" components of the
+    single operand into a packed pair of 16-bit unsigned scalars.
+    The scalars are represented in a bit pattern where all '0' bits
+    corresponds to 0.0 and all '1' bits corresponds to 1.0.  The bit
+    representations of the two converted components are packed into a
+    32-bit value, and that value is replicated to all four components
+    of the result vector.  The PK2US instruction can be reversed by the
+    UP2US instruction below.
+
+      tmp0 = VectorLoad(op0);
+      if (tmp0.x < 0.0) tmp0.x = 0.0;
+      if (tmp0.x > 1.0) tmp0.x = 1.0;
+      if (tmp0.y < 0.0) tmp0.y = 0.0;
+      if (tmp0.y > 1.0) tmp0.y = 1.0;
+      us.x = round(65535.0 * tmp0.x);  /* us is a ushort vector */
+      us.y = round(65535.0 * tmp0.y);
+      /* result obtained by combining raw bits of us. */
+      result.x = ((us.x) | (us.y << 16));
+      result.y = ((us.x) | (us.y << 16));
+      result.z = ((us.x) | (us.y << 16));
+      result.w = ((us.x) | (us.y << 16));
+
+    A fragment program will fail to load if it contains a PK2S instruction
+    that writes its results to a variable declared as "SHORT".
+
+    Section 3.11.5.34,  PK4B:  Pack Four Signed 8-bit Scalars
+
+    The PK4B instruction converts the four components of the single
+    operand into 8-bit signed quantities.  The signed quantities
+    are represented in a bit pattern where all '0' bits corresponds
+    to -128/127 and all '1' bits corresponds to +127/127.  The bit
+    representations of the four converted components are packed into a
+    32-bit value, and that value is replicated to all four components
+    of the result vector.  The PK4B instruction can be reversed by the
+    UP4B instruction below.
+
+      tmp0 = VectorLoad(op0);
+      if (tmp0.x < -128/127) tmp0.x = -128/127;
+      if (tmp0.y < -128/127) tmp0.y = -128/127;
+      if (tmp0.z < -128/127) tmp0.z = -128/127;
+      if (tmp0.w < -128/127) tmp0.w = -128/127;
+      if (tmp0.x > +127/127) tmp0.x = +127/127;
+      if (tmp0.y > +127/127) tmp0.y = +127/127;
+      if (tmp0.z > +127/127) tmp0.z = +127/127;
+      if (tmp0.w > +127/127) tmp0.w = +127/127;
+      ub.x = round(127.0 * tmp0.x + 128.0);  /* ub is a ubyte vector */
+      ub.y = round(127.0 * tmp0.y + 128.0);
+      ub.z = round(127.0 * tmp0.z + 128.0);
+      ub.w = round(127.0 * tmp0.w + 128.0);
+      /* result obtained by combining raw bits of ub. */
+      result.x = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+      result.y = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+      result.z = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+      result.w = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+
+    A fragment program will fail to load if it contains a PK4B instruction
+    that writes its results to a variable declared as "SHORT".
+
+    Section 3.11.5.35,  PK4UB:  Pack Four Unsigned 8-bit Scalars
+
+    The PK4UB instruction converts the four components of the single
+    operand into a packed grouping of 8-bit unsigned scalars.  The scalars
+    are represented in a bit pattern where all '0' bits corresponds to
+    0.0 and all '1' bits corresponds to 1.0.  The bit representations
+    of the four converted components are packed into a 32-bit value, and
+    that value is replicated to all four components of the result vector.
+    The PK4UB instruction can be reversed by the UP4UB instruction below.
+
+      tmp0 = VectorLoad(op0);
+      if (tmp0.x < 0.0) tmp0.x = 0.0;
+      if (tmp0.x > 1.0) tmp0.x = 1.0;
+      if (tmp0.y < 0.0) tmp0.y = 0.0;
+      if (tmp0.y > 1.0) tmp0.y = 1.0;
+      if (tmp0.z < 0.0) tmp0.z = 0.0;
+      if (tmp0.z > 1.0) tmp0.z = 1.0;
+      if (tmp0.w < 0.0) tmp0.w = 0.0;
+      if (tmp0.w > 1.0) tmp0.w = 1.0;
+      ub.x = round(255.0 * tmp0.x);  /* ub is a ubyte vector */
+      ub.y = round(255.0 * tmp0.y);
+      ub.z = round(255.0 * tmp0.z);
+      ub.w = round(255.0 * tmp0.w);
+      /* result obtained by combining raw bits of ub. */
+      result.x = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+      result.y = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+      result.z = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+      result.w = ((ub.x) | (ub.y << 8) | (ub.z << 16) | (ub.w << 24));
+
+    A fragment program will fail to load if it contains a PK4UB
+    instruction that writes its results to a variable declared as
+    "SHORT".
+
+    Section 3.11.5.36,  RFL:  Reflection Vector
+
+    The RFL instruction computes the reflection of the second vector
+    operand (the "direction" vector) about the vector specified by the
+    first vector operand (the "axis" vector).  Both operands are treated
+    as 3D vectors (the w components are ignored).  The result vector is
+    another 3D vector (the "reflected direction" vector).  The length
+    of the result vector, ignoring rounding errors, should equal that
+    of the second operand.
+
+      axis = VectorLoad(op0);
+      direction = VectorLoad(op1);
+      tmp.w = (axis.x * axis.x + axis.y * axis.y +
+               axis.z * axis.z);
+      tmp.x = (axis.x * direction.x + axis.y * direction.y + 
+               axis.z * direction.z);
+      tmp.x = 2.0 * tmp.x;
+      tmp.x = tmp.x / tmp.w;
+      result.x = tmp.x * axis.x - direction.x;
+      result.y = tmp.x * axis.y - direction.y;
+      result.z = tmp.x * axis.z - direction.z;
+
+    A fragment program will fail to load if the w component of the result
+    is enabled in the component write mask.
+
+    Section 3.11.5.37,  SEQ:  Set on Equal
+
+    The SEQ instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operand is equal to that of
+    the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x == tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y == tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z == tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w == tmp1.w) ? 1.0 : 0.0;
+
+    Section 3.11.5.38,  SFL:  Set on False
+
+    The SFL instruction is a degenerate case of the other "Set on"
+    instructions that sets all components of the result vector to 0.0.
+
+      result.x = 0.0;
+      result.y = 0.0;
+      result.z = 0.0;
+      result.w = 0.0;
+
+    Section 3.11.5.39,  SGT:  Set on Greater Than
+
+    The SGT instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operands is greater than that
+    of the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x > tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y > tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z > tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w > tmp1.w) ? 1.0 : 0.0;
+
+    Section 3.11.5.40,  SLE:  Set on Less Than or Equal
+
+    The SLE instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operand is less than or equal
+    to that of the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x <= tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y <= tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z <= tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w <= tmp1.w) ? 1.0 : 0.0;
+
+    Section 3.11.5.41,  SNE:  Set on Not Equal
+
+    The SNE instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operand is not equal to that
+    of the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x != tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y != tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z != tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w != tmp1.w) ? 1.0 : 0.0;
+
+    Section 3.11.5.42,  STR:  Set on True
+
+    The STR instruction is a degenerate case of the other "Set on"
+    instructions that sets all components of the result vector to 1.0.
+
+      result.x = 1.0;
+      result.y = 1.0;
+      result.z = 1.0;
+      result.w = 1.0;
+
+    Section 3.11.5.43,  UP2H:  Unpack Two 16-Bit Floats
+
+    The UP2H instruction unpacks two 16-bit floats stored together in
+    a 32-bit scalar operand.  The first 16-bit float (stored in the 16
+    least significant bits) is written into the "x" and "z" components
+    of the result vector; the second is written into the "y" and "w"
+    components of the result vector.
+
+    This operation undoes the type conversion and packing performed by
+    the PK2H instruction.
+
+      tmp = ScalarLoad(op0);
+      result.x = (fp16) (RawBits(tmp) & 0xFFFF);
+      result.y = (fp16) ((RawBits(tmp) >> 16) & 0xFFFF);
+      result.z = (fp16) (RawBits(tmp) & 0xFFFF);
+      result.w = (fp16) ((RawBits(tmp) >> 16) & 0xFFFF);
+    
+    A fragment program will fail to load if it contains a UP2H instruction
+    whose operand is a variable declared as "SHORT".
+
+    Section 3.11.5.44,  UP2US:  Unpack Two Unsigned 16-Bit Scalars
+
+    The UP2US instruction unpacks two 16-bit unsigned values packed
+    together in a 32-bit scalar operand.  The unsigned quantities are
+    encoded where a bit pattern of all '0' bits corresponds to 0.0 and
+    a pattern of all '1' bits corresponds to 1.0.  The "x" and "z"
+    components of the result vector are obtained from the 16 least
+    significant bits of the operand; the "y" and "w" components are
+    obtained from the 16 most significant bits.
+
+    This operation undoes the type conversion and packing performed by
+    the PK2US instruction.
+
+      tmp = ScalarLoad(op0);
+      result.x = ((RawBits(tmp) >> 0)  & 0xFFFF) / 65535.0;
+      result.y = ((RawBits(tmp) >> 16) & 0xFFFF) / 65535.0;
+      result.z = ((RawBits(tmp) >> 0)  & 0xFFFF) / 65535.0;
+      result.w = ((RawBits(tmp) >> 16) & 0xFFFF) / 65535.0;
+
+    A fragment program will fail to load if it contains a UP2S instruction
+    whose operand is a variable declared as "SHORT".
+
+    Section 3.11.5.45,  UP4B:  Unpack Four Signed 8-Bit Values
+
+    The UP4B instruction unpacks four 8-bit signed values packed together
+    in a 32-bit scalar operand.  The signed quantities are encoded where
+    a bit pattern of all '0' bits corresponds to -128/127 and a pattern
+    of all '1' bits corresponds to +127/127.  The "x" component of the
+    result vector is the converted value corresponding to the 8 least
+    significant bits of the operand; the "w" component corresponds to
+    the 8 most significant bits.
+
+    This operation undoes the type conversion and packing performed by
+    the PK4B instruction.
+
+      tmp = ScalarLoad(op0);
+      result.x = (((RawBits(tmp) >> 0) & 0xFF) - 128) / 127.0;
+      result.y = (((RawBits(tmp) >> 8) & 0xFF) - 128) / 127.0;
+      result.z = (((RawBits(tmp) >> 16) & 0xFF) - 128) / 127.0;
+      result.w = (((RawBits(tmp) >> 24) & 0xFF) - 128) / 127.0;
+
+    A fragment program will fail to load if it contains a UP4B instruction
+    whose operand is a variable declared as "SHORT".
+
+    Section 3.11.5.46,  UP4UB:  Unpack Four Unsigned 8-Bit Scalars
+
+    The UP4UB instruction unpacks four 8-bit unsigned values packed
+    together in a 32-bit scalar operand.  The unsigned quantities are
+    encoded where a bit pattern of all '0' bits corresponds to 0.0 and a
+    pattern of all '1' bits corresponds to 1.0.  The "x" component of the
+    result vector is obtained from the 8 least significant bits of the
+    operand; the "w" component is obtained from the 8 most significant
+    bits.
+
+    This operation undoes the type conversion and packing performed by
+    the PK4UB instruction.
+
+      tmp = ScalarLoad(op0);
+      result.x = ((RawBits(tmp) >> 0)  & 0xFF) / 255.0;
+      result.y = ((RawBits(tmp) >> 8)  & 0xFF) / 255.0;
+      result.z = ((RawBits(tmp) >> 16) & 0xFF) / 255.0;
+      result.w = ((RawBits(tmp) >> 24) & 0xFF) / 255.0;
+
+    A fragment program will fail to load if it contains a UP4UB
+    instruction whose operand is a variable declared as "SHORT".
+
+    Section 3.11.5.47,  X2D:  2D Coordinate Transformation
+
+    The X2D instruction multiplies the 2D offset vector specified by the
+    "x" and "y" components of the second vector operand by the 2x2 matrix
+    specified by the four components of the third vector operand, and adds
+    the transformed offset vector to the 2D vector specified by the "x"
+    and "y" components of the first vector operand.  The first component
+    of the sum is written to the "x" and "z" components of the result;
+    the second component is written to the "y" and "w" components of
+    the result.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      tmp2 = VectorLoad(op2);
+      result.x = tmp0.x + tmp1.x * tmp2.x + tmp1.y * tmp2.y;
+      result.y = tmp0.y + tmp1.x * tmp2.z + tmp1.y * tmp2.w;
+      result.z = tmp0.x + tmp1.x * tmp2.x + tmp1.y * tmp2.y;
+      result.w = tmp0.y + tmp1.x * tmp2.z + tmp1.y * tmp2.w;
+
+    Modify Section, 3.11.6.4 KIL: Kill fragment
+
+    Rather than mapping a coordinate set to a color, this function
+    prevents a fragment from receiving any future processing.  If any
+    component of its source vector is negative, the processing of this
+    fragment will be discontinued and no further outputs to this fragment
+    will occur.  Subsequent stages of the GL pipeline will be skipped
+    for this fragment.
+
+    A KIL instruction may be specified using either a vector operand
+    or a condition code test.  If a vector operand is specified, the
+    following is performed:
+
+      tmp = VectorLoad(op0);
+      if ((tmp.x < 0) || (tmp.y < 0) || 
+          (tmp.z < 0) || (tmp.w < 0))
+      {
+          exit;
+      }
+
+    If a condition code is specified, the following is performed:
+
+      if (TestCC(rc.c***) || TestCC(rc.*c**) || 
+          TestCC(rc.**c*) || TestCC(rc.***c)) 
+      {
+         exit;
+      }
+
+
+    Add Section 3.11.6.5, TXD: Texture Lookup with Derivatives
+
+    The TXD instruction takes the first three components of its first
+    vector operand and maps them to s, t, and r.  These coordinates are
+    used to sample from the specified texture target on the specified
+    texture image unit in a manner consistent with its parameters.
+
+    The level of detail is computed as specified in section 3.8.
+    In this calculation, ds/dx, dt/dx, and dr/dx are given by the x,
+    y, and z components, respectively, of the second vector operand.
+    ds/dy, dt/dy, and dr/dy are given by the x, y, and z components of
+    the third vector operand.
+    
+    The resulting sample is mapped to RGBA as described in table 3.21
+    and written to the result vector.
+
+      tmp = VectorLoad(op0);
+      result = TextureSample(tmp.x, tmp.y, tmp.z, 0.0, op1, op2);
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on ARB_fragment_program
+
+    This specification is based on a modified version of the grammar
+    published in the ARB_fragment_program specification.  This modified
+    grammar (see below) includes a few structural changes to better
+    accommodate new functionality from this and other extensions,
+    but should be functionally equivalent to the ARB_fragment_program
+    grammar.
+
+    <program>               ::= <optionSequence> <statementSequence> "END"
+
+    <optionSequence>        ::= <optionSequence> <option>
+                              | /* empty */
+
+    <option>                ::= "OPTION" <optionName> ";"
+
+    <optionName>            ::= "ARB_fog_exp"
+                              | "ARB_fog_exp2"
+                              | "ARB_fog_linear"
+                              | "ARB_precision_hint_fastest"
+                              | "ARB_precision_hint_nicest"
+
+    <statementSequence>     ::= <statement> <statementSequence>
+                              | /* empty */
+
+    <statement>             ::= <instruction> ";"
+                              | <namingStatement> ";"
+
+    <instruction>           ::= <ALUInstruction>
+                              | <TexInstruction>
+
+    <ALUInstruction>        ::= <VECTORop_instruction>
+                              | <SCALARop_instruction>
+                              | <BINSCop_instruction>
+                              | <BINop_instruction>
+                              | <TRIop_instruction>
+                              | <SWZop_instruction>
+
+    <TexInstruction>        ::= <TEXop_instruction>
+                              | <KILop_instruction>
+
+    <VECTORop_instruction>  ::= <VECTORop> <instResult> "," <instOperandV>
+
+    <VECTORop>              ::= "ABS"
+                              | "FLR"
+                              | "FRC"
+                              | "LIT"
+                              | "MOV"
+
+    <SCALARop_instruction>  ::= <SCALARop> <instResult> "," <instOperandS>
+
+    <SCALARop>              ::= "COS"
+                              | "EX2"
+                              | "LG2"
+                              | "RCP"
+                              | "RSQ"
+                              | "SCS"
+                              | "SIN"
+
+    <BINSCop_instruction>   ::= <BINSCop> <instResult> "," <instOperandS> "," 
+                                <instOperandS>
+
+    <BINSCop>               ::= "POW"
+
+    <BINop_instruction>     ::= <BINop> <instResult> "," <instOperandV> "," 
+                                <instOperandV>
+
+    <BINop>                 ::= "ADD"
+                              | "DP3"
+                              | "DP4"
+                              | "DPH"
+                              | "DST"
+                              | "MAX"
+                              | "MIN"
+                              | "MUL"
+                              | "SGE"
+                              | "SLT"
+                              | "SUB"
+                              | "XPD"
+
+    <TRIop_instruction>     ::= <TRIop> <instResult> "," <instOperandV> "," 
+                                <instOperandV> "," <instOperandV>
+
+    <TRIop>                 ::= "CMP"
+                              | "MAD"
+                              | "LRP"
+
+    <SWZop_instruction>     ::= <SWZop> <instResult> "," <instOperandVNS> "," 
+                                <extendedSwizzle>
+
+    <SWZop>                 ::= "SWZ"
+
+    <TEXop_instruction>     ::= <TEXop> <instResult> "," <instOperandV> "," 
+                                <texTarget>
+
+    <TEXop>                 ::= "TEX"
+                              | "TXP"
+                              | "TXB"
+
+    <KILop_instruction>     ::= <KILop> <killCond>
+
+    <KILop>                 ::= "KIL"
+
+    <texTarget>             ::= <texImageUnit> "," <texTargetType>
+
+    <texImageUnit>          ::= "texture" <optTexImageUnitNum>
+
+    <optTexImageUnitNum>    ::= /* empty */
+                              | "[" <texImageUnitNum> "]"
+
+    <texImageUnitNum>       ::= <integer> 
+                                /*[0,MAX_TEXTURE_IMAGE_UNITS_ARB-1]*/
+
+    <texTargetType>         ::= "1D"
+                              | "2D"
+                              | "3D"
+                              | "CUBE"
+                              | "RECT"
+
+    <killCond>              ::= <instOperandV>
+
+    <instOperandV>          ::= <instOperandBaseV>
+
+    <instOperandBaseV>      ::= <optSign> <attribUseV>
+                              | <optSign> <tempUseV>
+                              | <optSign> <paramUseV>
+
+    <instOperandS>          ::= <instOperandBaseS>
+
+    <instOperandBaseS>      ::= <optSign> <attribUseS>
+                              | <optSign> <tempUseS>
+                              | <optSign> <paramUseS>
+
+    <instOperandVNS>        ::= <attribUseVNS>
+                              | <tempUseVNS>
+                              | <paramUseVNS>
+
+    <instResult>            ::= <instResultBase>
+
+    <instResultBase>        ::= <tempUseW>
+                              | <resultUseW>
+
+    <namingStatement>       ::= <ATTRIB_statement>
+                              | <PARAM_statement>
+                              | <TEMP_statement>
+                              | <OUTPUT_statement>
+                              | <ALIAS_statement>
+
+    <ATTRIB_statement>      ::= "ATTRIB" <establishName> "=" <attribUseD>
+
+    <PARAM_statement>       ::= <PARAM_singleStmt>
+                              | <PARAM_multipleStmt>
+
+    <PARAM_singleStmt>      ::= "PARAM" <establishName> <paramSingleInit>
+
+    <PARAM_multipleStmt>    ::= "PARAM" <establishName> "[" <optArraySize> "]" 
+                                <paramMultipleInit>
+
+    <optArraySize>          ::= /* empty */
+                              | <integer> /* [1,MAX_PROGRAM_PARAMETERS_ARB]*/
+
+    <paramSingleInit>       ::= "=" <paramUseDB>
+
+    <paramMultipleInit>     ::= "=" "{" <paramMultInitList> "}"
+
+    <paramMultInitList>     ::= <paramUseDM>
+                              | <paramUseDM> "," <paramMultInitList>
+
+    <TEMP_statement>        ::= "TEMP" <varNameList>
+
+    <OUTPUT_statement>      ::= "OUTPUT" <establishName> "=" <resultUseD>
+
+    <ALIAS_statement>       ::= "ALIAS" <establishName> "=" <establishedName>
+
+    <establishedName>       ::= <tempVarName>
+                              | <addrVarName>
+                              | <attribVarName>
+                              | <paramArrayVarName>
+                              | <paramSingleVarName>
+                              | <resultVarName>
+
+    <varNameList>           ::= <establishName>
+                              | <establishName> "," <varNameList>
+
+    <establishName>         ::= <identifier>
+
+    <attribUseV>            ::= <attribBasic> <swizzleSuffix>
+                              | <attribVarName> <swizzleSuffix>
+                              | <attribColor> <swizzleSuffix>
+                              | <attribColor> "." <colorType> <swizzleSuffix>
+
+    <attribUseS>            ::= <attribBasic> <scalarSuffix>
+                              | <attribVarName> <scalarSuffix>
+                              | <attribColor> <scalarSuffix>
+                              | <attribColor> "." <colorType> <scalarSuffix>
+
+    <attribUseVNS>          ::= <attribBasic>
+                              | <attribVarName>
+                              | <attribColor>
+                              | <attribColor> "." <colorType>
+
+    <attribUseD>            ::= <attribBasic>
+                              | <attribColor>
+                              | <attribColor> "." <colorType>
+
+    <attribBasic>           ::= "fragment" "." <attribFragBasic>
+
+    <attribFragBasic>       ::= "texcoord" <optTexCoordNum>
+                              | "fogcoord"
+                              | "position"
+
+    <attribColor>           ::= "fragment" "." "color"
+
+    <paramUseV>             ::= <paramSingleVarName> <swizzleSuffix>
+                              | <paramArrayVarName> "[" <arrayMem> "]" 
+                                <swizzleSuffix>
+                              | <stateSingleItem> <swizzleSuffix>
+                              | <programSingleItem> <swizzleSuffix>
+                              | <constantVector> <swizzleSuffix>
+                              | <constantScalar> <swizzleSuffix>
+
+    <paramUseS>             ::= <paramSingleVarName> <scalarSuffix>
+                              | <paramArrayVarName> "[" <arrayMem> "]" 
+                                <scalarSuffix>
+                              | <stateSingleItem> <scalarSuffix>
+                              | <programSingleItem> <scalarSuffix>
+                              | <constantVector> <scalarSuffix>
+                              | <constantScalar> <scalarSuffix>
+
+    <paramUseVNS>           ::= <paramSingleVarName>
+                              | <paramArrayVarName> "[" <arrayMem> "]"
+                              | <stateSingleItem>
+                              | <programSingleItem>
+                              | <constantVector>
+                              | <constantScalar>
+
+    <paramUseDB>            ::= <stateSingleItem>
+                              | <programSingleItem>
+                              | <constantVector>
+                              | <signedConstantScalar>
+
+    <paramUseDM>            ::= <stateMultipleItem>
+                              | <programMultipleItem>
+                              | <constantVector>
+                              | <signedConstantScalar>
+
+    <stateMultipleItem>     ::= <stateSingleItem>
+                              | "state" "." <stateMatrixRows>
+
+    <stateSingleItem>       ::= "state" "." <stateMaterialItem>
+                              | "state" "." <stateLightItem>
+                              | "state" "." <stateLightModelItem>
+                              | "state" "." <stateLightProdItem>
+                              | "state" "." <stateFogItem>
+                              | "state" "." <stateMatrixRow>
+                              | "state" "." <stateTexEnvItem>
+                              | "state" "." <stateDepthItem>
+
+    <stateMaterialItem>     ::= "material" "." <stateMatProperty>
+                              | "material" "." <faceType> "." 
+                                <stateMatProperty>
+
+    <stateMatProperty>      ::= "ambient"
+                              | "diffuse"
+                              | "specular"
+                              | "emission"
+                              | "shininess"
+
+    <stateLightItem>        ::= "light" "[" <stateLightNumber> "]" "." 
+                                <stateLightProperty>
+
+    <stateLightProperty>    ::= "ambient"
+                              | "diffuse"
+                              | "specular"
+                              | "position"
+                              | "attenuation"
+                              | "spot" "." <stateSpotProperty>
+                              | "half"
+
+    <stateSpotProperty>     ::= "direction"
+
+    <stateLightModelItem>   ::= "lightmodel" <stateLModProperty>
+
+    <stateLModProperty>     ::= "." "ambient"
+                              | "." "scenecolor"
+                              | "." <faceType> "." "scenecolor"
+
+    <stateLightProdItem>    ::= "lightprod" "[" <stateLightNumber> "]" "." 
+                                <stateLProdProperty>
+                              | "lightprod" "[" <stateLightNumber> "]" "." 
+                                <faceType> "." <stateLProdProperty>
+
+    <stateLProdProperty>    ::= "ambient"
+                              | "diffuse"
+                              | "specular"
+
+    <stateLightNumber>      ::= <integer> /* [0,MAX_LIGHTS-1] */
+
+    <stateFogItem>          ::= "fog" "." <stateFogProperty>
+
+    <stateFogProperty>      ::= "color"
+                              | "params"
+
+    <stateMatrixRows>       ::= <stateMatrixItem>
+                              | <stateMatrixItem> "." <stateMatModifier>
+                              | <stateMatrixItem> "." "row" "[" 
+                                <stateMatrixRowNum> ".." <stateMatrixRowNum> 
+                                "]"
+                              | <stateMatrixItem> "." <stateMatModifier> "." 
+                                "row" "[" <stateMatrixRowNum> ".." 
+                                <stateMatrixRowNum> "]"
+
+    <stateMatrixRow>        ::= <stateMatrixItem> "." "row" "[" 
+                                <stateMatrixRowNum> "]"
+                              | <stateMatrixItem> "." <stateMatModifier> "." 
+                                "row" "[" <stateMatrixRowNum> "]"
+
+    <stateMatrixItem>       ::= "matrix" "." <stateMatrixName>
+
+    <stateMatModifier>      ::= "inverse"
+                              | "transpose"
+                              | "invtrans"
+
+    <stateMatrixName>       ::= "modelview" <stateOptModMatNum>
+                              | "projection"
+                              | "mvp"
+                              | "texture" <optTexCoordNum>
+                              | "palette" "[" <statePaletteMatNum> "]"
+                              | "program" "[" <stateProgramMatNum> "]"
+
+    <stateMatrixRowNum>     ::= <integer> /* [0,3] */
+
+    <stateOptModMatNum>     ::= /* empty */
+                              | "[" <stateModMatNum> "]"
+
+    <stateModMatNum>        ::= <integer> /*[0,MAX_VERTEX_UNITS_ARB-1]*/
+
+    <statePaletteMatNum>    ::= <integer> /*[0,MAX_PALETTE_MATRICES_ARB-1]*/
+
+    <stateProgramMatNum>    ::= <integer> /*[0,MAX_PROGRAM_MATRICES_ARB-1]*/
+
+    <stateTexEnvItem>       ::= "texenv" <optLegacyTexUnitNum> "." 
+                                <stateTexEnvProperty>
+
+    <stateTexEnvProperty>   ::= "color"
+
+    <stateDepthItem>        ::= "depth" "." <stateDepthProperty>
+
+    <stateDepthProperty>    ::= "range"
+
+    <programSingleItem>     ::= <progEnvParam>
+                              | <progLocalParam>
+
+    <programMultipleItem>   ::= <progEnvParams>
+                              | <progLocalParams>
+
+    <progEnvParams>         ::= "program" "." "env" "[" <progEnvParamNums> "]"
+
+    <progEnvParamNums>      ::= <progEnvParamNum>
+                              | <progEnvParamNum> ".." <progEnvParamNum>
+
+    <progEnvParam>          ::= "program" "." "env" "[" <progEnvParamNum> "]"
+
+    <progLocalParams>       ::= "program" "." "local" "[" <progLocalParamNums> 
+                                "]"
+
+    <progLocalParamNums>    ::= <progLocalParamNum>
+                              | <progLocalParamNum> ".." <progLocalParamNum>
+
+    <progLocalParam>        ::= "program" "." "local" "[" <progLocalParamNum> 
+                                "]"
+
+    <progEnvParamNum>       ::= <integer> 
+                                /*[0,MAX_PROGRAM_ENV_PARAMETERS_ARB-1]*/
+
+    <progLocalParamNum>     ::= <integer> 
+                                /*[0,MAX_PROGRAM_LOCAL_PARAMETERS_ARB-1]*/
+
+    <constantVector>        ::= "{" <constantVectorList> "}"
+
+    <constantVectorList>    ::= <signedConstantScalar>
+                              | <signedConstantScalar> "," 
+                                <signedConstantScalar>
+                              | <signedConstantScalar> "," 
+                                <signedConstantScalar> "," 
+                                <signedConstantScalar>
+                              | <signedConstantScalar> "," 
+                                <signedConstantScalar> "," 
+                                <signedConstantScalar> "," 
+                                <signedConstantScalar>
+
+    <signedConstantScalar>  ::= <optSign> <constantScalar>
+
+    <constantScalar>        ::= <floatConstant>
+
+    <floatConstant>         ::= <float>
+
+    <tempUseV>              ::= <tempVarName> <swizzleSuffix>
+
+    <tempUseS>              ::= <tempVarName> <scalarSuffix>
+
+    <tempUseVNS>            ::= <tempVarName>
+
+    <tempUseW>              ::= <tempVarName> <optWriteMask>
+
+    <resultUseW>            ::= <resultBasic> <optWriteMask>
+                              | <resultVarName> <optWriteMask>
+
+    <resultUseD>            ::= <resultBasic>
+
+    <resultBasic>           ::= "result" "." <resultFragBasic>
+
+    <resultFragBasic>       ::= "color" <resultOptColorNum>
+                              | "depth"
+
+    <resultOptColorNum>     ::= /* empty */
+
+    <arrayMem>              ::= <arrayMemAbs>
+
+    <arrayMemAbs>           ::= <integer>
+
+    <optWriteMask>          ::= /* empty */
+                              | <xyzwMask>
+                              | <rgbaMask>
+
+    <xyzwMask>              ::= "." "x"
+                              | "." "y"
+                              | "." "xy"
+                              | "." "z"
+                              | "." "xz"
+                              | "." "yz"
+                              | "." "xyz"
+                              | "." "w"
+                              | "." "xw"
+                              | "." "yw"
+                              | "." "xyw"
+                              | "." "zw"
+                              | "." "xzw"
+                              | "." "yzw"
+                              | "." "xyzw"
+
+    <rgbaMask>              ::= "." "r"
+                              | "." "g"
+                              | "." "rg"
+                              | "." "b"
+                              | "." "rb"
+                              | "." "gb"
+                              | "." "rgb"
+                              | "." "a"
+                              | "." "ra"
+                              | "." "ga"
+                              | "." "rga"
+                              | "." "ba"
+                              | "." "rba"
+                              | "." "gba"
+                              | "." "rgba"
+
+    <swizzleSuffix>         ::= /* empty */
+                              | "." <component>
+                              | "." <xyzwComponent> <xyzwComponent> 
+                                <xyzwComponent> <xyzwComponent>
+                              | "." <rgbaComponent> <rgbaComponent> 
+                                <rgbaComponent> <rgbaComponent>
+
+    <extendedSwizzle>       ::= <extSwizComp> "," <extSwizComp> "," 
+                                <extSwizComp> "," <extSwizComp>
+
+    <extSwizComp>           ::= <optSign> <xyzwExtSwizSel>
+                              | <optSign> <rgbaExtSwizSel>
+
+    <xyzwExtSwizSel>        ::= "0"
+                              | "1"
+                              | <xyzwComponent>
+
+    <rgbaExtSwizSel>        ::= <rgbaComponent>
+
+    <scalarSuffix>          ::= "." <component>
+
+    <component>             ::= <xyzwComponent>
+                              | <rgbaComponent>
+
+    <xyzwComponent>         ::= "x"
+                              | "y"
+                              | "z"
+                              | "w"
+
+    <rgbaComponent>         ::= "r"
+                              | "g"
+                              | "b"
+                              | "a"
+
+    <optSign>               ::= /* empty */
+                              | "-"
+                              | "+"
+
+    <faceType>              ::= "front"
+                              | "back"
+
+    <colorType>             ::= "primary"
+                              | "secondary"
+
+    <optTexCoordNum>        ::= /* empty */
+                              | "[" <texCoordNum> "]"
+
+    <texCoordNum>           ::= <integer> /*[0,MAX_TEXTURE_COORDS_ARB-1]*/
+
+    <optLegacyTexUnitNum>   ::= /* empty */
+                              | "[" <legacyTexUnitNum> "]"
+
+    <legacyTexUnitNum>      ::= <integer> /*[0,MAX_TEXTURE_UNITS-1]*/
+
+    The <integer>, <float>, and <identifier> grammar rules match
+    integer constants, floating point constants, and identifier names
+    as described in the ARB_vertex_program specification.  The <float>
+    grammar rule here is identical to the <floatConstant> grammar rule
+    in ARB_vertex_program.
+
+    The grammar rules <tempVarName>, <addrVarName>, <attribVarName>,
+    <paramArrayVarName>, <paramSingleVarName>, <resultVarName> refer
+    to the names of temporary, address register, attribute, program
+    parameter array, program parameter, and result variables declared
+    in the program text.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+Revision History
+
+    Rev.  Date      Author   Changes
+    ----  --------  -------  --------------------------------------------
+    4     05/27/05  pbrown   Removed required NV_fragment_program dependency;
+                             that extension actually isn't needed although the
+                             functionality it provides obviously is.
+
+    3     07/08/04  pbrown   Fixed entries for KIL and RFL in the opcode
+                             table.
+
+    2     05/16/04  pbrown   Documented terminals in modified fragment program
+                             grammar. 
+
+    1     --------  pbrown   Internal pre-release revisions.

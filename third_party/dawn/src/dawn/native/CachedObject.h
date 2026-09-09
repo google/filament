@@ -31,8 +31,8 @@
 #include <cstddef>
 #include <string>
 
-#include "dawn/native/CacheKey.h"
-#include "dawn/native/Forward.h"
+#include "src/dawn/native/CacheKey.h"
+#include "src/dawn/native/Forward.h"
 
 namespace dawn::native {
 
@@ -40,6 +40,8 @@ namespace dawn::native {
 // refcount of an existing object.
 class CachedObject {
   public:
+    virtual ~CachedObject() = default;
+
     // Functor necessary for the unordered_set<CachedObject*>-based cache.
     struct HashFunc {
         size_t operator()(const CachedObject* obj) const;

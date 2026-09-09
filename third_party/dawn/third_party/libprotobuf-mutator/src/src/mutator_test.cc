@@ -410,8 +410,8 @@ bool Mutate(const protobuf::Message& from, const protobuf::Message& to,
   }
 
   ADD_FAILURE() << "Failed to get from:\n"
-                << absl::StrCat(from) << "\nto:\n"
-                << absl::StrCat(to);
+                << from.DebugString() << "\nto:\n"
+                << to.DebugString();
   return false;
 }
 
@@ -678,12 +678,16 @@ TYPED_TEST(MutatorTypedTest, Serialization) {
 }
 
 TYPED_TEST(MutatorTypedTest, UnknownFieldTextFormat) {
+  if (!TextParserCanAllowUnknownField())
+    GTEST_SKIP() << "TextFormat::Parser::AllowUnknownField() is not available";
   typename TestFixture::Message parsed;
   EXPECT_TRUE(ParseTextMessage(kUnknownFieldInput, &parsed));
   EXPECT_EQ(SaveMessageAsText(parsed), kUnknownFieldExpected);
 }
 
 TYPED_TEST(MutatorTypedTest, DeepRecursion) {
+  if (!TextParserCanSetRecursionLimit())
+    GTEST_SKIP() << "TextFormat::Parser::SetRecursionLimit() is not available";
   typename TestFixture::Message message;
   typename TestFixture::Message* last = &message;
   for (int i = 0; i < 150; ++i) {

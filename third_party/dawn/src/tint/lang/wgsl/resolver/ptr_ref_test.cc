@@ -166,23 +166,6 @@ TEST_F(ResolverPtrRefTest, ArrayIndexAccessorViaPointer) {
     EXPECT_TRUE(ref->Type()->As<core::type::Reference>()->StoreType()->Is<core::type::I32>());
 }
 
-TEST_F(ResolverPtrRefTest, ArrayIndexAccessorViaPointer_FeatureDisallowed) {
-    // var a : array<i32, 3>;
-    // let p = &a;
-    // p[0]
-
-    auto* v = Var("v", ty.array<i32, 3>());
-    auto* p = Let("p", AddressOf(v));
-    auto* expr = IndexAccessor(Source{Source::Location{12, 34}}, p, 0_i);
-    WrapInFunction(v, p, expr);
-
-    auto resolver = Resolver(this, {});
-    EXPECT_FALSE(resolver.Resolve());
-    EXPECT_EQ(resolver.error(),
-              "12:34 error: pointer composite access requires the pointer_composite_access "
-              "language feature, which is not allowed in the current environment");
-}
-
 TEST_F(ResolverPtrRefTest, VectorIndexAccessorViaDerefPointer) {
     // var a : vec3<i32>;
     // let p = &a;
@@ -225,23 +208,6 @@ TEST_F(ResolverPtrRefTest, VectorIndexAccessorViaPointer) {
     EXPECT_TRUE(ref->Type()->As<core::type::Reference>()->StoreType()->Is<core::type::I32>());
 }
 
-TEST_F(ResolverPtrRefTest, VectorIndexAccessorViaPointer_FeatureDisallowed) {
-    // var a : vec3<i32>;
-    // let p = &a;
-    // p[0]
-
-    auto* v = Var("v", ty.vec3<i32>());
-    auto* p = Let("p", AddressOf(v));
-    auto* expr = IndexAccessor(Source{Source::Location{12, 34}}, p, 0_i);
-    WrapInFunction(v, p, expr);
-
-    auto resolver = Resolver(this, {});
-    EXPECT_FALSE(resolver.Resolve());
-    EXPECT_EQ(resolver.error(),
-              "12:34 error: pointer composite access requires the pointer_composite_access "
-              "language feature, which is not allowed in the current environment");
-}
-
 TEST_F(ResolverPtrRefTest, VectorMemberAccessorViaDerefPointer) {
     // var a : vec3<i32>;
     // let p = &a;
@@ -282,23 +248,6 @@ TEST_F(ResolverPtrRefTest, VectorMemberAccessorViaPointer) {
 
     ASSERT_TRUE(ref->Type()->Is<core::type::Reference>());
     EXPECT_TRUE(ref->Type()->As<core::type::Reference>()->StoreType()->Is<core::type::I32>());
-}
-
-TEST_F(ResolverPtrRefTest, VectorMemberAccessorViaPointer_FeatureDisallowed) {
-    // var a : vec3<i32>;
-    // let p = &a;
-    // p.x
-
-    auto* v = Var("v", ty.vec3<i32>());
-    auto* p = Let("p", AddressOf(v));
-    auto* expr = MemberAccessor(Source{Source::Location{12, 34}}, p, "x");
-    WrapInFunction(v, p, expr);
-
-    auto resolver = Resolver(this, {});
-    EXPECT_FALSE(resolver.Resolve());
-    EXPECT_EQ(resolver.error(),
-              "12:34 error: pointer composite access requires the pointer_composite_access "
-              "language feature, which is not allowed in the current environment");
 }
 
 TEST_F(ResolverPtrRefTest, MatrixIndexAccessorViaDerefPointer) {
@@ -349,23 +298,6 @@ TEST_F(ResolverPtrRefTest, MatrixIndexAccessorViaPointer) {
     EXPECT_TRUE(vec->Elements().type->Is<core::type::F32>());
 }
 
-TEST_F(ResolverPtrRefTest, MatrixIndexAccessorViaPointer_FeatureDisallowed) {
-    // var a : mat2x3<f32>;
-    // let p = &a;
-    // p[0]
-
-    auto* v = Var("v", ty.mat2x3<f32>());
-    auto* p = Let("p", AddressOf(v));
-    auto* expr = IndexAccessor(Source{Source::Location{12, 34}}, p, 0_i);
-    WrapInFunction(v, p, expr);
-
-    auto resolver = Resolver(this, {});
-    EXPECT_FALSE(resolver.Resolve());
-    EXPECT_EQ(resolver.error(),
-              "12:34 error: pointer composite access requires the pointer_composite_access "
-              "language feature, which is not allowed in the current environment");
-}
-
 TEST_F(ResolverPtrRefTest, StructMemberAccessorViaDerefPointer) {
     // struct S { a : i32, }
     // var a : S;
@@ -414,27 +346,6 @@ TEST_F(ResolverPtrRefTest, StructMemberAccessorViaPointer) {
 
     ASSERT_TRUE(ref->Type()->Is<core::type::Reference>());
     EXPECT_TRUE(ref->Type()->As<core::type::Reference>()->StoreType()->Is<core::type::I32>());
-}
-
-TEST_F(ResolverPtrRefTest, StructMemberAccessorViaPointer_FeatureDisallowed) {
-    // struct S { a : i32, }
-    // var a : S;
-    // let p = &a;
-    // p.a
-
-    auto* s = Structure("S", Vector{
-                                 Member("a", ty.i32()),
-                             });
-    auto* v = Var("v", ty.Of(s));
-    auto* p = Let("p", AddressOf(v));
-    auto* expr = MemberAccessor(Source{Source::Location{12, 34}}, p, "a");
-    WrapInFunction(v, p, expr);
-
-    auto resolver = Resolver(this, {});
-    EXPECT_FALSE(resolver.Resolve());
-    EXPECT_EQ(resolver.error(),
-              "12:34 error: pointer composite access requires the pointer_composite_access "
-              "language feature, which is not allowed in the current environment");
 }
 
 }  // namespace

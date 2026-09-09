@@ -30,7 +30,7 @@
 
 #include "dawn/native/WebGPUBackend.h"
 
-#include "dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
 
 namespace dawn::native::webgpu {
 

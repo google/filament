@@ -30,8 +30,8 @@
 
 #include <memory>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/ResourceHeap.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ResourceHeap.h"
 
 namespace dawn::native {
 

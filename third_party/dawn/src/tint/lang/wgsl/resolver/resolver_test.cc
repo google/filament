@@ -1153,9 +1153,9 @@ TEST_F(ResolverTest, Function_WorkgroupSize_OverridableConsts) {
     // @id(2) override depth = 2i;
     // @compute @workgroup_size(width, height, depth)
     // fn main() {}
-    Override("width", ty.i32(), Expr(16_i), Id(0_a));
-    Override("height", ty.i32(), Expr(8_i), Id(1_a));
-    Override("depth", ty.i32(), Expr(2_i), Id(2_a));
+    Override("width", ty.i32(), Expr(16_i), Vector{Id(0_a)});
+    Override("height", ty.i32(), Expr(8_i), Vector{Id(1_a)});
+    Override("depth", ty.i32(), Expr(2_i), Vector{Id(2_a)});
     auto* func = Func("main", tint::Empty, ty.void_(), tint::Empty,
                       Vector{
                           Stage(ast::PipelineStage::kCompute),
@@ -1178,9 +1178,9 @@ TEST_F(ResolverTest, Function_WorkgroupSize_OverridableConsts_NoInit) {
     // @id(2) override depth : i32;
     // @compute @workgroup_size(width, height, depth)
     // fn main() {}
-    Override("width", ty.i32(), Id(0_a));
-    Override("height", ty.i32(), Id(1_a));
-    Override("depth", ty.i32(), Id(2_a));
+    Override("width", ty.i32(), Vector{Id(0_a)});
+    Override("height", ty.i32(), Vector{Id(1_a)});
+    Override("depth", ty.i32(), Vector{Id(2_a)});
     auto* func = Func("main", tint::Empty, ty.void_(), tint::Empty,
                       Vector{
                           Stage(ast::PipelineStage::kCompute),
@@ -1202,7 +1202,7 @@ TEST_F(ResolverTest, Function_WorkgroupSize_Mixed) {
     // const depth = 3i;
     // @compute @workgroup_size(8, height, depth)
     // fn main() {}
-    Override("height", ty.i32(), Expr(2_i), Id(0_a));
+    Override("height", ty.i32(), Expr(2_i), Vector{Id(0_a)});
     GlobalConst("depth", ty.i32(), Expr(3_i));
     auto* func = Func("main", tint::Empty, ty.void_(), tint::Empty,
                       Vector{

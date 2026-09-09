@@ -1,0 +1,242 @@
+Name
+
+    NVX_conditional_render
+
+Name Strings
+
+    GL_NVX_conditional_render
+
+Contact
+
+    Eric Werness, NVIDIA (ewerness 'at' nvidia.com)
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         08/07/2012
+    NVIDIA Revision:            4
+
+Number
+
+    425
+
+Dependencies
+
+    The extension is written against the OpenGL 2.0 Specification.
+
+    ARB_occlusion_query or OpenGL 1.5 is required.
+
+    This extension interacts with NV_conditional_render.
+
+Overview
+
+    This extension provides support for conditional rendering based on the
+    results of an occlusion query.  This mechanism allows an application to
+    potentially reduce the latency between the completion of an occlusion
+    query and the rendering commands depending on its result.  It additionally
+    allows the decision of whether to render to be made without application
+    intervention.
+
+    This extension defines two new functions, BeginConditionalRenderNVX and
+    EndConditionalRenderNVX, between which rendering commands may be discarded
+    based on the results of an occlusion query.  If the specified occlusion
+    query returns a non-zero value, rendering commands between these calls are
+    executed.  If the occlusion query returns a value of zero, all rendering
+    commands between the calls are discarded.
+
+New Procedures and Functions
+
+    void BeginConditionalRenderNVX(uint id);
+    void EndConditionalRenderNVX(void);
+
+
+New Tokens
+
+    None.
+
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+   (Incorporate the spec edits from the NV_transform_feedback specification
+   that move the "Occlusion Queries" Section 4.1.7 -- to between Section 2.11,
+   Coordinate Transforms and Section 2.12, Clipping, and rename it to
+   "Asynchronous Queries".  Insert a new section immediately after the moved
+   "Asynchronous Queries" section.  If NV_transform_feedback is incorporated,
+   this section should be inserted prior the the "Transform Feedback"
+   section.)
+
+    (also modify the BeginQuery language to disallow BeginQuery while the
+     query object is being used for conditional rendering)
+    ...
+    BeginQuery sets the active query object name for the query type given by
+    <target> to <id>.  If BeginQuery is called with an <id> of zero, if the
+    active query object name for <target> is non-zero, if <id> is the active
+    query object name for any query type, or if <id> is the active query
+    object for condtional rendering (Section 2.X), the error INVALID OPERATION
+    is generated.
+
+
+    Section 2.X, Conditional Rendering
+
+    Conditional rendering can be used to discard rendering commands based on
+    the result of an occlusion query.  Conditional rendering is started and
+    stopped using the commands
+
+        void BeginConditionalRenderNVX(uint id);
+        void EndConditionalRenderNVX(void);
+
+    <id> specifies the name of an occlusion query object whose results are
+    used to determine if the rendering commands are discarded.  If the result
+    (SAMPLES_PASSED) of the query is zero, all rendering commands between
+    BeginConditionalRenderNVX and the corresponding EndConditionalRenderNVX
+    are discarded.  In this case, Begin, End, all vertex array commands
+    performing an implicit Begin and End, DrawPixels (section 3.6), Bitmap
+    (section 3.7), Clear (section 4.2.3), Accum (section 4.2.4), CopyPixels
+    (section 4.3.3), EvalMesh1, and EvalMesh2 (section 5.1) have no effect.
+    The effect of commands setting current vertex state (e.g., Color,
+    VertexAttrib) is undefined.  If the result of the occlusion query is
+    non-zero, such commands are not discarded.  The GL waits for the results
+    of the query to be available and then uses the results to determine if
+    subsequent rendering commands are discarded.
+
+    If BeginConditionalRenderNVX is called while conditional rendering is in
+    progress, or if EndConditionalRenderNVX is called while conditional
+    rendering is not in progress, the error INVALID_OPERATION is generated.
+    The error INVALID_VALUE is generated if <id> is not the name of an
+    existing query object query.  The error INVALID_OPERATION is generated if
+    <id> is the name of a query object with a target other than
+    SAMPLES_PASSED, or <id> is the name of a query currently in progress.
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD.
+
+Dependencies on NV_conditional_render
+
+    This extension was an early version of the NV_conditional_render
+    extension, which provides several conditional rendering modes
+    (QUERY_WAIT_NV, QUERY_NO_WAIT_NV, QUERY_BY_REGION_WAIT_NV,
+    QUERY_BY_REGION_NO_WAIT_NV).  This extension's commands:
+
+      glBeginConditionalRenderNVX(id);
+      glEndConditionalRenderNVX();
+
+    are equivalent to the following NV_conditional_render commands:
+
+      glBeginConditionalRenderNV(id, QUERY_WAIT_NV);
+      glEndConditionalRenderNV();
+
+Errors
+
+    INVALID_OPERATION is generated by BeginConditionalRenderNVX if a previous
+    BeginConditionalRenderNVX command has been executed without a
+    corresponding EndConditionalRenderNVX command.
+
+    INVALID_OPERATION is generated by EndConditionalRenderNVX if no
+    corresponding BeginConditionalRenderNVX command has been executed.
+
+    INVALID_VALUE is generated by BeginConditionalRenderNVX if <id> is not the
+    name of an existing occlusion query object.
+
+    INVALID_OPERATION is generated by BeginConditionalRenderNVX if <id> is the
+    name of a query object with a <target> other than SAMPLES_PASSED.
+
+    INVALID_OPERATION is generated by BeginConditionalRenderNVX if the query
+    identified by <id> is still in progress.
+
+Issues
+
+    (1) How should rendering commands other than "normal" Begin/End-style
+    geometry be affected by conditional rendering?
+
+      RESOLVED:  All rendering commands (DrawPixels, Bitmap, Clear, Accum,
+      etc...) are performed conditionally.
+
+    (5) What happens if BeginQuery is called while the specified occlusion
+    query is begin used for conditional rendering?
+
+      RESOLVED:  An INVALID_OPERATION error is generated.
+
+    (6) Should conditional rendering work with any type of query other than
+    SAMPLES_PASSED (occlusion)?
+   
+      RESOLVED:  Not in this extension.  The spec currently requires that <id>
+      be the name of an occlusion query.  There might be other query types
+      where such an operation would make sense, but there aren't any in the
+      current OpenGL spec.
+
+    (7) What is the effect on current state for immediate mode attribute calls
+    (e.g., Color, VertexAttrib) made during conditional rendering if the
+    corresponding occlusion query failed?
+
+      RESOLVED:  The effect of these calls is undefined.  If subsequent
+      primitives depend on a vertex attribute set inside a conditional
+      rendering block, and application should re-send the values after
+      EndConditionalRenderNV.
+
+
+Usage Example
+
+    GLuint queryID = 0x12345678;
+
+    // Use an occlusion query while rendering the bounding box of the real
+    // object. 
+    glBeginQuery(GL_SAMPLES_PASSED, queryID);
+       drawBoundingBox();
+    glEndQuery(GL_SAMPLES_PASSED);
+ 
+    // Do some unrelated rendering in hope that the query result will be
+    // available by the time we call glBeginConditionalRenderNV.
+
+    // Now conditionally render the real object if any portion of its
+    // bounding box is visible.
+    glBeginConditionalRenderNVX(queryID);
+       drawComplicatedObject();
+    glEndConditionalRenderNVX();
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+     4    08/07/12  pbrown    Minor edits in preparation for publishing to
+                              the Khronos registry.
+
+     3    02/19/08  pbrown    Document the INVALID_OPERATION error from
+                              calling BeginQuery while the query is used
+                              for conditional rendering in the spec body.
+
+     2    11/29/07  ewerness  First public release
+
+     1                        Internal revisions

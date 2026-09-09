@@ -30,7 +30,8 @@
 
 #include <vector>
 
-#include "dawn/native/d3d/BackendD3D.h"
+#include "src/dawn/native/d3d/BackendD3D.h"
+#include "src/dawn/native/d3d11/PlatformFunctionsD3D11.h"
 
 namespace dawn::native::d3d11 {
 

@@ -26,8 +26,13 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import hashlib
+import dataclasses
+import pathlib
 import re
 import sys
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
 
 PRESUBMIT_VERSION = '2.0.0'
 
@@ -87,6 +92,216 @@ NONINCLUSIVE_LANGUAGE_REGEXES = [
 LINT_FILTERS = []
 
 
+# Copied from Chrome's BanRule.
+@dataclasses.dataclass
+class BanRule:
+    # String pattern. If the pattern begins with a slash, the pattern will be
+    # treated as a regular expression instead.
+    pattern: str
+
+    # Explanation as a sequence of strings. Each string in the sequence will be
+    # printed on its own line.
+    explanation: Tuple[str, ...]
+
+    # Whether or not to treat this ban as a fatal error.
+    treat_as_error: bool = False
+
+    # Paths that should be excluded from the ban check. Each string is a regular
+    # expression that will be matched against the path of the file being checked
+    # relative to the root of the source tree.
+    excluded_paths: Optional[Sequence[str]] = None
+
+    # If True, surfaces any violation as a Gerrit comment on the CL after
+    # running the CQ.
+    surface_as_gerrit_lint: Optional[bool] = None
+
+
+# Configuration for banned patterns checks.
+_BANNED_CPP_PATTERNS: Sequence[BanRule] = (
+    BanRule(
+        pattern=r'/\bDAWN_UNSAFE_TODO\b',
+        explanation=(
+            'Do not introduce new instances of DAWN_UNSAFE_TODO. ',
+            'Use DAWN_UNSAFE_BUFFERS with a // SAFETY: comment instead, ',
+            'or rewrite to be safe.',
+        ),
+        treat_as_error=False,
+        surface_as_gerrit_lint=True,
+    ),
+    BanRule(
+        pattern=r'/#pragma\s+allow_unsafe_buffers\b',
+        explanation=(
+            '#pragma allow_unsafe_buffers is discouraged. Prefer using ',
+            'DAWN_UNSAFE_BUFFERS with a // SAFETY: comment for ',
+            'specific blocks, or rewrite to be safe.',
+        ),
+        treat_as_error=False,
+        surface_as_gerrit_lint=True,
+    ),
+    BanRule(
+        pattern=r'__EMSCRIPTEN__\b',
+        excluded_paths=(r'^src/utils/platform\.h$', ),
+        explanation='Use DAWN_PLATFORM_IS(EMSCRIPTEN) instead where possible.',
+        treat_as_error=False,
+        surface_as_gerrit_lint=True,
+    ),
+    BanRule(
+        pattern=r'/\b(EXPECT_DEATH|EXPECT_DEBUG_DEATH)\b',
+        excluded_paths=(r'^src/utils/gtest\.h$', ),
+        explanation=(
+            'Use EXPECT_DEATH_IF_SUPPORTED or ',
+            'DAWN_EXPECT_DEBUG_DEATH_IF_SUPPORTED instead.',
+        ),
+        treat_as_error=True,
+        surface_as_gerrit_lint=True,
+    ),
+    BanRule(
+        pattern=r'/\b(ASSERT_DEATH|ASSERT_DEBUG_DEATH)\b',
+        excluded_paths=(r'^src/utils/gtest\.h$', ),
+        explanation=(
+            'Use ASSERT_DEATH_IF_SUPPORTED or ',
+            'DAWN_ASSERT_DEBUG_DEATH_IF_SUPPORTED instead.',
+        ),
+        treat_as_error=True,
+        surface_as_gerrit_lint=True,
+    ),
+    BanRule(
+        pattern=r'runtime/explicit',
+        explanation='Use explicit(false) instead of NOLINT(runtime/explicit).',
+        treat_as_error=True,
+        surface_as_gerrit_lint=True,
+    ),
+    BanRule(
+        pattern=
+        r'/misc-explicit-constructor|cppcoreguidelines-explicit-constructor',
+        # We would prefer to use explicit(false) here too, but it doesn't work
+        # to suppress the clang-tidy warning on operators.
+        # There's no ban rule on google-explicit-constructor because it's hard
+        # to implement while allowing it on operators.
+        explanation=(
+            'Use explicit(false) for constructors, and ',
+            'NOLINTNEXTLINE(google-explicit-constructor) for operators.',
+        ),
+        treat_as_error=True,
+        surface_as_gerrit_lint=True,
+    ),
+)
+
+EXPECTED_LICENSE_TEXT = {
+    "//": [
+        "//",
+        "// Redistribution and use in source and binary forms, with or without",
+        "// modification, are permitted provided that the following conditions are met:",
+        "//",
+        "// 1. Redistributions of source code must retain the above copyright notice, this",
+        "//    list of conditions and the following disclaimer.",
+        "//",
+        "// 2. Redistributions in binary form must reproduce the above copyright notice,",
+        "//    this list of conditions and the following disclaimer in the documentation",
+        "//    and/or other materials provided with the distribution.",
+        "//",
+        "// 3. Neither the name of the copyright holder nor the names of its",
+        "//    contributors may be used to endorse or promote products derived from",
+        "//    this software without specific prior written permission.",
+        "//",
+        "// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+        "// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+        "// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+        "// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+        "// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+        "// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+        "// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+        "// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+        "// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+        "// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+    ],
+    "//*": [
+        "//*",
+        "//* Redistribution and use in source and binary forms, with or without",
+        "//* modification, are permitted provided that the following conditions are met:",
+        "//*",
+        "//* 1. Redistributions of source code must retain the above copyright notice, this",
+        "//*    list of conditions and the following disclaimer.",
+        "//*",
+        "//* 2. Redistributions in binary form must reproduce the above copyright notice,",
+        "//*    this list of conditions and the following disclaimer in the documentation",
+        "//*    and/or other materials provided with the distribution.",
+        "//*",
+        "//* 3. Neither the name of the copyright holder nor the names of its",
+        "//*    contributors may be used to endorse or promote products derived from",
+        "//*    this software without specific prior written permission.",
+        "//*",
+        "//* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+        "//* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+        "//* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+        "//* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+        "//* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+        "//* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+        "//* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+        "//* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+        "//* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+        "//* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+    ],
+    "#": [
+        "#",
+        "# Redistribution and use in source and binary forms, with or without",
+        "# modification, are permitted provided that the following conditions are met:",
+        "#",
+        "# 1. Redistributions of source code must retain the above copyright notice, this",
+        "#    list of conditions and the following disclaimer.",
+        "#",
+        "# 2. Redistributions in binary form must reproduce the above copyright notice,",
+        "#    this list of conditions and the following disclaimer in the documentation",
+        "#    and/or other materials provided with the distribution.",
+        "#",
+        "# 3. Neither the name of the copyright holder nor the names of its",
+        "#    contributors may be used to endorse or promote products derived from",
+        "#    this software without specific prior written permission.",
+        "#",
+        "# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+        "# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+        "# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+        "# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+        "# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+        "# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+        "# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+        "# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+        "# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+        "# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+    ]
+}
+
+# 'go fmt' has slightly different spacing rules relative to our C++
+# style, so .go files need their own variant
+EXPECTED_LICENSE_TEXT_GO = [
+    "//",
+    "// Redistribution and use in source and binary forms, with or without",
+    "// modification, are permitted provided that the following conditions are met:",
+    "//",
+    "//  1. Redistributions of source code must retain the above copyright notice, this",
+    "//     list of conditions and the following disclaimer.",
+    "//",
+    "//  2. Redistributions in binary form must reproduce the above copyright notice,",
+    "//     this list of conditions and the following disclaimer in the documentation",
+    "//     and/or other materials provided with the distribution.",
+    "//",
+    "//  3. Neither the name of the copyright holder nor the names of its",
+    "//     contributors may be used to endorse or promote products derived from",
+    "//     this software without specific prior written permission.",
+    "//",
+    "// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+    "// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+    "// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+    "// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+    "// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+    "// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+    "// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+    "// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+    "// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+    "// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+]
+
+
 def _NonInclusiveFileFilter(file):
     """Filters files that are exempt from the non-inclusive language check."""
     filter_list = [
@@ -111,7 +326,6 @@ def _NonInclusiveFileFilter(file):
         "src/dawn/tests/end2end/DepthBiasTests.cpp",  # External URL
         "src/tint/transform/canonicalize_entry_point_io.cc",  # External URL
         "test/tint/samples/compute_boids.wgsl",  # External URL
-        "third_party/gn/dxc/BUILD.gn",  # Third party file
         "third_party/directx-shader-compiler/BUILD.gn",  # Third party file
         "third_party/directx-shader-compiler/LICENSE",  # Third party file
         "third_party/directx-shader-compiler/build/message_compiler.py",  # Third party file
@@ -305,61 +519,300 @@ def _HasNoStrayWhitespaceFilter(file):
     return file.LocalPath().replace('\\', '/') not in filter_list
 
 
-def _CheckCopyrightHeaders(input_api, output_api):
-    """Checks that newly added files have a correct copyright year and prompts when it finds a discrepancy"""
-    current_year = int(input_api.time.strftime('%Y'))
+def _CheckCopyrightYear(input_api, output_api, f, new_contents_lines,
+                        current_year):
     copyright_regex = re.compile(r'Copyright (\d{4})')
+    for line in new_contents_lines:
+        if match := copyright_regex.search(line):
+            year = int(match.group(1))
+            if year != current_year:
+                return [
+                    output_api.PresubmitPromptWarning(
+                        f'{f.LocalPath()}: Copyright year is {year}, should be {current_year} as this is a new file.'
+                    )
+                ]
+            return []
+    return [
+        output_api.PresubmitPromptWarning(
+            f'{f.LocalPath()}: No copyright header found.')
+    ]
+
+
+def _CheckCopyrightText(input_api, output_api, f, new_contents_lines):
+    # Find the copyright line and check the lines after it.
+    copyright_regex = re.compile(r'Copyright (\d{4})')
+    for i, line in enumerate(new_contents_lines):
+        if match := copyright_regex.search(line):
+            # Determine the comment prefix.
+            prefix = "//"
+            if line.strip().startswith("//*"):
+                prefix = "//*"
+            if line.strip().startswith("#"):
+                prefix = "#"
+
+            expected = EXPECTED_LICENSE_TEXT.get(prefix)
+            if f.LocalPath().endswith('.go') and prefix == "//":
+                expected = EXPECTED_LICENSE_TEXT_GO
+
+            if not expected:
+                return []
+
+            # Check the next len(expected) lines.
+            actual_license_text = new_contents_lines[i + 1:i + 1 +
+                                                     len(expected)]
+            if actual_license_text != expected:
+                return [
+                    output_api.PresubmitPromptWarning(
+                        f'{f.LocalPath()}: Copyright license text is incorrect.'
+                    )
+                ]
+            return []
+    return []
+
+
+def _CheckCopyright(input_api, output_api):
+    """Checks that newly added files have a correct copyright year and license text."""
+    current_year = int(input_api.time.strftime('%Y'))
 
     errors = []
 
-    added_files = []
     # Use a list for deleted contents to handle multiple files with the same
     # content being renamed.
     deleted_files_hashes = []
     for f in input_api.AffectedFiles(include_deletes=True):
-        if not (f.LocalPath().endswith(('.h', '.cc', '.cpp'))):
-            continue
-
-        if f.Action() == 'A':
-            added_files.append(f)
-        elif f.Action() == 'D':
+        if f.Action() == 'D':
             deleted_files_hashes.append(
                 hashlib.sha256(''.join(
                     f.OldContents()).encode('utf-8')).hexdigest())
 
-    for f in added_files:
-        new_contents_lines = list(f.NewContents())
-        new_content_hash = hashlib.sha256(
-            ''.join(new_contents_lines).encode('utf-8')).hexdigest()
-
-        # If the file is a rename, we don't check for the copyright.
-        # A rename is detected if a file with the same content is also
-        # deleted in the same changelist.
-        is_rename = False
-        if new_content_hash in deleted_files_hashes:
-            deleted_files_hashes.remove(new_content_hash)
-            is_rename = True
-
-        if is_rename:
+    for f in input_api.AffectedFiles(include_deletes=False):
+        path = f.LocalPath().replace('\\', '/')
+        if not (path.endswith(
+            ('.h', '.cc', '.cpp', '.mm', '.gn', '.gni', '.cmake',
+             'CMakeLists.txt', 'BUILD.bazel', '.py', '.go', '.star', '.js',
+             '.mjs', '.sh', '.def', '.idl'))):
             continue
 
-        found_copyright = False
-        for line in new_contents_lines:
-            if match := copyright_regex.search(line):
-                found_copyright = True
-                year = int(match.group(1))
-                if year != current_year:
-                    errors.append(
-                        output_api.PresubmitPromptWarning(
-                            f'{f.LocalPath()}: Copyright year is {year}, should be {current_year} as this is a new file.'
-                        ))
-                break
-        if not found_copyright:
-            errors.append(
-                output_api.PresubmitPromptWarning(
-                    f'{f.LocalPath()}: No copyright header found.'))
+        new_contents_lines = list(f.NewContents())
+
+        # Always check for the copyright license text body if the file is modified.
+        errors.extend(
+            _CheckCopyrightText(input_api, output_api, f, new_contents_lines))
+
+        # Only check for the copyright year if the file is newly added.
+        if f.Action() == 'A':
+            new_content_hash = hashlib.sha256(
+                ''.join(new_contents_lines).encode('utf-8')).hexdigest()
+
+            # If the file is a rename, we don't check for the copyright year.
+            # A rename is detected if a file with the same content is also
+            # deleted in the same changelist.
+            is_rename = False
+            if new_content_hash in deleted_files_hashes:
+                deleted_files_hashes.remove(new_content_hash)
+                is_rename = True
+
+            if not is_rename:
+                errors.extend(
+                    _CheckCopyrightYear(input_api, output_api, f,
+                                        new_contents_lines, current_year))
 
     return errors
+
+
+def CheckPresubmitTests(input_api, output_api):
+    """Test PRESUBMIT.py during presubmit."""
+    # TODO(crbug.com/517626950): consider running the tests only when
+    # PRESUBMIT.py has been modified. For now, this is very cheap, so it
+    # doesn't matter.
+    return input_api.RunTests(
+        input_api.canned_checks.GetUnitTestsInDirectory(
+            input_api,
+            output_api,
+            input_api.PresubmitLocalPath(),
+            files_to_check=[r'^PRESUBMIT_test\.py$']))
+
+
+def CheckUnsafeBuffersSafetyComments(input_api, output_api):
+    """Checks that DAWN_UNSAFE_BUFFERS is accompanied by a
+    // SAFETY: comment.
+    """
+    # We only check C++ source files.
+    exts = ('.h', '.cc', '.cpp', '.mm')
+    file_filter = lambda f: f.LocalPath().endswith(exts)
+
+    unsafe_buffers_regex = re.compile(r'\bDAWN_UNSAFE_BUFFERS\b')
+    safety_comment_regex = re.compile(r'//.*\bSAFETY\b')
+
+    problems = []
+    locations = []
+
+    for f in input_api.AffectedFiles(include_deletes=False,
+                                     file_filter=file_filter):
+        lines = f.NewContents()
+        for line_num, line in enumerate(lines, start=1):
+            if line.strip().startswith('//'):
+                continue
+            if unsafe_buffers_regex.search(line):
+                # Check if safety comment is on the same line.
+                if safety_comment_regex.search(line):
+                    continue
+
+                # Check preceding lines for a SAFETY comment.
+                has_safety = False
+                for check_line_num in range(line_num - 1, 0, -1):
+                    check_line = lines[check_line_num - 1].strip()
+                    if not check_line.startswith('//'):
+                        # Not a comment line, stop searching.
+                        break
+                    if safety_comment_regex.search(check_line):
+                        has_safety = True
+                        break
+
+                if not has_safety:
+                    problems.append(
+                        f"{f.LocalPath()}:{line_num}: "
+                        "DAWN_UNSAFE_BUFFERS usage must be accompanied by a "
+                        "// SAFETY: comment.")
+                    locations.append(
+                        output_api.PresubmitResultLocation(
+                            file_path=f.LocalPath(),
+                            start_line=line_num,
+                            end_line=line_num,
+                        ))
+
+    if problems:
+        return [
+            output_api.PresubmitPromptWarning(
+                "DAWN_UNSAFE_BUFFERS usages must be accompanied by a "
+                "// SAFETY: comment explaining why they are safe.",
+                items=problems,
+                locations=locations)
+        ]
+    return []
+
+
+def CheckChangeTodoHasOwner(input_api, output_api):
+    """
+    Checks that TODO comments have the issue number.
+
+    This is similar to the canned check in
+    depot_tools/presubmit_canned_checks.py but with Dawn-specific exclusions:
+    - Excludes DAWN_UNSAFE_TODO macros.
+    - Excludes PRESUBMIT.py and PRESUBMIT_test.py to avoid false positives.
+    """
+    legacyTODO = '\\s*\\(.+\\)\\s*:'  # TODO(owner/bug):
+    modernTODO = ':\\s*[^\\s]+\\s*\\-'  # TODO: owner - description
+    unowned_todo = input_api.re.compile('\\bTODO(?!(%s|%s))' %
+                                        (legacyTODO, modernTODO))
+
+    # Skip PRESUBMIT files to avoid false positives from regexes and tests.
+    def FileFilter(affected_file):
+        filename = affected_file.LocalPath().replace('\\', '/')
+        if filename in ('PRESUBMIT.py', 'PRESUBMIT_test.py'):
+            return False
+        return input_api.FilterSourceFile(affected_file)
+
+    errors = []
+    for f in input_api.AffectedFiles(include_deletes=False,
+                                     file_filter=FileFilter):
+        for line_num, line in f.ChangedContents():
+            if unowned_todo.search(line):
+                errors.append(
+                    f'Found TODO with no issue number in {f.LocalPath()}:{line_num}'
+                )
+
+    if errors:
+        return [output_api.PresubmitPromptWarning('\n'.join(errors))]
+    return []
+
+
+# Copied from Chrome's _GetMessageForMatchingType.
+def _GetMessageForMatchingType(input_api, affected_file, line_number, line,
+                               ban_rule):
+    """
+    Helper method for checking for banned constructs.
+
+    Returns an string composed of the name of the file, the line number
+    where the match has been found and the additional text passed as
+    |message| in case the target type name matches the text inside the
+    line passed as parameter.
+    """
+    result = []
+
+    # Ignore comments containing banned strings (but not NOLINT comments).
+    if input_api.re.search(r'^ *//(?! *NOLINT)', line):
+        return result
+    # A // nocheck comment will bypass this error.
+    if line.endswith(' nocheck'):
+        return result
+
+    matched = False
+    if ban_rule.pattern[0:1] == '/':
+        regex = ban_rule.pattern[1:]
+        if input_api.re.search(regex, line):
+            matched = True
+    elif ban_rule.pattern in line:
+        matched = True
+
+    if matched:
+        result.append('    %s:%d:' % (affected_file.LocalPath(), line_number))
+        for line in ban_rule.explanation:
+            result.append('      %s' % line)
+
+    return result
+
+
+# Copied from Chrome's CheckNoBannedPatterns with modifications.
+def CheckNoBannedPatterns(input_api, output_api):
+    """Make sure that banned patterns are not used."""
+    results = []
+
+    def IsExcludedFile(affected_file, excluded_paths):
+        if not excluded_paths:
+            return False
+
+        local_path = pathlib.Path(affected_file.LocalPath()).as_posix()
+        for item in excluded_paths:
+            if input_api.re.match(item, local_path):
+                return True
+        return False
+
+    def CheckForMatch(affected_file, line_num: int, line: str,
+                      ban_rule: BanRule):
+        if IsExcludedFile(affected_file, ban_rule.excluded_paths):
+            return
+
+        message = _GetMessageForMatchingType(input_api, affected_file,
+                                             line_num, line, ban_rule)
+        if message:
+            result_loc = []
+            if ban_rule.surface_as_gerrit_lint:
+                result_loc.append(
+                    output_api.PresubmitResultLocation(
+                        file_path=affected_file.LocalPath(),
+                        start_line=line_num,
+                        end_line=line_num,
+                    ))
+            if ban_rule.treat_as_error:
+                results.append(
+                    output_api.PresubmitError('A banned pattern was used.\n' +
+                                              '\n'.join(message),
+                                              locations=result_loc))
+            else:
+                results.append(
+                    output_api.PresubmitPromptWarning(
+                        'A banned pattern was used.\n' + '\n'.join(message),
+                        locations=result_loc))
+
+    file_filter = lambda f: f.LocalPath().endswith(
+        ('.cc', '.mm', '.cpp', '.h'))
+    for f in input_api.AffectedFiles(file_filter=file_filter):
+        for line_num, line in f.ChangedContents():
+            for ban_rule in _BANNED_CPP_PATTERNS:
+                CheckForMatch(f, line_num, line, ban_rule)
+
+    return results
 
 
 def CheckChange(input_api, output_api):
@@ -383,19 +836,16 @@ def CheckChange(input_api, output_api):
     results.extend(
         input_api.canned_checks.CheckChangeHasNoTabs(input_api, output_api))
     results.extend(
-        input_api.canned_checks.CheckChangeTodoHasOwner(input_api, output_api))
-    results.extend(
         input_api.canned_checks.CheckChangeHasNoStrayWhitespace(
             input_api,
             output_api,
             source_file_filter=_HasNoStrayWhitespaceFilter))
-
     results.extend(
         input_api.canned_checks.CheckChangeHasDescription(
             input_api, output_api))
     results.extend(
         input_api.canned_checks.CheckDoNotSubmit(input_api, output_api))
-    results.extend(_CheckCopyrightHeaders(input_api, output_api))
+    results.extend(_CheckCopyright(input_api, output_api))
     # Note, the verbose_level here should match what is set in tools/lint so
     # the same set of lint errors are reported on the CQ and Kokoro bots.
     results.extend(

@@ -25,53 +25,47 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
+#include "src/dawn/utils/TerribleCommandBuffer.h"
 
-#include "dawn/utils/TerribleCommandBuffer.h"
-
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::utils {
 
-TerribleCommandBuffer::TerribleCommandBuffer() {}
+TerribleCommandBuffer::TerribleCommandBuffer() : mBuffer(mBackingBuffer) {}
 
 TerribleCommandBuffer::TerribleCommandBuffer(dawn::wire::CommandHandler* handler)
-    : mHandler(handler) {}
+    : mHandler(handler), mBuffer(mBackingBuffer) {}
 
 void TerribleCommandBuffer::SetHandler(dawn::wire::CommandHandler* handler) {
     mHandler = handler;
 }
 
 size_t TerribleCommandBuffer::GetMaximumAllocationSize() const {
-    return sizeof(mBuffer);
+    return mBackingBuffer.size();
 }
 
-void* TerribleCommandBuffer::GetCmdSpace(size_t size) {
-    // Note: This returns non-null even if size is zero.
-    if (size > sizeof(mBuffer)) {
-        return nullptr;
-    }
-    char* result = &mBuffer[mOffset];
-    if (sizeof(mBuffer) - size < mOffset) {
-        if (!Flush()) {
-            return nullptr;
-        }
-        return GetCmdSpace(size);
+std::optional<std::span<volatile std::byte>> TerribleCommandBuffer::GetCommandSpace(size_t size) {
+    if (size > mBackingBuffer.size()) {
+        return std::nullopt;
     }
 
+    if (mBuffer.size() - size < mOffset) {
+        if (!Flush()) {
+            return std::nullopt;
+        }
+        return GetCommandSpace(size);
+    }
+
+    std::span<volatile std::byte> result = mBuffer.subspan(mOffset, size);
     mOffset += size;
     return result;
 }
 
 bool TerribleCommandBuffer::Flush() {
-    char* start = &mBuffer[mLastFlushedOffset];
-    size_t size = mOffset - mLastFlushedOffset;
+    Span<std::byte> flushRange = mBuffer.subspan(mLastFlushedOffset, mOffset - mLastFlushedOffset);
     mLastFlushedOffset = mOffset;
-
-    bool success = mHandler->HandleCommands(start, size) != nullptr;
+    bool success = mHandler->HandleCommands(flushRange);
 
     // After a flush, we can only reset |mOffset| to 0 if both offsets are equal. Otherwise, there
     // are unflushed commands, likely queued as a part of the last flush, so defer resetting
@@ -85,6 +79,20 @@ bool TerribleCommandBuffer::Flush() {
 
 bool TerribleCommandBuffer::Empty() {
     return mOffset == 0;
+}
+
+size_t TerribleCommandBuffer::GetOffsetForTesting() const {
+    return mOffset;
+}
+
+void TerribleCommandBuffer::SetOffsetForTesting(size_t offset) {
+    mOffset = offset;
+}
+
+Span<const std::byte> TerribleCommandBuffer::GetContentSubrange(size_t startOffset,
+                                                                size_t endOffset) {
+    DAWN_ASSERT(endOffset >= startOffset);
+    return mBuffer.subspan(startOffset, endOffset - startOffset);
 }
 
 }  // namespace dawn::utils

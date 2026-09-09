@@ -1,0 +1,227 @@
+Name
+
+    ATI_render_texture_rectangle
+
+Name Strings
+
+    WGL_ATI_render_texture_rectangle
+
+Contact
+
+    Rob Mace, ATI Research (mace 'at' ati.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: September 27, 2018
+    Revision: 3
+
+Number
+
+    OpenGL Extension #532
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    WGL_ARB_render_texture is required.
+    GL_ARB_texture_rectangle or GL_EXT_texture_rectangle is required.
+
+    The extension is written against the OpenGL 1.5 Specification
+    and the WGL_ARB_render_texture 7/16/01 Specification.
+
+Overview
+
+    This extension builds upon WGL_ARB_render_texture and allows a
+    pbuffer to be bound to a texture rectangle target.
+
+
+Issues
+
+    1. Are separate BIND_TO_TEXTURE_RECTANGLE enums needed, or are the
+       BIND_TO_TEXTURE enums defined in WGL_ARB_render_texture
+       sufficient?
+
+       RESOLUTION: The BIND_TO_TEXTURE enums defined in
+       WGL_ARB_render_texture are sufficient.  WGL_ARB_render_texture
+       does not have BIND_TO_TEXTURE_2D, BIND_TO_TEXTURE_CUBE_MAP, etc.
+       enums.  It just has the BIND_TO_TEXTURE enums.
+
+
+New Procedures and Functions
+
+   None
+
+
+New Tokens
+
+    Accepted as a value in the <piAttribList> parameter of
+    wglCreatePbufferARB and returned in the value parameter of
+    wglQueryPbufferARB when <iAttribute> is WGL_TEXTURE_TARGET_ARB:
+
+        WGL_TEXTURE_RECTANGLE_ATI       0x21A5
+
+
+Additions to Chapter 2 of the OpenGL 1.5 Specification (OpenGL
+Operation)
+
+    None
+
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification (Special
+Functions)
+
+    None
+
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and
+State Requests)
+
+    None
+
+
+Additions to the WGL Specification
+
+    Modify wglCreatePbufferARB:
+
+        HPBUFFERARB wglCreatePbufferARB (HDC hDC, int iPixelFormat,
+            int iWidth, int iHeight, const int *piAttribList);
+
+        ...
+
+        WGL_TEXTURE_TARGET_ARB
+
+        This attribute indicates the target for the texture that will be
+        created when the pbuffer is created with a texture format of
+        WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB.  This attribute can
+        be set to WGL_NO_TEXTURE_ARB, WGL_TEXTURE_1D_ARB,
+        WGL_TEXTURE_2D_ARB, WGL_TEXTURE_CUBE_MAP_ARB, or
+        WGL_TEXTURE_RECTANGLE_ATI.  The default value is
+        WGL_NO_TEXTURE_ARB.
+
+        ...
+
+        WGL_PBUFFER_LARGEST_ARB
+
+        If this attribute is set to a non-zero value, the largest
+        available pbuffer is allocated when the allocation of the
+        pbuffer would otherwise fail due to insufficient resources.  The
+        width or height of the allocated pbuffer never exceeds <iWidth>
+        and <iHeight>, respectively.  Also, if the pbuffer will be used
+        as a texture (i.e., the value of the WGL_TEXTURE_TARGET_ARB
+        attribute is WGL_TEXTURE_1D_ARB, WGL_TEXTURE_2D_ARB,
+        WGL_TEXTURE_CUBE_MAP_ARB, or WGL_TEXTURE_RECTANGLE_ATI and
+        texture format is WGL_TEXTURE_RGB_ARB or WGL_TEXTURE_RGBA_ARB),
+        then the aspect ratio will be preserved and the new width and
+        height will be valid sizes for the corresponding texture target.
+        (e.g. Both the width and height will be a power of 2 if the
+        implementation only supports power of 2 textures.  Similarly,
+        the width and height will be equal for a cube map texture).  Use
+        wglQueryPbufferARB to retrieve the dimensions of the allocated
+        pbuffer.  The default value for this attribute is FALSE.
+
+        ...
+
+        ERROR_INVALID_DATA          The pixel format attribute
+                                    WGL_TEXTURE_FORMAT_ARB is
+                                    WGL_TEXTURE_RGB_ARB or
+                                    WGL_TEXTURE_RGBA_ARB
+                                    and WGL_PBUFFER_WIDTH and/or
+                                    WGL_PBUFFER_HEIGHT specify an
+                                    invalid size for the implementation
+                                    (e.g., the texture size is not a
+                                    power of 2 and
+                                    WGL_TEXTURE_TARGET_ARB is
+                                    WGL_TEXTURE_1D_ARB,
+                                    WGL_TEXTURE_2D_ARB, or
+                                    WGL_TEXTURE_CUBE_MAP_ARB).
+
+        ERROR_INVALID_DATA          WGL_TEXTURE_TARGET_ARB is
+                                    WGL_TEXTURE_RECTANGLE_ATI
+                                    and WGL_MIPMAP_TEXTURE_ARB is
+                                    non-zero.
+
+        ....
+
+    Modify wglBindTexImageARB
+
+        The command
+
+        BOOL wglBindTexImageARB (HPBUFFERARB hPbuffer, int iBuffer)
+
+        defines a one-dimensional texture image, two-dimensional
+        texture image, rectangle texture image, or a set of
+        two-dimensional cube map texture images.  The texture image or
+        images consist of the image data in <iBuffer> for the specified
+        pbuffer, <hPbuffer>, and need not be copied.  The texture
+        target, the texture format and the size of the texture
+        components are derived from attributes of pbuffer specified by
+        <hPbuffer>.
+
+        ...
+
+        The texture targets are derived from the WGL_TEXTURE_TARGET_ARB
+        attribute of <hPbuffer>.  If the texture target for the pbuffer
+        is WGL_TEXTURE_CUBE_MAP_ARB then <iBuffer> defines a set of
+        cubemap images for the cube map texture objects which are bound
+        to the current context (hereafter referred to as the current
+        texture object).  Note that when the texture target is
+        WGL_TEXTURE_CUBE_MAP_ARB, all cube map texture targets are
+        defined by a single call to wglBindTexImageARB. If the texture
+        target is WGL_TEXTURE_2D_ARB, then <iBuffer> defines a 2D
+        texture for the current 2D texture object.  If the texture
+        target is WGL_TEXTURE_1D_ARB, then <iBuffer> defines a 1D
+        texture for the current 1D texture object.  If the texture
+        target is WGL_TEXTURE_RECTANGLE_ATI, then <iBuffer> defines a
+        rectangle texture for the current rectangle texture object.
+
+        ....
+
+
+Errors
+
+    None
+
+
+New State
+
+    None
+
+
+New Implementation Dependent State
+
+    None
+
+
+Revision History
+
+   Date: 09/27/2018
+   Revision: 3
+      - Assigned extension number & registered the spec (see
+        github.com/KhronosGroup/OpenGL-Registry/issues/192)
+      - For reasons lost to history, the enum value 0x21A5 duplicates the
+        entirely unrelated WGL_GPU_NUM_PIPES_AMD.
+      - This will probably set the alltime record for the time between an
+        extension being created and being registered.
+
+   Date: 10/11/2004
+   Revision: 2
+      - Minor cleanup.
+      - Changed status to Complete.
+
+   Date: 8/16/2004
+   Revision: 1
+      - First draft.

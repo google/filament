@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/CommandRecordingContext.h"
+#include "src/dawn/native/metal/CommandRecordingContext.h"
 
-#include "dawn/common/Assert.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/Forward.h"
-#include "dawn/native/metal/QueueMTL.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/Forward.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native::metal {
 

@@ -52,6 +52,9 @@ class Atomic {
         return *this;
     }
 
+    T Load() const { return mValue.load(LoadMemoryOrder); }
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator T() const { return mValue.load(LoadMemoryOrder); }
 
     T operator=(T value) {

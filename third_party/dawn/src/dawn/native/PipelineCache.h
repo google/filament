@@ -30,11 +30,11 @@
 
 #include <atomic>
 
-#include "dawn/common/RefCounted.h"
-#include "dawn/native/BlobCache.h"
-#include "dawn/native/CacheKey.h"
-#include "dawn/native/Error.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/native/BlobCache.h"
+#include "src/dawn/native/CacheKey.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native {
 

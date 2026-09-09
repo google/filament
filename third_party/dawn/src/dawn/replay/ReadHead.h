@@ -32,7 +32,7 @@
 #include <span>
 #include <string>
 
-#include "dawn/replay/Error.h"
+#include "src/dawn/replay/Error.h"
 
 namespace dawn::replay {
 

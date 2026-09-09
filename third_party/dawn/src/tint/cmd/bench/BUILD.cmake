@@ -52,6 +52,7 @@ tint_add_target(tint_cmd_bench_bench_cmd bench_cmd
 
 tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
   tint_api_common
+  tint_cmd_bench_bench
   tint_lang_core
   tint_lang_core_constant
   tint_lang_core_type
@@ -66,6 +67,7 @@ tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_rtti_bench
   tint_utils_symbol
@@ -77,41 +79,35 @@ tint_target_add_external_dependencies(tint_cmd_bench_bench_cmd bench_cmd
   "src_utils"
 )
 
-if(TINT_BUILD_GLSL_WRITER AND TINT_BUILD_WGSL_READER)
+if(TINT_BUILD_GLSL_WRITER)
   tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
     tint_cmd_bench_glsl_bench
   )
-endif(TINT_BUILD_GLSL_WRITER AND TINT_BUILD_WGSL_READER)
+endif(TINT_BUILD_GLSL_WRITER)
 
-if(TINT_BUILD_HLSL_WRITER AND TINT_BUILD_WGSL_READER)
+if(TINT_BUILD_HLSL_WRITER)
   tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
     tint_cmd_bench_hlsl_bench
   )
-endif(TINT_BUILD_HLSL_WRITER AND TINT_BUILD_WGSL_READER)
+endif(TINT_BUILD_HLSL_WRITER)
 
-if(TINT_BUILD_MSL_WRITER AND TINT_BUILD_WGSL_READER)
+if(TINT_BUILD_MSL_WRITER)
   tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
     tint_cmd_bench_msl_bench
   )
-endif(TINT_BUILD_MSL_WRITER AND TINT_BUILD_WGSL_READER)
+endif(TINT_BUILD_MSL_WRITER)
 
-if(TINT_BUILD_SPV_WRITER AND TINT_BUILD_WGSL_READER)
+if(TINT_BUILD_SPV_WRITER)
   tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
     tint_cmd_bench_spirv_bench
   )
-endif(TINT_BUILD_SPV_WRITER AND TINT_BUILD_WGSL_READER)
+endif(TINT_BUILD_SPV_WRITER)
 
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
-    tint_cmd_bench_bench
-  )
-endif(TINT_BUILD_WGSL_READER)
-
-if(TINT_BUILD_WGSL_WRITER AND TINT_BUILD_WGSL_READER)
+if(TINT_BUILD_WGSL_WRITER)
   tint_target_add_dependencies(tint_cmd_bench_bench_cmd bench_cmd
     tint_cmd_bench_wgsl_bench
   )
-endif(TINT_BUILD_WGSL_WRITER AND TINT_BUILD_WGSL_READER)
+endif(TINT_BUILD_WGSL_WRITER)
 
 tint_target_set_output_name(tint_cmd_bench_bench_cmd bench_cmd "tint_benchmark")
 
@@ -139,6 +135,7 @@ tint_target_add_dependencies(tint_cmd_bench_bench bench
   tint_lang_wgsl
   tint_lang_wgsl_ast
   tint_lang_wgsl_program
+  tint_lang_wgsl_reader
   tint_lang_wgsl_sem
   tint_utils
   tint_utils_containers
@@ -147,6 +144,7 @@ tint_target_add_dependencies(tint_cmd_bench_bench bench
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -156,11 +154,5 @@ tint_target_add_external_dependencies(tint_cmd_bench_bench bench
   "google-benchmark"
   "src_utils"
 )
-
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_dependencies(tint_cmd_bench_bench bench
-    tint_lang_wgsl_reader
-  )
-endif(TINT_BUILD_WGSL_READER)
 
 endif(TINT_BUILD_WGSL_READER)

@@ -1,0 +1,136 @@
+Name
+
+    IBM_static_data
+
+Name Strings
+
+    GL_IBM_static_data
+
+Version
+
+    $Date: 1999/12/28 01:40:35 $ $Revision: 1.2 $
+    IBM Id: static_data.spec,v 1.1 1997/07/29 12:52:51 pbrown Exp
+
+Number
+
+    223
+
+Dependencies
+
+    None
+
+Overview
+
+    The OpenGL specification requires that data be bound at call time.	The
+    IBM_static_data extension relaxes the bind-at-call semantics allowing
+    an implementation to dereference pointers some time after the
+    corresponding calls.
+
+    Because of the bind-at-call sematics of standard OpenGL, an
+    implementation is required to either copy or fully process data at the
+    time it is provided by the application.  Copying data substantially
+    increases the demands on the memory subsystem; processing the data may
+    result in ineffective amortization of fixed costs.	Neither copying nor
+    processing allows multiple rendering threads to operate on the original
+    data.
+
+Issues
+
+  * Indirect rendering is ignored; is there anything useful we can do?
+
+  * This specification has been designed to be generic, but at this time
+    only allows vertex array data to be noted as static.  Should the
+    specification be extended to include data specified in one or more
+    of the following ways:
+      pixel data [glBitmap, glDrawPixels]
+      pixel maps [glPixelMap*]
+      vertex data [glVertex*v, glColor*v, glNormal*v, etc.]
+      evaluator maps [glMap*]
+      texture maps [glTexImage*, glTexSubImage*]
+      matrices [glLoadMatrix*, glMultMatrix*]
+      other attribute calls [glMaterial*v, glLight*v, etc.]
+
+New Procedures and Functions
+
+    FlushStaticDataIBM(GLenum target)
+
+New Tokens
+
+    Accepted by the <target> parameter of FlushStaticDataIBM:
+
+	ALL_STATIC_DATA_IBM			103060
+
+    Accepted by the <cap> parameter of EnableClientState, DisableClientState,
+    and IsEnabled, and the <target> parameter of FlushStaticDataIBM:
+
+	STATIC_VERTEX_ARRAY_IBM			103061
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+  Additions to Section 2.8, Vertex Arrays
+
+    Typically, the vertex array data is dereferenced at the time of a call
+    to glArrayElement, glDrawArrays, or glDrawElements, after which it can
+    be changed by the caller.  Calling EnableClientState with a target of
+    STATIC_VERTEX_ARRAY_IBM relaxes this requirement.  Instead, only the
+    memory addresses of such data are bound at the time of the call.  If
+    vertex array data are changed, freed, or reallocated while
+    STATIC_VERTEX_ARRAY_IBM is enabled, the results of any glArrayElement,
+    glDrawArrays, or glDrawElements calls using such an array are
+    undefined.	In order to free, change or reallocate the vertex array
+    data specified while STATIC_VERTEX_ARRAY_IBM was enabled, either
+    glFinish or glFlushStaticDataIBM must be used.
+
+    The client state required to implement vertex arrays consist of six
+    boolean values representing vertex array enables, one boolean value
+    representing the static vertex array enable, ...
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+  Additions to Section 5.5, Flush and Finish (added to the end of the section)
+
+  The command
+
+      void FlushStaticDataIBM( GLenum target ) ;
+
+  forces all references to data relative to target that were specified as
+  static to be resolved before this function returns.  While this is
+  similar to Finish, only the references to the target static data are
+  guaranteed to be completed upon return from this function.  This function
+  does not guarantee that any rendering involving the target data is
+  completed, only that the references to the data are completed.
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None
+
+New State
+
+    Get Value			  Type Get Command  Value Sec	Attrib
+    ----------------------------- ---- -----------  ----- ----	-------
+    STATIC_VERTEX_ARRAY_IBM	  B    IsEnabled    False 2.8	vertex-array
+
+New Implementation Dependent State
+
+    None

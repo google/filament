@@ -25,10 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/replay/Error.h"
+#include "src/dawn/replay/Error.h"
 
-#include "dawn/common/Log.h"
-#include "dawn/common/SystemUtils.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/utils/force_crash.h"
+#include "src/utils/log.h"
 
 namespace dawn::replay {
 
@@ -42,7 +43,7 @@ std::unique_ptr<ErrorData> ErrorData::Create(InternalErrorType type,
     auto [var, present] = GetEnvironmentVar("DAWN_DEBUG_BREAK_ON_ERROR");
     if (present && !var.empty() && var != "0") {
         ErrorLog() << error->GetMessage();
-        BreakPoint();
+        DAWN_FORCE_CRASH();
     }
     return error;
 }

@@ -33,15 +33,15 @@
 #include <variant>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Format.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/PerStage.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PerStage.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -153,16 +153,16 @@ struct StaticSamplerBindingInfo {
     Ref<SamplerBase> sampler;
     // Holds the BindingIndex of the single texture with which this sampler is statically paired, if
     // any.
-    BindingIndex sampledTextureIndex = BindingIndex(0);
+    BindingIndex sampledTextureIndex = BindingIndex(0u);
     // What this sampler will be used for.
-    StaticSamplerUse use;
+    StaticSamplerUse use = StaticSamplerUse::Freestanding;
 
     bool operator==(const StaticSamplerBindingInfo& other) const = default;
 };
 
 struct BindingInfo {
     BindingNumber binding;
-    wgpu::ShaderStage visibility;
+    wgpu::ShaderStage visibility = wgpu::ShaderStage::None;
 
     // The size of the array this binding is part of. Each BindingInfo represents a single entry.
     BindingIndex arraySize{1u};
@@ -239,23 +239,23 @@ struct APIBindPoint {
 };
 
 struct PerStageBindingCounts {
-    uint32_t sampledTextureCount;
-    uint32_t samplerCount;
-    uint32_t storageBufferCount;
-    uint32_t storageTextureCount;
-    uint32_t texelBufferCount;
-    uint32_t uniformBufferCount;
-    uint32_t externalTextureCount;
-    uint32_t staticSamplerCount;
+    uint32_t sampledTextureCount = 0;
+    uint32_t samplerCount = 0;
+    uint32_t storageBufferCount = 0;
+    uint32_t storageTextureCount = 0;
+    uint32_t texelBufferCount = 0;
+    uint32_t uniformBufferCount = 0;
+    uint32_t externalTextureCount = 0;
+    uint32_t staticSamplerCount = 0;
 };
 
 struct BindingCounts {
-    uint32_t totalCount;
-    uint32_t bufferCount;
-    uint32_t unverifiedBufferCount;  // Buffers with minimum buffer size unspecified
-    uint32_t dynamicUniformBufferCount;
-    uint32_t dynamicStorageBufferCount;
-    uint32_t staticSamplerCount;
+    uint32_t totalCount = 0;
+    uint32_t bufferCount = 0;
+    uint32_t unverifiedBufferCount = 0;  // Buffers with minimum buffer size unspecified
+    uint32_t dynamicUniformBufferCount = 0;
+    uint32_t dynamicStorageBufferCount = 0;
+    uint32_t staticSamplerCount = 0;
     PerStage<PerStageBindingCounts> perStage;
 };
 

@@ -61,6 +61,8 @@ tint_add_target(tint_lang_spirv_writer_raise lib
   lang/spirv/writer/raise/raise.h
   lang/spirv/writer/raise/remove_unreachable_in_loop_continuing.cc
   lang/spirv/writer/raise/remove_unreachable_in_loop_continuing.h
+  lang/spirv/writer/raise/replace_unsigned_compare_zero.cc
+  lang/spirv/writer/raise/replace_unsigned_compare_zero.h
   lang/spirv/writer/raise/resource_table_helper.cc
   lang/spirv/writer/raise/resource_table_helper.h
   lang/spirv/writer/raise/shader_io.cc
@@ -83,6 +85,7 @@ tint_target_add_dependencies(tint_lang_spirv_writer_raise lib
   tint_lang_spirv_intrinsic
   tint_lang_spirv_ir
   tint_lang_spirv_type
+  tint_lang_spirv_writer_common
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -90,26 +93,16 @@ tint_target_add_dependencies(tint_lang_spirv_writer_raise lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
 )
 
 tint_target_add_external_dependencies(tint_lang_spirv_writer_raise lib
+  "spirv-headers"
   "src_utils"
 )
-
-if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
-  tint_target_add_external_dependencies(tint_lang_spirv_writer_raise lib
-    "spirv-headers"
-  )
-endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
-
-if(TINT_BUILD_SPV_WRITER)
-  tint_target_add_dependencies(tint_lang_spirv_writer_raise lib
-    tint_lang_spirv_writer_common
-  )
-endif(TINT_BUILD_SPV_WRITER)
 
 endif(TINT_BUILD_SPV_WRITER)
 if(TINT_BUILD_SPV_WRITER)
@@ -128,6 +121,7 @@ tint_add_target(tint_lang_spirv_writer_raise_test test
   lang/spirv/writer/raise/merge_return_test.cc
   lang/spirv/writer/raise/pass_matrix_by_pointer_test.cc
   lang/spirv/writer/raise/remove_unreachable_in_loop_continuing_test.cc
+  lang/spirv/writer/raise/replace_unsigned_compare_zero_test.cc
   lang/spirv/writer/raise/shader_io_test.cc
   lang/spirv/writer/raise/unary_polyfill_test.cc
   lang/spirv/writer/raise/var_for_dynamic_index_test.cc
@@ -146,6 +140,8 @@ tint_target_add_dependencies(tint_lang_spirv_writer_raise_test test
   tint_lang_spirv_intrinsic
   tint_lang_spirv_ir
   tint_lang_spirv_type
+  tint_lang_spirv_writer_common
+  tint_lang_spirv_writer_raise
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -153,6 +149,7 @@ tint_target_add_dependencies(tint_lang_spirv_writer_raise_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -162,12 +159,5 @@ tint_target_add_external_dependencies(tint_lang_spirv_writer_raise_test test
   "gtest"
   "src_utils"
 )
-
-if(TINT_BUILD_SPV_WRITER)
-  tint_target_add_dependencies(tint_lang_spirv_writer_raise_test test
-    tint_lang_spirv_writer_common
-    tint_lang_spirv_writer_raise
-  )
-endif(TINT_BUILD_SPV_WRITER)
 
 endif(TINT_BUILD_SPV_WRITER)

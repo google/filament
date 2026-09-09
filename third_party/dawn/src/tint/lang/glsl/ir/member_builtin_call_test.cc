@@ -76,7 +76,7 @@ TEST_F(IR_GlslMemberBuiltinCallTest, CloneWithExplicitParams) {
 
     auto* access = b.Access(ty.ptr<storage, array<u32>, read_write>(), var, 0_u);
     auto* builtin = b.MemberCall<MemberBuiltinCall>(mod.Types().i32(), BuiltinFn::kLength, access);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<core::ir::TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());

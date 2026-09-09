@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/replay/Deserialization.h"
+#include "src/dawn/replay/Deserialization.h"
 
 #include <cstdint>
 #include <span>
 #include <string>
 
-#include "dawn/replay/ReadHead.h"
+#include "src/dawn/replay/ReadHead.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::replay {
 
 MaybeError ReadBytes(ReadHead& s, void* data, size_t size) {
-    return s.ReadBytes(std::span<uint8_t>(static_cast<uint8_t*>(data), size));
+    return s.ReadBytes(DAWN_UNSAFE_TODO(std::span<uint8_t>(static_cast<uint8_t*>(data), size)));
 }
 
 MaybeError Deserialize(ReadHead& s, int32_t* v) {

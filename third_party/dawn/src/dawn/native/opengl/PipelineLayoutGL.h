@@ -28,12 +28,12 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_PIPELINELAYOUTGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_PIPELINELAYOUTGL_H_
 
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_vector.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/opengl/IntegerTypes.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/opengl/IntegerTypes.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 

@@ -25,18 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/BackendD3D12.h"
+#include "src/dawn/native/d3d12/BackendD3D12.h"
 
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Log.h"
 #include "dawn/native/D3D12Backend.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/PhysicalDeviceD3D12.h"
-#include "dawn/native/d3d12/PlatformFunctionsD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/PhysicalDeviceD3D12.h"
+#include "src/dawn/native/d3d12/PlatformFunctionsD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
+#include "src/utils/log.h"
 
 namespace dawn::native::d3d12 {
 
@@ -77,11 +77,19 @@ MaybeError Backend::Initialize() {
 }
 
 const PlatformFunctions* Backend::GetFunctions() const {
-    return static_cast<const PlatformFunctions*>(Base::GetFunctions());
+    return static_cast<const PlatformFunctions*>(Base::GetFunctionsBase());
+}
+
+ResultOrError<ComPtr<ID3D12Device>> Backend::CreateD3DDevice(IUnknown* adapter) {
+    ComPtr<ID3D12Device> device;
+    DAWN_TRY(CheckHRESULT(
+        GetFunctions()->CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)),
+        "D3D12CreateDevice"));
+    return device;
 }
 
 MaybeError Backend::EnsureDXC() {
-#if DAWN_USE_BUILT_DXC
+#if defined(DAWN_USE_BUILT_DXC)
     // If components are already loaded, return early
     if (mDxcLibrary != nullptr) {
         // Since all components are assigned atomically, if one is loaded, all should be loaded

@@ -290,6 +290,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // constants for UBO sizes, we must hardcode WebGPU minspec in both places.
         // With a WebGPU UBO minspec of 64 KiB (65536 bytes), height is set to 65536 / 16 = 4096.
         out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 4096;\n";
+        // Unlike the layout constants above, other specialization constants generated below
+        // remain WGSL overrides whose defaults are specialized by WebGPUProgram before it creates
+        // the shader module.
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
@@ -347,6 +350,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     if (isDepthVariant) {
         out << "const bool RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = false;\n";
         out << "const bool RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = false;\n";
     } else {
         bool const litVariants = material.isLit || material.hasShadowMultiplier;
         generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
@@ -357,6 +361,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                 CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
                         RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS,
                 false);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
+                        RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING,
+                litVariants);
     }
 
     out << '\n';
@@ -1138,11 +1146,7 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
 
         out << SHADERS_SURFACE_AMBIENT_OCCLUSION_FS_DATA;
         out << SHADERS_SURFACE_LIGHT_INDIRECT_FS_DATA;
-
-        if (variant.hasDirectionalLighting()) {
-            out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
-        }
-
+        out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
         out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
         out << SHADERS_SURFACE_SHADING_LIT_FS_DATA;
     }

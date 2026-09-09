@@ -1,0 +1,307 @@
+Name
+
+    ARB_shader_draw_parameters
+
+Name Strings
+
+    GL_ARB_shader_draw_parameters
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Piers Daniell, NVIDIA
+    Daniel Rakos, AMD
+    Christophe Riccio, OpenGL Garden (!)
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date: 29 May 2017
+    Revision: 4
+
+Number
+
+    ARB Extension #156
+
+Dependencies
+
+    OpenGL 3.1 is required.
+
+    This extension is written against Version 4.3 of the Core Profile OpenGL
+    Specification, dated February 14, 2013 and Version 4.30 of the OpenGL
+    Shading Language Specification, dated February 7, 2013.
+
+    The presence of the GL_ARB_multi_draw_indirect extension affects the
+    definition of this extension.
+
+    The GL_ARB_indirect_parameters extension affects the definition of this
+    extension.
+
+Overview
+
+        In unextended GL, vertex shaders have inputs named gl_VertexID and
+    gl_InstanceID, which contain, respectively the index of the vertex and
+    instance. The value of gl_VertexID is the implicitly passed index of the
+    vertex being processed, which includes the value of baseVertex, for those
+    commands that accept it. Meanwhile, gl_InstanceID is the integer index
+    of the current instance being processed, but, even for commands that
+    accept a baseInstance parameter, it does not include the value of this
+    argument. Furthermore, the equivalents to these variables in other
+    graphics APIs do not necessarily follow these conventions. The reason for
+    this inconsistency is that there are legitimate use cases for both
+    inclusion and exclusion of the baseVertex or baseInstance parameters
+    in gl_VertexID and gl_InstanceID, respectively.
+
+        Rather than change the semantics of either built-in variable, this
+    extension adds two new built-in variables to the GL shading language,
+    gl_BaseVertexARB and gl_BaseInstanceARB, which contain the values passed
+    in the baseVertex and baseInstance parameters, respectively. Shaders
+    provided by the application may use these variables to offset gl_VertexID
+    or gl_InstanceID if desired, or use them for any other purpose.
+
+        Additionally, this extension adds a further built-in variable, gl_DrawID
+    to the shading language. This variable contains the index of the draw
+    currently being processed by a Multi* variant of a drawing command (such
+    as MultiDrawElements or MultiDrawArraysIndirect).
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+IP Status
+
+    No known IP claims.
+
+Additions to Chapter 10 of the OpenGL Core Profile Specification, "Vertex
+Specification and Drawing Commands"
+
+    Add the following after the pseudo-code describing MultiDrawArrays on
+    p.310:
+
+        The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawIDARB>, as described in Section 11.1.3.9.
+
+    Add the following after the pseudo-code describing MultiDrawArraysIndirect
+    on p.311:
+
+        The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawIDARB>, as described in Section 11.1.3.9.
+
+    Add the following after the pseudo-code describing MultiDrawElements on
+    p.313:
+
+        The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawIDARB>, as described in Section 11.1.3.9.
+
+    Add the following after the pseudo-code describing
+    MultiDrawElementsIndirect on p.316:
+
+        The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawIDARB>, as described in Section 11.1.3.9.
+
+    Add the following after the pseudo-code describing
+    MultiDrawElementsBaseVertex on p.316:
+
+        The index of the draw (<i> in the above pseudo-code) may be read by
+    a vertex shader as <gl_DrawIDARB>, as described in Section 11.1.3.9.
+
+Additions to Chapter 11 of the OpenGL Core Profile Specification, "Programmable
+Vertex Processing"
+
+    In Section 11.1.1, "Vertex Attributes", in the description of
+    GetActiveAttrib, state that gl_DrawIDARB is enumerated:
+
+        For GetActiveAttrib, all active vertex shader input variables are
+    enumerated, including the special built-in inputs gl_VertexID,
+    gl_BaseVertexARB, gl_InstanceID, gl_BaseInstanceARB, and gl_DrawIDARB.
+
+    Replace the paragraphs describing gl_VertexID and gl_InstanceID in Section
+    11.1.3.9, "Shader Inputs" with the following:
+
+        Besides having access to vertex attributes and uniform variables,
+    vertex shaders can access the read-only built-in variables gl_VertexID,
+    gl_InstanceID, gl_BaseVertexARB, gl_BaseInstanceARB and gl_DrawIDARB.
+
+        <gl_VertexID> holds ... (retain original language)
+
+        <gl_BaseVertexARB> holds the integer value passed to the <baseVertex>
+    parameter to the command that resulted in the current shader invocation.
+    In the case where the command has no <baseVertex> parameter, the value
+    of <gl_BaseVertexARB> is zero.
+
+        <gl_InstanceID> holds ... (retain original language)
+
+        <gl_BaseInstanceARB> holds the integer value passed to the
+    <baseInstance> parameter to the command that resulted in the current
+    shader invocation. In the case where the command has no <baseInstance>
+    parameter, the value of <gl_BaseInstanceARB> is zero.
+
+    Add the following paragraph after the above discussion of <gl_InstanceID>:
+
+        <gl_DrawIDARB> holds the integer draw number the current draw being
+    processed by the shader invocation. It is dynamically uniform. In
+    MultiDraw* variants, this is the zero-based index of the draw within the
+    list of draws processed by the command. In non-MultiDraw* commands, the
+    value of <gl_DrawIDARB> is always zero.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+Modifications to Chapter 7 of the OpenGL Shading Language Specification,
+Version 4.30.
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_ARB_shader_draw_parameters : <behavior>
+
+    where <behavior> is as described in Section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_draw_parameters     1
+
+    In Section 7.1, "Built-in Language Variables", add the following to the
+    list of input variables to a vertex shader, p.110:
+
+        in int      gl_DrawIDARB;
+        in int      gl_BaseVertexARB;
+        in int      gl_BaseInstanceARB;
+
+    Add the following paragraph after the description of gl_InstanceID, p.114:
+
+        The variable <gl_DrawIDARB> is a vertex language input variable that
+    holds the integer index of the drawing command to which the current vertex
+    belongs (see "Shader Inputs" in section 11.1.3.9 of the OpenGL Graphics
+    System Specification). If the vertex is not invoked by a Multi* form of
+    a draw command, then the value of gl_DrawIDARB is zero.
+
+        The variable <gl_BaseVertexARB> is a vertex language input variable
+    that holds the integer value passed to the <baseVertex> parameter of the
+    command that resulted in the current shader invocation (see "Shader Inputs"
+    in section 11.1.3.9 of the OpenGL Graphics System Specification).
+
+        The variable <gl_BaseInstanceARB> is a vertex language input variable
+    that holds the integer value passed to the <baseInstance> parameter of
+    the command that resulted in the current shader invocation (see "Shader
+    Inputs" in section 11.1.3.9 of the OpenGL Graphics System Specification).
+
+Usage Examples
+
+--- Example 1 ---
+--- Using a different transformation matrix per draw ---
+--- Some draws can share the same matrix ---
+
+    layout(binding = INDIRECTION) uniform indirection
+    {
+        int Transform[MAX_DRAW];
+    } Indirection;
+
+    layout(binding = TRANSFORM0) uniform transform
+    {
+        mat4 MVP[MAX_DRAW];
+    } Transform;
+
+    layout(location = POSITION) in vec3 Position;
+    layout(location = TEXCOORD) in vec3 Texcoord;
+
+    out gl_PerVertex
+    {
+        vec4 gl_Position;
+    };
+
+    out block
+    {
+        vec2 Texcoord;
+    } Out;
+
+    void main()
+    {
+        Out.Texcoord = Texcoord.st;
+        gl_Position = Transform.MVP[Indirection.Transform[gl_DrawIDARB]] *
+                      vec4(Position, 1.0);
+    }
+
+Dependencies on GL_ARB_multi_draw_indirect
+
+    If GL_ARB_multi_draw_indirect is not supported, remove the language added
+    after the pseudo-code describing MultiDrawArraysIndirect and
+    MultiDrawElementsIndirect.
+
+Dependencies on GL_ARB_indirect_parameters
+
+    Whilst not a true dependency, it should be noted that the additional
+    commands introduced by ARB_indirect_parameters affect the value of
+    gl_DrawIDARB.
+
+Issues
+
+    1) -
+
+    2) -
+
+    3) What is the value of gl_DrawIDARB for non-Multi* draws?
+
+       RESOLVED: Zero.
+
+    4) Do we need language to clarify that gl_DrawIDARB is a dynamically
+       uniform expression?
+
+       RESOLVED: Yes, this allows accessing resources per-draw.
+
+    5) -
+
+    6) -
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     1    05/16/2013  gsellers  Initial draft
+     2    05/29/2013  gsellers  Add descriptions of gl_BaseVertexARB and
+                                gl_BaseInstanceARB.
+                                Document pseudo-dependency on
+                                ARB_indirect_parameters.
+     3    06/05/2013  gsellers  Remove controls over gl_VertexID and
+                                gl_InstanceID, leaving only the
+                                gl_BaseVertexARB and gl_BaseInstanceARB
+                                variables. gl_DrawIDARB is unmodified.
+                                Issues 1, 2, 5 and 6 become non-issues as
+                                a result.
+     4    05/29/2017  dgkoch    remove edit reference to non-existant
+                                MultiDrawElementsInstancedBaseInstance function.
+                                Fix typos.
+

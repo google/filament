@@ -421,7 +421,18 @@ func (g *Generator) CType(typ any, pointerType PointerType) string {
 				ctype = "float"
 			case "float64", "float64_supertype":
 				ctype = "double"
-			case "c_void":
+			case "c_void",
+				// Semantic aliases for c_void
+				"c_void_data_ptr",
+				"c_void_mapped_range_ptr",
+				"c_void_a_native_window",
+				"c_void_ca_metal_layer",
+				"c_void_h_instance",
+				"c_void_h_wnd",
+				"c_void_wl_display",
+				"c_void_wl_surface",
+				"c_void_x11_display",
+				"c_void_xcb_connection":
 				ctype = "void"
 			default:
 				// Handle type names prefixed with the type category.

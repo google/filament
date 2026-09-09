@@ -30,8 +30,8 @@
 
 #include <utility>
 
-#include "dawn/common/Ref.h"
-#include "dawn/common/WeakRefSupport.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/WeakRefSupport.h"
 
 namespace dawn {
 
@@ -39,17 +39,17 @@ template <typename T>
 class WeakRef;
 
 // GetWeakRef is a less verbose method of calling of WeakRef<typename>::Get(obj);
-template <
-    typename T,
-    typename = typename std::enable_if<std::is_base_of_v<detail::WeakRefSupportBase, T>>::type>
-WeakRef<T> GetWeakRef(T* obj) {
+template <typename T>
+WeakRef<T> GetWeakRef(T* obj)
+    requires(std::is_base_of_v<detail::WeakRefSupportBase, T>)
+{
     return WeakRef<T>::Get(obj);
 }
 
-template <
-    typename T,
-    typename = typename std::enable_if<std::is_base_of_v<detail::WeakRefSupportBase, T>>::type>
-WeakRef<T> GetWeakRef(const Ref<T>& obj) {
+template <typename T>
+WeakRef<T> GetWeakRef(const Ref<T>& obj)
+    requires(std::is_base_of_v<detail::WeakRefSupportBase, T>)
+{
     return WeakRef<T>::Get(obj.Get());
 }
 
@@ -61,30 +61,38 @@ class WeakRef {
     WeakRef() {}
 
     // Constructors from nullptr.
-    // NOLINTNEXTLINE(runtime/explicit)
-    constexpr WeakRef(std::nullptr_t) : WeakRef() {}
+    explicit(false) constexpr WeakRef(std::nullptr_t) : WeakRef() {}
 
     // Constructors from a WeakRef<U>, where U can also equal T.
-    template <typename U, typename = typename std::enable_if<std::is_base_of_v<T, U>>::type>
-    WeakRef(const WeakRef<U>& other) : mData(other.mData) {}
-    template <typename U, typename = typename std::enable_if<std::is_base_of_v<T, U>>::type>
-    WeakRef<T>& operator=(const WeakRef<U>& other) {
+
+    template <typename U>
+    explicit(false) WeakRef(const WeakRef<U>& other)
+        requires(std::is_base_of_v<T, U>)
+        : mData(other.mData) {}
+    template <typename U>
+    WeakRef<T>& operator=(const WeakRef<U>& other)
+        requires(std::is_base_of_v<T, U>)
+    {
         mData = other.mData;
         return *this;
     }
-    template <typename U, typename = typename std::enable_if<std::is_base_of_v<T, U>>::type>
-    WeakRef(WeakRef<U>&& other) : mData(std::move(other.mData)) {}
-    template <typename U, typename = typename std::enable_if<std::is_base_of_v<T, U>>::type>
-    WeakRef<T>& operator=(WeakRef<U>&& other) {
+
+    template <typename U>
+    explicit(false) WeakRef(WeakRef<U>&& other)
+        requires(std::is_base_of_v<T, U>)
+        : mData(std::move(other.mData)) {}
+    template <typename U>
+    WeakRef<T>& operator=(WeakRef<U>&& other)
+        requires(std::is_base_of_v<T, U>)
+    {
         if (&other != this) {
             mData = std::move(other.mData);
         }
         return *this;
     }
 
-    // Constructor from explicit WeakRefSupport<T>* is allowed.
-    // NOLINTNEXTLINE(runtime/explicit)
-    WeakRef(WeakRefSupport<T>* support) : mData(support->mData) {}
+    // Constructor from implicit WeakRefSupport<T>* is allowed.
+    explicit(false) WeakRef(WeakRefSupport<T>* support) : mData(support->mData) {}
 
     // Comparison operators.
     bool operator==(const WeakRef<T>& other) const = default;

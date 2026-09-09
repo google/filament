@@ -43,6 +43,7 @@ class GPUSampler final : public interop::GPUSampler {
     GPUSampler(const wgpu::SamplerDescriptor& desc, wgpu::Sampler sampler);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::Sampler&() const { return sampler_; }
 
     // interop::GPUSampler interface compliance

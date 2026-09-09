@@ -1,0 +1,324 @@
+Name
+    
+     NV_register_combiners2
+
+Name Strings
+
+     GL_NV_register_combiners2
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Contributors
+
+    Thomas Roell
+
+Notice
+
+     Copyright NVIDIA Corporation, 2000, 2001, 2004.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Implemented.
+
+Version
+
+    NVIDIA Date: December 13, 2004
+    Version 1.2
+
+Number
+
+    227
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+    Assumes support for the NV_register_combiners extension (version 1.4).
+
+Overview
+
+    The NV_register_combiners extension provides a powerful fragment
+    coloring mechanism.  This specification extends the register combiners
+    functionality to support more color constant values that are unique
+    for each general combiner stage.
+
+    The base register combiners functionality supports only two color
+    constants.  These two constants are available in every general
+    combiner stage and in the final combiner.
+
+    When many general combiner stages are supported, more than two
+    unique color constants is often required.  The obvious way to extend
+    the register combiners is to add several more color constant
+    registers.  But adding new unique color constant registers is
+    expensive for hardware implementation because every color constant
+    register must be available as an input to any stage.
+
+    In practice however, it is the total set of general combiner stages
+    that requires more color constants, not each and every individual
+    general combiner stage.  Each individual general combiner stage
+    typically requires only one or two color constants.
+
+    By keeping two color constant registers but making these two registers
+    contain two unique color constant values for each general combiner
+    stage, the hardware expense of supporting multiple color constants
+    is minimized.  Additionally, this scheme scales appropriately as
+    more general combiner stages are added.
+
+Issues
+
+    How do is compatibility maintained with the original register
+    combiners?
+      
+      RESOLUTION:  Initially, per general combiner stage constants are
+      disabled and the register combiners operate as described in the
+      original NV_register_combiners specification.  A distinct "per
+      stage constants" enable exposes this extension's new functionality.
+
+    Where do the final combiner color constant values come from?
+
+      RESOLUTION:  When "per stage constants" is enabled, the final
+      combiner color constants continue to use the constant colors set
+      with glCombinerParameterfvNV.
+
+    Is the alpha component of the SECONDARY_COLOR_NV register now
+    initialized with the expected interpolated secondary color's alpha
+    component.
+
+       RESOLUTION:  Yes, see Revision History for details.
+
+New Procedures and Functions
+
+    void CombinerStageParameterfvNV(GLenum stage,
+                                    GLenum pname,
+                                    const GLfloat *params);
+
+    void GetCombinerStageParameterfvNV(GLenum stage,
+                                       GLenum pname,
+                                       GLfloat *params);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Disable, Enable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        PER_STAGE_CONSTANTS_NV                         0x8535
+
+    Accepted by the <pname> parameter of CombinerStageParameterfvNV
+    and GetCombinerStageParameterfvNV:
+
+        CONSTANT_COLOR0_NV                             (see NV_register_combiners)
+        CONSTANT_COLOR1_NV                             (see NV_register_combiners)
+
+    Accepted by the <stage> parameter of CombinerStageParameterfvNV and
+    GetCombinerStageParameterfvNV: 
+
+        COMBINER0_NV                                   (see NV_register_combiners)
+        COMBINER1_NV                                   (see NV_register_combiners)
+        COMBINER2_NV                                   (see NV_register_combiners)
+        COMBINER3_NV                                   (see NV_register_combiners)
+        COMBINER4_NV                                   (see NV_register_combiners)
+        COMBINER5_NV                                   (see NV_register_combiners)
+        COMBINER6_NV                                   (see NV_register_combiners)
+        COMBINER7_NV                                   (see NV_register_combiners)
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+ --  Section 3.8.12 "Register Combiners Application"
+
+    Because the alpha component of the SECONDARY_COLOR_NV register is
+    well-defined now (see Revision History) to be the alpha value of csec,
+    STRIKE this sentence:
+
+    "The initial value of the alpha portion of register SECONDARY_COLOR_NV
+    is undefined."
+ 
+    Add a paragraph immediately before section 3.8.12.1:
+
+    "The ccc0 and ccc1 values map to particular constant color values.
+    The ccc0 and ccc1 mappings depend on whether per-stage constants
+    are enabled or not.  Per-stage constants are enabled and disabled
+    with the Enable and Disable commands using the symbolic constant
+    PER_STAGE_CONSTANTS_NV.
+
+    When per-stage constants are disabled, ccc0 and ccc1 are mapped to
+    the register combiners' global color constant values, gccc0 and
+    gccc1.
+
+    When per-stage constants are enabled, ccc0 and ccc1 depend
+    on the combiner stage that inputs the COLOR_CONSTANT0_NV and
+    COLOR_CONSTANT1_NV registers.  Each general combiner stage # maps
+    ccc0 and ccc1 to the per-stage values s#ccc0 and s#ccc1 respectively.
+    The final combiner maps ccc0 and ccc1 to the values gccc0 and gccc1
+    (the same as if per-stage constants are disabled).
+
+    gccc0, gccc1, s#ccc0, and s#ccc1 are further described in the
+    following section."
+
+ --  Section 3.8.12.1 "Combiner Parameters"
+ 
+    Change Table NV_register_combiners.3 to read "gccc0" instead of
+    "ccc0" and "gccc1" instead of "ccc1".
+
+    Change the first sentence of the last paragraph to read:
+
+    "The values gccc0 and gccc1 named by CONSTANT_COLOR0_NV and
+    CONSTANT_COLOR1_NV are global constant colors available for inputs to
+    the final combiner stage and, when per-stage constants is disabled,
+    to the general combiner stages."
+
+    Add the following after the last paragraph in the section:
+
+    "Per-stage combiner parameters are specified by
+
+        void CombinerStageParameterfvNV(GLenum stage,
+                                        GLenum pname,
+                                        const GLfloat *params);
+
+    The <stage> parameter is a symbolic constant of the form
+    COMBINER<#>_NV, indicating the general combiner stage <#> whose
+    parameter named by <pname> is to be updated.  <pname> must be either
+    CONSTANT_COLOR0_NV or CONSTANT_COLOR1_NV.  <params> is a pointer
+    to a group of four values to which to set the indicated parameter.
+    The parameter names CONSTANT_COLOR0_NV and CONSTANT_COLOR1_NV
+    update the per-stage color constants s#ccc0 and s#ccc1 respectively
+    where # is the number of the specified general combiner stage.
+    The floating-point color values are clamped to the range [0,1]
+    when specified."
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+ --  Section 6.1.3 "Enumerated Queries"
+
+    Add to the bottom of the list of function prototypes (page 183):
+
+        void GetCombinerStageParameterfvNV(GLenum stage,
+                                           GLenum pname,
+                                           GLfloat *params);
+
+    Change the first sentence describing the register combiner queries
+    to mention GetCombinerStageParameterfvNV so the sentence reads:
+
+    "The GetCombinerInputParameterfvNV, GetCombinerInputParameterivNV,
+    GetCombinerOutputParameterfvNV, GetCombinerOutputParameterivNV,
+    and GetCombinerStageParameterfvNV parameter <stage> may be one of
+    COMBINER0_NV, COMBINER1_NV, and so on, indicating which general
+    combiner stage to query."
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Two new GL commands are added.
+
+    The following rendering command is sent to the sever as part of a
+    glXRender request:
+
+        CombinerStageParameterfvNV
+            2           12+4*n          rendering command length
+            2           4280            rendering command opcode
+            4           ENUM            stage
+            4           ENUM            pname
+                        0x852A   n=4    GL_CONSANT_COLOR0_NV
+                        0x852B   n=4    GL_CONSANT_COLOR1_NV
+                        else     n=0
+            4*n         LISTofFLOAT32   params
+
+    The remaining command is a non-rendering command.  This commands
+    is sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+        GetCombinerStageParameterfvNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           1327            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            stage
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+Errors
+
+    None
+
+New State
+
+Get Value               Type  Get Command                    Initial Value  Description         Sec       Attribute
+----------------------  ----  -----------------------------  -------------  ------------------  --------  --------------
+PER_STAGE_CONSTANTS_NV  B     IsEnabled                      False          enable for          3.8.12    texture/enable
+CONSTANT_COLOR0_NV      Cx#   GetCombinerStageParameterfvNV  0,0,0,0        per-stage constant  3.8.12.1  texture
+                                                                            color zero
+CONSTANT_COLOR1_NV      Cx#   GetCombinerStageParameterfvNV  0,0,0,0        per-stage constant  3.8.12.1  texture
+                                                                             color one
+
+[ where # is the value of MAX_GENERAL_COMBINERS_NV ]
+
+New Implementation State
+
+     None
+
+Revision History
+
+     December 13, 2004: Assigned GLX protocl opcodes and fixed protocol
+     with help from Thomas Roell.
+
+     Version 1.2 (February 11, 2004) - When describing the
+     per-fragment register initialization within the combiners, the
+     NV_register_combiners specification says "The initial value of the
+     alpha portion of register SECONDARY_COLOR_NV is undefined." While
+     this is true of NV1x GPUs, NV2x and beyond GPUs can properly
+     initialize the alpha component of the SECONDARY_COLOR_NV
+     register with the expected interpolated secondary color alpha.
+     Unfortunately, due to a driver bug, the alpha components was always
+     initialized to 1.0 in driver versions 56.90 (circa February 2004)
+     and before.  Drivers subsequent to 56.90 have this problem fixed.
+     This specification is updated to indicate that SECONDARY_COLOR_NV
+     initialization is well-defined and what you would expect now.
+
+     Version 1.1 (April 28, 2003) - The original specification failed
+     to specify what should happen if a color component parameter for
+     CombinerStageParameter*NV is outside the [0,1] range.  Such values
+     should be clamped to the [0,1] range.
+
+     NVIDIA drivers prior to May 2003 incorrectly failed to clamp color
+     component values specified with CombinerStageParameter*NV to [0,1].
+     Instead, approximately "x-floor(x)" where x is a component value
+     is used for rendering.

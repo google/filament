@@ -25,20 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/CommandRecordingContextD3D11.h"
+#include "src/dawn/native/d3d11/CommandRecordingContextD3D11.h"
 
 #include <string>
 #include <utility>
 
 #include "dawn/native/D3DBackend.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d11/BufferD3D11.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/Forward.h"
-#include "dawn/native/d3d11/PhysicalDeviceD3D11.h"
-#include "dawn/native/d3d11/PipelineLayoutD3D11.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d11/BufferD3D11.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/Forward.h"
+#include "src/dawn/native/d3d11/PhysicalDeviceD3D11.h"
+#include "src/dawn/native/d3d11/PipelineLayoutD3D11.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d11 {
 
@@ -56,7 +57,9 @@ ScopedCommandRecordingContext::ScopedCommandRecordingContext(CommandRecordingCon
 }
 
 ScopedCommandRecordingContext::ScopedCommandRecordingContext(ScopedCommandRecordingContext&& other)
-    : mGuard(std::move(other.mGuard)), mLockD3D11Scope(other.mLockD3D11Scope) {
+    : mGuard(std::move(other.mGuard)),
+      mLockD3D11Scope(other.mLockD3D11Scope),
+      mUniformBufferInUse(std::move(other.mUniformBufferInUse)) {
     other.mLockD3D11Scope = false;
 }
 
@@ -73,6 +76,7 @@ ScopedCommandRecordingContext& ScopedCommandRecordingContext::operator=(
         // Move the guard and lock state
         mGuard = std::move(other.mGuard);
         mLockD3D11Scope = other.mLockD3D11Scope;
+        mUniformBufferInUse = std::move(other.mUniformBufferInUse);
         other.mLockD3D11Scope = false;
     }
     return *this;
@@ -176,15 +180,18 @@ void ScopedCommandRecordingContext::Flush1(D3D11_CONTEXT_TYPE ContextType, HANDL
 void ScopedCommandRecordingContext::WriteUniformBufferRange(uint32_t offset,
                                                             const void* data,
                                                             size_t size) const {
-    DAWN_ASSERT(offset < kMaxImmediateConstantsPerPipeline);
-    DAWN_ASSERT(size <= sizeof(uint32_t) * (kMaxImmediateConstantsPerPipeline - offset));
-    std::memcpy(&Get()->mUniformBufferData[offset], data, size);
+    DAWN_ASSERT(offset < CommandRecordingContext::kMaxImmediateSlotsD3D11);
+    DAWN_ASSERT(size <=
+                sizeof(uint32_t) * (CommandRecordingContext::kMaxImmediateSlotsD3D11 - offset));
+    DAWN_UNSAFE_TODO(std::memcpy(&Get()->mUniformBufferData[offset], data, size));
     Get()->mUniformBufferDirty = true;
 }
 
 MaybeError ScopedCommandRecordingContext::FlushUniformBuffer() const {
     if (Get()->mUniformBufferDirty) {
-        auto scopedUseUniformBuffer = Get()->mUniformBuffer->UseInternal();
+        if (!mUniformBufferInUse) {
+            mUniformBufferInUse = Get()->mUniformBuffer->UseInternal();
+        }
         DAWN_TRY(Get()->mUniformBuffer->Write(this, 0, Get()->mUniformBufferData.data(),
                                               Get()->mUniformBufferData.size() * sizeof(uint32_t)));
         Get()->mUniformBufferDirty = false;
@@ -349,11 +356,8 @@ bool CommandRecordingContext::IsValid() const {
 
 void CommandRecordingContext::Destroy() {
     // mDevice could be null due to failure of initialization.
-    if (!mDevice) {
-        return;
-    }
+    DAWN_ASSERT(!mDevice || mDevice->IsLockedByCurrentThreadIfNeeded());
 
-    DAWN_ASSERT(mDevice->IsLockedByCurrentThreadIfNeeded());
     mIsOpen = false;
     mUniformBuffer = nullptr;
     mDevice = nullptr;
@@ -377,12 +381,12 @@ void CommandRecordingContext::Destroy() {
 // static
 ResultOrError<Ref<BufferBase>> CommandRecordingContext::CreateInternalUniformBuffer(
     DeviceBase* device) {
-    // Create a uniform buffer for user and internal ImmediateConstants.
+    // Create a uniform buffer for user and internal Immediates.
     BufferDescriptor descriptor;
-    descriptor.size = sizeof(uint32_t) * kMaxImmediateConstantsPerPipeline;
+    descriptor.size = sizeof(uint32_t) * kMaxImmediateSlotsD3D11;
     descriptor.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
     descriptor.mappedAtCreation = false;
-    descriptor.label = "ImmediateConstantsInternalBuffer";
+    descriptor.label = "ImmediatesInternalBuffer";
 
     Ref<BufferBase> uniformBuffer;
     // Lock the device to protect the clearing of the built-in uniform buffer.

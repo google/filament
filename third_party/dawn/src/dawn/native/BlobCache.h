@@ -28,14 +28,16 @@
 #ifndef SRC_DAWN_NATIVE_BLOBCACHE_H_
 #define SRC_DAWN_NATIVE_BLOBCACHE_H_
 
+#include <algorithm>
 #include <mutex>
+#include <span>
+#include <vector>
 
-#include "dawn/common/Platform.h"
-#include "dawn/common/Sha3.h"
-#include "dawn/native/Blob.h"
-#include "dawn/native/CacheResult.h"
-#include "dawn/native/Error.h"
-#include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#include "src/dawn/common/Sha3.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/CacheResult.h"
+#include "src/dawn/native/Error.h"
+#include "src/utils/platform.h"
 
 namespace dawn::platform {
 class CachingInterface;
@@ -45,6 +47,10 @@ namespace dawn::native {
 
 class CacheKey;
 class InstanceBase;
+
+namespace detail {
+std::vector<std::byte> GenerateHashPrefixedPayload(std::span<const std::byte> value);
+}  // namespace detail
 
 // This class should always be thread-safe because it may be called asynchronously.
 class BlobCache {
@@ -56,7 +62,7 @@ class BlobCache {
     ResultOrError<Blob> Load(const CacheKey& key);
 
     // Value to store must be non-empty/non-null.
-    void Store(const CacheKey& key, size_t valueSize, const void* value);
+    void Store(const CacheKey& key, std::span<const std::byte> value);
     void Store(const CacheKey& key, const Blob& value);
 
     // Store a CacheResult into the cache if it isn't cached yet.
@@ -70,7 +76,7 @@ class BlobCache {
 
     // Generates a blob that holds the actual stored bytes which may be different depending on
     // whether hash validation is enabled.
-    Blob GenerateActualStoredBlobForTesting(size_t valueSize, const void* value);
+    Blob GenerateActualStoredBlobForTesting(std::span<const std::byte> value);
 
   private:
     // Non-thread safe internal implementations of load and store. Exposed callers that use
@@ -79,7 +85,7 @@ class BlobCache {
     //   * StoreInternal insert the hash of |value| as prefix,
     //   * LoadInternal validate that the hash of the content after the prefix matches.
     // This hashing and validation is transparent to the caller.
-    void StoreInternal(const CacheKey& key, size_t valueSize, const void* value);
+    void StoreInternal(const CacheKey& cacheKey, std::span<const std::byte> value);
     ResultOrError<Blob> LoadInternal(const CacheKey& key);
 
     // Validates the cache key for this version of Dawn. At the moment, this is naively checking
@@ -87,10 +93,8 @@ class BlobCache {
     bool ValidateCacheKey(const CacheKey& key);
 
     const bool mHashValidation;
-    // TODO(https://crbug.com/dawn/2365): Convert these members to `raw_ptr`.
-    RAW_PTR_EXCLUSION const WGPUDawnLoadCacheDataFunction mLoadFunction;
-    RAW_PTR_EXCLUSION const WGPUDawnStoreCacheDataFunction mStoreFunction;
-    RAW_PTR_EXCLUSION void* const mFunctionUserdata;
+    const WGPUDawnLoadCacheDataCallbackInfo mLoadCallbackInfo;
+    const WGPUDawnStoreCacheDataCallbackInfo mStoreCallbackInfo;
 };
 
 }  // namespace dawn::native

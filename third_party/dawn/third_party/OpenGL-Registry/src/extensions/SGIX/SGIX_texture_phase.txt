@@ -1,0 +1,202 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_texture_phase
+
+Name Strings
+
+    GL_SGIX_texture_phase
+
+Version
+
+    $Date: 1997/12/08 19:59:59 $ $Revision: 1.3 $
+
+Number
+
+    ??
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows textures to filtered using a modified LINEAR
+    filter that treats the texture data as phase angle.  (In addition
+    to the NEAREST and LINEAR filters defined in the original GL
+    Specification.) Such filtering is useful for dopler data where
+    texel values correspond to positions on a unit circle or phase
+    angles.
+
+Issues
+
+    *	
+
+Reasoning
+
+    *	
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and
+    TexParameterf, and by the <params> parameter of TexParameteriv and
+    TexParameterfv, when their <pname> parameter is
+    TEXTURE_MIN_FILTER or TEXTURE_MAG_FILTER:
+
+	PHASE_SGIX		0x832A
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    The additional token value PHASE_SGIS is accepted as an enumerated
+    value for the texture minification and magnification filters, causing 
+    Table 3.7 to be replaced with the table below:
+
+	Name				Type		Legal Values
+	----				----		------------
+	TEXTURE_WRAP_S			integer		CLAMP, REPEAT
+	TEXTURE_WRAP_T			integer		CLAMP, REPEAT
+	TEXTURE_WRAP_R_EXT		integer		CLAMP, REPEAT
+	TEXTURE_MIN_FILTER		integer		NEAREST, LINEAR,
+							NEAREST_MIPMAP_NEAREST,
+							NEAREST_MIPMAP_LINEAR,
+							LINEAR_MIPMAP_NEAREST,
+							LINEAR_MIPMAP_LINEAR,
+							FILTER4_SGIS,
+							PHASE_SGIS
+	TEXTURE_MAG_FILTER		integer		NEAREST, LINEAR,
+							FILTER4_SGIS,
+							PHASE_SGIX
+	TEXTURE_BORDER_COLOR		4 floats	any 4 values in [0,1]
+
+	Table 3.7: Texture parameters and their values.
+
+    Phase filtering is specified by calling TexParameteri,
+    TexParameterf, TexParameteriv, or TexParameterfv with <pname> set
+    to TEXTURE_MIN_FILTER or TEXTURE_MAG_FILTER, and <param> or <params> 
+    set to PHASE_SGIS. Because phase filtering is defined only for
+    non-mipmapped textures, there is no difference between its
+    definition for minification and magnification.
+
+    First consider the 1-dimensional case.  Let T be a computed texture
+    value (one of R_t, G_t, B_t, or A_t).  Let T[i] be the component
+    value of the texel at location i in a 1-dimensional texture image.
+    Then, if the appropriate texture filter mode is PHASE_SGIX, a
+    2-texel group is selected:
+
+
+	      /	floor(u - 1/2) mod 2**n,	TEXTURE_WRAP_S is REPEAT
+	i0 = (
+	      \	floor(u - 1/2),			TEXTURE_WRAP_S is CLAMP
+
+
+	      /	(i0 + 1) mod 2**n,		TEXTURE_WRAP_S is REPEAT
+	i1 = (
+	      \	i0 + 1,				TEXTURE_WRAP_S is CLAMP
+
+
+   Let
+   
+	A = frac(u - 1/2)
+
+    where frac(x) denotes the fractional part of x, and u is the
+    texture image coordinate in the s direction, as illustrated in
+    Figure 3.10 of the GL Specification.  Then the texture value T is
+    found as:
+
+	t0 = T[i0]
+	t1 = T[i1]
+	del = t1 - t0
+	if |del| > 0.5 then
+	    t0 = t0 + sign(del)
+	T = frac((1-A) * t0 + A * t1)
+
+    If any of the selected T[i] in the above equation refer to a border
+    texel with unspecified value, then the border color given by the
+    current setting of TEXTURE_BORDER_COLOR is used instead of the
+    unspecified value.
+
+    For 2-dimensional textures the calculations for i0, i1, and
+    A are identical to the 1-dimensional case.  A 4-texel group is
+    selected, requiring two j values computed as
+
+
+	      /	floor(v - 1/2) mod 2**m,	TEXTURE_WRAP_T is REPEAT
+	j0 = (
+	      \	floor(v - 1/2),			TEXTURE_WRAP_T is CLAMP
+
+
+	      /	(j0 + 1) mod 2**m,		TEXTURE_WRAP_T is REPEAT
+	j1 = (
+	      \	j0 + 1,				TEXTURE_WRAP_T is CLAMP
+
+    Let
+
+	B = frac(v - 1/2)
+
+    where v is the texture image coordinate in the t direction, as
+    illustrated in Figure 3.10 of the GL Specification.  Then the
+    texture value T is found as:
+
+	t00 = T[i0,j0]
+	t01 = T[i0,j1]
+	t10 = T[i1,j0]
+	t11 = T[i1,j1]
+	del = t10 - t00
+	if |del| > 0.5 then
+	    t00 = t00 + sign(del)
+	t0 = frac((1-A) * t00 + A * t10)
+	del = t11 - t01
+	if |del| > 0.5 then
+	    t01 = t01 + sign(del)
+	t1 = frac((1-A) * t01 + A * t11)
+	del = t1 - t0
+	if |del| > 0.5 then
+	    t0 = t0 + sign(del)
+	T = frac((1-A) * t0 + A * t1)
+
+    If any of the selected T[i,j] in the above equation refer to a
+    border texel with unspecified value, then the border color given by
+    the current setting of TEXTURE_BORDER_COLOR is used instead of the
+    unspecified value.
+
+    Phase texture filtering is similarly defined for 3-dimensional
+    textures.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    
+Errors
+
+
+New State
+
+
+New Implementation Dependent State
+

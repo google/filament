@@ -40,6 +40,7 @@
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/utils/containers/hashset.h"
 #include "src/tint/utils/containers/vector.h"
+#include "src/tint/utils/result.h"
 #include "src/tint/utils/symbol/symbol.h"
 #include "src/tint/utils/text/styled_text.h"
 
@@ -128,6 +129,10 @@ class Struct : public Castable<Struct, Type> {
     /// @returns the byte size of the members without the end of structure
     /// alignment padding
     uint32_t SizeNoPadding() const;
+
+    /// @returns success if the structure has no excessive padding between members or at the end,
+    /// otherwise a Failure reason
+    Result<SuccessType> PaddingWithinLimit() const;
 
     /// @returns the structure flags
     core::type::StructFlags StructFlags() const { return struct_flags_; }
@@ -220,6 +225,10 @@ class StructMember : public Castable<StructMember, Node> {
     /// @returns the name of the structure member
     Symbol Name() const { return name_; }
 
+    /// Sets the name of the structure member
+    /// @param name the new name of the structure member
+    void SetName(Symbol name) { name_ = name; }
+
     /// Sets the owning structure to `s`
     /// @param s the new structure owner
     void SetStruct(const Struct* s) { struct_ = s; }
@@ -278,7 +287,7 @@ class StructMember : public Castable<StructMember, Node> {
     StructMember* Clone(CloneContext& ctx) const;
 
   private:
-    const Symbol name_;
+    Symbol name_;
     const core::type::Struct* struct_;
     const core::type::Type* type_;
     const uint32_t index_;

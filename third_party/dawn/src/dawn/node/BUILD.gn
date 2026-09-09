@@ -27,7 +27,7 @@
 
 import("../../../scripts/dawn_overrides_with_defaults.gni")
 
-if (is_win) {
+if (host_os == "win") {
   _exe = ".exe"
 } else {
   _exe = ""
@@ -61,7 +61,11 @@ dawn_go_executable =
     "$dawn_root/tools/golang/${_cipd_os}-${_cipd_arch}/bin/go${_exe}"
 
 # TODO(amaiorano): Figure out why path_exists doesn't work
-# assert(path_exists(dawn_node_addon_api_dir) && path_exists(dawn_node_api_headers_dir) && path_exists(dawn_webgpu_idl_path), "dawn_build_node_bindings missing dependencies. Please follow the 'Fetch dependencies' instructions at: ./src/dawn/node/README.md")
+#assert(
+#    path_exists(dawn_node_addon_api_dir) &&
+#        path_exists(dawn_node_api_headers_dir) &&
+#        path_exists(dawn_webgpu_idl_path),
+#    "dawn_build_node_bindings missing dependencies. Please follow the 'Fetch dependencies' instructions at: ./src/dawn/node/README.md")
 
 dawn_node_gen_dir = target_gen_dir
 interop_gen_dir = "$dawn_node_gen_dir/src/dawn/node/interop"
@@ -161,7 +165,8 @@ static_library("dawn_node_interop") {
 static_library("dawn_node_binding") {
   public_configs = [ ":common_config" ]
   if (is_win) {
-    # Use multibyte character set so that Win32 functions map the ANSI ones, not the UNICODE ones.
+    # Use multibyte character set so that Win32 functions map the ANSI ones, not
+    # the UNICODE ones.
     configs -= [ "//build/config/win:unicode" ]
   }
   sources = [
@@ -211,6 +216,8 @@ static_library("dawn_node_binding") {
     "binding/GPURenderPassEncoder.h",
     "binding/GPURenderPipeline.cpp",
     "binding/GPURenderPipeline.h",
+    "binding/GPUResourceTable.cpp",
+    "binding/GPUResourceTable.h",
     "binding/GPUSampler.cpp",
     "binding/GPUSampler.h",
     "binding/GPUShaderModule.cpp",
@@ -234,6 +241,7 @@ static_library("dawn_node_binding") {
   deps = [
     "$dawn_root/src/dawn/native",
     "$dawn_root/src/dawn/utils:wgpu_utils",
+    "$dawn_root/src/utils",
   ]
 }
 
@@ -320,10 +328,12 @@ shared_library("dawn_node") {
     # Don't pass '-z,defs' linker arg when compiling weak symbols
     configs -= [ "//build/config/compiler:no_unresolved_symbols" ]
 
-    # TODO(crbug.com/404499678): GN build doesn't like when weak functions have a definition
+    # TODO(crbug.com/404499678): GN build doesn't like when weak functions have
+    # a definition
     defines = [ "NAPI_SYMBOL_WEAK_DECL_ONLY" ]
     if (is_mac) {
-      # On mac, make undefined weak functions dynamic to bind with node functions at runtime
+      # On mac, make undefined weak functions dynamic to bind with node
+      # functions at runtime
       ldflags = [ "-Wl,-undefined,dynamic_lookup" ]
     }
     sources += [ "NapiSymbols.cpp" ]

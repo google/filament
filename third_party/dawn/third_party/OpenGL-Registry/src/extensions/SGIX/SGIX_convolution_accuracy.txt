@@ -1,0 +1,100 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_convolution_accuracy
+
+Name Strings
+
+    GL_SGIX_convolution_accuracy
+
+Contact
+
+    SGI
+
+Status
+
+    XXX - Not complete yet!!!
+
+Version
+
+    $Date: 1999/03/08 21:20:19 $ $Revision: 1.2 $
+
+Number
+
+    211
+
+Dependencies
+
+    EXT_convolution or ARB_imaging is required.
+
+Overview
+
+    This extension adds an accuracy hint for convolution.  It
+    allows the program to trade off precision for speed.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of glHint and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+	CONVOLUTION_HINT_SGIX		0x8316
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Add to section 5.6 ("Hints"):
+
+    If the <target> argument of Hint is specified as CONVOLUTION_HINT
+    then the <hint> argument indicates the desired quality of pixel
+    colors computed by the convolution stage of the pixel transfer
+    pipeline.  Higher quality may correspond to higher-precision
+    arithmetic, although an implementation may ignore the hint.  This
+    hint applies to both 1D and 2D convolution.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on EXT_convolution and ARB_imaging
+
+    If EXT_convolution or ARB_imaging is implemented, this extension
+    modifies the accuracy of the convolution operation.
+
+Errors
+
+    None
+
+New State
+
+    Get Value		    Get Command     Type    Value	    Attrib
+    ---------		    -----------     ----    -------	    ------
+    CONVOLUTION_HINT_SGIX   GetIntegerv     Z3	    DONT_CARE	    hint
+
+New Implementation Dependent State
+
+    None

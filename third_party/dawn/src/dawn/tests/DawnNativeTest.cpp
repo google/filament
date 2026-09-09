@@ -25,18 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnNativeTest.h"
+#include "src/dawn/tests/DawnNativeTest.h"
 
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "dawn/common/Assert.h"
 #include "dawn/dawn_proc.h"
-#include "dawn/native/ErrorData.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/dawn_platform.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "dawn/webgpu_cpp_print.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/assert.h"
 
 namespace dawn::native {
 

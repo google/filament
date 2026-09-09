@@ -27,10 +27,10 @@
 
 #include <set>
 
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/ityp_bitset.h"
 #include "dawn/native/Features_autogen.h"
-#include "gtest/gtest.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/utils/gtest.h"
+#include "src/utils/typed_integer.h"
 
 namespace dawn {
 namespace {
@@ -45,15 +45,15 @@ class ITypBitsetTest : public testing::Test {
     struct ConstexprTest {
         static constexpr Bitset kBitset = {1 << 0 | 1 << 3 | 1 << 7 | 1 << 8};
 
-        static_assert(kBitset[Key(0)] == true);
-        static_assert(kBitset[Key(1)] == false);
-        static_assert(kBitset[Key(2)] == false);
-        static_assert(kBitset[Key(3)] == true);
-        static_assert(kBitset[Key(4)] == false);
-        static_assert(kBitset[Key(5)] == false);
-        static_assert(kBitset[Key(6)] == false);
-        static_assert(kBitset[Key(7)] == true);
-        static_assert(kBitset[Key(8)] == true);
+        static_assert(kBitset[Key(0u)] == true);
+        static_assert(kBitset[Key(1u)] == false);
+        static_assert(kBitset[Key(2u)] == false);
+        static_assert(kBitset[Key(3u)] == true);
+        static_assert(kBitset[Key(4u)] == false);
+        static_assert(kBitset[Key(5u)] == false);
+        static_assert(kBitset[Key(6u)] == false);
+        static_assert(kBitset[Key(7u)] == true);
+        static_assert(kBitset[Key(8u)] == true);
 
         static_assert(kBitset.size() == 9);
     };
@@ -66,7 +66,7 @@ class ITypBitsetTest : public testing::Test {
                 ASSERT_FALSE(bits[Key(i)]) << i;
                 ASSERT_FALSE(bits.test(Key(i))) << i;
             } else {
-                mask |= (size_t(1) << i);
+                mask |= (size_t{1} << i);
                 ASSERT_TRUE(bits[Key(i)]) << i;
                 ASSERT_TRUE(bits.test(Key(i))) << i;
             }
@@ -98,16 +98,16 @@ TEST_F(ITypBitsetTest, Indexing) {
     Bitset bits;
     ExpectBits(bits, {});
 
-    bits[Key(2)] = true;
-    bits[Key(4)] = false;
-    bits.set(Key(1));
-    bits.set(Key(7), true);
-    bits.set(Key(8), false);
+    bits[Key(2u)] = true;
+    bits[Key(4u)] = false;
+    bits.set(Key(1u));
+    bits.set(Key(7u), true);
+    bits.set(Key(8u), false);
 
     ExpectBits(bits, {1, 2, 7});
 
-    bits.reset(Key(2));
-    bits.reset(Key(7));
+    bits.reset(Key(2u));
+    bits.reset(Key(7u));
     ExpectBits(bits, {1});
 }
 
@@ -116,10 +116,10 @@ TEST_F(ITypBitsetTest, Flip) {
     Bitset bits = {1 << 1 | 1 << 2 | 1 << 7};
     ExpectBits(bits, {1, 2, 7});
 
-    bits.flip(Key(4));
-    bits.flip(Key(1));  // false
-    bits.flip(Key(6));
-    bits.flip(Key(5));
+    bits.flip(Key(4u));
+    bits.flip(Key(1u));  // false
+    bits.flip(Key(6u));
+    bits.flip(Key(5u));
     ExpectBits(bits, {2, 4, 5, 6, 7});
 
     bits.flip();
@@ -139,7 +139,7 @@ TEST_F(ITypBitsetTest, SetResetAll) {
     ASSERT_TRUE(bits.any());
     ASSERT_FALSE(bits.none());
 
-    for (Key i(0); i < Key(9); ++i) {
+    for (Key i(0u); i < Key(9u); ++i) {
         ASSERT_TRUE(bits[i]);
     }
 
@@ -150,7 +150,7 @@ TEST_F(ITypBitsetTest, SetResetAll) {
     ASSERT_FALSE(bits.any());
     ASSERT_TRUE(bits.none());
 
-    for (Key i(0); i < Key(9); ++i) {
+    for (Key i(0u); i < Key(9u); ++i) {
         ASSERT_FALSE(bits[i]);
     }
 }
@@ -234,11 +234,12 @@ TEST_F(ITypBitsetDeathTest, OutOfBounds) {
         constexpr uint64_t bits = decltype(bitsIntConst)::value;
 
         constexpr uint64_t one = uint64_t{1};
-        ityp::bitset<Key, bits>{0};                                         // Valid
-        ityp::bitset<Key, bits>{(one << bits) - 1};                         // All valid bits set
-        EXPECT_DEATH((ityp::bitset<Key, bits>{one << bits}), "");           // Invalid lsb
-        EXPECT_DEATH((ityp::bitset<Key, bits>{one << 63}), "");             // Invalid msb
-        EXPECT_DEATH((ityp::bitset<Key, bits>{~((one << bits) - 1)}), "");  // All invalid bits
+        constexpr uint64_t validBits = (one << bits) - 1;
+        ityp::bitset<Key, bits>{0};                                             // Valid
+        ityp::bitset<Key, bits>{validBits};                                     // All valid bits
+        EXPECT_DEATH_IF_SUPPORTED((ityp::bitset<Key, bits>{one << bits}), "");  // Invalid lsb
+        EXPECT_DEATH_IF_SUPPORTED((ityp::bitset<Key, bits>{one << 63}), "");    // Invalid msb
+        EXPECT_DEATH_IF_SUPPORTED((ityp::bitset<Key, bits>{~validBits}), "");   // All invalid bits
     };
 
     test(std::integral_constant<uint64_t, 1>{});
@@ -263,10 +264,10 @@ class ITypBitsetIteratorTest : public testing::Test {
 // Simple iterator test.
 TEST_F(ITypBitsetIteratorTest, Iterator) {
     std::set<IntegerT> originalValues;
-    originalValues.insert(IntegerT(2));
-    originalValues.insert(IntegerT(6));
-    originalValues.insert(IntegerT(8));
-    originalValues.insert(IntegerT(35));
+    originalValues.insert(IntegerT(2u));
+    originalValues.insert(IntegerT(6u));
+    originalValues.insert(IntegerT(8u));
+    originalValues.insert(IntegerT(35u));
 
     for (IntegerT value : originalValues) {
         mStateBits.set(value);
@@ -297,15 +298,15 @@ TEST_F(ITypBitsetIteratorTest, EmptySet) {
 TEST_F(ITypBitsetIteratorTest, NonLValueBitset) {
     ityp::bitset<IntegerT, 40> otherBits;
 
-    mStateBits.set(IntegerT(1));
-    mStateBits.set(IntegerT(2));
-    mStateBits.set(IntegerT(3));
-    mStateBits.set(IntegerT(4));
+    mStateBits.set(IntegerT(1u));
+    mStateBits.set(IntegerT(2u));
+    mStateBits.set(IntegerT(3u));
+    mStateBits.set(IntegerT(4u));
 
-    otherBits.set(IntegerT(0));
-    otherBits.set(IntegerT(1));
-    otherBits.set(IntegerT(3));
-    otherBits.set(IntegerT(5));
+    otherBits.set(IntegerT(0u));
+    otherBits.set(IntegerT(1u));
+    otherBits.set(IntegerT(3u));
+    otherBits.set(IntegerT(5u));
 
     std::set<IntegerT> seenBits;
 
@@ -380,7 +381,7 @@ TEST_F(ITypBitsetIteratorTest, NonLValueBitset_Large) {
 
 class EnumBitSetIteratorTest : public testing::Test {
   protected:
-    enum class TestEnum { A, B, C, D, E, F, G, H, I, J, EnumCount };
+    enum class TestEnum : uint8_t { A, B, C, D, E, F, G, H, I, J, EnumCount };
 
     static constexpr size_t kEnumCount = static_cast<size_t>(TestEnum::EnumCount);
     ityp::bitset<TestEnum, kEnumCount> mStateBits;

@@ -1,16 +1,29 @@
-# Copyright 2026 The Dawn Authors
+# Copyright 2026 The Dawn & Tint Authors
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ################################################################################
 # dawn_test_infra - Code shared by all test kinds
@@ -30,11 +43,18 @@ add_library(dawn_test_infra OBJECT
 )
 common_compile_options(dawn_test_infra)
 target_link_libraries(dawn_test_infra PRIVATE
+    dawn_crash_handler
+    absl::stacktrace
+    absl::symbolize
     dawn_native
     dawn_wgpu_utils
     dawncpp
     gmock
 )
+
+if (DAWN_SUPPORTS_GLFW_FOR_WINDOWING)
+    target_link_libraries(dawn_test_infra PRIVATE glfw)
+endif()
 
 ################################################################################
 # dawn_end2end_test_objects - Tests that only use the public Dawn API
@@ -56,6 +76,7 @@ set(end2end_sources
     "end2end/BufferHostMappedPointerTests.h"
     "end2end/BufferRobustnessTests.cpp"
     "end2end/BufferTests.cpp"
+    "end2end/BufferViewTests.cpp"
     "end2end/BufferZeroInitTests.cpp"
     "end2end/ClipDistancesTests.cpp"
     "end2end/ClipSpaceTests.cpp"
@@ -142,6 +163,7 @@ set(end2end_sources
     "end2end/ShaderAtomicTests.cpp"
     "end2end/ShaderBuiltinPartialConstArgsErrorTests.cpp"
     "end2end/ShaderF16Tests.cpp"
+    "end2end/ShaderIOPolyfillTests.cpp"
     "end2end/ShaderModuleCachingTests.cpp"
     "end2end/ShaderPrintTests.cpp"
     "end2end/ShaderTests.cpp"
@@ -157,6 +179,7 @@ set(end2end_sources
     "end2end/TextureCorruptionTests.cpp"
     "end2end/TextureFormatTests.cpp"
     "end2end/TextureFormatsTier1Tests.cpp"
+    "end2end/TextureSampleCompare2DTests.cpp"
     "end2end/TextureShaderBuiltinTests.cpp"
     "end2end/TextureSubresourceTests.cpp"
     "end2end/TextureViewTests.cpp"
@@ -256,7 +279,7 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR (DAWN_ENABLE_
     )
 endif()
 
-if (DAWN_ENABLE_VULKAN AND (UNIX AND NOT ANDROID))
+if (DAWN_ENABLE_VULKAN AND (UNIX AND NOT ANDROID AND NOT APPLE))
     list(APPEND end2end_conditional_private_platform_depends
         "gbm"
     )
@@ -297,7 +320,7 @@ target_link_libraries(dawn_end2end_test_objects PRIVATE
 
 set(whitebox_conditional_private_platform_depends)
 set(whitebox_sources
-    "white_box/ImmediateConstantOffsetTests.cpp"
+    "white_box/ImmediateOffsetTests.cpp"
     "white_box/ShaderModuleTests.cpp"
     "white_box/SharedBufferMemoryTests.cpp"
     "white_box/SharedBufferMemoryTests.h"
@@ -348,6 +371,7 @@ if (DAWN_ENABLE_OPENGLES)
     list(APPEND whitebox_conditional_private_platform_depends dawn_khronos_platform)
     list(APPEND whitebox_sources
         "white_box/EGLImageWrappingTests.cpp"
+        "white_box/GLFramebufferCompletenessTests.cpp"
         "white_box/GLTextureWrappingTests.cpp"
     )
 endif()
@@ -364,7 +388,7 @@ if (DAWN_ENABLE_VULKAN)
         "white_box/QueryInternalShaderTests.cpp"
     )
 
-    if (UNIX AND NOT ANDROID)
+    if (UNIX AND NOT ANDROID AND NOT APPLE)
         list(APPEND whitebox_sources
             "white_box/SharedTextureMemoryTests_dmabuf.cpp"
             "white_box/SharedTextureMemoryTests_opaquefd.cpp"

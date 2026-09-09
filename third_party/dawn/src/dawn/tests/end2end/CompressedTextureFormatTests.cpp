@@ -27,14 +27,15 @@
 
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -55,6 +56,12 @@ DAWN_TEST_PARAM_STRUCT(CompressedTextureFormatTestParams, TextureFormat);
 
 class CompressedTextureFormatTest : public DawnTestWithParams<CompressedTextureFormatTestParams> {
   protected:
+    void SetUp() override {
+        DawnTestWithParams<CompressedTextureFormatTestParams>::SetUp();
+        // TODO(crbug.com/518857263): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+    }
+
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         const wgpu::TextureFormat format = GetParam().mTextureFormat;
         if (utils::IsBCTextureFormat(format) &&
@@ -114,8 +121,9 @@ class CompressedTextureFormatTest : public DawnTestWithParams<CompressedTextureF
                     uint32_t uploadBufferOffset = copyConfig.bufferOffset +
                                                   copyBytesPerImage * layer + copyBytesPerRow * h +
                                                   oneBlockCompressedTextureData.size() * w;
-                    std::memcpy(&data[uploadBufferOffset], oneBlockCompressedTextureData.data(),
-                                oneBlockCompressedTextureData.size() * sizeof(uint8_t));
+                    DAWN_UNSAFE_TODO(
+                        std::memcpy(&data[uploadBufferOffset], oneBlockCompressedTextureData.data(),
+                                    oneBlockCompressedTextureData.size() * sizeof(uint8_t)));
                 }
             }
         }
@@ -647,12 +655,12 @@ class CompressedTextureFormatTest : public DawnTestWithParams<CompressedTextureF
                                                utils::RGBA8 rightColorInBlock) {
         DAWN_ASSERT(testRegion.depthOrArrayLayers == 1);
 
-        std::vector<utils::RGBA8> expectedData(testRegion.width * testRegion.height,
-                                               leftColorInBlock);
+        std::vector<utils::RGBA8> expectedData(
+            static_cast<size_t>(testRegion.width) * testRegion.height, leftColorInBlock);
         for (uint32_t y = 0; y < testRegion.height; ++y) {
             for (uint32_t x = 0; x < testRegion.width; ++x) {
                 if (x % BlockWidthInTexels() >= BlockWidthInTexels() / 2) {
-                    expectedData[testRegion.width * y + x] = rightColorInBlock;
+                    expectedData[static_cast<size_t>(testRegion.width) * y + x] = rightColorInBlock;
                 }
             }
         }
@@ -1482,5 +1490,45 @@ DAWN_INSTANTIATE_TEST_P(CompressedTextureWriteTextureTest,
                         std::vector<wgpu::TextureFormat>(utils::kCompressedFormats.begin(),
                                                          utils::kCompressedFormats.end()));
 
+class UnalignedCompressedTextureFormatTest : public CompressedTextureFormatTest {
+    void SetUp() override {
+        CompressedTextureFormatTest::SetUp();
+        DAWN_TEST_UNSUPPORTED_IF(
+            !device.HasFeature(wgpu::FeatureName::TextureCompressionUnaligned));
+    }
+
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        std::vector<wgpu::FeatureName> features =
+            CompressedTextureFormatTest::GetRequiredFeatures();
+        if (SupportsFeatures({wgpu::FeatureName::TextureCompressionUnaligned})) {
+            features.push_back(wgpu::FeatureName::TextureCompressionUnaligned);
+        }
+        return features;
+    }
+};
+
+// Test copying to and from a 1x1 compressed texture.
+TEST_P(UnalignedCompressedTextureFormatTest, 1x1) {
+    DAWN_TEST_UNSUPPORTED_IF(!IsFormatSupported());
+
+    CopyConfig config = {
+        .textureDescriptor =
+            {
+                .usage = kDefaultFormatTextureUsage,
+                .size = {1, 1},
+                .format = GetParam().mTextureFormat,
+            },
+        .copyExtent3D = GetTextureSizeWithNumBlocks(1, 1),
+    };
+    TestCopyRegionIntoFormatTextures(config);
+}
+
+DAWN_INSTANTIATE_TEST_P(UnalignedCompressedTextureFormatTest,
+                        {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
+                         OpenGLESBackend(), VulkanBackend(),
+                         VulkanBackend({"use_temporary_buffer_in_texture_to_texture_copy"}),
+                         WebGPUBackend()},
+                        std::vector<wgpu::TextureFormat>(utils::kCompressedFormats.begin(),
+                                                         utils::kCompressedFormats.end()));
 }  // anonymous namespace
 }  // namespace dawn

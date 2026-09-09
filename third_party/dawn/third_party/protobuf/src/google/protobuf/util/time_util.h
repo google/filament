@@ -17,6 +17,7 @@
 
 #include "google/protobuf/duration.pb.h"
 #include "google/protobuf/timestamp.pb.h"
+#include "absl/strings/string_view.h"
 
 // Must be included last.
 #include "google/protobuf/port_def.inc"
@@ -24,6 +25,9 @@
 namespace google {
 namespace protobuf {
 namespace util {
+
+#undef PROTOBUF_EXPORT
+#define PROTOBUF_EXPORT
 
 // Utility functions for Timestamp and Duration.
 class PROTOBUF_EXPORT TimeUtil {

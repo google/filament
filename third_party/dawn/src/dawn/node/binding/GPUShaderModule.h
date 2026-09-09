@@ -49,6 +49,7 @@ class GPUShaderModule final : public interop::GPUShaderModule {
                     std::shared_ptr<AsyncRunner> async);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::ShaderModule&() const { return shader_; }
 
     // interop::GPUShaderModule interface compliance

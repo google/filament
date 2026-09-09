@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/white_box/VulkanImageWrappingTests_OpaqueFD.h"
+#include "src/dawn/tests/white_box/VulkanImageWrappingTests_OpaqueFD.h"
 
 #include <unistd.h>
 
@@ -33,12 +33,12 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
 #include "gtest/gtest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
 
 namespace dawn::native::vulkan {
 
@@ -228,14 +228,16 @@ class VulkanImageWrappingTestBackendOpaqueFD : public VulkanImageWrappingTestBac
         VkMemoryRequirements requirements;
         deviceVk->fn.GetImageMemoryRequirements(deviceVk->GetVkDevice(), handle, &requirements);
 
-        int bestType = deviceVk->GetResourceMemoryAllocator()->FindBestTypeIndex(
+        auto result = deviceVk->GetResourceMemoryAllocator()->FindBestTypeIndex(
             requirements, MemoryKind::DeviceLocal);
+        EXPECT_TRUE(result.has_value());
+        uint32_t bestType = result.value();
 
         VkMemoryAllocateInfo allocateInfo;
         allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocateInfo.pNext = nullptr;
         allocateInfo.allocationSize = requirements.size;
-        allocateInfo.memoryTypeIndex = static_cast<uint32_t>(bestType);
+        allocateInfo.memoryTypeIndex = bestType;
 
         // Import memory from file descriptor
         VkExportMemoryAllocateInfoKHR externalInfo;

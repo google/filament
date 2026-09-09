@@ -33,9 +33,12 @@
 #include <atomic>
 
 #include "dawn/wire/WireClient.h"
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/wire/client/ObjectBase.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire::client {
+
+class Buffer;
 
 class Queue final : public ObjectWithEventsBase {
   public:
@@ -48,22 +51,20 @@ class Queue final : public ObjectWithEventsBase {
     uint64_t GetCompletedSubmitIndex() const;
 
     // Dawn API
-    void APISubmit(size_t commandCount, const WGPUCommandBuffer* commands);
-    WGPUFuture APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callbackInfo);
-    void APIWriteBuffer(WGPUBuffer cBuffer, uint64_t bufferOffset, const void* data, size_t size);
-    void APIWriteTexture(const WGPUTexelCopyTextureInfo* destination,
-                         const void* data,
-                         size_t dataSize,
-                         const WGPUTexelCopyBufferLayout* dataLayout,
-                         const WGPUExtent3D* writeSize);
+    void APISubmit(Span<CommandBuffer* const> commands);
+    Future APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callbackInfo);
+    void APIWriteBuffer(Buffer* buffer, uint64_t bufferOffset, Span<const std::byte> data);
+    void APIWriteTexture(const TexelCopyTextureInfo* destination,
+                         Span<const std::byte> data,
+                         const TexelCopyBufferLayout* dataLayout,
+                         const Extent3D* writeSize);
 
   private:
-    void WriteBufferXL(WGPUBuffer cBuffer, uint64_t bufferOffset, const void* data, size_t size);
-    void WriteTextureXL(const WGPUTexelCopyTextureInfo* destination,
-                        const void* data,
-                        size_t dataSize,
-                        const WGPUTexelCopyBufferLayout* dataLayout,
-                        const WGPUExtent3D* writeSize);
+    void WriteBufferXL(Buffer* buffer, uint64_t bufferOffset, Span<const std::byte> data);
+    void WriteTextureXL(const TexelCopyTextureInfo* destination,
+                        Span<const std::byte> data,
+                        const TexelCopyBufferLayout* dataLayout,
+                        const Extent3D* writeSize);
 
     uint64_t mLastSubmitIndex = 0;
     std::atomic<uint64_t> mCompletedSubmitIndex = 0;

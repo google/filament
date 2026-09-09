@@ -31,8 +31,8 @@
 #include <vector>
 
 #include "absl/strings/str_split.h"
-#include "dawn/utils/CommandLineParser.h"
 #include "gtest/gtest.h"
+#include "src/dawn/utils/CommandLineParser.h"
 
 namespace dawn {
 namespace {

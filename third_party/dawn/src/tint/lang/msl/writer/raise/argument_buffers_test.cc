@@ -41,8 +41,8 @@ using namespace tint::core::number_suffixes;  // NOLINT
 class MslWriter_ArgumentBuffersTest : public core::ir::transform::TransformTest {
   public:
     void SetUp() override {
-        capabilities.Add(core::ir::Capability::kMslAllowEntryPointInterface,
-                         core::ir::Capability::kAllowAnyLetType);
+        mod.properties.Add(core::ir::Property::kAllowAnyLetType);
+        mod.properties.Add(core::ir::Property::kAllowMslEntryPointInterface);
     }
 };
 

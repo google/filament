@@ -32,9 +32,9 @@
 
 #include <string>
 
-#include "dawn/common/DynamicLib.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {
 

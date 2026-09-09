@@ -175,8 +175,8 @@ loader_cJSON_PrintBuffered(const cJSON *item, int prebuffer, cJSON_bool fmt, boo
  * failure. */
 /* NOTE: cJSON is not always 100% accurate in estimating how much memory it will use, so to be safe allocate 5 bytes more than you
  * actually need */
-CJSON_PUBLIC(cJSON_bool)
-loader_cJSON_PrintPreallocated(cJSON *item, char *buffer, const int length, const cJSON_bool format);
+TEST_FUNCTION_EXPORT CJSON_PUBLIC(cJSON_bool)
+    loader_cJSON_PrintPreallocated(cJSON *item, char *buffer, const int length, const cJSON_bool format);
 /* Delete a cJSON entity and all subentities. */
 TEST_FUNCTION_EXPORT CJSON_PUBLIC(void) loader_cJSON_Delete(cJSON *item);
 

@@ -1,0 +1,625 @@
+
+Name
+
+    EXT_vertex_weighting
+
+Name Strings
+
+    GL_EXT_vertex_weighting
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2000.
+
+Status
+
+    Discontinued.
+
+    NVIDIA no longer supports this extension in driver updates
+    after November 2002.  Instead, use either ARB_vertex_program &
+    NV_vertex_program.
+
+Version
+
+    NVIDIA Date: January 3, 2003
+    $Date$ $Revision$  
+
+Number
+
+    188
+
+Dependencies
+
+    None
+
+    Written based on the wording of the OpenGL 1.2 specification but not
+    dependent on it.
+
+Overview
+
+    The intent of this extension is to provide a means for blending
+    geometry based on two slightly differing modelview matrices.
+    The blending is based on a vertex weighting that can change on a
+    per-vertex basis.  This provides a primitive form of skinning.
+
+    A second modelview matrix transform is introduced.  When vertex
+    weighting is enabled, the incoming vertex object coordinates are
+    transformed by both the primary and secondary modelview matrices;
+    likewise, the incoming normal coordinates are transformed by the
+    inverses of both the primary and secondary modelview matrices.
+    The resulting two position coordinates and two normal coordinates
+    are blended based on the per-vertex vertex weight and then combined
+    by addition.  The transformed, weighted, and combined vertex position
+    and normal are then used by OpenGL as the eye-space position and
+    normal for lighting, texture coordinate, generation, clipping,
+    and further vertex transformation.
+
+Issues
+
+    Should the extension be written to extend to more than two vertex
+    weights and modelview matrices?
+
+      RESOLUTION: NO.  Supports only one vertex weight and two modelview
+      matrices.  If more than two is useful, that can be handled with
+      another extension.
+
+    Should the weighting factor be GLclampf instead of GLfloat?
+    
+      RESOLUTION:  GLfloat.  Though the value of a weighting factors
+      outside the range of zero to one (and even weights that do not add
+      to one) is dubious, there is no reason to limit the implementation
+      to values between zero and one.
+
+    Should the weights and modelview matrices be labeled 1 & 2 or 0 & 1?
+
+      RESOLUTION:  0 & 1.  This is consistent with the way lights and
+      texture units are named in OpenGL.  Make GL_MODELVIEW0_EXT
+      be an alias for GL_MODELVIEW.  Note that the GL_MODELVIEW0_EXT+1
+      will not be GL_MODELVIEW1_EXT as is the case with GL_LIGHT0 and
+      GL_LIGHT1.
+
+    Should there be a way to simultaneously Rotate, Translate, Scale,
+    LoadMatrix, MultMatrix, etc. the two modelview matrices together?
+
+      RESOLUTION:  NO.  The application must use MatrixMode and repeated
+      calls to keep the matrices in sync if desired.
+
+    Should the secondary modelview matrix stack be as deep as the primary
+    matrix stack or can they be different sizes?
+
+      RESOLUTION:  Must be the SAME size.  This wastes a lot of memory
+      that will be probably never be used (the modelview matrix stack
+      must have at least 32 entries), but memory is cheap.
+
+      The value returned by MAX_MODELVIEW_STACK_DEPTH applies to both
+      modelview matrices.
+
+    Should there be any vertex array support for vertex weights.
+
+      RESOLUTION:  YES.
+
+    Should we have a VertexWeight2fEXT that takes has two weight values?
+
+      RESOLUTION:  NO.  The weights are always vw and 1-vw.
+
+    What is the "correct" way to blend matrices, particularly when wo is
+    not one or the modelview matrix is projective?
+
+      RESOLUTION:  While it may not be 100% correct, the extension blends
+      the vertices based on transforming the object coordinates by
+      both M0 and M1, but the resulting w coordinate comes from simply
+      transforming the object coordinates by M0 and extracting the w.
+
+      Another option would be to simply blend the two sets of eye
+      coordinates without any special handling of w.  This is harder.
+
+      Another option would be to divide by w before blending the two
+      sets of eye coordinates.  This is awkward because if the weight
+      is 1.0 with vertex weighting enabled, the result is not the
+      same as disabling vertex weighting since EYE_LINEAR texgen
+      is based of of the non-perspective corrected eye coordinates.
+
+    As specified, the normal weighting and combination is performed on
+    unnormalized normals.  Would the math work better if the normals
+    were normalized before weighting and combining?
+
+      RESOLUTION:  Vertex weighting of normals is after the
+      GL_RESCALE_NORMAL step and before the GL_NORMALIZE step.
+
+    As specified, feedback and selection should apply vertex weighting
+    if enabled.  Yuck, that would mean that we need software code for
+    vertex weighting.
+
+       RESOLUTION:  YES, it should work with feedback and selection.
+
+    Sometimes it would be useful to mirror changes in both modelview
+    matrices.  For example, the viewing transforms are likely to be
+    different, just the final modeling transforms would be different.
+    Should there be an API support for mirroring transformations into
+    both matrices?
+
+      RESOLUTION:  NO.  Such support is likely to complicate the
+      matrix management in the OpenGL.  Applications can do a
+      Get matrix from modelview0 and then a LoadMatrix into modelview1
+      manually if they need to mirror things.
+
+      I also worry that if we had a mirrored matrix mode, it would
+      double the transform concatenation work if used naively.
+
+    Many of the changes to the two modelview matrices will be the same.
+    For example, the initial view transform loaded into each will be the
+    same.  Should there be a way to "mirror" changes to both modelview
+    matrices?
+
+      RESOLUTION:  NO.  Mirroring matrix changes would complicate the
+      driver's management of matrices.  Also, I am worried that naive
+      users would mirror all transforms and lead to lots of redundant
+      matrix concatenations.  The most efficient way to handle the
+      slight differences between the modelview matrices is simply
+      to GetFloat the primary matrix, LoadMatrix the values in the
+      secondary modelview matrix, and then perform the "extra" transform
+      to the secondary modelview matrix.
+
+      Ideally, a glCopyMatrix(GLenum src, GLenum dst) type OpenGL
+      command could make this more efficient.  There are similiar cases
+      where you want the modelview matrix mirrored in the texture matrix.
+      This is not the extension to solve this minor problem.
+
+    The post-vertex weighting normal is unlikely to be normalized.
+    Should this extension automatically enable normalization?
+
+      RESOLUTION:  NO.  Normalization should operate as specified.
+      The user is responsible for enabling GL_RESCALE_NORMAL or
+      GL_NORMALIZE as needed.
+
+      You could imagine cases where the application only sent
+      vertex weights of either zero or one and pre-normalized normals
+      so that GL_NORMALIZE would not strictly be required.
+
+      Note that the vertex weighting of transformed normals occurs
+      BEFORE normalize and AFTER rescaling.  See the issue below for
+      why this can make a difference.
+
+    How does vertex weighting interact with OpenGL 1.2's GL_RESCALE_NORMAL
+    enable?
+
+      RESOLUTION:  Vertex weighting of transformed normals occurs
+      BEFORE normalize and AFTER rescaling.
+
+      OpenGL 1.2 permits normal rescaling to behave just like normalize
+      and because normalize immediately follows rescaling, enabling
+      rescaling can be implementied by simply always enabling normalize.
+
+      Vertex weighting changes this.  If one or both of the modelview
+      matrices has a non-uniform scale, it may be useful to enable
+      rescaling and normalize and this operates differently than
+      simply enabling normalize.  The difference is that rescaling
+      occurs before the normal vertex weighting.
+
+      An implementation that truly treated rescaling as a normalize
+      would support both a pre-weighting normalize and a post-weighting
+      normalize.  Arguably, this is a good thing.
+
+      For implementations that perform simply rescaling and not a full
+      normalize to implement rescaling, the rescaling factor can be
+      concatenated into each particular inverse modelview matrix.
+
+New Procedures and Functions 
+
+    void VertexWeightfEXT(float weight);
+
+    void VertexWeightfvEXT(float *weight);
+
+    void VertexWeightPointerEXT(int size, enum type, sizei stride, void *pointer);
+
+New Tokens 
+
+    Accepted by the <target> parameter of Enable:
+
+        VERTEX_WEIGHTING_EXT                0x8509
+
+    Accepted by the <mode> parameter of MatrixMode:
+
+        MODELVIEW0_EXT                      0x1700  (alias to MODELVIEW enumerant)
+        MODELVIEW1_EXT                      0x850A
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        VERTEX_WEIGHTING_EXT
+        MODELVIEW0_EXT
+        MODELVIEW1_EXT
+        MODELVIEW0_MATRIX_EXT               0x0BA6  (alias to MODELVIEW_MATRIX)
+        MODELVIEW1_MATRIX_EXT               0x8506
+        CURRENT_VERTEX_WEIGHT_EXT           0x850B
+        VERTEX_WEIGHT_ARRAY_EXT             0x850C
+        VERTEX_WEIGHT_ARRAY_SIZE_EXT        0x850D
+        VERTEX_WEIGHT_ARRAY_TYPE_EXT        0x850E
+        VERTEX_WEIGHT_ARRAY_STRIDE_EXT      0x850F
+        MODELVIEW0_STACK_DEPTH_EXT          0x0BA3  (alias to MODELVIEW_STACK_DEPTH)
+        MODELVIEW1_STACK_DEPTH_EXT          0x8502
+
+     Accepted by the <pname> parameter of GetPointerv:
+
+        VERTEX_WEIGHT_ARRAY_POINTER_EXT     0x8510
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+ --  Section 2.6.  2nd paragraph changed: 
+
+     "Each vertex is specified with two, three, or four coordinates.
+     In addition, a current normal, current texture coordinates, current
+     color, and current vertex weight may be used in processing each
+     vertex."
+
+ --  Section 2.6.  New paragraph after the 3rd paragraph: 
+
+     "A vertex weight is associated with each vertex.  When vertex
+     weighting is enabled, this weight is used as a blending factor
+     to blend the position and normals transformed by the primary and
+     secondary modelview matrix transforms.  The vertex weighting
+     functionality takes place completely in the "vertex / normal
+     transformation" stage of Figure 2.2."
+
+ --  Section 2.6.3.  First paragraph changed to
+
+     "The only GL commands that are allowed within any Begin/End pairs are
+     the commands for specifying vertex coordinates, vertex colors, normal
+     coordinates, and texture coordinates (Vertex, Color, VertexWeightEXT,
+     Index, Normal, TexCoord)..."
+
+ --  Section 2.7.  New paragraph after the 4th paragraph: 
+
+     "The current vertex weight is set using 
+
+         void VertexWeightfEXT(float weight);
+         void VertexWeightfvEXT(float *weight);
+
+     This weight is used when vertex weighting is enabled."
+
+ --  Section 2.7.  The last paragraph changes from 
+
+     "... and one floating-point value to store the current color index."
+
+     to:
+
+     "... one floating-point number to store the vertex weight, and one
+     floating-point value to store the current color index."
+
+ --  Section 2.8.  Change 1st paragraph to say: 
+
+     "The client may specify up to seven arrays: one each to store edge
+     flags, texture coordinates, colors, color indices, vertex weights,
+     normals, and vertices. The commands" 
+
+     Add to functions listed following first paragraph:
+
+        void VertexWeightPointerEXT(int size, enum type, sizei stride, void *pointer);
+
+     Add to table 2.4 (p. 22):
+
+        Command                     Sizes   Types
+        ----------------------      -----   -----
+        VertexWeightPointerEXT      1       float
+
+     Starting with the second paragraph on p. 23, change to add
+     VERTEX_WEIGHT_ARRAY_EXT:
+
+     "An individual array is enabled or disabled by calling one of
+
+            void EnableClientState(enum array)
+            void DisableClientState(enum array)
+
+     with array set to EDGE_FLAG_ARRAY, TEXTURE_COORD_ARRAY, COLOR_ARRAY,
+     INDEX_ARRAY, VERTEX_ARRAY_WEIGHT_EXT, NORMAL_ARRAY, or VERTEX_ARRAY,
+     for the edge flag, texture coordinate, color, secondary color,
+     color index, normal, or vertex array, respectively.
+
+     The ith element of every enabled array is transferred to the GL by calling
+
+            void ArrayElement(int i)
+
+     For each enabled array, it is as though the corresponding command
+     from section 2.7 or section 2.6.2 were called with a pointer to
+     element i. For the vertex array, the corresponding command is
+     Vertex<size><type>v, where <size> is one of [2,3,4], and <type> is
+     one of [s,i,f,d], corresponding to array types short, int, float, and
+     double respectively. The corresponding commands for the edge flag,
+     texture coordinate, color, secondary color, color index, and normal
+     arrays are EdgeFlagv, TexCoord<size><type>v, Color<size><type>v,
+     Index<type>v, VertexWeightfvEXT, and Normal<type>v, respectively..."
+
+     Change pseudocode on p. 27 to disable vertex weight array for canned
+     interleaved array formats. After the lines
+
+            DisableClientState(EDGE_FLAG_ARRAY);
+            DisableClientState(INDEX_ARRAY);
+
+     insert the line
+
+            DisableClientState(VERTEX_WEIGHT_ARRAY_EXT);
+
+     Substitute "seven" for every occurrence of "six" in the final
+     paragraph on p. 27.
+
+ --  Section 2.10.  Change the sentence: 
+
+    "The model-view matrix is applied to these coordinates to yield eye
+     coordinates."
+
+     to:
+
+     "The primary modelview matrix is applied to these coordinates to
+     yield eye coordinates.  When vertex weighting is enabled, a secondary
+     modelview matrix is also applied to the vertex coordinates, the
+     result of the two modelview transformations are weighted by its
+     respective vertex weighting factor and combined by addition to yield
+     the true eye coordinates.  Vertex weighting is enabled or disabled
+     using Enable and Disable (see section 2.10.3) with an argument of
+     VERTEX_WEIGHTING_EXT."
+
+     Change the 4th paragraph to:
+
+     "If vertex weighting is disabled and a vertex in object coordinates
+     is given by ( xo yo zo wo )' and the primary model-view matrix is
+     M0, then the vertex's eye coordinates are found as
+
+        (xe ye ze we)'  =  M0 (xo yo zo wo)'
+
+     If vertex weighting is enabled, then the vertex's eye coordinates
+     are found as
+
+        (xe0 ye0 ze0 we0)'  =  M0 (xo yo zo wo)'
+
+        (xe1 ye1 ze1 we1)'  =  M1 (xo yo zo wo)'
+
+        (xe,ye,ze)' = vw*(xe0,ye0,ze0)' + (1-vw) * (xe1,ye1,ze1)'
+
+        we = we0
+
+     where M1 is the secondary modelview matrix and vw is the current
+     vertex weight."
+
+ --  Section 2.10.2  Change the 1st paragraph to say: 
+
+     "The projection matrix and the primary and secondary modelview
+     matrices are set and modified with a variety of commands. The
+     affected matrix is determined by the current matrix mode. The
+     current matrix mode is set with
+
+        void MatrixMode(enum mode);
+
+     which takes one of the four pre-defined constants TEXTURE,
+     MODELVIEW0, MODELVIEW1, or PROJECTION (note that MODELVIEW is an
+     alias for MODELVIEW0).  TEXTURE is described later.  If the current
+     matrix is MODELVIEW0, then matrix operations apply to the primary
+     modelview matrix; if MODELVIEW1, then matrix operations apply to
+     the secondary modelview matrix; if PROJECTION, then they apply to
+     the projection matrix."
+
+     Change the 9th paragraph to say:
+
+     "There is a stack of matrices for each of the matrix modes.  For the
+     MODELVIEW0 and MODELVIEW1 modes, the stack is at least 32 (that is,
+     there is a stack of at least 32 modelview matrices). ..."
+
+     Change the last paragraph to say:
+
+     "The state required to implement transformations consists of a
+     four-valued integer indicating the current matrix mode, a stack of
+     at least two 4x4 matrices for each of PROJECTION and TEXTURE with
+     associated stack pointers, and two stacks of at least 32 4x4 matrices
+     with an associated stack pointer for MODELVIEW0 and MODELVIEW1.
+     Initially, there is only one matrix on each stack, and all matrices
+     are set to the identity.  The initial matrix mode is MODELVIEW0."
+
+ --  Section 2.10.3  Change the 2nd and 7th paragraphs to say: 
+
+     "For a modelview matrix M, the normal for this matrix is transformed
+     to eye coordinates by:
+
+        (nx' ny' nz' q') = (nx ny nz q) * M^-1
+
+     where, if (x y z w)' are the associated vertex coordinates, then
+
+            /  0,                     w= 0
+            |
+        q = |  -(nx ny nz) (x y z)'                        (2.1)
+            |  --------------------,  w != 0
+            \          w
+
+     Implementations may choose instead to transform (x y z)' to eye
+     coordinates using
+
+        (nx' ny' nz') = (nx ny nz) * Mu^-1
+
+     Where Mu is the upper leftmost 3x3 matrix taken from M.
+
+     Rescale multiplies the transformed normals by a scale factor
+
+        ( nx" ny" nz" ) = f (nx' ny' nz')
+
+     If rescaling is disabled, then f = 1.  If rescaling is enabled, then
+     f is computed as (mij denotes the matrix element in row i and column j
+     of M^-1, numbering the topmost row of the matrix as row 1 and the leftmost column
+     as column 1
+
+                                1
+               f =    ---------------------------
+                      sqrt(m31^2 + m32^2 + m33^2)
+
+     Note that if the normals sent to GL were unit length and the model-view
+     matrix uniformly scales space, the rescale make sthe transformed normals
+     unit length.
+
+     Alternatively, an implementation may chose f as
+
+                                 1
+               f =     ---------------------------
+                       sqrt(nx'^2 + ny'^2 + nz'^2)
+
+     recomputing f for each normal.  This makes all non-zero length
+     normals unit length regardless of their input length and the nature
+     of the modelview matrix.
+
+     After rescaling, the final transformed normal used in lighting, nf,
+     depends on whether vertex weighting is enabled or not.
+
+     When vertex weighting is disabled, nf is computed as
+
+            nf = m * ( nx"0  ny"0  nz"0 )
+
+     where (nx"0 ny"0 nz"0) is the normal transformed as described
+     above using the primary modelview matrix for M.
+
+     If normalization is enabled m=1.  Otherwise
+
+                                 1
+               m =     ------------------------------
+                       sqrt(nx"0^2 + ny"0^2 + nz"0^2)
+
+     However when vertex weighting is enabled, the normal is transformed
+     twice as described above, once by the primary modelview matrix and
+     again by the secondary modelview matrix, weighted using the current
+     per-vertex weight, and normalized.  So nf is computed as
+
+            nf = m * ( nx"w  ny"w  nz"w )
+
+     where nw is the weighting normal computed as
+
+            nw = vw * ( nx"0  ny"0  nz"0 ) + (1-vw) * (nx"1 ny"1 nz"1)
+
+     where (nx"0 ny"0 nz"0) is the normal transformed as described
+     above using the primary modelview matrix for M, and (nx"1 ny"1 nz"1) is the
+     normal transformed as described above using the secondary modelview matrix for
+     M, and vw is the current pver-vertex weight."
+
+ --  Section 2.12.  Changes the 3rd paragraph: 
+
+     "The coordinates are treated as if they were specified in a
+     Vertex command.  The x, y, z, and w coordinates are transformed
+     by the current primary modelview and perspective matrices. These
+     coordinates, along with current values, are used to generate a
+     color and texture coordinates just as done for a vertex, except
+     that vertex weighting is always treated as if it is disabled."
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization) 
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment Operations
+and the Framebuffer) 
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions) 
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent
+    to the server as part of a glXRender request:
+
+        VertexWeightfvEXT
+            2  8        rendering command length
+            2  4135     rendering command opcode
+            4  FLOAT32  weight0
+
+    To support vertex arrays, the DrawArrays rendering command (sent via
+    a glXRender or glXRenderLarge request) is amended as follows:
+
+    The list of arrays listed for the third element in the ARRAY_INFO
+    structure is amended to include:
+
+                0x850c         j=1        VERTEX_WEIGHT_ARRAY_EXT
+
+    The VERTEX_DATA description is amended to include:
+
+       If the vertex weight array is enabled:
+       ws            LISTofBYTE        vertex weight array element
+       wp                              unused, wp=pad(ws)
+
+    with the following paragraph amended to read:
+
+    "where ns, cs, is, ts, es, vs, ws is the size of the normal, color,
+    index, texture, edge, vertex, and vertex weight array elements and
+    np, cp, ip, tp, ep, vp, wp is the padding for the normal, color,
+    index, texture, edge, vertex, and vertex weight array elements,
+    respectively."
+
+Errors 
+
+    The current vertex weight can be updated at any time.  In particular
+    WeightVertexEXT can be called between a call to Begin and the
+    corresponding call to End.
+
+    INVALID_VALUE is generated if VertexWeightPointerEXT parameter <size>
+    is not 1.
+
+    INVALID_ENUM is generated if VertexWeightPointerEXT parameter <type>
+    is not FLOAT.
+
+    INVALID_VALUE is generated if VertexWeightPointerEXT parameter <stride>
+    is negative.
+
+New State
+
+(table 6.5, p196)
+Get Value                   Type    Get Command     Initial Value   Description     Sec Attribute
+---------                   ----    -----------     -------------   -----------     --- ---------
+CURRENT_VERTEX_WEIGHT_EXT    F       GetFloatv       1               Current         2.8 current
+                                                                     vertex weight
+
+(table 6.6, p197)
+Get Value                           Type    Get Command     Initial Value   Description                     Sec Attribute
+---------                           ----    -----------     -------------   -----------                     --- ---------
+VERTEX_WEIGHT_ARRAY_EXT              B       IsEnabled       False           Vertex weight enable            2.8 vertex-array
+VERTEX_WEIGHT_ARRAY_SIZE_EXT         Z+      GetIntegerv     1               Weights per vertex              2.8 vertex-array
+VERTEX_WEIGHT_ARRAY_TYPE_EXT         Z1      GetIntegerv     FLOAT           Type of weights                 2.8 vertex-array
+VERTEX_WEIGHT_ARRAY_STRIDE_EXT       Z       GetIntegerv     0               Stride between weights          2.8 vertex-array
+VERTEX_WEIGHT_ARRAY_POINTER_EXT      Y       GetPointerv     0               Pointer to vertex weight array  2.8 vertex-array
+
+(table 6.7, p198)
+Get Value                   Type    Get Command     Initial Value   Description         Sec      Attribute
+---------                   ----    -----------     -------------   -----------         ------   ---------
+MODELVIEW0_MATRIX_EXT       32*xM4  GetFloatv       Identity        Primary modelview    2.10.2   -
+                                                                    stack
+MODELVIEW1_MATRIX_EXT       32*xM4  GetFloatv       Identity        Secondary modelview  2.10.2   -
+                                                                    stack
+MODELVIEW0_STACK_DEPTH_EXT  Z+      GetIntegerv     1               Primary modelview    2.10.2   -
+                                                                    stack depth
+MODELVIEW1_STACK_DEPTH_EXT  Z+      GetIntegerv     1               Secondary modelview  2.10.2   -
+                                                                    stack depth
+MATRIX_MODE                 Z4      GetIntegerv     MODELVIEW0      Current matrix mode  2.10.2   transform
+VERTEX_WEIGHTING_EXT        B       IsEnabled       False           Vertex weighting     2.10.2   transform/enable
+                                                                    on/off
+
+    NOTE:  MODELVIEW_MATRIX is an alias for MODELVIEW0_MATRIX_EXT
+           MODELVIEW_STACK_DEPTH is an alias for MODELVIEW0_STACK_DEPTH_EXT
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    12/16/2000 amended to include GLX protocol for vertex arrays
+    5/25/2000 added missing MODELVIEW#_MATRIX_EXT token values
+    1/3/2003 changed status to "discontinued"

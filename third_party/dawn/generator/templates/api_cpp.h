@@ -32,7 +32,7 @@
 
 {% if 'dawn' in enabled_tags %}
     #ifdef __EMSCRIPTEN__
-    #error "Do not include this header. Emscripten already provides headers needed for {{metadata.api}}."
+    #error "Do not include this header. Use the headers provided by Emdawnwebgpu instead."
     #endif
 {% endif %}
 
@@ -47,6 +47,7 @@
 #include <memory>
 #include <optional>
 #include <functional>
+#include <span>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -61,10 +62,10 @@ namespace {{metadata.namespace}} {
 {% for constant in by_category["constant"] %}
     {% set type = as_cppType(constant.type.name) %}
     {% if constant.cpp_value %}
-        static constexpr {{type}} k{{constant.name.CamelCase()}} = {{ constant.cpp_value }};
+        inline constexpr {{type}} k{{constant.name.CamelCase()}} = {{ constant.cpp_value }};
     {% else %}
         {% set value = c_prefix + "_" +  constant.name.SNAKE_CASE() %}
-        static constexpr {{type}} k{{constant.name.CamelCase()}} = {{ value }};
+        inline constexpr {{type}} k{{constant.name.CamelCase()}} = {{ value }};
     {% endif %}
 {% endfor %}
 
@@ -135,11 +136,10 @@ namespace {{metadata.namespace}} {
 class {{BoolCppType}} {
   public:
     constexpr {{BoolCppType}}() = default;
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    constexpr {{BoolCppType}}(bool value) : mValue(static_cast<{{BoolCType}}>(value)) {}
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    {{BoolCppType}}({{BoolCType}} value): mValue(value) {}
+    explicit(false) constexpr {{BoolCppType}}(bool value) : mValue(static_cast<{{BoolCType}}>(value)) {}
+    explicit(false) {{BoolCppType}}({{BoolCType}} value): mValue(value) {}
 
+    // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr operator bool() const { return static_cast<bool>(mValue); }
 
   private:
@@ -156,13 +156,10 @@ class {{BoolCppType}} {
 class {{OptionalBoolCppType}} {
   public:
     constexpr {{OptionalBoolCppType}}() = default;
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    constexpr {{OptionalBoolCppType}}(bool value) : mValue(static_cast<{{OptionalBoolCType}}>(value)) {}
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    constexpr {{OptionalBoolCppType}}(std::optional<bool> value) :
+    explicit(false) constexpr {{OptionalBoolCppType}}(bool value) : mValue(static_cast<{{OptionalBoolCType}}>(value)) {}
+    explicit(false) constexpr {{OptionalBoolCppType}}(std::optional<bool> value) :
         mValue(value ? static_cast<{{OptionalBoolCType}}>(*value) : {{OptionalBoolUndefined}}) {}
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    constexpr {{OptionalBoolCppType}}({{OptionalBoolCType}} value): mValue(value) {}
+    explicit(false) constexpr {{OptionalBoolCppType}}({{OptionalBoolCType}} value): mValue(value) {}
 
     // Define the values that are equivalent to the enums.
     {% for value in OptionalBool.values %}
@@ -184,7 +181,9 @@ class {{OptionalBoolCppType}} {
     }
 
     // Conversion functions.
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator {{OptionalBoolCType}}() const { return mValue; }
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator std::optional<bool>() const {
         if (mValue == {{OptionalBoolUndefined}}) {
             return std::nullopt;
@@ -209,28 +208,11 @@ class {{OptionalBoolCppType}} {
     inline const {{OptionalBoolCppType}} {{OptionalBoolCppType}}::{{as_cppEnum(value.name)}} = {{OptionalBoolCppType}}({{as_cEnum(OptionalBool.name, value.name)}});
 {% endfor %}
 
-// Helper class to wrap Status which allows implicit conversion to bool.
-// Used while callers switch to checking the Status enum instead of booleans.
-// TODO(crbug.com/42241199): Remove when all callers check the enum.
-struct ConvertibleStatus {
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    constexpr ConvertibleStatus(Status status) : status(status) {}
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit conversion
-    constexpr operator bool() const {
-        return status == Status::Success;
-    }
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit conversion
-    constexpr operator Status() const {
-        return status;
-    }
-    Status status;
-};
-
 template<typename Derived, typename CType>
 class ObjectBase {
   public:
     ObjectBase() = default;
-    ObjectBase(CType handle): mHandle(handle) {
+    explicit(false) ObjectBase(CType handle): mHandle(handle) {
         if (mHandle) Derived::{{c_prefix}}AddRef(mHandle);
     }
     ~ObjectBase() {
@@ -252,19 +234,19 @@ class ObjectBase {
 
     ObjectBase(ObjectBase&& other) {
         mHandle = other.mHandle;
-        other.mHandle = 0;
+        other.mHandle = nullptr;
     }
     Derived& operator=(ObjectBase&& other) {
         if (&other != this) {
             if (mHandle) Derived::{{c_prefix}}Release(mHandle);
             mHandle = other.mHandle;
-            other.mHandle = 0;
+            other.mHandle = nullptr;
         }
 
         return static_cast<Derived&>(*this);
     }
 
-    ObjectBase(std::nullptr_t) {}
+    explicit(false) ObjectBase(std::nullptr_t) {}
     Derived& operator=(std::nullptr_t) {
         if (mHandle != nullptr) {
             Derived::{{c_prefix}}Release(mHandle);
@@ -288,7 +270,7 @@ class ObjectBase {
     }
     CType MoveToCHandle() {
         CType result = mHandle;
-        mHandle = 0;
+        mHandle = nullptr;
         return result;
     }
     static Derived Acquire(CType handle) {
@@ -355,33 +337,17 @@ class ObjectBase {
 {%- endmacro %}
 
 //* This rendering macro should ONLY be used for callback info type functions.
-{%- macro render_cpp_callback_info_template_method_declaration(type, method, dfn=False) %}
+{%- macro render_cpp_callback_info_method_declaration(type, method, typed, const, dfn=False) %}
     {% set CppType = as_cppType(type.name) %}
     {% set MethodName = method.name.CamelCase() %}
     {% set MethodName = CppType + "::" + MethodName if dfn else MethodName %}
     {% set CallbackInfoType = (method.arguments|last).type %}
-    {% set CallbackType = find_by_name(CallbackInfoType.members, "callback").type %}
-    {% set SfinaeArg = " = std::enable_if_t<std::is_convertible_v<F, Cb*> || std::is_convertible_v<F, CbChar*>>" if not dfn else "" %}
-    template <typename F, typename T,
-              typename Cb
-                {%- if not dfn -%}
-                    {{" "}}= {{as_cppType(CallbackType.name)}}<T>
-                {%- endif -%},
-              //* The Callback fnptr with const char* instead of StringView.
-              //* TODO(42241188): Remove once all clients use StringView versions of the callbacks
-              typename CbChar
-                {%- if not dfn -%}
-                    {{" "}}= void (
-                        {%- for arg in CallbackType.arguments -%}
-                            {%- if arg.type.name.canonical_case() == "string view" -%}
-                                const char* {{as_varName(arg.name)}}{{", "}}
-                            {%- else -%}
-                                {{as_annotated_cppType(arg)}}{{", "}}
-                            {%- endif -%}
-                        {%- endfor -%}
-                    T userdata)
-                {%- endif -%},
-              typename{{SfinaeArg}}>
+    {% set Const = " const" if const else "" %}
+    {% if typed %}
+        template <typename F, typename T>
+    {% else %}
+        template <typename F>
+    {% endif %}
     {{as_annotated_cppType(method.returns)}} {{MethodName}}(
         {%- for arg in method.arguments if arg.type.category != "callback info" -%}
             {%- if arg.type.category == "object" and arg.annotation == "value" -%}
@@ -391,52 +357,13 @@ class ObjectBase {
             {%- endif -%}
         {%- endfor -%}
         {%- if find_by_name(CallbackInfoType.members, "mode") -%}
-            {{as_cppType(types["callback mode"].name)}} callbackMode,
+            {{as_cppType(types["callback mode"].name)}} callbackMode{{ ", "}}
         {%- endif -%}
-    F callback, T userdata) const
-{%- endmacro %}
-
-//* This rendering macro should ONLY be used for callback info type functions.
-{%- macro render_cpp_callback_info_lambda_method_declaration(type, method, dfn=False) %}
-    {% set CppType = as_cppType(type.name) %}
-    {% set MethodName = method.name.CamelCase() %}
-    {% set MethodName = CppType + "::" + MethodName if dfn else MethodName %}
-    {% set CallbackInfoType = (method.arguments|last).type %}
-    {% set CallbackType = find_by_name(CallbackInfoType.members, "callback").type %}
-    {% set SfinaeArg = " = std::enable_if_t<std::is_convertible_v<L, Cb> || std::is_convertible_v<L, CbChar>>" if not dfn else "" %}
-    template <typename L,
-              typename Cb
-                {%- if not dfn -%}
-                    {{" "}}= {{as_cppType(CallbackType.name)}}<>
-                {%- endif -%},
-              //* The Callback fnptr with const char* instead of StringView.
-              //* TODO(42241188): Remove once all clients use StringView versions of the callbacks
-              typename CbChar
-                {%- if not dfn -%}
-                    {{" "}}= std::function<void(
-                        {%- for arg in CallbackType.arguments -%}
-                            {%- if not loop.first %}, {% endif -%}
-                            {%- if arg.type.name.canonical_case() == "string view" -%}
-                                const char* {{as_varName(arg.name)}}
-                            {%- else -%}
-                                {{as_annotated_cppType(arg)}}
-                            {%- endif -%}
-                        {%- endfor -%}
-                    )>
-                {%- endif -%},
-              typename{{SfinaeArg}}>
-    {{as_annotated_cppType(method.returns)}} {{MethodName}}(
-        {%- for arg in method.arguments if arg.type.category != "callback info" -%}
-            {%- if arg.type.category == "object" and arg.annotation == "value" -%}
-                {{as_cppType(arg.type.name)}} const& {{as_varName(arg.name)}}{{ ", "}}
-            {%- else -%}
-                {{as_annotated_cppType(arg)}}{{ ", "}}
-            {%- endif -%}
-        {%- endfor -%}
-    {%- if find_by_name(CallbackInfoType.members, "mode") -%}
-            {{as_cppType(types["callback mode"].name)}} callbackMode,
-        {%- endif -%}
-    L callback) const
+    {%- if typed -%}
+        F callback, T userdata){{ Const }}
+    {%- else -%}
+        F callback){{ Const }}
+    {%- endif -%}
 {%- endmacro %}
 
 //* This rendering macro should NOT be used for callback info type functions.
@@ -444,7 +371,7 @@ class ObjectBase {
     {% set CppType = as_cppType(type.name) %}
     {% set MethodName = method.name.CamelCase() %}
     {% set MethodName = CppType + "::" + MethodName if dfn else MethodName %}
-    {{"ConvertibleStatus" if method.returns and method.returns.type.name.get() == "status" else as_annotated_cppType(method.returns)}} {{MethodName}}(
+    {{"Status" if method.returns and method.returns.type.name.get() == "status" else as_annotated_cppType(method.returns)}} {{MethodName}}(
         {%- for arg in method.arguments -%}
             {%- if not loop.first %}, {% endif -%}
             {%- if arg.type.category == "object" and arg.annotation == "value" -%}
@@ -483,20 +410,11 @@ class ObjectBase {
     struct {{as_cppType(type.name)}};
 {% endfor %}
 
-// TODO(42241188): Remove once all clients use StringView versions of the callbacks.
-// To make MSVC happy we need a StringView constructor from the adapter, so we first need to
-// forward declare StringViewAdapter here. Otherwise MSVC complains about an ambiguous conversion.
-namespace detail {
-    struct StringViewAdapter;
-}  // namespace detail
-
 struct StringView {
     char const * data = nullptr;
     size_t length = WGPU_STRLEN;
 
     {{wgpu_string_members("StringView") | indent(4)}}
-
-    StringView(const detail::StringViewAdapter& s);
 };
 
 namespace detail {
@@ -505,62 +423,53 @@ constexpr size_t ConstexprMax(size_t a, size_t b) {
 }
 
 template <typename T>
-static T& AsNonConstReference(const T& value) {
+inline T& AsNonConstReference(const T& value) {
     return const_cast<T&>(value);
 }
-
-// A wrapper around StringView that can be implicitly converted to const char* with temporary
-// storage that adds the \0 for output strings that are all explicitly-sized.
-// TODO(42241188): Remove once all clients use StringView versions of the callbacks.
-struct StringViewAdapter {
-    WGPUStringView sv;
-    char* nullTerminated = nullptr;
-
-    StringViewAdapter(WGPUStringView sv) : sv(sv) {}
-    ~StringViewAdapter() { delete[] nullTerminated; }
-    operator ::WGPUStringView() { return sv; }
-    operator StringView() { return {sv.data, sv.length}; }
-    operator const char*() {
-        assert(sv.length != WGPU_STRLEN);
-        assert(nullTerminated == nullptr);
-        nullTerminated = new char[sv.length + 1];
-        for (size_t i = 0; i < sv.length; i++) {
-            nullTerminated[i] = sv.data[i];
-        }
-        nullTerminated[sv.length] = 0;
-        return nullTerminated;
-    }
-};
 }  // namespace detail
-
-inline StringView::StringView(const detail::StringViewAdapter& s): data(s.sv.data), length(s.sv.length) {}
 
 namespace detail {
 // For callbacks, we support two modes:
 //   1) No userdata where we allow a std::function type that can include argument captures.
 //   2) Explicit typed userdata where we only allow non-capturing lambdas or function pointers.
-template <typename... Args>
+template <typename R, typename... Args>
 struct CallbackTypeBase;
-template <typename... Args>
-struct CallbackTypeBase<std::tuple<Args...>> {
-    using Callback = std::function<void(Args...)>;
+template <typename R, typename... Args>
+struct CallbackTypeBase<R, std::tuple<Args...>> {
+    using Callback = std::function<R(Args...)>;
 };
-template <typename... Args>
-struct CallbackTypeBase<std::tuple<Args...>, void> {
-    using Callback = void (Args...);
+template <typename R, typename... Args>
+struct CallbackTypeBase<R, std::tuple<Args...>, void> {
+    using Callback = R (Args...);
 };
-template <typename... Args, typename T>
-struct CallbackTypeBase<std::tuple<Args...>, T> {
-    using Callback = void (Args..., T);
+template <typename R, typename... Args, typename T>
+struct CallbackTypeBase<R, std::tuple<Args...>, T> {
+    using Callback = R (Args..., T);
+};
+
+// Noexcept specializations of CallbackTypeBase.
+template <typename R, typename... Args>
+struct CallbackTypeBase<R, std::tuple<Args...>, std::true_type> {
+    using Callback = R (Args...) noexcept;
+};
+template <typename R, typename... Args>
+struct CallbackTypeBase<R, std::tuple<Args...>, void, std::true_type> {
+    using Callback = R (Args...) noexcept;
+};
+template <typename R, typename... Args, typename T>
+struct CallbackTypeBase<R, std::tuple<Args...>, T, std::true_type> {
+    using Callback = R (Args..., T) noexcept;
 };
 }  // namespace detail
 
 //* Special callbacks that require some custom code generation.
-{% set SpecialCallbacks = ["device lost callback", "uncaptured error callback"] %}
+{%- set SpecialCallbacks = ["device lost callback", "uncaptured error callback"] %}
 
 {% for type in by_category["callback function"] if type.name.get() not in SpecialCallbacks %}
     template <typename... T>
-    using {{as_cppType(type.name)}} = typename detail::CallbackTypeBase<std::tuple<
+    using {{as_cppType(type.name)}} = detail::CallbackTypeBase<
+        {{as_cppType(type.returns.type.name) if type.returns else "void"}},
+        std::tuple<
         {%- for arg in type.arguments -%}
             {%- if not loop.first %}, {% endif -%}
             {{decorate(as_cppType(arg.type.name), arg)}}
@@ -568,54 +477,22 @@ struct CallbackTypeBase<std::tuple<Args...>, T> {
     >, T...>::Callback;
 {% endfor %}
 template <typename... T>
-using DeviceLostCallback = typename detail::CallbackTypeBase<std::tuple<const Device&, DeviceLostReason, StringView>, T...>::Callback;
+using DeviceLostCallback = detail::CallbackTypeBase<void, std::tuple<const Device&, DeviceLostReason, StringView>, T...>::Callback;
 template <typename... T>
-using UncapturedErrorCallback = typename detail::CallbackTypeBase<std::tuple<const Device&, ErrorType, StringView>, T...>::Callback;
+using UncapturedErrorCallback = detail::CallbackTypeBase<void, std::tuple<const Device&, ErrorType, StringView>, T...>::Callback;
 
-{% macro render_cpp_callback_info_template_method_impl(type, method) %}
-    {{render_cpp_callback_info_template_method_declaration(type, method, dfn=True)}} {
+{%- macro render_cpp_callback_info_method_impl(type, method, typed, const) %}
+    {{render_cpp_callback_info_method_declaration(type, method, typed=typed, const=const, dfn=True)}} {
         {% set CallbackInfoType = (method.arguments|last).type %}
         {% set CallbackType = find_by_name(CallbackInfoType.members, "callback").type %}
-        {{as_cType(CallbackInfoType.name)}} callbackInfo = {};
+        {% if typed %}
+            auto callbackInfo = detail::CallbackInfoHelper<{{as_cType(CallbackInfoType.name)}}, F>::Create(std::move(callback), userdata);
+        {% else %}
+            auto callbackInfo = detail::CallbackInfoHelper<{{as_cType(CallbackInfoType.name)}}, F>::Create(std::move(callback));
+        {% endif %}
         {% if find_by_name(CallbackInfoType.members, "mode") %}
             callbackInfo.mode = static_cast<{{as_cType(types["callback mode"].name)}}>(callbackMode);
         {% endif %}
-        if constexpr (std::is_convertible_v<F, Cb*>) {
-            callbackInfo.callback = [](
-                {%- for arg in CallbackType.arguments -%}
-                    {{as_annotated_cType(arg)}}{{", "}}
-                {%- endfor -%}
-            void* callback_param, void* userdata_param) {
-                auto cb = reinterpret_cast<Cb*>(callback_param);
-                (*cb)(
-                    {%- for arg in CallbackType.arguments -%}
-                        {{convert_cType_to_cppType(arg.type, arg.annotation, as_varName(arg.name))}}{{", "}}
-                    {%- endfor -%}
-                static_cast<T>(userdata_param));
-            };
-        } else {
-            //* Handle functors that take in const char* instead of StringView.
-            //* TODO(42241188): Remove once all clients use StringView versions of the callbacks
-            //* and also remove CbChar at the same time.
-            callbackInfo.callback = [](
-                {%- for arg in CallbackType.arguments -%}
-                    {{as_annotated_cType(arg)}}{{", "}}
-                {%- endfor -%}
-            void* callback_param, void* userdata_param) {
-                auto cb = reinterpret_cast<CbChar*>(callback_param);
-                (*cb)(
-                    {%- for arg in CallbackType.arguments -%}
-                        {%- if arg.type.name.canonical_case() == "string view" -%}
-                            {detail::StringViewAdapter({{as_varName(arg.name)}})}{{", "}}
-                        {%- else -%}
-                            {{convert_cType_to_cppType(arg.type, arg.annotation, as_varName(arg.name))}}{{", "}}
-                        {%- endif -%}
-                    {%- endfor -%}
-                static_cast<T>(userdata_param));
-            };
-        }
-        callbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
-        callbackInfo.userdata2 = reinterpret_cast<void*>(userdata);
         {% if method.returns and method.returns.type.name.get() == "future" %}
             auto result = {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
                 {%- for arg in method.arguments if arg.type.category != "callback info" -%}
@@ -628,72 +505,6 @@ using UncapturedErrorCallback = typename detail::CallbackTypeBase<std::tuple<con
                 {%- for arg in method.arguments if arg.type.category != "callback info" -%}
                     {{render_c_actual_arg(arg)}}{{", "}}
                 {%- endfor -%}
-            callbackInfo);
-        {% endif %}
-    }
-{%- endmacro %}
-
-{% macro render_cpp_callback_info_lambda_method_impl(type, method) %}
-    {{render_cpp_callback_info_lambda_method_declaration(type, method, dfn=True)}} {
-        {% set CallbackInfoType = (method.arguments|last).type %}
-        {% set CallbackType = find_by_name(CallbackInfoType.members, "callback").type %}
-        using F = {{as_cppType(CallbackType.name)}}<void>;
-
-        {{as_cType(CallbackInfoType.name)}} callbackInfo = {};
-        {% if find_by_name(CallbackInfoType.members, "mode") %}
-            callbackInfo.mode = static_cast<{{as_cType(types["callback mode"].name)}}>(callbackMode);
-        {% endif %}
-        if constexpr (std::is_convertible_v<L, F*>) {
-            callbackInfo.callback = [](
-            {%- for arg in CallbackType.arguments -%}
-                {{as_annotated_cType(arg)}}{{", "}}
-            {%- endfor -%}
-            void* callback_param, void*) {
-                auto cb = reinterpret_cast<F*>(callback_param);
-                (*cb)(
-                    {%- for arg in CallbackType.arguments -%}
-                        {%- if not loop.first %}, {% endif -%}
-                        {{convert_cType_to_cppType(arg.type, arg.annotation, as_varName(arg.name))}}
-                    {%- endfor -%});
-            };
-            callbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
-            callbackInfo.userdata2 = nullptr;
-        } else {
-            auto* lambda = new L(std::move(callback));
-            callbackInfo.callback = [](
-                {%- for arg in CallbackType.arguments -%}
-                    {{as_annotated_cType(arg)}}{{", "}}
-                {%- endfor -%}
-            void* callback_param, void*) {
-                std::unique_ptr<L> the_lambda(reinterpret_cast<L*>(callback_param));
-                (*the_lambda)(
-                    {%- for arg in CallbackType.arguments -%}
-                        {%- if not loop.first %}, {% endif -%}
-                        //* Handle functors that take in const char* instead of StringView.
-                        //* TODO(42241188): Remove once all clients use StringView versions of the callbacks
-                        //* and also remove CbChar at the same time.
-                        {%- if arg.type.name.canonical_case() == "string view" -%}
-                            {detail::StringViewAdapter({{as_varName(arg.name)}})}
-                        {%- else -%}
-                            {{convert_cType_to_cppType(arg.type, arg.annotation, as_varName(arg.name))}}
-                        {%- endif -%}
-                    {%- endfor -%});
-            };
-            callbackInfo.userdata1 = reinterpret_cast<void*>(lambda);
-            callbackInfo.userdata2 = nullptr;
-        }
-        {% if method.returns and method.returns.type.name.get() == "future" %}
-            auto result = {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
-            {%- for arg in method.arguments if arg.type.category != "callback info" -%}
-                {{render_c_actual_arg(arg)}}{{", "}}
-            {%- endfor -%}
-            callbackInfo);
-            return {{convert_cType_to_cppType(method.returns.type, 'value', 'result') | indent(8)}};
-        {% else %}
-            return {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
-            {%- for arg in method.arguments if arg.type.category != "callback info" -%}
-                {{render_c_actual_arg(arg)}}{{", "}}
-            {%- endfor -%}
             callbackInfo);
         {% endif %}
     }
@@ -722,9 +533,9 @@ using UncapturedErrorCallback = typename detail::CallbackTypeBase<std::tuple<con
         using ObjectBase::operator=;
 
         {% for method in type.methods %}
-            {% if has_callbackInfoStruct(method) %}
-                {{render_cpp_callback_info_template_method_declaration(type, method)|indent}};
-                {{render_cpp_callback_info_lambda_method_declaration(type, method)|indent}};
+            {% if has_callbackInfoStruct(method.arguments) %}
+                {{render_cpp_callback_info_method_declaration(type, method, typed=True, const=True)|indent}};
+                {{render_cpp_callback_info_method_declaration(type, method, typed=False, const=True)|indent}};
             {% else %}
                 inline {{render_cpp_method_declaration(type, method)}};
             {% endif %}
@@ -753,62 +564,135 @@ static_assert(offsetof(ChainedStruct, nextInChain) == offsetof({{c_prefix}}Chain
 static_assert(offsetof(ChainedStruct, sType) == offsetof({{c_prefix}}ChainedStruct, sType),
     "offsetof mismatch for ChainedStruct::sType");
 
+//* Renders the actual members for a struct type.
+{%- macro render_cpp_struct_members(type) %}
+    {% set Out = "Out" if type.output else "" %}
+    {% set Const = "const" if not type.output else "" %}
+    {% if type.extensible %}
+        ChainedStruct{{Out}} {{Const}} * nextInChain = nullptr;
+    {% endif %}
+    {% for member in type.members %}
+        //* We need special case handling for BindGroupLayoutEntry and it's members because in the
+        //* spec we decided that the default values of the member structs will be different than
+        //* the default value of those structs outside of the BindGroupLayoutEntry, i.e. the
+        //* default initialized value for a BufferBindingLayout is:
+        //*     {nullptr, BufferBindingType::Undefined, false, 0}
+        //* but the default value of a BufferBindingLayout within the BindGroupLayoutEntry is:
+        //*     {nullptr, BufferBindingType::BindingNotUsed, false, 0}
+        {% if type.name.get() == "bind group layout entry" %}
+            {% if member.name.canonical_case() == "buffer" %}
+                {% set forced_default_value = "{ nullptr, BufferBindingType::BindingNotUsed, false, 0 }" %}
+            {% elif member.name.canonical_case() == "sampler" %}
+                {% set forced_default_value = "{ nullptr, SamplerBindingType::BindingNotUsed }" %}
+            {% elif member.name.canonical_case() == "texture" %}
+                {% set forced_default_value = "{ nullptr, TextureSampleType::BindingNotUsed, TextureViewDimension::e2D, false }" %}
+            {% elif member.name.canonical_case() == "storage texture" %}
+                {% set forced_default_value = "{ nullptr, StorageTextureAccess::BindingNotUsed, TextureFormat::Undefined, TextureViewDimension::e2D }" %}
+            {% endif %}
+        {% endif %}
+        //* Special handling for callback info types where we default it to the C init macro.
+        {% if member.type.category == "callback info" %}
+            {% set member_declaration = as_annotated_cType(member) + " = " + CAPI + "_" + member.name.SNAKE_CASE() + "_INIT" %}
+        {% else %}
+            {% set member_declaration = render_member_declaration(member, type.has_free_members_function, forced_default_value) %}
+        {% endif %}
+        {% if type.chained and loop.first %}
+            //* Align the first member after ChainedStruct to match the C struct layout.
+            //* It has to be aligned both to its natural and ChainedStruct's alignment.
+            static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct{{Out}}), alignof({{decorate(as_cppType(member.type.name), member)}}));
+            alignas(kFirstMemberAlignment) {{member_declaration}};
+        {% else %}
+            {{member_declaration}};
+        {% endif %}
+    {%- endfor -%}
+{%- endmacro %}
+
+//* Renders aliases for the members for a struct type. This is used when dealing with callback info.
+{%- macro render_cpp_struct_aliases(type) %}
+    {% set CppType = as_cppType(type.name) %}
+    {% if type.chained %}
+        using detail::{{CppType}}::kFirstMemberAlignment;
+    {% endif %}
+    {% if type.extensible %}
+        using detail::{{CppType}}::nextInChain;
+    {% endif %}
+    {% for member in type.members %}
+        //* Special handling for callback info types where we default it to the C init macro.
+        {% if member.type.category != "callback info" %}
+            using detail::{{CppType}}::{{as_varName(member.name)}};
+        {% endif %}
+    {% endfor %}
+{%- endmacro %}
+
 //* Special structures that require some custom code generation.
-{% set SpecialStructures = ["device descriptor", "string view"] %}
+{% set SpecialStructures = ["string view"] %}
+
+// NOLINTBEGIN(bugprone-invalid-enum-default-initialization)
 
 {% for type in by_category["structure"] if type.name.get() not in SpecialStructures %}
+    {% set CppType = as_cppType(type.name) %}
     {% set Out = "Out" if type.output else "" %}
-    {% set const = "const" if not type.output else "" %}
+    {% set HasCallbackInfo = has_callbackInfoStruct(type.members) %}
+    {% set Parents = [] %}
+    //* If the struct has callback info members, create a backing struct for the members.
+    {% if HasCallbackInfo %}
+        namespace detail {
+        struct {{CppType}} {
+            {{render_cpp_struct_members(type)|indent -}}
+        };
+        }  // namespace detail
+        {% set Parents = Parents + ["protected detail::" + CppType] %}
+    {% endif %}
     {% if type.chained %}
+        {% set Parents = ["ChainedStruct" + Out] + Parents %}
         {% for root in type.chain_roots %}
             // Can be chained in {{as_cppType(root.name)}}
         {% endfor %}
-        struct {{as_cppType(type.name)}} : ChainedStruct{{Out}} {
-            inline {{as_cppType(type.name)}}();
-
-            struct Init;
-            inline {{as_cppType(type.name)}}(Init&& init);
-    {% else %}
-        struct {{as_cppType(type.name)}} {
-            {% if type.has_free_members_function %}
-                inline {{as_cppType(type.name)}}();
-            {% endif %}
     {% endif %}
-        {% if type.has_free_members_function %}
-            inline ~{{as_cppType(type.name)}}();
-            {{as_cppType(type.name)}}(const {{as_cppType(type.name)}}&) = delete;
-            {{as_cppType(type.name)}}& operator=(const {{as_cppType(type.name)}}&) = delete;
-            inline {{as_cppType(type.name)}}({{as_cppType(type.name)}}&&);
-            inline {{as_cppType(type.name)}}& operator=({{as_cppType(type.name)}}&&);
+    {% set Inherits = (" : " + Parents | join(", ")) if Parents else "" %}
+    struct {{CppType}}{{Inherits}} {
+        //* We provide a default constructor for the following cases:
+        //*   1) If we are a chained type, the default constructor sets the SType appropriately,
+        //*      and an Init constructor version will be provided for designated initialization of
+        //*      the other members.
+        //*   2) If we have callback info members, we provide an Init constructor which hides the
+        //*      callback info members. Because we provide an Init constructor, we also need to
+        //*      explicitly provide a default constructor for general use-case.
+        //*   3) If we have a free member function, we define a default constructor so that users
+        //*      cannot initialize the implicit "out" type struct.
+        {% if type.chained or HasCallbackInfo or type.has_free_members_function%}
+            inline {{CppType}}();
         {% endif %}
+        //* For chained types or types with hidden members, i.e. callback infos, we provide an
+        //* Init struct for designated initializers. For chained types, this sets the sType.
+        {% if type.chained or HasCallbackInfo %}
+            struct Init;
+            explicit(false) inline {{CppType}}(Init&& init);
+        {% endif %}
+        {% if type.has_free_members_function %}
+            inline ~{{CppType}}();
+            {{CppType}}(const {{CppType}}&) = delete;
+            {{CppType}}& operator=(const {{CppType}}&) = delete;
+            inline {{CppType}}({{CppType}}&&);
+            inline {{CppType}}& operator=({{CppType}}&&);
+        {% endif %}
+        //* Provide a conversion operator to the underlying C struct type.
+        // NOLINTNEXTLINE(google-explicit-constructor)
         inline operator const {{as_cType(type.name)}}&() const noexcept;
 
-        {% if type.extensible %}
-            ChainedStruct{{Out}} {{const}} * nextInChain = nullptr;
-        {% endif %}
-        {% for member in type.members %}
-            {% if type.name.get() == "bind group layout entry" %}
-                {% if member.name.canonical_case() == "buffer" %}
-                    {% set forced_default_value = "{ nullptr, BufferBindingType::BindingNotUsed, false, 0 }" %}
-                {% elif member.name.canonical_case() == "sampler" %}
-                    {% set forced_default_value = "{ nullptr, SamplerBindingType::BindingNotUsed }" %}
-                {% elif member.name.canonical_case() == "texture" %}
-                    {% set forced_default_value = "{ nullptr, TextureSampleType::BindingNotUsed, TextureViewDimension::e2D, false }" %}
-                {% elif member.name.canonical_case() == "storage texture" %}
-                    {% set forced_default_value = "{ nullptr, StorageTextureAccess::BindingNotUsed, TextureFormat::Undefined, TextureViewDimension::e2D }" %}
-                {% endif %}
-            {% endif %}
-            {% set member_declaration = render_member_declaration(member, type.has_free_members_function, forced_default_value) %}
-            {% if type.chained and loop.first %}
-                //* Align the first member after ChainedStruct to match the C struct layout.
-                //* It has to be aligned both to its natural and ChainedStruct's alignment.
-                static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct{{out}}), alignof({{decorate(as_cppType(member.type.name), member)}}));
-                alignas(kFirstMemberAlignment) {{member_declaration}};
-            {% else %}
-                {{member_declaration}};
-            {% endif %}
-        {% endfor %}
-        {% if type.has_free_members_function %}
+        {% if HasCallbackInfo %}
+            {{ render_cpp_struct_aliases(type)|indent }}
+            //* For callback info members, we need to provide setters instead of direct access
+            //* to the members.
+            {% for method in cpp_methods(type) %}
+                {{render_cpp_callback_info_method_declaration(type, method, typed=True, const=False, dfn=False)|indent }};
+                {{render_cpp_callback_info_method_declaration(type, method, typed=False, const=False, dfn=False)|indent }};
+            {% endfor %}
+        {% else %}
+            {{ render_cpp_struct_members(type)|indent -}}
+        {%- endif -%}
+
+        {%- if type.has_free_members_function %}
 
           private:
             inline void FreeMembers();
@@ -817,88 +701,371 @@ static_assert(offsetof(ChainedStruct, sType) == offsetof({{c_prefix}}ChainedStru
     };
 
 {% endfor %}
+// NOLINTEND(bugprone-invalid-enum-default-initialization)
 
-//* Device descriptor is specially implemented in C++ in order to hide callback info. Note that
-//* this is placed at the end of the structs and works for the device descriptor because no other
-//* structs include it as a member. In the future for these special structs, we may need to add
-//* a way to order the definitions w.r.t the topology of the structs.
-{% set type = types["device descriptor"] %}
-{% set CppType = as_cppType(type.name) %}
+// Callback info handling is generated and/or custom implemented here to convert the types between C and C++.
 namespace detail {
-struct {{CppType}} {
-    ChainedStruct const * nextInChain = nullptr;
-    {% for member in type.members %}
-        {% if member.type.category != "callback info" %}
-            {{render_member_declaration(member, type.has_free_members_function)}};
-        {% else %}
-            {{as_annotated_cType(member)}} = {{CAPI}}_{{member.name.SNAKE_CASE()}}_INIT;
-        {% endif %}
-    {% endfor %}
+struct Untyped {};
+
+// The current interface of CppFTraits exposes the following values:
+//   - CppFTraits::capturing: true if the callback is a capturing callback (i.e. a lambda that
+//     captures its environment).
+//   - CppFTraits::PtrT: The C++ callback function pointer type.
+//   - CppFTraits::ReturnT: The return type of the C++ callback function pointer.
+//   - CppFTraits::BaseArgsTuple: A tuple of the C++ arguments minus the user specified typed
+//     parameter.
+//
+// Implementation notes:
+//   - The |Untyped| struct is only used to differentiate whether |T| is a user specified type
+//     in which case we need to strip the type from the callback arguments for speecialization
+//     deduction.
+template <typename CppFT, typename CppFPtr, typename T>
+struct CppFTraitsImpl;
+// Specialization for raw function pointers.
+template <typename CppFT, typename R, typename... CppArgs, typename T>
+struct CppFTraitsImpl<CppFT, R(*)(CppArgs...), T> {
+    using PtrT = R(*)(CppArgs...);
+    using ReturnT = R;
+    static constexpr bool capturing = false;
+
+    static constexpr size_t NumCppArgs = sizeof...(CppArgs);
+    using BaseArgsTuple = decltype([]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return std::type_identity<std::tuple<std::tuple_element_t<Is, std::tuple<CppArgs...>>...>>{};
+    }(std::make_index_sequence<std::is_same_v<T, Untyped> ? NumCppArgs : NumCppArgs - 1>{})
+    )::type;
 };
+// Specialization for noexcept raw function pointers.
+template <typename CppFT, typename R, typename... CppArgs, typename T>
+struct CppFTraitsImpl<CppFT, R(*)(CppArgs...) noexcept, T> {
+    using PtrT = R(*)(CppArgs...) noexcept;
+    using ReturnT = R;
+    static constexpr bool capturing = false;
+
+    static constexpr size_t NumCppArgs = sizeof...(CppArgs);
+    using BaseArgsTuple = decltype([]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return std::type_identity<std::tuple<std::tuple_element_t<Is, std::tuple<CppArgs...>>...>>{};
+    }(std::make_index_sequence<std::is_same_v<T, Untyped> ? NumCppArgs : NumCppArgs - 1>{})
+    )::type;
+};
+// Specialization for member function pointers (lambdas);
+template <typename CppFT, typename R, typename C, typename... CppArgs, typename T>
+struct CppFTraitsImpl<CppFT, R(C::*)(CppArgs...) const, T> {
+    using PtrT = R(*)(CppArgs...);
+    using ReturnT = R;
+    static constexpr bool capturing = !std::is_convertible_v<CppFT, PtrT>;
+
+    static constexpr size_t NumCppArgs = sizeof...(CppArgs);
+    using BaseArgsTuple = decltype([]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return std::type_identity<std::tuple<std::tuple_element_t<Is, std::tuple<CppArgs...>>...>>{};
+    }(std::make_index_sequence<std::is_same_v<T, Untyped> ? NumCppArgs : NumCppArgs - 1>{})
+    )::type;
+};
+// Specialization for noexcept member function pointers (noexcept lambdas);
+template <typename CppFT, typename R, typename C, typename... CppArgs, typename T>
+struct CppFTraitsImpl<CppFT, R(C::*)(CppArgs...) const noexcept, T> {
+    using PtrT = R(*)(CppArgs...) noexcept;
+    using ReturnT = R;
+    static constexpr bool capturing = !std::is_convertible_v<CppFT, PtrT>;
+
+    static constexpr size_t NumCppArgs = sizeof...(CppArgs);
+    using BaseArgsTuple = decltype([]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return std::type_identity<std::tuple<std::tuple_element_t<Is, std::tuple<CppArgs...>>...>>{};
+    }(std::make_index_sequence<std::is_same_v<T, Untyped> ? NumCppArgs : NumCppArgs - 1>{})
+    )::type;
+};
+template <typename CppFT, typename T = Untyped>
+struct CppFTraits : CppFTraitsImpl<CppFT, decltype(&CppFT::operator()), T> {};
+template <typename R, typename... CppArgs, typename T>
+struct CppFTraits<R(*)(CppArgs...), T> :
+    CppFTraitsImpl<R(*)(CppArgs...), R(*)(CppArgs...), T> {};
+template <typename R, typename... CppArgs, typename T>
+struct CppFTraits<R(*)(CppArgs...) noexcept, T> :
+    CppFTraitsImpl<R(*)(CppArgs...) noexcept, R(*)(CppArgs...) noexcept, T> {};
+
+// CArgConverter are specialization structs that specialize a conversion from a C CallbackInfo's
+// callback argument types to a set of valid C++ types. These specializations provide us a way to
+// support additional C++ callback types, i.e. converting raw pointers to more C++ friendly
+// structures when applicable.
+template <typename CInfoT, typename CppArgs>
+struct CArgConverter;
+{% set SpecialCallbackInfos = [
+           "device lost callback info", "uncaptured error callback info",
+           "dawn load cache data callback info", "dawn store cache data callback info" ] %}
+{% for type in by_category["callback info"] if type.name.get() not in SpecialCallbackInfos %}
+    {% set CallbackType = find_by_name(type.members, "callback").type %}
+    template <>
+    struct CArgConverter<{{as_cType(type.name)}}, std::tuple<
+        {%- for arg in CallbackType.arguments -%}
+            {%- if not loop.first %}, {% endif -%}
+            {{decorate(as_cppType(arg.type.name), arg)}}
+        {%- endfor -%}
+    >> {
+        using Result = std::tuple<
+            {%- for arg in CallbackType.arguments -%}
+                {%- if not loop.first %}, {% endif -%}
+                {{decorate(as_cppType(arg.type.name), arg)}}
+            {%- endfor -%}
+        >;
+        static Result Convert(
+            {%- for arg in CallbackType.arguments -%}
+                {%- if not loop.first %}, {% endif -%}
+                {{as_annotated_cType(arg)}}
+            {%- endfor -%}) {
+            return std::make_tuple(
+                {%- for arg in CallbackType.arguments -%}
+                    {%- if not loop.first %}, {% endif -%}
+                    {{convert_cType_to_cppType(arg.type, arg.annotation, as_varName(arg.name))}}
+                {%- endfor -%}
+            );
+        }
+    };
+{% endfor %}
+//* Implement the custom special converters.
+template <>
+struct CArgConverter<WGPUDeviceLostCallbackInfo,
+                     std::tuple<const Device&, DeviceLostReason, StringView>> {
+    using Result = std::tuple<const Device&, DeviceLostReason, StringView>;
+    static Result Convert(WGPUDevice const* device,
+                          WGPUDeviceLostReason reason,
+                          WGPUStringView message) {
+        return std::make_tuple(std::cref(*reinterpret_cast<const Device*>(device)),
+                               static_cast<DeviceLostReason>(reason), message);
+    }
+};
+template <>
+struct CArgConverter<WGPUUncapturedErrorCallbackInfo,
+                     std::tuple<const Device&, ErrorType, StringView>> {
+    using Result = std::tuple<const Device&, ErrorType, StringView>;
+    static Result Convert(WGPUDevice const* device, WGPUErrorType type, WGPUStringView message) {
+        return std::make_tuple(std::cref(*reinterpret_cast<const Device*>(device)),
+                               static_cast<ErrorType>(type), message);
+    }
+};
+{% if find_by_name(by_category["callback info"], "dawn load cache data callback info") %}
+    template <>
+    struct CArgConverter<WGPUDawnLoadCacheDataCallbackInfo,
+                         std::tuple<std::span<const std::byte>, std::span<std::byte>>> {
+        using Result = std::tuple<std::span<const std::byte>, std::span<std::byte>>;
+        static Result Convert(size_t keySize, uint8_t const* key, size_t valueSize, uint8_t* value) {
+            return std::make_tuple(
+                std::span<const std::byte>(reinterpret_cast<const std::byte*>(key), keySize),
+                std::span<std::byte>(reinterpret_cast<std::byte*>(value), valueSize)
+            );
+        }
+    };
+{% endif %}
+{% if find_by_name(by_category["callback info"], "dawn store cache data callback info") %}
+    template <>
+    struct CArgConverter<WGPUDawnStoreCacheDataCallbackInfo,
+                         std::tuple<std::span<const std::byte>, std::span<const std::byte>>> {
+        using Result = std::tuple<std::span<const std::byte>, std::span<const std::byte>>;
+        static Result Convert(size_t keySize, uint8_t const* key, size_t valueSize, uint8_t const* value) {
+            return std::make_tuple(
+                std::span<const std::byte>(reinterpret_cast<const std::byte*>(key), keySize),
+                std::span<const std::byte>(reinterpret_cast<const std::byte*>(value), valueSize)
+            );
+        }
+    };
+{% endif %}
+
+// The CallbackHelper struct implements the static functions needed to convert the base C callbacks
+// into the user provided C++ callbacks. More than anything, it handles converting the real C
+// callback arguments (i.e. not the userdata pointers we use internally) to C++ arguments, and
+// casts the userdata pointers appropriately to ensure that everything is typed.
+template <typename R, typename CInfoT, typename CppF, typename CArgsTuple, typename Indices>
+struct CallbackHelperImpl;
+template <typename R, typename CInfoT, typename CppF, typename... CArgs, std::size_t... Is>
+struct CallbackHelperImpl<R, CInfoT, CppF, std::tuple<CArgs...>, std::index_sequence<Is...>> {
+    // Implementation for callbacks without an additional typed argument. We support capturing
+    // lambdas if users can specify a callback mode in this case and make an allocation.
+    static R Call(std::tuple_element_t<Is, std::tuple<CArgs...>>... cArgs,
+                     void* callbackParam, void*) {
+        using CppFTraits = CppFTraits<CppF>;
+        using Converter = CArgConverter<CInfoT, typename CppFTraits::BaseArgsTuple>;
+
+        if constexpr (CppFTraits::capturing) {
+            std::unique_ptr<CppF> callback(reinterpret_cast<CppF*>(callbackParam));
+            return std::apply(*callback, Converter::Convert(cArgs...));
+        } else {
+            auto callback = reinterpret_cast<CppFTraits::PtrT>(callbackParam);
+            return std::apply(callback, Converter::Convert(cArgs...));
+        }
+    }
+
+    // Implementation for callbacks where the user specifies an additional typed argument. We do
+    // not support capturing lambdas in this case since the user is already providing a typed
+    // argument and would make more sense for any other state to be capturing by that argument
+    // instead.
+    template <typename T>
+    static R Call(std::tuple_element_t<Is, std::tuple<CArgs...>>... cArgs,
+                     void* callbackParam, void* userdataParam) {
+        using CppFTraits = CppFTraits<CppF, T>;
+        using Converter = CArgConverter<CInfoT, typename CppFTraits::BaseArgsTuple>;
+
+        auto callback = reinterpret_cast<CppFTraits::PtrT>(callbackParam);
+        auto param = std::make_tuple(static_cast<T>(userdataParam));
+        return std::apply(callback, std::tuple_cat(Converter::Convert(cArgs...), param));
+    }
+};
+template <typename CInfoT, typename F, typename CbT>
+struct CallbackHelper;
+template <typename CInfoT, typename F, typename R, typename... CArgs>
+struct CallbackHelper<CInfoT, F, R(*)(CArgs...)> {
+    static constexpr size_t NumCArgs = sizeof...(CArgs);
+    using CArgsTuple = std::tuple<CArgs...>;
+    static_assert(NumCArgs >= 2, "C Function pointers must have two void* trailing arguments.");
+    static_assert(
+        std::is_same_v<std::tuple_element_t<NumCArgs - 1, CArgsTuple>, void*>,
+        "C Function pointer's last argument must be void*."
+    );
+    static_assert(
+        std::is_same_v<std::tuple_element_t<NumCArgs - 2, CArgsTuple>, void*>,
+        "C Function pointer's second to last argument must be void*."
+    );
+
+    using Impl = CallbackHelperImpl<R, CInfoT, F, CArgsTuple, std::make_index_sequence<NumCArgs - 2>>;
+    static R Call(CArgs... args) {
+        return Impl::Call(std::forward<CArgs>(args)...);
+    }
+    template <typename T>
+    static R Call(CArgs... args) {
+        return Impl::template Call<T>(std::forward<CArgs>(args)...);
+    }
+};
+
+// The CallbackInfoHelper provides a utility to create a C CallbackInfo struct type from a C++
+// callback. This allows us to de-duplicates the logic used for WebGPU structs that have
+// CallbackInfo members and WebGPU API functions that return a Future.
+template <typename CInfoT, typename F>
+struct CallbackInfoHelper {
+    static CInfoT Create(F lambda) {
+        CInfoT info = {};
+        if constexpr (CppFTraits<F>::capturing) {
+            if constexpr (requires(CInfoT x) { x.mode; }) {
+                // If we have a mode argument, then the callback is guaranteed to be called only
+                // once so we can support it by moving it and making an allocation for it.
+                std::unique_ptr<F> alloc = std::make_unique<F>(std::move(lambda));
+                info.userdata1 = reinterpret_cast<void*>(alloc.release());
+            } else {
+                // MSVC <=19.39 doesn't support static_assert(false) and this was fixed in later C++
+                // standards https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2593r1.html
+                constexpr bool kAlwaysFalse = sizeof(F) == 0;
+                static_assert(
+                    kAlwaysFalse, "capturing lambdas aren't supported for repeatable callbacks"
+                );
+            }
+        } else {
+            // Otherwise, if the lambda is not capturing, that means we can refer to it as a
+            // pointer directly.
+            info.userdata1 = reinterpret_cast<void*>(+lambda);
+        }
+        info.callback = CallbackHelper<CInfoT, F, decltype(CInfoT::callback)>::Call;
+        info.userdata2 = nullptr;
+        return info;
+    }
+
+    template <typename T>
+    requires (!CppFTraits<F>::capturing)
+    static CInfoT Create(F lambda, T userdata) {
+        CInfoT info = {};
+        info.callback = CallbackHelper<CInfoT, F, decltype(CInfoT::callback)>::template Call<T>;
+        info.userdata1 = reinterpret_cast<void*>(+lambda);
+        info.userdata2 = userdata;
+        return info;
+    }
+};
+
 }  // namespace detail
-struct {{CppType}} : protected detail::{{CppType}} {
-    inline operator const {{as_cType(type.name)}}&() const noexcept;
-
-    using detail::{{CppType}}::nextInChain;
-    {% for member in type.members %}
-        {% if member.type.category != "callback info" %}
-            using detail::{{CppType}}::{{as_varName(member.name)}};
-        {% endif %}
-    {% endfor %}
-
-    inline {{CppType}}();
-    struct Init;
-    inline {{CppType}}(Init&& init);
-
-    template <typename F, typename T,
-              typename Cb = DeviceLostCallback<T>,
-              typename = std::enable_if_t<std::is_convertible_v<F, Cb*>>>
-    void SetDeviceLostCallback(CallbackMode callbackMode, F callback, T userdata);
-    template <typename L,
-              typename Cb = DeviceLostCallback<>,
-              typename = std::enable_if_t<std::is_convertible_v<L, Cb>>>
-    void SetDeviceLostCallback(CallbackMode callbackMode, L callback);
-
-    template <typename F, typename T,
-              typename Cb = UncapturedErrorCallback<T>,
-              typename = std::enable_if_t<std::is_convertible_v<F, Cb*>>>
-    void SetUncapturedErrorCallback(F callback, T userdata);
-    template <typename L,
-              typename Cb = UncapturedErrorCallback<>,
-              typename = std::enable_if_t<std::is_convertible_v<L, Cb>>>
-    void SetUncapturedErrorCallback(L callback);
-};
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 // error: 'offsetof' within non-standard-layout type '{{metadata.namespace}}::XXX' is conditionally-supported
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #endif
+// NOLINTBEGIN(bugprone-invalid-enum-default-initialization)
 
 {% for type in by_category["structure"] if type.name.get() not in SpecialStructures %}
     {% set CppType = as_cppType(type.name) %}
     {% set CType = as_cType(type.name) %}
+    {% set HasCallbackInfo = has_callbackInfoStruct(type.members) %}
     // {{CppType}} implementation
-    {% if type.chained %}
+    {% if type.chained or has_callbackInfoStruct(type.members) %}
         {% set Out = "Out" if type.output else "" %}
-        {% set const = "const" if not type.output else "" %}
-        {{CppType}}::{{CppType}}()
-          : ChainedStruct{{Out}} { nullptr, SType::{{type.name.CamelCase()}} } {}
+        {% set Const = "const" if not type.output else "" %}
+        {% if type.chained %}
+            //* Default constructor for chained types sets the SType appropriately.
+            {{CppType}}::{{CppType}}()
+            : ChainedStruct{{Out}} { nullptr, SType::{{type.name.CamelCase()}} } {}
+        {% else %}
+            //* Otherwise, we need to provide a default constructor on top of the Init one.
+            {{CppType}}::{{CppType}}() = default;
+        {% endif %}
+        //* Init struct allows for designated initializers and constructors.
         struct {{CppType}}::Init {
-            ChainedStruct{{Out}} * {{const}} nextInChain;
-            {% for member in type.members %}
+            {% if type.extensible or type.chained %}
+                ChainedStruct{{Out}} * {{Const}} nextInChain;
+            {% endif %}
+            {% for member in type.members if member.type.category != "callback info" %}
                 {{render_member_declaration(member, type.has_free_members_function)}};
             {% endfor %}
         };
-        {{CppType}}::{{CppType}}({{CppType}}::Init&& init)
-          : ChainedStruct{{Out}} { init.nextInChain, SType::{{type.name.CamelCase()}} }
-            {%- for member in type.members -%},{{" "}}
-                {{as_varName(member.name)}}(std::move(init.{{as_varName(member.name)}}))
-            {%- endfor -%}
-            {}
+        //* There's three cases to handle here, |type.chained|, |HasCallbackInfo|, and both. It is
+        //* a bit easier to handle them individually even though it duplicates some templating a
+        //* bit because of the differences in the constructor.
+        {{CppType}}::{{CppType}}({{CppType}}::Init&& init) :
+        {% if type.chained and HasCallbackInfo %}
+                ChainedStruct{{Out}} { init.nextInChain, SType::{{type.name.CamelCase()}} },
+                detail::{{CppType}} {
+                    {% for member in type.members if member.type.category != "callback info" %}
+                        std::move(init.{{as_varName(member.name)}}),
+                    {% endfor %}
+                } {}
+        {% elif type.chained %}
+                ChainedStruct{{Out}} { init.nextInChain, SType::{{type.name.CamelCase()}} }
+                {%- for member in type.members -%}
+                    ,
+                    {{as_varName(member.name)}}(std::move(init.{{as_varName(member.name)}}))
+                {%- endfor -%}
+                {{" "}}{}
+        {% elif HasCallbackInfo %}
+                detail::{{CppType}} {
+                    {% if type.extensible %}
+                        init.nextInChain,
+                    {% endif %}
+                    {% for member in type.members if member.type.category != "callback info" %}
+                        std::move(init.{{as_varName(member.name)}}),
+                    {% endfor %}
+                } {}
+        {% endif %}
     {% elif type.has_free_members_function %}
+        //* If the type has free member function, we also want to make sure to add a default
+        //* constructor to ensure that users don't initialize the values themselves.
         {{CppType}}::{{CppType}}() = default;
     {% endif %}
+    //* Add the implementation for setters for callback infos.
+    {% if has_callbackInfoStruct(type.members) %}
+        {% for method in cpp_methods(type) %}
+            {% set memberName = as_varName((method.arguments | first).name) %}
+            {% set CallbackInfoType = (method.arguments | first).type %}
+            {{render_cpp_callback_info_method_declaration(type, method, typed=True, const=False, dfn=True) }} {
+                static_assert(offsetof({{CppType}}, {{memberName}}) == offsetof({{CType}}, {{memberName}}),
+                              "offsetof mismatch for {{CppType}}::{{memberName}}");
+
+                assert({{memberName}}.callback == nullptr);
+                {{memberName}} = detail::CallbackInfoHelper<{{as_cType(CallbackInfoType.name)}}, F>::Create(std::move(callback), userdata);
+                {% if find_by_name(CallbackInfoType.members, "mode") %}
+                    {{memberName}}.mode = static_cast<{{as_cType(types["callback mode"].name)}}>(callbackMode);
+                {% endif %}
+            }
+            {{render_cpp_callback_info_method_declaration(type, method, typed=False, const=False, dfn=True) }} {
+                assert({{memberName}}.callback == nullptr);
+                {{memberName}} = detail::CallbackInfoHelper<{{as_cType(CallbackInfoType.name)}}, F>::Create(std::move(callback));
+                {% if find_by_name(CallbackInfoType.members, "mode") %}
+                    {{memberName}}.mode = static_cast<{{as_cType(types["callback mode"].name)}}>(callbackMode);
+                {% endif %}
+            }
+        {% endfor %}
+    {%- endif -%}
     {% if type.has_free_members_function %}
         {{CppType}}::~{{CppType}}() {
             FreeMembers();
@@ -960,128 +1127,14 @@ struct {{CppType}} : protected detail::{{CppType}} {
         static_assert(offsetof({{CppType}}, nextInChain) == offsetof({{CType}}, nextInChain),
                 "offsetof mismatch for {{CppType}}::nextInChain");
     {% endif %}
-    {% for member in type.members %}
+    {% for member in type.members if member.type.category != "callback info" %}
         {% set memberName = member.name.camelCase() %}
         static_assert(offsetof({{CppType}}, {{memberName}}) == offsetof({{CType}}, {{memberName}}),
                 "offsetof mismatch for {{CppType}}::{{memberName}}");
     {% endfor %}
 
 {% endfor %}
-//* Special implementation for device descriptor.
-{% set type = types["device descriptor"] %}
-{% set CppType = as_cppType(type.name) %}
-{% set CType = as_cType(type.name) %}
-// {{CppType}} implementation
-
-{{CppType}}::operator const {{CType}}&() const noexcept {
-    return *reinterpret_cast<const {{CType}}*>(this);
-}
-
-{{CppType}}::{{CppType}}() : detail::{{CppType}} {} {
-    static_assert(offsetof({{CppType}}, nextInChain) == offsetof({{CType}}, nextInChain),
-                "offsetof mismatch for {{CppType}}::nextInChain");
-    {% for member in type.members %}
-        {% set memberName = member.name.camelCase() %}
-        static_assert(offsetof({{CppType}}, {{memberName}}) == offsetof({{CType}}, {{memberName}}),
-                "offsetof mismatch for {{CppType}}::{{memberName}}");
-    {% endfor %}
-}
-
-struct {{CppType}}::Init {
-    ChainedStruct const * nextInChain;
-    {% for member in type.members if member.type.category != "callback info" %}
-        {{render_member_declaration(member, type.has_free_members_function)}};
-    {% endfor %}
-};
-
-{{CppType}}::{{CppType}}({{CppType}}::Init&& init) : detail::{{CppType}} {
-    init.nextInChain
-    {%- for member in type.members if member.type.category != "callback info" -%},{{" "}}
-        std::move(init.{{as_varName(member.name)}})
-    {%- endfor -%}
-} {}
-
-static_assert(sizeof({{CppType}}) == sizeof({{CType}}), "sizeof mismatch for {{CppType}}");
-static_assert(alignof({{CppType}}) == alignof({{CType}}), "alignof mismatch for {{CppType}}");
-
-template <typename F, typename T, typename Cb, typename>
-void {{CppType}}::SetDeviceLostCallback(CallbackMode callbackMode, F callback, T userdata) {
-    assert(deviceLostCallbackInfo.callback == nullptr);
-
-    deviceLostCallbackInfo.mode = static_cast<WGPUCallbackMode>(callbackMode);
-    deviceLostCallbackInfo.callback = [](WGPUDevice const * device, WGPUDeviceLostReason reason, WGPUStringView message, void* callback_param, void* userdata_param) {
-        auto cb = reinterpret_cast<Cb*>(callback_param);
-        // We manually acquire and release the device to avoid changing any ref counts.
-        auto apiDevice = Device::Acquire(*device);
-        (*cb)(apiDevice, static_cast<DeviceLostReason>(reason), message, static_cast<T>(userdata_param));
-        apiDevice.MoveToCHandle();
-    };
-    deviceLostCallbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
-    deviceLostCallbackInfo.userdata2 = reinterpret_cast<void*>(userdata);
-}
-
-template <typename L, typename Cb, typename>
-void {{CppType}}::SetDeviceLostCallback(CallbackMode callbackMode, L callback) {
-    assert(deviceLostCallbackInfo.callback == nullptr);
-    using F = DeviceLostCallback<void>;
-
-    deviceLostCallbackInfo.mode = static_cast<WGPUCallbackMode>(callbackMode);
-    if constexpr (std::is_convertible_v<L, F*>) {
-        deviceLostCallbackInfo.callback = [](WGPUDevice const * device, WGPUDeviceLostReason reason, WGPUStringView message, void* callback_param, void*) {
-            auto cb = reinterpret_cast<F*>(callback_param);
-            // We manually acquire and release the device to avoid changing any ref counts.
-            auto apiDevice = Device::Acquire(*device);
-            (*cb)(apiDevice, static_cast<DeviceLostReason>(reason), message);
-            apiDevice.MoveToCHandle();
-        };
-        deviceLostCallbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
-        deviceLostCallbackInfo.userdata2 = nullptr;
-    } else {
-        auto* lambda = new L(std::move(callback));
-        deviceLostCallbackInfo.callback = [](WGPUDevice const * device, WGPUDeviceLostReason reason, WGPUStringView message, void* callback_param, void*) {
-            std::unique_ptr<L> the_lambda(reinterpret_cast<L*>(callback_param));
-            // We manually acquire and release the device to avoid changing any ref counts.
-            auto apiDevice = Device::Acquire(*device);
-            (*the_lambda)(apiDevice, static_cast<DeviceLostReason>(reason), message);
-            apiDevice.MoveToCHandle();
-        };
-        deviceLostCallbackInfo.userdata1 = reinterpret_cast<void*>(lambda);
-        deviceLostCallbackInfo.userdata2 = nullptr;
-    }
-}
-
-template <typename F, typename T, typename Cb, typename>
-void {{CppType}}::SetUncapturedErrorCallback(F callback, T userdata) {
-    assert(uncapturedErrorCallbackInfo.callback == nullptr);
-
-    uncapturedErrorCallbackInfo.callback = [](WGPUDevice const * device, WGPUErrorType type, WGPUStringView message, void* callback_param, void* userdata_param) {
-        auto cb = reinterpret_cast<Cb*>(callback_param);
-        // We manually acquire and release the device to avoid changing any ref counts.
-        auto apiDevice = Device::Acquire(*device);
-        (*cb)(apiDevice, static_cast<ErrorType>(type), message, static_cast<T>(userdata_param));
-        apiDevice.MoveToCHandle();
-    };
-    uncapturedErrorCallbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
-    uncapturedErrorCallbackInfo.userdata2 = reinterpret_cast<void*>(userdata);
-}
-
-template <typename L, typename Cb, typename>
-void {{CppType}}::SetUncapturedErrorCallback(L callback) {
-    assert(uncapturedErrorCallbackInfo.callback == nullptr);
-    using F = UncapturedErrorCallback<void>;
-    static_assert(std::is_convertible_v<L, F*>, "Uncaptured error callback cannot be a binding lambda");
-
-    uncapturedErrorCallbackInfo.callback = [](WGPUDevice const * device, WGPUErrorType type, WGPUStringView message, void* callback_param, void*) {
-        auto cb = reinterpret_cast<F*>(callback_param);
-        // We manually acquire and release the device to avoid changing any ref counts.
-        auto apiDevice = Device::Acquire(*device);
-        (*cb)(apiDevice, static_cast<ErrorType>(type), message);
-        apiDevice.MoveToCHandle();
-    };
-    uncapturedErrorCallbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
-    uncapturedErrorCallbackInfo.userdata2 = nullptr;
-}
-
+// NOLINTEND(bugprone-invalid-enum-default-initialization)
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
@@ -1092,9 +1145,9 @@ void {{CppType}}::SetUncapturedErrorCallback(L callback) {
     // {{CppType}} implementation
 
     {% for method in type.methods %}
-        {% if has_callbackInfoStruct(method) %}
-            {{render_cpp_callback_info_template_method_impl(type, method)}}
-            {{render_cpp_callback_info_lambda_method_impl(type, method)}}
+        {% if has_callbackInfoStruct(method.arguments) %}
+            {{render_cpp_callback_info_method_impl(type, method, typed=True, const=True)}}
+            {{render_cpp_callback_info_method_impl(type, method, typed=False, const=True)}}
         {% else %}
             {{render_cpp_method_impl(type, method)}}
         {% endif %}
@@ -1134,7 +1187,7 @@ void {{CppType}}::SetUncapturedErrorCallback(L callback) {
     {% endfor %}
     {% for type in by_category["callback function"] %}
         template <typename... T>
-        using {{as_cppType(type.name)}} = typename {{c_namespace.namespace_case()}}::{{as_cppType(type.name)}}<T...>;
+        using {{as_cppType(type.name)}} = {{c_namespace.namespace_case()}}::{{as_cppType(type.name)}}<T...>;
     {% endfor %}
 {% endif %}
 
@@ -1147,7 +1200,7 @@ void {{CppType}}::SetUncapturedErrorCallback(L callback) {
 // Free Functions
 {% for function in by_category["function"] if not function.no_cpp %}
     {% set FunctionName = as_cppType(function.name) %}
-    static inline {{as_annotated_cppType(function.returns)}} {{FunctionName}}(
+    inline {{as_annotated_cppType(function.returns)}} {{FunctionName}}(
         {%- for arg in function.arguments -%}
             {%- if not loop.first %}, {% endif -%}
             {{as_annotated_cppType(arg)}}{{render_cpp_default_value(arg, False)}}

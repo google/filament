@@ -1,0 +1,316 @@
+Name
+
+    EXT_visual_info
+
+Name Strings
+
+    GLX_EXT_visual_info
+
+Version
+
+    $Date: 1995/10/06 00:47:08 $ $Revision: 1.14 $
+
+Number
+
+    28
+
+Dependencies
+
+    SGIS_multisample affects the definition of this extension
+
+Overview
+
+    This extension allows the user to request a particular X visual 
+    type to be associated with a GLX visual, and allows the user
+    to query the X visual type underlying a GLX visual.
+
+    In addition, this extension provides a means to request a visual
+    with a transparent pixel and to query whether a visual supports a
+    transparent pixel value and the value of the transparent pixel.
+    Note that the notion of level and transparent pixels are orthogonal as
+    both layer 1 and layer 0 visuals may or may not have a transparent pixel
+    value.
+
+Issues
+    The X server allows two types of transparency: pixel and mask.
+    For mask, any pixel matching the transparency mask is transparent.
+    Do we want to include masks? GLX_TRANSPARENT_PIXEL has been changed
+    from a boolean to an enum to allow for this possibility.
+
+    Alpha is no longer included in the transparent pixel, although it 
+    may be useful in the future. Thus, we allow the TRANSPARENT_ALPHA_VALUE
+    to be queried -- even though it is not used. In the future
+    a GLX_TRANSPARENT_ALPHA or GLX_TRANSPARENT_RGBA transparency
+    mode could be added.
+
+    Keep tokens for GRAY_SCALE and STATIC_GRAY for future use, even
+    though they don't match visuals now.
+
+    Should glXChooseVisual ignore GLX_TRANSPARENT_INDEX_VALUE_EXT,
+    GLX_TRANSPARENT_RED_VALUE_EXT, GLX_TRANSPARENT_GREEN_VALUE_EXT,
+    GLX_TRANSPARENT_BLUE_VALUE_EXT, and GLX_TRANSPARENT_ALPHA_VALUE_EXT
+    settings in attrib_list if GLX_TRANSPARENT_TYPE_EXT is not set (either 
+    explicitly or implicitly) to a value other than GLX_NONE_EXT? Maybe it 
+    should just match the requested attributes -- even if the request doesn't 
+    make sense.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <attrib> parameter of glXGetConfig, and by the
+    <attrib_list> parameter of glXChooseVisual: 
+
+        GLX_X_VISUAL_TYPE_EXT           0x22
+        GLX_TRANSPARENT_TYPE_EXT        0x23
+        GLX_TRANSPARENT_INDEX_VALUE_EXT 0x24
+        GLX_TRANSPARENT_RED_VALUE_EXT   0x25
+        GLX_TRANSPARENT_GREEN_VALUE_EXT 0x26
+        GLX_TRANSPARENT_BLUE_VALUE_EXT  0x27
+        GLX_TRANSPARENT_ALPHA_VALUE_EXT 0x28
+
+    Returned by glXGetConfig, and accepted by the <attrib_list>
+    parameter of glXChooseVisual (following the GLX_X_VISUAL_TYPE_EXT 
+    token):
+
+        GLX_TRUE_COLOR_EXT              0x8002
+        GLX_DIRECT_COLOR_EXT            0x8003
+        GLX_PSEUDO_COLOR_EXT            0x8004
+        GLX_STATIC_COLOR_EXT            0x8005
+        GLX_GRAY_SCALE_EXT              0x8006
+        GLX_STATIC_GRAY_EXT             0x8007
+
+    Returned by glXGetConfig, and accepted by the <attrib_list>
+    parameter of glXChooseVisual (following the GLX_TRANSPARENT_TYPE_EXT
+    token):
+
+        GLX_NONE_EXT                    0x8000
+        GLX_TRANSPARENT_RGB_EXT         0x8008
+        GLX_TRANSPARENT_INDEX_EXT       0x8009
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    The X visual type of a GLX visual can be queried using glXGetConfig().
+
+    The visual attribute GLX_TRANSPARENT_TYPE_EXT indicates whether or not
+    the visual supports transparency, and if it does support transparency, 
+    what type of transparency is available. If the attribute is set to 
+    GLX_NONE_EXT then windows created with the visual will not have any 
+    transparent pixels. If the attribute is GLX_TRANSPARENT_RGB_EXT or
+    GLX_TRANSPARENT_INDEX_EXT then the visual supports transparency.
+    GLX_TRANSPARENT_RGB_EXT is only applicable to TrueColor and DirectColor 
+    visuals: a transparent pixel will be drawn when the red, green and blue 
+    values which are read from the framebuffer are equal to 
+    GLX_TRANSPARENT_RED_VALUE_EXT, GLX_TRANSPARENT_GREEN_VALUE_EXT and 
+    GLX_TRANSPARENT_BLUE_VALUE_EXT, respectively. For PseudoColor and 
+    StaticColor the transparency mode GLX_TRANSPARENT_INDEX_EXT is used.
+    In this case, a transparent pixel will be drawn when the index value that
+    is read from the framebuffer is equal to GLX_TRANSPARENT_INDEX_VALUE_EXT.
+
+    If GLX_TRANSPARENT_TYPE_EXT is GLX_NONE_EXT or GLX_TRANSPARENT_RGB_EXT, 
+    then the value returned for GLX_TRANSPARENT_INDEX_VALUE_EXT is undefined.
+    If GLX_TRANSPARENT_TYPE_EXT is GLX_NONE_EXT or GLX_TRANSPARENT_INDEX_EXT,
+    then the values returned for GLX_TRANSPARENT_RED_VALUE_EXT, 
+    GLX_TRANSPARENT_GREEN_VALUE_EXT, and GLX_TRANSPARENT_BLUE_VALUE_EXT are
+    undefined. When defined, GLX_TRANSPARENT_RED_VALUE_EXT, 
+    GLX_TRANSPARENT_GREEN_VALUE_EXT, and GLX_TRANSPARENT_BLUE_VALUE_EXT are 
+    integer framebuffer values between 0 and the maximum framebuffer value for 
+    the component. For example, GLX_TRANSPARENT_RED_VALUE_EXT will range 
+    between 0 and (2**GLX_RED_SIZE)-1.  (GLX_TRANSPARENT_ALPHA_VALUE_EXT is 
+    for future use.)
+
+        Attribute                 Type      Notes
+        ---------                 ----      -----
+        GLX_USE_GL                boolean   True if OpenGL rendering is supported
+        GLX_BUFFER_SIZE           integer   depth of the color buffer
+        GLX_LEVEL                 integer   frame buffer level
+        GLX_RGBA                  boolean   True if in RGBA rendering is supported
+        GLX_DOUBLEBUFFER          boolean   True if color buffers have front/back pairs
+        GLX_STEREO                boolean   True if color buffers have left/right pairs
+        GLX_AUX_BUFFERS           integer   number of auxiliary color buffers
+        GLX_RED_SIZE              integer   number of bits of Red in the framebuffer
+        GLX_GREEN_SIZE            integer   number of bits of Green in the framebuffer
+        GLX_BLUE_SIZE             integer   number of bits of Blue in the framebuffer
+        GLX_ALPHA_SIZE            integer   number of bits of Alpha in the framebuffer
+        GLX_DEPTH_SIZE            integer   number of bits in the depth buffer
+        GLX_STENCIL_SIZE          integer   number of bits in the stencil buffer
+        GLX_ACCUM_RED_SIZE        integer   number of bits of Red in the accumulation buffer
+        GLX_ACCUM_GREEN_SIZE      integer   number of bits of Green in the accumulation buffer
+        GLX_ACCUM_BLUE_SIZE       integer   number of bits of Blue in the accumulation buffer
+        GLX_ACCUM_ALPHA_SIZE      integer   number of bits of Alpha in the accumulation buffer
+        GLX_SAMPLE_BUFFERS_SGIS   integer   number of multisample buffers
+        GLX_SAMPLES_SGIS          integer   number of samples stored in each multisample buffer
+        GLX_X_VISUAL_TYPE_EXT     integer   X visual type of the GLX visual
+        GLX_TRANSPARENT_TYPE_EXT enum       None, TRANSPARENT_RGB_EXT, or TRANSPARENT_INDEX_EXT
+        GLX_TRANSPARENT_INDEX_VALUE_EXT integer   transparent index value.
+        GLX_TRANSPARENT_RED_VALUE_EXT   integer transparent red value.
+        GLX_TRANSPARENT_GREEN_VALUE_EXT integer transparent green value.
+        GLX_TRANSPARENT_BLUE_VALUE_EXT  integer transparent blue value.
+        GLX_TRANSPARENT_ALPHA_VALUE_EXT integer transparent alpha value.
+
+        Table 1: Configuration attributes
+
+    glXGetConfig returns one of the values in table 2 (below) when called
+    with attribute name GLX_X_VISUAL_TYPE_EXT.
+
+        GLX token name                  X Visual Type
+        --------------                  -------------
+        GLX_TRUE_COLOR_EXT              TrueColor
+        GLX_DIRECT_COLOR_EXT            DirectColor
+        GLX_PSEUDO_COLOR_EXT            PseudoColor
+        GLX_STATIC_COLOR_EXT            StaticColor
+        GLX_GRAY_SCALE_EXT              GrayScale
+        GLX_STATIC_GRAY_EXT             StaticGray
+
+        Table 2: X visual type token values
+
+    Replace the GLX specification discussion of glXChooseVisual with
+    the following text:
+
+    glXChooseVisual is used to find a visual that matches the client's
+    specified attributes.
+
+        XVisualInfo* glXChooseVisual( Display *dpy, int screen,
+                                      int *attrib_list );
+
+    glXChooseVisual returns a pointer to an XVisualInfo structure
+    describing the visual that best meets a minimum specification.  The
+    boolean GLX attributes of the visual that is returned will match the
+    specification exactly.  The integer GLX attributes will meet or exceed
+    the specified minimum values.  The enumerated GLX attributes are
+    matched in an attribute-specific manner.  If no conforming visual
+    exists, NULL is returned.
+
+    The enumerated attribute GLX_X_VISUAL_TYPE_EXT specifies which X
+    visual type is required for the requested GLX visual.  
+    
+    If GLX_RGBA is in <attrib_list>, then only GLX_TRUE_COLOR_EXT and 
+    GLX_DIRECT_COLOR_EXT can produce a match. If GLX_X_VISUAL_TYPE_EXT
+    is not in <attrib_list>, and if all other attributes are equivalent,
+    then a TrueColor visual will be chosen in preference to a DirectColor
+    visual.
+
+    If GLX_RGBA is not in <attrib_list>, then only GLX_PSEUDO_COLOR_EXT and 
+    GLX_STATIC_COLOR_EXT can produce a match. If GLX_X_VISUAL_TYPE_EXT
+    is not in <attrib_list>, and if all other attributes are equivalent,
+    then a PseudoColor visual will be chosen in preference to a StaticColor
+    visual.
+
+    The tokens GLX_GRAY_SCALE_EXT and GLX_STATIC_GRAY_EXT will not match
+    current OpenGL enabled visuals, but are included for future use.
+
+    If GLX_TRANSPARENT_TYPE_EXT is not included in <attrib_list>,
+    then the attribute will be treated as a "don't care" and a
+    visual with or without a transparent pixel may be chosen.
+    If GLX_TRANSPARENT_TYPE_EXT is not included in <attrib_list>, or if it
+    is set to GLX_NONE_EXT, then inclusion of GLX_TRANSPARENT_INDEX_VALUE_EXT, 
+    GLX_TRANSPARENT_RED_VALUE_EXT, GLX_TRANSPARENT_GREEN_VALUE_EXT, 
+    GLX_TRANSPARENT_BLUE_VALUE_EXT, or GLX_TRANSPARENT_ALPHA_VALUE_EXT
+    will be ignored. 
+
+    All boolean GLX attributes default to False except GLX_USE_GL, which
+    defaults to True.  All integer attributes default to zero.
+
+    Default specifications are superseded by the attributes included in
+    <attrib_list>.  Integer attributes are immediately followed by the
+    corresponding desired value.  Boolean attributes appearing in
+    <attrib_list> have an implicit True value; such attributes are never
+    followed by an explicit True or False value.  The list is terminated
+    with None.
+
+    To free the data returned, use XFree().
+
+    NULL is returned if an undefined GLX attribute is encountered, or
+    if an unacceptable enumerated attribute value is encountered.
+
+GLX Protocol
+
+    Seven new property type/property value pairs are included in the property 
+    list of each visual returned by glXGetVisualConfigs. The property 
+    type/property value pairs are encoded as
+
+    4           ENUM                    property type
+                0x22                    GLX_X_VISUAL_TYPE_EXT           
+    4           ENUM                    property value
+                0x8002                  GLX_TRUE_COLOR_EXT      
+                0x8003                  GLX_DIRECT_COLOR_EXT
+                0x8004                  GLX_PSEUDO_COLOR_EXT
+                0x8005                  GLX_STATIC_COLOR_EXT    
+                0x8006                  GLX_GRAY_SCALE_EXT
+                0x8007                  GLX_STATIC_GRAY_EXT
+
+    4           ENUM                    property type
+                0x23                    GLX_TRANSPARENT_TYPE_EXT
+    4           ENUM                    property value
+                0x8000                  GLX_NONE_EXT
+                0x8008                  GLX_TRANSPARENT_RGB_EXT
+                0x8009                  GLX_TRANSPARENT_INDEX_EXT
+
+    4           ENUM                    property type
+                0x24                    GLX_TRANSPARENT_INDEX_VALUE_EXT
+    4           BOOL32                  property value
+
+    4           ENUM                    property type
+                0x25                    GLX_TRANSPARENT_RED_VALUE_EXT
+    4           INT32                   property value
+
+    4           ENUM                    property type
+                0x26                    GLX_TRANSPARENT_GREEN_VALUE_EXT
+    4           INT32                   property value
+
+    4           ENUM                    property type
+                0x27                    GLX_TRANSPARENT_BLUE_VALUE_EXT
+    4           INT32                   property value
+
+    4           ENUM                    property type
+                0x28                    GLX_TRANSPARENT_ALPHA_VALUE_EXT
+    4           INT32                   property value
+
+
+Dependencies on SGIS_multisample
+
+    If SGIS_multisample is not supported, references to
+    GLX_SAMPLE_BUFFERS_SGIS and GLX_SAMPLES_SGIS in this document are
+    invalid and should be ignored.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    Get Value                           Get Command     Type
+    ---------                           -----------     ----
+    GLX_X_VISUAL_TYPE_EXT               glXGetConfig    Z6
+    GLX_TRANSPARENT_TYPE_EXT            glXGetConfig
+    GLX_TRANSPARENT_INDEX_VALUE_EXT     glXGetConfig    
+    GLX_TRANSPARENT_RED_VALUE_EXT       glXGetConfig
+    GLX_TRANSPARENT_GREEN_VALUE_EXT     glXGetConfig
+    GLX_TRANSPARENT_BLUE_VALUE_EXT      glXGetConfig
+    GLX_TRANSPARENT_ALPHA_VALUE_EXT     glXGetConfig

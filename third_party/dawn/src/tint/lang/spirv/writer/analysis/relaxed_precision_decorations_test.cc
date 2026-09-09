@@ -43,9 +43,11 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 class SpirvWriter_RelaxedPrecisionDecorationsTest : public core::ir::IRTestHelper {
   protected:
-    const core::ir::Capabilities kValidationCapabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
+    void SetUp() override {
+        core::ir::IRTestHelper::SetUp();
+        mod.properties.Add(core::ir::Property::kAllow16BitFloats,
+                           core::ir::Property::kAllowNonCoreTypes);
+    }
 
     type::Image* MakeSampledImage() {
         auto dim = type::Dim::kD2;
@@ -157,7 +159,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision due to the f16 texel format.
     // The texel value will be relaxed precision since it is converted to f16.
@@ -172,14 +174,16 @@ TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest,
     mod.root_block->Append(image);
 
     core::ir::Value* texel = nullptr;
+    core::ir::Instruction* tmp1 = nullptr;
+    core::ir::Instruction* tmp2 = nullptr;
     auto* ep = b.ComputeFunction("main");
     b.Append(ep->Block(), [&] {  //
         auto* coords = b.Zero<vec2u>();
         texel = b.Call<ir::BuiltinCall>(ty.vec4f(), BuiltinFn::kImageRead, b.Load(image), coords,
                                         Literal(0u))
                     ->Result();
-        auto* tmp1 = b.Let("tmp1", texel);
-        auto* tmp2 = b.Let("tmp2", tmp1);
+        tmp1 = b.Let("tmp1", texel);
+        tmp2 = b.Let("tmp2", tmp1);
         b.Let("result", b.Multiply(b.Convert<vec4h>(tmp2), 2_h));
         b.Return(ep);
     });
@@ -203,12 +207,14 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision due to the f16 texel format.
-    // The texel value will be relaxed precision since it is converted to f16.
+    // The texel value and intermediate lets will be relaxed precision since they are converted to
+    // f16.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
-    EXPECT_THAT(decorations, testing::UnorderedElementsAre(texel, image->Result()));
+    EXPECT_THAT(decorations, testing::UnorderedElementsAre(texel, image->Result(), tmp1->Result(),
+                                                           tmp2->Result()));
 }
 
 TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest,
@@ -244,7 +250,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision due to the f16 texel format.
     // The texel value will NOT be relaxed precision since it is used as an f32 value.
@@ -283,7 +289,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision due to the f16 texel format.
     // The texel value will be relaxed precision since it is converted from f16.
@@ -298,12 +304,14 @@ TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest,
     mod.root_block->Append(image);
 
     core::ir::Value* texel = nullptr;
+    core::ir::Value* converted_f = nullptr;
+    core::ir::Instruction* tmp1 = nullptr;
     auto* ep = b.ComputeFunction("main");
     b.Append(ep->Block(), [&] {  //
         auto* coords = b.Zero<vec2u>();
         auto* val_h = b.Splat<vec4h>(1_h);
-        auto* converted_f = b.Convert<vec4f>(val_h)->Result();
-        auto* tmp1 = b.Let("tmp1", converted_f);
+        converted_f = b.Convert<vec4f>(val_h)->Result();
+        tmp1 = b.Let("tmp1", converted_f);
         auto* tmp2 = b.Let("tmp2", tmp1);
         texel = tmp2->Result();
         b.Call<ir::BuiltinCall>(ty.void_(), BuiltinFn::kImageWrite, b.Load(image), coords, texel,
@@ -328,12 +336,14 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision since it is used with an f16 conversion.
-    // The texel value will be relaxed precision since it is converted from f16.
+    // The texel value and intermediate lets will be relaxed precision since they are converted from
+    // f16.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
-    EXPECT_THAT(decorations, testing::UnorderedElementsAre(image->Result(), texel));
+    EXPECT_THAT(decorations,
+                testing::UnorderedElementsAre(image->Result(), texel, tmp1->Result(), converted_f));
 }
 
 TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest, StorageTexture_F16Format_Write_F32) {
@@ -366,7 +376,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision due to the f16 texel format.
     // The texel value will NOT be relaxed precision since it is not converted from f16.
@@ -407,7 +417,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision since all accesses are converted to/from f16.
     // The texel value will be relaxed precision since it is converted to f16.
@@ -448,7 +458,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // Neither the image variable nor the texel value get relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
@@ -486,7 +496,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable and the texel value will be relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
@@ -524,7 +534,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // Neither the image variable nor the texel value get relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
@@ -575,7 +585,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The first texel value will be relaxed precision since it is converted to f16.
     // The image variable and second texel value will NOT be relaxed precision.
@@ -624,7 +634,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will NOT be relaxed precision since one write is not relaxed.
     // The first texel value will be relaxed precision since it is converted from f16.
@@ -649,8 +659,8 @@ TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest, SampledTexture_Read_Converte
         auto* loaded_image = b.Load(image);
         auto* loaded_sampler = b.Load(sampler);
         auto* sampled_image = b.CallExplicit<ir::BuiltinCall>(
-            ty.Get<type::SampledImage>(image_type), BuiltinFn::kOpSampledImage, Vector{image_type},
-            loaded_image, loaded_sampler);
+            ty.Get<type::SampledImage>(image_type), BuiltinFn::kOpSampledImage,
+            Vector<core::ir::TemplateParameter, 1>{image_type}, loaded_image, loaded_sampler);
 
         sample = b.Call<ir::BuiltinCall>(ty.vec4f(), BuiltinFn::kImageSampleImplicitLod,
                                          sampled_image, coords, Literal(0u))
@@ -678,7 +688,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision since all accesses are converted to/from f16.
     // The sampled value will be relaxed precision since it is converted to f16.
@@ -703,8 +713,8 @@ TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest, SampledTexture_Read_NotConve
         auto* loaded_image = b.Load(image);
         auto* loaded_sampler = b.Load(sampler);
         auto* sampled_image = b.CallExplicit<ir::BuiltinCall>(
-            ty.Get<type::SampledImage>(image_type), BuiltinFn::kOpSampledImage, Vector{image_type},
-            loaded_image, loaded_sampler);
+            ty.Get<type::SampledImage>(image_type), BuiltinFn::kOpSampledImage,
+            Vector<core::ir::TemplateParameter, 1>{image_type}, loaded_image, loaded_sampler);
 
         sample = b.Call<ir::BuiltinCall>(ty.vec4f(), BuiltinFn::kImageSampleImplicitLod,
                                          sampled_image, coords, Literal(0u))
@@ -732,7 +742,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // Neither the image variable nor the texel value get relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
@@ -771,7 +781,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision due to the f16 texel format.
     // The texel value will NOT be relaxed precision since it is converted to i32.
@@ -815,7 +825,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will NOT be relaxed precision because it is an integer format.
     // The texel value WILL be relaxed precision since it is converted to f16.
@@ -872,7 +882,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable will be relaxed precision since all accesses are converted to/from f16.
     // The texel value will be relaxed precision since it is converted to f16.
@@ -926,7 +936,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // Neither the image variable, function parameter, nor the texel value get relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
@@ -995,7 +1005,7 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The image variable, both function parameters, and the texel value will be relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
@@ -1060,12 +1070,104 @@ $B1: {  # root
 }
 )";
     EXPECT_EQ(src, str());
-    EXPECT_EQ(Validate(mod, kValidationCapabilities), Success);
+    EXPECT_EQ(Validate(mod), Success);
 
     // The first texel value will be relaxed precision since it is converted to f16.
     // The image variable, function parameter, and second texel value will NOT be relaxed precision.
     auto decorations = GetRelaxedPrecisionDecorations(mod);
     EXPECT_THAT(decorations, testing::UnorderedElementsAre(texel1));
+}
+
+TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest,
+       StorageTexture_F32Format_IntermediateSwizzle_ConvertedToF16) {
+    auto* image = b.Var("img", ty.ptr<handle>(MakeStorageImage(core::TexelFormat::kRgba32Float)));
+    image->SetBindingPoint(0, 0);
+    mod.root_block->Append(image);
+
+    core::ir::Value* texel = nullptr;
+    core::ir::Instruction* swiz = nullptr;
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {  //
+        auto* coords = b.Zero<vec2u>();
+        texel = b.Call<ir::BuiltinCall>(ty.vec4f(), BuiltinFn::kImageRead, b.Load(image), coords,
+                                        Literal(0u))
+                    ->Result();
+        swiz = b.Swizzle(ty.vec4f(), texel, {3, 2, 1, 0});
+        b.Let("result", b.Multiply(b.Convert<vec4h>(swiz), 2_h));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %img:ptr<handle, spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, rw_op_compatible, rgba32float, read_write>, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, rw_op_compatible, rgba32float, read_write> = load %img
+    %4:vec4<f32> = spirv.image_read %3, vec2<u32>(0u), 0u
+    %5:vec4<f32> = swizzle %4, wzyx
+    %6:vec4<f16> = convert %5
+    %7:vec4<f16> = mul %6, 2.0h
+    %result:vec4<f16> = let %7
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+    EXPECT_EQ(Validate(mod), Success);
+
+    // The image variable will be relaxed precision since all accesses are converted to f16.
+    // The texel value and intermediate swizzle will be relaxed precision since they are converted
+    // to f16.
+    auto decorations = GetRelaxedPrecisionDecorations(mod);
+    EXPECT_THAT(decorations, testing::UnorderedElementsAre(texel, image->Result(), swiz->Result()));
+}
+
+TEST_F(SpirvWriter_RelaxedPrecisionDecorationsTest,
+       StorageTexture_F32Format_IntermediateSwizzle_ConvertedFromF16) {
+    auto* image = b.Var("img", ty.ptr<handle>(MakeStorageImage(core::TexelFormat::kRgba32Float)));
+    image->SetBindingPoint(0, 0);
+    mod.root_block->Append(image);
+
+    core::ir::Value* converted_f = nullptr;
+    core::ir::Instruction* swiz = nullptr;
+    core::ir::Value* texel = nullptr;
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {  //
+        auto* coords = b.Zero<vec2u>();
+        auto* val_h = b.Splat<vec4h>(1_h);
+        converted_f = b.Convert<vec4f>(val_h)->Result();
+        swiz = b.Swizzle(ty.vec4f(), converted_f, {3, 2, 1, 0});
+        texel = swiz->Result();
+        b.Call<ir::BuiltinCall>(ty.void_(), BuiltinFn::kImageWrite, b.Load(image), coords, texel,
+                                Literal(0u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %img:ptr<handle, spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, rw_op_compatible, rgba32float, read_write>, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:vec4<f32> = convert vec4<f16>(1.0h)
+    %4:vec4<f32> = swizzle %3, wzyx
+    %5:spirv.image<f32, 2d, not_depth, non_arrayed, single_sampled, rw_op_compatible, rgba32float, read_write> = load %img
+    %6:void = spirv.image_write %5, vec2<u32>(0u), %4, 0u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+    EXPECT_EQ(Validate(mod), Success);
+
+    // The image variable will be relaxed precision since all accesses are converted from f16.
+    // The texel value (which is swizzle result), and converted f32 value will be relaxed precision
+    // since they are converted from f16.
+    auto decorations = GetRelaxedPrecisionDecorations(mod);
+    EXPECT_THAT(decorations, testing::UnorderedElementsAre(texel, image->Result(), converted_f));
 }
 
 }  // namespace

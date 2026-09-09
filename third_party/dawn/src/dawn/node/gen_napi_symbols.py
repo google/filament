@@ -38,17 +38,18 @@ output_file = Path(sys.argv[2])
 with open(symbols_js_file, "r") as f:
     matches = re.findall(r"napi_[a-z0-9_]*", f.read())
 
-if os.name == 'nt':
+if output_file.suffix == '.def':
+    # The target OS is Windows.
     # Generate the NapiSymbols.def file from the Napi symbol list
-    assert (output_file.suffix == ".def")
     with open(output_file, "w") as f:
         f.write("LIBRARY node.exe\n")
         f.write("EXPORTS\n")
         for symbol in matches:
             f.write(f"  {symbol}\n")
 else:
+    # The target OS is not Windows.
     # Generate the NapiSymbols.h file from the Napi symbol list
-    assert (output_file.suffix == ".h")
+    assert output_file.suffix == ".h", output_file.suffix
     with open(output_file, "w") as f:
         matches2 = [f"NAPI_SYMBOL({symbol})" for symbol in matches]
         f.write("\n".join(matches2))

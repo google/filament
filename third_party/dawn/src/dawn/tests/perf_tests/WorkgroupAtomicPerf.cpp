@@ -32,8 +32,8 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 // The purpose of this test is to estimate the overhead of atomics on workgroup memory.
 // There are cases where simple memory load stores could be used instead of atomicLoad/Store and

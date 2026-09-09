@@ -25,7 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnTest.h"
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
+#include "src/dawn/tests/DawnTest.h"
 
 #include <algorithm>
 #include <atomic>
@@ -43,27 +48,47 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/Platform.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/common/SystemUtils.h"
+// Need to be included before GLFW/glfw3.h to avoid MSVC warning C4005: 'APIENTRY': macro
+// redefinition
+#if DAWN_PLATFORM_IS(WINDOWS)
+#include "src/utils/windows_with_undefs.h"
+
+// Must come after windows_with_undefs
+#include <comdef.h>
+#include <versionhelpers.h>
+#endif
+
+#if DAWN_PLATFORM_IS(ANDROID)
+#include <android/api-level.h>
+#endif
+
 #include "dawn/dawn_proc.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/PartitionAllocSupport.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/PlatformDebugLogger.h"
-#include "dawn/utils/SystemUtils.h"
-#include "dawn/utils/TerribleCommandBuffer.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/Timer.h"
-#include "dawn/utils/WGPUHelpers.h"
-#include "dawn/utils/WireHelper.h"
 #include "dawn/wire/WireClient.h"
 #include "dawn/wire/WireServer.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/PartitionAllocSupport.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/PlatformDebugLogger.h"
+#include "src/dawn/utils/SystemUtils.h"
+#include "src/dawn/utils/TerribleCommandBuffer.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/Timer.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/dawn/utils/WireHelper.h"
+#include "src/utils/assert.h"
+#include "src/utils/crash_handler.h"
+#include "src/utils/log.h"
+#include "src/utils/platform.h"
+
+#ifdef DAWN_SUPPORTS_GLFW_FOR_WINDOWING
+#include "GLFW/glfw3.h"
+#include "webgpu/webgpu_glfw.h"
+#endif
 
 #ifdef DAWN_ENABLE_BACKEND_WEBGPU
 #include "dawn/native/WebGPUBackend.h"
@@ -74,12 +99,14 @@
 #include "dawn/native/OpenGLBackend.h"
 #endif  // DAWN_ENABLE_BACKEND_OPENGL
 
-#if DAWN_PLATFORM_IS(WINDOWS)
-#include <comdef.h>
-#include <versionhelpers.h>
-#endif
-
 namespace dawn {
+
+void GLFWindowDestroyer::operator()(GLFWwindow* ptr) {
+#ifdef DAWN_SUPPORTS_GLFW_FOR_WINDOWING
+    glfwDestroyWindow(ptr);
+#endif
+}
+
 namespace {
 
 using testing::_;
@@ -155,29 +182,6 @@ struct ParamTogglesHelper {
 }  // anonymous namespace
 
 #ifdef DAWN_ENABLE_BACKEND_WEBGPU
-class Capture {
-  public:
-    Capture(const std::string& commandData, const std::string& contentData)
-        : mCommandData(commandData), mContentData(contentData) {}
-
-    std::unique_ptr<replay::Replay> Replay(wgpu::Device device) {
-        std::istringstream commandIStream(mCommandData);
-        std::istringstream contentIStream(mContentData);
-
-        auto capture = replay::Capture::Create(commandIStream, mCommandData.size(), contentIStream,
-                                               mContentData.size());
-        std::unique_ptr<replay::Replay> replay = replay::Replay::Create(device, std::move(capture));
-
-        bool result = replay->Play();
-        EXPECT_TRUE(result);
-        return replay;
-    }
-
-  private:
-    std::string mCommandData;
-    std::string mContentData;
-};
-
 class Recorder {
   public:
     static std::unique_ptr<Recorder> CreateAndStart(wgpu::Device device) {
@@ -191,23 +195,85 @@ class Recorder {
         return recorder;
     }
 
-    Capture Finish() {
+    void SetSurfaces(std::vector<wgpu::Surface> surfaces) { mSurfaces = std::move(surfaces); }
+
+    void EndCapture() {
+        if (mCapture) {
+            return;
+        }
+
         native::webgpu::EndCapture(mDevice.Get());
         // Make sure at TearDown the device is released as the DawnTest will check device count.
         mDevice = nullptr;
-        return Capture(mCommandStream.str(), mContentStream.str());
+
+        auto commandData = mCommandStream.str();
+        auto contentData = mContentStream.str();
+        std::istringstream commandIStream(commandData);
+        std::istringstream contentIStream(contentData);
+
+        mCapture = replay::Capture::Create(commandIStream, commandData.size(), contentIStream,
+                                           contentData.size());
+    }
+
+    replay::Replay* Replay(wgpu::Device device) {
+        DAWN_ASSERT(mCapture);
+        mReplay = replay::Replay::Create(device, std::move(mCapture));
+
+        if (!mSurfaces.empty()) {
+            mReplay->SetSurfaces(mSurfaces);
+        }
+
+        bool result = mReplay->Play();
+        EXPECT_TRUE(result);
+        return mReplay.get();
+    }
+
+    replay::Capture* GetCapture() {
+        if (mReplay) {
+            return mReplay->GetCapture();
+        }
+
+        DAWN_ASSERT(mCapture);
+        return mCapture.get();
+    }
+
+    replay::Replay* GetReplay() const {
+        DAWN_ASSERT(mReplay);
+        return mReplay.get();
+    }
+
+    ~Recorder() {
+        if (mDevice != nullptr) {
+            native::webgpu::EndCapture(mDevice.Get());
+        }
     }
 
   private:
     explicit Recorder(wgpu::Device device) : mDevice(device) {}
 
     wgpu::Device mDevice;
+    std::vector<wgpu::Surface> mSurfaces;
     std::ostringstream mCommandStream;
     std::ostringstream mContentStream;
+
+    std::unique_ptr<replay::Replay> mReplay;
+    // Store the capture once EndCapture, it is moved to mReplay after a replay is started.
+    std::unique_ptr<replay::Capture> mCapture;
 };
 #else
 // A No-op version implementation of the Capture Replay functionality.
 namespace replay {
+
+struct SurfaceInfo {
+    uint32_t width;
+    uint32_t height;
+};
+
+class Capture {
+  public:
+    std::vector<SurfaceInfo> GetSurfaceInfos() const { DAWN_UNREACHABLE(); }
+};
+
 class Replay {
   public:
     template <typename T>
@@ -217,15 +283,12 @@ class Replay {
 };
 }  // namespace replay
 
-class Capture {
-  public:
-    std::unique_ptr<replay::Replay> Replay(wgpu::Device device) { DAWN_UNREACHABLE(); }
-};
-
 class Recorder {
   public:
     static std::unique_ptr<Recorder> CreateAndStart(wgpu::Device device) { DAWN_UNREACHABLE(); }
-    Capture Finish() { DAWN_UNREACHABLE(); }
+    void SetSurfaces(std::vector<wgpu::Surface> surfaces) {}
+    void EndCapture() { DAWN_UNREACHABLE(); }
+    replay::Replay* Replay(wgpu::Device device) { DAWN_UNREACHABLE(); }
 };
 #endif
 
@@ -294,6 +357,7 @@ DawnTestEnvironment* DawnTestEnvironment::GetEnvironment() {
 }
 
 DawnTestEnvironment::DawnTestEnvironment(int argc, char** argv) {
+    InstallCrashHandler(argv[0]);
     InitializePartitionAllocForTesting();
     InitializeDanglingPointerDetectorForTesting();
 
@@ -973,14 +1037,15 @@ DawnTestBase::DawnTestBase(const AdapterTestParam& param) : mParam(param) {
                 WGPUAdapterInfo info = {};
                 native::GetProcs().adapterGetInfo(candidate.Get(), &info);
 
-                const auto& param = gCurrentTest->mParam;
-                bool result = (param.adapterProperties.selected &&
-                               info.deviceID == param.adapterProperties.deviceID &&
-                               info.vendorID == param.adapterProperties.vendorID &&
-                               info.adapterType == static_cast<WGPUAdapterType>(
-                                                       param.adapterProperties.adapterType) &&
-                               std::string_view(info.device.data, info.device.length) ==
-                                   param.adapterProperties.name);
+                const auto& testParam = gCurrentTest->mParam;
+                bool result =
+                    (testParam.adapterProperties.selected &&
+                     info.deviceID == testParam.adapterProperties.deviceID &&
+                     info.vendorID == testParam.adapterProperties.vendorID &&
+                     info.adapterType ==
+                         static_cast<WGPUAdapterType>(testParam.adapterProperties.adapterType) &&
+                     DAWN_UNSAFE_TODO(std::string_view(info.device.data, info.device.length)) ==
+                         testParam.adapterProperties.name);
                 native::GetProcs().adapterInfoFreeMembers(info);
                 return result;
             });
@@ -1017,7 +1082,6 @@ DawnTestBase::DawnTestBase(const AdapterTestParam& param) : mParam(param) {
             callbackInfo.callback(WGPURequestDeviceStatus_Error, nullptr, kEmptyOutputStringView,
                                   callbackInfo.userdata1, callbackInfo.userdata2);
         } else {
-            gCurrentTest->mLastCreatedBackendDevice = cDevice;
             callbackInfo.callback(WGPURequestDeviceStatus_Success, cDevice, kEmptyOutputStringView,
                                   callbackInfo.userdata1, callbackInfo.userdata2);
         }
@@ -1125,6 +1189,10 @@ bool DawnTestBase::IsQualcomm() const {
            gpu_info::IsQualcommACPI(mAdapterInfo->vendorID);
 }
 
+bool DawnTestBase::IsSamsung() const {
+    return gpu_info::IsSamsung(mAdapterInfo->vendorID);
+}
+
 bool DawnTestBase::IsSwiftshader() const {
     return gpu_info::IsGoogleSwiftshader(mAdapterInfo->vendorID, mAdapterInfo->deviceID);
 }
@@ -1172,47 +1240,14 @@ bool DawnTestBase::IsWindows() const {
 }
 
 bool DawnTestBase::IsWindows11() const {
+    return IsWindowsVersionAtLeast(22000u);
+}
+
+bool DawnTestBase::IsWindowsVersionAtLeast(uint32_t buildNumber,
+                                           uint32_t updateBuildRevision) const {
 #if DAWN_PLATFORM_IS(WINDOWS)
-    // Windows 10 and 11 have the same version number and only differ by build number
-    if (!IsWindows10OrGreater()) {
-        return false;
-    }
-
-    // Referenced from base/win/registry.cc in Chromium
-    auto ReadFromSZRegistryKey = [](HKEY registerKey, const char* registerKeyName) -> uint64_t {
-        DWORD valueType;
-        DWORD returnSize;
-        if (RegQueryValueExA(registerKey, registerKeyName, nullptr, &valueType, nullptr,
-                             &returnSize) != ERROR_SUCCESS) {
-            return 0;
-        }
-        std::vector<char> returnStringValue(returnSize);
-        auto hr = RegQueryValueExA(registerKey, registerKeyName, nullptr, &valueType,
-                                   reinterpret_cast<LPBYTE>(returnStringValue.data()), &returnSize);
-        if (hr != ERROR_SUCCESS || valueType != REG_SZ) {
-            return 0;
-        }
-        constexpr int32_t kRadix = 10;
-        return strtol(returnStringValue.data(), nullptr, kRadix);
-    };
-
-    // Referenced from base/win/windows_version.cc in Chromium
-    auto GetCurrentBuildNumber = [&]() -> uint64_t {
-        constexpr wchar_t kRegKeyWindowsNTCurrentVersion[] =
-            L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
-        HKEY hKey;
-        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, kRegKeyWindowsNTCurrentVersion, 0, KEY_QUERY_VALUE,
-                          &hKey) != ERROR_SUCCESS) {
-            return false;
-        }
-        uint64_t v = ReadFromSZRegistryKey(hKey, "CurrentBuildNumber");
-        RegCloseKey(hKey);
-        return v;
-    };
-
-    static uint64_t currentBuildNumber = GetCurrentBuildNumber();
-    return currentBuildNumber >= 22000u;
-
+    const WindowsVersion currentVersion = GetCurrentWindowsVersion();
+    return currentVersion >= WindowsVersion{buildNumber, updateBuildRevision};
 #else
     return false;
 #endif
@@ -1226,15 +1261,19 @@ bool DawnTestBase::IsLinux() const {
 #endif
 }
 
-bool DawnTestBase::IsMacOS(int32_t majorVersion, int32_t minorVersion) const {
+bool DawnTestBase::IsMacOS() const {
 #if DAWN_PLATFORM_IS(MACOS)
-    if (majorVersion == -1 && minorVersion == -1) {
-        return true;
-    }
-    int32_t majorVersionOut, minorVersionOut = 0;
-    GetMacOSVersion(&majorVersionOut, &minorVersionOut);
-    return (majorVersion != -1 && majorVersion == majorVersionOut) &&
-           (minorVersion != -1 && minorVersion == minorVersionOut);
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool DawnTestBase::IsMacOSVersionAtLeast(uint32_t majorVersion,
+                                         uint32_t minorVersion,
+                                         uint32_t patchVersion) const {
+#if DAWN_PLATFORM_IS(MACOS)
+    return dawn::IsMacOSVersionAtLeast(majorVersion, minorVersion, patchVersion);
 #else
     return false;
 #endif
@@ -1243,6 +1282,15 @@ bool DawnTestBase::IsMacOS(int32_t majorVersion, int32_t minorVersion) const {
 bool DawnTestBase::IsAndroid() const {
 #if DAWN_PLATFORM_IS(ANDROID)
     return true;
+#else
+    return false;
+#endif
+}
+
+bool DawnTestBase::IsAndroidOlderThan(uint32_t version) const {
+#if DAWN_PLATFORM_IS(ANDROID)
+    // Android API level == (Android version + 20)
+    return static_cast<uint32_t>(android_get_device_api_level()) < (version + 20);
 #else
     return false;
 #endif
@@ -1270,11 +1318,6 @@ bool DawnTestBase::Is32Bit() const {
 #else
     return false;
 #endif
-}
-
-bool DawnTestBase::BackendDeviceHasFeature(wgpu::FeatureName feature) const {
-    return native::GetProcs().deviceHasFeature(backendDevice,
-                                               static_cast<WGPUFeatureName>(feature));
 }
 
 bool DawnTestBase::IsMesa(const std::string& mesaVersion) const {
@@ -1327,6 +1370,17 @@ bool DawnTestBase::IsCaptureReplayCheckingEnabled() const {
     return mCheckCaptureReplay;
 }
 
+replay::Capture* DawnTestBase::GetCapture() const {
+#ifdef DAWN_ENABLE_BACKEND_WEBGPU
+    if (mRecorder) {
+        return mRecorder->GetCapture();
+    }
+    return nullptr;
+#else
+    return nullptr;
+#endif
+}
+
 // static
 bool DawnTestBase::IsAsan() {
 #if defined(ADDRESS_SANITIZER)
@@ -1345,11 +1399,15 @@ bool DawnTestBase::IsTsan() {
 #endif
 }
 
-bool DawnTestBase::HasToggleEnabled(const char* toggle) const {
-    auto toggles = native::GetTogglesUsed(backendDevice);
+bool DawnTestBase::HasToggleEnabled(const char* toggle, const wgpu::Device& d) const {
+    auto toggles = native::GetTogglesUsed(GetWireHelper()->GetBackendDevice(d));
     return std::find_if(toggles.begin(), toggles.end(), [toggle](const char* name) {
                return strcmp(toggle, name) == 0;
            }) != toggles.end();
+}
+
+bool DawnTestBase::HasToggleEnabled(const char* toggle) const {
+    return HasToggleEnabled(toggle, device);
 }
 
 bool DawnTestBase::HasVendorIdFilter() const {
@@ -1523,10 +1581,9 @@ wgpu::Device DawnTestBase::CreateDevice(std::string isolationKey) {
 
     adapter.RequestDevice(
         &deviceDesc, wgpu::CallbackMode::AllowSpontaneous,
-        [&apiDevice, this](wgpu::RequestDeviceStatus status, wgpu::Device device,
-                           wgpu::StringView) {
+        [&apiDevice, this](wgpu::RequestDeviceStatus status, wgpu::Device d, wgpu::StringView) {
             if (status == wgpu::RequestDeviceStatus::Success) {
-                apiDevice = std::move(device);
+                apiDevice = std::move(d);
 
                 apiDevice.SetLoggingCallback([](wgpu::LoggingType type, wgpu::StringView message) {
                     std::string_view view = {message.data, message.length};
@@ -1676,8 +1733,6 @@ void DawnTestBase::SetUp() {
         return HandleDeviceCreationFailure();
     }
 
-    backendDevice = mLastCreatedBackendDevice;
-    DAWN_ASSERT(backendDevice);
     device.GetLimits(deviceLimits.GetLinked());
     queue = device.GetQueue();
 
@@ -1706,6 +1761,10 @@ void DawnTestBase::TearDown() {
     }
 
     mAdapterInfo = nullptr;
+
+    // At this point the capture context has been cleared and all surfaces held by it are released.
+    // Now it's safe to destroy the windows.
+    mReplayWindows.clear();
 }
 
 void DawnTestBase::DestroyDevice(wgpu::Device deviceToDestroy) {
@@ -1730,6 +1789,7 @@ void DawnTestBase::LoseDeviceForTesting(wgpu::Device deviceToLose) {
         .Times(1);
     resolvedDevice.ForceLoss(wgpu::DeviceLostReason::Unknown, "Device lost for testing");
     resolvedDevice.Tick();
+    FlushWire();
 }
 
 std::ostringstream& DawnTestBase::AddBufferExpectation(const char* file,
@@ -1738,7 +1798,7 @@ std::ostringstream& DawnTestBase::AddBufferExpectation(const char* file,
                                                        uint64_t offset,
                                                        uint64_t size,
                                                        detail::Expectation* expectation) {
-    uint64_t alignedSize = Align(size, uint64_t(4));
+    uint64_t alignedSize = Align(size, uint64_t{4});
     auto readback = ReserveReadback(device, alignedSize);
 
     // We need to enqueue the copy immediately because by the time we resolve the expectation,
@@ -1913,7 +1973,8 @@ std::ostringstream& DawnTestBase::ExpectSampledFloatDataImpl(wgpu::Texture textu
 
     // Create and initialize the slot buffer so that it won't unexpectedly affect the count of
     // resources lazily cleared.
-    const std::vector<float> initialBufferData(width * height * componentCount * sampleCount, 0.f);
+    const std::vector<float> initialBufferData(
+        static_cast<size_t>(width) * height * componentCount * sampleCount, 0.f);
     wgpu::Buffer readbackBuffer = utils::CreateBufferFromData(
         device, initialBufferData.data(), sizeof(float) * initialBufferData.size(),
         wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::Storage);
@@ -1959,8 +2020,10 @@ std::ostringstream& DawnTestBase::ExpectMultisampledFloatData(wgpu::Texture text
                                                               uint32_t arrayLayer,
                                                               uint32_t mipLevel,
                                                               detail::Expectation* expectation) {
-    return ExpectSampledFloatDataImpl(texture, width, height, componentCount, sampleCount,
-                                      arrayLayer, mipLevel, wgpu::TextureAspect::All, expectation);
+    return ExpectSampledFloatDataImpl(
+        texture, /*width=*/width, /*height=*/height, /*componentCount=*/componentCount,
+        /*sampleCount=*/sampleCount,
+        /*arrayLayer=*/arrayLayer, /*mipLevel=*/mipLevel, wgpu::TextureAspect::All, expectation);
 }
 
 std::ostringstream& DawnTestBase::ExpectSampledDepthData(wgpu::Texture texture,
@@ -1969,7 +2032,9 @@ std::ostringstream& DawnTestBase::ExpectSampledDepthData(wgpu::Texture texture,
                                                          uint32_t arrayLayer,
                                                          uint32_t mipLevel,
                                                          detail::Expectation* expectation) {
-    return ExpectSampledFloatDataImpl(texture, width, height, 1, 1, arrayLayer, mipLevel,
+    return ExpectSampledFloatDataImpl(texture, /*width=*/width, /*height=*/height,
+                                      /*componentCount=*/1, /*sampleCount=*/1,
+                                      /*arrayLayer=*/arrayLayer, /*mipLevel=*/mipLevel,
                                       wgpu::TextureAspect::DepthOnly, expectation);
 }
 
@@ -2108,7 +2173,7 @@ std::ostringstream& DawnTestBase::ExpectAttachmentDepthStencilTestData(
     wgpu::CommandBuffer commands = commandEncoder.Finish();
     queue.Submit(1, &commands);
 
-    std::vector<uint32_t> colorData(width * height, 1u);
+    std::vector<uint32_t> colorData(static_cast<size_t>(width) * height, 1u);
     return EXPECT_TEXTURE_EQ(colorData.data(), colorTexture, {0, 0}, {width, height});
 }
 
@@ -2206,21 +2271,19 @@ void DawnTestBase::MapSlotsSynchronously(std::span<ReadbackSlot> readbacks) {
     for (size_t slotIndex = 0; slotIndex < readbacks.size(); ++slotIndex) {
         auto& slot = readbacks[slotIndex];
 
-        slot.buffer.MapAsync(
-            wgpu::MapMode::Read, 0, wgpu::kWholeMapSize, wgpu::CallbackMode::AllowProcessEvents,
-            [this, &slot, &pendingMaps](wgpu::MapAsyncStatus status, wgpu::StringView) {
-                DAWN_ASSERT(status == wgpu::MapAsyncStatus::Success);
-                Mutex::AutoLock lg(&mMutex);
+        slot.buffer.MapAsync(wgpu::MapMode::Read, 0, wgpu::kWholeMapSize,
+                             wgpu::CallbackMode::AllowProcessEvents,
+                             [&slot, &pendingMaps](wgpu::MapAsyncStatus status, wgpu::StringView) {
+                                 DAWN_ASSERT(status == wgpu::MapAsyncStatus::Success);
+                                 if (status == wgpu::MapAsyncStatus::Success) {
+                                     slot.mappedData = slot.buffer.GetConstMappedRange();
+                                     DAWN_ASSERT(slot.mappedData != nullptr);
+                                 } else {
+                                     slot.mappedData = nullptr;
+                                 }
 
-                if (status == wgpu::MapAsyncStatus::Success) {
-                    slot.mappedData = slot.buffer.GetConstMappedRange();
-                    DAWN_ASSERT(slot.mappedData != nullptr);
-                } else {
-                    slot.mappedData = nullptr;
-                }
-
-                pendingMaps.fetch_sub(1, std::memory_order_release);
-            });
+                                 pendingMaps.fetch_sub(1, std::memory_order_release);
+                             });
     }
 
     // Busy wait until all map operations are done.
@@ -2287,14 +2350,39 @@ void DawnTestBase::CheckReplayedReadbackBuffers(std::span<ReadbackSlot> existing
     }
     // Stop recording.
     DAWN_ASSERT(mRecorder.get());
-    auto capture = mRecorder->Finish();
+    mRecorder->EndCapture();
+
+    // Create windows and surfaces for replay.
+    auto surfaceInfos = GetCapture()->GetSurfaceInfos();
+
+    if (!surfaceInfos.empty()) {
+#ifdef DAWN_SUPPORTS_GLFW_FOR_WINDOWING
+        std::vector<wgpu::Surface> surfaces;
+
+        for (const auto& info : surfaceInfos) {
+            // Set GLFW_NO_API to avoid GLFW bringing up a GL context that we won't use.
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            auto replayWindow = std::unique_ptr<GLFWwindow, GLFWindowDestroyer>(glfwCreateWindow(
+                info.width, info.height, "DawnTest Replay Window", nullptr, nullptr));
+
+            // Create surfaces and windows for the replay.
+            surfaces.push_back(
+                wgpu::glfw::CreateSurfaceForWindow(GetInstance(), replayWindow.get()));
+            mReplayWindows.push_back(std::move(replayWindow));
+        }
+
+        mRecorder->SetSurfaces(std::move(surfaces));
+#else
+        DAWN_UNREACHABLE();
+#endif
+    }
 
     // TODO(crbug.com/462149555): For now simply use the webgpu "outer" device for replay.
     // Ideally we would replay on a new device or the inner device (need public API to expose
     // it).
     wgpu::Device replayDevice = device;
 
-    auto replay = capture.Replay(replayDevice);
+    auto replay = mRecorder->Replay(replayDevice);
 
     for (auto& readback : existingReadbacks) {
         auto replayedBuffer = replay->GetObjectByLabel<wgpu::Buffer>(readback.label);
@@ -2353,11 +2441,9 @@ void DawnTestBase::StartTestTimer(float expected_max_time) {
 void DawnTestBase::ResolveDeferredExpectationsNow() {
     FlushWire();
 
-    MapSlotsSynchronously(mReadbackSlots);
-
-    CheckReplayedReadbackBuffers(mReadbackSlots);
-
     Mutex::AutoLock lg(&mMutex);
+    MapSlotsSynchronously(mReadbackSlots);
+    CheckReplayedReadbackBuffers(mReadbackSlots);
     ResolveExpectations();
 
     mDeferredExpectations.clear();

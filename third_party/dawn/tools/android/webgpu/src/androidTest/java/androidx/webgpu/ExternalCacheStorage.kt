@@ -25,15 +25,15 @@ import java.io.FileOutputStream
  * tests that do not run in a google3 environment, where [TestStorage] is not available.
  */
 class ExternalCacheStorage(private val context: Context) : Storage {
-    override fun writeImage(imageName: String, bitmap: Bitmap) {
-        val outputDir = context.cacheDir ?: throw Exception("cacheDir is null")
-        if (!outputDir.exists()) {
-            outputDir.mkdirs()
-        }
-
-        val outputFile = File(outputDir, imageName)
-        FileOutputStream(outputFile).use { stream ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        }
+  override fun writeImage(imageName: String, bitmap: Bitmap) {
+    val outputDir = context.cacheDir ?: throw Exception("cacheDir is null")
+    if (!outputDir.exists()) {
+      outputDir.mkdirs()
     }
+
+    val outputFile = File(outputDir, imageName)
+    FileOutputStream(outputFile).use { stream ->
+      bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+    }
+  }
 }

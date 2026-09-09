@@ -25,12 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/wire/client/EventManager.h"
+#include "src/dawn/wire/client/EventManager.h"
 
 #include <map>
 #include <optional>
@@ -38,9 +33,9 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Log.h"
-#include "dawn/common/Time.h"
-#include "dawn/wire/client/Client.h"
+#include "src/dawn/common/Time.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/utils/log.h"
 
 namespace dawn::wire::client {
 
@@ -92,7 +87,7 @@ EventManager::EventManager(size_t timedWaitAnyMaxCount)
     : mTimedWaitAnyMaxCount(timedWaitAnyMaxCount) {}
 
 EventManager::~EventManager() {
-    TransitionTo(State::ClientDropped);
+    Destroy();
 }
 
 std::pair<FutureID, bool> EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
@@ -103,20 +98,9 @@ std::pair<FutureID, bool> EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
 
     FutureID futureID = mNextFutureID++;
 
-    switch (mState) {
-        case State::InstanceDropped: {
-            if (event->GetCallbackMode() != WGPUCallbackMode_AllowSpontaneous) {
-                event->Complete(futureID, EventCompletionType::Shutdown);
-                return {futureID, false};
-            }
-            break;
-        }
-        case State::ClientDropped: {
-            event->Complete(futureID, EventCompletionType::Shutdown);
-            return {futureID, false};
-        }
-        case State::Nominal:
-            break;
+    if (mIsDestroyed) {
+        event->Complete(futureID, EventCompletionType::Shutdown);
+        return {futureID, false};
     }
 
     mTrackedEvents.Use([&](auto trackedEvents) {
@@ -127,41 +111,16 @@ std::pair<FutureID, bool> EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
     return {futureID, true};
 }
 
-void EventManager::TransitionTo(EventManager::State state) {
-    // If the client is disconnected, this becomes a no-op.
-    if (mState == State::ClientDropped) {
+void EventManager::Destroy() {
+    if (mIsDestroyed) {
         return;
     }
 
-    // Only forward state transitions are allowed.
-    DAWN_ASSERT(state > mState);
-    mState = state;
+    mIsDestroyed = true;
 
     while (true) {
         EventMap events;
-        switch (state) {
-            case State::InstanceDropped: {
-                mTrackedEvents.Use([&](auto trackedEvents) {
-                    for (auto it = trackedEvents->begin(); it != trackedEvents->end();) {
-                        auto& event = it->second;
-                        if (event->GetCallbackMode() != WGPUCallbackMode_AllowSpontaneous) {
-                            events.emplace(it->first, std::move(event));
-                            it = trackedEvents->erase(it);
-                        } else {
-                            ++it;
-                        }
-                    }
-                });
-                break;
-            }
-            case State::ClientDropped: {
-                mTrackedEvents.Use([&](auto trackedEvents) { events = std::move(*trackedEvents); });
-                break;
-            }
-            case State::Nominal:
-                // We always start in the nominal state so we should never be transitioning to it.
-                DAWN_UNREACHABLE();
-        }
+        mTrackedEvents.Use([&](auto trackedEvents) { events = std::move(*trackedEvents); });
         if (events.empty()) {
             break;
         }
@@ -197,7 +156,7 @@ void EventManager::ProcessPollEvents() {
 }
 
 namespace {
-bool UpdateAnyCompletedOrReady(std::span<WGPUFutureWaitInfo> waitInfos,
+bool UpdateAnyCompletedOrReady(Span<FutureWaitInfo> waitInfos,
                                const EventManager::EventMap& allEvents,
                                EventManager::EventMap* eventsToComplete) {
     DAWN_ASSERT(eventsToComplete->empty());
@@ -224,35 +183,34 @@ bool UpdateAnyCompletedOrReady(std::span<WGPUFutureWaitInfo> waitInfos,
 }
 }  // anonymous namespace
 
-WGPUWaitStatus EventManager::WaitAny(size_t count, WGPUFutureWaitInfo* infos, uint64_t timeoutNS) {
+wgpu::WaitStatus EventManager::WaitAny(Span<FutureWaitInfo> infos, uint64_t timeoutNS) {
     if (timeoutNS > 0) {
         if (mTimedWaitAnyMaxCount == 0) {
             dawn::ErrorLog() << "Instance only supports timed wait anys if "
                                 "WGPUInstanceFeatureName_TimedWaitAny is enabled.";
-            return WGPUWaitStatus_Error;
+            return wgpu::WaitStatus::Error;
         }
-        if (count > mTimedWaitAnyMaxCount) {
+        if (infos.size() > mTimedWaitAnyMaxCount) {
             dawn::ErrorLog() << "Instance only supports up to (" << mTimedWaitAnyMaxCount
                              << ") timed wait anys.";
-            return WGPUWaitStatus_Error;
+            return wgpu::WaitStatus::Error;
         }
     }
 
-    if (count == 0) {
-        return WGPUWaitStatus_Success;
+    if (infos.empty()) {
+        return wgpu::WaitStatus::Success;
     }
 
     // Since the user can specify the FutureIDs in any order, we need to use another ordered map
     // here to ensure that the result is ordered for JS event ordering.
-    auto waitInfos = std::span(infos, count);
     EventMap eventsToComplete;
     bool anyCompleted = mTrackedEvents.ConstUse([&](auto trackedEvents) {
-        if (UpdateAnyCompletedOrReady(waitInfos, *trackedEvents, &eventsToComplete)) {
+        if (UpdateAnyCompletedOrReady(infos, *trackedEvents, &eventsToComplete)) {
             return true;
         }
         if (timeoutNS > 0) {
             return trackedEvents.WaitFor(Nanoseconds(timeoutNS), [&](const EventMap& events) {
-                return UpdateAnyCompletedOrReady(waitInfos, events, &eventsToComplete);
+                return UpdateAnyCompletedOrReady(infos, events, &eventsToComplete);
             });
         }
         return false;
@@ -269,7 +227,7 @@ WGPUWaitStatus EventManager::WaitAny(size_t count, WGPUFutureWaitInfo* infos, ui
         }
     });
 
-    return anyCompleted ? WGPUWaitStatus_Success : WGPUWaitStatus_TimedOut;
+    return anyCompleted ? wgpu::WaitStatus::Success : wgpu::WaitStatus::TimedOut;
 }
 
 }  // namespace dawn::wire::client

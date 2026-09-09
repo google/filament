@@ -30,7 +30,7 @@
 
 #include <memory>
 
-#include "dawn/common/vulkan_platform.h"
+#include "src/dawn/common/vulkan_platform.h"
 
 namespace dawn::native::vulkan {
 class Device;

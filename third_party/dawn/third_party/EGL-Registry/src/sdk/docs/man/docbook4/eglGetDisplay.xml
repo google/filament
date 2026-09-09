@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglGetDisplay">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglGetDisplay</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetDisplay</refname>
+        <refpurpose>
+            return an <acronym>EGL</acronym> display connection
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLDisplay <function>eglGetDisplay</function></funcdef>
+                <paramdef>NativeDisplayType <parameter>native_display</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>native_display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the display to connect to.
+                        <constant>EGL_DEFAULT_DISPLAY</constant> indicates the default display.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglGetDisplay</function> obtains the
+            <acronym>EGL</acronym> display connection for the native
+            display <parameter>native_display</parameter>.
+        </para>
+        <para>
+            If <parameter>display_id</parameter> is
+            <constant>EGL_DEFAULT_DISPLAY</constant>, a default display connection is returned.
+        </para>
+        <para>
+            If no display connection matching <parameter>native_display</parameter> is
+            available, <constant>EGL_NO_DISPLAY</constant> is returned. No
+            error is generated.
+        </para>
+        <para>
+            Use <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+            to initialize the display connection.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

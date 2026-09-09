@@ -1,0 +1,915 @@
+Name
+
+    NV_fragment_program2
+
+Name Strings
+
+    GL_NV_fragment_program2
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified:      08/04/2004
+    NVIDIA Revision:    8
+
+Number
+
+    304
+
+
+Dependencies
+
+    ARB_fragment_program is required.
+    NV_fragment_program_option is required.
+
+Overview
+
+    This extension, like the NV_fragment_program_option extension, provides
+    additional fragment program functionality to extend the standard
+    ARB_fragment_program language and execution environment.  ARB programs
+    wishing to use this added functionality need only add:
+
+        OPTION NV_fragment_program2;
+
+    to the beginning of their fragment programs.
+
+    New functionality provided by this extension, above and beyond that
+    already provided by the NV_fragment_program_option extension, includes:
+
+
+      * structured branching support, including data-dependent IF tests, loops
+        supporting a fixed number of iterations, and a data-dependent loop
+        exit instruction (BRK),
+
+      * subroutine calls,
+
+      * instructions to perform vector normalization, divide vector components
+        by a scalar, and perform two-component dot products (with or without a
+        scalar add),
+
+      * an instruction to perform a texture lookup with an explicit LOD,
+
+      * a loop index register for indirect access into the texture coordinate
+        attribute array, and
+
+      * a facing attribute that indicates whether the fragment is generated
+        from a front- or back-facing primitive.
+
+
+Issues
+
+    * Should this extension expose projective forms of the LOD-modifying
+      texture instructions?
+
+        RESOLVED: No. The user can manually add a DIV instruction to achieve
+        the same effect.
+
+    * Should this extension expose precision explicitly?
+
+        RESOLVED: Only for storage using the SHORT TEMP and LONG TEMP syntax
+        (similar to NV_fragment_program_option).
+
+    * How are resources (such as registers and condition codes) scoped?
+
+        RESOLVED: All resources are globally scoped. This means that if, for
+        instance, a subroutine modifies a condition code, that modification
+        effects both the caller and the callee.
+
+    * How is the scope determined for instructions required to be within a
+      specific loop construct?
+
+        RESOLVED: The scope is determined statically at compile time. This means
+        that calling BRK and using A0 from a subroutine called within a loop is
+        a compile error.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetProgramivARB:
+
+        MAX_PROGRAM_EXEC_INSTRUCTIONS_NV                0x88F4
+        MAX_PROGRAM_CALL_DEPTH_NV                       0x88F5
+        MAX_PROGRAM_IF_DEPTH_NV                         0x88F6
+        MAX_PROGRAM_LOOP_DEPTH_NV                       0x88F7
+        MAX_PROGRAM_LOOP_COUNT_NV                       0x88F8
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Modify Section 3.11 of ARB_fragment_program (Fragment Program):
+
+    Delete the sentence referring to the lack of branching or looping.
+
+    Modify Section 3.11.2 of ARB_fragment_program (Fragment Program Grammar
+    and Restrictions):
+
+    (mostly add to existing grammar rules, as extended by
+    NV_fragment_program_option)
+    
+    <optionName>            ::= "NV_fragment_program2"
+
+    <statement>             ::= <branchLabel> ":"
+
+    <instruction>           ::= <FlowInstruction>
+
+    <ALUInstruction>        ::= <VECSCAop_instruction>
+
+    <FlowInstruction>       ::= <BRAop_instruction>
+                              | <FLOWCCop_instruction>
+                              | <IFop_instruction>
+                              | <LOOPop_instruction>
+                              | <ENDFLOWop_instruction>
+
+    <VECTORop>              ::= "NRM"
+
+    <VECSCAop_instruction>  ::= <VECSCAop> <instResult> "," <instOperandV> "," 
+                                <instOperandS>
+
+    <VECSCAop>              ::= "DIV"
+
+    <BINop>                 ::= "DP2"
+
+    <TRIop>                 ::= "DP2A"
+
+    <TEXop>                 ::= "TXL"
+
+    <BRAop_instruction>     ::= <BRAop> <branchLabel> <optBranchCond>
+
+    <BRAop>                 ::= "CAL"
+
+    <FLOWCCop_instruction>  ::= <FLOWCCop> <optBranchCond>
+
+    <FLOWCCop>              ::= "RET"
+                              | "BRK"
+
+    <IFop_instruction>      ::= <IFop> <ccTest>
+
+    <IFop>                  ::= "IF"
+
+    <LOOPop_instruction>    ::= <LOOPop> <instOperandV>
+
+    <LOOPop>                ::= "LOOP"
+                              | "REP"
+
+    <ENDFLOWop_instruction> ::= <ENDFLOWop>
+
+    <ENDFLOWop>             ::= "ELSE"
+                              | "ENDIF"
+                              | "ENDLOOP"
+                              | "ENDREP"
+
+    <optBranchCond>         ::= /* empty */
+                              | <ccMask>
+
+    <branchLabel>           ::= <identifier>
+
+    <attribFragBasic>       ::= "texcoord" "[" <arrayMemRel> "]"
+                              | "facing"
+
+    <arrayMemRel>           ::= <addrUseS> <arrayMemRelOffset>
+
+    <arrayMemRelOffset>     ::= /* empty */
+                              | "+" <addrRegPosOffset>
+
+    <addrRegPosOffset>      ::= <integer> from 0 to 9
+
+    <addrUseS>              ::= <addrVarName> <scalarAddrSuffix>
+
+    <scalarAddrSuffix>      ::= "." <addrComponent>
+
+    <addrComponent>         ::= "x"
+
+    Note:  This extension provides a pre-defined address register (A0) that
+    matches the <addrVarName> grammar rule and can be used as a loop counter
+    (Section 3.11.3.Y).  It is not possible to declare additional address
+    register variables.
+    
+
+    Modify Section 3.11.3.1, Fragment Attributes
+
+    (add new bindings to binding table)
+
+      Fragment Attribute Binding  Components  Underlying State
+      --------------------------  ----------  ----------------------------
+      ...
+      fragment.texcoord[A0.x+n]   (s,t,r,q)   indexed texture coordinate
+      fragment.facing             (f,0,0,1)   fragment facing
+
+    If a fragment attribute binding matches "fragment.texcoord[A0.x+n]", a
+    texture coordinate number <c> is computed by adding the current value of
+    the "A0.x" address register (the loop index -- Section 3.11.3.Y) and <n>.
+    The "x", "y", "z", and "w" components of the fragment attribute variable
+    are filled with the "s", "t", "r", and "q" components, respectively, of
+    the fragment texture coordinates for texture coordinate set <c>.  If <c>
+    is negative or greater than or equal to MAX_TEXTURE_COORDS_ARB, the
+    fragment attribute variable is undefined.
+
+    If a fragment attribute binding matches "fragment.facing", the "x"
+    component of the fragment attribute variable is filled with +1.0 or -1.0,
+    depending on the orientation of the primitive producing the fragment.  If
+    the fragment is generated by a back-facing polygon (including point- and
+    line-mode polygons), the facing is -1.0; otherwise, the facing is +1.0.
+    The "y", "z", and "w" coordinates are filled with 0, 0, and 1,
+    respectively.
+
+
+    Add New Section 3.11.3.Y, Fragment Program Address Register (insert after
+    Section 3.11.3.X, Condition Code Register)
+
+    Fragment program address register variables are a set of four-component
+    signed integer vectors where only the "x" component of the address
+    registers is currently accessible.  Address registers are used as indices
+    when performing relative addressing in the "fragment.texcoord" attribute
+    array (section 3.11.3.1).
+
+    Fragment program address registers can not be declared in a fragment
+    program.  There is only a single built-in address register, "A0.x" (loop
+    index), which is available inside LOOP/ENDLOOP blocks.  A fragment program
+    that accesses A0.x outside a LOOP/ENDLOOP block will fail to load.
+
+    A0.x is initialized in by the LOOP instruction and updated by the ENDLOOP
+    instruction.  When LOOP blocks are nested, each block has its own value
+    for A0.x, but only the A0.x value for the innermost block can be used. The
+    value of A0.x is clamped to be greater than or equal to 0.
+
+    
+    Modify Section 3.11.4, Fragment Program Execution Environment
+
+    (modify instruction table) There are sixty-seven fragment program
+    instructions....
+
+               Modifiers
+      Instr.   R H X C S  Inputs  Output   Description
+      -------  - - - - -  ------  ------   --------------------------------
+      ABS      X X X X X  v       v        absolute value
+      ADD      X X X X X  v,v     v        add
+      BRK      - - - - -  c       -        break out of loop instruction
+      CAL      - - - - -  c       -        subroutine call
+      CMP      - - - X X  v,v,v   v        compare
+      COS      X X - X X  s       ssss     cosine with reduction to [-PI,PI]
+      DDX      X X - X X  v       v        partial derivative relative to X
+      DDY      X X - X X  v       v        partial derivative relative to Y
+      DIV      X X - X X  v,s     v        divide vector components by scalar
+      DP2      X X X X X  v,v     ssss     2-component dot product
+      DP2A     X X X X X  v,v,v   ssss     2-comp. dot product w/scalar add
+      DP3      X X X X X  v,v     ssss     3-component dot product
+      DP4      X X X X X  v,v     ssss     4-component dot product
+      DPH      X X X X X  v,v     ssss     homogeneous dot product
+      DST      X X - X X  v,v     v        distance vector
+      ELSE     - - - - -  -       -        start if test else block
+      ENDIF    - - - - -  -       -        end if test block
+      ENDLOOP  - - - - -  -       -        end of loop block
+      ENDREP   - - - - -  -       -        end of repeat block
+      EX2      X X - X X  s       ssss     exponential base 2
+      FLR      X X X X X  v       v        floor
+      FRC      X X X X X  v       v        fraction
+      IF       - - - - -  c       -        start of if test block
+      KIL      - - - - -  v or c  -        kill fragment
+      LG2      X X - X X  s       ssss     logarithm base 2
+      LIT      X X - X X  v       v        compute light coefficients
+      LOOP     - - - - -  v       -        start of loop block        
+      LRP      X X X X X  v,v,v   v        linear interpolation
+      MAD      X X X X X  v,v,v   v        multiply and add
+      MAX      X X X X X  v,v     v        maximum
+      MIN      X X X X X  v,v     v        minimum
+      MOV      X X X X X  v       v        move
+      MUL      X X X X X  v,v     v        multiply
+      NRM      X X - X X  v       v        normalize 3-component vector
+      PK2H     - - - - -  v       ssss     pack two 16-bit floats
+      PK2US    - - - - -  v       ssss     pack two unsigned 16-bit scalars
+      PK4B     - - - - -  v       ssss     pack four signed 8-bit scalars
+      PK4UB    - - - - -  v       ssss     pack four unsigned 8-bit scalars
+      POW      X X - X X  s,s     ssss     exponentiate
+      RCP      X X - X X  s       ssss     reciprocal
+      REP      - - - - -  v       -        start of repeat block
+      RET      - - - - -  c       -        subroutine return
+      RFL      X X - X X  v,v     v        reflection vector
+      RSQ      X X - X X  s       ssss     reciprocal square root
+      SCS      X X - X X  s       ss--     sine/cosine without reduction
+      SEQ      X X X X X  v,v     v        set on equal
+      SFL      X X X X X  v,v     v        set on false
+      SGE      X X X X X  v,v     v        set on greater than or equal
+      SGT      X X X X X  v,v     v        set on greater than
+      SIN      X X - X X  s       ssss     sine with reduction to [-PI,PI]
+      SLE      X X X X X  v,v     v        set on less than or equal
+      SLT      X X X X X  v,v     v        set on less than
+      SNE      X X X X X  v,v     v        set on not equal
+      STR      X X X X X  v,v     v        set on true
+      SUB      X X X X X  v,v     v        subtract
+      SWZ      X X - X X  v       v        extended swizzle
+      TEX      - - - X X  v       v        texture sample
+      TXB      - - - X X  v       v        texture sample with bias
+      TXD      - - - X X  v,v,v   v        texture sample w/partials      
+      TXL      - - - X X  v       v        texture same w/explicit LOD
+      TXP      - - - X X  v       v        texture sample with projection
+      UP2H     - - - X X  s       v        unpack two 16-bit floats
+      UP2US    - - - X X  s       v        unpack two unsigned 16-bit scalars
+      UP4B     - - - X X  s       v        unpack four signed 8-bit scalars
+      UP4UB    - - - X X  s       v        unpack four unsigned 8-bit scalars
+      X2D      X X - X X  v,v,v   v        2D coordinate transformation
+      XPD      X X - X X  v,v     v        cross product
+
+      Table X.5:  Summary of fragment program instructions.  The columns "R",
+      "H", "X", "C", and "S" indicate whether the "R", "H", or "X" precision
+      modifiers, the C condition code update modifier, and the "_SAT"/"_SSAT"
+      saturation modifiers, respectively, are supported for the opcode.  In
+      the input/output columns, "v" indicates a floating-point vector input or
+      output, "s" indicates a floating-point scalar input, "ssss" indicates a
+      scalar output replicated across a 4-component result vector, "ss--"
+      indicates two scalar outputs in the first two components, and "c"
+      indicates a condition code test.  Instructions describe as "texture
+      sample" also specify a texture image unit identifier and a texture
+      target.
+
+
+    Modify Section 3.11.4.3, Fragment Program Destination Register Update
+
+    (modify saturation discussion) If the instruction opcode has the "_SAT"
+    suffix, requesting saturated result vectors, each component of the result
+    vector is clamped to the range [0,1] before updating the destination
+    register.  If the instruction opcode has the "_SSAT" suffix, requesting
+    signed saturation, each component of the result vector is clamped to the
+    range [-1,1] before updating the destination register.
+
+
+    Add Section 3.11.4.X, Fragment Program Branching (before Section 3.11.4.4,
+    Fragment Program Result Processing)
+
+    Fragment programs support a limited model of branching.  Fragment programs
+    can specify one of several types of instruction blocks: IF/ELSE/ENDIF
+    blocks, LOOP/ENDLOOP blocks, and REP/ENDREP blocks.  Examples include the
+    following:
+
+      LOOP {5, 0, 1};     # 5 iterations with loop index at 0,1,2,3,4
+      ADD R0, R0, R1;
+      ENDLOOP;
+
+      REP repCount;
+      ADD R0, R0, R1;
+      ENDREP;
+
+      MOVC CC, R0;
+      IF GT.x;
+        MOV R0, R1;  # executes if R0.x > 0
+      ELSE;
+        MOV R0, R2;  # executes if R0.x <= 0
+      ENDIF;
+
+    Instruction blocks may be nested -- for example, a LOOP block may be
+    contained inside an IF/ELSE/ENDIF block.  In all cases, each instruction
+    block must be terminated with the appropriate instruction (ENDIF for IF,
+    ENDLOOP for LOOP, ENDREP for REP).  Nested instruction blocks must be
+    wholly contained within a block -- if a LOOP instruction is found between
+    an IF and ELSE instruction, the ENDLOOP must also be present between the
+    IF and ELSE.  A fragment program will fail to load if any instruction
+    block is terminated by an incorrect instruction or is not terminated
+    before the block containing it.
+
+    IF/ELSE/ENDIF blocks evaluate a condition to determine which instructions
+    to execute.  If the condition is true, all instructions between the IF and
+    ELSE are executed.  If the condition is false, all instructions between
+    the ELSE and ENDIF are executed.  The ELSE instruction is optional.  If
+    the ELSE is omitted, all instructions between the IF and ENDIF are
+    executed if the condition is true, or skipped if the condition is false.
+    A limited amount of nesting is supported -- a fragment program will fail
+    to load if an IF instruction is nested inside MAX_PROGRAM_IF_DEPTH_NV or
+    more IF/ELSE/ENDIF blocks.
+
+    The condition of an IF test is specified by the <ccTest> grammar rule and
+    may depend on the contents of the condition code register.  Branch
+    conditions are evaluated by evaluating a condition code write mask in
+    exactly the same manner as done for register writes (section 2.14.2.2).
+    If any of the four components of the condition code write mask are
+    enabled, the branch is taken and execution continues with the instruction
+    following the label specified in the instruction.  Otherwise, the
+    instruction is ignored and fragment program execution continues with the
+    next instruction.  In the following example code,
+
+        MOVC CC, c[0];         # c[0]=(-2, 0, 2, NaN), CC gets (LT,EQ,GT,UN)
+        CAL label1 (LT.xyzw);  # call taken
+        CAL label2 (LT.wyzw);  # call not taken
+
+    the first CAL instruction loads a condition code of (LT,EQ,GT,UN) while
+    the second CAL instruction loads a condition code of (UN,EQ,GT,UN).  The
+    first call will be made because the "x" component evaluates to LT; the
+    second call will not be made because no component evaluates to LT.
+
+    LOOP/ENDLOOP and REP/ENDREP blocks involve a loop counter that indicates
+    the number of times the instructions between the LOOP/REP and
+    ENDLOOP/ENDREP are executed.  Looping blocks have a number of significant
+    limitations.  First, the loop counter can not be computed at run time; it
+    must be specified as a program parameter.  Second, the number of loop
+    iterations is limited to the value MAX_PROGRAM_LOOP_COUNT_NV, which must
+    be at least 255.  Third, only a limited amount of nesting is supported --
+    a fragment program will fail to load if a LOOP or REP instruction is
+    nested inside MAX_PROGRAM_LOOP_DEPTH_NV or more LOOP/ENDLOOP or REP/ENDREP
+    blocks.
+
+    The BRK instruction is available to terminate a loop block early.  A BRK
+    instruction can be conditional; the condition is evaluated in the same
+    manner as the condition of an IF instruction, and the loop is terminated
+    if the condition is true.  A fragment program will fail to load if it
+    contains a BRK instruction that is not nested inside a LOOP/ENDLOOP or
+    REP/ENDREP block.
+
+    Fragment programs can contain one or more instruction labels, matching the
+    grammar rule <branchLabel>.  An instruction label can be referred to
+    explicitly in subroutine call (CAL) instructions.  Instruction labels can
+    be used at any point in the body of a program, and can be used in
+    instructions before being defined in the program string.  Instruction
+    labels can be defined anywhere in the program, except inside an
+    IF/ELSE/ENDIF, LOOP/ENDLOOP, or REP/ENDREP instruction block.  A fragment
+    program will fail to load if it contains an instruction label inside an
+    instruction block.
+
+    Fragment programs can also specify subroutine calls.  When a subroutine
+    call (CAL) instruction is executed, a reference to the instruction
+    immediately following the CAL instruction is pushed onto the call stack.
+    When a subroutine return (RET) instruction is executed, an instruction
+    reference is popped off the call stack and program execution continues
+    with the popped instruction.  A fragment program will terminate if a CAL
+    instruction is executed with MAX_PROGRAM_CALL_DEPTH_NV entries already in
+    the call stack or if a RET instruction is executed with an empty call
+    stack.  Subroutine calls may be conditional; the condition is specified by
+    the <optBranchCond> grammar rule and evaluated in the same way as the
+    condition of the IF instruction.  If no condition is specified, it is as
+    though "(TR)" were specified -- the branch is unconditional.
+
+    If a fragment program has an instruction label "main", program execution
+    begins with the instruction immediately following the instruction label.
+    Otherwise, program execution begins with the first instruction of the
+    program.  Instructions will be executed sequentially in the order
+    specified in the program, although branch instructions will affect the
+    instruction execution order, as described above.  A fragment program will
+    terminate after executing a RET instruction with an empty call stack.  A
+    fragment program will also terminate after executing the last instruction
+    in the program, unless that instruction was a taken branch.
+
+    A fragment program will fail to load if an instruction refers to a label
+    that is not defined in the program string.
+
+    A fragment program will terminate abnormally if a subroutine call
+    instruction produces a call stack overflow.  Additionally, a fragment
+    program will terminate abnormally after executing
+    MAX_PROGRAM_EXEC_INSTRUCTIONS instructions to prevent hangs caused by
+    infinite loops in the program.
+
+    When a fragment program terminates, normally or abnormally, it will emit a
+    fragment whose attributes are taken from the final values of the fragment
+    program result variables (section 3.11.3.4).
+
+
+    Add to Section 3.11.4.5 of ARB_fragment_program (Fragment Program
+    Options):
+
+    Section 3.11.4.5.3, NV_fragment_program2 Option
+
+    If a fragment program specifies the "NV_fragment_program2" option, the
+    ARB_fragment_program grammar and execution environment are extended to
+    take advantage of all the features of the "NV_fragment_program" option,
+    plus the following features:
+
+      * structured branching support, including data-dependent IF tests, loops
+        supporting a fixed number of iterations, and a data-dependent loop
+        exit instruction (BRK),
+
+      * subroutine calls,
+
+      * several new instructions:
+
+        * NRM -- vector normalization
+        * DIV -- divide vector components by a scalar
+        * DP2 -- two-component dot product
+        * DP2A -- two-component dot product with scalar add
+        * TXL -- texture lookup with explicit LOD specified
+        * IF/ELSE/ENDIF -- conditional execution blocks
+        * REP/ENDREP -- loop block
+        * LOOP/ENDLOOP -- loop block using index register
+        * BRK -- break out of loop block
+        * CAL -- subroutine call
+        * RET -- subroutine return
+
+      * a loop index register inside LOOP/ENDLOOP blocks that can be used for
+        indirect access into the texture coordinate attribute array, and
+
+      * a facing attribute that indicates whether the fragment is generated
+        from a front- or back-facing primitive.
+
+
+    Modify Section 3.11.5,  Fragment Program ALU Instruction Set
+
+    Section 3.11.5.48, DIV:  Divide (Vector Components by Scalar)
+
+    The DIV instruction divides each component of the first vector operand by
+    the second scalar operand to produce a 4-component result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = ScalarLoad(op1);
+      result.x = tmp0.x / tmp1;
+      result.y = tmp0.y / tmp1;
+      result.z = tmp0.z / tmp1;
+      result.w = tmp0.w / tmp1;
+
+    This instruction may not produce results identical to a RCP/MUL
+    instruction sequence.
+
+
+    Section 3.11.5.49, DP2:  2-Component Dot Product
+
+    The DP2 instruction computes a two-component dot product of the two
+    operands (using the first two components) and replicates the dot product
+    to all four components of the result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      dot = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y);
+      result.x = dot;
+      result.y = dot;
+      result.z = dot;
+      result.w = dot;
+
+    Section 3.11.5.50, DP2A:  2-Component Dot Product w/Scalar Add
+
+    The DP2 instruction computes a two-component dot product of the two
+    operands (using the first two components), adds the x component of the
+    third operand, and replicates the result to all four components of the
+    result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      tmp2 = VectorLoad(op2);
+      dot = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + tmp2.x;
+      result.x = dot;
+      result.y = dot;
+      result.z = dot;
+      result.w = dot;
+
+
+    Section 3.11.5.51, NRM:  3-Component Vector Normalize
+
+    The NRM instruction normalizes the vector given by the x, y, and z
+    components of the vector operand to produce the x, y, and z components of
+    the result vector.  The w component of the result is undefined.
+
+      tmp = VectorLoad(op0);
+      scale = ApproxRSQ(tmp.x * tmp.x + tmp.y * tmp.y + tmp.z * tmp.z);
+      result.x = tmp.x * scale;
+      result.y = tmp.y * scale;
+      result.z = tmp.z * scale;
+      result.w = undefined;
+
+    Note that the normalization uses an approximate scale and may be carried
+    at lower precision than a corresponding sequence of DP3, RSQ, and MUL
+    instructions.
+
+
+    Add Section 3.11.6.6, TXL: Texture Lookup with Explicit LOD
+
+    The TXL instruction takes the x, y, and z components of the vector operand
+    and maps them to s, t, and r, respectively.  These coordinates are used to
+    sample from the specified texture target on the specified texture image
+    unit in a manner consistent with its parameters.
+
+    The level of detail is computed as specified in section 3.8.8, except that
+    rho(x,y) is given by 2^w, where w is the w component of the vector
+    operand.
+    
+    The resulting sample is mapped to RGBA as described in table 3.21 
+    and written to the result vector.
+
+      tmp = VectorLoad(op0);
+      result = TextureSample(tmp.x, tmp.y, tmp.z, 0.0, op1, op2);
+
+
+    Add Section 3.11.X, Fragment Program Flow Control Instruction Set
+    (immediately after Section 3.11.6, Fragment Program Texture Instruction
+    Set)
+
+    3.11.X.1, BRK:  Break
+
+    The BRK instruction conditionally transfers control to the instruction
+    immediately following the next ENDLOOP or ENDREP instruction.  A BRK
+    instruction has no effect if the condition code test evaluates to FALSE.
+
+    The following pseudocode describes the operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        continue execution at instruction following the next ENDLOOP or
+          ENDREP;
+      }
+
+
+    3.11.X.2, CAL:  Subroutine Call
+
+    The CAL instruction conditionally transfers control to the instruction
+    following the label specified in the instruction.  A CAL instruction has
+    no effect if the condition code test evaluates to FALSE.
+
+    When executed, the CAL instruction pushes a reference to the instruction
+    immediately following the CAL instruction onto the call stack.  When a
+    matching RET instruction is executed, execution will continue at that
+    instruction after executing the matching RET instruction.  
+    
+    Implementations may have a limited call stack.  If the number of CAL
+    instructions that have been performed without returning is
+    MAX_PROGRAM_CALL_DEPTH_NV, a CAL instruction will cause the call stack to
+    overflow and the fragment program to terminate.
+
+    The following pseudocode describes the operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+
+        // Check for call stack overflow.
+        if (callStackDepth >= MAX_PROGRAM_CALL_DEPTH_NV) {
+          terminate fragment program;
+        }
+
+        push instruction following the CAL instruction on the call stack;
+        continue execution at instruction following <branchLabel>;
+      }
+
+
+    3.11.X.3, ELSE:  Beginning of ELSE Block
+
+    The ELSE instruction signifies the end of the "execute if true" portion of
+    an IF/ELSE/ENDIF block.  
+
+    If the condition evaluated at the IF statement was TRUE, when a program
+    reaches the ELSE statement, it has completed the entire "execute if true"
+    portion of the IF/ELSE/ENDIF block.  Execution will continue at the
+    corresponding ENDIF instruction.
+
+    If the condition evaluated at the IF statement was FALSE, program
+    execution would skip over the entire "execute if true" portion of the
+    IF/ELSE/ENDIF block, including the ELSE instruction.
+
+
+    3.11.X.4, ENDIF:  End of IF/ELSE Block
+
+    The ENDIF instruction signifies the end of an IF/ELSE/ENDIF block.  It has
+    no other effect on program execution.
+
+
+    3.11.X.5, ENDLOOP:  End of LOOP Block
+
+    The ENDLOOP instruction specifies the end of a LOOP block.  When an
+    ENDLOOP instruction executes, the loop count is decremented and the loop
+    index increment value is added to the loop index (A0.x).  If the
+    decremented loop count is greater than zero, execution continues at the
+    top of the LOOP block.
+
+      LoopCount--;
+      LoopIndex += LoopIncr;
+      if (LoopCount > 0) {
+        continue execution at instruction following corresponding LOOP
+          instruction;
+      }
+
+    3.11.X.6, ENDREP:  End of REP Block
+
+    The ENDREP instruction specifies the end of a REP block.  When an ENDREP
+    instruction executes, the loop count is decremented.  If the decremented
+    loop count is greater than zero, execution continues at the top of the REP
+    block.
+
+      LoopCount--;
+      if (LoopCount > 0) {
+        continue execution at instruction following corresponding LOOP
+          instruction;
+      }
+
+
+    3.11.X.7, IF:  Beginning of IF Block
+
+    The IF instruction conditionally transfers control to the instruction
+    immediately following the corresponding ELSE instruction (if present) or
+    ENDIF instruction (if no ELSE is present).
+
+    Implementations may have a limited ability to nest IF blocks at run time.
+    If the number of IF/ENDIF blocks that are currently active is
+    MAX_PROGRAM_IF_DEPTH_NV, an IF instruction will cause the fragment program
+    to terminate.  If an IF instruction is executed inside a subroutine, any
+    active IF/ENDIF blocks in the calling code count against this limit.
+
+      if (IF block nested too deeply) {
+        terminate fragment program;
+      }
+
+      // Evaluate the condition.  If the condition is true, continue at the
+      // next instruction.  Otherwise, continue at the 
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        continue execution at the next instruction;
+      } else if (IF block contains an ELSE statement) {
+        continue execution at instruction following corresponding ELSE;
+      } else {
+        continue execution at instruction following corresponding ENDIF;
+      }
+
+
+    3.11.X.8, LOOP:  Beginning of LOOP Block
+
+    The LOOP instruction begins a LOOP block.  The x, y, and z components of
+    the single vector operand specify the initial values for the loop count,
+    loop index, and loop index increment, respectively.
+
+    The loop count indicates the number of times the instructions between the
+    LOOP and corresponding ENDLOOP instruction will be executed.  If the
+    initial value of the loop count is not positive, the entire block is
+    skipped and execution continues at the corresponding ENDLOOP instruction.
+
+    The loop index (A0.x) can be used for indirect addressing in the set of
+    texture coordinate fragment attributes.  A fragment program can only use
+    the loop index of the current LOOP block; loop indices for containing LOOP
+    blocks are not available.
+
+    Implementations may have a limited ability to nest LOOP and REP blocks at
+    run time.  If the number of LOOP/ENDLOOP and REP/ENDREP blocks that have
+    not completed is MAX_PROGRAM_LOOP_DEPTH_NV, a LOOP instruction will cause
+    the fragment program to terminate.  If a LOOP instruction is executed
+    inside a subroutine, any active LOOP/ENDLOOP or REP/ENDREP blocks in the
+    calling code count against this limit.
+
+      if (LOOP block nested too deeply) {
+        terminate fragment program;
+      }
+
+      // Set up loop information for the new nesting level.
+      tmp = VectorLoad(op0);
+      LoopCount = floor(op0.x);
+      LoopIndex = floor(op0.y);
+      LoopIncr  = floor(op0.z);
+      if (LoopCount <= 0) {
+        continue execution at the corresponding ENDLOOP;
+      }
+
+    LOOP blocks do not support fully general branching -- a fragment program
+    will fail to load if the vector operand is not a program parameter.
+
+
+    3.11.X.9, REP:  Beginning of REP Block
+
+    The REP instruction begins a REP block.  The x component of the single
+    vector operand specifies the initial value for the loop count.  REP blocks
+    are completely identical to LOOP blocks except that they don't use the
+    loop index at all.
+
+    The loop count indicates the number of times the instructions between the
+    REP and corresponding ENDREP instruction will be executed.  If the initial
+    value of the loop count is not positive, the entire block is skipped and
+    execution continues at the instruction following the corresponding ENDREP
+    instruction.
+
+    Implementations may have a limited ability to nest LOOP and REP blocks at
+    run time.  If the number of LOOP/ENDLOOP and REP/ENDREP blocks that have
+    not completed is MAX_PROGRAM_LOOP_DEPTH_NV, a REP instruction will cause
+    the fragment program to terminate.  If a REP instruction is executed
+    inside a subroutine, any active LOOP/ENDLOOP or REP/ENDREP blocks in the
+    calling code count against this limit.
+
+      if (REP block nested too deeply) {
+        terminate fragment program;
+      }
+
+      // Set up loop information for the new nesting level.
+      tmp = VectorLoad(op0);
+      LoopCount = floor(op0.x);
+      if (LoopCount <= 0) {
+        continue execution at the corresponding ENDREP;
+      }
+
+    REP blocks do not support fully general branching -- a fragment program
+    will fail to load if the vector operand is not a program parameter.
+
+
+    3.11.X.10, RET:  Subroutine Return
+
+    The RET instruction conditionally returns from a subroutine initiated by a
+    CAL instruction.  A RET instruction has no effect if the condition code
+    test evaluates to FALSE.
+
+    When executed, the RET instruction pops a reference to the instruction
+    immediately following the corresponding CAL instruction onto the call
+    stack and continues execution at that instruction.
+
+    If a RET instruction is issued when the call stack is empty, the fragment
+    program is terminated.
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+
+        if (callStackDepth <= 0) {
+          terminate fragment program;
+        }
+        
+        pop instruction following the CAL instruction off the call stack;
+        continue execution at that instruction;
+      }
+
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.4 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on ARB_fragment_program
+
+    ARB_fragment_program is required.
+
+    This specification and NV_fragment_program_option are based on a modified
+    version of the grammar published in the ARB_fragment_program
+    specification.  This modified grammar includes a few structural changes to
+    better accommodate new functionality from this and other extensions, but
+    should be functionally equivalent to the ARB_fragment_program grammar.
+    See NV_fragment_program_option for details on the base grammar.
+
+Dependencies on NV_fragment_program2_option
+
+    NV_fragment_program_option is required.
+
+    If the NV_fragment_program2 program option is specified, all the
+    functionality described in both this extension and the
+    NV_fragment_program_option specification is available.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+                                                                  Min
+    Get Value                            Type    Get Command      Value   Description         Sec       Attrib
+    -----------------------------------  ----    ---------------  ------  -----------------   --------  ------
+    MAX_PROGRAM_EXEC_INSTRUCTIONS_NV     Z+      GetProgramivARB  65536   maximum program     3.11.4.X  -
+                                                                          execution inst-
+                                                                          ruction count
+    MAX_PROGRAM_CALL_DEPTH_NV            Z+      GetProgramivARB  4       maximum program     3.11.4.X  -
+                                                                          call stack depth
+    MAX_PROGRAM_IF_DEPTH_NV              Z+      GetProgramivARB  48      maximum program     3.11.4.X  -
+                                                                          if nesting
+    MAX_PROGRAM_LOOP_DEPTH_NV            Z+      GetProgramivARB  4       maximum program     3.11.4.X  -
+                                                                          loop nesting
+    MAX_PROGRAM_LOOP_COUNT_NV            Z+      GetProgramivARB  255     maximum program     3.11.4.X  -
+                                                                          initial loop count
+
+    (add to Table X.10.  New Implementation-Dependent Values Introduced by
+     ARB_fragment_program.  Values queried by GetProgramivARB require a <pname>
+     of FRAGMENT_PROGRAM_ARB.)
+
+Revision History
+
+    Rev.  Date      Author   Changes
+    ----  --------  -------  --------------------------------------------
+    8     08/04/04  pbrown   Fixed two typos in the TXL instruction.
+
+    7     07/08/04  pbrown   Fixed entries for KIL and RFL in the opcode
+                             table.
+
+    6     05/16/04  pbrown   Documented that "A0" is a pre-defined address
+                             register variable for the purposes of the 
+                             grammar, and that no other address register
+                             variables can be declared. 
+
+    5     --------  pbrown   Internal pre-release revisions.

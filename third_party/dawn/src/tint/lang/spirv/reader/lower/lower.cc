@@ -65,12 +65,10 @@ Result<SuccessType> Lower(core::ir::Module& mod) {
     // `||` statements.
     TINT_CHECK_RESULT(core::ir::transform::RemoveTerminatorArgs(mod));
 
-    core::ir::AssertValid(mod,
-                          core::ir::Capabilities{
-                              core::ir::Capability::kAllowMultipleEntryPoints,
-                              core::ir::Capability::kAllowOverrides,
-                          },
-                          "after spirv.Lower");
+    // All SPIR-V types should have been removed by the transforms above.
+    mod.properties.Remove(core::ir::Property::kAllowNonCoreTypes);
+
+    core::ir::AssertValid(mod, "after spirv.Lower");
 
     return Success;
 }

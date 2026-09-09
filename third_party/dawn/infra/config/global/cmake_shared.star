@@ -31,12 +31,17 @@ load("@chromium-luci//builders.star", "cpu", "os")
 
 def _apply_linux_cmake_builder_defaults(kwargs):
     kwargs.setdefault("cpu", cpu.X86_64)
-    kwargs.setdefault("os", os.LINUX_NOBLE)
-    kwargs.setdefault("ssd", None)
 
-    # TODO(crbug.com/459517292): Remove this and rely on file-wide defaults
-    # once we move Linux CMake builders into the luci.chromium.gpu.* pools.
-    kwargs.setdefault("builderless", None)
+    # n2-standard-8 is specifically targeted for Linux/CMake instead of the more
+    # common e2-standard-8 because RBE is not currently supported for CMake
+    # builds. The newer CPUs used by n2-standard-8 GCE instances result in
+    # significantly faster local compile times. e4-standard-8 will be the
+    # standard going forward for all builders and appears to have equivalent
+    # CMake build times to n2-standard-8, so allow that as well until
+    # all n2-standard-8 machines are phased out.
+    kwargs.setdefault("machine_type", "n2-standard-8|e4-standard-8")
+    kwargs.setdefault("os", os.LINUX_DEFAULT)
+    kwargs.setdefault("ssd", None)
     return kwargs
 
 def _apply_mac_cmake_builder_defaults(kwargs):
@@ -49,14 +54,17 @@ def _apply_mac_cmake_builder_defaults(kwargs):
     return kwargs
 
 def _apply_win_cmake_builder_defaults(kwargs):
-    # This CPU dimension acts as a proxy for machine_type: n2-standard-8 since
-    # machine_type cannot currently be set via Starlark. n2-standard-8 is
-    # specifically targeted for Win/CMake instead of the more common
-    # e2-standard-8 because Windows compilation takes the most time and the use
-    # of MSVC means that RBE is unsupported for remote compilation. The newer
-    # CPUs used by n2-standard-8 GCE instances result in significantly faster
-    # compile times.
-    kwargs.setdefault("cpu", "x86-64-Ice_Lake_GCE")
+    kwargs.setdefault("cpu", cpu.X86_64)
+
+    # n2-standard-8 is specifically targeted for Win/CMake instead of the more
+    # common e2-standard-8 because Windows compilation takes the most time and
+    # the use of MSVC means that RBE is unsupported for remote compilation. The
+    # newer CPUs used by n2-standard-8 GCE instances result in significantly
+    # faster compile times. e4-standard-8 will be the standard going forward for
+    # all builders and appears to have equivalent CMake build times to
+    # n2-standard-8, so allow that as well until all n2-standard-8 machines are
+    # phased out.
+    kwargs.setdefault("machine_type", "n2-standard-8|e4-standard-8")
     kwargs.setdefault("os", os.WINDOWS_DEFAULT)
     kwargs.setdefault("ssd", None)
     return kwargs

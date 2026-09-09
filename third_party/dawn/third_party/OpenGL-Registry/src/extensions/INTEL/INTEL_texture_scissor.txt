@@ -1,0 +1,207 @@
+Name
+
+ INTEL_texture_scissor
+
+Name Strings
+
+ GL_INTEL_texture_scissor
+
+Version
+
+   $Date: 1997/05/09 02:42:17 $ $Revision: 1.1 $
+
+Number
+
+   135
+
+Dependencies
+
+    EXT_texture3D is affected by the definition of this extension
+    EXT_texture is required
+
+Overview
+
+This extension enables one to render with clipping based on texture 
+coordinates. The only way to clip a primitive while rendering in GL 1.1 is
+to define a Clipping Plane. Clipping of the primitive is then  effected
+based on the spatial coordinates of the primitive with reference to the user
+defined clipping plane. This extension adds a new dimension to the clipping
+of primitives, namely-clipping based on texture coordinates as opposed
+to spatial coordinates.
+
+One of the advantages of clipping planes, is that for a given viewing volume
+all the primitives that make up the models in the current scene may be
+clipped against a set of clipping planes that are defined once at the start
+for the current viewing volume. Two issues that are worth  mentioning in
+this case are :
+
+1. The cost of defining clipping planes is amortized over all primitives in
+the scene
+2. The job of determining the equation of clipping planes that  enclose a
+convex region defining the  current viewing volume is fairly straightforward.
+
+Both the above factors that make clip planes so profitable in 3D graphics
+rendering, do not necessarily hold true when dealing with 3D texture mapped
+based volume rendering of large volume datasets. This    is specifically
+true when one uses 3D texture mapping hardware to do volumetric morphing of
+large volumes. Three factors require the ability to clip based on texture
+coordinates
+
+First, most texture memory in machines are never large enough to fit the
+entire volumetric dataset. Hence, to use 3D texture mapping to render
+volumes, one has to partition the volume into blocks large enough to fit in
+the available texture memory. This requires one to clip the primitives the
+straddle texture block boundaries, for oblique viewing angles. In
+straightforward volume rendering, this clipping may be easily done through
+the definition of clip planes in GL, because there is a linear correspondence
+between the texture coordinate 'w' and the spatial coordinate 'z' of each
+point in the volume.
+
+Second, when one morphs a source volume to obtain the target volume, the
+linear correspondence between the texture coordinate 'w' and the spatial
+coordinate 'z' of each point in the volume is lost. Because    morphs are
+inherently non-linear different points in the original volume (identified
+by a unique 'z' and an unique 'w') are mapped to different locations in the
+target and in the process lose their linear relationship. Thus no one set
+of clipping planes can be defined for all the primitives that result when
+rendering morphed volumes. 
+
+Third, even if one were to try and define clip planes for each of the
+resulting primitives when rendering morphed volumes, the equations are not
+easy to determine - both in terms of speed and ease of     implementation!
+One has to first determine the intersection points where the texture
+coordinate goes out of bounds, i.e. below 0.0 or above 1.0, and then define
+a planes that would encapsulte those parts of the primitive that have
+texture coordinates in the correct range. 
+
+Finally, the fact that all this has to be done in software slows down the
+process tremendously. 
+
+An easier solution would be to enable, a simple test in hardware that checks
+to see if a fragments texel coordinates are within a  user defined range. If
+it passes this test the fragment is rendered, if not it is discarded. 
+
+Besides the immediate advantage in performance, this solution would also
+enable one to simplify application code considerably.
+
+An added benefit of this extension is that it provides one with the facility
+of tiling 2D textures in 1D, 2D or 3D.
+
+New Procedures and Functions 
+
+void    TexScissorINTEL(GLenum    target, 
+                        GLclampf   tlow,
+                        GLclampf   thigh);
+void    TexScissorFuncINTEL(GLenum    target, Glenum lfunc, Glenum hfunc)
+
+New Tokens
+
+Accepted by the <cap> parameter of  Enable, Disable, IsEnabled :
+
+TEXTURE_SCISSOR_INTEL
+
+Accepted by the <pname> parameter of parameter of GetBooleanv, GetIntegerv,
+GetFloatv, and GetDoublev 
+
+TEXTURE_SCISSOR_S_INTEL [ returns two values : low and high ]
+TEXTURE_SCISSOR_T_INTEL [ returns two values : low and high ]
+TEXTURE_SCISSOR_R_INTEL [ returns two values : low and high ]
+
+by the <target> parameter of glTexScissorINTEL and glTexScissorFuncINTEL
+
+	GL_S
+	GL_T
+	GL_R
+
+Additions to Chapter 2 of the GL 1.1 Specification
+
+None
+
+
+Additions to Chapter 3 of the GL 1.1 Specification (Rasterization)
+
+None
+
+Additions to Chapter 4 of the GL 1.1 Specification (Per Fragment Operations
+and the Framebuffer)
+
+The INTEL_texturescissor conditionally discards a fragment based on the
+outcome of a comparison between the texture coordinate value of the incoming
+fragment and the texture bounds set by the TexScissorINTEL() function. The
+test is controlled with 
+
+void TexScissorINTEL(GLenum target, GLclampf tlow, GLclampf thigh)
+
+The texture scissor test is controlled by the texture function set by
+TexScissorFuncINTEL() :
+
+ void TexScissorFuncINTEL(GLenum target, GLenum lfunc, Glenum hfunc)
+
+lfunc can be any of GL_GREATER, GL_GEQUAL, or GL_EQUAL while lfunc can be
+any of GL_LESS, GL_LEQUAL or GL_EQUAL. These values enable one to handle
+boundary cases that involve adjacent regions overlapping.
+
+Thus, for lfunc set to GL_GEQUAL and hfunc set to GL_LEQUAL, if the target
+texture coordinate (s, t, or r) is greater than or equal to tlow and less
+than or equal to thigh (i.e. tlow <= s, t, r <= thigh), the texture test
+passes. Otherwise, the test fails and the fragment is discarded. The test
+is enabled or disabled with the Enable and Disable commands, using the
+symbolic constant TEXTURE_SCISSOR_INTEL. When disabled, the texture scissor
+test is not performed and it is as if the texture scissor test always passes.
+
+'tlow' and 'thigh' are two floating point values in the range <0.0, 1.0>
+(tlow is always less than or equal to thigh). The default values are 0.0 for
+tlow and 1.0 for thigh. Initially, the texture scissor test is disabled by
+default.
+
+Additions to Chapter 5 of the GL 1.1 Specification (Special Functions)
+
+None
+
+Additions to Chapter 6 of the GL 1.1 Specification (State and State Requests)
+
+None
+
+Additions to GLX Specification
+
+None
+
+GLX Protocol
+
+None
+
+Dependencies on EXT_texture3D
+
+If EXT_texture3D is not supported, references to texture target GL_R are
+invalid and should be ignored.
+
+Errors
+
+INVALID_VALUE is generated if glTexScissorINTEL() is called with  tlow > thigh.
+
+INVALID_VALUE is generated if glTexScissorINTEL() is called with  tlow < 0.0
+or  tlow > 1.0
+
+INVALID_VALUE is generated if glTexScissorINTEL() is called with  thigh < 0.0
+or thigh > 1.0
+
+INVALID_VALUE is generated if glTexScissorFuncINTEL() is called with lfunc or
+hfunc set to any other value other than [GL_GREATER, GL_GEQUAL, or GL_EQUAL]
+and [GL_LESS, GL_LEQUAL or GL_EQUAL] respectively.
+
+
+New State
+
+None
+
+New Implementation Dependent State
+
+
+Get Value                  Get Command Type   Initial Value        Attribute
+TEXTURE_SCISSOR_INTEL      IsEnabled    B        False         texture / enable
+TEXTURE_SCISSOR_S_INTEL    GetFloatv    R      0.0, 1.0        texture / enable
+TEXTURE_SCISSOR_T_INTEL    GetFloatv    R      0.0, 1.0        texture / enable
+TEXTURE_SCISSOR_R_INTEL    GetFloatv    R      0.0, 1.0        texture / enable
+TEXTURE_SCISSOR_FUNC_INTEL GetIntegerv  Z6 GL_GEQUAL, GL_LESS  texture / enable
+
+

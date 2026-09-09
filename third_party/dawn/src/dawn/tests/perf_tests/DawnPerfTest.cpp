@@ -25,57 +25,75 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
 
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Log.h"
-#include "dawn/platform/tracing/TraceEvent.h"
-#include "dawn/tests/perf_tests/DawnPerfTestPlatform.h"
-#include "dawn/utils/Timer.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTestPlatform.h"
+#include "src/dawn/utils/Timer.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/log.h"
+
+#if defined(DAWN_USE_PERFETTO)
+#include <perfetto/tracing/core/trace_config.h>
+#include <perfetto/tracing/tracing.h>
+#include <perfetto/tracing/track_event.h>
+#endif
+#if defined(DAWN_USE_PERFETTO_TRACE_PROCESSOR)
+#include "perfetto/trace_processor/trace_processor.h"  // nogncheck
+#endif
 
 namespace dawn {
 namespace {
 
-DawnPerfTestEnvironment* gTestEnv = nullptr;
-
-void DumpTraceEventsToJSONFile(
-    const std::vector<DawnPerfTestPlatform::TraceEvent>& traceEventBuffer,
-    const char* traceFile) {
-    std::ofstream outFile;
-    outFile.open(traceFile, std::ios_base::app);
-
-    for (const DawnPerfTestPlatform::TraceEvent& traceEvent : traceEventBuffer) {
-        const char* category = nullptr;
-        switch (traceEvent.category) {
-            case platform::TraceCategory::General:
-                category = "general";
-                break;
-            case platform::TraceCategory::Validation:
-                category = "validation";
-                break;
-            case platform::TraceCategory::Recording:
-                category = "recording";
-                break;
-            case platform::TraceCategory::GPUWork:
-                category = "gpu";
-                break;
-            default:
-                DAWN_UNREACHABLE();
-        }
-
-        uint64_t microseconds = static_cast<uint64_t>(traceEvent.timestamp * 1000.0 * 1000.0);
-
-        outFile << ", { " << "\"name\": \"" << traceEvent.name << "\", " << "\"cat\": \""
-                << category << "\", " << "\"ph\": \"" << traceEvent.phase << "\", "
-                << "\"id\": " << traceEvent.id << ", " << "\"tid\": " << traceEvent.threadId << ", "
-                << "\"ts\": " << microseconds << ", " << "\"pid\": \"Dawn\"" << " }";
+#if defined(DAWN_USE_PERFETTO)
+void InitializePerfetto() {
+    if (!perfetto::Tracing::IsInitialized()) {
+        perfetto::TracingInitArgs args;
+        args.backends = perfetto::kInProcessBackend;
+        perfetto::Tracing::Initialize(args);
     }
-    outFile.close();
 }
+
+std::unique_ptr<perfetto::TracingSession> StartPerfettoTracing() {
+    InitializePerfetto();
+
+    perfetto::TraceConfig cfg;
+    cfg.add_buffers()->set_size_kb(102400);  // 100MB
+
+    auto* ds_cfg = cfg.add_data_sources()->mutable_config();
+    ds_cfg->set_name("track_event");
+
+    auto tracingSession = perfetto::Tracing::NewTrace();
+    tracingSession->Setup(cfg);
+    tracingSession->StartBlocking();
+    return tracingSession;
+}
+
+std::vector<char> StopPerfettoTracing(perfetto::TracingSession* tracingSession,
+                                      const char* filename) {
+    tracingSession->StopBlocking();
+    std::vector<char> traceData = tracingSession->ReadTraceBlocking();
+
+    if (filename != nullptr) {
+        std::ofstream outFile(filename, std::ios::binary);
+        if (outFile) {
+            outFile.write(traceData.data(), traceData.size());
+            dawn::InfoLog() << "Wrote Perfetto trace to " << filename;
+        } else {
+            dawn::WarningLog() << "Error opening trace file " << filename << " for writing";
+        }
+    }
+    return traceData;
+}
+#endif  // defined(DAWN_USE_PERFETTO)
+
+DawnPerfTestEnvironment* gTestEnv = nullptr;
 
 }  // namespace
 }  // namespace dawn
@@ -92,32 +110,33 @@ DawnPerfTestEnvironment::DawnPerfTestEnvironment(int argc, char** argv)
     : DawnTestEnvironment(argc, argv) {
     size_t argLen = 0;  // Set when parsing --arg=X arguments
     for (int i = 1; i < argc; ++i) {
-        if (strcmp("--calibration", argv[i]) == 0) {
+        if (DAWN_UNSAFE_TODO(strcmp("--calibration", argv[i])) == 0) {
             mIsCalibrating = true;
             continue;
         }
 
         constexpr const char kOverrideStepsArg[] = "--override-steps=";
         argLen = sizeof(kOverrideStepsArg) - 1;
-        if (strncmp(argv[i], kOverrideStepsArg, argLen) == 0) {
-            const char* overrideSteps = argv[i] + argLen;
+        if (DAWN_UNSAFE_TODO(strncmp(argv[i], kOverrideStepsArg, argLen)) == 0) {
+            const char* overrideSteps = DAWN_UNSAFE_TODO(argv[i] + argLen);
             if (overrideSteps[0] != '\0') {
-                mOverrideStepsToRun = strtoul(overrideSteps, nullptr, 0);
+                mOverrideStepsToRun = DAWN_UNSAFE_TODO(strtoul(overrideSteps, nullptr, 0));
             }
             continue;
         }
 
         constexpr const char kTraceFileArg[] = "--trace-file=";
         argLen = sizeof(kTraceFileArg) - 1;
-        if (strncmp(argv[i], kTraceFileArg, argLen) == 0) {
-            const char* traceFile = argv[i] + argLen;
+        if (DAWN_UNSAFE_TODO(strncmp(argv[i], kTraceFileArg, argLen)) == 0) {
+            const char* traceFile = DAWN_UNSAFE_TODO(argv[i] + argLen);
             if (traceFile[0] != '\0') {
                 mTraceFile = traceFile;
             }
             continue;
         }
 
-        if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
+        if (DAWN_UNSAFE_TODO(strcmp("-h", argv[i])) == 0 ||
+            DAWN_UNSAFE_TODO(strcmp("--help", argv[i])) == 0) {
             InfoLog() << "Additional flags:"
                       << " [--calibration] [--override-steps=x] [--trace-file=file]\n"
                       << "  --calibration: Only run calibration. Calibration allows the perf test"
@@ -132,36 +151,15 @@ DawnPerfTestEnvironment::DawnPerfTestEnvironment(int argc, char** argv)
 DawnPerfTestEnvironment::~DawnPerfTestEnvironment() = default;
 
 void DawnPerfTestEnvironment::SetUp() {
+#if defined(DAWN_USE_PERFETTO)
+    InitializePerfetto();
+#endif
     mPlatform = std::make_unique<DawnPerfTestPlatform>();
     mInstance = CreateInstance(mPlatform.get());
     DAWN_ASSERT(mInstance);
-
-    // Begin writing the trace event array.
-    if (mTraceFile != nullptr) {
-        std::ofstream outFile;
-        outFile.open(mTraceFile);
-        outFile << "{ \"traceEvents\": [";
-        outFile << "{}";  // Placeholder object so trace events can always prepend a comma
-        outFile.flush();
-        outFile.close();
-    }
 }
 
 void DawnPerfTestEnvironment::TearDown() {
-    // End writing the trace event array.
-    if (mTraceFile != nullptr) {
-        std::vector<DawnPerfTestPlatform::TraceEvent> traceEventBuffer =
-            mPlatform->AcquireTraceEventBuffer();
-
-        // Write remaining trace events.
-        DumpTraceEventsToJSONFile(traceEventBuffer, mTraceFile);
-
-        std::ofstream outFile;
-        outFile.open(mTraceFile, std::ios_base::app);
-        outFile << "]}\n";
-        outFile.close();
-    }
-
     DawnTestEnvironment::TearDown();
 }
 
@@ -220,27 +218,31 @@ void DawnPerfTestBase::RunTest() {
     // Do another warmup run. Seems to consistently improve results.
     DoRunLoop(kMaximumRunTimeSeconds);
 
-    DawnPerfTestPlatform* platform =
-        reinterpret_cast<DawnPerfTestPlatform*>(gTestEnv->GetPlatform());
-    const char* testName = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-
     // Only enable trace event recording in this section.
     // We don't care about trace events during warmup and calibration.
-    platform->EnableTraceEventRecording(true);
-    {
-        TRACE_EVENT0(platform, General, testName);
-        for (unsigned int trial = 0; trial < kNumTrials; ++trial) {
-            TRACE_EVENT0(platform, General, "Trial");
-            DoRunLoop(kMaximumRunTimeSeconds);
-            OutputResults();
+    for (unsigned int trial = 0; trial < kNumTrials; ++trial) {
+#if defined(DAWN_USE_PERFETTO)
+        std::unique_ptr<perfetto::TracingSession> tracingSession;
+        if (gTestEnv->GetTraceFile() != nullptr) {
+            tracingSession = StartPerfettoTracing();
         }
+#endif
+        {
+            TRACE_EVENT(DAWN_TRACE_CATEGORY(), "Trial");
+            DoRunLoop(kMaximumRunTimeSeconds);
+        }
+
+        std::vector<char> traceData;
+#if defined(DAWN_USE_PERFETTO)
+        if (tracingSession) {
+            traceData = StopPerfettoTracing(tracingSession.get(), gTestEnv->GetTraceFile());
+        }
+#endif
+        OutputResults(traceData);
     }
-    platform->EnableTraceEventRecording(false);
 }
 
 void DawnPerfTestBase::DoRunLoop(double maxRunTime) {
-    platform::Platform* platform = gTestEnv->GetPlatform();
-
     mNumStepsPerformed = 0;
     mCpuTime = 0;
     mGPUTime = std::nullopt;
@@ -258,7 +260,7 @@ void DawnPerfTestBase::DoRunLoop(double maxRunTime) {
             mTest->WaitABit();
         }
 
-        TRACE_EVENT0(platform, General, "Step");
+        TRACE_EVENT(DAWN_TRACE_CATEGORY(), "Step");
         double stepStart = mTimer->GetElapsedTime();
         Step();
         mCpuTime += mTimer->GetElapsedTime() - stepStart;
@@ -286,80 +288,53 @@ void DawnPerfTestBase::DoRunLoop(double maxRunTime) {
     mTimer->Stop();
 }
 
-void DawnPerfTestBase::OutputResults() {
+void DawnPerfTestBase::OutputResults(const std::vector<char>& traceData) {
     // TODO(enga): When Dawn has multiple backgrounds threads, add a Device::WaitForIdleForTesting()
     // which waits for all threads to stop doing work. When we output results, there should
     // be no additional incoming trace events.
-    DawnPerfTestPlatform* platform =
-        reinterpret_cast<DawnPerfTestPlatform*>(gTestEnv->GetPlatform());
-
-    std::vector<DawnPerfTestPlatform::TraceEvent> traceEventBuffer =
-        platform->AcquireTraceEventBuffer();
-
-    struct EventTracker {
-        double start = std::numeric_limits<double>::max();
-        double end = 0;
-        uint32_t count = 0;
-    };
-
-    EventTracker validationTracker = {};
-    EventTracker recordingTracker = {};
-
-    double totalValidationTime = 0;
-    double totalRecordingTime = 0;
-
-    // Note: We assume END timestamps always come after their corresponding BEGIN timestamps.
-    // TODO(enga): When Dawn has multiple threads, stratify by thread id.
-    for (const DawnPerfTestPlatform::TraceEvent& traceEvent : traceEventBuffer) {
-        EventTracker* tracker = nullptr;
-        double* totalTime = nullptr;
-
-        switch (traceEvent.category) {
-            case platform::TraceCategory::Validation:
-                tracker = &validationTracker;
-                totalTime = &totalValidationTime;
-                break;
-            case platform::TraceCategory::Recording:
-                tracker = &recordingTracker;
-                totalTime = &totalRecordingTime;
-                break;
-            default:
-                break;
-        }
-
-        if (tracker == nullptr) {
-            continue;
-        }
-
-        if (traceEvent.phase == TRACE_EVENT_PHASE_BEGIN) {
-            tracker->start = std::min(tracker->start, traceEvent.timestamp);
-            tracker->count++;
-        }
-
-        if (traceEvent.phase == TRACE_EVENT_PHASE_END) {
-            tracker->end = std::max(tracker->end, traceEvent.timestamp);
-            DAWN_ASSERT(tracker->count > 0);
-            tracker->count--;
-
-            if (tracker->count == 0) {
-                *totalTime += (tracker->end - tracker->start);
-                *tracker = {};
-            }
-        }
-    }
-
     PrintPerIterationResultFromSeconds("wall_time", mTimer->GetElapsedTime(), true);
     PrintPerIterationResultFromSeconds("cpu_time", mCpuTime, true);
     if (mGPUTime.has_value()) {
         PrintPerIterationResultFromSeconds("gpu_time", *mGPUTime, true);
     }
-    PrintPerIterationResultFromSeconds("validation_time", totalValidationTime, true);
-    PrintPerIterationResultFromSeconds("recording_time", totalRecordingTime, true);
 
-    const char* traceFile = gTestEnv->GetTraceFile();
-    if (traceFile != nullptr) {
-        DumpTraceEventsToJSONFile(traceEventBuffer, traceFile);
+#if defined(DAWN_USE_PERFETTO_TRACE_PROCESSOR)
+    if (!traceData.empty()) {
+        perfetto::trace_processor::Config config;
+        std::unique_ptr<perfetto::trace_processor::TraceProcessor> tp =
+            perfetto::trace_processor::TraceProcessor::CreateInstance(config);
+
+        auto buf = std::make_unique<uint8_t[]>(traceData.size());
+        std::memcpy(buf.get(), traceData.data(), traceData.size());
+        auto status = tp->Parse(std::move(buf), traceData.size());
+        tp->NotifyEndOfFile();
+
+        if (status.ok()) {
+            auto run_query = [&](const std::string& query) -> double {
+                auto iterator = tp->ExecuteQuery(query);
+                if (iterator.Next()) {
+                    auto val = iterator.Get(0);
+                    if (val.type == perfetto::trace_processor::SqlValue::kDouble) {
+                        return val.AsDouble();
+                    }
+                }
+                return 0.0;
+            };
+
+            // Query validation time
+            double validation_time = run_query(
+                "SELECT SUM(dur) / 1e9 FROM slice WHERE category = 'gpu.dawn.validation'");
+            PrintPerIterationResultFromSeconds("validation_time", validation_time, true);
+
+            // Query recording time
+            double recording_time =
+                run_query("SELECT SUM(dur) / 1e9 FROM slice WHERE category = 'gpu.dawn.recording'");
+            PrintPerIterationResultFromSeconds("recording_time", recording_time, true);
+        } else {
+            printf("Error parsing trace data: %s\n", status.c_message());
+        }
     }
+#endif
 }
 
 void DawnPerfTestBase::AddGPUTime(double time) {

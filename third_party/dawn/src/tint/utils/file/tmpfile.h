@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_UTILS_FILE_TMPFILE_H_
 #define SRC_TINT_UTILS_FILE_TMPFILE_H_
 
+#include <span>
 #include <string>
 
 #include "src/tint/utils/text/string_stream.h"
@@ -55,14 +56,13 @@ class TmpFile {
     /// @return the path to the temporary file
     std::string Path() const { return path_; }
 
-    /// Opens the temporary file and appends |size| bytes from |data| to the end
+    /// Opens the temporary file and appends the raw bytes in |data| to the end
     /// of the temporary file. The temporary file is closed again before
     /// returning, allowing other processes to open the file on operating systems
     /// that require exclusive ownership of opened files.
     /// @param data the data to write to the end of the file
-    /// @param size the number of bytes to write from data
     /// @returns true on success, otherwise false
-    bool Append(const void* data, size_t size) const;
+    bool Append(std::span<const std::byte> data) const;
 
     /// Appends the argument to the end of the file.
     /// @param data the data to write to the end of the file
@@ -72,7 +72,7 @@ class TmpFile {
         StringStream ss;
         ss << data;
         std::string str = ss.str();
-        Append(str.data(), str.size());
+        Append(std::as_bytes(std::span(str)));
         return *this;
     }
 

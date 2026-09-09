@@ -7,7 +7,7 @@ It is not automated at this point. Following are the rough steps on how to do it
 cd third_party
 mkdir dawn_copy && cd dawn_copy
 git init
-git fetch --depth=1 https://dawn.googlesource.com/dawn refs/heads/chromium/7792
+git fetch --depth=1 https://dawn.googlesource.com/dawn refs/heads/chromium/8021
 git reset --hard FETCH_HEAD
 python3 tools/fetch_dawn_dependencies.py
 find . -name .git -type d -print0 | xargs -0 rm -r

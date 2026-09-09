@@ -1,0 +1,63 @@
+name: Generate a coverage report and publish it to GitHub pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    if: github.repository == 'microsoft/DirectXShaderCompiler'
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          submodules: true
+      - name: Setup Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - name: Install dependencies
+        run: sudo apt install -y ninja-build
+      - name: Configure
+        run: cmake -B build -G Ninja -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_USE_LINKER=lld -DCMAKE_BUILD_TYPE=Release -DDXC_COVERAGE=On -C ${{github.workspace}}/cmake/caches/PredefinedParams.cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ${{github.workspace}}
+      - name: Build
+        run: ninja -C build test-depends
+      - name: Test
+        run: ninja -C build check-all
+      - name: Generate Report
+        run: ninja -C build generate-coverage-report
+      - name: Force artifact permissions
+        run: chmod -c -R +rX ${{github.workspace}}/build/report
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: ${{github.workspace}}/build/report
+        
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    if: github.repository == 'microsoft/DirectXShaderCompiler'
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

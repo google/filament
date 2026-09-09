@@ -25,44 +25,50 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/CommandBufferVk.h"
+#include "src/dawn/native/vulkan/CommandBufferVk.h"
 
 #include <algorithm>
+#include <concepts>
 #include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "absl/functional/function_ref.h"
-#include "dawn/common/Enumerator.h"
-#include "dawn/common/Range.h"
-#include "dawn/native/BindGroupTracker.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/DynamicUploader.h"
-#include "dawn/native/EnumMaskIterator.h"
-#include "dawn/native/ExternalTexture.h"
-#include "dawn/native/ImmediateConstantsTracker.h"
-#include "dawn/native/RenderBundle.h"
-#include "dawn/native/vulkan/BindGroupVk.h"
-#include "dawn/native/vulkan/BufferVk.h"
-#include "dawn/native/vulkan/CommandRecordingContextVk.h"
-#include "dawn/native/vulkan/ComputePipelineVk.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/FramebufferCache.h"
-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
-#include "dawn/native/vulkan/PipelineLayoutVk.h"
-#include "dawn/native/vulkan/QuerySetVk.h"
-#include "dawn/native/vulkan/QueueVk.h"
-#include "dawn/native/vulkan/RenderPassCache.h"
-#include "dawn/native/vulkan/RenderPipelineVk.h"
-#include "dawn/native/vulkan/ResolveTextureLoadingUtilsVk.h"
-#include "dawn/native/vulkan/ResourceTableVk.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/common/Range.h"
+#include "src/dawn/native/BindGroupTracker.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/DynamicUploader.h"
+#include "src/dawn/native/EnumMaskIterator.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/ExternalTexture.h"
+#include "src/dawn/native/ImmediatesTracker.h"
+#include "src/dawn/native/RenderBundle.h"
+#include "src/dawn/native/vulkan/BindGroupVk.h"
+#include "src/dawn/native/vulkan/BufferVk.h"
+#include "src/dawn/native/vulkan/CommandRecordingContextVk.h"
+#include "src/dawn/native/vulkan/ComputePipelineVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/FramebufferCache.h"
+#include "src/dawn/native/vulkan/FramebufferFetchHelper.h"
+#include "src/dawn/native/vulkan/ImmediatesLayoutVk.h"
+#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
+#include "src/dawn/native/vulkan/PipelineLayoutVk.h"
+#include "src/dawn/native/vulkan/QuerySetVk.h"
+#include "src/dawn/native/vulkan/QueueVk.h"
+#include "src/dawn/native/vulkan/RenderPassCache.h"
+#include "src/dawn/native/vulkan/RenderPipelineVk.h"
+#include "src/dawn/native/vulkan/ResolveTextureLoadingUtilsVk.h"
+#include "src/dawn/native/vulkan/ResourceTableVk.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/utils/compiler.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native::vulkan {
 
@@ -78,6 +84,33 @@ VkIndexType VulkanIndexType(wgpu::IndexFormat format) {
             break;
     }
     DAWN_UNREACHABLE();
+}
+
+std::vector<VkBufferImageCopy> ComputePerArrayLayerBufferImageCopyRegions(
+    const BufferCopy& bufferCopy,
+    const TextureCopy& textureCopy,
+    const TexelExtent3D& copySize,
+    const TypedTexelBlockInfo& blockInfo) {
+    const uint64_t bytesPerImage =
+        blockInfo.ToBytes(bufferCopy.blocksPerRow) * static_cast<uint64_t>(bufferCopy.rowsPerImage);
+    const uint32_t layerCount =
+        static_cast<uint32_t>(static_cast<uint64_t>(copySize.depthOrArrayLayers));
+
+    TexelExtent3D singleLayerSize = copySize;
+    singleLayerSize.depthOrArrayLayers = TexelCount{1u};
+
+    std::vector<VkBufferImageCopy> regions;
+    regions.reserve(layerCount);
+    for (uint32_t layer = 0; layer < layerCount; ++layer) {
+        TextureCopy layerTextureCopy = textureCopy;
+        layerTextureCopy.origin.z = textureCopy.origin.z + TexelCount{layer};
+
+        VkBufferImageCopy region = ComputeBufferImageCopyRegion(bufferCopy, layerTextureCopy,
+                                                                blockInfo.ToBlock(singleLayerSize));
+        region.bufferOffset = bufferCopy.offset + uint64_t{layer} * bytesPerImage;
+        regions.push_back(region);
+    }
+    return regions;
 }
 
 bool HasSameTextureCopyExtent(const TextureCopy& srcCopy,
@@ -105,8 +138,8 @@ VkImageCopy ComputeImageCopyRegion(const TextureCopy& srcCopy,
 
     bool has3DTextureInCopy = false;
 
-    region.srcOffset.x = static_cast<uint32_t>(srcCopy.origin.x);
-    region.srcOffset.y = static_cast<uint32_t>(srcCopy.origin.y);
+    region.srcOffset.x = dchecked_cast<int32_t>(srcCopy.origin.x);
+    region.srcOffset.y = dchecked_cast<int32_t>(srcCopy.origin.y);
     switch (srcTexture->GetDimension()) {
         case wgpu::TextureDimension::Undefined:
             DAWN_UNREACHABLE();
@@ -116,20 +149,20 @@ VkImageCopy ComputeImageCopyRegion(const TextureCopy& srcCopy,
             region.srcOffset.z = 0;
             break;
         case wgpu::TextureDimension::e2D:
-            region.srcSubresource.baseArrayLayer = static_cast<uint32_t>(srcCopy.origin.z);
-            region.srcSubresource.layerCount = static_cast<uint32_t>(copySize.depthOrArrayLayers);
+            region.srcSubresource.baseArrayLayer = dchecked_cast<uint32_t>(srcCopy.origin.z);
+            region.srcSubresource.layerCount = dchecked_cast<uint32_t>(copySize.depthOrArrayLayers);
             region.srcOffset.z = 0;
             break;
         case wgpu::TextureDimension::e3D:
             has3DTextureInCopy = true;
             region.srcSubresource.baseArrayLayer = 0;
             region.srcSubresource.layerCount = 1;
-            region.srcOffset.z = static_cast<uint32_t>(srcCopy.origin.z);
+            region.srcOffset.z = dchecked_cast<int32_t>(srcCopy.origin.z);
             break;
     }
 
-    region.dstOffset.x = static_cast<uint32_t>(dstCopy.origin.x);
-    region.dstOffset.y = static_cast<uint32_t>(dstCopy.origin.y);
+    region.dstOffset.x = dchecked_cast<int32_t>(dstCopy.origin.x);
+    region.dstOffset.y = dchecked_cast<int32_t>(dstCopy.origin.y);
     switch (dstTexture->GetDimension()) {
         case wgpu::TextureDimension::Undefined:
             DAWN_UNREACHABLE();
@@ -139,24 +172,24 @@ VkImageCopy ComputeImageCopyRegion(const TextureCopy& srcCopy,
             region.dstOffset.z = 0;
             break;
         case wgpu::TextureDimension::e2D:
-            region.dstSubresource.baseArrayLayer = static_cast<uint32_t>(dstCopy.origin.z);
-            region.dstSubresource.layerCount = static_cast<uint32_t>(copySize.depthOrArrayLayers);
+            region.dstSubresource.baseArrayLayer = dchecked_cast<uint32_t>(dstCopy.origin.z);
+            region.dstSubresource.layerCount = dchecked_cast<uint32_t>(copySize.depthOrArrayLayers);
             region.dstOffset.z = 0;
             break;
         case wgpu::TextureDimension::e3D:
             has3DTextureInCopy = true;
             region.dstSubresource.baseArrayLayer = 0;
             region.dstSubresource.layerCount = 1;
-            region.dstOffset.z = static_cast<uint32_t>(dstCopy.origin.z);
+            region.dstOffset.z = dchecked_cast<int32_t>(dstCopy.origin.z);
             break;
     }
 
     DAWN_ASSERT(HasSameTextureCopyExtent(srcCopy, dstCopy, copySize));
     TexelExtent3D imageExtent = ComputeTextureCopyExtent(dstCopy, copySize);
-    region.extent.width = static_cast<uint32_t>(imageExtent.width);
-    region.extent.height = static_cast<uint32_t>(imageExtent.height);
+    region.extent.width = dchecked_cast<uint32_t>(imageExtent.width);
+    region.extent.height = dchecked_cast<uint32_t>(imageExtent.height);
     region.extent.depth =
-        has3DTextureInCopy ? static_cast<uint32_t>(copySize.depthOrArrayLayers) : 1;
+        has3DTextureInCopy ? dchecked_cast<uint32_t>(copySize.depthOrArrayLayers) : 1;
 
     return region;
 }
@@ -165,32 +198,38 @@ VkImageCopy ComputeImageCopyRegion(const TextureCopy& srcCopy,
 VkRect2D GetAlignedRenderArea(VkExtent2D granularity, BeginRenderPassCmd* renderPassCmd) {
     VkRect2D renderArea;
 
+    if (renderPassCmd->forceFullRenderArea) {
+        renderArea.offset = {};
+        renderArea.extent = {renderPassCmd->width, renderPassCmd->height};
+        return renderArea;
+    }
+
     if (granularity.width == 0 || granularity.width == 1) {
-        renderArea.offset.x = renderPassCmd->renderArea.x;
+        renderArea.offset.x = sign_cast(renderPassCmd->renderArea.x);
         renderArea.extent.width = renderPassCmd->renderArea.width;
     } else {
-        renderArea.offset.x = AlignDown(renderPassCmd->renderArea.x, granularity.width);
+        renderArea.offset.x = sign_cast(AlignDown(renderPassCmd->renderArea.x, granularity.width));
 
         uint32_t right =
             Align(renderPassCmd->renderArea.x + renderPassCmd->renderArea.width, granularity.width);
         if (right > renderPassCmd->width) {
             right = renderPassCmd->width;
         }
-        renderArea.extent.width = right - renderArea.offset.x;
+        renderArea.extent.width = right - sign_cast(renderArea.offset.x);
     }
 
     if (granularity.height == 0 || granularity.height == 1) {
-        renderArea.offset.y = renderPassCmd->renderArea.y;
+        renderArea.offset.y = sign_cast(renderPassCmd->renderArea.y);
         renderArea.extent.height = renderPassCmd->renderArea.height;
     } else {
-        renderArea.offset.y = AlignDown(renderPassCmd->renderArea.y, granularity.height);
+        renderArea.offset.y = sign_cast(AlignDown(renderPassCmd->renderArea.y, granularity.height));
 
         uint32_t bottom = Align(renderPassCmd->renderArea.y + renderPassCmd->renderArea.height,
                                 granularity.height);
         if (bottom > renderPassCmd->height) {
             bottom = renderPassCmd->height;
         }
-        renderArea.extent.height = bottom - renderArea.offset.y;
+        renderArea.extent.height = bottom - sign_cast(renderArea.offset.y);
     }
 
     return renderArea;
@@ -210,8 +249,9 @@ VkRect2D GetAlignedRenderArea(Device* device,
 class DescriptorSetTracker : public BindGroupTrackerBase<true> {
   public:
     bool AreLayoutsCompatible() override {
-        return mPipelineLayout == mLastAppliedPipelineLayout &&
-               mLastAppliedImmediateConstantSize == mImmediateConstantSize;
+        return mLastAppliedPipeline != nullptr &&
+               mLastAppliedPipeline->GetLayout() == mPipeline->GetLayout() &&
+               mLastAppliedImmediateSize == mImmediateSize;
     }
 
     const BindGroupBase* GetBindGroup(BindGroupIndex index) const { return mBindGroups[index]; }
@@ -227,8 +267,15 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
         BindGroupTrackerBase::OnSetPipeline(pipeline);
 
         mVkLayout = pipeline->GetVkLayout();
-        mImmediateConstantSize = pipeline->GetImmediateConstantSize();
+        mImmediateSize = pipeline->GetImmediateSize();
         mUsesResourceTable = pipeline->GetLayout()->UsesResourceTable();
+        if constexpr (std::derived_from<VkPipelineType, RenderPipelineBase>) {
+            mFramebufferFetchEnabled = pipeline->UsesFramebufferFetch();
+        }
+    }
+
+    void SetFramebufferFetchDescriptorSet(VkDescriptorSet set) {
+        mFramebufferFetchDescriptorSet = set;
     }
 
     void SetResourceTable(ResourceTable* resourceTable) { mResourceTable = resourceTable; }
@@ -236,7 +283,7 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
     void Apply(const VulkanFunctions& vk,
                VkCommandBuffer commandBuffer,
                VkPipelineBindPoint bindPoint) {
-        Apply(vk, commandBuffer, bindPoint,
+        Apply(vk, commandBuffer, bindPoint, mVkLayout,
               [&](BindGroupIndex i) { return ToBackend(mBindGroups[i])->GetHandle(); });
     }
 
@@ -244,6 +291,7 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
     void Apply(const VulkanFunctions& vk,
                VkCommandBuffer commandBuffer,
                VkPipelineBindPoint bindPoint,
+               VkPipelineLayout layout,
                F GetDescriptorSet) {
         BeforeApply();
 
@@ -251,14 +299,33 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
 
         // Changing push constant range invalidates all descriptor sets.
         // Also clear the last resource table so it gets rebound below.
-        if (mLastAppliedImmediateConstantSize != mImmediateConstantSize) {
+        if (mLastAppliedImmediateSize != mImmediateSize) {
+            dirtyBindGroups = mBindGroupLayoutsMask;
+            mLastFramebufferFetchEnabled = false;
+            mLastResourceTable = nullptr;
+        }
+
+        BindGroupIndex startOfBindGroups{0u};
+        if (mLastFramebufferFetchEnabled != mFramebufferFetchEnabled) {
+            // When the use of framebuffer fetch changes between pipelines, dirty all bind groups
+            // because they shift by 1.
             dirtyBindGroups = mBindGroupLayoutsMask;
             mLastResourceTable = nullptr;
+
+            if (mFramebufferFetchEnabled) {
+                DAWN_ASSERT(mFramebufferFetchDescriptorSet != VK_NULL_HANDLE);
+                vk.CmdBindDescriptorSets(commandBuffer, bindPoint, layout,
+                                         static_cast<uint32_t>(startOfBindGroups), 1,
+                                         &*mFramebufferFetchDescriptorSet, 0, nullptr);
+            }
+        }
+        if (mFramebufferFetchEnabled) {
+            ++startOfBindGroups;
         }
 
         // When the usage of the resource table changes between pipelines, or the resource table
         // itself is changed, dirty all bind groups because they shift by 1 (the resource table
-        // occupies VkDescriptorSet 0).
+        // occupies VkDescriptorSet 0 or 1).
         if (mLastUsesResourceTable != mUsesResourceTable || mLastResourceTable != mResourceTable) {
             dirtyBindGroups = mBindGroupLayoutsMask;
 
@@ -266,11 +333,14 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
             if (mUsesResourceTable) {
                 DAWN_ASSERT(mResourceTable != nullptr);
                 VkDescriptorSet set = mResourceTable->GetHandle();
-                vk.CmdBindDescriptorSets(commandBuffer, bindPoint, mVkLayout, 0, 1, &*set, 0,
+                vk.CmdBindDescriptorSets(commandBuffer, bindPoint, layout,
+                                         static_cast<uint32_t>(startOfBindGroups), 1, &*set, 0,
                                          nullptr);
             }
         }
-        BindGroupIndex startOfBindGroups{mUsesResourceTable ? 1u : 0u};
+        if (mUsesResourceTable) {
+            ++startOfBindGroups;
+        }
 
         for (BindGroupIndex dirtyBGIndex : dirtyBindGroups) {
             VkDescriptorSet set = GetDescriptorSet(dirtyBGIndex);
@@ -280,16 +350,17 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
             uint32_t count = static_cast<uint32_t>(dynamicOffsetSpan.size());
             const uint32_t* dynamicOffset = count > 0 ? dynamicOffsetSpan.data() : nullptr;
 
-            vk.CmdBindDescriptorSets(commandBuffer, bindPoint, mVkLayout, setIndex, 1, &*set, count,
+            vk.CmdBindDescriptorSets(commandBuffer, bindPoint, layout, setIndex, 1, &*set, count,
                                      dynamicOffset);
         }
 
         // Update PipelineLayout
         AfterApply();
 
-        mLastAppliedImmediateConstantSize = mImmediateConstantSize;
+        mLastAppliedImmediateSize = mImmediateSize;
         mLastUsesResourceTable = mUsesResourceTable;
         mLastResourceTable = mResourceTable;
+        mLastFramebufferFetchEnabled = mFramebufferFetchEnabled;
     }
 
     RAW_PTR_EXCLUSION VkPipelineLayout mVkLayout;
@@ -297,14 +368,33 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true> {
     raw_ptr<ResourceTable> mResourceTable = nullptr;
     bool mLastUsesResourceTable = false;
     bool mUsesResourceTable = false;
-    uint32_t mLastAppliedImmediateConstantSize = 0;
-    uint32_t mImmediateConstantSize = 0;
+    bool mFramebufferFetchEnabled = false;
+    bool mLastFramebufferFetchEnabled = false;
+    VkDescriptorSet mFramebufferFetchDescriptorSet = VK_NULL_HANDLE;
+    uint32_t mLastAppliedImmediateSize = 0;
+    uint32_t mImmediateSize = 0;
 };
 
-template <typename T>
-class ImmediateConstantTracker : public T {
+class RenderImmediatesTracker
+    : public UserImmediatesTrackerBase<RenderImmediates, RenderPipelineBase> {
   public:
-    ImmediateConstantTracker() = default;
+    RenderImmediatesTracker() = default;
+
+    void SetClampFragDepth(float minClampFragDepth, float maxClampFragDepth) {
+        ClampFragDepthArgs fragDepthArgs;
+        fragDepthArgs.minClampFragDepth = minClampFragDepth;
+        fragDepthArgs.maxClampFragDepth = maxClampFragDepth;
+
+        UpdateImmediates(offsetof(RenderImmediates, clampFragDepth), fragDepthArgs);
+    }
+};
+
+using ComputeImmediatesTracker = UserImmediatesTrackerBase<ComputeImmediates, ComputePipelineBase>;
+
+template <typename T>
+class ImmediateTracker : public T {
+  public:
+    ImmediateTracker() = default;
 
     void DirtyAll() { this->mDirty.set(); }
 
@@ -317,16 +407,16 @@ class ImmediateConstantTracker : public T {
     void Apply(const VulkanFunctions& vk,
                VkCommandBuffer commandBuffer,
                VkPipelineLayout layout,
-               ImmediateConstantMask pipelineMask) {
+               ImmediateMask pipelineMask) {
         for (auto&& [offset, size] : IterateRanges(this->mDirty & pipelineMask)) {
             uint32_t immediateContentStartOffset =
-                static_cast<uint32_t>(offset) * kImmediateConstantElementByteSize;
+                static_cast<uint32_t>(offset) * kImmediateElementByteSize;
             uint32_t pushConstantRangeStartOffset =
                 GetImmediateIndexInPipeline(static_cast<uint32_t>(offset), pipelineMask) *
-                kImmediateConstantElementByteSize;
+                kImmediateElementByteSize;
             vk.CmdPushConstants(commandBuffer, layout, kImmediateShaderStages,
                                 pushConstantRangeStartOffset,
-                                size * kImmediateConstantElementByteSize,
+                                checked_cast<uint32_t>(size * kImmediateElementByteSize),
                                 this->mContent.template Get<uint32_t>(immediateContentStartOffset));
         }
 
@@ -342,8 +432,11 @@ MaybeError PrepareResourcesForSyncScope(Device* device,
                                         const SyncScopeResourceUsage& scope) {
     // Apply pending updates to all resource tables used in usages scope.
     // This has to be done before transitioning resources.
-    for (auto& resourceTable : scope.usedResourceTables) {
-        DAWN_TRY(ToBackend(resourceTable)->ApplyPendingUpdates(recordingContext));
+    // TODO(crbug.com/529883743): Consider folding the logic in GatherWritableTextures into the
+    // scope.textures loop below
+    if (auto table = scope.resourceTable) {
+        auto writables = GatherWritableTextures(scope);
+        DAWN_TRY(ToBackend(table)->ApplyPendingUpdates(recordingContext, writables));
     }
 
     // Separate barriers with vertex stages in destination stages from all other barriers.
@@ -433,9 +526,10 @@ MaybeError PrepareResourcesForSyncScope(Device* device,
 
     for (const ImageBarriers& barriers : {vertexImageBarriers, nonVertexImageBarriers}) {
         if (!barriers.imageBarriers.empty()) {
-            device->fn.CmdPipelineBarrier(
-                recordingContext->commandBuffer, barriers.srcStages, barriers.dstStages, 0, 0,
-                nullptr, 0, nullptr, barriers.imageBarriers.size(), barriers.imageBarriers.data());
+            device->fn.CmdPipelineBarrier(recordingContext->commandBuffer, barriers.srcStages,
+                                          barriers.dstStages, 0, 0, nullptr, 0, nullptr,
+                                          checked_cast<uint32_t>(barriers.imageBarriers.size()),
+                                          barriers.imageBarriers.data());
         }
     }
     recordingContext->EmitBufferBarrierIfNecessary(device, vertexBufferBarrier);
@@ -449,38 +543,21 @@ MaybeError PrepareResourcesForSyncScope(Device* device,
 void ResetUsedQuerySetsOnRenderPass(Device* device,
                                     VkCommandBuffer commands,
                                     QuerySetBase* querySet,
-                                    const std::vector<bool>& availability) {
-    DAWN_ASSERT(availability.size() == querySet->GetQueryAvailability().size());
+                                    const ityp::vector<QueryIndex, bool>& availability) {
+    DAWN_ASSERT(availability.size() == querySet->GetQueryCount());
 
-    auto currentIt = availability.begin();
-    auto lastIt = availability.end();
-    // Traverse the used queries which availability are true.
-    while (currentIt != lastIt) {
-        auto firstTrueIt = std::find(currentIt, lastIt, true);
-        // No used queries need to be reset
-        if (firstTrueIt == lastIt) {
-            break;
-        }
-
-        auto nextFalseIt = std::find(firstTrueIt, lastIt, false);
-
-        uint32_t queryIndex = std::distance(availability.begin(), firstTrueIt);
-        uint32_t queryCount = std::distance(firstTrueIt, nextFalseIt);
-
-        // Reset the queries between firstTrueIt and nextFalseIt (which is at most
-        // lastIt)
-        device->fn.CmdResetQueryPool(commands, ToBackend(querySet)->GetHandle(), queryIndex,
-                                     queryCount);
-
-        // Set current iterator to next false
-        currentIt = nextFalseIt;
-    }
+    ForEachAvailableQueryRange(
+        QueryIndex(0u), availability.size(), [&](QueryIndex i) { return availability[i]; },
+        [&](QueryIndex start, QueryIndex count) {
+            device->fn.CmdResetQueryPool(commands, ToBackend(querySet)->GetHandle(),
+                                         uint32_t{start}, uint32_t{count});
+        });
 }
 
 void RecordWriteTimestampCmd(CommandRecordingContext* recordingContext,
                              Device* device,
                              QuerySetBase* querySet,
-                             uint32_t queryIndex,
+                             QueryIndex queryIndex,
                              bool isRenderPass,
                              VkPipelineStageFlagBits pipelineStage) {
     VkCommandBuffer commands = recordingContext->commandBuffer;
@@ -488,52 +565,34 @@ void RecordWriteTimestampCmd(CommandRecordingContext* recordingContext,
     // The queries must be reset between uses, and the reset command cannot be called in render
     // pass.
     if (!isRenderPass) {
-        device->fn.CmdResetQueryPool(commands, ToBackend(querySet)->GetHandle(), queryIndex, 1);
+        device->fn.CmdResetQueryPool(commands, ToBackend(querySet)->GetHandle(),
+                                     uint32_t{queryIndex}, 1u);
     }
 
     device->fn.CmdWriteTimestamp(commands, pipelineStage, ToBackend(querySet)->GetHandle(),
-                                 queryIndex);
+                                 uint32_t{queryIndex});
 }
 
 void RecordResolveQuerySetCmd(VkCommandBuffer commands,
                               Device* device,
                               QuerySet* querySet,
-                              uint32_t firstQuery,
-                              uint32_t queryCount,
+                              QueryIndex firstQuery,
+                              QueryIndex queryCount,
                               Buffer* destination,
                               uint64_t destinationOffset) {
-    const std::vector<bool>& availability = querySet->GetQueryAvailability();
+    ForEachAvailableQueryRange(
+        firstQuery, queryCount, [&](QueryIndex i) { return querySet->IsQueryAvailable(i); },
+        [&](QueryIndex start, QueryIndex count) {
+            // Compute the offset for this range of available queries in the buffer.
+            VkDeviceSize resolveBufferOffset =
+                destinationOffset + ToQueryStorageSize(start - firstQuery);
 
-    auto currentIt = availability.begin() + firstQuery;
-    auto lastIt = availability.begin() + firstQuery + queryCount;
-
-    // Traverse available queries in the range of [firstQuery, firstQuery +  queryCount - 1]
-    while (currentIt != lastIt) {
-        auto firstTrueIt = std::find(currentIt, lastIt, true);
-        // No available query found for resolving
-        if (firstTrueIt == lastIt) {
-            break;
-        }
-        auto nextFalseIt = std::find(firstTrueIt, lastIt, false);
-
-        // The query index of firstTrueIt where the resolving starts
-        uint32_t resolveQueryIndex = std::distance(availability.begin(), firstTrueIt);
-        // The queries count between firstTrueIt and nextFalseIt need to be resolved
-        uint32_t resolveQueryCount = std::distance(firstTrueIt, nextFalseIt);
-
-        // Calculate destinationOffset based on the current resolveQueryIndex and firstQuery
-        uint32_t resolveDestinationOffset =
-            destinationOffset + (resolveQueryIndex - firstQuery) * sizeof(uint64_t);
-
-        // Resolve the queries between firstTrueIt and nextFalseIt (which is at most lastIt)
-        device->fn.CmdCopyQueryPoolResults(commands, querySet->GetHandle(), resolveQueryIndex,
-                                           resolveQueryCount, destination->GetHandle(),
-                                           resolveDestinationOffset, sizeof(uint64_t),
-                                           VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-
-        // Set current iterator to next false
-        currentIt = nextFalseIt;
-    }
+            // Resolve the queries between firstTrueIt and nextFalseIt (which is at most lastIt)
+            device->fn.CmdCopyQueryPoolResults(commands, querySet->GetHandle(), uint32_t{start},
+                                               uint32_t{count}, destination->GetHandle(),
+                                               resolveBufferOffset, kSingleQueryStorageSize,
+                                               VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+        });
 }
 
 VkClearValue ToVkClearValue(dawn::native::Color clearColor, TextureComponentType baseType) {
@@ -541,25 +600,19 @@ VkClearValue ToVkClearValue(dawn::native::Color clearColor, TextureComponentType
     switch (baseType) {
         case TextureComponentType::Float: {
             const std::array<float, 4> appliedClearColor = ConvertToFloatColor(clearColor);
-            for (uint32_t j = 0; j < 4; ++j) {
-                clearValue.color.float32[j] = appliedClearColor[j];
-            }
+            Span<float>{clearValue.color.float32}.CopyFrom(appliedClearColor);
             break;
         }
         case TextureComponentType::Uint: {
             const std::array<uint32_t, 4> appliedClearColor =
                 ConvertToUnsignedIntegerColor(clearColor);
-            for (uint32_t j = 0; j < 4; ++j) {
-                clearValue.color.uint32[j] = appliedClearColor[j];
-            }
+            Span<uint32_t>{clearValue.color.uint32}.CopyFrom(appliedClearColor);
             break;
         }
         case TextureComponentType::Sint: {
             const std::array<int32_t, 4> appliedClearColor =
                 ConvertToSignedIntegerColor(clearColor);
-            for (uint32_t j = 0; j < 4; ++j) {
-                clearValue.color.int32[j] = appliedClearColor[j];
-            }
+            Span<int32_t>{clearValue.color.int32}.CopyFrom(appliedClearColor);
             break;
         }
     }
@@ -691,7 +744,7 @@ struct ProgrammablePassState : public StackAllocated {
         VkCommandBuffer commands = recordingContext->commandBuffer;
 
         vk.CmdBindPipeline(commands, PipelineBindPoint, pipelineHandles.pipeline);
-        descriptorSets.Apply(vk, commands, PipelineBindPoint,
+        descriptorSets.Apply(vk, commands, PipelineBindPoint, pipelineHandles.layout,
                              [&](BindGroupIndex i) { return newDescriptorSets[i]->GetHandle(); });
         immediates.Apply(vk, commands, pipelineHandles.layout, lastPipeline->GetImmediateMask());
 
@@ -713,16 +766,15 @@ struct ProgrammablePassState : public StackAllocated {
     CommandRecordingContext* recordingContext;
 
     DescriptorSetTracker descriptorSets;
-    ImmediateConstantTracker<BaseImmediateTracker> immediates;
+    ImmediateTracker<BaseImmediateTracker> immediates;
 
     Pipeline* lastPipeline = nullptr;
     Pipeline* lastAppliedPipeline = nullptr;
 };
 
-using RenderPassState = ProgrammablePassState<RenderImmediateConstantsTrackerBase,
-                                              RenderPipeline,
-                                              VK_PIPELINE_BIND_POINT_GRAPHICS>;
-using ComputePassState = ProgrammablePassState<ComputeImmediateConstantsTrackerBase,
+using RenderPassState =
+    ProgrammablePassState<RenderImmediatesTracker, RenderPipeline, VK_PIPELINE_BIND_POINT_GRAPHICS>;
+using ComputePassState = ProgrammablePassState<ComputeImmediatesTracker,
                                                ComputePipeline,
                                                VK_PIPELINE_BIND_POINT_COMPUTE>;
 
@@ -880,7 +932,7 @@ MaybeError RecordBeginRenderPass(CommandRecordingContext* recordingContext,
 
     // Query a VkRenderPass from the cache
     VkRenderPass renderPassVK = VK_NULL_HANDLE;
-    uint32_t renderPassId = 0;
+    uint64_t renderPassId = 0;
     {
         RenderPassCacheQuery query;
 
@@ -1091,11 +1143,15 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
             ResetUsedQuerySetsOnRenderPass(device, recordingContext->commandBuffer,
                                            usages.querySets[i], usages.queryAvailabilities[i]);
         }
+
+        if (device->IsToggleEnabled(Toggle::VulkanAddWorkToEmptyResolvePass)) {
+            DAWN_TRY(device->PrepareEmptyPassQuerySet(recordingContext));
+        }
         return {};
     };
 
-    size_t nextComputePassNumber = 0;
-    size_t nextRenderPassNumber = 0;
+    PassIndex nextComputePassNumber{0u};
+    PassIndex nextRenderPassNumber{0u};
 
     Command type;
     while (mCommands.NextCommandId(&type)) {
@@ -1140,15 +1196,21 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
                 ToBackend(src.buffer)->EnsureDataInitialized(recordingContext);
 
                 const TypedTexelBlockInfo& blockInfo = GetBlockInfo(dst);
-                VkBufferImageCopy region =
-                    ComputeBufferImageCopyRegion(src, dst, blockInfo.ToBlock(copy->copySize));
-                VkImageSubresourceLayers subresource = region.imageSubresource;
+                std::vector<VkBufferImageCopy> regions;
+                if (device->IsToggleEnabled(Toggle::VulkanSplitBufferTextureCopyForArrayLayers) &&
+                    copy->copySize.depthOrArrayLayers > TexelCount{1u}) {
+                    regions = ComputePerArrayLayerBufferImageCopyRegions(src, dst, copy->copySize,
+                                                                         blockInfo);
+                } else {
+                    regions.push_back(
+                        ComputeBufferImageCopyRegion(src, dst, blockInfo.ToBlock(copy->copySize)));
+                }
 
                 SubresourceRange range =
                     GetSubresourcesAffectedByCopy(copy->destination, copy->copySize);
 
-                if (IsCompleteSubresourceCopiedTo(dst.texture.Get(), copy->copySize,
-                                                  subresource.mipLevel, dst.aspect)) {
+                if (IsCompleteSubresourceCopiedTo(dst.texture.Get(), copy->copySize, dst.mipLevel,
+                                                  dst.aspect)) {
                     // Since texture has been overwritten, it has been "initialized"
                     dst.texture->SetIsSubresourceContentInitialized(true, range);
                 } else {
@@ -1167,8 +1229,9 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
 
                 // Dawn guarantees dstImage be in the TRANSFER_DST_OPTIMAL layout after the
                 // copy command.
-                device->fn.CmdCopyBufferToImage(commands, srcBuffer, dstImage,
-                                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+                device->fn.CmdCopyBufferToImage(
+                    commands, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    static_cast<uint32_t>(regions.size()), regions.data());
                 break;
             }
 
@@ -1184,8 +1247,15 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
                 ToBackend(dst.buffer)->EnsureDataInitializedAsDestination(recordingContext, copy);
 
                 const TypedTexelBlockInfo& blockInfo = GetBlockInfo(src);
-                VkBufferImageCopy region =
-                    ComputeBufferImageCopyRegion(dst, src, blockInfo.ToBlock(copy->copySize));
+                std::vector<VkBufferImageCopy> regions;
+                if (device->IsToggleEnabled(Toggle::VulkanSplitBufferTextureCopyForArrayLayers) &&
+                    copy->copySize.depthOrArrayLayers > TexelCount{1u}) {
+                    regions = ComputePerArrayLayerBufferImageCopyRegions(dst, src, copy->copySize,
+                                                                         blockInfo);
+                } else {
+                    regions.push_back(
+                        ComputeBufferImageCopyRegion(dst, src, blockInfo.ToBlock(copy->copySize)));
+                }
 
                 SubresourceRange range =
                     GetSubresourcesAffectedByCopy(copy->source, copy->copySize);
@@ -1203,7 +1273,8 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
                 VkBuffer dstBuffer = ToBackend(dst.buffer)->GetHandle();
                 // The Dawn CopySrc usage is always mapped to GENERAL
                 device->fn.CmdCopyImageToBuffer(commands, srcImage, VK_IMAGE_LAYOUT_GENERAL,
-                                                dstBuffer, 1, &region);
+                                                dstBuffer, static_cast<uint32_t>(regions.size()),
+                                                regions.data());
                 break;
             }
 
@@ -1308,16 +1379,15 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
             case Command::BeginRenderPass: {
                 BeginRenderPassCmd* cmd = mCommands.NextCommand<BeginRenderPassCmd>();
 
-                DAWN_TRY(PrepareResourcesForRenderPass(
-                    device, recordingContext,
-                    GetResourceUsages().renderPasses[nextRenderPassNumber]));
+                auto& usage = GetResourceUsages().renderPasses[nextRenderPassNumber];
+                DAWN_TRY(PrepareResourcesForRenderPass(device, recordingContext, usage));
 
                 DAWN_TRY(LazyClearRenderPassAttachments(
                     device, cmd, [&](TextureBase* texture, const SubresourceRange& range) {
                         return ToBackend(texture)->EnsureSubresourceContentInitialized(
                             recordingContext, range);
                     }));
-                DAWN_TRY(RecordRenderPass(recordingContext, cmd));
+                DAWN_TRY(RecordRenderPass(recordingContext, cmd, usage, nextRenderPassNumber));
 
                 recordingContext->hasRecordedRenderPass = true;
                 nextRenderPassNumber++;
@@ -1348,28 +1418,32 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
 
             case Command::ResolveQuerySet: {
                 ResolveQuerySetCmd* cmd = mCommands.NextCommand<ResolveQuerySetCmd>();
+                if (cmd->queryCount == QueryIndex{0u}) {
+                    continue;
+                }
+
                 QuerySet* querySet = ToBackend(cmd->querySet.Get());
                 Buffer* destination = ToBackend(cmd->destination.Get());
 
                 destination->EnsureDataInitializedAsDestination(
-                    recordingContext, cmd->destinationOffset, cmd->queryCount * sizeof(uint64_t));
+                    recordingContext, cmd->destinationOffset, ToQueryStorageSize(cmd->queryCount));
 
                 // vkCmdCopyQueryPoolResults only can retrieve available queries because
                 // VK_QUERY_RESULT_WAIT_BIT is set. In order to resolve the unavailable queries
                 // as 0s, we need to clear the resolving region of the destination buffer to 0s.
-                auto startIt = querySet->GetQueryAvailability().begin() + cmd->firstQuery;
-                auto endIt =
-                    querySet->GetQueryAvailability().begin() + cmd->firstQuery + cmd->queryCount;
-                bool hasUnavailableQueries = std::find(startIt, endIt, false) != endIt;
+                bool clearNeeded =
+                    !querySet->AreAllQueriesAvailable(cmd->firstQuery, cmd->queryCount);
+
                 // Workaround for resolving overlapping queries to a same buffer on Intel Gen12 GPUs
                 // due to Mesa driver issue.
                 // See http://crbug.com/dawn/1823 for more information.
-                bool clearNeeded = device->IsToggleEnabled(Toggle::ClearBufferBeforeResolveQueries);
-                if (hasUnavailableQueries || clearNeeded) {
+                clearNeeded |= device->IsToggleEnabled(Toggle::ClearBufferBeforeResolveQueries);
+
+                if (clearNeeded) {
                     destination->TransitionUsageNow(recordingContext, wgpu::BufferUsage::CopyDst);
                     device->fn.CmdFillBuffer(commands, destination->GetHandle(),
                                              cmd->destinationOffset,
-                                             cmd->queryCount * sizeof(uint64_t), 0u);
+                                             ToQueryStorageSize(cmd->queryCount), 0u);
                 }
 
                 destination->TransitionUsageNow(recordingContext, wgpu::BufferUsage::QueryResolve);
@@ -1385,17 +1459,19 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
 
                 RecordWriteTimestampCmd(recordingContext, device, cmd->querySet.Get(),
                                         cmd->queryIndex, false, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+                UpdateQueryAvailability(cmd);
                 break;
             }
 
             case Command::InsertDebugMarker: {
                 if (device->GetGlobalInfo().HasExt(InstanceExt::DebugUtils)) {
                     InsertDebugMarkerCmd* cmd = mCommands.NextCommand<InsertDebugMarkerCmd>();
-                    const char* label = mCommands.NextData<char>(cmd->length + 1);
+                    std::string_view label = NextNullTerminatedString(&mCommands, cmd->length);
                     VkDebugUtilsLabelEXT utilsLabel;
                     utilsLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
                     utilsLabel.pNext = nullptr;
-                    utilsLabel.pLabelName = label;
+                    utilsLabel.pLabelName = label.data();
                     // Default color to black
                     utilsLabel.color[0] = 0.0;
                     utilsLabel.color[1] = 0.0;
@@ -1421,11 +1497,11 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
             case Command::PushDebugGroup: {
                 if (device->GetGlobalInfo().HasExt(InstanceExt::DebugUtils)) {
                     PushDebugGroupCmd* cmd = mCommands.NextCommand<PushDebugGroupCmd>();
-                    const char* label = mCommands.NextData<char>(cmd->length + 1);
+                    std::string_view label = NextNullTerminatedString(&mCommands, cmd->length);
                     VkDebugUtilsLabelEXT utilsLabel;
                     utilsLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
                     utilsLabel.pNext = nullptr;
-                    utilsLabel.pLabelName = label;
+                    utilsLabel.pLabelName = label.data();
                     // Default color to black
                     utilsLabel.color[0] = 0.0;
                     utilsLabel.color[1] = 0.0;
@@ -1441,27 +1517,27 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* recordingConte
             case Command::WriteBuffer: {
                 WriteBufferCmd* write = mCommands.NextCommand<WriteBufferCmd>();
                 const uint64_t offset = write->offset;
-                const uint64_t size = write->size;
-                if (size == 0) {
+                Span<const std::byte> data = mCommands.NextData<std::byte>(write->size);
+
+                if (data.empty()) {
                     continue;
                 }
 
                 Buffer* dstBuffer = ToBackend(write->buffer.Get());
-                uint8_t* data = mCommands.NextData<uint8_t>(size);
 
                 DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
-                    size, kCopyBufferToBufferOffsetAlignment,
+                    data.size(), kCopyBufferToBufferOffsetAlignment,
                     [&](UploadReservation reservation) -> MaybeError {
-                        memcpy(reservation.mappedPointer, data, size);
+                        reservation.mappedData.CopyFrom(data);
 
                         dstBuffer->EnsureDataInitializedAsDestination(recordingContext, offset,
-                                                                      size);
+                                                                      data.size());
                         dstBuffer->TransitionUsageNow(recordingContext, wgpu::BufferUsage::CopyDst);
 
                         VkBufferCopy copy;
                         copy.srcOffset = reservation.offsetInBuffer;
                         copy.dstOffset = offset;
-                        copy.size = size;
+                        copy.size = data.size();
 
                         device->fn.CmdCopyBuffer(commands,
                                                  ToBackend(reservation.buffer)->GetHandle(),
@@ -1485,8 +1561,7 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
     Device* device = ToBackend(GetDevice());
 
     // Write timestamp at the beginning of compute pass if it's set
-    if (computePassCmd->timestampWrites.beginningOfPassWriteIndex !=
-        wgpu::kQuerySetIndexUndefined) {
+    if (computePassCmd->timestampWrites.beginningOfPassWriteIndex != kQuerySetIndexUndefinedTyped) {
         RecordWriteTimestampCmd(recordingContext, device,
                                 computePassCmd->timestampWrites.querySet.Get(),
                                 computePassCmd->timestampWrites.beginningOfPassWriteIndex, false,
@@ -1495,7 +1570,7 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
 
     VkCommandBuffer commands = recordingContext->commandBuffer;
 
-    uint64_t currentDispatch = 0;
+    size_t currentDispatch = 0;
     ComputePassState state(device->fn, recordingContext);
 
     Command type;
@@ -1506,12 +1581,14 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
 
                 // Write timestamp at the end of compute pass if it's set.
                 if (computePassCmd->timestampWrites.endOfPassWriteIndex !=
-                    wgpu::kQuerySetIndexUndefined) {
+                    kQuerySetIndexUndefinedTyped) {
                     RecordWriteTimestampCmd(recordingContext, device,
                                             computePassCmd->timestampWrites.querySet.Get(),
                                             computePassCmd->timestampWrites.endOfPassWriteIndex,
                                             false, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
                 }
+
+                UpdateQueryAvailability(computePassCmd->timestampWrites);
                 return {};
             }
 
@@ -1545,15 +1622,13 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
 
             case Command::SetBindGroup: {
                 SetBindGroupCmd* cmd = mCommands.NextCommand<SetBindGroupCmd>();
-
                 BindGroup* bindGroup = ToBackend(cmd->group.Get());
-                uint32_t* dynamicOffsets = nullptr;
-                if (cmd->dynamicOffsetCount > 0) {
+                ityp::span<BindingIndex, const uint32_t> dynamicOffsets;
+                if (cmd->dynamicOffsetCount != BindingIndex{0u}) {
                     dynamicOffsets = mCommands.NextData<uint32_t>(cmd->dynamicOffsetCount);
                 }
 
-                state.descriptorSets.OnSetBindGroup(cmd->index, bindGroup, cmd->dynamicOffsetCount,
-                                                    dynamicOffsets);
+                state.descriptorSets.OnSetBindGroup(cmd->index, bindGroup, dynamicOffsets);
                 break;
             }
 
@@ -1566,11 +1641,11 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
             case Command::InsertDebugMarker: {
                 if (device->GetGlobalInfo().HasExt(InstanceExt::DebugUtils)) {
                     InsertDebugMarkerCmd* cmd = mCommands.NextCommand<InsertDebugMarkerCmd>();
-                    const char* label = mCommands.NextData<char>(cmd->length + 1);
+                    std::string_view label = NextNullTerminatedString(&mCommands, cmd->length);
                     VkDebugUtilsLabelEXT utilsLabel;
                     utilsLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
                     utilsLabel.pNext = nullptr;
-                    utilsLabel.pLabelName = label;
+                    utilsLabel.pLabelName = label.data();
                     // Default color to black
                     utilsLabel.color[0] = 0.0;
                     utilsLabel.color[1] = 0.0;
@@ -1596,11 +1671,11 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
             case Command::PushDebugGroup: {
                 if (device->GetGlobalInfo().HasExt(InstanceExt::DebugUtils)) {
                     PushDebugGroupCmd* cmd = mCommands.NextCommand<PushDebugGroupCmd>();
-                    const char* label = mCommands.NextData<char>(cmd->length + 1);
+                    std::string_view label = NextNullTerminatedString(&mCommands, cmd->length);
                     VkDebugUtilsLabelEXT utilsLabel;
                     utilsLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
                     utilsLabel.pNext = nullptr;
-                    utilsLabel.pLabelName = label;
+                    utilsLabel.pLabelName = label.data();
                     // Default color to black
                     utilsLabel.color[0] = 0.0;
                     utilsLabel.color[1] = 0.0;
@@ -1618,15 +1693,16 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
 
                 RecordWriteTimestampCmd(recordingContext, device, cmd->querySet.Get(),
                                         cmd->queryIndex, false, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+                UpdateQueryAvailability(cmd);
                 break;
             }
 
             case Command::SetImmediates: {
                 SetImmediatesCmd* cmd = mCommands.NextCommand<SetImmediatesCmd>();
                 DAWN_ASSERT(cmd->size > 0);
-                uint8_t* value = nullptr;
-                value = mCommands.NextData<uint8_t>(cmd->size);
-                state.immediates.SetImmediates(cmd->offset, value, cmd->size);
+                Span<const std::byte> data = mCommands.NextData<std::byte>(cmd->size);
+                state.immediates.SetImmediates(cmd->offset, data);
                 break;
             }
 
@@ -1646,14 +1722,19 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* recordingCo
 }
 
 MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingContext,
-                                           BeginRenderPassCmd* renderPassCmd) {
+                                           BeginRenderPassCmd* renderPassCmd,
+                                           const RenderPassResourceUsage& usage,
+                                           PassIndex renderPassIndex) {
     Device* device = ToBackend(GetDevice());
     VkCommandBuffer commands = recordingContext->commandBuffer;
+
+    const IndirectDrawMetadata& metadata = GetIndirectDrawMetadata()[renderPassIndex];
+    IndirectDrawIndex indirectDrawIndex{0u};
 
     // Write timestamp at the beginning of render pass if it's set.
     // We've observed that this must be called before the render pass or the timestamps produced
     // are nonsensical on multiple Android devices.
-    if (renderPassCmd->timestampWrites.beginningOfPassWriteIndex != wgpu::kQuerySetIndexUndefined) {
+    if (renderPassCmd->timestampWrites.beginningOfPassWriteIndex != kQuerySetIndexUndefinedTyped) {
         RecordWriteTimestampCmd(recordingContext, device,
                                 renderPassCmd->timestampWrites.querySet.Get(),
                                 renderPassCmd->timestampWrites.beginningOfPassWriteIndex, true,
@@ -1663,6 +1744,13 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
     DAWN_TRY(RecordBeginRenderPass(recordingContext, device, renderPassCmd));
 
     RenderPassState state(device->fn, recordingContext);
+
+    if (usage.usesFramebufferFetch) {
+        VkDescriptorSet set;
+        DAWN_TRY_ASSIGN(
+            set, device->GetFramebufferFetchHelper()->GetDescriptorsForRenderPass(renderPassCmd));
+        state.descriptorSets.SetFramebufferFetchDescriptorSet(set);
+    }
 
     // Set the default value for the dynamic state
     {
@@ -1690,8 +1778,8 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
         device->fn.CmdSetViewport(commands, 0, 1, &viewport);
 
         VkRect2D scissorRect;
-        scissorRect.offset.x = renderPassCmd->renderArea.x;
-        scissorRect.offset.y = renderPassCmd->renderArea.y;
+        scissorRect.offset.x = static_cast<int32_t>(renderPassCmd->renderArea.x);
+        scissorRect.offset.y = static_cast<int32_t>(renderPassCmd->renderArea.y);
         scissorRect.extent.width = renderPassCmd->renderArea.width;
         scissorRect.extent.height = renderPassCmd->renderArea.height;
         device->fn.CmdSetScissor(commands, 0, 1, &scissorRect);
@@ -1699,7 +1787,6 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
         // Apply default frag depth
         state.immediates.SetClampFragDepth(0.0, 1.0);
     }
-
 
     // Tracks the number of commands that do significant GPU work (a draw or query write) this pass.
     uint32_t workCommandCount = 0;
@@ -1710,10 +1797,13 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 workCommandCount++;
                 DrawCmd* draw = iter->NextCommand<DrawCmd>();
 
-                DAWN_TRY(state.SyncAndRun([&](const VulkanFunctions& vk, VkCommandBuffer commands) {
-                    vk.CmdDraw(commands, draw->vertexCount, draw->instanceCount, draw->firstVertex,
-                               draw->firstInstance);
-                }));
+                if (draw->vertexCount > 0 && draw->instanceCount > 0) {
+                    DAWN_TRY(
+                        state.SyncAndRun([&](const VulkanFunctions& vk, VkCommandBuffer commands) {
+                            vk.CmdDraw(commands, draw->vertexCount, draw->instanceCount,
+                                       draw->firstVertex, draw->firstInstance);
+                        }));
+                }
                 break;
             }
 
@@ -1721,21 +1811,29 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 workCommandCount++;
                 DrawIndexedCmd* draw = iter->NextCommand<DrawIndexedCmd>();
 
-                DAWN_TRY(state.SyncAndRun([&](const VulkanFunctions& vk, VkCommandBuffer commands) {
-                    vk.CmdDrawIndexed(commands, draw->indexCount, draw->instanceCount,
-                                      draw->firstIndex, draw->baseVertex, draw->firstInstance);
-                }));
+                if (draw->indexCount > 0 && draw->instanceCount > 0) {
+                    DAWN_TRY(state.SyncAndRun([&](const VulkanFunctions& vk,
+                                                  VkCommandBuffer commands) {
+                        vk.CmdDrawIndexed(commands, draw->indexCount, draw->instanceCount,
+                                          draw->firstIndex, draw->baseVertex, draw->firstInstance);
+                    }));
+                }
                 break;
             }
 
             case Command::DrawIndirect: {
                 workCommandCount++;
                 DrawIndirectCmd* draw = iter->NextCommand<DrawIndirectCmd>();
-                Buffer* buffer = ToBackend(draw->indirectBuffer.Get());
+
+                IndirectDrawMetadata::ValidatedIndirectDraw validatedDraw =
+                    metadata.GetValidatedIndirectDraw(draw, indirectDrawIndex++);
+
+                Buffer* indirectBuffer = ToBackend(validatedDraw.indirectBuffer.Get());
+                DAWN_ASSERT(indirectBuffer != nullptr);
 
                 DAWN_TRY(state.SyncAndRun([&](const VulkanFunctions& vk, VkCommandBuffer commands) {
-                    vk.CmdDrawIndirect(commands, buffer->GetHandle(),
-                                       static_cast<VkDeviceSize>(draw->indirectOffset), 1, 0);
+                    vk.CmdDrawIndirect(commands, indirectBuffer->GetHandle(),
+                                       validatedDraw.indirectOffset, 1, 0);
                 }));
                 break;
             }
@@ -1743,13 +1841,16 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::DrawIndexedIndirect: {
                 workCommandCount++;
                 DrawIndexedIndirectCmd* draw = iter->NextCommand<DrawIndexedIndirectCmd>();
-                Buffer* buffer = ToBackend(draw->indirectBuffer.Get());
-                DAWN_ASSERT(buffer != nullptr);
+
+                IndirectDrawMetadata::ValidatedIndirectDraw validatedDraw =
+                    metadata.GetValidatedIndirectDraw(draw, indirectDrawIndex++);
+
+                Buffer* indirectBuffer = ToBackend(validatedDraw.indirectBuffer.Get());
+                DAWN_ASSERT(indirectBuffer != nullptr);
 
                 DAWN_TRY(state.SyncAndRun([&](const VulkanFunctions& vk, VkCommandBuffer commands) {
-                    vk.CmdDrawIndexedIndirect(commands, buffer->GetHandle(),
-                                              static_cast<VkDeviceSize>(draw->indirectOffset), 1,
-                                              0);
+                    vk.CmdDrawIndexedIndirect(commands, indirectBuffer->GetHandle(),
+                                              validatedDraw.indirectOffset, 1, 0);
                 }));
                 break;
             }
@@ -1810,11 +1911,11 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::InsertDebugMarker: {
                 if (device->GetGlobalInfo().HasExt(InstanceExt::DebugUtils)) {
                     InsertDebugMarkerCmd* cmd = iter->NextCommand<InsertDebugMarkerCmd>();
-                    const char* label = iter->NextData<char>(cmd->length + 1);
+                    std::string_view label = NextNullTerminatedString(iter, cmd->length);
                     VkDebugUtilsLabelEXT utilsLabel;
                     utilsLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
                     utilsLabel.pNext = nullptr;
-                    utilsLabel.pLabelName = label;
+                    utilsLabel.pLabelName = label.data();
                     // Default color to black
                     utilsLabel.color[0] = 0.0;
                     utilsLabel.color[1] = 0.0;
@@ -1840,11 +1941,11 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::PushDebugGroup: {
                 if (device->GetGlobalInfo().HasExt(InstanceExt::DebugUtils)) {
                     PushDebugGroupCmd* cmd = iter->NextCommand<PushDebugGroupCmd>();
-                    const char* label = iter->NextData<char>(cmd->length + 1);
+                    std::string_view label = NextNullTerminatedString(iter, cmd->length);
                     VkDebugUtilsLabelEXT utilsLabel;
                     utilsLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
                     utilsLabel.pNext = nullptr;
-                    utilsLabel.pLabelName = label;
+                    utilsLabel.pLabelName = label.data();
                     // Default color to black
                     utilsLabel.color[0] = 0.0;
                     utilsLabel.color[1] = 0.0;
@@ -1860,13 +1961,12 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::SetBindGroup: {
                 SetBindGroupCmd* cmd = iter->NextCommand<SetBindGroupCmd>();
                 BindGroup* bindGroup = ToBackend(cmd->group.Get());
-                uint32_t* dynamicOffsets = nullptr;
-                if (cmd->dynamicOffsetCount > 0) {
+                ityp::span<BindingIndex, const uint32_t> dynamicOffsets;
+                if (cmd->dynamicOffsetCount != BindingIndex{0u}) {
                     dynamicOffsets = iter->NextData<uint32_t>(cmd->dynamicOffsetCount);
                 }
 
-                state.descriptorSets.OnSetBindGroup(cmd->index, bindGroup, cmd->dynamicOffsetCount,
-                                                    dynamicOffsets);
+                state.descriptorSets.OnSetBindGroup(cmd->index, bindGroup, dynamicOffsets);
                 break;
             }
 
@@ -1898,9 +1998,8 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::SetImmediates: {
                 SetImmediatesCmd* cmd = iter->NextCommand<SetImmediatesCmd>();
                 DAWN_ASSERT(cmd->size > 0);
-                uint8_t* value = nullptr;
-                value = iter->NextData<uint8_t>(cmd->size);
-                state.immediates.SetImmediates(cmd->offset, value, cmd->size);
+                Span<const std::byte> data = iter->NextData<std::byte>(cmd->size);
+                state.immediates.SetImmediates(cmd->offset, data);
                 break;
             }
 
@@ -1930,16 +2029,9 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 // a driver bug that fails to resolve render targets in empty passes.
                 if (workCommandCount == 0 &&
                     device->IsToggleEnabled(Toggle::VulkanAddWorkToEmptyResolvePass)) {
-                    QuerySetBase* querySet = device->GetEmptyPassQuerySet();
-
-                    // Ensure that the query was allocated. In the unlikely event that it wasn't
-                    // (probably due to an OOM) empty render passes can't be safely completed using
-                    // this workaround.
-                    DAWN_INTERNAL_ERROR_IF(querySet->IsError(),
-                                           "Unable to allocate internal empty pass query set.");
-
-                    device->fn.CmdBeginQuery(commands, ToBackend(querySet)->GetHandle(), 0, 0);
-                    device->fn.CmdEndQuery(commands, ToBackend(querySet)->GetHandle(), 0);
+                    Ref<QuerySetBase> emptyQuerySet = device->UseEmptyPassQuerySet();
+                    device->fn.CmdBeginQuery(commands, ToBackend(emptyQuerySet)->GetHandle(), 0, 0);
+                    device->fn.CmdEndQuery(commands, ToBackend(emptyQuerySet)->GetHandle(), 0);
                 }
 
                 RecordEndRenderPass(recordingContext, device);
@@ -1948,13 +2040,14 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 // We've observed that this must be called after the render pass ends or the
                 // timestamps produced are nonsensical on multiple Android devices.
                 if (renderPassCmd->timestampWrites.endOfPassWriteIndex !=
-                    wgpu::kQuerySetIndexUndefined) {
+                    kQuerySetIndexUndefinedTyped) {
                     RecordWriteTimestampCmd(recordingContext, device,
                                             renderPassCmd->timestampWrites.querySet.Get(),
                                             renderPassCmd->timestampWrites.endOfPassWriteIndex,
                                             true, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
                 }
 
+                UpdateQueryAvailability(renderPassCmd->timestampWrites);
                 return {};
             }
 
@@ -2003,8 +2096,8 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::SetScissorRect: {
                 SetScissorRectCmd* cmd = mCommands.NextCommand<SetScissorRectCmd>();
                 VkRect2D rect;
-                rect.offset.x = cmd->x;
-                rect.offset.y = cmd->y;
+                rect.offset.x = sign_cast(cmd->x);
+                rect.offset.y = sign_cast(cmd->y);
                 rect.extent.width = cmd->width;
                 rect.extent.height = cmd->height;
 
@@ -2016,8 +2109,8 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 ExecuteBundlesCmd* cmd = mCommands.NextCommand<ExecuteBundlesCmd>();
                 auto bundles = mCommands.NextData<Ref<RenderBundleBase>>(cmd->count);
 
-                for (uint32_t i = 0; i < cmd->count; ++i) {
-                    CommandIterator* iter = bundles[i]->GetCommands();
+                for (const auto& bundle : bundles) {
+                    CommandIterator* iter = bundle->GetCommands();
                     iter->Reset();
                     while (iter->NextCommandId(&type)) {
                         DAWN_TRY(EncodeRenderBundleCommand(iter, type));
@@ -2031,7 +2124,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 BeginOcclusionQueryCmd* cmd = mCommands.NextCommand<BeginOcclusionQueryCmd>();
 
                 device->fn.CmdBeginQuery(commands, ToBackend(cmd->querySet.Get())->GetHandle(),
-                                         cmd->queryIndex, 0);
+                                         uint32_t{cmd->queryIndex}, 0);
                 break;
             }
 
@@ -2040,7 +2133,9 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 EndOcclusionQueryCmd* cmd = mCommands.NextCommand<EndOcclusionQueryCmd>();
 
                 device->fn.CmdEndQuery(commands, ToBackend(cmd->querySet.Get())->GetHandle(),
-                                       cmd->queryIndex);
+                                       uint32_t{cmd->queryIndex});
+
+                UpdateQueryAvailability(cmd);
                 break;
             }
 
@@ -2050,6 +2145,8 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
 
                 RecordWriteTimestampCmd(recordingContext, device, cmd->querySet.Get(),
                                         cmd->queryIndex, true, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+                UpdateQueryAvailability(cmd);
                 break;
             }
 

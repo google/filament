@@ -25,17 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Commands.h"
+#include "src/dawn/native/Commands.h"
 
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/CommandAllocator.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/RenderBundle.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/ResourceTable.h"
-#include "dawn/native/Texture.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/CommandAllocator.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/RenderBundle.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/ResourceTable.h"
+#include "src/dawn/native/Texture.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
@@ -139,9 +140,9 @@ void FreeCommands(CommandIterator* commands) {
             }
             case Command::ExecuteBundles: {
                 ExecuteBundlesCmd* cmd = commands->NextCommand<ExecuteBundlesCmd>();
-                auto bundles = commands->NextData<Ref<RenderBundleBase>>(cmd->count);
-                for (size_t i = 0; i < cmd->count; ++i) {
-                    (&bundles[i])->~Ref<RenderBundleBase>();
+                auto bundles = commands->NextData<RenderBundleBase*>(cmd->count);
+                for (auto bundle : bundles) {
+                    Ref<RenderBundleBase> ref = AcquireRef(bundle);
                 }
                 cmd->~ExecuteBundlesCmd();
                 break;
@@ -159,7 +160,7 @@ void FreeCommands(CommandIterator* commands) {
             }
             case Command::InsertDebugMarker: {
                 InsertDebugMarkerCmd* cmd = commands->NextCommand<InsertDebugMarkerCmd>();
-                commands->NextData<char>(cmd->length + 1);
+                commands->NextData<char>(cmd->length);
                 cmd->~InsertDebugMarkerCmd();
                 break;
             }
@@ -170,7 +171,7 @@ void FreeCommands(CommandIterator* commands) {
             }
             case Command::PushDebugGroup: {
                 PushDebugGroupCmd* cmd = commands->NextCommand<PushDebugGroupCmd>();
-                commands->NextData<char>(cmd->length + 1);
+                commands->NextData<char>(cmd->length);
                 cmd->~PushDebugGroupCmd();
                 break;
             }
@@ -211,7 +212,7 @@ void FreeCommands(CommandIterator* commands) {
             }
             case Command::SetBindGroup: {
                 SetBindGroupCmd* cmd = commands->NextCommand<SetBindGroupCmd>();
-                if (cmd->dynamicOffsetCount > 0) {
+                if (cmd->dynamicOffsetCount > BindingIndex{0u}) {
                     commands->NextData<uint32_t>(cmd->dynamicOffsetCount);
                 }
                 cmd->~SetBindGroupCmd();
@@ -219,9 +220,7 @@ void FreeCommands(CommandIterator* commands) {
             }
             case Command::SetImmediates: {
                 SetImmediatesCmd* cmd = commands->NextCommand<SetImmediatesCmd>();
-                if (cmd->size > 0) {
-                    commands->NextData<uint8_t>(cmd->size);
-                }
+                commands->NextData<uint8_t>(cmd->size);
                 cmd->~SetImmediatesCmd();
                 break;
             }
@@ -347,7 +346,7 @@ void SkipCommand(CommandIterator* commands, Command type) {
 
         case Command::InsertDebugMarker: {
             InsertDebugMarkerCmd* cmd = commands->NextCommand<InsertDebugMarkerCmd>();
-            commands->NextData<char>(cmd->length + 1);
+            commands->NextData<char>(cmd->length);
             break;
         }
 
@@ -357,7 +356,7 @@ void SkipCommand(CommandIterator* commands, Command type) {
 
         case Command::PushDebugGroup: {
             PushDebugGroupCmd* cmd = commands->NextCommand<PushDebugGroupCmd>();
-            commands->NextData<char>(cmd->length + 1);
+            commands->NextData<char>(cmd->length);
             break;
         }
 
@@ -392,7 +391,7 @@ void SkipCommand(CommandIterator* commands, Command type) {
 
         case Command::SetBindGroup: {
             SetBindGroupCmd* cmd = commands->NextCommand<SetBindGroupCmd>();
-            if (cmd->dynamicOffsetCount > 0) {
+            if (cmd->dynamicOffsetCount > BindingIndex{0u}) {
                 commands->NextData<uint32_t>(cmd->dynamicOffsetCount);
             }
             break;
@@ -400,9 +399,7 @@ void SkipCommand(CommandIterator* commands, Command type) {
 
         case Command::SetImmediates: {
             SetImmediatesCmd* cmd = commands->NextCommand<SetImmediatesCmd>();
-            if (cmd->size > 0) {
-                commands->NextData<uint8_t>(cmd->size);
-            }
+            commands->NextData<uint8_t>(cmd->size);
             break;
         }
 
@@ -422,9 +419,7 @@ void SkipCommand(CommandIterator* commands, Command type) {
 
         case Command::WriteBuffer: {
             auto cmd = commands->NextCommand<WriteBufferCmd>();
-            if (cmd->size > 0) {
-                commands->NextData<uint8_t>(cmd->size);
-            }
+            commands->NextData<uint8_t>(cmd->size);
             break;
         }
 
@@ -435,18 +430,27 @@ void SkipCommand(CommandIterator* commands, Command type) {
     }
 }
 
-const char* AddNullTerminatedString(CommandAllocator* allocator, StringView s, uint32_t* length) {
-    std::string_view view = s;
-    *length = static_cast<uint32_t>(view.length());
+std::string_view AddNullTerminatedString(CommandAllocator* allocator,
+                                         std::string_view s,
+                                         size_t* length) {
+    *length = s.length() + 1;
 
     // Include extra null-terminator character. The string_view may not be null-terminated. It also
     // may already have a null-terminator inside of it, in which case adding the null-terminator is
     // unnecessary. However, this is unlikely, so always include the extra character.
-    char* out = allocator->AllocateData<char>(view.length() + 1);
-    memcpy(out, view.data(), view.length());
-    out[view.length()] = '\0';
+    Span<char> out = allocator->AllocateData<char>(s.length() + 1);
 
-    return out;
+    // TODO(https://crbug.com/524406299): Use Span::CopyFrom.
+    std::ranges::copy(s, out.begin());
+    out[s.length()] = '\0';
+
+    return {out.begin(), out.end()};
+}
+
+std::string_view NextNullTerminatedString(CommandIterator* iterator, size_t length) {
+    Span<const char> data = iterator->NextData<char>(length);
+    DAWN_ASSERT(data[data.size() - 1] == '\0');  // The string is null-terminated.
+    return {data.begin(), data.end()};
 }
 
 TimestampWrites::TimestampWrites() = default;

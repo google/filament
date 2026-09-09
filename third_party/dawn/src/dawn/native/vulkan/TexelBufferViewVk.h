@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_TEXELBUFFERVIEWVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_TEXELBUFFERVIEWVK_H_
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/TexelBufferView.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/TexelBufferView.h"
 
 namespace dawn::native::vulkan {
 

@@ -2,6 +2,7 @@
 *.glsl      eol=lf
 *.gn        eol=lf
 *.bazel     eol=lf
+*.bzl       eol=lf
 *.cmake     eol=lf
 *.gni       eol=lf
 *.hlsl      eol=lf
@@ -20,3 +21,4 @@
 *.inl       eol=lf
 *.txt       eol=lf
 *.bat       eol=crlf
+*_nocompile.nc eol=lf linguist-language=C++

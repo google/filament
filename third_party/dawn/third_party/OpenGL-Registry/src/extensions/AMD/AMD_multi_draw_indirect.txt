@@ -1,0 +1,212 @@
+Name
+
+    AMD_multi_draw_indirect
+
+Name Strings
+
+    GL_AMD_multi_draw_indirect
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers
+
+Status
+
+    Complete, shipping.
+
+Version
+
+    Last Modified Date: Febuary 14, 2011
+    Revision: 2
+
+Number
+
+    408
+
+Dependencies
+
+    OpenGL 4.0 or ARB_draw_indirect is required.
+
+    The extension is written against the OpenGL 4.1 Specification, Core Profile,
+    July 25, 2010
+
+Overview
+
+    The ARB_draw_indirect extension (included in OpenGL 4.0) introduced
+    mechanisms whereby the parameters for a draw function may be provided in
+    a structure contained in a buffer object rather than as parameters to the
+    drawing procedure. This is known as an indirect draw and is exposed as two
+    new functions, glDrawArraysIndirect and glDrawElementsIndirect. Each of
+    these functions generates a single batch of primitives.
+
+    This extension builds on this functionality by providing procedures to
+    invoke multiple draws from a single procedure call. This allows large
+    batches of drawing commands to be assembled in server memory (via a buffer
+    object) which may then be dispatched through a single function call.
+
+New Procedures and Functions
+
+        void MultiDrawArraysIndirectAMD(enum mode,
+                                        const void *indirect,
+                                        sizei primcount,
+                                        sizei stride);
+
+        void MultiDrawElementsIndirectAMD(enum mode,
+                                          enum type,
+                                          const void *indirect,
+                                          sizei primcount,
+                                          sizei stride);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.1 (Core) Specification (OpenGL Operation)
+
+    Additions to Section 2.8.3, "Drawing Commands"
+
+    After the description of MultiDrawArrays and before the introduction of
+    DrawElementsInstanced, insert the following on p.36:
+
+        The command
+
+        void MultiDrawArraysIndirectAMD(enum mode,
+                                        const void *indirect,
+                                        sizei primcount,
+                                        sizei stride);
+
+    behaves identically to DrawArraysIndirect, except that <indirect> is
+    treated as an array of <primcount> DrawArraysIndirectCommand structures.
+    <indirect> contains the offset of the first element of the array within the
+    buffer currently bound to the DRAW_INDIRECT buffer binding.<stride>
+    specifies the distance, in basic machine units, between the elements of the
+    array. If <stride> is zero, the array elements are treated as tightly
+    packed. <stride> must be a multiple of four, otherwise an INVALID_VALUE
+    error is generated.
+
+    It has the same effect as:
+
+        if (<mode> is invalid)
+            generate appropriate error
+        else {
+            const ubyte * ptr = (const ubyte *)indirect;
+            for (i = 0; i < primcount; i++) {
+                DrawArraysIndirect(mode,
+                                   (DrawArraysIndirectCommand*)ptr);
+                if (stride == 0)
+                {
+                    ptr += sizeof(DrawArraysIndirectCommand);
+                } else
+                {
+                    ptr += stride;
+                }
+            }
+        }
+
+    <primcount> must be positive, otherwise an INVALID_VALUE error will be
+    generated.
+
+    After the description of DrawElementsIndirect and before the introduction
+    of MultiDrawElementsBaseVertex, insert the following on p.39:
+
+        The command
+
+        void MultiDrawElementsIndirectAMD(enum mode,
+                                          enum type,
+                                          const void *indirect,
+                                          sizei primcount,
+                                          sizei stride);
+
+    behaves identically to DrawElementsIndirect, except that <indirect> is
+    treated as an array of <primcount> DrawElementsIndirectCommand structures.
+    <indirect> contains the offset of the first element of the array within the
+    buffer currently bound to the DRAW_INDIRECT buffer binding. <stride>
+    specifies the distance, in basic machine units, between the elements of the
+    array. If <stride> is zero, the array elements are treated as tightly
+    packed. <stride> must be a multiple of four, otherwise an INVALID_VALUE
+    error is generated.
+
+    It has the same effect as:
+
+        if (<mode> or <type> is invalid)
+            generate appropriate error
+        else {
+            const ubyte * ptr = (const ubyte *)indirect;
+            for (i = 0; i < primcount; i++) {
+                DrawElementsIndirect(mode,
+                                     type,
+                                     (DrawElementsIndirectCommand*)ptr);
+                if (stride == 0)
+                {
+                    ptr += sizeof(DrawElementsIndirectCommand);
+                } else
+                {
+                    ptr += stride;
+                }
+            }
+        }
+
+    Modifications to Section 2.9.8 "Indirect Commands in Buffer Objects"
+
+    Modify both instances of "DrawArraysIndirect and DrawElementsIndirect" on
+    p.51 to read "DrawArraysIndirect, DrawElementsIndirect,
+    MultiDrawArraysIndirect and MultiDrawElementsIndirect".
+
+Additions to Chapter 3 of the OpenGL 4.1 (Core) Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.1 (Core) Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.1 (Core) Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.1 (Core) Specification (State and
+State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_VALUE is generated by MultiDrawArraysIndirect or
+    MultiDrawElementsIndirect if <primcount> is negative.
+
+    INVALID_VALUE is generated by MultiDrawArraysIndirect or
+    MultiDrawElementsIndirect if <stride> is not a multipe of four.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    None, so far.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     2    02/14/2011  gsellers  Add stride parameters
+     1    01/06/2011  gsellers  Initial draft

@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_EXTERNAL_SEMAPHORE_SEMAPHORESERVICEIMPLEMENTATION_H_
 #define SRC_DAWN_NATIVE_VULKAN_EXTERNAL_SEMAPHORE_SEMAPHORESERVICEIMPLEMENTATION_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/vulkan/ExternalHandle.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/vulkan/ExternalHandle.h"
 
 namespace dawn::native::vulkan {
 class Device;

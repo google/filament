@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_D3D_SHARED_TEXTURE_MEMORY_D3D_H_
 #define SRC_DAWN_NATIVE_D3D_SHARED_TEXTURE_MEMORY_D3D_H_
 
-#include "dawn/native/SharedTextureMemory.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/SharedTextureMemory.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {
 

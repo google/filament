@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_QUERYSETWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_QUERYSETWGPU_H_
 
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

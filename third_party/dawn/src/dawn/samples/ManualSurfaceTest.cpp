@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 // This is an example to manually test surface code. Controls are the following, scoped to the
 // currently focused window:
 //  - W: creates a new window.
@@ -93,15 +88,16 @@
 #include <vector>
 
 #include "GLFW/glfw3.h"
-#include "dawn/common/Assert.h"
-#include "dawn/common/Log.h"
 #include "dawn/dawn_proc.h"  // nogncheck
 #include "dawn/native/DawnNative.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/CommandLineParser.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "dawn/webgpu_cpp_print.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/CommandLineParser.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/log.h"
 #include "webgpu/webgpu_glfw.h"
 
 template <typename T>
@@ -200,8 +196,8 @@ void SyncFromWindow(WindowData* data) {
     int height;
     glfwGetFramebufferSize(data->window, &width, &height);
 
-    data->targetConfig.width = std::max(1u, width / data->divisor);
-    data->targetConfig.height = std::max(1u, height / data->divisor);
+    data->targetConfig.width = std::max(1u, static_cast<uint32_t>(width) / data->divisor);
+    data->targetConfig.height = std::max(1u, static_cast<uint32_t>(height) / data->divisor);
 }
 
 void AddWindow() {
@@ -229,9 +225,11 @@ void AddWindow() {
     data->currentConfig = config;
     data->targetConfig = config;
     SyncFromWindow(data.get());
-    data->presentModes.assign(caps.presentModes, caps.presentModes + caps.presentModeCount);
-    data->alphaModes.assign(caps.alphaModes, caps.alphaModes + caps.alphaModeCount);
-    data->formats.assign(caps.formats, caps.formats + caps.formatCount);
+    data->presentModes.assign(caps.presentModes,
+                              DAWN_UNSAFE_TODO(caps.presentModes + caps.presentModeCount));
+    data->alphaModes.assign(caps.alphaModes,
+                            DAWN_UNSAFE_TODO(caps.alphaModes + caps.alphaModeCount));
+    data->formats.assign(caps.formats, DAWN_UNSAFE_TODO(caps.formats + caps.formatCount));
 
     windows[window] = std::move(data);
 }
@@ -254,15 +252,15 @@ void DoRender(WindowData* data) {
         pass.Draw(3);
         pass.End();
     } else {
-        data->clearCycle -= 1.0 / 60.f;
-        if (data->clearCycle < 0.0) {
+        data->clearCycle -= 1.0f / 60.0f;
+        if (data->clearCycle < 0.0f) {
             data->clearCycle = 1.0f;
         }
 
         dawn::utils::ComboRenderPassDescriptor desc({view});
         desc.cColorAttachments[0].loadOp = wgpu::LoadOp::Clear;
-        desc.cColorAttachments[0].clearValue = {data->clearCycle, 1.0f - data->clearCycle, 0.0f,
-                                                1.0f};
+        desc.cColorAttachments[0].clearValue = {double{data->clearCycle},
+                                                double{1.0f - data->clearCycle}, 0.0, 1.0};
 
         wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&desc);
         pass.End();

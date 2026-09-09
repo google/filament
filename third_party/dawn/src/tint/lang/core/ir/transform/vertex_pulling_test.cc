@@ -40,6 +40,7 @@ namespace {
 
 class MslWriter_VertexPullingTest : public core::ir::transform::TransformTest {
   protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
     core::IOAttributes Location(uint32_t loc) {
         core::IOAttributes attrs;
         attrs.location = loc;
@@ -3156,6 +3157,98 @@ $B1: {  # root
                           }}}};
     Run(VertexPulling, cfg);
 
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_VertexPullingTest, OneAttribute_Snorm10_10_10_2) {
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
+    auto* param = b.FunctionParam("input", ty.vec4f());
+    param->SetLocation(0);
+    ep->AppendParam(param);
+    ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
+    b.Append(ep->Block(), [&] {  //
+        b.Return(ep, param);
+    });
+
+    auto* src = R"(
+%foo = @vertex func(%input:vec4<f32> [@location(0)]):vec4<f32> [@position] {
+  $B1: {
+    ret %input
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    VertexPullingConfig cfg;
+    cfg.pulling_group = 4u;
+    cfg.vertex_state = {{{4, VertexStepMode::kVertex, {{VertexFormat::kSnorm10_10_10_2, 0, 0}}}}};
+    Run(VertexPulling, cfg);
+
+    auto* expect = R"(
+$B1: {  # root
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+}
+
+%foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
+  $B2: {
+    %4:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
+    %5:u32 = load %4
+    %6:i32 = bitcast<i32> %5
+    %7:vec4<i32> = construct %6
+    %8:vec4<i32> = shl %7, vec4<u32>(22u, 12u, 2u, 0u)
+    %9:vec4<i32> = shr %8, vec4<u32>(22u, 22u, 22u, 30u)
+    %10:vec4<f32> = convert %9
+    %11:vec4<f32> = div %10, vec4<f32>(511.0f, 511.0f, 511.0f, 1.0f)
+    %12:vec4<f32> = max %11, vec4<f32>(-1.0f)
+    ret %12
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_VertexPullingTest, OneAttribute_Unorm10_10_10_2) {
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
+    auto* param = b.FunctionParam("input", ty.vec4f());
+    param->SetLocation(0);
+    ep->AppendParam(param);
+    ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
+    b.Append(ep->Block(), [&] {  //
+        b.Return(ep, param);
+    });
+
+    auto* src = R"(
+%foo = @vertex func(%input:vec4<f32> [@location(0)]):vec4<f32> [@position] {
+  $B1: {
+    ret %input
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    VertexPullingConfig cfg;
+    cfg.pulling_group = 4u;
+    cfg.vertex_state = {{{4, VertexStepMode::kVertex, {{VertexFormat::kUnorm10_10_10_2, 0, 0}}}}};
+    Run(VertexPulling, cfg);
+
+    auto* expect = R"(
+$B1: {  # root
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+}
+
+%foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
+  $B2: {
+    %4:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
+    %5:u32 = load %4
+    %6:vec4<u32> = construct %5
+    %7:vec4<u32> = shr %6, vec4<u32>(0u, 10u, 20u, 30u)
+    %8:vec4<u32> = and %7, vec4<u32>(1023u, 1023u, 1023u, 3u)
+    %9:vec4<f32> = convert %8
+    %10:vec4<f32> = div %9, vec4<f32>(1023.0f, 1023.0f, 1023.0f, 3.0f)
+    ret %10
+  }
+}
+)";
     EXPECT_EQ(expect, str());
 }
 

@@ -27,9 +27,9 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -304,9 +304,8 @@ class DrawIndirectUsingInstanceIndexTest : public DrawIndirectUsingFirstVertexTe
     }
 
     void SetUp() override {
-        DawnTest::SetUp();
+        dawn::DrawIndirectUsingFirstVertexTest::SetUp();
         DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::IndirectFirstInstance));
-        GeneralSetup();
     }
 };
 

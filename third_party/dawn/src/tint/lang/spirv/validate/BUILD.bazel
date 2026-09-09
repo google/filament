@@ -34,8 +34,12 @@
 #                       Do not modify this file directly
 ################################################################################
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//src/tint:flags.bzl", "COPTS")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+
+exports_files(glob(["*.def", "*.tmpl"], allow_empty = True))
+
 cc_library(
   name = "validate",
   srcs = [
@@ -54,13 +58,9 @@ cc_library(
     "//src/tint/utils/memory",
     "//src/tint/utils/rtti",
     "//src/tint/utils/text",
+    "@spirv_tools",
     "//src/utils",
-  ] + select({
-    ":tint_build_spv_reader_or_tint_build_spv_writer": [
-      "@spirv_tools",
-    ],
-    "//conditions:default": [],
-  }),
+  ],
   copts = COPTS,
   visibility = ["//visibility:public"],
 )
@@ -71,19 +71,15 @@ cc_library(
     "validate_test.cc",
   ],
   deps = [
+    "//src/tint/lang/spirv/validate",
     "//src/tint/utils",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",
     "//src/tint/utils/rtti",
     "@gtest",
+    "@spirv_tools",
     "//src/utils",
-  ] + select({
-    ":tint_build_spv_reader_or_tint_build_spv_writer": [
-      "//src/tint/lang/spirv/validate",
-      "@spirv_tools",
-    ],
-    "//conditions:default": [],
-  }),
+  ],
   copts = COPTS,
   visibility = ["//visibility:public"],
 )
@@ -101,8 +97,8 @@ alias(
 selects.config_setting_group(
     name = "tint_build_spv_reader_or_tint_build_spv_writer",
     match_any = [
-        "tint_build_spv_reader",
-        "tint_build_spv_writer",
+        ":tint_build_spv_reader",
+        ":tint_build_spv_writer",
     ],
 )
 

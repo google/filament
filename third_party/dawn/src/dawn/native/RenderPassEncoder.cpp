@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/RenderPassEncoder.h"
+#include "src/dawn/native/RenderPassEncoder.h"
 
 #include <math.h>
 
@@ -33,26 +33,27 @@
 #include <cstring>
 #include <utility>
 
-#include "dawn/common/Constants.h"
-#include "dawn/native/Adapter.h"
-#include "dawn/native/Buffer.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/CommandEncoder.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/RenderBundle.h"
-#include "dawn/native/RenderPipeline.h"
-#include "dawn/native/ValidationUtils.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/CommandEncoder.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/RenderBundle.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/native/ResourceTable.h"
+#include "src/dawn/native/ValidationUtils.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 namespace {
 
 // Check the query at queryIndex is unavailable, otherwise it cannot be written.
 MaybeError ValidateQueryIndexOverwrite(QuerySetBase* querySet,
-                                       uint32_t queryIndex,
+                                       QueryIndex queryIndex,
                                        const QueryAvailabilityMap& queryAvailabilityMap) {
     auto it = queryAvailabilityMap.find(querySet);
     DAWN_INVALID_IF(it != queryAvailabilityMap.end() && it->second[queryIndex],
@@ -147,17 +148,6 @@ ObjectType RenderPassEncoder::GetType() const {
     return ObjectType::RenderPassEncoder;
 }
 
-void RenderPassEncoder::TrackQueryAvailability(QuerySetBase* querySet, uint32_t queryIndex) {
-    DAWN_ASSERT(querySet != nullptr);
-
-    // Track the query availability with true on render pass for rewrite validation and query
-    // reset on render pass on Vulkan
-    mUsageTracker.TrackQueryAvailability(querySet, queryIndex);
-
-    // Track it again on command encoder for zero-initializing when resolving unused queries.
-    mCommandEncoder->TrackQueryAvailability(querySet, queryIndex);
-}
-
 void RenderPassEncoder::APIEnd() {
     // The encoding context might create additional resources, so we need to lock the device.
     auto deviceGuard = GetDevice()->GetGuard();
@@ -197,6 +187,9 @@ void RenderPassEncoder::End() {
                                                       std::move(mIndirectDrawMetadata)));
 
             DAWN_TRY(mEndCallback());
+            // Once the end callback has been called explicitly set it to null so that any
+            // references the lambdas may be holding can be dropped.
+            mEndCallback = nullptr;
             return {};
         },
         "encoding %s.End().", this);
@@ -250,7 +243,8 @@ void RenderPassEncoder::APISetViewport(float x,
 
                 const CombinedLimits& limits = GetDevice()->GetLimits();
                 uint32_t maxViewportSize = limits.v1.maxTextureDimension2D;
-                float maxViewportBounds = maxViewportSize * 2.0f;
+                float maxViewportSizeFloat = static_cast<float>(maxViewportSize);
+                float maxViewportBounds = static_cast<float>(maxViewportSize) * 2.0f;
 
                 DAWN_INVALID_IF(
                     width < 0 || height < 0,
@@ -258,17 +252,17 @@ void RenderPassEncoder::APISetViewport(float x,
                     height);
 
                 DAWN_INVALID_IF(
-                    width > maxViewportSize, "Viewport width (%f) exceeds the maximum (%u).%s",
+                    width > maxViewportSizeFloat, "Viewport width (%f) exceeds the maximum (%u).%s",
                     width, maxViewportSize,
                     DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
-                                                maxTextureDimension2D, width));
+                                                maxTextureDimension2D, static_cast<double>(width)));
 
-                DAWN_INVALID_IF(
-                    height > maxViewportSize,
-                    "Viewport size height (%f) exceeds the maximum (%u).%s", height,
-                    maxViewportSize,
-                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
-                                                maxTextureDimension2D, height));
+                DAWN_INVALID_IF(height > maxViewportSizeFloat,
+                                "Viewport size height (%f) exceeds the maximum (%u).%s", height,
+                                maxViewportSize,
+                                DAWN_INCREASE_LIMIT_MESSAGE(
+                                    GetDevice()->GetAdapter()->GetLimits().v1,
+                                    maxTextureDimension2D, static_cast<double>(height)));
 
                 DAWN_INVALID_IF(x < -maxViewportBounds || y < -maxViewportBounds,
                                 "Viewport offset (x: %f, y: %f) is less than the minimum "
@@ -332,7 +326,38 @@ void RenderPassEncoder::APISetScissorRect(uint32_t x, uint32_t y, uint32_t width
         "encoding %s.SetScissorRect(%u, %u, %u, %u).", this, x, y, width, height);
 }
 
-void RenderPassEncoder::APIExecuteBundles(uint32_t count, RenderBundleBase* const* renderBundles) {
+void RenderPassEncoder::APISetResourceTable(ResourceTableBase* table) {
+    DAWN_ASSERT(table != nullptr);
+
+    mEncodingContext->TryEncode(
+        this,
+        [&](CommandAllocator* allocator) -> MaybeError {
+            if (GetDevice()->IsValidationEnabled()) {
+                DAWN_INVALID_IF(
+                    !GetDevice()->HasFeature(Feature::ChromiumExperimentalSamplingResourceTable),
+                    "setResourceTable requires the %s feature enabled.",
+                    wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable);
+                DAWN_TRY(GetDevice()->ValidateObject(table));
+
+                ResourceTableBase* currentTable = mCommandBufferState.GetResourceTable();
+                DAWN_INVALID_IF(currentTable != nullptr && table != currentTable,
+                                "Changing from %s to %s is not allowed in a RenderPassEncoder (in "
+                                "the future the table will be set in BeginRenderPass).",
+                                currentTable, table);
+            }
+
+            mCommandBufferState.SetResourceTable(table);
+            mUsageTracker.SetUsedResourceTable(table);
+
+            SetResourceTableCmd* cmd =
+                allocator->Allocate<SetResourceTableCmd>(Command::SetResourceTable);
+            cmd->table = table;
+            return {};
+        },
+        "encoding %s.SetResourceTable(%s).", this, table);
+}
+
+void RenderPassEncoder::APIExecuteBundles(Span<RenderBundleBase* const> renderBundles) {
     mEncodingContext->TryEncode(
         this,
         [&](CommandAllocator* allocator) -> MaybeError {
@@ -340,57 +365,78 @@ void RenderPassEncoder::APIExecuteBundles(uint32_t count, RenderBundleBase* cons
                 const AttachmentState* attachmentState = GetAttachmentState();
                 bool depthReadOnlyInPass = IsDepthReadOnly();
                 bool stencilReadOnlyInPass = IsStencilReadOnly();
-                for (uint32_t i = 0; i < count; ++i) {
-                    DAWN_TRY(GetDevice()->ValidateObject(renderBundles[i]));
+                bool hasResourceTable = mCommandBufferState.HasResourceTable();
+                for (auto [i, renderBundle] : Enumerate(renderBundles)) {
+                    DAWN_TRY(GetDevice()->ValidateObject(renderBundle));
 
-                    DAWN_INVALID_IF(attachmentState != renderBundles[i]->GetAttachmentState(),
+                    DAWN_INVALID_IF(attachmentState != renderBundle->GetAttachmentState(),
                                     "Attachment state of renderBundles[%i] (%s) is not "
                                     "compatible with %s.\n"
                                     "%s expects an attachment state of %s.\n"
                                     "renderBundles[%i] (%s) has an attachment state of %s.",
-                                    i, renderBundles[i], this, this, attachmentState, i,
-                                    renderBundles[i], renderBundles[i]->GetAttachmentState());
+                                    i, renderBundle, this, this, attachmentState, i, renderBundle,
+                                    renderBundle->GetAttachmentState());
 
-                    bool depthReadOnlyInBundle = renderBundles[i]->IsDepthReadOnly();
-                    DAWN_INVALID_IF(depthReadOnlyInPass && !depthReadOnlyInBundle,
-                                    "DepthReadOnly (%u) of renderBundle[%i] (%s) is not compatible "
-                                    "with DepthReadOnly (%u) of %s.",
-                                    depthReadOnlyInBundle, i, renderBundles[i], depthReadOnlyInPass,
+                    bool depthReadOnlyInBundle = renderBundle->IsDepthReadOnly();
+                    DAWN_INVALID_IF(
+                        depthReadOnlyInPass && !depthReadOnlyInBundle,
+                        "DepthReadOnly (%u) of renderBundles[%i] (%s) is not compatible "
+                        "with DepthReadOnly (%u) of %s.",
+                        depthReadOnlyInBundle, i, renderBundle, depthReadOnlyInPass, this);
+
+                    bool stencilReadOnlyInBundle = renderBundle->IsStencilReadOnly();
+                    DAWN_INVALID_IF(stencilReadOnlyInPass && !stencilReadOnlyInBundle,
+                                    "StencilReadOnly (%u) of renderBundles[%i] (%s) is not "
+                                    "compatible with StencilReadOnly (%u) of %s.",
+                                    stencilReadOnlyInBundle, i, renderBundle, stencilReadOnlyInPass,
                                     this);
 
-                    bool stencilReadOnlyInBundle = renderBundles[i]->IsStencilReadOnly();
-                    DAWN_INVALID_IF(stencilReadOnlyInPass && !stencilReadOnlyInBundle,
-                                    "StencilReadOnly (%u) of renderBundle[%i] (%s) is not "
-                                    "compatible with StencilReadOnly (%u) of %s.",
-                                    stencilReadOnlyInBundle, i, renderBundles[i],
-                                    stencilReadOnlyInPass, this);
+                    DAWN_INVALID_IF(
+                        renderBundle->UsesResourceTable() && !hasResourceTable,
+                        "renderBundles[%i] (%s) uses a ResourceTable but none is set on %s.", i,
+                        renderBundle, this);
                 }
             }
 
+            // Always reset state but the ResourceTable.
+            ResourceTableBase* table = mCommandBufferState.GetResourceTable();
             mCommandBufferState = CommandBufferStateTracker{};
+            mCommandBufferState.SetResourceTable(table);
+
+            // Only encode an ExecuteBundles command if count > 0
+            if (renderBundles.empty()) {
+                return {};
+            }
 
             ExecuteBundlesCmd* cmd =
                 allocator->Allocate<ExecuteBundlesCmd>(Command::ExecuteBundles);
-            cmd->count = count;
+            cmd->count = renderBundles.size();
 
-            Ref<RenderBundleBase>* bundles = allocator->AllocateData<Ref<RenderBundleBase>>(count);
-            for (uint32_t i = 0; i < count; ++i) {
+            Span<Ref<RenderBundleBase>> bundles =
+                allocator->AllocateData<Ref<RenderBundleBase>>(renderBundles.size());
+            for (auto [i, bundle] : Enumerate(bundles)) {
+                // TODO(https://crbug.com/524406299): Use Span::CopyFrom.
                 bundles[i] = renderBundles[i];
 
-                mUsageTracker.MergeResourceUsages(bundles[i]->GetResourceUsage());
+                mUsageTracker.MergeResourceUsages(bundle->GetResourceUsage());
+                if (bundle->GetResourceUsage().usesFramebufferFetch) {
+                    mUsageTracker.MarkFramebufferFetchUsed();
+                }
+
                 if (IsValidationEnabled()) {
                     mIndirectDrawMetadata.AddBundle(renderBundles[i]);
                 }
 
-                mDrawCount += bundles[i]->GetDrawCount();
+                mDrawCount += bundle->GetDrawCount();
             }
-
             return {};
         },
-        "encoding %s.ExecuteBundles(%u, ...).", this, count);
+        "encoding %s.ExecuteBundles(%u, ...).", this, renderBundles.size());
 }
 
-void RenderPassEncoder::APIBeginOcclusionQuery(uint32_t queryIndex) {
+void RenderPassEncoder::APIBeginOcclusionQuery(uint32_t queryIndexUntyped) {
+    QueryIndex queryIndex{queryIndexUntyped};
+
     mEncodingContext->TryEncode(
         this,
         [&](CommandAllocator* allocator) -> MaybeError {
@@ -438,7 +484,11 @@ void RenderPassEncoder::APIEndOcclusionQuery() {
                 DAWN_INVALID_IF(!mOcclusionQueryActive, "No occlusion queries are active.");
             }
 
-            TrackQueryAvailability(mOcclusionQuerySet.Get(), mCurrentOcclusionQueryIndex);
+            // The render pass usage tracker contains data about written queries. This is
+            // necessary on Vulkan to be able to reset queries before the start of render passes
+            // (it can only be done outside of a render pass).
+            mUsageTracker.TrackQueryAvailability(mOcclusionQuerySet.Get(),
+                                                 mCurrentOcclusionQueryIndex);
 
             mOcclusionQueryActive = false;
 
@@ -452,7 +502,9 @@ void RenderPassEncoder::APIEndOcclusionQuery() {
         "encoding %s.EndOcclusionQuery().", this);
 }
 
-void RenderPassEncoder::APIWriteTimestamp(QuerySetBase* querySet, uint32_t queryIndex) {
+void RenderPassEncoder::APIWriteTimestamp(QuerySetBase* querySet, uint32_t queryIndexUntyped) {
+    QueryIndex queryIndex{queryIndexUntyped};
+
     mEncodingContext->TryEncode(
         this,
         [&](CommandAllocator* allocator) -> MaybeError {
@@ -466,7 +518,12 @@ void RenderPassEncoder::APIWriteTimestamp(QuerySetBase* querySet, uint32_t query
                                  querySet);
             }
 
-            TrackQueryAvailability(querySet, queryIndex);
+            mCommandEncoder->TrackUsedQuerySet(querySet);
+
+            // The render pass usage tracker contains data about written queries. This is
+            // necessary on Vulkan to be able to reset queries before the start of render passes
+            // (it can only be done outside of a render pass).
+            mUsageTracker.TrackQueryAvailability(querySet, queryIndex);
 
             WriteTimestampCmd* cmd =
                 allocator->Allocate<WriteTimestampCmd>(Command::WriteTimestamp);

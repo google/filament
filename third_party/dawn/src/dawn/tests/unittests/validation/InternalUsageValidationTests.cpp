@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -106,6 +106,29 @@ TEST_F(TextureInternalUsageValidationTest, Basic) {
     // Internal usage adds to the base usage.
     internalDesc.internalUsage = wgpu::TextureUsage::CopyDst;
     device.CreateTexture(&textureDesc);
+}
+
+// Test that TransientAttachment cannot be passed as internal usage.
+TEST_F(TextureInternalUsageValidationTest, TransientAttachment) {
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.size = {1, 1};
+    textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+
+    wgpu::DawnTextureInternalUsageDescriptor internalDesc = {};
+    textureDesc.nextInChain = &internalDesc;
+
+    // Success case: Texture is Render+Transient and Render as internal usage.
+    textureDesc.usage =
+        wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TransientAttachment;
+    internalDesc.internalUsage = wgpu::TextureUsage::RenderAttachment;
+    device.CreateTexture(&textureDesc);
+
+    // Failure case: Texture is Render+Transient for both normal and internal usages.
+    textureDesc.usage =
+        wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TransientAttachment;
+    internalDesc.internalUsage =
+        wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TransientAttachment;
+    ASSERT_DEVICE_ERROR(device.CreateTexture(&textureDesc));
 }
 
 // Test that internal usages takes part in other validation that

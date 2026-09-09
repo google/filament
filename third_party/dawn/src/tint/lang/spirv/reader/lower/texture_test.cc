@@ -38,7 +38,14 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using SpirvReader_TextureTest = core::ir::transform::TransformTest;
+class SpirvReader_TextureTest : public core::ir::transform::TransformTest {
+  protected:
+    void SetUp() override {
+        core::ir::transform::TransformTest::SetUp();
+        mod.properties.Add(core::ir::Property::kAllowNonCoreTypes);
+        mod.properties.Add(core::ir::Property::kAllowPointerToHandle);
+    }
+};
 
 using Dim = spirv::type::Dim;
 using Depth = spirv::type::Depth;

@@ -29,9 +29,9 @@
 #define SRC_DAWN_NATIVE_WEBGPU_COMPUTEPIPELINEWGPU_H_
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

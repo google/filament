@@ -25,17 +25,18 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
 
 #include <algorithm>
 #include <limits>
 #include <utility>
 
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/GPUDescriptorHeapAllocationD3D12.h"
-#include "dawn/native/d3d12/QueueD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/GPUDescriptorHeapAllocationD3D12.h"
+#include "src/dawn/native/d3d12/QueueD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::d3d12 {
 
@@ -44,7 +45,7 @@ namespace dawn::native::d3d12 {
 // We change the value from {1024, 512} to {32, 16} because we use blending
 // for D3D12DescriptorHeapTests.EncodeManyUBO and R16Float has limited range
 // and low precision at big integer.
-static constexpr const uint32_t kShaderVisibleSmallHeapSizes[] = {32, 16};
+static constexpr std::array<uint32_t, 2> kShaderVisibleSmallHeapSizes = {32, 16};
 
 uint32_t GetD3D12ShaderVisibleHeapMinSize(D3D12_DESCRIPTOR_HEAP_TYPE heapType, bool useSmallSize) {
     if (useSmallSize) {
@@ -94,6 +95,7 @@ D3D12_DESCRIPTOR_HEAP_FLAGS GetD3D12HeapFlags(D3D12_DESCRIPTOR_HEAP_TYPE heapTyp
 ResultOrError<std::unique_ptr<ShaderVisibleDescriptorAllocator>>
 ShaderVisibleDescriptorAllocator::Create(Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType) {
     auto allocator = std::make_unique<ShaderVisibleDescriptorAllocator>(device, heapType);
+    // TODO(crbug.com/504685801): Remove default allocation
     DAWN_TRY(
         allocator->AllocateAndSwitchShaderVisibleHeap(allocator->GetShaderVisibleHeapMinSize()));
     return std::move(allocator);
@@ -104,10 +106,10 @@ ShaderVisibleDescriptorAllocator::ShaderVisibleDescriptorAllocator(
     D3D12_DESCRIPTOR_HEAP_TYPE heapType)
     : mHeapType(heapType),
       mDevice(device),
-      mSizeIncrement(device->GetD3D12Device()->GetDescriptorHandleIncrementSize(heapType)) {
+      mSizeIncrement(device->GetD3D12Device()->GetDescriptorHandleIncrementSize(heapType)),
+      mDescriptorCount(0) {
     DAWN_ASSERT(heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
                 heapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-    mDescriptorCount = GetShaderVisibleHeapMinSize();
 }
 
 bool ShaderVisibleDescriptorAllocator::AllocateGPUDescriptors(
@@ -164,7 +166,7 @@ ShaderVisibleDescriptorAllocator::AllocateHeap(uint32_t descriptorCount) const {
     // The size in bytes of a descriptor heap is best calculated by the increment size
     // multiplied by the number of descriptors. In practice, this is only an estimate and
     // the actual size may vary depending on the driver.
-    const uint64_t kSize = mSizeIncrement * descriptorCount;
+    const uint64_t kSize = static_cast<uint64_t>(mSizeIncrement) * descriptorCount;
 
     DAWN_TRY(mDevice->GetResidencyManager()->EnsureCanAllocate(kSize, MemorySegment::Local));
 
@@ -195,47 +197,43 @@ MaybeError ShaderVisibleDescriptorAllocator::AllocateAndSwitchShaderVisibleHeap(
     const uint32_t maxDescriptorCount = GetShaderVisibleHeapMaxSize();
     DAWN_ASSERT(minDescriptorCount <= maxDescriptorCount);
 
-    // Grow the heap to the next power of two size if necessary.
-    if (minDescriptorCount > mDescriptorCount) {
-        if (!IsPowerOfTwo(minDescriptorCount)) {
-            // Align to the next power of two heap size (e.g 4096, 8192, 16384, etc.)
-            uint32_t align = Pow2(Log2(minDescriptorCount) + 1u);
-            minDescriptorCount = Align(minDescriptorCount, align);
-            DAWN_ASSERT(minDescriptorCount <= maxDescriptorCount);
+    // Move the current heap to the pool if max-size.
+    if (mHeap) {
+        DAWN_ASSERT(mDescriptorCount == (mHeap->GetSize() / mSizeIncrement));
+        mDevice->GetResidencyManager()->UnlockAllocation(mHeap.get());
+        if (mDescriptorCount == maxDescriptorCount) {
+            // TODO(dawn:256): Consider periodically triming to avoid OOM.
+            mPool.push_back({.lastUseSerial = mDevice->GetQueue()->GetPendingCommandSerial(),
+                             .heap = std::move(mHeap)});
+        } else {
+            // Current heap is not max-sized, so we'll be dropping it and creating a new one below.
+            mDevice->ReferenceUntilUnused(mHeap->GetD3D12DescriptorHeap());
+            mHeap = nullptr;
         }
-        mDescriptorCount = minDescriptorCount;
     }
 
-    std::unique_ptr<ShaderVisibleDescriptorHeap> descriptorHeap;
+    // Grow the heap to fit minDescriptorCount, or grow exponentially, staying under the max limit.
+    mDescriptorCount = std::max(minDescriptorCount, mDescriptorCount * 2);
+    mDescriptorCount = std::min(mDescriptorCount, maxDescriptorCount);
 
-    // The general strategy is to allocate a new heap of mDescriptorCount size, until
-    // mDescriptorCount reaches the max size, at which point we pool the max-sized heaps.
-    if (mHeap != nullptr) {
-        mDevice->GetResidencyManager()->UnlockAllocation(mHeap.get());
-        if (mDescriptorCount < maxDescriptorCount) {
-            mDevice->ReferenceUntilUnused(mHeap->GetD3D12DescriptorHeap());
-        } else {
-            // Pool-allocate heaps.
-            // Return the switched out heap to the pool and retrieve the oldest heap that is no
-            // longer used by GPU. This maintains a heap buffer to avoid frequently re-creating
-            // heaps for heavy users.
-            // TODO(dawn:256): Consider periodically triming to avoid OOM.
-            mPool.push_back({mDevice->GetQueue()->GetPendingCommandSerial(), std::move(mHeap)});
-            if (mPool.front().heapSerial <= mDevice->GetQueue()->GetCompletedCommandSerial()) {
-                descriptorHeap = std::move(mPool.front().heap);
-                mPool.pop_front();
-            }
+    // If mDescriptorCount is max, try to retrieve the oldest heap no longer in use by the GPU from
+    // the pool.
+    std::unique_ptr<ShaderVisibleDescriptorHeap> descriptorHeap;
+    if ((mDescriptorCount == maxDescriptorCount) && !mPool.empty()) {
+        if (mPool.front().lastUseSerial <= mDevice->GetQueue()->GetCompletedCommandSerial()) {
+            descriptorHeap = std::move(mPool.front().heap);
+            mPool.pop_front();
         }
     }
 
     if (descriptorHeap == nullptr) {
         DAWN_TRY_ASSIGN(descriptorHeap, AllocateHeap(mDescriptorCount));
     }
-
     DAWN_TRY(mDevice->GetResidencyManager()->LockAllocation(descriptorHeap.get()));
 
     // Create a FIFO buffer from the recently created heap.
     mHeap = std::move(descriptorHeap);
+    DAWN_ASSERT(mDescriptorCount == (mHeap->GetSize() / mSizeIncrement));
     mAllocator = RingBufferAllocator(mDescriptorCount);
 
     // Invalidate all bindgroup allocations on previously bound heaps by incrementing the heap

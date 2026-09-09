@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/RenderPipelineMTL.h"
+#include "src/dawn/native/metal/RenderPipelineMTL.h"
 
-#include "dawn/native/Adapter.h"
-#include "dawn/native/CreatePipelineAsyncEvent.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/metal/BackendMTL.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/PipelineLayoutMTL.h"
-#include "dawn/native/metal/ShaderModuleMTL.h"
-#include "dawn/native/metal/TextureMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
-#include "dawn/platform/metrics/HistogramMacros.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/CreatePipelineAsyncEvent.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/metal/BackendMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/ImmediatesLayoutMTL.h"
+#include "src/dawn/native/metal/PipelineLayoutMTL.h"
+#include "src/dawn/native/metal/ShaderModuleMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/platform/metrics/HistogramMacros.h"
 
 namespace dawn::native::metal {
 
@@ -125,6 +126,8 @@ MTLVertexFormat VertexFormatType(wgpu::VertexFormat format) {
             return MTLVertexFormatUInt1010102Normalized;
         case wgpu::VertexFormat::Unorm8x4BGRA:
             return MTLVertexFormatUChar4Normalized_BGRA;
+        case wgpu::VertexFormat::Snorm10_10_10_2:
+            return MTLVertexFormatInt1010102Normalized;
         default:
             DAWN_UNREACHABLE();
     }
@@ -379,9 +382,12 @@ MaybeError RenderPipeline::InitializeImpl() {
     descriptorMTL.vertexDescriptor = vertexDesc.Get();
 
     if (UsesFragDepth() && !HasUnclippedDepth()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, clampFragDepth), sizeof(ClampFragDepthArgs));
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, clampFragDepth),
+                                                sizeof(ClampFragDepthArgs));
     }
+
+    mImmediateMask |=
+        GetImmediateBlockBits(offsetof(RenderImmediates, nonConstantZero), sizeof(NonConstantZero));
 
     const PerStage<ProgrammableStage>& allStages = GetAllStages();
     const ProgrammableStage& vertexStage = allStages[wgpu::ShaderStage::Vertex];
@@ -542,7 +548,7 @@ NSRef<MTLVertexDescriptor> RenderPipeline::MakeVertexDesc() const {
                 }
                 maxArrayStride =
                     std::max(maxArrayStride,
-                             GetVertexFormatInfo(attrib.format).byteSize + size_t(attrib.offset));
+                             GetVertexFormatInfo(attrib.format).byteSize + size_t{attrib.offset});
             }
             layoutDesc.stepFunction = MTLVertexStepFunctionConstant;
             layoutDesc.stepRate = 0;

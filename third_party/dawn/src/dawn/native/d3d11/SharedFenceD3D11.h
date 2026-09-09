@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_SHARED_FENCE_D3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_SHARED_FENCE_D3D11_H_
 
-#include "dawn/native/d3d/SharedFenceD3D.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/d3d/SharedFenceD3D.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {
 

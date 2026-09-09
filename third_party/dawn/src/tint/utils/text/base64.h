@@ -30,10 +30,19 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 
 #include "src/tint/utils/containers/vector.h"
+#include "src/tint/utils/result.h"
 
 namespace tint {
+
+// Note: that Decode and Encode are not guaranteed to be a perfect roundtrip, because the value
+// calculated by Decode is based on all the comments in the WGSL file, and the intended usage of
+// encode is to be used as part of emitting a single comment string.
+// So for this sequence: multiple comments -> Encode -> binary -> Decode, you will get a single
+// string to put in a comment. The data when parsed should be equivalent though, you are just not
+// guaranteed to get the exact same text out.
 
 /// Decodes a byte from a base64 encoded character
 /// @param c the character to decode
@@ -62,6 +71,11 @@ inline std::optional<uint8_t> DecodeBase64(char c) {
 /// @param wgsl the WGSL source
 /// @return the base64 decoded bytes
 Vector<std::byte, 0> DecodeBase64FromComments(std::string_view wgsl);
+
+/// EncodeBase64 encodes a byte stream as a base64 string
+/// @param data the data to encode
+/// @return the base64 encoded string, or Failure if a byte is not in the range [0, 63]
+Result<std::string> EncodeBase64(std::span<const std::byte> data);
 
 }  // namespace tint
 

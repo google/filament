@@ -62,6 +62,7 @@ tint_target_add_dependencies(tint_lang_wgsl_writer lib
   tint_lang_wgsl_ast
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer_ast_printer
   tint_lang_wgsl_writer_common
   tint_lang_wgsl_writer_ir_to_program
   tint_lang_wgsl_writer_raise
@@ -72,6 +73,7 @@ tint_target_add_dependencies(tint_lang_wgsl_writer lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -81,12 +83,6 @@ tint_target_add_dependencies(tint_lang_wgsl_writer lib
 tint_target_add_external_dependencies(tint_lang_wgsl_writer lib
   "src_utils"
 )
-
-if(TINT_BUILD_WGSL_WRITER)
-  tint_target_add_dependencies(tint_lang_wgsl_writer lib
-    tint_lang_wgsl_writer_ast_printer
-  )
-endif(TINT_BUILD_WGSL_WRITER)
 
 endif(TINT_BUILD_WGSL_WRITER)
 if(TINT_BUILD_WGSL_WRITER)
@@ -111,6 +107,7 @@ tint_target_add_dependencies(tint_lang_wgsl_writer_test test
   tint_lang_wgsl_ast
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer
   tint_lang_wgsl_writer_common
   tint_lang_wgsl_writer_ir_to_program
   tint_lang_wgsl_writer_raise
@@ -121,6 +118,7 @@ tint_target_add_dependencies(tint_lang_wgsl_writer_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -131,31 +129,20 @@ tint_target_add_external_dependencies(tint_lang_wgsl_writer_test test
   "src_utils"
 )
 
-if(TINT_BUILD_WGSL_WRITER)
-  tint_target_add_dependencies(tint_lang_wgsl_writer_test test
-    tint_lang_wgsl_writer
-  )
 endif(TINT_BUILD_WGSL_WRITER)
-
-endif(TINT_BUILD_WGSL_WRITER)
-if(TINT_BUILD_WGSL_WRITER)
+if(TINT_BUILD_FUZZERS AND TINT_BUILD_WGSL_WRITER)
 ################################################################################
 # Target:    tint_lang_wgsl_writer_fuzz
 # Kind:      fuzz
-# Condition: TINT_BUILD_WGSL_WRITER
+# Condition: TINT_BUILD_FUZZERS AND TINT_BUILD_WGSL_WRITER
 ################################################################################
 tint_add_target(tint_lang_wgsl_writer_fuzz fuzz
 )
 
 tint_target_add_dependencies(tint_lang_wgsl_writer_fuzz fuzz
-  tint_api_common
-  tint_lang_core
-  tint_lang_core_constant
-  tint_lang_core_type
+  tint_cmd_fuzz_common
   tint_lang_wgsl
-  tint_lang_wgsl_ast
-  tint_lang_wgsl_program
-  tint_lang_wgsl_sem
+  tint_lang_wgsl_writer
   tint_lang_wgsl_writer_common
   tint_utils
   tint_utils_bytes
@@ -165,8 +152,8 @@ tint_target_add_dependencies(tint_lang_wgsl_writer_fuzz fuzz
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
-  tint_utils_symbol
   tint_utils_text
 )
 
@@ -178,15 +165,6 @@ if(TINT_BUILD_WGSL_READER)
   tint_target_add_sources(tint_lang_wgsl_writer_fuzz fuzz
     "lang/wgsl/writer/writer_fuzz.cc"
   )
-  tint_target_add_dependencies(tint_lang_wgsl_writer_fuzz fuzz
-    tint_cmd_fuzz_wgsl_fuzz
-  )
 endif(TINT_BUILD_WGSL_READER)
 
-if(TINT_BUILD_WGSL_WRITER)
-  tint_target_add_dependencies(tint_lang_wgsl_writer_fuzz fuzz
-    tint_lang_wgsl_writer
-  )
-endif(TINT_BUILD_WGSL_WRITER)
-
-endif(TINT_BUILD_WGSL_WRITER)
+endif(TINT_BUILD_FUZZERS AND TINT_BUILD_WGSL_WRITER)

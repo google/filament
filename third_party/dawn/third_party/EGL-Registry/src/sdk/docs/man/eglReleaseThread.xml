@@ -1,0 +1,125 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglReleaseThread">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglReleaseThread</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglReleaseThread</refname>
+        <refpurpose>Release EGL per-thread state</refpurpose>
+    </refnamediv>
+    <refsynopsisdiv><title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglReleaseThread</function></funcdef>
+                <void/>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglReleaseThread</function> returns the EGL to its
+            state at thread initialization, releasing all per-thread
+            state including the error status returned by
+            <command>eglGetError</command>, the currently bound
+            rendering API defined by <command>eglBindAPI</command>, and
+            the current contexts for each supported client API. The
+            overhead of maintaining this state may be objectionable in
+            applications which create and destroy many threads, but only
+            call EGL or client APIs in a few of those threads at any
+            given time.
+        </para>
+        <para>
+            <constant>EGL_TRUE</constant> is returned on success, and the
+            following actions are taken:
+        </para>
+        <itemizedlist>
+            <listitem>
+                <para>
+                    For each client API supported by EGL, if there is a
+                    currently bound context, that context is released.
+                    This is equivalent to calling
+                    <function>eglMakeCurrent</function> with ctx set to
+                    <constant>EGL_NO_CONTEXT</constant> and both draw
+                    and read set to <constant>EGL_NO_SURFACE</constant>
+                    (see section 3.7.3).
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+                    The current rendering API is reset to its value at
+                    thread initialization (see
+                    <command>eglBindAPI</command>).
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+                    Any additional implementation-dependent per-thread
+                    state maintained by EGL is marked for deletion as
+                    soon as possible.
+                </para>
+            </listitem>
+        </itemizedlist>
+        <para>
+            <function>eglReleaseThread</function> may be called in any
+            thread at any time, and may be called more than once in a
+            single thread. The initialization status of EGL (see section
+            3.2) is not affected by releasing the thread; only
+            per-thread state is affected.
+        </para>
+        <para>
+            Resources explicitly allocated by calls to EGL, such as
+            contexts, surfaces, and configuration lists, are not
+            affected by <function>eglReleaseThread</function>. Such
+            resources belong not to the thread, but to the EGL
+            implementation as a whole.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglReleaseThread</function> is supported only if the
+            EGL version is 1.2 or greater.
+        </para>
+        <para>
+            Applications may call other EGL routines from a thread
+            following <function>eglReleaseThread</function>, but any
+            such call may reallocate the EGL state previously released.
+            In particular, calling <function>eglGetError</function>
+            immediately following a successful call to
+            <function>eglReleaseThread</function> will return
+            <constant>EGL_SUCCESS</constant>, but will also result in
+            reallocating per-thread state.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise. There are no
+            defined conditions under which failure will occur. Even if
+            EGL is not initialized on any EGLDisplay,
+            <function>eglReleaseThread</function> should succeed.
+        </para>
+        <para>
+            However, platform-dependent failures may be signaled through
+            the value returned from <function>eglGetError</function>.
+            Unless the platform-dependent behavior is known, a failed
+            call to <function>eglReleaseThread</function> should be
+            assumed to leave the current rendering API, and the
+            currently bound contexts for each supported client API, in
+            an unknown state.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetError</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

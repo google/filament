@@ -27,9 +27,9 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -162,11 +162,17 @@ class ViewportTest : public DawnTest {
 
 // Test that by default the full viewport is used.
 TEST_P(ViewportTest, DefaultViewportRect) {
+    // TODO(crbug.com/523211972): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     TestViewportQuad(0, 0, kWidth, kHeight, false);
 }
 
 // Test various viewport values in the X direction.
 TEST_P(ViewportTest, VaryingInX) {
+    // TODO(crbug.com/523211972): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     TestViewportQuad(0, 0, kWidth - 1, kHeight);
     TestViewportQuad(1, 0, kWidth - 1, kHeight);
     TestViewportQuad(2, 0, 1, kHeight);
@@ -174,6 +180,9 @@ TEST_P(ViewportTest, VaryingInX) {
 
 // Test various viewport values in the Y direction.
 TEST_P(ViewportTest, VaryingInY) {
+    // TODO(crbug.com/523211972): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     TestViewportQuad(0, 0, kWidth, kHeight - 1);
     TestViewportQuad(0, 1, kWidth, kHeight - 1);
     TestViewportQuad(0, 2, kWidth, 1);
@@ -181,6 +190,9 @@ TEST_P(ViewportTest, VaryingInY) {
 
 // Test various viewport values in both X and Y
 TEST_P(ViewportTest, SubBoxes) {
+    // TODO(crbug.com/523211972): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     TestViewportQuad(1, 1, kWidth - 2, kHeight - 2);
     TestViewportQuad(2, 2, 2, 2);
     TestViewportQuad(2, 3, 2, 1);

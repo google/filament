@@ -1,0 +1,137 @@
+Name
+
+    SGIX_reference_plane
+
+Name String
+
+    GL_SGIX_reference_plane
+
+Version
+
+    $Date: 1996/03/08 00:11:51 $ $Revision: 1.5 $
+
+Number
+
+    60
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows a group of coplanar primitives to be rendered
+    without depth-buffering artifacts.  This is accomplished by generating
+    the depth values for all the primitives from a single ``reference plane''
+    rather than from the primitives themselves.  This ensures that all the
+    primitives in the group have exactly the same depth value at any given
+    sample point, no matter what imprecision may exist in the original
+    specifications of the primitives or in the GL's coordinate transformation
+    process.
+
+    The reference plane is defined by a four-component plane equation.
+    When glReferencePlaneSGIX is called, equation is transformed by the
+    transpose-adjoint of a matrix that is the complete object-coordinate
+    to clip-coordinate transformation.  The resulting clip-coordinate
+    coefficients are transformed by the current viewport when the reference
+    plane is enabled.
+
+    The reference plane is enabled and disabled with glEnable and glDisable.
+
+    If the reference plane is enabled, a fragment (xf,yf,zf) will have a
+    new z coordinate generated from (xf,yf) by giving it the same z value
+    that the reference plane would have at (xf,yf).
+
+Issues
+
+    * What should the default reference plane be?
+       - (0,0,1,0) in window coords seems good 
+
+    * What happens if the reference plane does not intersect the view frustum?
+       - can disallow enabling of the plane, or substitute the default plane. 
+
+    * Should it be possible to query the validity of the reference plane just
+      like RasterPos?
+       - could be useful
+
+New Procedures and Functions
+
+    void glReferencePlaneSGIX(const GLdouble *equation);
+
+New Tokens
+
+    Accepted by the <pname> parameter of glGet, and the <cap> parameter
+    of glEnable, glDisable, and glIsEnabled:
+
+        REFERENCE_PLANE_SGIX
+
+    Accepted by the <pname> parameter of glGet:
+
+        REFERENCE_PLANE_EQUATION_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    If enabled, the reference plane is used to calculate the fragment's z
+    value based on the fragment's x and y values and the reference plane
+    itself.
+
+    Let the reference plane be defined by a four-component plane equation
+    in window coordinates.
+
+        a*x + b*y + c*z + d = 0.0
+
+    then if the incoming fragment has an x value of xf and a y value of yf,
+    the fragment's z value zf will be:
+
+        zf = -(d + a*xf + b*yf) / c;
+
+    The generated zf is undefined if it falls outside the valid zbuffer range.
+    (That is what KONA does).
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    A new GL rendering command is needed to support
+    ReferencePlaneSGIX().  The following command is sent to the
+    server as part of a glXRender request:
+
+    ReferencePlaneSGIX
+            2       20              rendering command length
+            2       TBD             rendering command opcode
+            4       FLOAT32         a (x coefficient) of plane equation
+            4       FLOAT32         b (y coefficient) of plane equation
+            4       FLOAT32         c (z coefficient) of plane equation
+            4       FLOAT32         d (constant term) of plane equation
+
+    No new protocol is required to handle state retrieval.
+
+Errors
+
+    INVALID_OPERATION is generated if ReferencePlaneSGIX is called between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value                       Get Command  Type  Initial Value     Attrib
+    ---------                       -----------  ----  -------------     ------
+    REFERENCE_PLANE_SGIX             IsEnabled     B      FALSE       transform/enable
+    REFERENCE_PLANE_EQUATION_SGIX    GetFloatv     V      ???         transform
+
+    The plane coefficiants returned by Get() are in clip coordinates.
+

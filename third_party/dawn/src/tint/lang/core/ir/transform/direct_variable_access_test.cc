@@ -46,25 +46,25 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 namespace {
 
-static constexpr DirectVariableAccessOptions kTransformHandle = {
+static constexpr DirectVariableAccessConfig kTransformHandle = {
     /* transform_private */ false,
     /* transform_function */ false,
     /* transform_handle */ HandleTransformLevel::kFull,
 };
 
-static constexpr DirectVariableAccessOptions kTransformExternalHandle = {
+static constexpr DirectVariableAccessConfig kTransformExternalHandle = {
     /* transform_private */ false,
     /* transform_function */ false,
     /* transform_handle */ HandleTransformLevel::kExternal,
 };
 
-static constexpr DirectVariableAccessOptions kTransformPrivate = {
+static constexpr DirectVariableAccessConfig kTransformPrivate = {
     /* transform_private */ true,
     /* transform_function */ false,
     /* transform_handle */ HandleTransformLevel::kNone,
 };
 
-static constexpr DirectVariableAccessOptions kTransformFunction = {
+static constexpr DirectVariableAccessConfig kTransformFunction = {
     /* transform_private */ false,
     /* transform_function */ true,
     /* transform_handle */ HandleTransformLevel::kNone,
@@ -113,7 +113,7 @@ $B1: {  # root
 
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -152,7 +152,7 @@ $B1: {  # root
 
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -191,7 +191,7 @@ $B1: {  # root
 
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -230,7 +230,7 @@ $B1: {  # root
 
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -264,7 +264,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -336,7 +336,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -407,7 +407,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -635,7 +635,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -855,7 +855,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -932,7 +932,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -1009,7 +1009,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -1319,7 +1319,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -1441,7 +1441,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -1517,7 +1517,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -1593,7 +1593,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -1902,7 +1902,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2023,7 +2023,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2115,7 +2115,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2202,7 +2202,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2282,7 +2282,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2592,7 +2592,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2714,7 +2714,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2796,7 +2796,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -2872,7 +2872,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -3181,7 +3181,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -3302,7 +3302,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -3590,7 +3590,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -3740,7 +3740,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -3938,7 +3938,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -4428,7 +4428,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -4636,7 +4636,7 @@ $B1: {  # root
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -4675,7 +4675,7 @@ TEST_F(IR_DirectVariableAccessTest_FunctionAS, Enabled_LocalPtr) {
 
     auto* expect = src;  // Nothing changes
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -5095,7 +5095,7 @@ str = struct @align(4) {
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -5151,7 +5151,7 @@ str = struct @align(4) {
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -5523,7 +5523,7 @@ Outer = struct @align(16) {
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -5712,7 +5712,7 @@ TEST_F(IR_DirectVariableAccessTest_FunctionAS, Disabled_CallChaining2) {
 
     auto* expect = src;
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -6727,7 +6727,7 @@ $B1: {  # root
 
     auto* expect = src;  // No change
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -7343,7 +7343,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -7409,7 +7409,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -7854,7 +7854,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -7978,7 +7978,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -8115,7 +8115,7 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
@@ -8240,12 +8240,1372 @@ $B1: {  # root
 }
 )";
 
-    Run(DirectVariableAccess, DirectVariableAccessOptions{});
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
 
     EXPECT_EQ(expect, str());
 }
 
 }  // namespace complex_tests
+
+////////////////////////////////////////////////////////////////////////////////
+// buffer_view tests
+////////////////////////////////////////////////////////////////////////////////
+namespace buffer_view_test {
+
+struct IR_DirectVariableAccessTest_BufferView : public TransformTest {
+    void SetUp() override { mod.properties.Add(Property::kAllowBufferTypes); }
+};
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Simple_BufferLength) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    foo->SetParams({p});
+    b.Append(foo->Block(), [&] {
+        b.Call(ty.u32(), BuiltinFn::kBufferLength, p);
+        b.Return(foo);
+    });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        b.Call(ty.void_(), foo, v);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>):void {
+  $B2: {
+    %4:u32 = bufferLength %p
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %6:void = call %foo, %v
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func():void {
+  $B2: {
+    %3:u32 = bufferLength %v
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %5:void = call %foo
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Simple_BufferView) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    foo->SetParams({p, offset});
+    b.Append(foo->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.u32()), BuiltinFn::kBufferView,
+                       Vector<TemplateParameter, 1>{ty.u32()}, p, offset);
+        b.Return(foo);
+    });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        b.Call(ty.void_(), foo, v, 16_u);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %offset:u32):void {
+  $B2: {
+    %5:ptr<storage, u32, read_write> = bufferView<u32> %p, %offset
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %7:void = call %foo, %v, 16u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%offset:u32):void {
+  $B2: {
+    %4:ptr<storage, u32, read_write> = bufferView<u32> %v, %offset
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %6:void = call %foo, 16u
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Simple_BufferArrayView) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    mod.root_block->Append(v);
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    auto* size = b.FunctionParam("size", ty.u32());
+    foo->SetParams({p, offset, size});
+    b.Append(foo->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.runtime_array(ty.u32())), BuiltinFn::kBufferArrayView,
+                       Vector<TemplateParameter, 1>{ty.runtime_array(ty.u32())}, p, offset, size);
+        b.Return(foo);
+    });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        b.Call(ty.void_(), foo, v, 16_u, 64_u);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<storage, buffer, read_write>, %offset:u32, %size:u32):void {
+  $B2: {
+    %6:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %p, %offset, %size
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %8:void = call %foo, %v, 16u, 64u
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%offset:u32, %size:u32):void {
+  $B2: {
+    %5:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %v, %offset, %size
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %7:void = call %foo, 16u, 64u
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, BufferView_Chain) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.buffer(128)));
+    mod.root_block->Append(v);
+
+    auto* arr_ty = ty.array(ty.vec4(ty.u32()), 4_u);
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(workgroup, arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, ty.vec4(ty.u32())), bar_p, 3_u);
+        b.LoadVectorElement(a, 1_u);
+        b.Return(bar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    foo->SetParams({offset});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.CallExplicit(ty.ptr(workgroup, arr_ty), BuiltinFn::kBufferView,
+                                    Vector<TemplateParameter, 1>{arr_ty}, v, offset);
+        b.Call(ty.void_(), bar, call);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p:ptr<workgroup, array<vec4<u32>, 4>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, vec4<u32>, read_write> = access %p, 3u
+    %5:u32 = load_vector_element %4, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32):void {
+  $B3: {
+    %8:ptr<workgroup, array<vec4<u32>, 4>, read_write> = bufferView<array<vec4<u32>, 4>> %v, %offset
+    %9:void = call %bar, %8
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<workgroup, array<vec4<u32>, 4>, read_write> = bufferView<array<vec4<u32>, 4>> %v, %4
+    %6:ptr<workgroup, vec4<u32>, read_write> = access %5, 3u
+    %7:u32 = load_vector_element %6, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32):void {
+  $B3: {
+    %10:array<u32, 1> = construct %offset
+    %11:void = call %bar, %10
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, BufferView_Chain_WithLength) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.buffer(128)));
+    mod.root_block->Append(v);
+
+    auto* arr_ty = ty.array(ty.vec4(ty.u32()), 4_u);
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(workgroup, arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, ty.vec4(ty.u32())), bar_p, 3_u);
+        b.LoadVectorElement(a, 1_u);
+        b.Return(bar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    auto* length = b.FunctionParam("length", ty.u32());
+    foo->SetParams({offset, length});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.CallExplicit(ty.ptr(workgroup, arr_ty), BuiltinFn::kBufferView,
+                                    Vector<TemplateParameter, 1>{arr_ty}, v, offset, length);
+        b.Call(ty.void_(), bar, call);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p:ptr<workgroup, array<vec4<u32>, 4>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, vec4<u32>, read_write> = access %p, 3u
+    %5:u32 = load_vector_element %4, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32, %length:u32):void {
+  $B3: {
+    %9:ptr<workgroup, array<vec4<u32>, 4>, read_write> = bufferView<array<vec4<u32>, 4>> %v, %offset, %length
+    %10:void = call %bar, %9
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p_view_args:array<u32, 2>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:u32 = access %p_view_args, 1u
+    %6:ptr<workgroup, array<vec4<u32>, 4>, read_write> = bufferView<array<vec4<u32>, 4>> %v, %4, %5
+    %7:ptr<workgroup, vec4<u32>, read_write> = access %6, 3u
+    %8:u32 = load_vector_element %7, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32, %length:u32):void {
+  $B3: {
+    %12:array<u32, 2> = construct %offset, %length
+    %13:void = call %bar, %12
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, BufferArrayView_Chain) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.buffer(128)));
+    mod.root_block->Append(v);
+
+    auto* arr_ty = ty.runtime_array(ty.vec4(ty.u32()));
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(workgroup, arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, ty.vec4(ty.u32())), bar_p, 3_u);
+        b.LoadVectorElement(a, 1_u);
+        b.Return(bar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    auto* size = b.FunctionParam("size", ty.u32());
+    foo->SetParams({offset, size});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.CallExplicit(ty.ptr(workgroup, arr_ty), BuiltinFn::kBufferArrayView,
+                                    Vector<TemplateParameter, 1>{arr_ty}, v, offset, size);
+        b.Call(ty.void_(), bar, call);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p:ptr<workgroup, array<vec4<u32>>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, vec4<u32>, read_write> = access %p, 3u
+    %5:u32 = load_vector_element %4, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32, %size:u32):void {
+  $B3: {
+    %9:ptr<workgroup, array<vec4<u32>>, read_write> = bufferArrayView<array<vec4<u32>>> %v, %offset, %size
+    %10:void = call %bar, %9
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p_view_args:array<u32, 2>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:u32 = access %p_view_args, 1u
+    %6:ptr<workgroup, array<vec4<u32>>, read_write> = bufferArrayView<array<vec4<u32>>> %v, %4, %5
+    %7:ptr<workgroup, vec4<u32>, read_write> = access %6, 3u
+    %8:u32 = load_vector_element %7, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32, %size:u32):void {
+  $B3: {
+    %12:array<u32, 2> = construct %offset, %size
+    %13:void = call %bar, %12
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, BufferArrayView_Chain_WithLength) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.buffer(128)));
+    mod.root_block->Append(v);
+
+    auto* arr_ty = ty.runtime_array(ty.vec4(ty.u32()));
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(workgroup, arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, ty.vec4(ty.u32())), bar_p, 3_u);
+        b.LoadVectorElement(a, 1_u);
+        b.Return(bar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    auto* size = b.FunctionParam("size", ty.u32());
+    auto* length = b.FunctionParam("length", ty.u32());
+    foo->SetParams({offset, size, length});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.CallExplicit(ty.ptr(workgroup, arr_ty), BuiltinFn::kBufferArrayView,
+                                    Vector<TemplateParameter, 1>{arr_ty}, v, offset, size, length);
+        b.Call(ty.void_(), bar, call);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p:ptr<workgroup, array<vec4<u32>>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, vec4<u32>, read_write> = access %p, 3u
+    %5:u32 = load_vector_element %4, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32, %size:u32, %length:u32):void {
+  $B3: {
+    %10:ptr<workgroup, array<vec4<u32>>, read_write> = bufferArrayView<array<vec4<u32>>> %v, %offset, %size, %length
+    %11:void = call %bar, %10
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p_view_args:array<u32, 3>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:u32 = access %p_view_args, 1u
+    %6:u32 = access %p_view_args, 2u
+    %7:ptr<workgroup, array<vec4<u32>>, read_write> = bufferArrayView<array<vec4<u32>>> %v, %4, %5, %6
+    %8:ptr<workgroup, vec4<u32>, read_write> = access %7, 3u
+    %9:u32 = load_vector_element %8, 1u
+    ret
+  }
+}
+%foo = func(%offset:u32, %size:u32, %length:u32):void {
+  $B3: {
+    %14:array<u32, 3> = construct %offset, %size, %length
+    %15:void = call %bar, %14
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, BufferView_MultiChain) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.buffer(128)));
+    mod.root_block->Append(v);
+
+    auto* sub_arr_ty = ty.array(ty.vec4(ty.u32()), 4_u);
+    auto* arr_ty = ty.array(sub_arr_ty, 4_u);
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(workgroup, sub_arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, ty.vec4(ty.u32())), bar_p, 3_u);
+        b.LoadVectorElement(a, 1_u);
+        b.Return(bar);
+    });
+
+    auto* foobar = b.Function("foobar", ty.void_());
+    auto* foobar_q = b.FunctionParam("q", ty.ptr(workgroup, arr_ty));
+    foobar->SetParams({foobar_q});
+    b.Append(foobar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, sub_arr_ty), foobar_q, 3_u);
+        b.Call(ty.void_(), bar, a);
+        b.Return(foobar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    foo->SetParams({offset});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.CallExplicit(ty.ptr(workgroup, arr_ty), BuiltinFn::kBufferView,
+                                    Vector<TemplateParameter, 1>{arr_ty}, v, offset);
+        b.Call(ty.void_(), foobar, call);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p:ptr<workgroup, array<vec4<u32>, 4>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, vec4<u32>, read_write> = access %p, 3u
+    %5:u32 = load_vector_element %4, 1u
+    ret
+  }
+}
+%foobar = func(%q:ptr<workgroup, array<array<vec4<u32>, 4>, 4>, read_write>):void {
+  $B3: {
+    %8:ptr<workgroup, array<vec4<u32>, 4>, read_write> = access %q, 3u
+    %9:void = call %bar, %8
+    ret
+  }
+}
+%foo = func(%offset:u32):void {
+  $B4: {
+    %12:ptr<workgroup, array<array<vec4<u32>, 4>, 4>, read_write> = bufferView<array<array<vec4<u32>, 4>, 4>> %v, %offset
+    %13:void = call %foobar, %12
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p_view_args:array<u32, 1>, %p_indices:array<u32, 1>):void {
+  $B2: {
+    %5:u32 = access %p_view_args, 0u
+    %6:ptr<workgroup, array<array<vec4<u32>, 4>, 4>, read_write> = bufferView<array<array<vec4<u32>, 4>, 4>> %v, %5
+    %7:u32 = access %p_indices, 0u
+    %8:ptr<workgroup, array<vec4<u32>, 4>, read_write> = access %6, %7
+    %9:ptr<workgroup, vec4<u32>, read_write> = access %8, 3u
+    %10:u32 = load_vector_element %9, 1u
+    ret
+  }
+}
+%foobar = func(%q_view_args:array<u32, 1>):void {
+  $B3: {
+    %13:u32 = access %q_view_args, 0u
+    %14:array<u32, 1> = construct %13
+    %15:array<u32, 1> = construct 3u
+    %16:void = call %bar, %14, %15
+    ret
+  }
+}
+%foo = func(%offset:u32):void {
+  $B4: {
+    %19:array<u32, 1> = construct %offset
+    %20:void = call %foobar, %19
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, BufferArrayView_MultiChain) {
+    auto* v = b.Var("v", ty.ptr(workgroup, ty.buffer(128)));
+    mod.root_block->Append(v);
+
+    auto* sub_arr_ty = ty.array(ty.vec4(ty.u32()), 4_u);
+    auto* arr_ty = ty.runtime_array(sub_arr_ty);
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(workgroup, sub_arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, ty.vec4(ty.u32())), bar_p, 3_u);
+        b.LoadVectorElement(a, 1_u);
+        b.Return(bar);
+    });
+
+    auto* foobar = b.Function("foobar", ty.void_());
+    auto* foobar_q = b.FunctionParam("q", ty.ptr(workgroup, arr_ty));
+    foobar->SetParams({foobar_q});
+    b.Append(foobar->Block(), [&] {
+        auto* a = b.Access(ty.ptr(workgroup, sub_arr_ty), foobar_q, 3_u);
+        b.Call(ty.void_(), bar, a);
+        b.Return(foobar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    auto* size = b.FunctionParam("size", ty.u32());
+    foo->SetParams({offset, size});
+    b.Append(foo->Block(), [&] {
+        auto* call = b.CallExplicit(ty.ptr(workgroup, arr_ty), BuiltinFn::kBufferArrayView,
+                                    Vector<TemplateParameter, 1>{arr_ty}, v, offset, size);
+        b.Call(ty.void_(), foobar, call);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p:ptr<workgroup, array<vec4<u32>, 4>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, vec4<u32>, read_write> = access %p, 3u
+    %5:u32 = load_vector_element %4, 1u
+    ret
+  }
+}
+%foobar = func(%q:ptr<workgroup, array<array<vec4<u32>, 4>>, read_write>):void {
+  $B3: {
+    %8:ptr<workgroup, array<vec4<u32>, 4>, read_write> = access %q, 3u
+    %9:void = call %bar, %8
+    ret
+  }
+}
+%foo = func(%offset:u32, %size:u32):void {
+  $B4: {
+    %13:ptr<workgroup, array<array<vec4<u32>, 4>>, read_write> = bufferArrayView<array<array<vec4<u32>, 4>>> %v, %offset, %size
+    %14:void = call %foobar, %13
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<workgroup, buffer<128>, read_write> = var undef
+}
+
+%bar = func(%p_view_args:array<u32, 2>, %p_indices:array<u32, 1>):void {
+  $B2: {
+    %5:u32 = access %p_view_args, 0u
+    %6:u32 = access %p_view_args, 1u
+    %7:ptr<workgroup, array<array<vec4<u32>, 4>>, read_write> = bufferArrayView<array<array<vec4<u32>, 4>>> %v, %5, %6
+    %8:u32 = access %p_indices, 0u
+    %9:ptr<workgroup, array<vec4<u32>, 4>, read_write> = access %7, %8
+    %10:ptr<workgroup, vec4<u32>, read_write> = access %9, 3u
+    %11:u32 = load_vector_element %10, 1u
+    ret
+  }
+}
+%foobar = func(%q_view_args:array<u32, 2>):void {
+  $B3: {
+    %14:u32 = access %q_view_args, 0u
+    %15:u32 = access %q_view_args, 1u
+    %16:array<u32, 2> = construct %14, %15
+    %17:array<u32, 1> = construct 3u
+    %18:void = call %bar, %16, %17
+    ret
+  }
+}
+%foo = func(%offset:u32, %size:u32):void {
+  $B4: {
+    %22:array<u32, 2> = construct %offset, %size
+    %23:void = call %foobar, %22
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Disambiguate_Fn) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* arr_ty = ty.array<u32>();
+
+    auto* bar = b.Function("bar", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, arr_ty));
+    bar->SetParams({p});
+    b.Append(bar->Block(), [&] { b.Return(bar); });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        auto* v1 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u);
+        b.Call(ty.void_(), bar, v1);
+
+        auto* v2 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferArrayView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u, 10_u);
+        b.Call(ty.void_(), bar, v2);
+
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%bar = func(%p:ptr<storage, array<u32>, read_write>):void {
+  $B2: {
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, 0u
+    %6:void = call %bar, %5
+    %7:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %v, 0u, 10u
+    %8:void = call %bar, %7
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%bar = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %4
+    ret
+  }
+}
+%bar_1 = func(%p_view_args_1:array<u32, 2>):void {  # %bar_1: 'bar', %p_view_args_1: 'p_view_args'
+  $B3: {
+    %8:u32 = access %p_view_args_1, 0u
+    %9:u32 = access %p_view_args_1, 1u
+    %10:ptr<storage, array<u32>, read_write> = bufferArrayView<array<u32>> %v, %8, %9
+    ret
+  }
+}
+%main = func():void {
+  $B4: {
+    %12:array<u32, 1> = construct 0u
+    %13:void = call %bar, %12
+    %14:array<u32, 2> = construct 0u, 10u
+    %15:void = call %bar_1, %14
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Disambiguate_Length) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* arr_ty = ty.array<u32>();
+
+    auto* bar = b.Function("bar", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, arr_ty));
+    bar->SetParams({p});
+    b.Append(bar->Block(), [&] { b.Return(bar); });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        auto* v1 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u);
+        b.Call(ty.void_(), bar, v1);
+
+        auto* v2 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u, 100_u);
+        b.Call(ty.void_(), bar, v2);
+
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%bar = func(%p:ptr<storage, array<u32>, read_write>):void {
+  $B2: {
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, 0u
+    %6:void = call %bar, %5
+    %7:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, 0u, 100u
+    %8:void = call %bar, %7
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%bar = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %4
+    ret
+  }
+}
+%bar_1 = func(%p_view_args_1:array<u32, 2>):void {  # %bar_1: 'bar', %p_view_args_1: 'p_view_args'
+  $B3: {
+    %8:u32 = access %p_view_args_1, 0u
+    %9:u32 = access %p_view_args_1, 1u
+    %10:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %8, %9
+    ret
+  }
+}
+%main = func():void {
+  $B4: {
+    %12:array<u32, 1> = construct 0u
+    %13:void = call %bar, %12
+    %14:array<u32, 2> = construct 0u, 100u
+    %15:void = call %bar_1, %14
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, MultiLevelPropagation) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* arr_ty = ty.array<u32>();
+
+    auto* bar = b.Function("bar", ty.void_());
+    auto* bar_p = b.FunctionParam("p", ty.ptr(storage, arr_ty));
+    bar->SetParams({bar_p});
+    b.Append(bar->Block(), [&] {
+        b.Access(ty.ptr(storage, ty.u32()), bar_p, 0_u);
+        b.Return(bar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* foo_p = b.FunctionParam("p", ty.ptr(storage, arr_ty));
+    foo->SetParams({foo_p});
+    b.Append(foo->Block(), [&] {
+        b.Call(ty.void_(), bar, foo_p);
+        b.Return(foo);
+    });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        auto* v1 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u);
+        b.Call(ty.void_(), foo, v1);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%bar = func(%p:ptr<storage, array<u32>, read_write>):void {
+  $B2: {
+    %4:ptr<storage, u32, read_write> = access %p, 0u
+    ret
+  }
+}
+%foo = func(%p_1:ptr<storage, array<u32>, read_write>):void {  # %p_1: 'p'
+  $B3: {
+    %7:void = call %bar, %p_1
+    ret
+  }
+}
+%main = func():void {
+  $B4: {
+    %9:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, 0u
+    %10:void = call %foo, %9
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%bar = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %4
+    %6:ptr<storage, u32, read_write> = access %5, 0u
+    ret
+  }
+}
+%foo = func(%p_view_args_1:array<u32, 1>):void {  # %p_view_args_1: 'p_view_args'
+  $B3: {
+    %9:u32 = access %p_view_args_1, 0u
+    %10:array<u32, 1> = construct %9
+    %11:void = call %bar, %10
+    ret
+  }
+}
+%main = func():void {
+  $B4: {
+    %13:array<u32, 1> = construct 0u
+    %14:void = call %foo, %13
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, LetDeclaration) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* arr_ty = ty.array<u32>();
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, arr_ty));
+    foo->SetParams({p});
+    b.Append(foo->Block(), [&] { b.Return(foo); });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        auto* v1 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u);
+        auto* l = b.Let("l", v1);
+        b.Call(ty.void_(), foo, l);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<storage, array<u32>, read_write>):void {
+  $B2: {
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, 0u
+    %l:ptr<storage, array<u32>, read_write> = let %5
+    %7:void = call %foo, %l
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %4
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %7:array<u32, 1> = construct 0u
+    %8:void = call %foo, %7
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, DynamicArgs) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* arr_ty = ty.array<u32>();
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, arr_ty));
+    foo->SetParams({p});
+    b.Append(foo->Block(), [&] { b.Return(foo); });
+
+    auto* main = b.Function("main", ty.void_());
+    auto* offset = b.FunctionParam("offset", ty.u32());
+    main->SetParams({offset});
+    b.Append(main->Block(), [&] {
+        auto* dyn_offset = b.Add(offset, 4_u);
+        auto* v1 = b.CallExplicit(ty.ptr(storage, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, dyn_offset);
+        b.Call(ty.void_(), foo, v1);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<storage, array<u32>, read_write>):void {
+  $B2: {
+    ret
+  }
+}
+%main = func(%offset:u32):void {
+  $B3: {
+    %6:u32 = add %offset, 4u
+    %7:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %6
+    %8:void = call %foo, %7
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<storage, array<u32>, read_write> = bufferView<array<u32>> %v, %4
+    ret
+  }
+}
+%main = func(%offset:u32):void {
+  $B3: {
+    %8:u32 = add %offset, 4u
+    %9:array<u32, 1> = construct %8
+    %10:void = call %foo, %9
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Uniform) {
+    auto* v = b.Var("v", ty.ptr(uniform, ty.buffer(128)));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* arr_ty = ty.array<u32, 4>();
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(uniform, arr_ty));
+    foo->SetParams({p});
+    b.Append(foo->Block(), [&] { b.Return(foo); });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        auto* v1 = b.CallExplicit(ty.ptr(uniform, arr_ty), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{arr_ty}, v, 0_u);
+        b.Call(ty.void_(), foo, v1);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v:ptr<uniform, buffer<128>, read> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<uniform, array<u32, 4>, read>):void {
+  $B2: {
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %5:ptr<uniform, array<u32, 4>, read> = bufferView<array<u32, 4>> %v, 0u
+    %6:void = call %foo, %5
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v:ptr<uniform, buffer<128>, read> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<uniform, array<u32, 4>, read> = bufferView<array<u32, 4>> %v, %4
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %7:array<u32, 1> = construct 0u
+    %8:void = call %foo, %7
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, Struct) {
+    auto* v = b.Var("v", ty.ptr(storage, ty.unsized_buffer()));
+    v->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(v);
+
+    auto* str_ =
+        ty.Struct(mod.symbols.New("S"), {
+                                            {mod.symbols.Register("arr"), ty.array<u32, 4>()},
+                                        });
+
+    auto* foo = b.Function("foo", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, str_));
+    foo->SetParams({p});
+    b.Append(foo->Block(), [&] {
+        auto* acc = b.Access(ty.ptr(storage, ty.u32()), p, 0_u, 2_u);
+        b.Load(acc);
+        b.Return(foo);
+    });
+
+    auto* main = b.Function("main", ty.void_());
+    b.Append(main->Block(), [&] {
+        auto* v1 = b.CallExplicit(ty.ptr(storage, str_), BuiltinFn::kBufferView,
+                                  Vector<TemplateParameter, 1>{str_}, v, 0_u);
+        b.Call(ty.void_(), foo, v1);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+S = struct @align(4) {
+  arr:array<u32, 4> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p:ptr<storage, S, read_write>):void {
+  $B2: {
+    %4:ptr<storage, u32, read_write> = access %p, 0u, 2u
+    %5:u32 = load %4
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %7:ptr<storage, S, read_write> = bufferView<S> %v, 0u
+    %8:void = call %foo, %7
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+S = struct @align(4) {
+  arr:array<u32, 4> @offset(0)
+}
+
+$B1: {  # root
+  %v:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+}
+
+%foo = func(%p_view_args:array<u32, 1>):void {
+  $B2: {
+    %4:u32 = access %p_view_args, 0u
+    %5:ptr<storage, S, read_write> = bufferView<S> %v, %4
+    %6:ptr<storage, u32, read_write> = access %5, 0u, 2u
+    %7:u32 = load %6
+    ret
+  }
+}
+%main = func():void {
+  $B3: {
+    %9:array<u32, 1> = construct 0u
+    %10:void = call %foo, %9
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_DirectVariableAccessTest_BufferView, ConvertedParameters) {
+    auto* gv1 = b.Var("gv1", ty.ptr(storage, ty.unsized_buffer()));
+    gv1->SetBindingPoint(0, 0);
+    mod.root_block->Append(gv1);
+    auto* gv2 = b.Var("gv2", ty.ptr(storage, ty.buffer(128)));
+    gv2->SetBindingPoint(0, 1);
+    mod.root_block->Append(gv2);
+
+    auto* bar = b.Function("bar", ty.void_());
+    auto* p = b.FunctionParam("p", ty.ptr(storage, ty.unsized_buffer()));
+    bar->SetParams({p});
+    b.Append(bar->Block(), [&] {
+        b.CallExplicit(ty.ptr(storage, ty.u32()), BuiltinFn::kBufferView,
+                       Vector<TemplateParameter, 1>{ty.u32()}, p, 0_u);
+        b.Return(bar);
+    });
+
+    auto* foo = b.Function("foo", ty.void_());
+    b.Append(foo->Block(), [&] {
+        b.Call(ty.void_(), bar, gv1);
+        b.Call(ty.void_(), bar, gv2);
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %gv1:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+  %gv2:ptr<storage, buffer<128>, read_write> = var undef @binding_point(0, 1)
+}
+
+%bar = func(%p:ptr<storage, buffer, read_write>):void {
+  $B2: {
+    %5:ptr<storage, u32, read_write> = bufferView<u32> %p, 0u
+    ret
+  }
+}
+%foo = func():void {
+  $B3: {
+    %7:void = call %bar, %gv1
+    %8:void = call %bar, %gv2
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %gv1:ptr<storage, buffer, read_write> = var undef @binding_point(0, 0)
+  %gv2:ptr<storage, buffer<128>, read_write> = var undef @binding_point(0, 1)
+}
+
+%bar = func():void {
+  $B2: {
+    %4:ptr<storage, u32, read_write> = bufferView<u32> %gv1, 0u
+    ret
+  }
+}
+%bar_1 = func():void {  # %bar_1: 'bar'
+  $B3: {
+    %6:ptr<storage, u32, read_write> = bufferView<u32> %gv2, 0u
+    ret
+  }
+}
+%foo = func():void {
+  $B4: {
+    %8:void = call %bar
+    %9:void = call %bar_1
+    ret
+  }
+}
+)";
+
+    Run(DirectVariableAccess, DirectVariableAccessConfig{});
+
+    EXPECT_EQ(expect, str());
+}
+
+}  // namespace buffer_view_test
 
 }  // namespace
 }  // namespace tint::core::ir::transform

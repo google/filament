@@ -30,8 +30,8 @@
 
 #include <vector>
 
-#include "dawn/native/QuerySet.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/native/QuerySet.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
 
@@ -42,15 +42,15 @@ class QuerySet final : public QuerySetBase {
     static ResultOrError<Ref<QuerySet>> Create(Device* device,
                                                const QuerySetDescriptor* descriptor);
 
-    GLuint Get(uint32_t index) const;
-    std::vector<GLuint> GetQueries() const;
+    GLuint Get(QueryIndex index) const;
+    const ityp::vector<QueryIndex, GLuint>& GetQueries() const;
 
   private:
     QuerySet(Device* device, const QuerySetDescriptor* descriptor);
 
     ~QuerySet() override;
     void DestroyImpl(DestroyReason reason) override;
-    std::vector<GLuint> mQueries;
+    ityp::vector<QueryIndex, GLuint> mQueries;
 };
 
 }  // namespace dawn::native::opengl

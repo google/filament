@@ -33,17 +33,25 @@
 #include <memory>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/Assert.h"
-#include "dawn/wire/Wire.h"
 #include "dawn/wire/WireCmd_autogen.h"
-#include "dawn/wire/WireDeserializeAllocator.h"
+#include "src/dawn/wire/WireDeserializeAllocator.h"
+#include "src/utils/assert.h"
+#include "src/utils/heap_array.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire {
 
-class ChunkedCommandHandler : public CommandHandler {
+class ChunkedCommandHandler {
   public:
-    ChunkedCommandHandler();
-    ~ChunkedCommandHandler() override;
+    virtual ~ChunkedCommandHandler();
+
+    virtual bool HandleCommands(Span<const volatile std::byte> commands) { return false; }
+
+    // TODO(https://crbug.com/528027992): Remove in favor of overload above, once both the server
+    // and client implement it.
+    virtual const volatile char* HandleCommands(const volatile char* commands, size_t size) {
+        return nullptr;
+    }
 
   protected:
     WireResult HandleChunkedCommand(DeserializeBuffer* deserializeBuffer);
@@ -55,9 +63,8 @@ class ChunkedCommandHandler : public CommandHandler {
     // must be called in a thread-safe manner, we do not need to explicitly synchronize access to
     // this map.
     struct ChunkedCommand {
-        size_t remainingSize = 0;
-        size_t putOffset = 0;
-        std::unique_ptr<char[]> data = nullptr;
+        HeapArray<std::byte> data;
+        Span<std::byte> current;
     };
     absl::flat_hash_map<uint64_t, ChunkedCommand> mChunkedCommands;
 };

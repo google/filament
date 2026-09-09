@@ -8,6 +8,11 @@ libprotobuf-mutator is a library to randomly mutate
 [protobuffers](https://github.com/google/protobuf). <BR>
 It could be used together with guided fuzzing engines, such as [libFuzzer](http://libfuzzer.info).
 
+The core of libprotobuf-mutator has the following dependencies:
+
+- Protobuf >=3.6.1.3 (library and compiler)
+- Clang >=12.0.0 including libFuzzer
+
 ## Quick start on Debian/Ubuntu
 
 Install prerequisites:

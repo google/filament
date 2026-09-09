@@ -1,0 +1,227 @@
+Name
+
+    NOK_swap_region2
+
+Name Strings
+
+    EGL_NOK_swap_region2
+
+Notice
+
+    Copyright 2010 Nokia. All rights reserved.
+
+Contributors
+
+    Robert Palmer
+    Sami Kyöstilä
+
+Contacts
+
+    Robert Palmer, Nokia (robert.palmer 'at' nokia.com)
+    Sami Kyöstilä, Nokia (sami.kyostila 'at' nokia.com)
+
+Status
+
+    Internally reviewed
+
+Version
+
+    2 - April 29, 2010
+
+Number
+
+    EGL Extension #23
+
+Dependencies
+
+    Requires EGL 1.4
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension adds a new function which provides an alternative to
+    eglSwapBuffers. eglSwapBuffersRegion2NOK accepts two new parameters
+    in addition to those in eglSwapBuffers. The new parameters consist
+    of a pointer to a list of 4-integer blocks defining rectangles
+    (x, y, width, height) and an integer specifying the number of
+    rectangles in the list.
+
+    The new parameters allow users to declare the region of the surface
+    that has been updated. The implementation uses this information to transfer
+    the updated region to the front buffer. Only the pixels within the
+    specified region are copied; any rendering outside that region will not
+    become visible on the window surface. This in contrast with the
+    EGL_NOK_swap_region extension which treats the modified region only as a
+    hint.
+
+    This functional change is aimed at further reducing the processing and
+    bandwidth requirements of optimizations of applications whose graphics are
+    commonly subjected to region-based changes. Specifically, this extension
+    enables partial surface updates without requiring the use of preserved
+    swaps.
+
+New Procedures and Functions
+
+    EGLAPI EGLBoolean EGLAPIENTRY eglSwapBuffersRegion2NOK(
+              EGLDisplay dpy,
+              EGLSurface surface,
+              EGLint numRects,
+              const EGLint* rects);
+
+New Types
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 3 of the EGL 1.4 Specification (EGL Functions
+and Errors)
+
+    Add the following text to the end of the first subsection in
+    section 3.9.1 (prior to 'Native Window Resizing' subsection):
+
+        "eglSwapBuffersRegion2NOK is an alternative to eglSwapBuffers
+        that allows the client to provide the region of the surface
+        which has been updated. This will allow processing and
+        bandwidth optimizations for applications whose graphics are
+        commonly subject to region-based changes.
+
+        eglSwapBuffersRegion2NOK behaves in the same way as
+        eglSwapBuffers with the following modification: the additional
+        parameters <numRects> and <rects> provide specify a region which was
+        rendered to by the application. The implementation uses this
+        information to combine the modified backbuffer region with the previous
+        frontbuffer to form the new frontbuffer. The implementation guarantees
+        that all of the pixels within the modified region are posted for
+        display and none of the pixels outside the region are sourced. Only
+        back buffered surfaces can be used with eglSwapBuffersRegion2NOK.
+
+        <rects> specifies a pointer to a list of 4-integer blocks
+        defining rectangles. The area covered by the rectangles
+        constitutes the region of the color buffer which has been
+        updated by the client. <numRects> specifies the number of
+        rectangles in the <rects> list. If <numRects> is set to zero
+        the update region is set to the width and height of the
+        surface.
+
+        Each rectangle is specified as an integer 4-tuple in the form
+        (x, y, width, height). The x and y values provided by the client
+        must specify the bottom left corner of each rectangle as the
+        origin of the coordinate system is bottom left. Rectangles are
+        clipped (restricted) to the bounds of the EGLSurface. A
+        rectangle with width or height less than or equal 0 is ignored.
+        The region is defined by the union of all the specified
+        rectangles. The rectangles as specified must be disjoint. If
+        the rectangles are not disjoint or the user has rendered
+        outside of the region declared, the rendering results are
+        undefined."
+
+    Insert "eglSwapBuffersRegion2NOK" appropriately after each instance
+    of "eglSwapBuffers" in the first paragraph in section 3.9.4
+
+    Add the following before the last sentence in the first
+    paragraph in section 3.9.4
+
+        "If eglSwapBuffersRegion2NOK is called and <numRects> is greater
+        than zero and <rects> is NULL, an EGL_BAD_PARAMETER error is
+        generated. If <numRects> is less than zero, an
+        EGL_BAD_PARAMETER error is generated."
+
+        "If eglSwapBuffersRegion2NOK is called with a single buffered
+        <surface>, an EGL_BAD_MATCH error is generated."
+
+Dependencies on OpenGL ES
+
+    None
+
+Dependencies on OpenVG
+
+    None
+
+
+Issues
+
+    1) Is there a limit on the number of rectangles that can be used?
+    Should there be a specified number which are guaranteed to be
+    supported?
+
+    RESOLVED: This is limited by the amount of resources available to the
+    implementation. The implementation is free to fail with EGL_BAD_ALLOC if a
+    given update region cannot be processed due to resource constraints.
+
+    2) Are there any limitations on the location or size of rectangles?
+
+    RESOLVED: The limitations placed on the validity of a rectangle is
+    that the width and height must be greater than zero and should not
+    overlap. Rectangles which have a width or height less than or equal
+    to zero will be ignored. If rectangles overlap the rendering
+    results are undefined. In addition all rectangles are clipped to
+    the area of the surface. Rectangles which are partially or
+    completely outside the boundary of the surface will not generate an
+    error.
+
+    3) How does eglSwapBuffersRegion2NOK interact with incremental
+    rendering?
+
+    RESOLVED: This extension does not affect the client's ability to
+    perform incremental rendering.  The ability to perform incremental
+    rendering is determined solely by the EGLSurface's
+    EGL_SWAP_BEHAVIOR attribute.  The use of eglSwapBuffersRegion2NOK to
+    describe changed regions can still assist window system composition
+    optimizations even if the client is physically redrawing the entire
+    surface on every frame.
+
+    If EGL_SWAP_BEHAVIOR is EGL_BUFFER_PRESERVED, the client can
+    restrict their rendering to a particular region (e.g. using scissor
+    rects) and then declare this region using eglSwapBuffersRegion2NOK.
+
+    If EGL_SWAP_BEHAVIOR is EGL_BUFFER_DESTROYED, the client can
+    also restrict rendering to a particular region of the surface, but that
+    region must be completely re-rendered because the previous frame contents
+    are no longer available within that region. The application can then post
+    this region with eglSwapBuffersRegion2NOK. Since the buffer posting is
+    guaranteed to be limited to the declared region, the application does not
+    need to re-render or otherwise ensure pixel data outside the updated region
+    is valid.
+
+    4) How is this extension an improvement over EGL_NOK_swap_region?
+
+    RESOLVED: This extension builds on the previous EGL_NOK_swap_region
+    extension by requiring that the implementation considers the update region
+    provided by the application as a mandate rather than a hint. This allows
+    for region-restricted rendering without requiring the use of preserved buffer
+    swaps which may be relatively expensive for the implementation.
+
+    Furthermore, whilst preserved swap behaviour is necessary for incremental
+    rendering, many applications fully re-render modified surface regions and
+    so don't require preserved swap behaviour. This extension provides a
+    lighter weight surface update mechanism for such applications.
+
+    5) How does this extension compare to MESA_copy_sub_buffer?
+
+    RESOLVED: There are two main differences between MESA_copy_sub_buffer and
+    this extension:
+
+        1. This extension allows for arbitrary update regions instead of a
+           single rectangle.
+
+        2. eglSwapBuffersRegion2NOK is specified to be a frame swap, so the
+           implementation is free to apply destructive swap behavior in
+           conjunction with this function call. This may allow for a
+           performance improvement.
+
+Revision History
+
+    Version 1, 2010/04/28 (Sami Kyöstilä)
+      - First revision based on EGL_NOK_swap_region version 10.
+    Version 2, 2010/04/29 (Sami Kyöstilä)
+      - Specify operation in terms of copying from the back buffer into the
+        front buffer instead of involving the the system composition or the
+        display.
+      - Disallowed usage with anything else than back buffered surfaces.
+      - Clarified some sentences.
+

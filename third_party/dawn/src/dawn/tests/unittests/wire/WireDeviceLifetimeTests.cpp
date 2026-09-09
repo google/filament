@@ -31,8 +31,8 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/native/Instance.h"
-#include "dawn/utils/WireHelper.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/utils/WireHelper.h"
 
 namespace dawn {
 namespace {

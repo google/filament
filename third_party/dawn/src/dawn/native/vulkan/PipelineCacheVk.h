@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_PIPELINECACHEVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_PIPELINECACHEVK_H_
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/PipelineCache.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/PipelineCache.h"
 
 namespace dawn::native::vulkan {
 

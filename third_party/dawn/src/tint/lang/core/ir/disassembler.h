@@ -33,6 +33,7 @@
 #include <string_view>
 
 #include "src/tint/lang/core/binary_op.h"
+#include "src/tint/lang/core/intrinsic/table.h"
 #include "src/tint/lang/core/ir/binary.h"
 #include "src/tint/lang/core/ir/block.h"
 #include "src/tint/lang/core/ir/block_param.h"
@@ -72,6 +73,11 @@ class Disassembler {
             return instruction == other.instruction && index == other.index;
         }
     };
+
+    /// @param mod the module
+    /// @param inst the instruction to disassemble
+    /// @returns the disassembled instruction
+    static std::string Disassemble(const Module& mod, const Instruction* inst);
 
     /// Constructor.
     /// Performs the disassembly of the module @p mod, constructing a Source::File with the name @p
@@ -253,6 +259,7 @@ class Disassembler {
     void EmitOperand(const Instruction* inst, size_t index);
     void EmitOperandList(const Instruction* inst, size_t start_index = 0);
     void EmitOperandList(const Instruction* inst, size_t start_index, size_t count);
+    void EmitTemplateList(VectorRef<core::intrinsic::TemplateParameter> args);
     void EmitInstructionName(const Instruction* inst);
 
     const Module& mod_;

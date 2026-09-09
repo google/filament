@@ -1,0 +1,5 @@
+// Basic DXC Smoke Test
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /Fc %t
+// RUN: FileCheck --input-file=%t %s --check-prefix=FC
+
+// FC:define void @main()

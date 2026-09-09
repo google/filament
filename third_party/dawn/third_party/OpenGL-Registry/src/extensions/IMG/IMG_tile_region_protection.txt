@@ -1,0 +1,360 @@
+Name
+
+    IMG_tile_region_protection
+
+Name Strings
+
+    GL_IMG_tile_region_protection
+
+Contact
+
+    Deepak Ravikumar, Imagination Technologies 
+    (deepak 'dot' ravikumar 'at' imgtec 'dot' com)
+
+Contributors
+
+      Ian King, Imagination Technologies
+      (Ian 'dot' King 'at' imgtec 'dot' com)
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: June 06, 2022
+    Revision: 1.0
+
+Number
+
+    OpenGL SC Extension #1
+ 
+Dependencies
+
+    This extension is written against the OpenGL SC 2.0.1 
+    specification, EGL Version 1.4 specification and the
+    GLSL ES Shading Language 1.00 specification with limitations as 
+    specified in Appendix F of the OpenGL SC 2.0.1 specification.
+
+Overview
+
+    The safety-critical geometric primitives should have safety 
+    mechanisms to guard them against faults that may result in pixel 
+    corruption. On Imagination Technologies safety-critical Tile Based 
+    rendering GPUs, Tile Region Protection (TRP) safety mechanism 
+    performs safety integrity checks on all tiles that contain 
+    safety-critical geometries and detect faults in the rendering of 
+    these elements. This extension allows application to tag all its 
+    safety-critical geometric primitives as safety-related so as to run 
+    TRP safety checks on them and report faults in their rendering. 
+    Any faults reported by this extension can then be acted upon by the 
+    application. Depending on the hardware. TRP can detect either 
+    transient or both transient and permanent faults that occur during 
+    the rendering of these safety-critical elements.
+    
+    This extension provides application a way to specify all its 
+    safety-critical geometric primitives in order to enable the TRP
+    safety integrity checks on them, and thereby detect and report 
+    faults in their rendering.
+    
+    This extension also adds a read-only built-in boolean
+    gl_TRPIsProtected, to be used in the fragment shader to check if 
+    the tile is protected by TRP or not. This built-in allows 
+    developers to verify that all of the safety-critical geometric 
+    primitives are indeed protected by TRP. Shaders using the new 
+    functionality provided by this extension should enable this via
+    the construct,
+
+    #extension GL_IMG_tile_region_protection : require   (or enable)
+
+IP Status
+
+    Imagination Technologies Proprietary
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable and Disable, 
+    <value> parameter of IsEnabled and by the <pname> parameter 
+    of GetBooleanv
+
+        GL_TRP_IMG                            0x8EA0
+    
+    Returned by GetGraphicsResetStatus
+
+        GL_TRP_ERROR_CONTEXT_RESET_IMG        0x8EA1
+
+    Returned by GetError
+
+        GL_TRP_UNSUPPORTED_CONTEXT_IMG        0x8EA2
+
+
+Additions to Chapter 2 of the OpenGL SC 2.0.1 Specification
+(OpenGL SC Operation)
+
+    Section 2.6 Graphics Reset Recovery Add below to the values
+    that can be returned by GetGraphicsResetStatus
+    
+    TRP_ERROR_CONTEXT_RESET_IMG indicates that a reset has been detected
+    due to a fault detected by TRP in a safety-critical render in the 
+    current GL context.
+
+
+    Table 2.3 Summary of GL errors add the below entry
+
+       Error                       Description     Offending 
+                                                   command 
+                                                   ignored?        Advisory Action
+       -------------------         -----------     -----           -------------------       
+      TRP_UNSUPPORTED_CONTEXT_IMG  TRP enable        Yes           Continue for
+                                   failed due to                   non safety-critical
+                                   context not                     renders.
+                                   supporting                      Abort for
+                                   robust buffer                   safety-critical
+                                   and/or has                      renders.
+                                   reset notifi-               
+                                   cation other
+                                   than
+                                   LOSE_CONTEXT_ON_RESET                            
+
+Additions to Chapter 4 of the OpenGL SC 2.0.1 Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    Add Section 4.1.9 Tile Region Protection(TRP) after 
+    4.1.8 "Additional Multisample Fragment Operations"
+    
+    Tile Region Protection performs safety checks during the 
+    rendering of safety-critical geometric primitives, to protect them 
+    from faults that may otherwise cause pixel data corruption and 
+    result in the safety-critical elements being rendered incorrectly. 
+    Depending on the hardware,TRP can detect either transient or both 
+    transient and permanent faults that occur during the rendering of 
+    these safety-critical elements.
+
+    TRP is enabled with the generic Enable command using the
+    symbolic constant TRP_IMG before passing the safety-critical 
+    sequence of geometric primitives to the GL. Once TRP is enabled, 
+    all further sequence of geometric primitives passed to the GL are 
+    treated as safety-critical. It can be disabled with the Disable 
+    command using the same symbolic constant for the non safety-critical
+    geometric primitives.
+    
+    TRP runs safety integrity checks during the rendering of the 
+    specified safety-critical geometries. Any fault detected by TRP in 
+    the rendering of these elements will result in a reset of the GL 
+    context and any subsequent GL commands on that context will
+    generate a CONTEXT_LOST error. In this case, GetGraphicsResetStatus 
+    will return the value TRP_ERROR_CONTEXT_RESET_IMG. 
+    
+    TRP requires a graphic context with reset notification strategy
+    set to LOSE_CONTEXT_ON_RESET and robust buffer access enabled 
+    with CONTEXT_ROBUST_ACCESS_EXT set to True. 
+    GL_TRP_UNSUPPORTED_CONTEXT_IMG error is generated if TRP is 
+    enabled for a graphics context that does not have robust buffer
+    access enabled (OPENGL_ROBUST_ACCESS_EXT set to False) or 
+    that has reset notification strategy set to a value other than 
+    LOSE_CONTEXT_ON_RESET
+    
+
+Additions to Chapter 6 of the OpenGL SC 2.0.1 Specification 
+(State and State Requests)
+
+    Table 6.11. Pixel Operations (cont.) add the below entry
+
+                                        Initial
+    Get Value        Type  Get Command  Value     Description          Section
+    -------------------  ----  -----------  ------  -------------------     -------
+    TRP_IMG           B     IsEnabled   False   Tile Region Protection  4.1.9
+                                                enabled
+
+
+Additions to Chapter 7 of the OpenGL Shading Language 1.00 Specification
+(Built-in Variables)
+
+    Added new built-in boolean to 7.2 Fragment Shader Special Variables 
+    with the below description.
+    
+    The fragment shader has access to the read-only built-in variable
+    gl_TRPIsProtected whose value is true for all fragments with window 
+    relative coordinates falling inside a protected tile. At least one 
+    square of an integer grid in window coordinates which are part of a 
+    protected tile occupied by a geometric primitive is protected by 
+    TRP safety checks.
+
+    The built-in variables that are accessible from a fragment shader 
+    are intrinsically given types as follows:
+    
+    mediump vec4 gl_FragCoord;
+    bool gl_FrontFacing;
+    mediump vec4 gl_FragColor;
+    mediump vec4 gl_FragData[gl_MaxDrawBuffers];
+    mediump vec2 gl_PointCoord;
+    bool gl_TRPIsProtected;
+ 
+Dependencies on GL and ES profiles, versions, and other extensions
+
+    None
+   
+Errors
+
+    TRP_UNSUPPORTED_CONTEXT_IMG error is generated if TRP is enabled for
+    a graphic context for which the reset notification strategy 
+    RESET_NOTIFICATION_STRATEGY_EXT is not LOSE_CONTEXT_ON_RESET and 
+    robust buffer access CONTEXT_ROBUST_ACCESS is false.
+
+New State
+
+    Table 6.11. Pixel Operations (cont.) add the below entry
+
+                                        Initial
+    Get Value        Type  Get Command  Value     Description          Section
+    -------------------  ----  -----------  ------  -------------------     -------
+    TRP_IMG          B     IsEnabled    False   Tile Region Protection  4.1.9
+                                                enabled
+
+New Implementation Dependent State
+
+    None
+
+Sample Code
+
+    The below code snippet illustrates the usage of this extension to 
+    protect safety-critical sequence of geometric primitives.
+    
+    /* Step 1 Enable TRP */
+    glEnable(GL_TRP_IMG);
+    GLenum error = glGetError();
+    if (error == (GLenum)GL_NO_ERROR)
+    {
+      /* Step 2 Submit commands for rendering the 
+       * safety-critical sequence of geometric primitives.
+       */
+       ...
+    }
+
+    /* Step 3 Disable TRP before submitting the
+     * non safety-critical sequence of geometric primitives to GL.
+     */
+     glDisable(GL_TRP_IMG);
+     ...
+    /* End of non-safety critical geometry submission */
+     
+    /* Step 4  Upon completion of the submitted commands to GL,  
+     * check status of the safety-critical renders
+     */
+    error = glGetError();
+    if (error == (GLenum)GL_CONTEXT_LOST)
+    {
+      GLenum graphicResetReason = glGetGraphicsResetStatus();
+      if (graphicResetReason == (GLenum)GL_TRP_ERROR_CONTEXT_RESET_IMG)
+      {
+        /* Step 4.5 Handle fault detected by TRP in 
+         * safety-critical render
+         */
+      }
+    }
+    
+    The fragment shader code snippet below illustrates how to identify
+    if the tile is protected by TRP safety checks or not.
+    
+    #extension GL_IMG_tile_region_protection : enable
+     
+    void main()
+    {
+      outColour.rgb = vec3(0.0,1.0,0.0);
+      /* Overlay safety protected tiles with green colour */
+      outColour.a = gl_TRPIsProtected ? 0.5 : 0.0;
+    }
+
+Conformance Tests
+
+    GL2ExtensionTests/img_trp
+
+Issues
+
+    1) What should the default state of TRP_IMG be?
+
+       RESOLVED: If TRP_IMG default state was True, then every geometry 
+       being rendered, irrespective of it being safety-critical or not, 
+       will be treated as safety-related and safety integrity checks 
+       would be run on them. This will have a negative effect on the 
+       overall performance and would defeat the purpose of TRP, as TRP 
+       is aimed at providing efficient and high performance 
+       safety-critical rendering. Hence the default state of TRP_IMG is 
+       false.
+
+       From an application perspective, TRP must be enabled before 
+       submitting the safety-critical geometric primitives to the GL in 
+       order to run the TRP safety integrity checks for them to detect 
+       and report faults in their rendering. TRP should be disabled 
+       before submitting non safety-critical sequence of geometric 
+       primitives to the GL.
+    
+    2) How should the application react to a TRP_ERROR_CONTEXT_RESET_IMG 
+       event?
+
+       RESOLVED: Application should treat TRP_ERROR_CONTEXT_RESET_IMG 
+       similar to a context reset event and should not use the graphics 
+       context for any further purpose. Recovery requires creating a new
+       context and recreating all relevant states from the lost context.
+
+    3) How does this extension ensure freedom from interference 
+       during the rendering of safety-critical sequence of geometric 
+       primitives from faults that may arise from the rendering of 
+       non-safety critical geometric primitives ?
+
+       RESOLVED: In order to ensure the integrity of rendering of 
+       safety-critical sequence of geometric primitives, it is required 
+       to ensure that there is freedom from interference during the 
+       rendering of safety-critical geometric primitives from faults 
+       that may have occurred during the rendering of 
+       non safety-critical geometric primitives. Otherwise, such a fault
+       might cause non safety-critical geometric primitives to occlude 
+       the safety-critical geometries and prevent it from being 
+       displayed correctly.
+
+       This extension can efficiently detect such faults from 
+       interfering with the expected rendering of safety-critical 
+       sequence of geometric primitives, provided the application has 
+       tagged at least one of the submitted geometric primitive as 
+       safety-related. However, if the application explicitly calls 
+       Flush, Finish or Readnpixels to submit commands containing only 
+       non safety-critical sequence of geometric primitives to the GPU 
+       and then proceeds to add more geometric primitives, including 
+       sequence of safety-critical geometric primitives, then, the TRP 
+       extension will not be able to ensure freedom from interference 
+       during the rendering of the safety-critical sequence of geometric
+       primitives from faults that may have occurred from the rendering 
+       of previously submitted non-safety critical geometric primitives. 
+       In such use cases, the  application should add additional safety 
+       mechanisms to verify that the safety-critical geometry rendering 
+       was not affected by faults from non safety-critical sequence of 
+       geometric primitives.
+
+       It is highly recommended to avoid such use cases where the 
+       application explicitly submits all previously called commands 
+       (eg by calling Flush, Finish or Readnpixels), containing only 
+       non safety-critical sequence of geometric primitives to the GPU 
+       and then adds more geometric primitives including sequence of 
+       safety-critical geometries for rendering. The same also applies 
+       for the case where the application explicitly submits 
+       safety-critical sequence of geometric primitives and then
+       adds further sequence of only non safety-critical 
+       geometric primitives. This TRP extension is capable of 
+       efficiently detecting rendering faults from non safety-critical 
+       geometric primitives affecting safety-critical geometric 
+       primitives rendering if it knows that there is at least one 
+       safety-critical geometric primitive in the submitted sequence of 
+       geometric primitives.
+
+Revision History
+
+      Revision 1.0, 06/06/2022 
+      - Initial revision.

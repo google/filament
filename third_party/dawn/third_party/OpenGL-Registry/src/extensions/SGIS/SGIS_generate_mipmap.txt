@@ -1,0 +1,185 @@
+Name
+
+    SGIS_generate_mipmap
+
+Name Strings
+
+    GL_SGIS_generate_mipmap
+
+Version
+
+    $Date: 1997/02/26 03:36:30 $ $Revision: 1.6 $
+
+Number
+
+    32
+
+Dependencies
+
+    EXT_texture is required
+    EXT_texture3D affects the definition of this extension
+    EXT_texture_object affects the definition of this extension
+    SGIS_texture_lod affects the definition of this extension
+
+Overview
+
+    This extension defines a mechanism by which OpenGL can derive the
+    entire set of mipmap arrays when provided with only the base level
+    array.  Automatic mipmap generation is particularly useful when
+    texture images are being provided as a video stream.
+
+Issues
+
+    *   How are edges handled?
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and GetTexParameterfv:
+
+        GENERATE_MIPMAP_SGIS            0x8191
+
+    Accepted by the <target> parameter of Hint, and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        GENERATE_MIPMAP_HINT_SGIS       0x8192
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    GL Specification Table 3.7 is updated as follows:
+
+        Name                            Type        Legal Values
+        ----                            ----        ------------
+        TEXTURE_WRAP_S                  integer     CLAMP, REPEAT
+        TEXTURE_WRAP_T                  integer     CLAMP, REPEAT
+        TEXTURE_WRAP_R_EXT              integer     CLAMP, REPEAT
+        TEXTURE_MIN_FILTER              integer     NEAREST, LINEAR,
+                                                    NEAREST_MIPMAP_NEAREST,
+                                                    NEAREST_MIPMAP_LINEAR,
+                                                    LINEAR_MIPMAP_NEAREST,
+                                                    LINEAR_MIPMAP_LINEAR,
+                                                    FILTER4_SGIS
+        TEXTURE_MAG_FILTER              integer     NEAREST, LINEAR,
+                                                    FILTER4_SGIS,
+                                                    LINEAR_DETAIL_SGIS,
+                                                    LINEAR_DETAIL_ALPHA_SGIS,
+                                                    LINEAR_DETAIL_COLOR_SGIS,
+                                                    LINEAR_SHARPEN_SGIS,
+                                                    LINEAR_SHARPEN_ALPHA_SGIS,
+                                                    LINEAR_SHARPEN_COLOR_SGIS
+        TEXTURE_BORDER_COLOR            4 floats    any 4 values in [0,1]
+        DETAIL_TEXTURE_LEVEL_SGIS       integer     any non-negative integer
+        DETAIL_TEXTURE_MODE_SGIS        integer     ADD, MODULATE
+        TEXTURE_MIN_LOD_SGIS            float       any value
+        TEXTURE_MAX_LOD_SGIS            float       any value
+        TEXTURE_BASE_LEVEL_SGIS         integer     any non-negative integer
+        TEXTURE_MAX_LEVEL_SGIS          integer     any non-negative integer
+        GENERATE_MIPMAP_SGIS            boolean     TRUE or FALSE
+
+        Table 3.7: Texture parameters and their values.
+
+    This extension introduces a side effect to the modification of the
+    base level mipmap array.  The side effect is enabled on a per-texture
+    basis by calling TexParameteri, TexParameterf, TexParameteriv, or
+    TexParameterfv with <target> set to TEXTURE_1D, TEXTURE_2D, or
+    TEXTURE_3D_EXT, <pname> set to GENERATE_MIPMAP_SGIS, and <param>
+    set to TRUE (or <params> pointing to TRUE).  It is disabled using the
+    same call, with <param> set to FALSE, or <params> pointing to FALSE.
+    If SGIS_texture_lod is supported, the base level array is the array
+    number TEXTURE_BASE_LEVEL_SGIS.  Otherwise the base level array is
+    array zero.
+
+    If GENERATE_MIPMAP_SGIS is enabled, the side effect occurs whenever
+    any change is made to the interior or edge image values of the base
+    level texture array.  The side effect is computation of a complete
+    set of mipmap arrays, all derived from the modified base level array.
+    Array levels BASE+1 through BASE+p are replaced with derived arrays,
+    regardless of their previous contents.  All other texture arrays,
+    including the base array, are left unchanged by this mipmap computation.
+
+    The internal formats and border widths of the derived mipmap arrays
+    all match those of the base array, and the dimensions of the derived
+    arrays follow the requirements described in the Mipmapping section of
+    the GL Specification.  The result is that the set of mipmap arrays is
+    complete as defined by the GL Specification.  The contents of the
+    derived image arrays are computed by repeated, filtered reduction of
+    the base level image array.  This specification does not require any
+    particular filter algorithm, though a simple 2x2 box filter is
+    recommended as the default filter.  Hint variable
+    GENERATE_MIPMAP_HINT_SGIS can be changed from its default value of
+    DONT_CARE to either FASTEST or NICEST, indicating to the implementation
+    that either the fastest or highest quality filter operation is desired.
+    These operations are not defined by this specification, however.  The
+    single hint value controls the filtering of all the textures, and is
+    evaluated when the filtering operation takes place.
+
+    Automatic mipmap generation is available for texture targets TEXTURE_1D,
+    TEXTURE_2D, and TEXTURE_3D_EXT only.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, references to 3D texture mapping and
+    to TEXTURE_3D_EXT in this document are invalid and should be ignored.
+
+Dependencies on EXT_texture_object
+
+    If EXT_texture_object is implemented, the state value named
+
+        GENERATE_MIPMAP_SGIS
+
+    is added to the state vector of each texture object. When an attribute
+    set that includes texture information is popped, the bindings and
+    enables are first restored to their pushed values, then the bound
+    textures have their GENERATE_MIPMAP_SGIS parameters restored to their
+    pushed values.
+
+Dependencies on SGIS_texture_lod
+
+    If SGIS_texture_lod is not supported, the base array level is always
+    level zero.  References in this document to TEXTURE_BASE_LEVEL_SGIS
+    should be ignored.
+
+Errors
+
+    None
+
+New State
+
+                                                                  Initial
+    Get Value                   Get Command       Type  Value     Attrib
+    ---------                   -----------       ----  -------   ------
+    GENERATE_MIPMAP_SGIS        GetTexParameteriv B     FALSE     texture
+    GENERATE_MIPMAP_HINT_SGIS   GetIntegerv       Z3    DONT_CARE hint
+
+New Implementation Dependent State
+
+    None

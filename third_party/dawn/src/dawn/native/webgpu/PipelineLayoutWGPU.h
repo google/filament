@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_PIPELINELAYOUTWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_PIPELINELAYOUTWGPU_H_
 
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

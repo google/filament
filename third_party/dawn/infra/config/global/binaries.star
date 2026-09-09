@@ -78,3 +78,10 @@ targets.binaries.windowed_test_launcher(
     label = "//src/tint/cmd/test:tint_unittests",
     module_scheme = "gtest",
 )
+
+targets.binaries.script(
+    name = "litert_lm_advanced_main",
+    label = "//third_party/litert-lm:litert_lm_advanced_main",
+    script = "//scripts/run_litert_lm_benchmark.py",
+    module_scheme = "single",
+)

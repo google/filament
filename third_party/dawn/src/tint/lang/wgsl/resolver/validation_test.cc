@@ -33,7 +33,6 @@
 namespace tint::resolver {
 namespace {
 
-using ::testing::HasSubstr;
 
 using ResolverValidationTest = ResolverTest;
 using ResolverValidationDeathTest = ResolverValidationTest;
@@ -49,7 +48,7 @@ class FakeExpr final : public Castable<FakeExpr, ast::Expression> {
 };
 
 TEST_F(ResolverValidationTest, WorkgroupMemoryUsedInVertexStage) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<workgroup> wg: vec4<f32>;
 
@@ -70,7 +69,7 @@ var<workgroup> wg: vec4<f32>;
 }
 
 TEST_F(ResolverValidationTest, WorkgroupMemoryUsedInFragmentStage) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<workgroup> wg: vec4<f32>;
 var<workgroup> dst: vec4<f32>;
@@ -109,7 +108,7 @@ fn f0() {
 }
 
 TEST_F(ResolverValidationTest, RWStorageBufferUsedInVertexStage) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 @group(0) @binding(0) var<storage, read_write> v : vec4<f32>;
 @vertex
@@ -129,7 +128,7 @@ input.wgsl:2:23 note: variable is declared here
 }
 
 TEST_F(ResolverValidationTest, RWStorageTextureUsedInVertexStage) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 @group(0) @binding(0) var v : texture_storage_2d<r32uint, read_write>;
 
@@ -162,7 +161,7 @@ TEST_F(ResolverValidationDeathTest, UnhandledStmt) {
 }
 
 TEST_F(ResolverValidationTest, Stmt_If_NonBool) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   if (1.23f) {}
@@ -176,7 +175,7 @@ input.wgsl:3:7 error: if statement condition must be bool, got f32
 }
 
 TEST_F(ResolverValidationTest, Stmt_ElseIf_NonBool) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   if (true) {} else if (1.23f) {}
@@ -201,7 +200,7 @@ TEST_F(ResolverValidationDeathTest, Expr_ErrUnknownExprType) {
 }
 
 TEST_F(ResolverValidationTest, UsingUndefinedVariable_Fail) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   b = 2;
@@ -215,7 +214,7 @@ input.wgsl:3:3 error: unresolved value 'b'
 }
 
 TEST_F(ResolverValidationTest, UsingUndefinedVariableInBlockStatement_Fail) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   {
@@ -231,7 +230,7 @@ input.wgsl:4:5 error: unresolved value 'b'
 }
 
 TEST_F(ResolverValidationTest, UsingDefinedGlobalVariable_Pass) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 var<private> global_var: f32 = 2.1;
 fn my_func() {
@@ -241,7 +240,7 @@ fn my_func() {
 }
 
 TEST_F(ResolverValidationTest, UsingUndefinedVariableInnerScope_Fail) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   if (true) { var a : f32 = 2.0; }
@@ -256,7 +255,7 @@ input.wgsl:4:3 error: unresolved value 'a'
 }
 
 TEST_F(ResolverValidationTest, UsingDefinedVariableOuterScope_Pass) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   var a : f32 = 2.0;
@@ -266,7 +265,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, UsingUndefinedVariableDifferentScope_Fail) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   { var a : f32 = 2.0; }
@@ -281,7 +280,7 @@ input.wgsl:4:5 error: unresolved value 'a'
 }
 
 TEST_F(ResolverValidationTest, AddressSpace_FunctionVariableWorkgroupClass) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn func() {
   var<workgroup> var_name : i32;
@@ -295,7 +294,7 @@ input.wgsl:3:3 error: function-scope 'var' declaration must use 'function' addre
 }
 
 TEST_F(ResolverValidationTest, AddressSpace_FunctionVariablePrivateClass) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn func() {
   var<private> s : i32;
@@ -309,7 +308,7 @@ input.wgsl:3:3 error: function-scope 'var' declaration must use 'function' addre
 }
 
 TEST_F(ResolverValidationTest, AddressSpace_SamplerExplicitAddressSpace) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 @group(0) @binding(0) var<private> var_name : sampler;
 )",
@@ -321,7 +320,7 @@ input.wgsl:2:23 error: variables of type 'sampler' must not specify an address s
 }
 
 TEST_F(ResolverValidationTest, AddressSpace_TextureExplicitAddressSpace) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 @group(0) @binding(0) var<function> var_name : texture_1d<f32>;
 )",
@@ -333,7 +332,7 @@ input.wgsl:2:23 error: variables of type 'texture_1d<f32>' must not specify an a
 }
 
 TEST_F(ResolverValidationTest, Expr_MemberAccessor_VectorSwizzle_BadChar) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> my_vec : vec3<f32>;
 fn f() {
@@ -348,7 +347,7 @@ input.wgsl:4:16 error: invalid vector swizzle character
 }
 
 TEST_F(ResolverValidationTest, Expr_MemberAccessor_VectorSwizzle_MixedChars) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> my_vec : vec4<f32>;
 fn f() {
@@ -363,7 +362,7 @@ input.wgsl:4:14 error: invalid mixing of vector swizzle characters rgba with xyz
 }
 
 TEST_F(ResolverValidationTest, Expr_MemberAccessor_VectorSwizzle_BadLength) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> my_vec : vec3<f32>;
 fn f() {
@@ -378,7 +377,7 @@ input.wgsl:4:14 error: invalid vector swizzle size
 }
 
 TEST_F(ResolverValidationTest, Expr_MemberAccessor_VectorSwizzle_BadIndex) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> my_vec : vec2<f32>;
 fn f() {
@@ -394,7 +393,7 @@ input.wgsl:4:14 error: invalid vector swizzle member
 
 TEST_F(ResolverValidationTest,
        Stmt_Loop_ContinueInLoopBodyBeforeDeclAndAfterDecl_UsageInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -427,7 +426,7 @@ input.wgsl:8:11 note: identifier 'z' referenced in continuing block here
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInLoopBodyAfterDecl_UsageInContinuing_InBlocks) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -445,7 +444,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInLoopBodySubscopeBeforeDecl_UsageInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -476,7 +475,7 @@ input.wgsl:9:11 note: identifier 'z' referenced in continuing block here
 
 TEST_F(ResolverValidationTest,
        Stmt_Loop_ContinueInLoopBodySubscopeBeforeDecl_UsageInContinuingSubscope) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -508,7 +507,7 @@ input.wgsl:10:15 note: identifier 'z' referenced in continuing block here
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInLoopBodySubscopeBeforeDecl_UsageOutsideBlock) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -540,7 +539,7 @@ input.wgsl:9:15 note: identifier 'z' referenced in continuing block here
 
 TEST_F(ResolverValidationTest,
        Stmt_Loop_ContinueInLoopBodySubscopeBeforeDecl_UsageInContinuingLoop) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -573,7 +572,7 @@ input.wgsl:10:15 note: identifier 'z' referenced in continuing block here
 
 TEST_F(ResolverValidationTest,
        Stmt_Loop_ContinueInLoopBodyBeforeDecl_UsageInNestedContinuingInBody) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -596,7 +595,7 @@ fn f() {
 
 TEST_F(ResolverValidationTest,
        Stmt_Loop_ContinueInLoopBodyBeforeDecl_UsageInNestedContinuingInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -634,7 +633,7 @@ input.wgsl:9:17 note: identifier 'z' referenced in continuing block here
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInNestedLoopBodyBeforeDecl_UsageInContinuing) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -654,7 +653,7 @@ fn f() {
 
 TEST_F(ResolverValidationTest,
        Stmt_Loop_ContinueInNestedLoopBodyBeforeDecl_UsageInContinuingSubscope) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -675,7 +674,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInNestedLoopBodyBeforeDecl_UsageInContinuingLoop) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -697,7 +696,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInLoopBodyAfterDecl_UsageInContinuing) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -713,7 +712,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ReturnInContinuing_Direct) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -731,7 +730,7 @@ input.wgsl:5:7 error: continuing blocks must not contain a return statement
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ReturnInContinuing_Indirect) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -764,7 +763,7 @@ input.wgsl:5:16 note: see continuing block here
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_DiscardInContinuing_Direct) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn my_func() {
   loop  {
@@ -778,7 +777,7 @@ fn my_func() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInContinuing_Direct) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -796,7 +795,7 @@ input.wgsl:5:11 error: continuing blocks must not contain a continue statement
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_ContinueInContinuing_Indirect) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop {
@@ -813,7 +812,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_Continuing_BreakIf) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop  {
@@ -826,7 +825,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_Continuing_BreakIf_Not_Last) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -856,7 +855,7 @@ input.wgsl:5:18 note: see continuing block here
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_Continuing_BreakIf_Duplicate) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -885,7 +884,7 @@ input.wgsl:4:18 note: see continuing block here
 }
 
 TEST_F(ResolverValidationTest, Stmt_Loop_Continuing_BreakIf_NonBool) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop  {
@@ -903,7 +902,7 @@ input.wgsl:5:20 error: break-if statement condition must be bool, got i32
 }
 
 TEST_F(ResolverValidationTest, Stmt_ForLoop_CondIsBoolRef) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   var cond : bool = true;
@@ -913,7 +912,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_ForLoop_CondIsNotBool) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   for (; 1.0f; ) {}
@@ -927,7 +926,7 @@ input.wgsl:3:10 error: for-loop condition must be bool, got f32
 }
 
 TEST_F(ResolverValidationTest, Stmt_While_CondIsBoolRef) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   var cond : bool = false;
@@ -937,7 +936,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_While_CondIsNotBool) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   while (1.0f) {}
@@ -951,7 +950,7 @@ input.wgsl:3:10 error: while condition must be bool, got f32
 }
 
 TEST_F(ResolverValidationTest, Stmt_ContinueInLoop) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop {
@@ -963,7 +962,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_ContinueNotInLoop) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   continue;
@@ -977,7 +976,7 @@ input.wgsl:3:3 error: continue statement must be in a loop
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInLoop) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop {
@@ -988,7 +987,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInSwitch) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop {
@@ -1003,7 +1002,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInSwitchInContinuing) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 fn f() {
   loop {
@@ -1021,7 +1020,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfTrueInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1041,7 +1040,7 @@ input.wgsl:6:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfElseInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1059,7 +1058,7 @@ input.wgsl:5:26 error: 'break' must not be used to exit from a continuing block.
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1077,7 +1076,7 @@ input.wgsl:5:7 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfInIfInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1099,7 +1098,7 @@ input.wgsl:7:11 error: 'break' must not be used to exit from a continuing block.
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfTrueMultipleStmtsInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1120,7 +1119,7 @@ input.wgsl:7:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfElseMultipleStmtsInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1141,7 +1140,7 @@ input.wgsl:7:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfElseIfInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1161,7 +1160,7 @@ input.wgsl:6:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfNonEmptyElseInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1183,7 +1182,7 @@ input.wgsl:6:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfElseNonEmptyTrueInContinuing) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1205,7 +1204,7 @@ input.wgsl:8:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakInIfInContinuingNotLast) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   loop {
@@ -1226,7 +1225,7 @@ input.wgsl:6:9 error: 'break' must not be used to exit from a continuing block. 
 }
 
 TEST_F(ResolverValidationTest, Stmt_BreakNotInLoopOrSwitch) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   break;
@@ -1240,7 +1239,7 @@ input.wgsl:3:3 error: break statement must be in a loop or switch case
 }
 
 TEST_F(ResolverValidationTest, StructMemberDuplicateName) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 struct S {
   a : i32,
@@ -1258,7 +1257,7 @@ input.wgsl:3:3 note: previous definition is here
 )");
 }
 TEST_F(ResolverValidationTest, StructMemberDuplicateNameDifferentTypes) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 struct S {
   a : bool,
@@ -1276,7 +1275,7 @@ input.wgsl:3:3 note: previous definition is here
 )");
 }
 TEST_F(ResolverValidationTest, StructMemberDuplicateNamePass) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 struct S {
   a : i32,
@@ -1290,7 +1289,7 @@ struct S1 {
 }
 
 TEST_F(ResolverValidationTest, NegativeStructMemberAlignAttribute) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 struct S {
   @align(-2) a : f32,
@@ -1304,7 +1303,7 @@ input.wgsl:3:4 error: '@align' value must be a positive, power-of-two integer
 }
 
 TEST_F(ResolverValidationTest, NonPOTStructMemberAlignAttribute) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 struct S {
   @align(3) a : f32,
@@ -1318,7 +1317,7 @@ input.wgsl:3:4 error: '@align' value must be a positive, power-of-two integer
 }
 
 TEST_F(ResolverValidationTest, ZeroStructMemberAlignAttribute) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 struct S {
   @align(0) a : f32,
@@ -1332,7 +1331,7 @@ input.wgsl:3:4 error: '@align' value must be a positive, power-of-two integer
 }
 
 TEST_F(ResolverValidationTest, StructMemberSizeAttributeTooSmall) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 struct S {
   @size(1) a : f32,
@@ -1346,7 +1345,7 @@ input.wgsl:3:4 error: '@size' must be at least as big as the type's size (4)
 }
 
 TEST_F(ResolverValidationTest, Expr_Initializer_Cast_Pointer) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 fn f() {
   var vf : f32;
@@ -1361,7 +1360,7 @@ input.wgsl:4:33 error: type is not constructible
 }
 
 TEST_F(ResolverValidationTest, I32_Overflow) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : i32 = 2147483648;
 )",
@@ -1373,7 +1372,7 @@ var<private> v : i32 = 2147483648;
 }
 
 TEST_F(ResolverValidationTest, I32_Underflow) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : i32 = -2147483649;
 )",
@@ -1385,7 +1384,7 @@ var<private> v : i32 = -2147483649;
 }
 
 TEST_F(ResolverValidationTest, U32_Overflow) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : u32 = 4294967296;
 )",
@@ -1397,7 +1396,7 @@ var<private> v : u32 = 4294967296;
 }
 
 TEST_F(ResolverValidationTest, ShiftLeft_I32_PartialEval_Valid) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 var<private> v : i32;
 fn f() {
@@ -1407,7 +1406,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, ShiftLeft_I32_PartialEval_Invalid) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : i32;
 fn f() {
@@ -1422,7 +1421,7 @@ input.wgsl:4:13 error: shift left value must be less than the bit width of the l
 }
 
 TEST_F(ResolverValidationTest, ShiftRight_U32_PartialEval_Invalid) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : u32;
 fn f() {
@@ -1437,7 +1436,7 @@ input.wgsl:4:13 error: shift right value must be less than the bit width of the 
 }
 
 TEST_F(ResolverValidationTest, ShiftLeft_VecI32_PartialEval_Valid) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 var<private> v : vec3<i32>;
 fn f() {
@@ -1447,7 +1446,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, ShiftLeft_VecI32_PartialEval_Invalid) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : vec3<i32>;
 fn f() {
@@ -1462,7 +1461,7 @@ input.wgsl:4:13 error: shift left value must be less than the bit width of the l
 }
 
 TEST_F(ResolverValidationTest, ShiftLeft_I32_CompoundAssign_Valid) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 var<private> v : i32;
 fn f() {
@@ -1472,7 +1471,7 @@ fn f() {
 }
 
 TEST_F(ResolverValidationTest, ShiftLeft_I32_CompoundAssign_Invalid) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 var<private> v : i32;
 fn f() {
@@ -1487,7 +1486,7 @@ input.wgsl:4:5 error: shift left value must be less than the bit width of the lh
 }
 
 TEST_F(ResolverValidationTest, WorkgroupUniformLoad_ArraySize_NamedOverride) {
-    ExpectError(
+    EXPECT_ERROR(
         R"(
 override size = 10u;
 var<workgroup> a : array<u32, size>;
@@ -1510,7 +1509,7 @@ input.wgsl:5:7 error: no matching call to 'workgroupUniformLoad(ptr<workgroup, a
 }
 
 TEST_F(ResolverValidationTest, WorkgroupUniformLoad_ArraySize_NamedConstant) {
-    ExpectSuccess(
+    EXPECT_SUCCESS(
         R"(
 const size = 10u;
 var<workgroup> a : array<u32, size>;

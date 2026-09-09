@@ -116,6 +116,7 @@ class TextGenerator {
         ~LineWriter();
 
         /// @returns the StringStream
+        // NOLINTNEXTLINE(google-explicit-constructor)
         operator StringStream&() { return os; }
 
         /// @param rhs the value to write to the line

@@ -29,10 +29,10 @@
 #include <unordered_map>
 #include <utility>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/mocks/platform/CachingInterfaceMock.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/mocks/platform/CachingInterfaceMock.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {

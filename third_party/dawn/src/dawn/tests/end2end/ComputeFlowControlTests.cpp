@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -511,6 +511,47 @@ fn main() {
                                           0xA3,         // after if-else
                                           0xDEADBEEF};  // unwritten
     RunTest(shader, inputs, expected);
+}
+
+// This is a regression test for a crash in MTLCompilerService on macOS (crbug.com/508638064).
+TEST_P(ComputeFlowControlTests, SwitchReturnMTLCompilerServiceCrash) {
+    const char* shader = R"(
+@group(0) @binding(0) var<uniform> u: i32;
+@group(0) @binding(1) var<storage, read_write> s: i32;
+
+fn foo(){
+    switch (s) {
+        case 0i: {}
+        case 2i: {
+            return;
+        }
+        case 4i: {}
+        default: {
+            s = s / u;
+        }
+    }
+    switch (s) {
+        case 0i: {
+            s = 0;
+        }
+        case 1i: {}
+        case 4i: {}
+        default: {
+            s = 0;
+        }
+    }
+}
+
+@compute @workgroup_size(1)
+fn main() {
+    foo();
+    foo();
+}
+)";
+
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = utils::CreateShaderModule(device, shader);
+    device.CreateComputePipeline(&csDesc);
 }
 
 DAWN_INSTANTIATE_TEST(ComputeFlowControlTests,

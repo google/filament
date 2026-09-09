@@ -148,10 +148,6 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterPixelLocalTest, UsedInEntry) {
-    capabilities = core::ir::Capabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
-
     auto r = OneArgFunc();
     b.Append(r.func->Block(), [&] {
         auto* access = b.Access(ty.ptr<pixel_local>(ty.u32()), r.pl, 0_u);
@@ -233,10 +229,6 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterPixelLocalTest, UsedInNonEntry) {
-    capabilities = core::ir::Capabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
-
     auto r = OneArgFunc();
     auto* func2 = b.Function("foo", ty.void_());
     b.Append(func2->Block(), [&] {
@@ -335,10 +327,6 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterPixelLocalTest, UsedInNonEntryViaPointer) {
-    capabilities = core::ir::Capabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
-
     auto r = OneArgFunc();
     auto* func2 = b.Function("foo", ty.void_());
     b.Append(func2->Block(), [&] {
@@ -439,10 +427,6 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterPixelLocalTest, MultipleInputBuiltins) {
-    capabilities = core::ir::Capabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
-
     auto r = OneArgFunc(/*multiple_builtins*/ true);
     b.Append(r.func->Block(), [&] {
         auto* access = b.Access(ty.ptr<pixel_local>(ty.u32()), r.pl, 0_u);
@@ -528,10 +512,6 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterPixelLocalTest, MultipleMembers) {
-    capabilities = core::ir::Capabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
-
     auto r = ThreeArgFunc();
     b.Append(r.func->Block(), [&] {
         auto* access = b.Access(ty.ptr<pixel_local>(ty.u32()), r.pl, 0_u);
@@ -639,10 +619,6 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterPixelLocalTest, MultipleMembers_MismatchedTypes) {
-    capabilities = core::ir::Capabilities{
-        core::ir::Capability::kAllowNonCoreTypes,
-    };
-
     auto r = ThreeArgFunc();
     b.Append(r.func->Block(), [&] {
         auto* access = b.Access(ty.ptr<pixel_local>(ty.u32()), r.pl, 0_u);

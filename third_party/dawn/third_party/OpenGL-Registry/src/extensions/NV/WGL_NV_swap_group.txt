@@ -1,0 +1,196 @@
+Name
+
+    NV_swap_group
+
+Name Strings
+
+    WGL_NV_swap_group
+
+Notice
+
+    Copyright NVIDIA Corporation, 2003.
+
+Status
+
+    Shipping since 2003 on Quadro GPUs with framelock support
+
+Version
+
+    Date: 09/08/2009   Revision: 1.0
+
+Number
+
+    351
+
+Dependencies
+
+    Written based on the wording of the GLX_SGIX_swap_group and 
+    GLX_SGIX_swap_barrier specifications.
+
+    WGL_EXT_swap_control affects the definition of this extension.
+    WGL_EXT_swap_frame_lock affects the definition of this extension.
+
+Overview
+
+    This extension provides the capability to synchronize the buffer swaps
+    of a group of OpenGL windows. A swap group is created, and windows are 
+    added as members to the swap group.  Buffer swaps to members of the swap 
+    group will then take place concurrently.
+
+    This extension also provides the capability to sychronize the buffer
+    swaps of different swap groups, which may reside on distributed systems
+    on a network. For this purpose swap groups can be bound to a swap barrier.
+
+    This extension extends the set of conditions that must be met before
+    a buffer swap can take place. 
+
+Issues
+
+    An implementation can not guarantee that the initialization of the swap
+    groups or barriers will succeed because the state of the window system may
+    restrict the usage of these features. Once a swap group or barrier has 
+    been sucessfully initialized, the implementation can only guarantee to
+    sustain swap group functionality as long as the state of the window system
+    does not restrict this. An example for a state that does typically not
+    restrict swap group usage is the use of one fullscreen sized window per
+    windows desktop.
+
+New Procedures and Functions
+
+    BOOL wglJoinSwapGroupNV(HDC hDC,
+                            GLuint group);
+
+    BOOL wglBindSwapBarrierNV(GLuint group,
+                              GLuint barrier);
+
+    BOOL wglQuerySwapGroupNV(HDC hDC,
+                             GLuint *group,
+                             GLuint *barrier);
+
+    BOOL wglQueryMaxSwapGroupsNV(HDC hDC,
+                                 GLuint *maxGroups,
+                                 GLuint *maxBarriers);
+
+    BOOL wglQueryFrameCountNV(HDC hDC,
+                              GLuint *count);
+
+    BOOL wglResetFrameCountNV(HDC hDC);
+
+New Tokens
+
+    none
+
+Additions to the WGL Specification
+
+    Add to section 3.2.6, Double Buffering:
+
+    wglJoinSwapGroupNV adds <hDC> to the swap group specified by <group>.
+    If <hDC> is already a member of a different group, it is 
+    implicitly removed from that group first. A swap group is specified as 
+    an integer value between 0 and the value returned in <maxGroups> by 
+    wglQueryMaxSwapGroupsNV. If <group> is zero, the hDC is unbound from its 
+    current group, if any. If <group> is larger than <maxGroups>, 
+    wglJoinSwapGroupNV fails.
+
+    wglJoinSwapGroupNV returns True if <hDC> has been successfully bound to 
+    <group>  and False if it fails. 
+
+    wglBindSwapBarrierNV binds the swap group specified by <group> to <barrier>.
+    <barrier> is an integer value between 0 and the value returned in 
+    <maxBarriers> by wglQueryMaxSwapGroupsNV. If <barrier> is zero, the group is 
+    unbound from its current barrier, if any. If <barrier> is larger than 
+    <maxBarriers>, wglBindSwapBarrierNV fails.
+    Subsequent buffer swaps for that group will be subject to this binding, 
+    until the group is unbound from <barrier>.
+
+    wglBindSwapBarrierNV returns True if <group> has been successfully bound to 
+    <barrier> and False if it fails.
+
+    wglQuerySwapGroupNV returns in <group> and <barrier> the group and barrier 
+    currently bound to hDC, if any. 
+    
+    wglQuerySwapGroupNV returns True if <group> and <barrier> could be successfully 
+    queried for <hDC> and False if it fails. 
+    If it fails, the values of <group> and <barrier> are undefined.
+
+    wglQueryMaxSwapGroupsNV returns in <maxGroups> and <maxBarriers> the maximum 
+    number of swap groups and barriers supported by an implementation which 
+    drives window <hDC>.
+
+    wglQueryMaxSwapGroupsNV returns True if <maxGroups> and <maxBarriers> could be 
+    successfully queried for <hDC> and False if it fails. 
+    If it fails, the values of <maxGroups> and <maxBarriers> are undefined.
+
+    Before a buffer swap can take place, a set of conditions must be 
+    satisfied.  The conditions are defined in terms of the notions of when 
+    a window is ready to swap and when a group is ready to swap.
+
+    Any hDC that is not a window (i.e. a non-visible rendering buffer) is always 
+    ready.
+
+    A window is ready when all of the following are true:
+
+    1. A buffer swap command has been issued for it.
+
+    2. Its swap interval has elapsed.
+
+    A group is ready when the following is true:
+
+    1. All windows in the group are ready.
+
+    All of the following must be satisfied before a buffer swap for a window
+    can take place:
+
+    1. The window is ready.
+
+    2. If the window belongs to a group, the group is ready.
+
+    3. If the window belongs to a group and that group is bound to a 
+       barrier, all groups using that barrier are ready.
+
+    Buffer swaps for all windows in a swap group will take place concurrently
+    after the conditions are satisfied for every window in the group.
+
+    Buffer swaps for all groups using a barrier will take place concurrently 
+    after the conditions are satisfied for every window of every group using 
+    the barrier, if and only if the vertical retraces of the screens of all 
+    the groups are synchronized.  If they are not synchronized, there is no
+    guarantee of concurrency between groups.
+
+    An implementation may support a limited number of swap groups and barriers,
+    and may have restrictions on where the users of a barrier can reside.
+    For example, an implementation may allow the users to reside on different
+    display devices or even hosts.  
+    An implementation may return zero for any of <maxGroups> and <maxBarriers>
+    returned by wglQueryMaxSwapGroupsNV if swap groups or barriers are not 
+    available in that implementation or on that host.
+
+    The implementation provides a universal counter, the so called frame counter,
+    among all systems that are locked together by swap groups/barriers. It is 
+    based on the internal synchronization signal which triggers the buffer swap.
+
+    wglQueryFrameCountNV returns in <count> the current frame counter for 
+    <swapGroup>.
+
+    wglQueryFrameCountNV returns TRUE if the frame counter could be successfully 
+    retrieved. Otherwise it returns FALSE.
+
+    wglResetFrameCountNV resets the frame counter of <swapGroup> to zero.
+
+    wglResetFrameCountNV returns TRUE if the frame counter could be successfully 
+    reset, otherwise it returns FALSE. In a system that has an NVIDIA framelock
+    add-on adapter installed and enabled, wglResetFrameCountNV will only succeed when 
+    the framelock is configured as a Master system. 
+
+Errors
+
+    wglJoinSwapGroupNV, wglQuerySwapGroupNV and wglQueryMaxSwapGroupsNV generate 
+    ERROR_DC_NOT_FOUND if <hDC> is not a valid HDC.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

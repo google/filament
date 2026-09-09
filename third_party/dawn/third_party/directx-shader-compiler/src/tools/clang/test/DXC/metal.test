@@ -1,0 +1,10 @@
+// REQUIRES: metal
+
+// Metal libraries are LLVM bitcode. This check inspects the magic number from
+// the metal library output.
+// RUN: %dxc %S/Inputs/smoke.hlsl  /T ps_6_0 -metal -Fo Tmp.metal -Fre Tmp.json
+// RUN: head -c 4 Tmp.metal | FileCheck -check-prefix=MTL %s
+// MTL: {{^MTLB}}
+
+// RUN: cat Tmp.json | FileCheck --check-prefix=FRE %s
+// FRE: "EntryPoint":"main"

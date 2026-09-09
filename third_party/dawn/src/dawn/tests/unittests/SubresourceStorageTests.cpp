@@ -30,10 +30,10 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Log.h"
-#include "dawn/native/SubresourceStorage.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/SubresourceStorage.h"
+#include "src/utils/log.h"
 
 namespace dawn::native {
 

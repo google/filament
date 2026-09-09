@@ -30,8 +30,8 @@
 
 #include <unordered_map>
 
-#include "dawn/replay/Error.h"
 #include "dawn/webgpu_cpp.h"
+#include "src/dawn/replay/Error.h"
 
 namespace dawn::replay {
 

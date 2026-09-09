@@ -27,20 +27,49 @@
 
 # GEN_BUILD:DO_NOT_GENERATE - This is a hand-crafted file.
 
-load(":flags.bzl", "declare_bool_flag", "declare_os_flag")
+load(":flags.bzl", "declare_bool_flag")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//src/tint:generated_sources.bzl", "tint_generated_sources", "tint_generation_dependencies")
 
 # Declares the 'tint_build_*' flags that control what parts of Tint get built
-declare_bool_flag(name = "tint_build_glsl_validator", default = False)
-declare_bool_flag(name = "tint_build_glsl_writer",    default = False)
-declare_bool_flag(name = "tint_build_hlsl_writer",    default = True)
-declare_bool_flag(name = "tint_build_ir",             default = True)
-declare_bool_flag(name = "tint_build_msl_writer",     default = True)
-declare_bool_flag(name = "tint_build_spv_reader",     default = True)
-declare_bool_flag(name = "tint_build_spv_writer",     default = True)
-declare_bool_flag(name = "tint_build_tintd",          default = False)
-declare_bool_flag(name = "tint_build_wgsl_reader",    default = True)
-declare_bool_flag(name = "tint_build_wgsl_writer",    default = True)
-declare_bool_flag(name = "tint_build_null_writer",    default = True)
+declare_bool_flag(name = "tint_build_glsl_writer", default = False)
+declare_bool_flag(name = "tint_build_hlsl_writer", default = True)
+declare_bool_flag(name = "tint_build_ir", default = True)
+declare_bool_flag(name = "tint_build_msl_writer", default = True)
+declare_bool_flag(name = "tint_build_spv_reader", default = True)
+declare_bool_flag(name = "tint_build_spv_writer", default = True)
+declare_bool_flag(name = "tint_build_wgsl_reader", default = True)
+declare_bool_flag(name = "tint_build_wgsl_writer", default = True)
+declare_bool_flag(name = "tint_build_null_writer", default = True)
+declare_bool_flag(name = "tint_build_fuzzers", default = False)
+declare_bool_flag(name = "tint_build_fuzzer_vulkan_support", default = False)
+declare_bool_flag(name = "tint_build_ir_binary", default = False)
+declare_bool_flag(name = "tint_build_mesa", default = False)
+# 'tint_build_glsl_validator' is not supported in the bazel build, so force it to always disabled.
+config_setting(
+    name = "tint_build_glsl_validator_true",
+    values = {"define": "never_true=true"},
+    visibility = ["//visibility:public"],
+)
+config_setting(
+    name = "tint_build_glsl_validator_false",
+    values = {},
+    visibility = ["//visibility:public"],
+)
 
-# Declares the 'os' flag that control what OS-specific Tint code gets built
-declare_os_flag()
+genrule(
+    name = "generate_sources",
+    srcs = tint_generation_dependencies,
+    outs = tint_generated_sources,
+    cmd = "$(location //tools/src:gen-sources) $(RULEDIR)/gen",
+    tools = ["//tools/src:gen-sources"],
+    visibility = ["//visibility:public"],
+    tags = ["local"],
+)
+
+# This is used to add the include paths to any targets that need generated headers.
+cc_library(
+    name = "generated_tint_headers",
+    includes = ["gen"],
+    visibility = ["//visibility:public"],
+)

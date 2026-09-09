@@ -33,11 +33,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Sha3.h"
-#include "dawn/native/Blob.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/d3d/D3DCompilationRequest.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/common/Sha3.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/d3d/D3DCompilationRequest.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d {
 

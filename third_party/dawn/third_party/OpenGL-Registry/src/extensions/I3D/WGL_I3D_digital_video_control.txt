@@ -1,0 +1,224 @@
+Name
+
+    WGL_I3D_digital_video_control
+
+Name Strings
+
+    WGL_I3D_digital_video_control
+
+Contact
+
+    Dale Kirkland, Intense3D (dlkirkla 'at' intense3d.com)
+
+Status
+
+    Complete
+
+Version
+
+    Date: 04/17/2000   Revision 1.0
+
+Number
+
+    250
+
+Dependencies
+
+    The extension is written against the OpenGL 1.2.1 Specification
+    although it should work on any previous OpenGL specification.
+
+    The WGL_EXT_extensions_string extension is required.
+
+    WGL_I3D_gamma affects the definition of this extension.
+
+Overview
+
+    The digital video control extension controls digital video data,
+    such as whether it is gamma corrected or the cursor is injected
+    into the video stream.
+
+IP Status
+
+    None
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    BOOL wglGetDigitalVideoParametersI3D(HDC hDC,
+                                         int iAttribute,
+                                         int *piValue)
+
+    BOOL wglSetDigitalVideoParametersI3D(HDC hDC,
+                                         int iAttribute,
+                                         const int *piValue)
+
+New Tokens
+
+    Accepted by the <iAttribute> parameter of wglGetDigitalVideoParametersI3D
+    and wglSetDigitalVideoParametersI3D:
+
+      WGL_DIGITAL_VIDEO_CURSOR_ALPHA_FRAMEBUFFER_I3D    0x2050
+      WGL_DIGITAL_VIDEO_CURSOR_ALPHA_VALUE_I3D          0x2051
+      WGL_DIGITAL_VIDEO_CURSOR_INCLUDED_I3D             0x2052
+      WGL_DIGITAL_VIDEO_GAMMA_CORRECTED_I3D             0x2053
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the WGL Specification
+
+    Digital video data is controlled by parameters that are set with
+    the function wglSetDigitalVideoParametersI3D:
+
+      BOOL wglSetDigitalVideoParametersI3D(HDC hDC,
+                                           int iAttribute,
+                                           const int *piValue)
+
+    <hDC> is a device context for a graphics adapter or a window
+    residing on a device that supports digital video.  For multiple
+    monitor systems, only the digital video mode associated with <hDC>
+    is set.
+
+    <iAttribute> must be one of the following values:
+
+      WGL_DIGITAL_VIDEO_CURSOR_ALPHA_FRAMEBUFFER_I3D
+          Specifies the source of the cursor data's alpha component.
+          If the value pointed to by <piValue> is non-zero, the
+          alpha component of the cursor data comes from the
+          framebuffer. If the value pointed to by <piValue> is
+          zero the alpha component of the cursor is specified by
+          WGL_DIGITAL_VIDEO_CURSOR_ALPHA_VALUE_I3D. The default
+          value is zero.
+
+      WGL_DIGITAL_VIDEO_CURSOR_ALPHA_VALUE_I3D
+          Determines the alpha component of the cursor.  The value
+          pointed to by <piValue> is converted by the following
+          equation:
+
+                          ((2 * <*piValue>) + 1)
+                          ----------------------
+                              (2^32 - 1)
+
+          and the result is clamped to [0, 1].  The clamped result is
+          multiplied by 2^n - 1, where 'n' is the number of bits in the
+          alpha buffer.  The digital video data will have the result as
+          the cursor data's alpha component.  The default alpha value
+          is 2^31 - 1.
+
+      WGL_DIGITAL_VIDEO_CURSOR_INCLUDED_I3D
+          Specifies whether cursor data is included in the digital
+          video data.  If the value pointed to by <piValue> is
+          non-zero, the digital video data contains cursor data.
+          Otherwise the digital video data does not contain cursor
+          data.  This value defaults to zero.
+
+      WGL_DIGITAL_VIDEO_GAMMA_CORRECTED_I3D
+          Specifies whether the digital video data is gamma
+          corrected.  If the value pointed to by <piValue> is non-zero,
+          the digital video data is gamma corrected.  Otherwise, the
+          digital video data is not gamma corrected.  This value
+          defaults to zero.
+
+    Digital video parameters can be queried with the function
+    wglGetDigitalVideoParametersI3D:
+
+      BOOL wglGetDigitalVideoParametersI3D(HDC hDC,
+                                           int iAttribute,
+                                           int *piValue)
+
+    <hDC> is a device context for a graphics adapter or a window
+    residing on a device that supports digital video.  For multiple
+    monitor systems, only the digital video mode parameters associated
+    with <hDC> are returned.
+
+    <iAttribute> must be one of the following values:
+
+      WGL_DIGITAL_VIDEO_CURSOR_ALPHA_FRAMEBUFFER_I3D
+          <piValue> returns one value indicating the source of the cursor
+          data's alpha component.  If the value is non-zero then the
+          alpha component of the cursor data comes from the framebuffer.
+          Otherwise, the value of the cursor's alpha data is determined
+          by the value specified by
+          WGL_DIGITAL_VIDEO_CURSOR_ALPHA_VALUE_I3D.
+
+      WGL_DIGITAL_VIDEO_CURSOR_ALPHA_VALUE_I3D
+          <piValue> returns the user-specified alpha component of
+          the cursor's data.
+
+      WGL_DIGITAL_VIDEO_CURSOR_INCLUDED_I3D
+          <piValue> returns one value indicating whether cursor data is
+          present in the digital video data.  If the value is non-zero
+          then cursor data is present in the digital video data.
+
+      WGL_DIGITAL_VIDEO_GAMMA_CORRECTED_I3D
+          <piValue> returns one value indicating whether the digital
+          video data is gamma corrected.  If the value is non-zero then
+          the digital video data is gamma corrected.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Dependencies on WGL_I3D_gamma
+
+    If WGL_I3D_gamma is supported, the <iAttribute> parameter of
+    WGLGetDigitalVideoParametersI3D and WGLSetDigitalVideoParametersI3D
+    accepts WGL_DIGITAL_VIDEO_GAMMA_CORRECTED_I3D.  Otherwise it does
+    not.
+
+Errors
+
+    If the function succeeds, a value of TRUE is returned.  If the
+    function fails, a value of FALSE is returned.  To get extended
+    error information, call GetLastError.
+
+      ERROR_DC_NOT_FOUND         The <hDC> was not valid.
+
+      ERROR_NO_SYSTEM_RESOURCES  There is no support for digital video
+                                 for the device specified by <hDC>.
+
+      ERROR_INVALID_DATA         <iAttribute> is not a valid value.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    12/03/1999  0.1  First draft.
+    01/05/2000  0.2  Enumerants assigned
+    04/17/2000  1.0  Driver released to ISVs.

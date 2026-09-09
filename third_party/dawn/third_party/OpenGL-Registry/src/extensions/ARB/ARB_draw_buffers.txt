@@ -1,0 +1,584 @@
+Name
+
+    ARB_draw_buffers
+
+Name Strings
+
+    GL_ARB_draw_buffers
+
+Contributors
+
+    Benj Lipchak, AMD
+    Bill Licea-Kane, AMD
+
+Contact
+
+    Rob Mace, NVIDIA (rmace 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2004-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    No known IP issues.
+
+Status
+
+    Complete. Approved by the ARB on July 23, 2004.
+
+Version
+
+    Last Modified Date: February 19, 2008
+    Revision: 17
+
+Number
+
+    ARB Extension #37
+
+Dependencies
+
+    The extension is written against the OpenGL 1.5 Specification.
+
+    OpenGL 1.3 is required.
+
+    ARB_fragment_program affects the definition of this extension.
+
+    ARB_fragment_shader affects the definition of this extension.
+
+
+Overview
+
+    This extension extends ARB_fragment_program and ARB_fragment_shader
+    to allow multiple output colors, and provides a mechanism for
+    directing those outputs to multiple color buffers.
+
+
+Issues
+
+    (1) How many GL_DRAW_BUFFER#_ARB enums should be reserved?  
+
+      RESOLVED: We only need 4 currently, but for future expandability 
+      it would be nice to keep the enums in sequence.  We'll specify
+      16 for now, which will be more than enough for a long time.
+
+    (2) How should multisample work when there are multiple output
+        colors being rendered to multiple draw buffers?
+
+      Basic options are:
+        (a) Color 0 is written to the multisample buffer and then the
+            multisample buffer is resolved to all the color buffers.
+            This option would be consistent with GL's idea of a single
+            multisample buffer, but would be really useless and defeat
+            the purpose of multiple output colors.
+        (b) Have a separate multisample color buffer for each output
+            color/draw buffer.  This would be useful but would all
+            implementations be able to handle it?
+        (c) Don't allow multiple output colors and multisampling to
+            be combined by restricting MAX_DRAW_BUFFERS_ARB to 1
+            for contexts with multisample buffers.  This is simple
+            and would allow a future extension to allow (b).
+
+      RESOLUTION: (b) and (c).  Samples will contain separate color
+      values for each output color.  Implementations that can not
+      support this can restrict MAX_DRAW_BUFFERS_ARB to 1 for contexts
+      with multisample buffers.
+
+    (3) Should gl_FragColor be aliased to gl_FragData[0]?
+
+      RESOLUTION: No.  A shader should write either gl_FragColor, or
+      gl_FragData[n], but not both.
+
+      Writing to gl_FragColor will write to all draw buffers specified
+      with DrawBuffersARB.
+
+    (4) Should gl_FragData[n] be clamped?
+
+      RESOLUTION: They will be clamped if fragment color clamping is
+      enabled.
+
+
+New Procedures and Functions
+
+    void DrawBuffersARB(sizei n, const enum *bufs);
+
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        MAX_DRAW_BUFFERS_ARB                    0x8824
+        DRAW_BUFFER0_ARB                        0x8825
+        DRAW_BUFFER1_ARB                        0x8826
+        DRAW_BUFFER2_ARB                        0x8827
+        DRAW_BUFFER3_ARB                        0x8828
+        DRAW_BUFFER4_ARB                        0x8829
+        DRAW_BUFFER5_ARB                        0x882A
+        DRAW_BUFFER6_ARB                        0x882B
+        DRAW_BUFFER7_ARB                        0x882C
+        DRAW_BUFFER8_ARB                        0x882D
+        DRAW_BUFFER9_ARB                        0x882E
+        DRAW_BUFFER10_ARB                       0x882F
+        DRAW_BUFFER11_ARB                       0x8830
+        DRAW_BUFFER12_ARB                       0x8831
+        DRAW_BUFFER13_ARB                       0x8832
+        DRAW_BUFFER14_ARB                       0x8833
+        DRAW_BUFFER15_ARB                       0x8834
+
+
+Additions to Chapter 2 of the OpenGL 1.5 Specification (OpenGL
+Operation)
+
+    None
+
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    Modify Section 3.2.1, Multisampling (p. 71)
+
+    (replace the second paragraph with)
+
+    An additional buffer, called the multisample buffer, is added to the
+    framebuffer.  Pixel sample values, including color, depth, and
+    stencil values, are stored in this buffer.  Samples contain separate
+    color values for each output color.  When the framebuffer includes a
+    multisample buffer, it does not include depth or stencil buffers,
+    even if the multisample buffer does not store depth or stencil
+    values. Color buffers (left, right, front, back, and aux) do coexist
+    with the multisample buffer, however.
+
+
+    Modify Section 3.11.2, Fragment Program Grammar and Semantic
+    Restrictions (ARB_fragment_program)
+
+    (replace <resultBinding> grammar rule with these rules)
+
+    <resultBinding>        ::= "result" "." "color" <optOutputColorNum>
+                             | "result" "." "depth"
+
+    <optOutputColorNum>    ::= ""
+                             | "[" <outputColorNum> "]"
+
+    <outputColorNum>       ::= <integer> from 0 to MAX_DRAW_BUFFERS_ARB-1
+
+
+    Modify Section 3.11.3.4, Fragment Program Results
+
+    (modify Table X.3)
+
+        Binding                        Components  Description
+        -----------------------------  ----------  ----------------------------
+        result.color[n]                (r,g,b,a)   color n 
+        result.depth                   (*,*,*,d)   depth coordinate
+
+        Table X.3:  Fragment Result Variable Bindings.  Components labeled
+        "*" are unused.  "[n]" is optional -- color <n> is used if 
+        specified; color 0 is used otherwise.
+
+    (modify third paragraph)  If a result variable binding matches 
+    "result.color[n]", updates to the "x", "y", "z", and "w" components 
+    of the result variable modify the "r", "g", "b", and "a" components, 
+    respectively, of the fragment's corresponding output color.  If 
+    "result.color[n]" is not both bound by the fragment program and 
+    written by some instruction of the program, the output color <n> of 
+    the fragment program is undefined.
+
+
+    Add a new Section 3.11.4.5.3 (ARB_fragment_program)
+
+    3.11.4.5.3  Draw Buffers Program Option
+
+    If a fragment program specifies the "ARB_draw_buffers" option,
+    it will generate multiple output colors, and the result binding
+    "result.color[n]" is allowed, as described in section 3.11.3.4,
+    and with modified grammar rules as set forth in section 3.11.2.
+    If this option is not specified, a fragment program that attempts
+    to bind "result.color[n]" will fail to load, and only "result.color"
+    will be allowed.
+
+
+    Add a new section 3.11.6 (ARB_fragment_shader)
+
+    Section 3.11.6 Fragment Shader Output
+
+    The OpenGL Shading Language specification describes the values that
+    may be output by a fragment shader. These are gl_FragColor,
+    gl_FragData[n], and gl_FragDepth.  If fragment color clamping is
+    enabled, the final fragment color values or the final fragment data
+    values written by a fragment shader are clamped to the range [0,1]
+    and then converted to fixed-point as described in section 2.13.9,
+    Final Color Processing.
+
+    The final fragment depth written by a fragment shader is first
+    clamped to [0,1] then  converted to fixed-point as if it were a
+    window z value. See Section 2.10.1, Controlling the Viewport.  Note
+    that the depth range computation is NOT applied here, only the
+    conversion to fixed-point.
+
+    The OpenGL Shading Language specification defines what happens when
+    color and/or depth are not written. Those rules are repeated here.
+
+    Writing to gl_FragColor specifies the fragment color that will be
+    used by the subsequent fixed functionality pipeline. If subsequent
+    fixed functionality consumes fragment color and an execution of a
+    fragment shader does not write a value to gl_FragColor then the
+    fragment color consumed is undefined.
+
+    Writing to gl_FragData[n] specifies the fragment data that will be
+    used by the subsequent fixed functionality pipeline.  If subsequent
+    fixed functionality consumes fragment data and an execution of a
+    fragment shader does not write a value to gl_FragData[n] then the
+    fragment data consumed is undefined.
+
+    If a shader statically assigns a value to gl_FragColor, it may not
+    assign a value to gl_FragData[n].  If a shader statically writes a
+    value to gl_FragData[n], it may not assign a value to gl_FragColor.
+    That is, a shader may assign values to either gl_FragColor or
+    gl_FragData[n], but not both.
+
+    Writing to gl_FragDepth will establish the depth value for the
+    fragment being processed. If depth buffering is enabled, and a
+    shader does not write gl_FragDepth, then the fixed function value
+    for depth will be used as the fragment's depth value. If a shader
+    statically assigns a value to gl_FragDepth, and there is an
+    execution path through the shader that does not set gl_FragDepth,
+    then the value of the fragment's depth may be undefined for some
+    executions of the shader. That is, if a shader statically writes
+    gl_FragDepth, then it is responsible for always writing it.
+
+    Note, statically assigning a value to gl_FragColor, gl_FragData[n]
+    or gl_FragDepth means that there is a line of code in the fragment
+    shader source that writes a value to gl_FragColor, gl_FragData[n]
+    or gl_FragDepth, respectively, even if that line of code is never
+    executed.
+
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+
+    Replace Section 4.2.1, Selecting a Buffer for Writing (p. 183)
+
+    4.2.1 Selecting Color Buffers for Writing
+
+    The first such operation is controlling the color buffers into
+    which each of the output colors are written.  This is accomplished
+    with either DrawBuffer or DrawBuffersARB.
+
+    The command
+
+      void DrawBuffer(enum buf);
+
+    defines the set of color buffers to which output color 0 is written.
+    <buf> is a symbolic constant specifying zero, one, two, or four
+    buffers for writing.  The constants are NONE, FRONT_LEFT,
+    FRONT_RIGHT, BACK_LEFT, BACK_RIGHT, FRONT, BACK, LEFT, RIGHT,
+    FRONT_AND_BACK, and AUX0 through AUXn, where n + 1 is the number
+    of available auxiliary buffers.
+
+    The constants refer to the four potentially visible buffers front
+    left, front right, back left, and back right, and to the auxiliary
+    buffers.  Arguments other than AUXi that omit reference to LEFT or
+    RIGHT refer to both left and right buffers.  Arguments other than
+    AUXi that omit reference to FRONT or BACK refer to both front and
+    back buffers.  AUXi enables drawing only to auxiliary buffer i.
+    Each AUXi adheres to AUXi = AUX0 + i.  The constants and the buffers
+    they indicate are summarized in Table 4.3.  If DrawBuffer is
+    supplied with a constant (other than NONE) that does not indicate
+    any of the color buffers allocated to the GL context, the error
+    INVALID_OPERATION results.
+
+      symbolic         front  front  back  back   aux
+      constant         left   right  left  right   i
+      --------         -----  -----  ----  -----  ---
+      NONE
+      FRONT_LEFT         *
+      FRONT_RIGHT               *
+      BACK_LEFT                       *
+      BACK_RIGHT                             *
+      FRONT              *      *
+      BACK                            *      *
+      LEFT               *            *
+      RIGHT                     *            *
+      FRONT_AND_BACK     *      *     *      *
+      AUXi                                          *
+
+      Table 4.3: Arguments to DrawBuffer and the buffers that they
+      indicate.
+
+
+    DrawBuffer will set the draw buffer for output colors other than 0
+    to NONE.
+
+    The command
+
+      void DrawBuffersARB(sizei n, const enum *bufs);
+
+    defines the draw buffers to which all output colors are written.
+    <n> specifies the number of buffers in <bufs>.  <bufs> is a pointer
+    to an array of symbolic constants specifying the buffer to which
+    each output color is written.  The constants may be NONE,
+    FRONT_LEFT, FRONT_RIGHT, BACK_LEFT, BACK_RIGHT, and AUX0 through
+    AUXn, where n + 1 is the number of available auxiliary buffers.  The
+    draw buffers being defined correspond in order to the respective
+    output colors.  The draw buffer for output colors beyond <n> is set
+    to NONE.
+
+    Except for NONE, a buffer should not appear more then once in the
+    array pointed to by <bufs>.  Specifying a buffer more then once
+    will result in the error INVALID_OPERATION.
+
+    If a fragment program is not using the "ARB_draw_buffers" option,
+    DrawBuffersARB specifies a set of draw buffers into which output
+    color 0 is written.
+
+    If a fragment shader writes to "gl_FragColor", DrawBuffersARB
+    specifies a set of draw buffers into which the color written to
+    "gl_FragColor" is written.
+
+    The maximum number of draw buffers is implementation dependent and
+    must be at least 1.  The number of draw buffers supported can
+    be queried with the state MAX_DRAW_BUFFERS_ARB.
+
+    The constants FRONT, BACK, LEFT, RIGHT, and FRONT_AND_BACK that
+    refer to multiple buffers are not valid for use in DrawBuffersARB
+    and will result in the error INVALID_OPERATION.
+
+    If DrawBuffersARB is supplied with a constant (other than NONE)
+    that does not indicate any of the color buffers allocated to
+    the GL context, the error INVALID_OPERATION will be generated.  If
+    <n> is greater than MAX_DRAW_BUFFERS_ARB, the error
+    INVALID_OPERATION will be generated.
+
+    Indicating a buffer or buffers using DrawBuffer or DrawBuffersARB
+    causes subsequent pixel color value writes to affect the indicated
+    buffers.  If more than one color buffer is selected for drawing,
+    blending and logical operations are computed and applied
+    independently for each buffer.  If there are multiple output colors
+    being written to multiple buffers, the alpha used in alpha to
+    coverage and alpha test is the alpha of output color 0.
+
+    Specifying NONE as the draw buffer for an output color will inhibit
+    that output color from being written to any buffer.
+
+    Monoscopic contexts include only left buffers, while stereoscopic
+    contexts include both left and right buffers.  Likewise, single
+    buffered contexts include only front buffers, while double buffered
+    contexts include both front and back buffers.  The type of context
+    is selected at GL initialization.
+
+    The state required to handle color buffer selection is an integer
+    for each supported output color.  In the initial state, draw buffer
+    for output color 0 is FRONT if there are no back buffers; otherwise
+    it is BACK.  The initial state of draw buffers for output colors
+    other then 0 is NONE.
+
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification (Special 
+Functions)
+
+    None
+
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and
+State Requests)
+
+    None
+
+
+Additions to Chapter 3 of the OpenGL Shading Language 1.10 Specification
+(Basics)
+
+    Add a new Section 3.3.1, GL_ARB_draw_buffers Extension (p. 13)
+
+    3.3.1 GL_ARB_draw_buffers Extension
+
+    To use the GL_ARB_draw_buffers extension in a shader it must be
+    enabled using the #extension directive.
+
+    The shading language preprocessor #define GL_ARB_draw_buffers will
+    be defined to 1, if the GL_ARB_draw_buffers extension is supported.
+
+
+Dependencies on ARB_fragment_program
+
+    If ARB_fragment_program is not supported then all changes to
+    section 3.11 of ARB_fragment_program and the fragment program
+    specific part of section 4.2.1 are removed.
+
+
+Dependencies on ARB_fragment_shader
+
+    If ARB_fragment_shader is not supported then all changes to
+    section 3.11 of ARB_fragment_shader, section 3.3.1 of the Shading
+    Language Specification, and the fragment shader specific part of
+    section 4.2.1 are removed.
+
+
+Interactions with possible future extensions
+
+    If there is some other future extension that defines multiple
+    color outputs then this extension and glDrawBuffersARB could be
+    used to define the destinations for those outputs.  This extension
+    need not be used only with ARB_fragment_program.
+
+GLX Protocol
+
+    The following rendering command is potentially large, and hence can
+    be sent in a glxRender or glxRenderLarge request.
+    
+        DrawBuffersARB
+            2           8+(4*n)         rendering command length
+            2           233             rendering command opcode
+            4           CARD32          n
+            n*4         LISTofCARD32    list of draw buffers
+            
+    If the command is encoded in a glxRenderLarge request, the command
+    opcode and command length fields above are expanded to 4 bytes each:
+
+            4           12+(4*n)        rendering command length
+            4           233             rendering command opcode
+
+Errors
+  
+    The error INVALID_OPERATION is generated by DrawBuffersARB if a
+    color buffer not currently allocated to the GL context is specified.
+
+    The error INVALID_OPERATION is generated by DrawBuffersARB if <n>
+    is greater than the state MAX_DRAW_BUFFERS_ARB.
+    
+    The error INVALID_OPERATION is generated by DrawBuffersARB if value
+    in <bufs> does not correspond to one of the allowed buffers.
+
+    The error INVALID_OPERATION is generated by DrawBuffersARB if a draw
+    buffer other then NONE is specified more then once in <bufs>.
+
+
+New State
+
+    (table 6.19, p227) add the following entry:
+
+    Get Value                        Type    Get Command    Initial Value Description           Section       Attribute
+    -------------------------------  ------  -------------  ------------- --------------------  ------------  ------------
+    DRAW_BUFFERi_ARB                 Z10*    GetIntegerv    see 4.2.1     Draw buffer selected  4.2.1         color-buffer
+                                                                          for output color i
+    
+
+New Implementation Dependent State
+
+    Get Value                        Type  Get Command     Minimum Value    Description             Sec.     Attribute
+    ---------                        ----  -----------     -------------    -------------------     -----    ---------
+    MAX_DRAW_BUFFERS_ARB             Z+    GetIntegerv     1                Maximum number of       4.2.1    -
+                                                                            active draw buffers
+
+
+Revision History
+
+   Date: 2/19/2008
+   Revision: 17 (Mark Kilgard, NVIDIA)
+      - Updated contact
+
+   Date: 11/4/2006
+   Revision: 16 (Benj Lipchak, AMD)
+      - Updated contact info after ATI/AMD merger.
+
+   Date: 12/13/2004
+   Revision: 15 (Ian Romanick, IBM)
+      - Added GLX protocol.
+
+   Date: 7/26/2004
+   Revision: 14
+      - Clarified interaction of gl_FragColor and multiple draw buffers.
+      - Updated dependencies section.
+      - Added real ARB extension #.
+
+   Date: 7/22/2004
+   Revision: 13
+      - Converted from ATI_draw_buffers to ARB_draw_buffers.
+
+   Date: 7/21/2004
+   Revision: 12
+      - Updated intro to mention ARB_fragment_shader.
+      - Marked which sections modify ARB_fragment_program and
+        ARB_fragment_shader.
+      - Added "Dependencies on ARB_fragment_shader".
+      - Added extension section 3.3.1 to Shading Language spec.
+      - Resolved interaction with multisample (issue 2).
+      - Fixed typos.
+
+   Date: 6/9/2004
+   Revision: 11
+      - Added GLSL integration.
+
+   Date: 4/27/2004
+   Revision: 10
+      - Replaced modification to section 4.2.1 with a complete
+        replacement for the section, the individual modifications were
+        getting too cumbersome.
+      - Added issue (2) on multisampling.
+
+   Date: 4/15/2004
+   Revision: 9
+      - Specified that it is the alpha of color 0 that is used for alpha
+        test.
+
+   Date: 12/30/2002
+   Revision: 8
+      - Clarified that DrawBuffersATI will set the set of draw buffers
+        to write color output 0 to when the "ATI_draw_buffer" fragments
+        program option is not in use.
+
+   Date: 9/27/2002
+   Revision: 7
+      - Fixed confusion between meaning of color buffer and draw buffer
+        in last revision.
+      - Fixed mistake in when an error is generated based on the <n>
+        argument of DrawBuffersATI.
+
+   Date: 9/26/2002
+   Revision: 6
+      - Cleaned up and put in sync with latest ARB_fragment_program
+        revision (#22).  Some meaningless changes made just in the name
+        of consistency.
+
+   Date: 9/11/2002
+   Revision: 5
+      - Added section 3.11.4.5.3.
+      - Added enum numbers to New Tokens.
+
+   Date: 9/9/2002
+   Revision: 4
+      - Changed error from MAX_OUTPUT_COLORS to MAX_DRAW_BUFFERS_ATI.
+      - Changed 3.10 section numbers to 3.11 to match change to
+        ARB_fragment_program spec.
+      - Changed ARB_fragment_program from required to affects, and
+        added section on interactions with it and future extensions
+        that define multiple color outputs.
+
+   Date: 9/6/2002
+   Revision: 3
+      - Changed error to INVALID OPERATION.
+      - Cleaned up typos.
+
+   Date: 8/19/2002
+   Revision: 2
+      - Added a paragraph that specifically points out that the 
+        constants that refer to multiple buffers are not allowed with
+        DrawBuffersATI.
+      - Changed bufs to <bufs> in a couple of places.
+
+   Date: 8/16/2002
+   Revision: 1
+      - First draft for circulation.

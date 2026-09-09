@@ -39,9 +39,9 @@ namespace tint::inspector {
 /// Container for information about how a resource is bound
 struct ResourceBindingInfo {
     /// Bind group the binding belongs
-    uint32_t group;
+    uint32_t group = 0;
     /// Identifier to identify this binding within the bind group
-    uint32_t binding;
+    uint32_t binding = 0;
 
     /// The types used with the binding array
     std::vector<ResourceType> type_info{};

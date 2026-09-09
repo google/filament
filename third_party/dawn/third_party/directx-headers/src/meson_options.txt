@@ -1,0 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+option('build-test',
+       type : 'boolean',
+       value : true,
+       description : 'Build the test')

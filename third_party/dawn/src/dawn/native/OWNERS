@@ -2,3 +2,4 @@
 # https://github.com/GerritCodeReview/plugins_code-owners/blob/HEAD/resources/Documentation/path-expressions.md#simple-path-expressions
 per-file *=kainino@chromium.org
 per-file *=lokokung@google.com
+per-file *=amaiorano@google.com

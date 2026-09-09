@@ -25,21 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/SharedTextureMemoryWGPU.h"
+#include "src/dawn/native/webgpu/SharedTextureMemoryWGPU.h"
 
 #include <utility>
 #include <vector>
 
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/QueueWGPU.h"
-#include "dawn/native/webgpu/SharedFenceWGPU.h"
-#include "dawn/native/webgpu/TextureWGPU.h"
-#include "dawn/native/webgpu/ToWGPU.h"
-#include "dawn/native/webgpu/WebGPUError.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/QueueWGPU.h"
+#include "src/dawn/native/webgpu/SharedFenceWGPU.h"
+#include "src/dawn/native/webgpu/TextureWGPU.h"
+#include "src/dawn/native/webgpu/ToWGPU.h"
+#include "src/dawn/native/webgpu/WebGPUError.h"
 
 namespace dawn::native::webgpu {
 
@@ -150,7 +150,7 @@ ResultOrError<FenceAndSignalValue> SharedTextureMemory::EndAccessImpl(
     if (innerState.initialized) {
         texture->SetIsSubresourceContentInitialized(true, texture->GetAllSubresources());
     }
-    DAWN_ASSERT(texture->IsInitialized() == static_cast<bool>(innerState.initialized));
+    DAWN_ASSERT(texture->IsResourceInitialized() == static_cast<bool>(innerState.initialized));
 
     if (auto* mtlEndStateChain = state.Get<SharedTextureMemoryMetalEndAccessState>()) {
         DAWN_TRY(ToBackend(GetDevice()->GetQueue())->SubmitPendingCommands());

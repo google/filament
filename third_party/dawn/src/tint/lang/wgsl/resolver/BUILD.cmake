@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)
 ################################################################################
 # Target:    tint_lang_wgsl_resolver
 # Kind:      lib
+# Condition: TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER
 ################################################################################
 tint_add_target(tint_lang_wgsl_resolver lib
   lang/wgsl/resolver/dependency_graph.cc
@@ -75,6 +77,7 @@ tint_target_add_dependencies(tint_lang_wgsl_resolver lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -84,6 +87,7 @@ tint_target_add_external_dependencies(tint_lang_wgsl_resolver lib
   "src_utils"
 )
 
+endif(TINT_BUILD_WGSL_READER OR TINT_BUILD_WGSL_WRITER)
 if(TINT_BUILD_WGSL_READER)
 ################################################################################
 # Target:    tint_lang_wgsl_resolver_test
@@ -132,7 +136,6 @@ tint_add_target(tint_lang_wgsl_resolver_test test
   lang/wgsl/resolver/evaluation_stage_test.cc
   lang/wgsl/resolver/expression_kind_test.cc
   lang/wgsl/resolver/f16_extension_test.cc
-  lang/wgsl/resolver/filtering_parameters_extension_test.cc
   lang/wgsl/resolver/framebuffer_fetch_extension_test.cc
   lang/wgsl/resolver/function_validation_test.cc
   lang/wgsl/resolver/host_shareable_validation_test.cc
@@ -164,6 +167,7 @@ tint_add_target(tint_lang_wgsl_resolver_test test
   lang/wgsl/resolver/texel_buffer_test.cc
   lang/wgsl/resolver/texture_and_sampler_let_extension_test.cc
   lang/wgsl/resolver/type_validation_test.cc
+  lang/wgsl/resolver/uniformity_test.cc
   lang/wgsl/resolver/unresolved_identifier_test.cc
   lang/wgsl/resolver/validation_test.cc
   lang/wgsl/resolver/validator_is_storeable_test.cc
@@ -185,6 +189,7 @@ tint_target_add_dependencies(tint_lang_wgsl_resolver_test test
   tint_lang_wgsl_ast_test
   tint_lang_wgsl_intrinsic
   tint_lang_wgsl_program
+  tint_lang_wgsl_reader
   tint_lang_wgsl_resolver
   tint_lang_wgsl_sem
   tint_lang_wgsl_sem_test
@@ -195,6 +200,7 @@ tint_target_add_dependencies(tint_lang_wgsl_resolver_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -204,14 +210,5 @@ tint_target_add_external_dependencies(tint_lang_wgsl_resolver_test test
   "gtest"
   "src_utils"
 )
-
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_sources(tint_lang_wgsl_resolver_test test
-    "lang/wgsl/resolver/uniformity_test.cc"
-  )
-  tint_target_add_dependencies(tint_lang_wgsl_resolver_test test
-    tint_lang_wgsl_reader
-  )
-endif(TINT_BUILD_WGSL_READER)
 
 endif(TINT_BUILD_WGSL_READER)

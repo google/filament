@@ -25,11 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/Serialization.h"
+#include "src/dawn/native/webgpu/Serialization.h"
 
 #include <string>
 
-#include "dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
 
 namespace dawn::native::webgpu {
 

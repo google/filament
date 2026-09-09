@@ -25,21 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/client/ResourceTable.h"
+#include "src/dawn/wire/client/ResourceTable.h"
 
 #include <limits>
 #include <utility>
 
-#include "dawn/wire/client/Client.h"
-#include "dawn/wire/client/Device.h"
-#include "dawn/wire/client/LimitsAndFeatures.h"
-#include "dawn/wire/client/Queue.h"
+#include "src/dawn/wire/client/Client.h"
+#include "src/dawn/wire/client/Device.h"
+#include "src/dawn/wire/client/LimitsAndFeatures.h"
+#include "src/dawn/wire/client/Queue.h"
 
 namespace dawn::wire::client {
 
 // static
-WGPUResourceTable ResourceTable::Create(Device* device,
-                                        const WGPUResourceTableDescriptor* descriptor) {
+ResourceTable* ResourceTable::Create(Device* device, const ResourceTableDescriptor* descriptor) {
     if (descriptor->size > kMaxResourceTableSize) {
         return nullptr;
     }
@@ -48,24 +47,25 @@ WGPUResourceTable ResourceTable::Create(Device* device,
 
     DeviceCreateResourceTableCmd cmd;
     cmd.self = ToAPI(device);
-    cmd.descriptor = descriptor;
+    cmd.descriptor = ToAPI(descriptor);
 
     Ref<ResourceTable> table = wireClient->Make<ResourceTable>(device, descriptor);
     cmd.result = table->GetWireHandle(wireClient);
 
     wireClient->SerializeCommand(cmd);
 
-    return ReturnToAPI(std::move(table));
+    return ReturnToAPI2(std::move(table));
 }
 
 ResourceTable::ResourceTable(const ObjectBaseParams& params,
                              Device* device,
-                             const WGPUResourceTableDescriptor* descriptor)
+                             const ResourceTableDescriptor* descriptor)
     : ObjectBase(params), mDevice(device) {
     const LimitsAndFeatures& limitsAndFeatures = device->GetLimitsAndFeatures();
 
     uint32_t sizeLimit = 0;
-    if (limitsAndFeatures.HasFeature(WGPUFeatureName_ChromiumExperimentalSamplingResourceTable)) {
+    if (limitsAndFeatures.HasFeature(
+            wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable)) {
         sizeLimit = kMaxResourceTableSize;
     }
 
@@ -94,10 +94,10 @@ void ResourceTable::APIDestroy() {
     GetClient()->SerializeCommand(cmd);
 }
 
-WGPUStatus ResourceTable::APIUpdate(uint32_t slot, const WGPUBindingResource* resource) {
+wgpu::Status ResourceTable::APIUpdate(uint32_t slot, const BindingResource* resource) {
     if (mDestroyed || slot >= mSlotAvailableAfterSubmit.size() ||
         mSlotAvailableAfterSubmit[slot] > mDevice->GetQueue()->GetCompletedSubmitIndex()) {
-        return WGPUStatus_Error;
+        return wgpu::Status::Error;
     }
 
     constexpr uint64_t kSlotInUseOnGPU = std::numeric_limits<uint64_t>::max();
@@ -107,13 +107,13 @@ WGPUStatus ResourceTable::APIUpdate(uint32_t slot, const WGPUBindingResource* re
     ResourceTableUpdateCmd cmd;
     cmd.self = ToAPI(this);
     cmd.slot = slot;
-    cmd.resource = resource;
+    cmd.resource = ToAPI(resource);
     GetClient()->SerializeCommand(cmd);
 
-    return WGPUStatus_Success;
+    return wgpu::Status::Success;
 }
 
-uint32_t ResourceTable::APIInsertBinding(const WGPUBindingResource* resource) {
+uint32_t ResourceTable::APIInsert(const BindingResource* resource) {
     if (mDestroyed) {
         return WGPU_INVALID_BINDING;
     }
@@ -127,8 +127,8 @@ uint32_t ResourceTable::APIInsertBinding(const WGPUBindingResource* resource) {
             continue;
         }
 
-        WGPUStatus updateStatus = APIUpdate(slot, resource);
-        DAWN_ASSERT(updateStatus == WGPUStatus_Success);
+        wgpu::Status updateStatus = APIUpdate(slot, resource);
+        DAWN_ASSERT(updateStatus == wgpu::Status::Success);
         return slot;
     }
 
@@ -136,20 +136,20 @@ uint32_t ResourceTable::APIInsertBinding(const WGPUBindingResource* resource) {
     return WGPU_INVALID_BINDING;
 }
 
-WGPUStatus ResourceTable::APIRemoveBinding(uint32_t slot) {
+wgpu::Status ResourceTable::APIRemove(uint32_t slot) {
     if (mDestroyed || slot >= mSlotAvailableAfterSubmit.size()) {
-        return WGPUStatus_Error;
+        return wgpu::Status::Error;
     }
 
     mSlotAvailableAfterSubmit[slot] = mDevice->GetQueue()->GetLastSubmitIndex();
 
     // Forward the command to the server.
-    ResourceTableRemoveBindingCmd cmd;
+    ResourceTableRemoveCmd cmd;
     cmd.self = ToAPI(this);
     cmd.slot = slot;
     GetClient()->SerializeCommand(cmd);
 
-    return WGPUStatus_Success;
+    return wgpu::Status::Success;
 }
 
 uint32_t ResourceTable::APIGetSize() const {

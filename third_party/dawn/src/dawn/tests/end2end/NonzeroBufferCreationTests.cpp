@@ -28,7 +28,8 @@
 #include <array>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -46,9 +47,9 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithCopyDstUsage) {
 
     wgpu::Buffer buffer = device.CreateBuffer(&descriptor);
 
-    std::vector<uint8_t> expectedData(kSize, uint8_t(1u));
-    EXPECT_BUFFER_U32_RANGE_EQ(reinterpret_cast<uint32_t*>(expectedData.data()), buffer, 0,
-                               kSize / sizeof(uint32_t));
+    std::vector<uint8_t> expectedData(kSize, uint8_t{1});
+    DAWN_UNSAFE_TODO(EXPECT_BUFFER_U32_RANGE_EQ(reinterpret_cast<uint32_t*>(expectedData.data()),
+                                                buffer, 0, kSize / sizeof(uint32_t)));
 }
 
 // Verify that each byte of the buffer has all been initialized to 1 with the toggle enabled when it
@@ -62,9 +63,9 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithMapWriteWithoutCopyDstUsage
 
     wgpu::Buffer buffer = device.CreateBuffer(&descriptor);
 
-    std::vector<uint8_t> expectedData(kSize, uint8_t(1u));
-    EXPECT_BUFFER_U32_RANGE_EQ(reinterpret_cast<uint32_t*>(expectedData.data()), buffer, 0,
-                               kSize / sizeof(uint32_t));
+    std::vector<uint8_t> expectedData(kSize, uint8_t{1});
+    DAWN_UNSAFE_TODO(EXPECT_BUFFER_U32_RANGE_EQ(reinterpret_cast<uint32_t*>(expectedData.data()),
+                                                buffer, 0, kSize / sizeof(uint32_t)));
 }
 
 // Verify that each byte of the buffer has all been initialized to 1 with the toggle enabled when
@@ -85,8 +86,9 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithMappedAtCreation) {
     defaultDescriptor.size = kSize;
     defaultDescriptor.mappedAtCreation = true;
 
-    const std::vector<uint8_t> expectedData(kSize, uint8_t(1u));
-    const uint32_t* expectedDataPtr = reinterpret_cast<const uint32_t*>(expectedData.data());
+    const std::vector<uint8_t> expectedData(kSize, uint8_t{1});
+    const uint32_t* expectedDataPtr =
+        DAWN_UNSAFE_TODO(reinterpret_cast<const uint32_t*>(expectedData.data()));
 
     // Buffer with MapRead usage
     {
@@ -95,12 +97,12 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithMappedAtCreation) {
         wgpu::Buffer buffer = device.CreateBuffer(&descriptor);
 
         const uint8_t* mappedData = static_cast<const uint8_t*>(buffer.GetConstMappedRange());
-        EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize));
+        DAWN_UNSAFE_TODO(EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize)));
         buffer.Unmap();
 
         MapAsyncAndWait(buffer, wgpu::MapMode::Read, 0, kSize);
         mappedData = static_cast<const uint8_t*>(buffer.GetConstMappedRange());
-        EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize));
+        DAWN_UNSAFE_TODO(EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize)));
         buffer.Unmap();
     }
 
@@ -111,7 +113,7 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithMappedAtCreation) {
         wgpu::Buffer buffer = device.CreateBuffer(&descriptor);
 
         const uint8_t* mappedData = static_cast<const uint8_t*>(buffer.GetConstMappedRange());
-        EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize));
+        DAWN_UNSAFE_TODO(EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize)));
         buffer.Unmap();
 
         EXPECT_BUFFER_U32_RANGE_EQ(expectedDataPtr, buffer, 0, kSize / sizeof(uint32_t));
@@ -124,7 +126,7 @@ TEST_P(NonzeroBufferCreationTests, BufferCreationWithMappedAtCreation) {
         wgpu::Buffer buffer = device.CreateBuffer(&descriptor);
 
         const uint8_t* mappedData = static_cast<const uint8_t*>(buffer.GetConstMappedRange());
-        EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize));
+        DAWN_UNSAFE_TODO(EXPECT_EQ(0, memcmp(mappedData, expectedData.data(), kSize)));
         buffer.Unmap();
 
         EXPECT_BUFFER_U32_RANGE_EQ(expectedDataPtr, buffer, 0, kSize / sizeof(uint32_t));

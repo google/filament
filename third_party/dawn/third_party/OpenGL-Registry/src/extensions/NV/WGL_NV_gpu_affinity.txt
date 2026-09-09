@@ -1,0 +1,628 @@
+Name
+
+      WGL_NV_gpu_affinity
+
+Name Strings
+
+      WGL_NV_gpu_affinity
+
+Contact
+
+      Barthold Lichtenbelt, NVIDIA (blichtenbelt 'at' nvidia.com)
+
+Notice
+
+      Copyright NVIDIA Corporation, 2005-2006.
+
+Status
+
+      Completed.
+
+Version
+
+      Last Modified Date: 11/08/2006
+      Author revision: 11
+
+Number
+
+      355
+
+Dependencies
+
+      WGL_ARB_extensions_string is required.
+
+      This extension interacts with WGL_ARB_make_current_read.
+
+      This extension interacts with WGL_ARB_pbuffer.
+
+      This extension interacts with GL_EXT_framebuffer_object
+
+Overview
+
+      On systems with more than one GPU it is desirable to be able to
+      select which GPU(s) in the system become the target for OpenGL
+      rendering commands. This extension introduces the concept of a GPU
+      affinity mask. OpenGL rendering commands are directed to the
+      GPU(s) specified by the affinity mask. GPU affinity is immutable.
+      Once set, it cannot be changed.
+
+      This extension also introduces the concept called affinity-DC. An
+      affinity-DC is a device context with a GPU affinity mask embedded
+      in it. This restricts the device context to only allow OpenGL
+      commands to be sent to the GPU(s) in the affinity mask.
+
+      Handles for the GPUs present in a system are enumerated with the
+      command wglEnumGpusNV. An affinity-DC is created by calling
+      wglCreateAffinityDCNV. This function takes a list of GPU handles,
+      which make up the affinity mask. An affinity-DC can also
+      indirectly be created by obtaining a DC from a pBuffer handle, by
+      calling wglGetPbufferDC, which in turn was created from an
+      affinity-DC by calling wglCreatePbuffer.
+
+      A context created from an affinity DC will inherit the GPU
+      affinity mask from the DC. Once inherited, it cannot be changed.
+      Such a context is called an affinity-context. This restricts the
+      affinity-context to only allow OpenGL commands to be sent to those
+      GPU(s) in its affinity mask. Once created, this context can be
+      used in two ways:
+
+        1. Make the affinity-context current to an affinity-DC. This
+           will only succeed if the context's affinity mask is the same
+           as the affinity mask in the DC. There is no window
+           associated with an affinity DC, therefore this is a way to
+           achieve off-screen rendering to an OpenGL context. This can
+           either be rendering to a pBuffer, or an application created
+           framebuffer object. In the former case, the affinity-mask of
+           the pBuffer DC, which is obtained from a pBuffer handle,
+           will be the same affinity-mask as the DC used to created the
+           pBuffer handle.  In the latter case, the default framebuffer
+           object will be incomplete because there is no window-system
+           created framebuffer. Therefore, the application will have to
+           create and bind a framebuffer object as the target for
+           rendering.
+        2. Make the affinity-context current to a DC obtained from a
+           window. Rendering only happens to the sub rectangles(s) of
+           the window that overlap the parts of the desktop that are
+           displayed by the GPU(s) in the affinity mask of the context.
+
+      Sharing OpenGL objects between affinity-contexts, by calling
+      wglShareLists, will only succeed if the contexts have identical
+      affinity masks.
+
+      It is not possible to make a regular context (one without an
+      affinity mask) current to an affinity-DC. This would mean a way
+      for a context to inherit affinity information, which makes the
+      context affinity mutable, which is counter to the premise of this
+      extension.
+
+New Procedures, Functions and Structures:
+
+      DECLARE_HANDLE(HGPUNV);
+
+      typedef struct _GPU_DEVICE {
+        DWORD  cb;
+        CHAR   DeviceName[32];
+        CHAR   DeviceString[128];
+        DWORD  Flags;
+        RECT   rcVirtualScreen;
+      } GPU_DEVICE, *PGPU_DEVICE;
+
+      BOOL wglEnumGpusNV(UINT iGpuIndex,
+                         HGPUNV *phGpu);
+
+      BOOL wglEnumGpuDevicesNV(HGPUNV hGpu,
+                               UINT iDeviceIndex,
+                               PGPU_DEVICE lpGpuDevice);
+
+      HDC wglCreateAffinityDCNV(const HGPUNV *phGpuList);
+
+      BOOL wglEnumGpusFromAffinityDCNV(HDC hAffinityDC,
+                                       UINT iGpuIndex,
+                                       HGPUNV *hGpu);
+
+      BOOL wglDeleteDCNV(HDC hdc);
+
+New Tokens
+
+      New error codes set by wglShareLists, wglMakeCurrent and
+      wglMakeContextCurrentARB:
+
+      ERROR_INCOMPATIBLE_AFFINITY_MASKS_NV    0x20D0
+
+      New error codes set by wglMakeCurrent and
+      wglMakeContextCurrentARB:
+
+      ERROR_MISSING_AFFINITY_MASK_NV          0x20D1
+
+Additions to the WGL Specification
+
+      GPU Affinity
+
+      To query handles for all GPUs in a system call:
+
+           BOOL wglEnumGpusNV(UINT iGpuIndex, HGPUNV *phGPU);
+
+      <iGpuIndex> is an index value that specifies a GPU.
+
+      <phGPU> upon return will contain a handle for GPU number
+      <iGpuIndex>. The first GPU will be index 0.
+
+      By looping over wglEnumGpusNV and incrementing <iGpuIndex>,
+      starting at index 0, all GPU handles can be queried. If the
+      function succeeds, the return value is TRUE. If the function
+      fails, the return value is FALSE and <phGPU> will be unmodified.
+      The function fails if <iGpuIndex> is greater or equal than the
+      number of GPUs supported by the system.
+
+      To retrieve information about the display devices supported by a
+      GPU call:
+
+           BOOL wglEnumGpuDevicesNV(HGPUNV hGpu,
+                                   UINT iDeviceIndex,
+                                   PGPU_DEVICE lpGpuDevice);
+
+      <hGpu> is a handle to the GPU to query.
+
+      <iDeviceIndex> is an index value that specifies a display device,
+      supported by <hGpu>, to query. The first display device will be
+      index 0.
+
+      <lpGpuDevice> pointer to a GPU_DEVICE structure which will receive
+      information about the display device at index <iDeviceIndex>.
+
+      By looping over the function wglEnumGpuDevicesNV and incrementing
+      <iDeviceIndex>, starting at index 0, all display devices can be
+      queried. If the function succeeds, the return value is TRUE. If
+      the function fails, the return value is FALSE and <lpGpuDevice>
+      will be unmodified. The function fails if <iDeviceIndex> is
+      greater or equal than the number of display devices supported by
+      <hGpu>.
+
+      The GPU_DEVICE structure has the following members:
+
+           typedef struct _GPU_DEVICE {
+             DWORD  cb;
+             CHAR   DeviceName[32];
+             CHAR   DeviceString[128];
+             DWORD  Flags;
+             RECT   rcVirtualScreen;
+           } GPU_DEVICE, *PGPU_DEVICE;
+
+      <cb> is the size of the GPU_DEVICE structure. Before calling
+      wglEnumGpuDevicesNV, set <cb> to the size, in bytes, of
+      GPU_DEVICE.
+
+      <DeviceName> is a string identifying the display device name. This
+      will be the same string as stored in the <DeviceName> field of the
+      DISPLAY_DEVICE structure, which is filled in by
+      EnumDisplayDevices.
+
+      <DeviceString> is a string describing the GPU for this display
+      device. It is the same string as stored in the <DeviceString>
+      field in the DISPLAY_DEVICE structure that is filled in by
+      EnumDisplayDevices when it describes a display adapter (and not a
+      monitor).
+
+      <Flags> Indicates the state of the display device. It can be a
+      combination of any of the following:
+
+      DISPLAY_DEVICE_ATTACHED_TO_DESKTOP      If set, the device is part
+      of the desktop.
+
+      DISPLAY_DEVICE_PRIMARY_DEVICE           If set, the primary
+      desktop is on this device. Only one device in the system can have
+      this set.
+
+      <rcVirtualScreen> specifies the display device rectangle, in
+      virtual screen coordinates. The value of <rcVirtualScreen> is
+      undefined if the device is not part of the desktop, i.e.
+      DISPLAY_DEVICE_ATTACHED_TO_DESKTOP is not set in the <Flags>
+      field.
+
+      The function wglEnumGpuDevicesNV can fail for a variety of
+      reasons. Call GetLastError to get extended error information.
+      Possible errors are as follows:
+
+      ERROR_INVALID_HANDLE   <hGpu> is not a valid GPU handle.
+
+      A new type of DC, called an affinity-DC, can be used to direct
+      OpenGL commands to a specific GPU or set of GPUs. An affinity-DC
+      is a device context with a GPU affinity mask embedded in it. This
+      restricts the device context to only allow OpenGL commands to be
+      sent to the GPU(s) in the affinity mask. An affinity-DC can be
+      created directly, using the new function wglCreateAffinityDCNV and
+      also indirectly by calling wglCreatePbufferARB followed by
+      wglGetPbufferDCARB. To create an affinity-DC directly call:
+
+           HDC wglCreateAffinityDCNV(const HGPUNV *phGpuList);
+
+      <phGpuList> is a NULL-terminated array of GPU handles to which the
+      affinity-DC will be restricted. If an element in the list is not a
+      GPU handle, as returned by wglEnumGpusNV, it is silently ignored.
+
+      If successful, the function returns an affinity-DC. If it fails,
+      NULL will be returned.
+
+      To create an affinity-DC indirectly, first call
+      wglCreatePbufferARB passing it an affinity-DC. Next, pass the
+      handle returned by the call to wglCreatePbufferARB to
+      wglGetPbufferDCARB to create an affinity-DC for the pBuffer. The
+      DC returned by wglGetPbufferDCARB will have the same affinity mask
+      as the DC used to create the pBuffer handle by calling
+      wglCreatePbufferARB.
+
+      An affinity-DC has no window associated with it, and therefore it
+      has no default window-system-provided framebuffer. (Note: This is
+      terminology borrowed from EXT_framebuffer_object). A context made
+      current to an affinity-DC will only be able to render into an
+      application-created framebuffer object, or a pBuffer. The default
+      window-system-framebuffer object, when bound, will be incomplete.
+      The EXT_framebuffer_object specification defines what 'incomplete'
+      means exactly.
+
+      A context created from an affinity-DC, by calling wglCreateContext
+      and passing it an affinity-DC, is called an affinity-context. This
+      context will inherit the affinity mask from the DC. This affinity-
+      mask cannot be changed. The affinity mask restricts the affinity-
+      context to only allow OpenGL commands to be sent to those GPU(s)
+      in its affinity mask.
+
+      The function wglCreateAffinityDCNV can fail for a variety of
+      reasons. Call GetLastError to get extended error information.
+      Possible errors are as follows:
+
+      ERROR_NO_SYSTEM_RESOURCES    Insufficient resources exist to
+      create the affinity-DC.
+
+      ERROR_INVALID_DATA           <phGpuList> is empty or contains no
+      valid GPU handles
+
+      An affinity-context can only be made current to an affinity-DC
+      with the same affinity-mask, otherwise wglMakeCurrent and
+      wglMakeContextCurrentARB will fail and return FALSE. In the case
+      of wglMakeContextCurrentARB, the affinity masks of both the "read"
+      and "draw" DCs need to match the affinity-mask of the context.
+
+      If a context that has no affinity mask is made current to an
+      affinity-DC, wglMakeCurrent and wglMakeContextCurrentARB will fail
+      and return FALSE. In the case of wglMakeContextCurrentARB it will
+      fail if either the "read" or "draw" DC is an affinity-DC.
+
+      If an affinity-context is made current to a DC obtained from a
+      window, by calling GetDC, then rendering will only happen to the
+      subrectangle(s) of the window that overlap the parts of the
+      desktop that are displayed by the GPU(s) in the affinity-mask of
+      the context. Note that a DC obtained from a window does not have
+      an affinity mask set.
+
+      The following error codes are added to the description of
+      wglMakeCurrent and wglMakeContextCurrentARB:
+
+      ERROR_INCOMPATIBLE_AFFINITY_MASKS_NV    The device context(s) and
+      rendering context have non-matching affinity masks.
+
+      ERROR_MISSING_AFFINITY_MASK_NV          The rendering context does
+      not have an affinity mask set.
+
+      Sharing OpenGL objects between affinity-contexts, by calling
+      wglShareLists, will only succeed if the contexts have identical
+      affinity masks. The following error codes are added to the
+      description of wglShareLists:
+
+      ERROR_INCOMPATIBLE_AFFINITY_MASKS_NV    The contexts have non-
+      matching affinity masks.
+
+      To delete an affinity-DC call:
+
+           BOOL wglDeleteDCNV(HDC hdc)
+
+      <hdc> Is a handle of an affinity-DC to delete.
+
+      If the function succeeds, TRUE is returned. If the function fails,
+      FALSE is returned. Call GetLastError to get extended error
+      information. Possible errors are as follows:
+
+      ERROR_INVALID_HANDLE   <hdc> is not a handle of an affinity-DC.
+
+      To retrieve a list of GPU handles that make up the affinity-mask
+      of an affinity-DC, call:
+
+           BOOL wglEnumGpusFromAffinityDCNV(HDC hAffinityDC,
+                                           UINT iGpuIndex,
+                                           HGPUNV *phGpu);
+
+      <hAffinityDC> is a handle of the affinity-DC to query.
+
+      <iGpuIndex> is an index value of the GPU handle in the affinity
+      mask of <hAffinityDC> to query.
+
+      <phGpu> upon return will contain a handle for GPU number
+      <iGpuIndex>. The first GPU will be at index 0.
+
+      By looping over wglEnumGpusFromAffinityDCNV and incrementing
+      <iGpuIndex>, starting at index 0, all GPU handles associated with
+      the DC can be queried. If the function succeeds, the return value
+      is TRUE. If the function fails, the return value is FALSE and
+      <phGPU> will be unmodified. The function fails if <iGpuIndex> is
+      greater or equal than the number of GPUs associated with
+      <hAffinityDC>.
+
+      Call GetLastError to get extended error information. Possible
+      errors are as follows:
+
+      ERROR_INVALID_HANDLE   <hAffinityDC> is not a handle of an
+      affinity-DC.
+
+Interactions with WGL_ARB_make_current_read
+
+      If the make current read extension is not supported, all language
+      referring to wglMakeContextCurrentARB is deleted.
+
+Interactions with WGL_ARB_pbuffer
+
+      If the pbuffer extension is not supported, all language referring
+      to puffers, wglGetPbuferDC and wglCreatePbuffer are deleted.
+
+Interactions with GL_EXT_framebuffer_object
+
+      If the framebuffer object extension is not supported, all language
+      referring to framebuffer objects is deleted.
+
+Usage examples
+
+      // Example 1 - Normal window creation, DC setup and
+      // context creation.
+
+      PIXELFORMATDESCRIPTOR pfd;
+      int   pf;
+      HDC   hDC;
+      HGLRC hRC;
+      HWND  hWnd;
+
+      hWnd = CreateWindow(...);
+      hDC = GetDC(hWnd);
+
+      memset(&pfd, 0, sizeof(pfd));
+      pfd.nSize        = sizeof(pfd);
+      pfd.nVersion     = 1;
+      pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
+      pfd.iPixelType   = PFD_TYPE_RGBA;
+      pfd.cColorBits   = 32;
+
+      // Note, for ease of code reading no error checking is done.
+      pf = ChoosePixelFormat(hDC, &pfd);
+      SetPixelFormat(hDC, pf, &pfd);
+      DescribePixelFormat(hDC, pf, sizeof(PIXELFORMATDESCRIPTOR),
+                          &pfd);
+
+      hRC = wglCreateContext(hDC);
+      wglMakeCurrent(hDC, hRC);
+
+
+      // Example 2 - Offscreen rendering to one GPU using a FBO
+      // It is assumed that a context already has been created (and
+      // possibly destroyed) and was used to query the proc addresses
+      // of the WGL affinity related entrypoints.
+
+      #define MAX_GPU 4
+
+      PIXELFORMATDESCRIPTOR pfd;
+      int    pf, gpuIndex = 0;
+      HGPUNV hGPU[MAX_GPU];
+      HGPUNV GpuMask[MAX_GPU];
+      HDC    affDC;
+      HGLRC  affRC;
+
+      // Get a list of the first MAX_GPU GPUs in the system
+      while ((gpuIndex < MAX_GPU) && wglEnumGpusNV(gpuIndex,
+      &hGPU[gpuIndex])) {
+            gpuIndex++;
+      }
+
+      // Create an affinity-DC associated with the first GPU
+      GpuMask[0] = hGPU[0];
+      GpuMask[1] = NULL;
+
+      affDC = wglCreateAffinityDCNV(GpuMask);
+
+      // Set a pixelformat on the affinity-DC
+      pf = ChoosePixelFormat(affDC, &pfd);
+      SetPixelFormat(affDC, pf, &pfd);
+      DescribePixelFormat(affDC, pf, sizeof(PIXELFORMATDESCRIPTOR),
+      &pfd);
+
+      affRC = wglCreateContext(affDC);
+      wglMakeCurrent(affDC, affRC);
+
+      // Make a previously created FBO current so we have something
+      // to render into. Since there's no window, the default system
+      // created FBO is incomplete.
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb);
+
+       <Now draw>
+
+      // Example 3 - Offscreen rendering to one GPU using a pBuffer
+      // It is assumed that a context already has been created (and
+      // possibly destroyed) and was used to query the proc addresses
+      // of the WGL affinity and pbuffer related entrypoints.
+
+      #define MAX_GPU 4
+
+      int    gpuIndex = 0;
+      HGPUNV hGPU[MAX_GPU];
+      HGPUNV GpuMask[MAX_GPU];
+      HDC    affDC, pBufferAffDC;
+      HGLRC  affRC;
+
+      // Get a list of the first MAX_GPU GPUs in the system
+      while ((gpuIndex < MAX_GPU) && wglEnumGpusNV(gpuIndex,
+      &hGPU[gpuIndex])) {
+            gpuIndex++;
+      }
+
+      // Create an affinity-DC associated with the first GPU
+      GpuMask[0] = hGPU[0];
+      GpuMask[1] = NULL;
+
+      affDC = wglCreateAffinityDCNV(GpuMask);
+
+      // Setup desired pixelformat attributes for the pbuffer
+      // including WGL_DRAW_TO_PBUFFER_ARB.
+      HPBUFFERARB  handle;
+      int          width = 512, height = 512, format = 0;
+      unsigned int nformats;
+
+      int attribList[] =
+      {
+          WGL_RED_BITS_ARB,               8,
+          WGL_GREEN_BITS_ARB,             8,
+          WGL_BLUE_BITS_ARB,              8,
+          WGL_ALPHA_BITS_ARB,             8,
+          WGL_STENCIL_BITS_ARB,           0,
+          WGL_DEPTH_BITS_ARB,             0,
+          WGL_DRAW_TO_PBUFFER_ARB,        true,
+          0,
+      };
+
+      wglChoosePixelFormatARB(affDC, attribList, NULL, 1,
+                              &format, &nformats);
+
+      handle = wglCreatePbufferARB(affDC, format, width, height, NULL);
+
+      // pbufferAffDC will have the same affinity-mask as affDC.
+      pBufferAffDC = wglGetPbufferDCARB(handle);
+
+      // affRC will inherit the affinity-mask from pBufferAffDC.
+      affRC = wglCreateContext(pBufferAffDC);
+      wglMakeCurrent(pBufferAffDC, affRC);
+
+      <Now draw into the pBuffer>
+
+Issues
+
+      1) Do we really need an affinity-DC, or can we do with just an
+      affinity context?
+
+      DISCUSSION: If affinity is not part of a DC, a new function will
+      need to be defined to create an affinity-context or set an
+      affinity-mask for an existing context. Passing NULL as a HDC to
+      wglMakeCurrent will then be one way to create an off-screen
+      rendering context, where rendering will have to go to a FBO. If
+      the HDC passed to wglMakeCurrent is one for a pBuffer, the
+      affinity-mask in the affinity-context dictates where rendering is
+      direct to. This might mean pBuffer resources will have to move, or
+      alternatively, duplicated across all GPUs in a system. That is
+      counter to the whole idea of this extension. Thus an affinity-DC
+      is definitely needed for a pBuffer.
+
+      Thus the question reduces to, do we need an affinity-DC in order
+      to facilitate off-screen rendering to a FBO? Having an affinity-DC
+      has the following advantages:
+
+      a)  It is consistent with making current to a pBuffer or window,
+      that does need a DC.
+      b) passing NULL as a HDC to wglMakeCurrent might be filtered out
+      by the MS layer on future OSes.
+      c) The driver implementation might benefit from knowing at DC
+      creation time what the affinity-mask is, rather than at
+      wglMakeCurrent time.
+
+      RESOLUTION: Yes.
+
+      2) Should the GPU affinity concept also apply to D3D and/or GDI
+      commands?
+
+      DISCUSSION:  It could be especially desirable to apply the
+      affinity concept to D3D. However, D3D is sufficiently different
+      that this extension doesn't directly apply.
+
+      RESOLUTION: That falls outside this extension.
+
+      3) Should setting a pixelformat on an affinity-DC be required?
+
+      DISCUSSION: Setting a pixelformat on an affinity-DC is not
+      strictly necessary if the application does off-screen rendering to
+      a FBO. However, the Microsoft layer of wglMakeCurrent requires
+      that the pixelformats of the DC and RC passed to it match. This
+      becomes an issue when making an affinity-context current to a DC
+      obtained from a window. The DC has a pixelformat set by the
+      application, and therefore the affinity-context needs to have the
+      same pixelformat. This means the affinity-DC, that the affinity-
+      context is created from, needs to have the same pixelformat set.
+
+      RESOLUTION: YES. Setting a pixelformat on an affinity-DC is
+      required.
+
+      4) Is it allowed to make an affinity-context current to an
+      affinity-DC where the mask of the context spans more GPUs than the
+      mask in the DC?
+
+      5) Is it allowed to make an affinity-context current to an
+      affinity-DC where the mask of the context spans less GPUs than the
+      mask in the DC?
+
+      DISCUSSION: Issues 4 and 5 are lumped together in this discussion.
+      For example, is this scenario something we want to support: An
+      application wants to share objects across two contexts and have
+      these two contexts each render to a different GPU. It can do this
+      by creating two affinity-DCs. One has an affinity mask for the
+      first GPU, the other for the second GPU. It also creates two
+      affinity-contexts that both have an affinity-mask that spans both
+      GPUs. Making one context current to the first affinity-DC will
+      lock the context to the GPU in the mask of that affinity-DC. Make
+      another context current to the second affinity-DC will lock that
+      context to the second GPU. This is effectively what issue 4) is
+      asking. . The simplest solution is to disallow these cases, and
+      that is how the spec is currently written.
+
+      RESOLUTION: NO, we will not allow this to keep the spec simple. If
+      necessary, these restrictions can always be lifted later.
+
+      6) What should an application do if the enum functions that return
+      BOOL fail for another reason than they are done? For example, if
+      they fail because they run out of memory?
+
+      RESOLUTION: An application will have to call GetLastError to find
+      out the reason of failure.
+
+      7) The "Enum" API commands in this extension assume that the list
+      of things being enumerated does not change dynamically. Is that
+      reasonable?
+
+      DISCUSSION: Display devices, and possibly GPUs in the future, can
+      be changed dynamically and/or hotplugged. Thus yes, this is a
+      potential issue. Existing OS functionality like EnumDisplayDevices
+      and even wglMakeCurrent will suffer from this too. In the latter
+      case, the application could make a context current to a device
+      that was removed from the system. A possible solution would be
+      some sort of notification mechanism to the application. Possibly
+      combined with being able to snapshot state first, then enumerate
+      that snapshot. That snapshot of state might immediately become
+      invalid, but at least the enumeration will walk a consistent list.
+
+      RESOLUTION: This is a wider issue than just this specification,
+      and not currently addressed.
+
+      8) How do I transfer data efficiently between two affinity-
+      contexts?
+
+      DISCUSSION: It is desired for an application to render in one
+      context, and transfer the result of that rendering to another
+      context. These two contexts can be on different GPUs. If they are,
+      how does the application efficiently transfer this data? Currently
+      OpenGL provides two mechanisms, neither of which are ideal:
+
+      1) The application can do a ReadPixels followed by a DrawPixels /
+      TexImage call. This involves transfer through host memory, which
+      can be slow.
+
+      2) The application can share objects among the two contexts using
+      wglShareLists(). This will work, but is counter to the premise of
+      this extension where each GPU has its own set of resources, not
+      shared with another GPU.
+
+      RESOLUTION: This is a hole which needs to be addressed separately.
+
+Revision history
+
+      None

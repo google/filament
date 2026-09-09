@@ -1,0 +1,677 @@
+Name
+
+    EXT_vertex_array
+
+Name Strings
+
+    GL_EXT_vertex_array
+
+Version
+
+    $Date: 1995/10/03 05:39:58 $ $Revision: 1.16 $  FINAL
+
+Number
+
+    30
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension adds the ability to specify multiple geometric primitives
+    with very few subroutine calls.  Instead of calling an OpenGL procedure
+    to pass each individual vertex, normal, or color, separate arrays
+    of vertexes, normals, and colors are prespecified, and are used to
+    define a sequence of primitives (all of the same type) when a single
+    call is made to DrawArraysEXT.  A stride mechanism is provided so that
+    an application can choose to keep all vertex data staggered in a
+    single array, or sparsely in separate arrays.  Single-array storage
+    may optimize performance on some implementations.
+
+    This extension also supports the rendering of individual array elements,
+    each specified as an index into the enabled arrays.
+
+Issues
+
+    *   Should arrays for material parameters be provided?  If so, how?
+
+        A: No.  Let's leave this to a separate extension, and keep this
+           extension lean.
+
+    *   Should a FORTRAN interface be specified in this document?
+
+    *   It may not be possible to implement GetPointervEXT in FORTRAN.  If
+        not, should we eliminate it from this proposal?
+
+        A: Leave it in.
+
+    *   Should a stride be specified by DrawArraysEXT which, if non-zero,
+        would override the strides specified for the individual arrays?
+        This might improve the efficiency of single-array transfers.
+
+        A: No, it's not worth the effort and complexity.
+
+    *   Should entry points for byte vertexes, byte indexes, and byte
+        texture coordinates be added in this extension?
+
+        A: No, do this in a separate extension, which defines byte support
+           for arrays and for the current procedural interface.
+
+    *   Should support for meshes (not strips) of rectangles be provided?
+
+        A: No. If this is necessary, define a separate quad_mesh extension
+           that supports both immediate mode and arrays.  (Add QUAD_MESH_EXT
+           as a token accepted by Begin and DrawArraysEXT.  Add
+           QuadMeshLengthEXT to specify the length of the mesh.)
+
+Reasoning
+
+    *   DrawArraysEXT requires that VERTEX_ARRAY_EXT be enabled so that
+        future extensions can support evaluation as well as direct
+        specification of vertex coordinates.
+
+    *   This extension does not support evaluation.  It could be extended
+        to provide such support by adding arrays of points to be evaluated,
+        and by adding enables to indicate that the arrays are to be
+        evaluated.  I think we may choose to add an array version of
+        EvalMesh, rather than extending the operation of DrawArraysEXT,
+        so I'd rather wait on this one.
+
+    *   <size> is specified before <type> to match the order of the
+        information in immediate mode commands, such as Vertex3f.
+        (first 3, then f)
+
+    *   It seems reasonable to allow attribute values to be undefined after
+        DrawArraysEXT executes.  This avoids implementation overhead in
+        the case where an incomplete primitive is specified, and will allow
+        optimization on multiprocessor systems.  I don't expect this to be
+        a burden to programmers.
+
+    *   It is not an error to call VertexPointerEXT, NormalPointerEXT,
+        ColorPointerEXT, IndexPointerEXT, TexCoordPointerEXT,
+        or EdgeFlagPointerEXT between the execution of Begin and the
+        corresponding execution of End.  Because these commands will
+        typically be implemented on the client side with no protocol,
+        testing for between-Begin-End status requires that the client
+        track this state, or that a round trip be made.  Neither is
+        desirable.
+
+    *   Arrays are enabled and disabled individually, rather than with a
+        single mask parameter, for two reasons.  First, we have had trouble
+        allocating bits in masks, so eliminating a mask eliminates potential
+        trouble down the road.  We may eventually require a larger number of
+        array types than there are bits in a mask.  Second, making the
+        enables into state eliminates a parameter in ArrayElementEXT, and
+        may allow it to execute more efficiently.  Of course this state
+        model may result in programming errors, but OpenGL is full of such
+        hazards anyway!
+
+    *   ArrayElementEXT is provided to support applications that construct
+        primitives by indexing vertex data, rather than by streaming through
+        arrays of data in first-to-last order.  Because each call specifies
+        only a single vertex, it is possible for an application to explicitly
+        specify per-primitive attributes, such as a single normal per
+        individual triangle.
+
+    *   The <count> parameters are added to the *PointerEXT commands to
+        allow implementations to cache array data, and in particular to
+        cache the transformed results of array data that are rendered
+        repeatedly by ArrayElementEXT.  Implementations that do not wish
+        to perform such caching can ignore the <count> parameter.
+
+    *   The <first> parameter of DrawArraysEXT allows a single set of
+        arrays to be used repeatedly, possibly improving performance.
+
+New Procedures and Functions
+
+    void ArrayElementEXT(int i);
+
+    void DrawArraysEXT(enum mode,
+                       int first,
+                       sizei count);
+
+    void VertexPointerEXT(int size,
+                          enum type,
+                          sizei stride,
+                          sizei count,
+                          const void* pointer);
+
+    void NormalPointerEXT(enum type,
+                          sizei stride,
+                          sizei count,
+                          const void* pointer);
+
+    void ColorPointerEXT(int size,
+                         enum type,
+                         sizei stride,
+                         sizei count,
+                         const void* pointer);
+
+    void IndexPointerEXT(enum type,
+                         sizei stride,
+                         sizei count,
+                         const void* pointer);
+
+    void TexCoordPointerEXT(int size,
+                            enum type,
+                            sizei stride,
+                            sizei count,
+                            const void* pointer);
+
+    void EdgeFlagPointerEXT(sizei stride,
+                            sizei count,
+                            const Boolean* pointer);
+
+    void GetPointervEXT(enum pname,
+                       void** params);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        VERTEX_ARRAY_EXT               0x8074
+        NORMAL_ARRAY_EXT               0x8075
+        COLOR_ARRAY_EXT                0x8076
+        INDEX_ARRAY_EXT                0x8077
+        TEXTURE_COORD_ARRAY_EXT        0x8078
+        EDGE_FLAG_ARRAY_EXT            0x8079
+
+    Accepted by the <type> parameter of VertexPointerEXT, NormalPointerEXT,
+    ColorPointerEXT, IndexPointerEXT, and TexCoordPointerEXT:
+
+        DOUBLE_EXT                     0x140A
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        VERTEX_ARRAY_SIZE_EXT          0x807A
+        VERTEX_ARRAY_TYPE_EXT          0x807B
+        VERTEX_ARRAY_STRIDE_EXT        0x807C
+        VERTEX_ARRAY_COUNT_EXT         0x807D
+        NORMAL_ARRAY_TYPE_EXT          0x807E
+        NORMAL_ARRAY_STRIDE_EXT        0x807F
+        NORMAL_ARRAY_COUNT_EXT         0x8080
+        COLOR_ARRAY_SIZE_EXT           0x8081
+        COLOR_ARRAY_TYPE_EXT           0x8082
+        COLOR_ARRAY_STRIDE_EXT         0x8083
+        COLOR_ARRAY_COUNT_EXT          0x8084
+        INDEX_ARRAY_TYPE_EXT           0x8085
+        INDEX_ARRAY_STRIDE_EXT         0x8086
+        INDEX_ARRAY_COUNT_EXT          0x8087
+        TEXTURE_COORD_ARRAY_SIZE_EXT   0x8088
+        TEXTURE_COORD_ARRAY_TYPE_EXT   0x8089
+        TEXTURE_COORD_ARRAY_STRIDE_EXT 0x808A
+        TEXTURE_COORD_ARRAY_COUNT_EXT  0x808B
+        EDGE_FLAG_ARRAY_STRIDE_EXT     0x808C
+        EDGE_FLAG_ARRAY_COUNT_EXT      0x808D
+
+    Accepted by the <pname> parameter of GetPointervEXT:
+
+        VERTEX_ARRAY_POINTER_EXT       0x808E
+        NORMAL_ARRAY_POINTER_EXT       0x808F
+        COLOR_ARRAY_POINTER_EXT        0x8090
+        INDEX_ARRAY_POINTER_EXT        0x8091
+        TEXTURE_COORD_ARRAY_POINTER_EXT 0x8092
+        EDGE_FLAG_ARRAY_POINTER_EXT    0x8093
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    Array Specification
+    -------------------
+
+    Individual array pointers and associated data are maintained for an
+    array of vertexes, an array of normals, an array of colors, an array
+    of color indexes, an array of texture coordinates, and an array of edge
+    flags.  The data associated with each array specify the data type of
+    the values in the array, the number of values per element in the array
+    (e.g.  vertexes of 2, 3, or 4 coordinates), the byte stride from one
+    array element to the next, and the number of elements (counting from
+    the first) that are static.  Static elements may be modified by the
+    application, but once they are modified, the application must explicitly
+    respecify the array before using it for any rendering.  When an array is
+    specified, the pointer and associated data are saved as client-side
+    state, and static elements may be cached by the implementation.  Non-
+    static (dynamic) elements are never accessed until ArrayElementEXT or
+    DrawArraysEXT is issued.
+
+    VertexPointerEXT specifies the location and data format of an array
+    of vertex coordinates.  <pointer> specifies a pointer to the first
+    coordinate of the first vertex in the array.  <type> specifies the data
+    type of each coordinate in the array, and must be one of SHORT, INT,
+    FLOAT, or DOUBLE_EXT, implying GL data types short, int, float, and
+    double respectively.  <size> specifies the number of coordinates per
+    vertex, and must be 2, 3, or 4.  <stride> specifies the byte offset
+    between pointers to consecutive vertexes.  If <stride> is zero, the
+    vertex data are understood to be tightly packed in the array.  <count>
+    specifies the number of vertexes, counting from the first, that are
+    static.
+
+    NormalPointerEXT specifies the location and data format of an array
+    of normals.  <pointer> specifies a pointer to the first coordinate
+    of the first normal in the array.  <type> specifies the data type
+    of each coordinate in the array, and must be one of BYTE, SHORT, INT,
+    FLOAT, or DOUBLE_EXT, implying GL data types byte, short, int, float,
+    and double respectively.  It is understood that each normal comprises
+    three coordinates.  <stride> specifies the byte offset between
+    pointers to consecutive normals.  If <stride> is zero, the normal
+    data are understood to be tightly packed in the array.  <count>
+    specifies the number of normals, counting from the first, that are
+    static.
+
+    ColorPointerEXT specifies the location and data format of an array
+    of color components.  <pointer> specifies a pointer to the first
+    component of the first color element in the array.  <type> specifies the
+    data type of each component in the array, and must be one of BYTE,
+    UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT, FLOAT, or
+    DOUBLE_EXT, implying GL data types byte, ubyte, short, ushort, int,
+    uint, float, and double respectively.  <size> specifies the number of
+    components per color, and must be 3 or 4.  <stride> specifies the byte
+    offset between pointers to consecutive colors.  If <stride> is zero,
+    the color data are understood to be tightly packed in the array.
+    <count> specifies the number of colors, counting from the first, that
+    are static.
+
+    IndexPointerEXT specifies the location and data format of an array
+    of color indexes.  <pointer> specifies a pointer to the first index in
+    the array.  <type> specifies the data type of each index in the
+    array, and must be one of SHORT, INT, FLOAT, or DOUBLE_EXT, implying
+    GL data types short, int, float, and double respectively.  <stride>
+    specifies the byte offset between pointers to consecutive indexes.  If
+    <stride> is zero, the index data are understood to be tightly packed
+    in the array.  <count> specifies the number of indexes, counting from
+    the first, that are static.
+
+    TexCoordPointerEXT specifies the location and data format of an array
+    of texture coordinates.  <pointer> specifies a pointer to the first
+    coordinate of the first element in the array.  <type> specifies the data
+    type of each coordinate in the array, and must be one of SHORT, INT,
+    FLOAT, or DOUBLE_EXT, implying GL data types short, int, float, and
+    double respectively.  <size> specifies the number of coordinates per
+    element, and must be 1, 2, 3, or 4.  <stride> specifies the byte offset
+    between pointers to consecutive elements of coordinates.  If <stride> is
+    zero, the coordinate data are understood to be tightly packed in the
+    array.  <count> specifies the number of texture coordinate elements,
+    counting from the first, that are static.
+
+    EdgeFlagPointerEXT specifies the location and data format of an array
+    of boolean edge flags.  <pointer> specifies a pointer to the first flag
+    in the array.  <stride> specifies the byte offset between pointers to
+    consecutive edge flags.  If <stride> is zero, the edge flag data are
+    understood to be tightly packed in the array.  <count> specifies the
+    number of edge flags, counting from the first, that are static.
+
+    The table below summarizes the sizes and data types accepted (or
+    understood implicitly) by each of the six pointer-specification commands.
+
+        Command               Sizes     Types
+        -------               -----     -----
+        VertexPointerEXT      2,3,4     short, int, float, double
+        NormalPointerEXT      3         byte, short, int, float, double
+        ColorPointerEXT       3,4       byte, short, int, float, double,
+                                        ubyte, ushort, uint
+        IndexPointerEXT       1         short, int, float, double
+        TexCoordPointerEXT    1,2,3,4   short, int, float, double
+        EdgeFlagPointerEXT    1         boolean
+
+    Rendering the Arrays
+    --------------------
+
+    By default all the arrays are disabled, meaning that they will not
+    be accessed when either ArrayElementEXT or DrawArraysEXT is called.
+    An individual array is enabled or disabled by calling Enable or
+    Disable with <cap> set to appropriate value, as specified in the
+    table below:
+
+        Array Specification Command     Enable Token
+        ---------------------------     ------------
+        VertexPointerEXT                VERTEX_ARRAY_EXT
+        NormalPointerEXT                NORMAL_ARRAY_EXT
+        ColorPointerEXT                 COLOR_ARRAY_EXT
+        IndexPointerEXT                 INDEX_ARRAY_EXT
+        TexCoordPointerEXT              TEXTURE_COORD_ARRAY_EXT
+        EdgeFlagPointerEXT              EDGE_FLAG_ARRAY_EXT
+
+    When ArrayElementEXT is called, a single vertex is drawn, using vertex
+    and attribute data taken from location <i> of the enabled arrays.  The
+    semantics of ArrayElementEXT are defined in the C-code below:
+
+        void ArrayElementEXT (int i) {
+            byte* p;
+            if (NORMAL_ARRAY_EXT) {
+                if (normal_stride == 0)
+                    p = (byte*)normal_pointer + i * 3 * sizeof(normal_type);
+                else
+                    p = (byte*)normal_pointer + i * normal_stride;
+                Normal3<normal_type>v ((normal_type*)p);
+            }
+            if (COLOR_ARRAY_EXT) {
+                if (color_stride == 0)
+                    p = (byte*)color_pointer +
+                        i * color_size * sizeof(color_type);
+                else
+                    p = (byte*)color_pointer + i * color_stride;
+                Color<color_size><color_type>v ((color_type*)p);
+            }
+            if (INDEX_ARRAY_EXT) {
+                if (index_stride == 0)
+                    p = (byte*)index_pointer + i * sizeof(index_type);
+                else
+                    p = (byte*)index_pointer + i * index_stride;
+                Index<index_type>v ((index_type*)p);
+            }
+            if (TEXTURE_COORD_ARRAY_EXT) {
+                if (texcoord_stride == 0)
+                    p = (byte*)texcoord_pointer +
+                        i * texcoord_size * sizeof(texcoord_type);
+                else
+                    p = (byte*)texcoord_pointer + i * texcoord_stride;
+                TexCoord<texcoord_size><texcoord_type>v ((texcoord_type*)p);
+            }
+            if (EDGE_FLAG_ARRAY_EXT) {
+                if (edgeflag_stride == 0)
+                    p = (byte*)edgeflag_pointer + i * sizeof(boolean);
+                else
+                    p = (byte*)edgeflag_pointer + i * edgeflag_stride;
+                EdgeFlagv ((boolean*)p);
+            }
+            if (VERTEX_ARRAY_EXT) {
+                if (vertex_stride == 0)
+                    p = (byte*)vertex_pointer +
+                        i * vertex_size * sizeof(vertex_type);
+                else
+                    p = (byte*)vertex_pointer + i * vertex_stride;
+                Vertex<vertex_size><vertex_type>v ((vertex_type*)p);
+            }
+        }
+
+    ArrayElementEXT executes even if VERTEX_ARRAY_EXT is not enabled.  No
+    drawing occurs in this case, but the attributes corresponding to
+    enabled arrays are modified.
+
+    When DrawArraysEXT is called, <count> sequential elements from each
+    enabled array are used to construct a sequence of geometric primitives,
+    beginning with element <first>.  <mode> specifies what kind of
+    primitives are constructed, and how the array elements are used to
+    construct these primitives.  Accepted values for <mode> are POINTS,
+    LINE_STRIP, LINE_LOOP, LINES, TRIANGLE_STRIP, TRIANGLE_FAN, TRIANGLES,
+    QUAD_STRIP, QUADS, and POLYGON.  If VERTEX_ARRAY_EXT is not enabled, no
+    geometric primitives are generated.
+
+    The semantics of DrawArraysEXT are defined in the C-code below:
+
+        void DrawArraysEXT(enum mode, int first, sizei count) {
+            int i;
+            if (count < 0)
+                /* generate INVALID_VALUE error and abort */
+            else {
+                Begin (mode);
+                for (i=0; i < count; i++)
+                    ArrayElementEXT(first + i);
+                End ();
+            }
+        }
+
+    The ways in which the execution of DrawArraysEXT differs from the
+    semantics indicated in the pseudo-code above are:
+
+        1.  Vertex attributes that are modified by DrawArraysEXT have an
+            unspecified value after DrawArraysEXT returns.  For example, if
+            COLOR_ARRAY_EXT is enabled, the value of the current color is
+            undefined after DrawArraysEXT executes.  Attributes that aren't
+            modified remain well defined.
+
+        2.  Operation of DrawArraysEXT is atomic with respect to error
+            generation.  If an error is generated, no other operations take
+            place.
+
+    Although it is not an error to respecify an array between the execution
+    of Begin and the corresponding execution of End, the result of such
+    respecification is undefined.  Static array data may be read and cached
+    by the implementation at any time.  If static array data are modified by
+    the application, the results of any subsequently issued ArrayElementEXT
+    or DrawArraysEXT commands are undefined.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    ArrayElementEXT and DrawArraysEXT are included in display lists.
+    When either command is entered into a display list, the necessary
+    array data (determined by the array pointers and enables) is also
+    entered into the display list.  Because the array pointers and
+    enables are client side state, their values affect display lists
+    when the lists are created, not when the lists are executed.
+
+    Array specification commands VertexPointerEXT, NormalPointerEXT,
+    ColorPointerEXT, IndexPointerEXT, TexCoordPointerEXT, and
+    EdgeFlagPointerEXT specify client side state, and are therefore
+    not included in display lists.  Likewise Enable and Disable, when
+    called with <cap> set to VERTEX_ARRAY_EXT, NORMAL_ARRAY_EXT,
+    COLOR_ARRAY_EXT, INDEX_ARRAY_EXT, TEXTURE_COORD_ARRAY_EXT, or
+    EDGE_FLAG_ARRAY_EXT, are not included in display lists.
+    GetPointervEXT returns state information, and so is not included
+    in display lists.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    GetPointervEXT returns in <param> the array pointer value specified
+    by <pname>.  Accepted values for <pname> are VERTEX_ARRAY_POINTER_EXT,
+    NORMAL_ARRAY_POINTER_EXT, COLOR_ARRAY_POINTER_EXT,
+    INDEX_ARRAY_POINTER_EXT, TEXTURE_COORD_ARRAY_POINTER_EXT,
+    and EDGE_FLAG_ARRAY_POINTER_EXT.
+
+    All array data are client side state, and are not saved or restored
+    by PushAttrib and PopAttrib.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new rendering command is added; it can be sent to the server as part of a 
+    glXRender request or as part of a glXRenderLarge request:
+
+        The DrawArraysEXT command consists of three sections, in the following order: 
+        (1) header information, (2) a list of array information, containing the type 
+        and size of the array values for each enabled array and (3) a list of vertex 
+        data. Each element in the list of vertex data contains information for a single 
+        vertex taken from the enabled arrays.
+   
+        DrawArraysEXT
+            2           16+(12*m)+(s*n) rendering command length
+            2           4116            rendering command opcode
+            4           CARD32          n (number of array elements)
+            4           CARD32          m (number of enabled arrays)
+            4           ENUM            mode    /* GL_POINTS etc */
+            12*m        LISTofARRAY_INFO 
+            s*n         LISTofVERTEX_DATA 
+     
+            Where s = ns + cs + is + ts + es + vs + np + cp + ip + tp + ep + vp. (See
+            description below, under VERTEX_DATA.) Note that if an array is disabled 
+            then no information is sent for it. For example, when the normal array is 
+            disabled, there is no ARRAY_INFO record for the normal array and ns and np 
+            are both zero.
+
+            Note that the list of ARRAY_INFO is unordered: since the ARRAY_INFO
+            record contains the array type, the arrays in the list may be stored
+            in any order. Also, the VERTEX_DATA list is a packed list of vertices.
+            For each vertex, data is retrieved from the enabled arrays, and stored
+            in the list.
+
+            If the command is encoded in a glXRenderLarge request, the command
+            opcode and command length fields above are expanded to 4 bytes each:
+
+            4           20+(12*m)+(s*n) rendering command length
+            4           4116            rendering command opcode
+
+        ARRAY_INFO
+            4           ENUM                    data type
+                        0x1400  i=1             BYTE 
+                        0x1401  i=1             UNSIGNED_BYTE
+                        0x1402  i=2             SHORT       
+                        0x1403  i=2             UNSIGNED_SHORT
+                        0x1404  i=4             INT  
+                        0x1405  i=4             UNSIGNED_INT
+                        0x1406  i=4             FLOAT
+                        0x140A  i=8             DOUBLE_EXT
+            4           INT32                   j (number of values in array element)
+            4           ENUM                    array type
+                        0x8074  j=2/3/4         VERTEX_ARRAY_EXT               
+                        0x8075  j=3             NORMAL_ARRAY_EXT               
+                        0x8076  j=3/4           COLOR_ARRAY_EXT                
+                        0x8077  j=1             INDEX_ARRAY_EXT                
+                        0x8078  j=1/2/3/4       TEXTURE_COORD_ARRAY_EXT        
+                        0x8079  j=1             EDGE_FLAG_ARRAY_EXT 
+
+            For each array, the size of an array element is i*j. Some arrays
+            (e.g., the texture coordinate array) support different data sizes;
+            for these arrays, the size, j, is specified when the array is defined.
+ 
+        VERTEX_DATA
+            if the normal array is enabled:
+
+            ns          LISTofBYTE              normal array element
+            np                                  unused, np=pad(ns)
+
+            if the color array is enabled:
+
+            cs          LISTofBYTE              color array element
+            cp                                  unused, cp=pad(cs)
+
+            if the index array is enabled:
+
+            is          LISTofBYTE              index array element
+            ip                                  unused, ip=pad(is)
+
+            if the texture coord array is enabled:
+
+            ts          LISTofBYTE              texture coord array element
+            tp                                  unused, tp=pad(ts)
+
+            if the edge flag array is enabled:
+
+            es          LISTofBYTE              edge flag array element
+            ep                                  unused, ep=pad(es)
+
+            if the vertex array is enabled:
+
+            vs          LISTofBYTE              vertex array element
+            vp                                  unused, vp=pad(vs)
+
+            where ns, cs, is, ts, es, vs is the size of the normal, color, index, 
+            texture, edge and vertex array elements and np, cp, ip, tp, ep, vp is 
+            the padding for the normal, color, index, texture, edge and vertex array 
+            elements, respectively.
+
+Errors
+
+    INVALID_OPERATION is generated if DrawArraysEXT is called between the
+    execution of Begin and the corresponding execution of End.
+
+    INVALID_ENUM is generated if DrawArraysEXT parameter <mode> is not
+    POINTS, LINE_STRIP, LINE_LOOP, LINES, TRIANGLE_STRIP, TRIANGLE_FAN,
+    TRIANGLES, QUAD_STRIP, QUADS, or POLYGON.
+
+    INVALID_VALUE is generated if DrawArraysEXT parameter <count> is
+    negative.
+
+    INVALID_VALUE is generated if VertexPointerEXT parameter <size> is not
+    2, 3, or 4.
+
+    INVALID_ENUM is generated if VertexPointerEXT parameter <type> is not
+    SHORT, INT, FLOAT, or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if VertexPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_ENUM is generated if NormalPointerEXT parameter <type> is not
+    BYTE, SHORT, INT, FLOAT, or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if NormalPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_VALUE is generated if ColorPointerEXT parameter <size> is not
+    3 or 4.
+
+    INVALID_ENUM is generated if ColorPointerEXT parameter <type> is not
+    BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT, FLOAT,
+    or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if ColorPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_ENUM is generated if IndexPointerEXT parameter <type> is not
+    SHORT, INT, FLOAT, or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if IndexPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_VALUE is generated if TexCoordPointerEXT parameter <size> is not
+    1, 2, 3, or 4.
+
+    INVALID_ENUM is generated if TexCoordPointerEXT parameter <type> is not
+    SHORT, INT, FLOAT, or DOUBLE_EXT.
+
+    INVALID_VALUE is generated if TexCoordPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_VALUE is generated if EdgeFlagPointerEXT parameter <stride> or
+    <count> is negative.
+
+    INVALID_ENUM is generated if GetPointervEXT parameter <pname> is not
+    VERTEX_ARRAY_POINTER_EXT, NORMAL_ARRAY_POINTER_EXT,
+    COLOR_ARRAY_POINTER_EXT, INDEX_ARRAY_POINTER_EXT,
+    TEXTURE_COORD_ARRAY_POINTER_EXT, or EDGE_FLAG_ARRAY_POINTER_EXT.
+
+New State
+                                                                Initial
+    Get Value                           Get Command     Type    Value   Attrib
+    ---------                           -----------     ----    ------- ------
+    VERTEX_ARRAY_EXT                    IsEnabled       B       False   client
+    VERTEX_ARRAY_SIZE_EXT               GetIntegerv     Z+      4       client
+    VERTEX_ARRAY_TYPE_EXT               GetIntegerv     Z4      FLOAT   client
+    VERTEX_ARRAY_STRIDE_EXT             GetIntegerv     Z+      0       client
+    VERTEX_ARRAY_COUNT_EXT              GetIntegerv     Z+      0       client
+    VERTEX_ARRAY_POINTER_EXT            GetPointervEXT  Z+      0       client
+    NORMAL_ARRAY_EXT                    IsEnabled       B       False   client
+    NORMAL_ARRAY_TYPE_EXT               GetIntegerv     Z5      FLOAT   client
+    NORMAL_ARRAY_STRIDE_EXT             GetIntegerv     Z+      0       client
+    NORMAL_ARRAY_COUNT_EXT              GetIntegerv     Z+      0       client
+    NORMAL_ARRAY_POINTER_EXT            GetPointervEXT  Z+      0       client
+    COLOR_ARRAY_EXT                     IsEnabled       B       False   client
+    COLOR_ARRAY_SIZE_EXT                GetIntegerv     Z+      4       client
+    COLOR_ARRAY_TYPE_EXT                GetIntegerv     Z8      FLOAT   client
+    COLOR_ARRAY_STRIDE_EXT              GetIntegerv     Z+      0       client
+    COLOR_ARRAY_COUNT_EXT               GetIntegerv     Z+      0       client
+    COLOR_ARRAY_POINTER_EXT             GetPointervEXT  Z+      0       client
+    INDEX_ARRAY_EXT                     IsEnabled       B       False   client
+    INDEX_ARRAY_TYPE_EXT                GetIntegerv     Z4      FLOAT   client
+    INDEX_ARRAY_STRIDE_EXT              GetIntegerv     Z+      0       client
+    INDEX_ARRAY_COUNT_EXT               GetIntegerv     Z+      0       client
+    INDEX_ARRAY_POINTER_EXT             GetPointervEXT  Z+      0       client
+    TEXTURE_COORD_ARRAY_EXT             IsEnabled       B       False   client
+    TEXTURE_COORD_ARRAY_SIZE_EXT        GetIntegerv     Z+      4       client
+    TEXTURE_COORD_ARRAY_TYPE_EXT        GetIntegerv     Z4      FLOAT   client
+    TEXTURE_COORD_ARRAY_STRIDE_EXT      GetIntegerv     Z+      0       client
+    TEXTURE_COORD_ARRAY_COUNT_EXT       GetIntegerv     Z+      0       client
+    TEXTURE_COORD_ARRAY_POINTER_EXT     GetPointervEXT  Z+      0       client
+    EDGE_FLAG_ARRAY_EXT                 IsEnabled       B       False   client
+    EDGE_FLAG_ARRAY_STRIDE_EXT          GetIntegerv     Z+      0       client
+    EDGE_FLAG_ARRAY_COUNT_EXT           GetIntegerv     Z+      0       client
+    EDGE_FLAG_ARRAY_POINTER_EXT         GetPointervEXT  Z+      0       client
+
+New Implementation Dependent State
+
+    None

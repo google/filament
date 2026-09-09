@@ -25,12 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/RenderPipelineGL.h"
+#include "src/dawn/native/opengl/RenderPipelineGL.h"
 
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/native/opengl/Forward.h"
-#include "dawn/native/opengl/PersistentPipelineStateGL.h"
-#include "dawn/native/opengl/UtilsGL.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/native/opengl/Forward.h"
+#include "src/dawn/native/opengl/ImmediatesLayoutGL.h"
+#include "src/dawn/native/opengl/PersistentPipelineStateGL.h"
+#include "src/dawn/native/opengl/UtilsGL.h"
 
 namespace dawn::native::opengl {
 
@@ -223,16 +224,16 @@ RenderPipeline::RenderPipeline(Device* device,
 
 MaybeError RenderPipeline::InitializeImpl() {
     if (UsesVertexIndex()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, firstVertex), kImmediateConstantElementByteSize);
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, firstVertex),
+                                                kImmediateElementByteSize);
     }
     if (UsesInstanceIndex()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, firstInstance), kImmediateConstantElementByteSize);
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, firstInstance),
+                                                kImmediateElementByteSize);
     }
     if (UsesFragDepth()) {
-        mImmediateMask |= GetImmediateConstantBlockBits(
-            offsetof(RenderImmediateConstants, clampFragDepth), sizeof(ClampFragDepthArgs));
+        mImmediateMask |= GetImmediateBlockBits(offsetof(RenderImmediates, clampFragDepth),
+                                                sizeof(ClampFragDepthArgs));
     }
     return ToBackend(GetDevice())
         ->EnqueueGL([self = Ref<RenderPipeline>(this)](const OpenGLFunctions& gl) -> MaybeError {
@@ -339,7 +340,7 @@ MaybeError RenderPipeline::ApplyNow(const OpenGLFunctions& gl,
 
     if (IsDepthBiasEnabled()) {
         DAWN_GL_TRY(gl, Enable(GL_POLYGON_OFFSET_FILL));
-        float depthBias = GetDepthBias();
+        float depthBias = static_cast<float>(GetDepthBias());
         if (GetDevice()->IsToggleEnabled(Toggle::GLDepthBiasModifier)) {
             // There is an ambiguity in the GL and Vulkan specs with respect to
             // depthBias: If a depth value lies between 2^n and 2^(n+1), is the

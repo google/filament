@@ -1,0 +1,427 @@
+Name
+
+    NV_vertex_buffer_unified_memory
+
+Name Strings
+
+    GL_NV_vertex_buffer_unified_memory
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Mark Kilgard, NVIDIA
+    Jason Sams, NVIDIA
+    Eric Werness, NVIDIA
+    Christoph Kubisch, NVIDIA
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: July 8, 2015
+    Author Revision: 4
+
+Number
+
+    380
+
+Dependencies
+
+    Written based on the wording of the OpenGL 3.0 specification.
+
+    This extension interacts with NV_shader_buffer_load. 
+
+    This extension interacts with EXT_direct_state_access. 
+
+    This extension interacts with ARB_compatibility.
+    
+    This extension interacts with OpenGL 3.2
+
+Overview
+
+    This extension provides a mechanism to specify vertex attrib and
+    element array locations using GPU addresses.
+
+    Binding vertex buffers is one of the most frequent and expensive
+    operations in many GL applications, due to the cost of chasing 
+    pointers and binding objects described in the Overview of 
+    NV_shader_buffer_load. The intent of this extension is to enable a 
+    way for the application to specify vertex attrib state that alleviates
+    the overhead of object binds and driver memory management.
+
+New Procedures and Functions
+
+    void BufferAddressRangeNV(enum pname, uint index, uint64EXT address,
+                              sizeiptr length);
+
+    void VertexFormatNV(int size, enum type, sizei stride);
+    void NormalFormatNV(enum type, sizei stride);
+    void ColorFormatNV(int size, enum type, sizei stride);
+    void IndexFormatNV(enum type, sizei stride);
+    void TexCoordFormatNV(int size, enum type, sizei stride);
+    void EdgeFlagFormatNV(sizei stride);
+    void SecondaryColorFormatNV(int size, enum type, sizei stride);
+    void FogCoordFormatNV(enum type, sizei stride);
+    void VertexAttribFormatNV(uint index, int size, enum type,
+                              boolean normalized, sizei stride);
+    void VertexAttribIFormatNV(uint index, int size, enum type,
+                               sizei stride);
+
+    void GetIntegerui64i_vNV(enum value, uint index, uint64EXT result[]);
+
+New Tokens
+
+    Accepted by the <cap> parameter of DisableClientState, 
+    EnableClientState, IsEnabled:
+
+        VERTEX_ATTRIB_ARRAY_UNIFIED_NV                 0x8F1E
+        ELEMENT_ARRAY_UNIFIED_NV                       0x8F1F
+
+    Accepted by the <pname> parameter of BufferAddressRangeNV 
+    and the <value> parameter of GetIntegerui64i_vNV: 
+
+        VERTEX_ATTRIB_ARRAY_ADDRESS_NV                 0x8F20
+        TEXTURE_COORD_ARRAY_ADDRESS_NV                 0x8F25
+
+    Accepted by the <pname> parameter of BufferAddressRangeNV 
+    and the <value> parameter of GetIntegerui64vNV: 
+
+        VERTEX_ARRAY_ADDRESS_NV                        0x8F21
+        NORMAL_ARRAY_ADDRESS_NV                        0x8F22
+        COLOR_ARRAY_ADDRESS_NV                         0x8F23
+        INDEX_ARRAY_ADDRESS_NV                         0x8F24
+        EDGE_FLAG_ARRAY_ADDRESS_NV                     0x8F26
+        SECONDARY_COLOR_ARRAY_ADDRESS_NV               0x8F27
+        FOG_COORD_ARRAY_ADDRESS_NV                     0x8F28
+        ELEMENT_ARRAY_ADDRESS_NV                       0x8F29
+
+    Accepted by the <target> parameter of GetIntegeri_vNV or
+    GetIntegerui64i_vNV:
+
+        VERTEX_ATTRIB_ARRAY_LENGTH_NV                  0x8F2A
+        TEXTURE_COORD_ARRAY_LENGTH_NV                  0x8F2F
+
+    Accepted by the <value> parameter of GetIntegerv or
+    GetIntegerui64vNV:
+
+        VERTEX_ARRAY_LENGTH_NV                         0x8F2B
+        NORMAL_ARRAY_LENGTH_NV                         0x8F2C
+        COLOR_ARRAY_LENGTH_NV                          0x8F2D
+        INDEX_ARRAY_LENGTH_NV                          0x8F2E
+        EDGE_FLAG_ARRAY_LENGTH_NV                      0x8F30
+        SECONDARY_COLOR_ARRAY_LENGTH_NV                0x8F31
+        FOG_COORD_ARRAY_LENGTH_NV                      0x8F32
+        ELEMENT_ARRAY_LENGTH_NV                        0x8F33
+
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+    Add to Section 2.9 (end of p. 29)
+
+    The commands:
+
+        void VertexFormatNV(int size, enum type, sizei stride);
+        void NormalFormatNV(enum type, sizei stride);
+        void ColorFormatNV(int size, enum type, sizei stride);
+        void IndexFormatNV(enum type, sizei stride);
+        void TexCoordFormatNV(int size, enum type, sizei stride);
+        void EdgeFlagFormatNV(sizei stride);
+        void SecondaryColorFormatNV(int size, enum type, sizei stride);
+        void FogCoordFormatNV(enum type, sizei stride);
+        void VertexAttribFormatNV(uint index, int size, enum type, boolean normalized, sizei stride);
+        void VertexAttribIFormatNV(uint index, int size, enum type, sizei stride);
+
+    set the same vertex array format state as the corresponding command 
+    where "Format" is changed to "Pointer" (and extension suffixes are 
+    dropped or updated appropriately). They do not inspect the current
+    ARRAY_BUFFER binding for any error checks, nor do they modify the 
+    pointer state or vertex attribute buffer bindings. The parameters are
+    interpreted as they are in the corresponding functions. 
+
+    Add to Section 2.9.1 (p. 46)
+
+    While VERTEX_ATTRIB_ARRAY_UNIFIED_NV is enabled, the rendering 
+    commands ArrayElement, DrawArrays, DrawElements, DrawRangeElements, 
+    MultiDrawArrays, DrawArraysInstanced, and DrawElementsInstanced 
+    operate as previously defined, except that data for enabled vertex and
+    attrib arrays are sourced from GPU addresses specified by the command:
+
+        void BufferAddressRangeNV(enum pname, uint index, uint64EXT address,
+                                   sizeiptr length);
+
+    where <pname> is VERTEX_ARRAY_ADDRESS_NV, NORMAL_ARRAY_ADDRESS_NV, 
+    COLOR_ARRAY_ADDRESS_NV, INDEX_ARRAY_ADDRESS_NV, 
+    EDGE_FLAG_ARRAY_ADDRESS_NV, SECONDARY_COLOR_ARRAY_ADDRESS_NV, 
+    or FOG_COORD_ARRAY_ADDRESS_NV and <index> is ignored, or <pname> is 
+    TEXTURE_COORD_ARRAY_ADDRESS_NV and <index> is the texture unit, 
+    or <pname> is VERTEX_ATTRIB_ARRAY_ADDRESS_NV and <index> identifies 
+    the generic vertex attribute whose address is being specified. 
+    <address> specifies the GPU address from which arrays will be sourced,
+    and addresses beyond and including (<address> + <length>) will return 
+    undefined values. If the address range of an enabled vertex attrib 
+    does not belong to a buffer object that is resident at the time of 
+    the Draw, undefined results, possibly including program termination, 
+    may occur.
+
+    It is not possible to mix vertex or attrib arrays sourced from GPU 
+    addresses with either vertex or attrib arrays in client memory or
+    specified with classic VBO bindings.
+
+    Add to Section 2.9.2 (p. 47)
+
+    While ELEMENT_ARRAY_UNIFIED_NV is enabled, DrawElements, 
+    DrawElementsRange, MultiDrawElements, and DrawElementsInstanced source
+    their indices from the address specified by the command 
+    BufferAddressRange where <pname> is ELEMENT_ARRAY_ADDRESS_NV and 
+    <index> is zero, added to the <indices> parameter. If a Draw command 
+    sources indices beyond and including (<address> + <length>), the index
+    values will be undefined. If the element array address range does not 
+    belong to a buffer object that is resident at the time of the Draw, 
+    undefined results, possibly including program termination, may occur.
+
+    Modify the language of NV_shader_buffer_load, replacing 
+    "made (in)accessible to the GL via shader buffer loads" with "made
+    (in)accessible to the GL via shader buffer loads or via vertex attrib
+    and/or element array reads".
+
+Additions to Chapter 5 of the OpenGL 3.0 Specification (Special Functions)
+
+    Add to Section 5.4, p. 310 (Display Lists)
+
+    Add to the list of excluded Vertex Array commands: 
+    BufferAddressRangeNV, and all VertexFormat* entry points added by 
+    this extension.
+
+Additions to Chapter 6 of the OpenGL 3.0 Specification (State and State Requests)
+
+    Add to Section 6.1.11, p. 314 (Pointer, String, and 64-bit Queries)
+
+    Indexed 64-bit state variables are queried with the command:
+
+        void GetIntegerui64i_vNV(enum value, uint index, uint64EXT *data);
+
+    Legal values of <value> are only those that specify 
+    GetIntegerui64i_vNV in the state tables in Chapter 6.
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    The error INVALID_VALUE is generated by BufferAddressRange if <length>
+    is negative.
+
+    The error INVALID_VALUE is generated by BufferAddressRange if <pname>
+    is VERTEX_ATTRIB_ARRAY_ADDRESS_NV and <index> is greater than the
+    supported number of numbered vertex attribs, or if <pname> is
+    TEXTURE_COORD_ARRAY_ADDRESS_NV and <index> is greater than
+    MAX_TEXTURE_COORDS.
+
+New State
+
+    Update Table 6.9, p. 347 (Vertex Array Object State)
+
+    Get Value                            Type    Get Command     Initial Value   Sec     Attribute
+    ---------                            ----    -----------     -------------   ---     ---------
+    VERTEX_ATTRIB_ARRAY_UNIFIED_NV        B      IsEnabled           FALSE       2.9     none
+    ELEMENT_ARRAY_UNIFIED_NV              B      IsEnabled           FALSE       2.9     none
+    VERTEX_ATTRIB_ARRAY_ADDRESS_NV     16*Z64+   GetIntegerui64i_vNV   0         2.9     none
+    VERTEX_ATTRIB_ARRAY_LENGTH_NV      16*Z64+   GetIntegeri_v         0         2.9     none
+    VERTEX_ARRAY_ADDRESS_NV              Z64+    GetIntegerui64vNV     0         2.9     none
+    VERTEX_ARRAY_LENGTH_NV               Z64+    GetIntegerv           0         2.9     none
+    NORMAL_ARRAY_ADDRESS_NV              Z64+    GetIntegerui64vNV     0         2.9     none
+    NORMAL_ARRAY_LENGTH_NV               Z64+    GetIntegerv           0         2.9     none
+    COLOR_ARRAY_ADDRESS_NV               Z64+    GetIntegerui64vNV     0         2.9     none
+    COLOR_ARRAY_LENGTH_NV                Z64+    GetIntegerv           0         2.9     none
+    INDEX_ARRAY_ADDRESS_NV               Z64+    GetIntegerui64vNV     0         2.9     none
+    INDEX_ARRAY_LENGTH_NV                Z64+    GetIntegerv           0         2.9     none
+    TEXTURE_COORD_ARRAY_ADDRESS_NV      8*Z64+   GetIntegerui64i_vNV   0         2.9     none
+    TEXTURE_COORD_ARRAY_LENGTH_NV       8*Z64+   GetIntegeri_v         0         2.9     none
+    EDGE_FLAG_ARRAY_ADDRESS_NV           Z64+    GetIntegerui64vNV     0         2.9     none
+    EDGE_FLAG_ARRAY_LENGTH_NV            Z64+    GetIntegerv           0         2.9     none
+    SECONDARY_COLOR_ARRAY_ADDRESS_NV     Z64+    GetIntegerui64vNV     0         2.9     none
+    SECONDARY_COLOR_ARRAY_LENGTH_NV      Z64+    GetIntegerv           0         2.9     none
+    FOG_COORD_ARRAY_ADDRESS_NV           Z64+    GetIntegerui64vNV     0         2.9     none
+    FOG_COORD_ARRAY_LENGTH_NV            Z64+    GetIntegerv           0         2.9     none
+    ELEMENT_ARRAY_ADDRESS_NV             Z64+    GetIntegerui64vNV     0         2.9     none
+    ELEMENT_ARRAY_LENGTH_NV              Z64+    GetIntegerv           0         2.9     none
+
+Interactions with OpenGL 3.2
+
+    If the context version is greater or equal version 3.2, querying 
+    all *_LENGTH_NV values can be done via GetInteger64v
+    as well as GetInteger64i_v.
+    
+Dependencies on NV_shader_buffer_load:
+
+    This extension relies on the mechanisms to get addresses and make
+    buffers resident that NV_shader_buffer_load provides, but does not
+    rely on either the LOAD instruction or the changes to the Shading 
+    Language.
+
+Dependencies on ARB_compatibility
+
+    If the context version is greater than 3.0 and does not include 
+    ARB_compatibility functionality, then EnableClientState and 
+    DisableClientState have been deprecated and removed. This extension
+    adds back those commands, but only requires that they accept the
+    VERTEX_ATTRIB_ARRAY_UNIFIED_NV and ELEMENT_ARRAY_UNIFIED_NV tokens.
+
+Examples
+
+    Creating several interleaved vertex buffers of the same format and 
+    switching between them efficiently.
+
+        GenBuffers(N, vbos);
+
+        // initialize buffers
+        GLuint64EXT gpuAddrs[N];
+        for (i = 0; i < N; ++i) {
+            BindBuffer(target, vbos[i]);
+            BufferData(target, vboSizes[i], vboData[i], STATIC_DRAW);
+
+            // get the address of this buffer and make it resident.
+            GetBufferParameterui64vNV(target, BUFFER_GPU_ADDRESS_NV, &gpuAddrs[i]); 
+            MakeBufferResidentNV(target, READ_ONLY);
+        }
+
+        // setup format - 4-ubyte color, 4-float position
+        EnableClientState(COLOR_ARRAY);
+        EnableClientState(VERTEX_ARRAY);
+        ColorFormatNV(4, UNSIGNED_BYTE, 20);
+        VertexFormatNV(4, FLOAT, 20);
+        // enable vertex address use
+        EnableClientState(VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
+
+        for (i = 0; i < N; ++i) {
+            // point at buffer i
+            BufferAddressRangeNV(COLOR_ARRAY_ADDRESS_NV, 0, gpuAddrs[i], vboSizes[i]);
+            BufferAddressRangeNV(VERTEX_ARRAY_ADDRESS_NV, 0, gpuAddrs[i]+4, vboSizes[i]-4);
+
+            DrawArrays(POINTS, 0, vboSizes[i]/20);
+        }
+
+
+Issues
+
+    1) Should any of the new commands be compiled into display lists?
+
+    RESOLVED: NO. It should be straightforward to allow any of the vertex
+    format commands or BufferAddressRangeNV to be compiled, but as long 
+    as DrawElements/DrawArrays are not compiled it's not clear that it's 
+    useful. It's easier to relax the restriction later than to add a new
+    restriction later if deemed necessary, so they are not compiled.
+
+    2) What should be client state and what should be server state?
+
+    RESOLVED: The new enables should be client state as the client needs
+    to know them to determine whether to read from client vertex arrays.
+    For all the other new state, it's not clear that there's any reason 
+    to make them client state. Vertex and attrib array formats remain 
+    client state.
+
+    3) What about other buffer object uses (PBO, XFB, etc)?
+
+    RESOLVED: Deferred to separate extensions, if deemed necessary.
+
+    4) How should the use of GPU addresses be enabled and how should it
+    interact with classic VBO and client vertex arrays?
+
+    RESOLVED: A single enable for all vertex attribs (both named and 
+    generic), and an enable for element array. This precludes mixing with
+    classic VBO and client vertex arrays, which is not particularly 
+    desirable in the first place. Requiring implementations to mix with 
+    classic VBO may re-introduce a significant amount of the CPU overhead 
+    that this extension is intended to remove.
+
+    These enables are not problematic for middleware because the enables
+    are per-VAO and middleware libraries can/should use their own VAOs if 
+    they need to avoid polluting the application's state.
+
+    5) Should ArrayElement be supported?
+
+    RESOLVED: YES. ArrayElement updates the current vertex state in the 
+    context which is not naturally a "GPU" operation, so this may be 
+    inefficient, but we should support it anyway.
+
+    6) Should there be a separate BindBufferAddressNV and 
+    BindBufferAddressIndexedNV?
+
+    RESOLVED: NO. There's no particularly strong argument in either 
+    direction.
+
+    7) What happens if an invalid address is fetched?
+
+    UNRESOLVED: If <address> and <length> correctly specify a range of a
+    resident buffer object, then the implementation *might* support 
+    replacing reads from beyond <address> + <length> with undefined 
+    results. However, a genuinely invalid address may cause system errors
+    including program termination. A "debug context" could potentially 
+    check on each draw call whether all the address ranges are within
+    a resident buffer object.
+
+    8) Should this be limited to generic vertex attribs?
+
+    RESOLVED: NO. Named attribs are deprecated, and it would make the spec 
+    and implementation shorter. But the interactions are clean and easy 
+    to specify, and many legacy apps use the named attribs. The answer 
+    may have to change to "yes" if this extension is ever promoted.
+
+    9) Should the <indices> parameter to DrawElements and friends be used?
+
+    RESOLVED: YES. This is required for MultiDrawElements to be useful
+    and hence to provide an easy porting path for existing applications.
+    This is unfortunately inconsistent with ignoring the vertex attrib 
+    pointer state, but the vertex attrib pointers are "latched" state and
+    <indices> is "immediate" state so they're already semantically 
+    different.
+
+    10) Are there alignment requirements on vertex attrib and element 
+    array addresses?
+
+    RESOLVED: No more so than with existing VBO functionality. The spec has
+    the following vague language about using VBOs:
+
+    "Clients must align data elements consistent with the requirements 
+    of the client platform, with an additional base-level requirement 
+    that an offset within a buffer to a datum comprising N basic machine 
+    units be a multiple of N."
+
+    However, the consequences of ignoring this advice aren't specified.
+    Since this extension still uses buffer objects, presumably it should
+    inherit the same restrictions. However, if we split out the Format API
+    from the Address API, then it becomes impossible to do an error check 
+    to enforce this. But, our implementation has never had such an error
+    check in the first place...
+
+    Follow the quoted advice from the core spec, and this extension adds 
+    no new error checks to enforce it. The GL should ensure that the base
+    address of a buffer is at least 16-byte aligned (see issue 16 of
+    NV_shader_buffer_load).
+
+    11) Does MAX_SHADER_BUFFER_ADDRESS_NV imply any restriction on vertex
+    attrib or element array addresses?
+
+    RESOLVED: No, it is only a restriction on shader loads. The entire
+    address space is available for vertex/element fetches.
+
+    12) How does the new vertex state interact with 
+    EXT_direct_state_access's ClientAttribDefaultEXT?
+
+    RESOLVED: All the new state is reset to the initial values.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     1              jbolz     Internal revisions.
+     2    06/30/09  jbolz     Defined interaction with deprecated 
+                              client state commands.
+     3    09/09/09  mjk       Assigned number + fixed typos
+     4    07/08/15  ckubisch  64-bit Gets for *_LENGTH_NV, interaction with 3.2

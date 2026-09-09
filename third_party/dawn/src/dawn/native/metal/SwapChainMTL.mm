@@ -25,14 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/SwapChainMTL.h"
+#include "src/dawn/native/metal/SwapChainMTL.h"
 
 #import <QuartzCore/CAMetalLayer.h>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Surface.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Surface.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/QueueMTL.h"
+#include "src/dawn/native/metal/TextureMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
 
 namespace dawn::native::metal {
 
@@ -91,7 +93,11 @@ MaybeError SwapChain::Initialize(SwapChainBase* previousSwapChain) {
 
 MaybeError SwapChain::PresentImpl() {
     DAWN_ASSERT(mCurrentDrawable != nullptr);
-    [*mCurrentDrawable present];
+
+    Queue* queue = ToBackend(GetDevice()->GetQueue());
+    CommandRecordingContext* commandContext = queue->GetPendingCommandContext();
+    [commandContext->GetCommands() presentDrawable:*mCurrentDrawable];
+    DAWN_TRY(queue->SubmitPendingCommandBuffer());
 
     mTexture->APIDestroy();
     mTexture = nullptr;
@@ -105,6 +111,13 @@ ResultOrError<SwapChainTextureInfo> SwapChain::GetCurrentTextureImpl() {
     @autoreleasepool {
         DAWN_ASSERT(mCurrentDrawable == nullptr);
         mCurrentDrawable = [*mLayer nextDrawable];
+
+        if (mCurrentDrawable == nullptr) {
+            SwapChainTextureInfo info;
+            info.texture = nullptr;
+            info.status = wgpu::SurfaceGetCurrentTextureStatus::Timeout;
+            return info;
+        }
 
         TextureDescriptor textureDesc = GetSwapChainBaseTextureDescriptor(this);
 

@@ -28,11 +28,11 @@
 #include <memory>
 #include <vector>
 
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/BinarySemaphore.h"
 #include "gmock/gmock.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/BinarySemaphore.h"
 
 namespace dawn {
 namespace {
@@ -41,7 +41,6 @@ using testing::_;
 using testing::EmptySizedString;
 using testing::HasSubstr;
 using testing::MockCppCallback;
-using testing::NonEmptySizedString;
 using testing::SizedStringMatches;
 using utils::BinarySemaphore;
 

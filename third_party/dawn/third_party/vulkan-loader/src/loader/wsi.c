@@ -311,6 +311,22 @@ VKAPI_ATTR void VKAPI_CALL terminator_DestroySurfaceKHR(VkInstance instance, VkS
 
     VkIcdSurface *icd_surface = (VkIcdSurface *)(uintptr_t)(surface);
     if (NULL != icd_surface) {
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+        if (icd_surface->base.platform == VK_ICD_WSI_PLATFORM_ANDROID) {
+            // Android surfaces are not loader-created VkIcdSurface objects: they are a smaller VkIcdSurfaceAndroid with no
+            // surface_index or create_info, so reading those fields would run past the allocation. Just free the handle,
+            // matching the early-out in wsi_unwrap_icd_surface.
+            loader_instance_heap_free(loader_inst, (void *)(uintptr_t)surface);
+            return;
+        }
+#endif  // VK_USE_PLATFORM_ANDROID_KHR
+#if defined(VK_USE_PLATFORM_MACOS_MVK)
+        if (icd_surface->base.platform == VK_ICD_WSI_PLATFORM_IOS) {
+            // Same as Android: an iOS surface is a smaller VkIcdSurfaceIOS without a surface_index or create_info.
+            loader_instance_heap_free(loader_inst, (void *)(uintptr_t)surface);
+            return;
+        }
+#endif  // VK_USE_PLATFORM_MACOS_MVK
         for (struct loader_icd_term *icd_term = loader_inst->icd_terms; icd_term != NULL; icd_term = icd_term->next) {
             if (icd_term->enabled_instance_extensions.khr_surface &&
                 icd_term->scanned_icd->interface_version >= ICD_VER_SUPPORTS_ICD_SURFACE_KHR &&
@@ -1352,9 +1368,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateAndroidSurfaceKHR(VkInstance ins
                                                                   const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *loader_inst = loader_get_instance(instance);
-    if (!loader_inst->enabled_extensions.khr_display) {
+    if (!loader_inst->enabled_extensions.khr_android_surface) {
         loader_log(loader_inst, VULKAN_LOADER_ERROR_BIT, 0,
-                   "VK_KHR_display extension not enabled. vkCreateAndroidSurfaceKHR not executed!");
+                   "VK_KHR_android_surface extension not enabled. vkCreateAndroidSurfaceKHR not executed!");
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
@@ -1404,7 +1420,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateHeadlessSurfaceEXT(VkInstance in
         loader_log(loader_inst, VULKAN_LOADER_ERROR_BIT, 0,
                    "VK_EXT_headless_surface extension not enabled.  "
                    "vkCreateHeadlessSurfaceEXT not executed!");
-        return VK_SUCCESS;
+        goto out;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -1665,6 +1681,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMetalSurfaceEXT(VkInstance insta
     if (!loader_inst->enabled_extensions.ext_metal_surface) {
         loader_log(loader_inst, VULKAN_LOADER_ERROR_BIT, 0,
                    "VK_EXT_metal_surface extension not enabled. vkCreateMetalSurfaceEXT will not be executed.");
+        result = VK_ERROR_EXTENSION_NOT_PRESENT;
+        goto out;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -2207,12 +2225,6 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateSharedSwapchainsKHR(VkDevice dev
                    "[VUID-vkCreateSharedSwapchainsKHR-device-parameter]");
         abort(); /* Intentionally fail so user can correct issue. */
     }
-    if (NULL != icd_term->surface_list.list) {
-        loader_log(NULL, VULKAN_LOADER_ERROR_BIT, 0,
-                   "vkCreateSharedSwapchainsKHR Terminator: No VkSurfaceKHR objects were created, indicating an application "
-                   "bug. Returning VK_SUCCESS. ");
-        return VK_SUCCESS;
-    }
     if (NULL == dev->loader_dispatch.extension_terminator_dispatch.CreateSharedSwapchainsKHR) {
         loader_log(NULL, VULKAN_LOADER_ERROR_BIT, 0,
                    "vkCreateSharedSwapchainsKHR Terminator: Driver's function pointer was NULL, returning VK_SUCCESS. Was the "
@@ -2378,7 +2390,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceDisplayProperties2KHR
     }
 
     // If we do have to write to pProperties, then we need to write to a temporary array of VkDisplayPropertiesKHR and copy it
-    VkDisplayPropertiesKHR *properties = loader_stack_alloc(*pPropertyCount * sizeof(VkDisplayPropertiesKHR));
+    uint32_t allocated_count = *pPropertyCount;
+    VkDisplayPropertiesKHR *properties = loader_stack_alloc(allocated_count * sizeof(VkDisplayPropertiesKHR));
     if (properties == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -2386,7 +2399,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceDisplayProperties2KHR
     if (res < 0) {
         return res;
     }
-    for (uint32_t i = 0; i < *pPropertyCount; ++i) {
+    // The driver reports the written count back in pPropertyCount; never copy past the array we sized.
+    for (uint32_t i = 0; i < *pPropertyCount && i < allocated_count; ++i) {
         memcpy(&pProperties[i].displayProperties, &properties[i], sizeof(VkDisplayPropertiesKHR));
     }
     return res;
@@ -2433,7 +2447,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceDisplayPlanePropertie
     }
 
     // If we do have to write to pProperties, then we need to write to a temporary array of VkDisplayPlanePropertiesKHR and copy it
-    VkDisplayPlanePropertiesKHR *properties = loader_stack_alloc(*pPropertyCount * sizeof(VkDisplayPlanePropertiesKHR));
+    uint32_t allocated_count = *pPropertyCount;
+    VkDisplayPlanePropertiesKHR *properties = loader_stack_alloc(allocated_count * sizeof(VkDisplayPlanePropertiesKHR));
     if (properties == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -2442,7 +2457,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceDisplayPlanePropertie
     if (res < 0) {
         return res;
     }
-    for (uint32_t i = 0; i < *pPropertyCount; ++i) {
+    // The driver reports the written count back in pPropertyCount; never copy past the array we sized.
+    for (uint32_t i = 0; i < *pPropertyCount && i < allocated_count; ++i) {
         memcpy(&pProperties[i].displayPlaneProperties, &properties[i], sizeof(VkDisplayPlanePropertiesKHR));
     }
     return res;
@@ -2490,7 +2506,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayModeProperties2KHR(VkPhysica
     }
 
     // If we do have to write to pProperties, then we need to write to a temporary array of VkDisplayModePropertiesKHR and copy it
-    VkDisplayModePropertiesKHR *properties = loader_stack_alloc(*pPropertyCount * sizeof(VkDisplayModePropertiesKHR));
+    uint32_t allocated_count = *pPropertyCount;
+    VkDisplayModePropertiesKHR *properties = loader_stack_alloc(allocated_count * sizeof(VkDisplayModePropertiesKHR));
     if (properties == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -2498,7 +2515,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayModeProperties2KHR(VkPhysica
     if (res < 0) {
         return res;
     }
-    for (uint32_t i = 0; i < *pPropertyCount; ++i) {
+    // The driver reports the written count back in pPropertyCount; never copy past the array we sized.
+    for (uint32_t i = 0; i < *pPropertyCount && i < allocated_count; ++i) {
         memcpy(&pProperties[i].displayModeProperties, &properties[i], sizeof(VkDisplayModePropertiesKHR));
     }
     return res;
@@ -2824,14 +2842,16 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormats2KHR(Vk
                                                                          NULL);
         } else {
             // Allocate a temporary array for the output of the old function
-            VkSurfaceFormatKHR *formats = loader_stack_alloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
+            uint32_t allocated_count = *pSurfaceFormatCount;
+            VkSurfaceFormatKHR *formats = loader_stack_alloc(allocated_count * sizeof(VkSurfaceFormatKHR));
             if (formats == NULL) {
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
 
             VkResult res = icd_term->dispatch.GetPhysicalDeviceSurfaceFormatsKHR(phys_dev_term->phys_dev, surface,
                                                                                  pSurfaceFormatCount, formats);
-            for (uint32_t i = 0; i < *pSurfaceFormatCount; ++i) {
+            // The driver reports the written count back in pSurfaceFormatCount; never copy past the array we sized.
+            for (uint32_t i = 0; i < *pSurfaceFormatCount && i < allocated_count; ++i) {
                 pSurfaceFormats[i].surfaceFormat = formats[i];
                 if (pSurfaceFormats[i].pNext != NULL) {
                     loader_log(icd_term->this_instance, VULKAN_LOADER_WARN_BIT, 0,

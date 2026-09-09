@@ -36,6 +36,7 @@
 #include "src/dawn/node/binding/GPUComputePassEncoder.h"
 #include "src/dawn/node/binding/GPUQuerySet.h"
 #include "src/dawn/node/binding/GPURenderPassEncoder.h"
+#include "src/dawn/node/binding/GPUResourceTable.h"
 #include "src/dawn/node/binding/GPUTexture.h"
 
 namespace wgpu::binding {
@@ -55,6 +56,7 @@ interop::Interface<interop::GPURenderPassEncoder> GPUCommandEncoder::beginRender
 
     wgpu::RenderPassDescriptor desc{};
     wgpu::RenderPassMaxDrawCount maxDrawCountDesc{};
+    wgpu::ResourceTable resourceTable;
     desc.nextInChain = &maxDrawCountDesc;
 
     if (!conv(desc.colorAttachments, desc.colorAttachmentCount, descriptor.colorAttachments) ||
@@ -62,12 +64,21 @@ interop::Interface<interop::GPURenderPassEncoder> GPUCommandEncoder::beginRender
         !conv(desc.label, descriptor.label) ||
         !conv(desc.occlusionQuerySet, descriptor.occlusionQuerySet) ||
         !conv(desc.timestampWrites, descriptor.timestampWrites) ||
-        !conv(maxDrawCountDesc.maxDrawCount, descriptor.maxDrawCount)) {
+        !conv(maxDrawCountDesc.maxDrawCount, descriptor.maxDrawCount) ||
+        !conv(resourceTable, descriptor.resourceTable)) {
         return {};
     }
 
+    wgpu::RenderPassEncoder dawnPassEncoder = enc_.BeginRenderPass(&desc);
+
+    // TODO(https://crbug.com/435317394): The extension struct exposed by webgpu.h if/when it is
+    // added instead of wgpu::RenderPassEncoder::SetResourceTable.
+    if (resourceTable) {
+        dawnPassEncoder.SetResourceTable(resourceTable);
+    }
+
     return interop::GPURenderPassEncoder::Create<GPURenderPassEncoder>(env, desc,
-                                                                       enc_.BeginRenderPass(&desc));
+                                                                       std::move(dawnPassEncoder));
 }
 
 interop::Interface<interop::GPUComputePassEncoder> GPUCommandEncoder::beginComputePass(

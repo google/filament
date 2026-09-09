@@ -1,0 +1,1234 @@
+Name
+
+    EXT_transform_feedback
+
+Name Strings
+
+    GL_EXT_transform_feedback
+
+Contributors
+
+    Nick Carter
+    Charlie Lao
+    Jeremy Sandmel
+    Cliff Woolley
+    Alex Eddy
+
+Contact
+
+    Barthold Lichtenbelt (blichtenbelt 'at' nvidia.com)
+    Pat Brown (pbrown 'at' nvidia.com)
+    Eric Werness (ewerness 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         08/09/2013
+    NVIDIA Revision:            8
+
+Number
+
+    352
+
+Dependencies
+
+    The OpenGL Shading Language (GLSL) is required.  OpenGL 2.0 or the
+    ARB_shader_objects extension is required.
+
+    EXT_geometry_shader4 trivially interacts with this extension.
+
+    NV_transform_feedback interacts with this extension.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+Overview
+
+    This extension provides a new mode to the GL, called transform feedback,
+    which records selected vertex attributes for each primitive processed by
+    the GL.  The selected attributes are written into buffer objects, and can
+    be written with each attribute in a separate buffer object or with all
+    attributes interleaved into a single buffer object.  If a geometry shader
+    is active, the primitives recorded are those emitted by the geometry
+    shader.  Otherwise, transform feedback captures primitives whose vertices
+    are transformed by a vertex shader.  In either case, the primitives
+    captured are those generated prior to clipping.  Transform feedback mode
+    captures the values of specified varying variables emitted from GLSL
+    vertex or geometry shaders.
+
+    The vertex data recorded in transform feedback mode is stored into buffer
+    objects as an array of vertex attributes.  The regular representation and
+    the use of buffer objects allows the recorded data to be processed
+    directly by the GL without requiring CPU intervention to copy data.  In
+    particular, transform feedback data can be used for vertex arrays (via
+    vertex buffer objects), as the source for pixel data (via pixel buffer
+    objects), as shader constant data (via the NV_parameter_buffer_object or
+    EXT_bindable_uniform extensions), or via any other extension that makes
+    use of buffer objects.
+
+    This extension introduces new query object support to allow transform
+    feedback mode to operate asynchronously.  Query objects allow applications
+    to determine when transform feedback results are complete, as well as the
+    number of primitives processed and written back to buffer objects while in
+    transform feedback mode.  This extension also provides a new rasterizer
+    discard enable, which allows applications to use transform feedback to
+    capture vertex attributes without rendering anything.
+
+New Procedures and Functions
+
+    void BindBufferRangeEXT(enum target, uint index, uint buffer,
+                           intptr offset, sizeiptr size);
+    void BindBufferOffsetEXT(enum target, uint index, uint buffer,
+                            intptr offset);
+    void BindBufferBaseEXT(enum target, uint index, uint buffer);
+
+    void BeginTransformFeedbackEXT(enum primitiveMode);
+    void EndTransformFeedbackEXT(void);
+
+    void TransformFeedbackVaryingsEXT(uint program, sizei count,
+                                      const char * const *varyings, 
+                                      enum bufferMode);
+    void GetTransformFeedbackVaryingEXT(uint program, uint index,
+                                        sizei bufSize, sizei *length, 
+                                        sizei *size, enum *type, char *name);
+
+    void GetIntegerIndexedvEXT(enum param, uint index, int *values);
+    void GetBooleanIndexedvEXT(enum param, uint index, boolean *values);
+
+    (Note: These indexed query functions are provided in the EXT_draw_buffers2
+    extension.  The boolean query is not useful for any queryable value in
+    this extension, but is supported for completeness and consistency with
+    base GL typed "Get" functions.)
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData,
+    GetBufferPointerv, BindBufferRangeEXT, BindBufferOffsetEXT and
+    BindBufferBaseEXT:
+
+      TRANSFORM_FEEDBACK_BUFFER_EXT                     0x8C8E
+
+    Accepted by the <param> parameter of GetIntegerIndexedvEXT and
+    GetBooleanIndexedvEXT:
+
+      TRANSFORM_FEEDBACK_BUFFER_START_EXT               0x8C84
+      TRANSFORM_FEEDBACK_BUFFER_SIZE_EXT                0x8C85
+
+    Accepted by the <param> parameter of GetIntegerIndexedvEXT and
+    GetBooleanIndexedvEXT, and by the <pname> parameter of GetBooleanv,
+    GetDoublev, GetIntegerv, and GetFloatv:
+
+      TRANSFORM_FEEDBACK_BUFFER_BINDING_EXT             0x8C8F
+
+    Accepted by the <bufferMode> parameter of TransformFeedbackVaryingsEXT:
+
+      INTERLEAVED_ATTRIBS_EXT                           0x8C8C
+      SEPARATE_ATTRIBS_EXT                              0x8C8D
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery, and
+    GetQueryiv:
+
+      PRIMITIVES_GENERATED_EXT                          0x8C87
+      TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT         0x8C88
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+      RASTERIZER_DISCARD_EXT                            0x8C89
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv,
+    and GetFloatv:
+
+      MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS_EXT 0x8C8A
+      MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT       0x8C8B
+      MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS_EXT    0x8C80
+
+   Accepted by the <pname> parameter of GetProgramiv:
+
+      TRANSFORM_FEEDBACK_VARYINGS_EXT                   0x8C83
+      TRANSFORM_FEEDBACK_BUFFER_MODE_EXT                0x8C7F
+      TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH_EXT         0x8C76
+
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL
+Operation)
+
+    Insert three new sections between Sections 2.11, Coordinate Transforms and
+    2.12, Clipping:
+
+    (Move the "Asynchronous Queries" language out of Section 4.1.7.  This
+    section doesn't really introduce any new functionality, other than
+    alluding to the transform feedback queries introduced below.)
+
+    Section 2.X, Asynchronous Queries
+
+    Asynchronous queries provide a mechanism to return information about the
+    processing of a sequence of GL commands.  There are two query types
+    supported by the GL.  Transform feedback queries (section 2.Y) returns
+    information on the number of vertices and primitives processed by the GL
+    and written to one or more buffer objects.  Occlusion queries (section
+    4.1.7.1) count the number of fragments or samples that pass the depth
+    test.
+
+    The results of asynchronous queries are not returned by the GL immediately
+    after the completion of the last command in the set; subsequent commands
+    can be processed while the query results are not complete.  When
+    available, the query results are stored in an associated query object.
+    The commands described in section 6.1.12 provide mechanisms to determine
+    when query results are available and return the actual results of the
+    query.  The name space for query objects is the unsigned integers, with
+    zero reserved by the GL.
+
+    Each type of query supported by the GL has an active query object name. If
+    the active query object name for a query type is non-zero, the GL is
+    currently tracking the information corresponding to that query type and
+    the query results will be written into the corresponding query object.  If
+    the active query object for a query type name is zero, no such information
+    is being tracked.
+
+    A query object is created by calling
+
+      void BeginQuery(enum target, uint id);
+
+    with an unused name <id>.  <target> indicates the type of query to be
+    performed; valid values of <target> are defined in subsequent
+    sections. When a query object is created, the name <id> is marked as used
+    and associated with a new query object.
+
+    BeginQuery sets the active query object name for the query type given by
+    <target> to <id>.  If BeginQuery is called with an <id> of zero, if the
+    active query object name for <target> is non-zero, or if <id> is the
+    active query object name for any query type, the error INVALID OPERATION
+    is generated.
+
+    The command
+
+      void EndQuery(enum target);
+
+    marks the end of the sequence of commands to be tracked for the query type
+    given by <target>.  The active query object for <target> is updated to
+    indicate that query results are not available, and the active query object
+    name for <target> is reset to zero.  When the commands issued prior to
+    EndQuery have completed and a final query result is available, the query
+    object, active when EndQuery is, called is updated by the GL.  The query
+    object is updated to indicate that the query results are available and to
+    contain the query result.  If the active query object name for <target> is
+    zero when EndQuery is called, the error INVALID_OPERATION is generated.
+
+   The command
+
+      void GenQueries(sizei n, uint *ids);
+
+    returns <n> previously unused query object names in <ids>. These names are
+    marked as used, but no object is associated with them until the first time
+    they are used by BeginQuery.
+
+    Query objects are deleted by calling
+
+      void DeleteQueries(sizei n, const uint *ids);
+
+    <ids> contains <n> names of query objects to be deleted. After a query
+    object is deleted, its name is again unused.  Unused names in <ids> are
+    silently ignored.
+
+    Calling either GenQueries or DeleteQueries while any query of any target
+    is active causes an INVALID_OPERATION error to be generated.
+
+    Query objects contain two pieces of state:  a single bit indicating
+    whether a query result is available, and an integer containing the query
+    result value.  The number of bits used to represent the query result is
+    implementation-dependent.  In the initial state of a query object, the
+    result is available and its value is zero.
+
+    The necessary state for each query type is an unsigned integer holding the
+    active query object name (zero if no query object is active), and any
+    state necessary to keep the current results of an asynchronous query in
+    progress.
+
+    Section 2.Y, Transform Feedback
+
+    In transform feedback mode, attributes of the vertices of transformed
+    primitives processed by a vertex or geometry shader are written out to one
+    or more buffer objects.  The vertices are fed back after vertex color
+    clamping, but before clipping.  If a geometry shader is active, the
+    vertices recorded are those emitted from the geometry shader.  The
+    transformed vertices may be optionally discarded after being stored into
+    one or more buffer objects, or they can be passed on down to the clipping
+    stage for further processing.  The set of attributes captured is
+    determined when a program is linked.
+
+    Transform feedback is started and finished by calling
+
+      void BeginTransformFeedbackEXT(enum primitiveMode)
+
+    and
+
+      void EndTransformFeedbackEXT(void),
+
+    respectively. Transform feedback is said to be active after a call to
+    BeginTransformFeedbackEXT and inactive after a call to
+    EndTransformFeedbackEXT.  <primitiveMode> is one of TRIANGLES, LINES, or
+    POINTS, and specifies the output type of primitives that will be recorded
+    into the buffer objects bound for transform feedback (see
+    below). <primitiveMode> places a restriction on the primitive types that
+    may be rendered while transform feedback is active -- see table X.1.
+
+      Transform Feedback
+      primitiveMode               allowed render primitive modes
+      ----------------------      ---------------------------------
+      POINTS                      POINTS
+      LINES                       LINES, LINE_LOOP, and LINE_STRIP
+      TRIANGLES                   TRIANGLES, TRIANGLE_STRIP,
+                                  TRIANGLE_FAN, QUADS, QUAD_STRIP,
+                                  and POLYGON
+
+    Table X.1 Legal combinations between the transform feedback primitive
+    mode, as passed to BeginTransformFeedbackEXT and the current primitive
+    mode.
+
+    Transform feedback commands must be paired; the error INVALID_OPERATION is
+    generated by BeginTransformFeedbackEXT if transform feedback is active,
+    and by EndTransformFeedbackEXT if transform feedback is inactive.
+
+    Transform feedback mode captures the values of varying variables written
+    by an active vertex or geometry shader.  The error INVALID_OPERATION is
+    generated by BeginTransformFeedbackEXT if no vertex or geometry shader is
+    not active.
+
+    When transform feedback is active, all geometric primitives generated must
+    be compatible with the value of <primitiveMode> passed to
+    BeginTransformFeedbackEXT.  The error INVALID_OPERATION is generated by
+    Begin or any operation that implicitly calls Begin (such as DrawElements)
+    if <mode> is not one of the allowed modes in Table X.1.  If a geometry
+    shader is active, its output primtive type is used instead of the <mode>
+    parameter passed to Begin for the purposes of this error check.
+
+    Buffer objects are made to be targets of transform feedback by calling one
+    of the commands
+
+      void BindBufferRangeEXT(enum target, uint index, uint buffer,
+                              intptr offset, sizeiptr size)
+      void BindBufferOffsetEXT(enum target, uint index, uint buffer,
+                               intptr offset)
+      void BindBufferBaseEXT(enum target, uint index, uint buffer)
+
+    with <target> set to TRANSFORM_FEEDBACK_BUFFER_EXT.  There is an array of
+    buffer object binding points that are used while transform feedback is
+    active, plus a single general binding point that can be used by other
+    buffer object manipulation functions (e.g., BindBuffer, MapBuffer).  All
+    three commands bind the buffer object named by <buffer> to the general
+    binding point, and additionally bind the buffer object to the binding
+    point in the array given by <index>.  The error INVALID_VALUE is generated
+    if <index> is greater than or equal to the value of
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    For BindBufferRangeEXT, <offset> specifies a starting offset into the
+    buffer object <buffer> and <size> specifies the amount of data that can be
+    written to the buffer object while transform feedback mode is active.
+    Both <offset> and <size> are in basic machine units.  The error
+    INVALID_VALUE is generated if the value of <size> is less than or equal to
+    zero, or if either <offset> or <size> are not word-aligned.  Calling
+    BindBufferOffsetEXT is equivalent of calling BindBufferRangeEXT with
+    <size> = sizeof(buffer) - <offset>, and rounding <size> down so that it is
+    word-aligned. BindBufferBaseEXT is equivalent to calling
+    BindBufferOffsetEXT with an <offset> of 0.
+
+    When an individual point, line, or triangle primitive reaches the
+    transform feedback stage while transform feedback is active, the values of
+    the specified varying variables of the vertex are appended to the buffer
+    objects bound to the transform feedback binding points.  The attributes of
+    the first vertex received after BeginTransformFeedbackEXT are written at
+    the starting offsets of the bound buffer objects set by
+    BindBufferRangeEXT, and subsequent vertex attributes are appended to the
+    buffer object.  When capturing line and triangle primitives, all
+    attributes of the first vertex are written first, followed by attributes
+    of the subsequent vertices.  When writing varying variables that are
+    arrays, individual array elements are written in order.  For
+    multi-component varying variables or varying array elements, the
+    individual components are written in order.  The value for any attribute
+    specified to be streamed to a buffer object but not actually written by a
+    vertex or geometry shader is undefined.
+
+    When quads and polygons are provided to transform feedback with a
+    primitive mode of TRIANGLES, they will be tessellated and recorded as
+    triangles (the order of tessellation within a primitive is undefined).
+    Individual lines or triangles of a strip or fan primitive will be
+    extracted and recorded separately. Incomplete primitives are not recorded.
+
+    Transform feedback can operate in either INTERLEAVED_ATTRIBS_EXT or
+    SEPARATE_ATTRIBS_EXT mode.  In INTERLEAVED_ATTRIBS_EXT mode, the values of
+    one or more varyings are written, interleaved, into the buffer object
+    bound to the first transform feedback binding point (index = 0).  If more
+    than one varying variable is written, they will be recorded in the order
+    specified by TransformFeedbackVaryingsEXT (section 2.15.3).  In
+    SEPARATE_ATTRIBS_EXT mode, the first varying variable specified by
+    TransformFeedbackVaryingsEXT is written to the first transform feedback
+    binding point; subsequent varying variables are written to the subsequent
+    transform feedback binding points.  The total number of variables that may
+    be captured in separate mode is given by
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    If recording the vertices of a primitive to the buffer objects being used
+    for transform feedback purposes would result in either exceeding the
+    limits of any buffer object's size, or in exceeding the end position
+    <offset> + <size> - 1, as set by BindBufferRangeEXT, then no vertices of
+    that primitive are recorded in any buffer object, and the counter
+    corresponding to the asynchronous query target
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT (see Section 2.Z) is not
+    incremented.
+
+    In either separate or interleaved modes, all transform feedback binding
+    points that will be written to must have buffer objects bound when
+    BeginTransformFeedbackEXT is called.  The error INVALID_OPERATION is
+    generated by BeginTransformFeedbackEXT if any binding point used in
+    transform feedback mode does not have a buffer object bound.  In
+    interleaved mode, only the first buffer object binding point is ever
+    written to.  The error INVALID_OPERATION is also generated by
+    BeginTransformFeedbackEXT if no binding points would be used, either
+    because no program object is active or because the active program object
+    has specified no varying variables to record.
+
+    While transform feedback is active, the set of attached buffer objects and
+    the set of varying variables captured may not be changed.  If transform
+    feedback is active, the error INVALID_OPERATION is generated by
+    UseProgram, by LinkProgram if <program> is the currently active program
+    object, and by BindBufferRangeEXT, BindBufferOffsetEXT, or
+    BindBufferBaseEXT if <target> is TRANSFORM_FEEDBACK_BUFFER_EXT.
+
+
+    Section 2.Z, Primitive Queries
+ 
+    Primitive queries use query objects to track the number of primitives
+    generated by the GL and to track the number of primitives written to
+    transform feedback buffers.
+
+    When BeginQuery is called with a <target> of PRIMITIVES_GENERATED_EXT, the
+    primitives-generated count maintained by the GL is set to zero. When the
+    generated primitive query is active, the primitives-generated count is
+    incremented every time a primitive reaches the Discarding Rasterization
+    stage (see Section 3.x) right before rasterization. This counter counts
+    the number of primitives emitted by a geometry shader, if active, possibly
+    further tessellated into separate primitives during the transform-feedback
+    stage, if active.
+
+    When BeginQuery is called with a <target> of
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT, the transform-feedback-
+    primitives-written count maintained by the GL is set to zero. When the
+    transform feedback primitive written query is active, the
+    transform-feedback-primitives-written count is incremented every time a
+    primitive is recorded into a buffer object. If transform feedback is not
+    active, this counter is not incremented. If the primitive does not fit in
+    the buffer object, the counter is not incremented.
+
+    These two queries can be used together to determine if all primitives have
+    been written to the bound feedback buffers; if both queries are run
+    simultaneously and the query results are equal, all primitives have been
+    written to the buffer(s). If the number of primitives written is less than
+    the number of primitives generated, the buffer is full.
+
+
+    Modify Section 2.15.3 "Shader Variables", p. 75.
+
+    Change the second sentence in the first paragraph on p. 84 as follows:
+
+    . . . written by a vertex shader, read by a fragment shader, or used for
+    transform feedback will count against this limit.  The transformed vertex
+    position (gl_Position) does not count against this limit. ...
+
+    Add the following language to the end of section 2.15.3 (p.84):
+
+    Each program object can specify one or more varying variables to be
+    recorded in transform feedback mode.  This set is specified by the command
+
+      void TransformFeedbackVaryingsEXT(uint program, sizei count,
+                                        const char * const *varyings, 
+                                        enum bufferMode)
+
+    <program> specifies the program object.  <count> specifies the number of
+    varying variables used for transform feedback.  <varyings> is an array of
+    <count> zero-terminated strings specifying the names of the varying
+    variables to use for transform feedback.  The varying variables specified
+    in <varyings> can be either built-in varying variables (beginning with
+    "gl_") or user-defined ones. varying variables are written out in the
+    order they appear in the array <varyings>. <bufferMode> is either
+    INTERLEAVED_ATTRIBS_EXT or SEPARATE_ATTRIBS_EXT, and identifies the mode
+    used to capture the varying variables when transform feedback is active.
+    The error INVALID_VALUE is generated if <program> is not the name of a
+    program object, or if <bufferMode> is SEPARATE_ATTRIBS_EXT and <count> is
+    greater than the implement-dependent limit
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    The state set by TransformFeedbackVaryingsEXT has no effect on the
+    execution of the program until <program> is subsequently linked.  When
+    LinkProgram is called, the program is linked so that the values of the
+    specified varying variables for the vertices of each primitive generated
+    by the GL are written to a single buffer object (if the buffer mode is
+    INTERLEAVED_ATTRIBS_EXT) or multiple buffer objects (if the buffer mode is
+    SEPARATE_ATTRIBS_EXT).  A program will fail to link if:
+
+      * the <count> specified by TransformFeedbackVaryingsEXT is non-zero, but
+        the program object has no vertex or geometry shader;
+
+      * any variable name specified in the <varyings> array is not declared as
+        an output in the geometry shader (if present) or the vertex shader (if
+        no geometry shader is present);
+
+      * any two entries in the <varyings> array specify the same varying
+        variable;
+
+      * the total number of components to capture in any varying variable in
+        <varyings> is greater than the constant
+        MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS_EXT and the buffer mode is
+        SEPARATE_ATTRIBS_EXT; or
+
+      * the total number of components to capture is greater than the constant
+        MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS_EXT and the buffer mode
+        is INTERLEAVED_ATTRIBS_EXT.
+
+    To determine the set of varying variables in a linked program object that
+    will be captured in transform feedback mode, use the command:
+
+      void GetTransformFeedbackVaryingEXT(uint program, uint index,
+                                          sizei bufSize, sizei *length, 
+                                          sizei *size, enum *type, 
+                                          char *name);
+
+    This command provides information about the varying variable selected by
+    <index>.  An <index> of 0 selects the first varying variable specified in
+    the <varyings> array of TransformFeedbackVaryingsEXT, and an <index> of
+    TRANSFORM_FEEDBACK_VARYINGS_EXT-1 selects the last such varying variable.
+    The value of TRANSFORM_FEEDBACK_VARYINGS_EXT can be queried with
+    GetProgramiv (see section 6.1.14).  If <index> is greater than or equal to
+    TRANSFORM_FEEDBACK_VARYINGS_EXT, the error INVALID_VALUE is generated.
+    The parameter <program> is the name of a program object for which the
+    command LinkProgram has been issued in the past.  If a new set of varying
+    variables is specified by TransformFeedbackVaryingsEXT after a program
+    object has been linked, the information returned by
+    GetTransformFeedbackVaryingEXT will not reflect those variables until the
+    program is re-linked.
+
+    The name of the selected varying is returned as a null-terminated string
+    in <name>. The actual number of characters written into <name>, excluding
+    the null terminator, is returned in <length>. If <length> is NULL, no
+    length is returned. The maximum number of characters that may be written
+    into <name>, including the null terminator, is specified by <bufSize>. The
+    returned varying name can be the name of a user defined varying variable
+    or the name of a built- in varying (which begin with the prefix "gl_", see
+    the OpenGL Shading Language specification for a complete list). The length
+    of the longest varying name in program is given by
+    TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH_EXT, which can be queried with
+    GetProgramiv (see section 6.1.14).
+
+    For the selected varying variable, its type is returned into <type>.  The
+    size of the varying is returned into <size>. The value in <size> is in
+    units of the type returned in <type>. The type returned can be any of
+    FLOAT, FLOAT_VEC2, FLOAT_VEC3, FLOAT_VEC4, INT, INT_VEC2, INT_VEC3,
+    INT_VEC4, UNSIGNED_INT, UNSIGNED_INT_VEC2_EXT, UNSIGNED_INT_VEC3_EXT,
+    UNSIGNED_INT_VEC4_EXT, FLOAT_MAT2, FLOAT_MAT3, or FLOAT_MAT4.  If an error
+    occurred, the return parameters <length>, <size>, <type> and <name> will
+    be unmodified.  This command will return as much information about the
+    varying variables as possible.  If no information is available, <length>
+    will be set to zero and <name> will be an empty string. This situation
+    could arise if GetTransformFeedbackVaryingEXT is called after a failed
+    link.
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+   (Add new section 3.X, Discarding Rasterization)
+
+    Primitives can be optionally discarded before rasterization by calling
+    Enable and Disable with RASTERIZER_DISCARD_EXT. When enabled, primitives
+    are discared right before the rasterization stage, but after the optional
+    transform feedback stage. When disabled, primitives are passed through to
+    the rasterization stage to be processed normally. RASTERIZER_DISCARD_EXT
+    applies to the DrawPixels, CopyPixels, Bitmap, Clear and Accum commands as
+    well.
+
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    (Replace section 4.1.7, "Occlusion Queries", p. 204, with the following)
+
+    Occlusion queries use query objects to track the number of fragments or
+    samples that pass the depth test.  An occlusion query can be started and
+    finished by calling BeginQuery and EndQuery, respectively, with a <target>
+    of SAMPLES_PASSED.
+
+    When an occlusion query starts, the samples-passed count maintained by the
+    GL is set to zero.  When an occlusion query is active, the samples-passed
+    count is incremented for each fragment that passes the depth test.  If the
+    value of SAMPLE BUFFERS is 0, then the samples- passed count is
+    incremented by 1 for each fragment. If the value of SAMPLE BUFFERS is 1,
+    then the samples-passed count is incremented by the number of samples
+    whose coverage bit is set. However, implementations, at their discretion,
+    may instead increase the samples-passed count by the value of SAMPLES if
+    any sample in the fragment is covered.  When an occlusion query finishes
+    and all fragments generated by the commands issued prior to EndQuery have
+    been generated, the samples-passed count is written to the corresponding
+    query object as the query result value, and the query result for that
+    object is marked as available.
+
+    If the samples-passed count overflows, (i.e., exceeds the value 2^n - 1,
+    where n is the number of bits in the samples-passed count), its value
+    becomes undefined.  It is recommended, but not required, that
+    implementations handle this overflow case by saturating at 2^n - 1 and
+    incrementing no further.
+
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    (Add to section 5.4, Display Lists p. 237)
+
+    On p. 241, add the following to the list of vertex buffer object commands
+    not compiled into a display list: BindBufferRangeEXT, BindBufferOffsetEXT,
+    BindBufferBaseEXT, and TransformFeedbackVaryingsEXT.
+
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    Modify the second paragraph of section 6.1.1 (Simple Queries) p244 to read
+    as follows:
+
+    ...<data> is a pointer to a scalar or array of the indicated type in which
+    to place the returned data. The commands
+
+      void GetIntegerIndexedvEXT(enum param, uint index, int *values);
+      void GetBooleanIndexedvEXT(enum param, uint index, boolean *values);
+
+    are used to query indexed state.  <target> is the name of the indexed
+    state and <index> is the index of the particular element being queried.
+    <data> is a pointer to a scalar or array of the indicated type in which to
+    place the returned data. In addition ...
+
+   (Replace Section 6.1.12, Occlusion Queries, p. 254)
+
+    Section 6.1.12, Asynchronous Queries
+
+    The command
+
+      boolean IsQuery(uint id);
+
+    returns TRUE if <id> is the name of a query object. If <id> is zero, or if
+    <id> is a non-zero value that is not the name of a query object, IsQuery
+    returns FALSE.
+
+    Information about a query target can be queried with the command
+
+      void GetQueryiv(enum target, enum pname, int *params);
+
+    <target> identifies the query target and can be SAMPLES_PASSED for
+    occlusion queries or PRIMITIVES_GENERATED_EXT and
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT for primitive queries.
+
+    If <pname> is CURRENT_QUERY, the name of the currently active query for
+    <target>, or zero if no query is active, will be placed in <params>.
+
+    If <pname> is QUERY_COUNTER_BITS, the implementation-dependent number of
+    bits used to hold the query result for <target> will be placed in
+    params. The number of query counter bits may be zero, in which case the
+    counter contains no useful information.
+
+    For primitive queries (PRIMITIVES_GENERATED_EXT and
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT) if the number of bits is
+    non-zero, the minimum number of bits allowed is 32.
+
+    For occlusion queries (SAMPLES_PASSED), if the number of bits is non-
+    zero, the minimum number of bits allowed is a function of the
+    implementation's maximum viewport dimensions (MAX_VIEWPORT_DIMS).  The
+    counter must be able to represent at least two overdraws for every pixel
+    in the viewport. The formula to compute the allowable minimum value (where
+    n is the minimum number of bits) is:
+
+      n = min(32, ceil(log_2(maxViewportWidth *
+                             maxViewportHeight * 2))).
+
+    The state of a query object can be queried with the commands
+
+      void GetQueryObjectiv(uint id, enum pname, int *params);
+      void GetQueryObjectuiv(uint id, enum pname, uint *params);
+
+    If <id> is not the name of a query object, or if the query object named by
+    <id> is currently active, then an INVALID_OPERATION error is generated.
+
+    If <pname> is QUERY_RESULT, then the query object's result value is
+    returned as a single integer in <params>.  If the value is so large in
+    magnitude that it cannot be represented with the requested type, then the
+    nearest value representable using the requested type is returned.  If the
+    number of query counter bits for any <target> is zero, then the result is
+    returned as a single integer with a value of 0.
+
+    There may be an indeterminate delay before the above query returns.  If
+    <pname> is QUERY_RESULT_AVAILABLE, FALSE is returned if such a delay would
+    be required, TRUE is returned otherwise. It must always be true that if
+    any query object returns a result available of TRUE, all queries of the
+    same type issued prior to that query must also return TRUE.
+
+    Querying the state for any given query object forces the corresponding
+    query to complete within a finite amount of time.
+
+    If multiple queries are issued using the same object name prior to calling
+    GetQueryObject[u]iv, the result and availability information returned will
+    always be from the last query issued.  The results from any queries before
+    the last one will be lost if they are not retrieved before starting a new
+    query on the same <target> and <id>.
+
+
+    (Add to Section 6.1.13, Buffer Objects, p. 255)
+
+    Add the following paragraph to the bottom of this section, p. 256.
+
+    To query which buffer objects are bound to the array of transform feedback
+    binding points and will be used when transform feedback is active, call
+    GetIntegerIndexedvEXT() with <param> set to
+    TRANSFORM_FEEDBACK_BUFFER_BINDING_EXT.  <index> has to be in the range 0
+    to MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT - 1, otherwise the error
+    INVALID_VALUE is generated. The name of the buffer object bound to <index>
+    is returned in <values>. If no buffer object is bound for <index>, zero is
+    returned in <values>.
+
+    To query the starting offset or size of the range of each buffer object
+    binding used for transform feedback, call GetIntegerIndexedvEXT() with
+    <param> set to TRANSFORM_FEEDBACK_BUFFER_START_EXT or
+    TRANSFORM_FEEDBACK_BUFFER_SIZE_EXT respectively.  The error INVALID_VALUE
+    is generated if <index> not in the range 0 to
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT - 1.  If the parameter
+    (starting offset or size) was not specified when the buffer object was
+    bound, or if no buffer object is bound to <index>, zero is returned.
+
+    (add to Section 6.1.14, Shader and Program Queries, p. 256)
+
+    Add the following paragraph to the bottom of page 257:
+
+    If <pname> is TRANSFORM_FEEDBACK_BUFFER_MODE_EXT, the buffer mode, used
+    when transform feedback is active, is returned. It can be one of
+    SEPARATE_ATTRIBS_EXT or INTERLEAVED_ATTRIBS_EXT.  If <pname> is
+    TRANSFORM_FEEDBACK_VARINGS_EXT, the number of varying variables to capture
+    in transform feedback mode for the program is returned.  If <pname> is
+    TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH, the length of the longest varying
+    name specified to be used for transform feedback, including a null
+    terminator, is returned. If no varyings are used for transform feedback,
+    zero is returned.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    UNDER DEVELOPMENT
+
+Interactions with NV_transform_feedback
+
+    NV_transform_feedback is the initial version of this extension, which
+    includes three capabilities not provided here:
+
+      * support for transform feedback with assembly vertex/geometry programs
+        and fixed-function vertex processing;
+
+      * the ability to change the set of GLSL varying variables to capture in
+        transform feedback mode without re-linking; and 
+
+      * the "active varying" API that enumerates all varying variables in a
+        program object that are considered active.
+
+    This extension provides one capability not provided by
+    NV_transform_feedback -- the ability and requirement to specify the set of
+    varying variables used for transform feedback prior to linking.
+
+    If both extensions are supported, the following happens:
+
+      * When a program is linked, the active varying state defined in the NV
+        extension is updated.  For the purposes of this API, any variables
+        enabled for transform feedback via TransformFeedbackVaryingsEXT() are
+        considered active.
+
+      * When a program is linked, the transform feedback configuration is
+        built from the state provided by TransformFeedbackVaryingsEXT() as in
+        the current extension.  In terms of the NV extension, it is as though
+        the linker had queried the locations of each varying specified in
+        TransformFeedbackVaryingsEXT() and then called the
+        TransformFeedbackVaryingsNV() to update the transform feedback
+        configuration post-link.  If no varying variables were specified by
+        TransformFeedbackVaryingsEXT(), the transform feedback configuration
+        is reset to an empty default state after linking, just as is always
+        the case when using the NV extension alone.
+
+      * Calling TransformFeedbackVaryingsNV() after linking allows an
+        application to update the transform feedback state post-link.  Any
+        transform feedback state set when a program is linked is replaced with
+        the state specified by TransformFeedbackVaryingsNV().
+
+      * Calling TransformFeedbackVaryingsEXT() after linking continues to have
+        no effect.
+
+      * The EXT and NV versions of all functions defined in both extension,
+        other than TransformFeedbackVaryings*(), operate identically.
+
+      * BeginTransformFeedbackEXT() does not require the use of a GLSL program
+        object if both extensions are supported.  If no GLSL program object is
+        active, transform feedback is still enabled and captures the
+        attributes specified by TransformFeedbackAttribsNV().
+
+
+Interactions with EXT_timer_query
+
+    EXT_timer_query is the first extension to generalize the BeginQuery and
+    EndQuery mechanism introduced by ARB_occlusion_query and OpenGL 1.5 to
+    cover an additional query type.  This extension is the second.  This
+    extension is written against the OpenGL 2.0 specification and uses most of
+    the modifications in the EXT_timer_query specification.  If
+    EXT_timer_query is supported, timer queries need to be added as a third
+    query type.
+
+
+Dependencies on EXT_geometry_shader4
+
+    If EXT_geometry_shader4 is not supported, delete all references to
+    geometry shaders.
+
+
+Errors
+
+    The error INVALID_OPERATION is generated by BeginQuery if called with an
+    <id> of zero, if the active query object name for <target> is non- zero,
+    or if <id> is the active query object name for any query type.
+
+    The error INVALID_OPERATION is generated by EndQuery if the active query
+    object name for <target> is zero.
+
+    The error INVALID_OPERATION is generated if Begin, or any command that
+    performs an explicit Begin, is called when:
+
+      * a geometry shader is not active and <mode> does not match the allowed
+        begin modes for the current transform feedback state as given by table
+        X.1.
+
+      * a geometry shader is active and the output primitive type of the
+        geometry shader does not match the allowed begin modes for the current
+        transform feedback state as given by table X.1.
+
+    The error INVALID_OPERATION is generated by BeginTransformFeedbackEXT if
+    any transform feedback buffer object binding point used in transform
+    feedback mode does not have a buffer object bound.
+
+    The error INVALID_OPERATION is also generated by BeginTransformFeedbackEXT
+    if no binding points would be used, either because no program object is
+    active or because the active program object has specified no varying
+    variables to record.
+
+    If transform feedback is active, the error INVALID_OPERATION is generated
+    by BeginTransformFeedbackEXT; UseProgram; LinkProgram if called on the
+    currently in use program object; and BindBufferRangeEXT,
+    BindBufferOffsetEXT, or BindBufferBaseEXT if <target> is
+    TRANSFORM_FEEDBACK_BUFFER_EXT.
+
+    If transform feedback is inactive, the error INVALID_OPERATION is
+    generated by EndTransformFeedbackEXT.
+
+    The error INVALID_VALUE is generated by BindBufferRangeEXT,
+    BindBufferOffsetEXT, or BindBufferBaseEXT if <index> is greater or equal
+    than MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    The error INVALID_VALUE is generated by BindBufferRangeEXT if the value of
+    <size> is less than or equal to zero, or not word-aligned.
+
+    The error INVALID_VALUE is generated by BindBufferRangeEXT or
+    BindBufferOffsetEXT if <offset> is not word-aligned.
+
+    The error INVALID_VALUE is generated by TransformFeedbackVaryingsEXT
+    commands if <program> is not the name of a program object, or if
+    <bufferMode> is SEPARATE_ATTRIBS_EXT and <count> is greater than
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    The error INVALID_VALUE is generated by GetTransformFeedbackVaryingEXT if
+    <index> is greater than or equal to the value of
+    TRANSFORM_FEEDBACK_VARYINGS_EXT.
+
+    The error INVALID_VALUE is generated by GetIntegerIndexedvEXT() or
+    GetBooleanIndexedvEXT() with <param> set to
+    TRANSFORM_FEEDBACK_BUFFER_BINDING_EXT if <index> is greater than or equal
+    to MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+
+New State
+
+    (Add a new table:  Table 6.X,  Transform Feedback State)
+
+    Get Value             Type    Get Command     Init. Value  Description                Sec    Attrib
+    ------------------    ------  --------------  ------------ -------------------------  -----  ------
+    TRANSFORM_FEEDBACK_   Z+      GetIntegerv          0        Buffer object bound to    6.1.13   -
+      BUFFER_BINDING_EXT                                        generic bind point for
+                                                                transform feedback.
+    TRANSFORM_FEEDBACK_   nxZ+    GetInteger-          0        Buffer object bound to    6.1.13   -
+      BUFFER_BINDING_EXT          IndexedvEXT                   each transform feedback
+                                                                attribute stream.
+    TRANSFORM_FEEDBACK_   nxZ+    GetInteger-          0        Start offset of binding   6.1.13   -
+      BUFFER_START_EXT            IndexedvEXT                   range for each transform
+                                                                feedback attrib. stream
+    TRANSFORM_FEEDBACK_   nxZ+    GetInteger-          0        Size of binding range     6.1.13   -
+      BUFFER_SIZE_EXT             IndexedvEXT                   for each transform
+                                                                feedback attrib. stream
+
+   (Modify Table 6.37, p 298, updating the query object state to cover
+   transform feedback.)
+
+    Get Value         Type  Get Command       Init. Value  Description                Sec    Attribute
+    ----------------  ----  ----------------  -----------  -------------------------  -----  ---------
+    CURRENT_QUERY     3xZ+  GetQueryiv        0            Active query object name   2.X        -
+                                                           (occlusion, timer, xform
+                                                            feedback)
+
+   (Modify Table 6.29, p. 290, Program Object State. Add the following state.)
+
+    Get Value           Type  Get Command   Init. Value  Description                 Sec    Attribute
+    ----------------    ----  ------------  -----------  -------------------------   -----  ---------
+   TRANSFORM_FEEDBACK_  Z2    GetProgramiv  INTERLEAVED_ Transform feedback mode     6.1.14     -
+     BUFFER_MODE_EXT                        ATTRIBS_EXT   for the program
+   TRANSFORM_FEEDBACK_  Z+    GetProgramiv       0       Number of varyings to       6.1.14     -
+     VARYINGS_EXT                                        stream to buffer object(s)
+   TRANSFORM_FEEDBACK_  Z+    GetProgramiv       0       Maximum transform feedback  6.1.14     -
+     VARYING_MAX_                                        varying name length
+     LENGTH_EXT
+        -               Z+    GetTransform-      -       Size of each transform      2.15.3     -
+                               Feedback-                 feedback varying variable
+                               VaryingEXT
+        -               Z+    GetTransform-       -      Type of each transform      2.15.3     -
+                               Feedback-                 feedback varying variable
+                               VaryingEXT
+        -               0+x-  GetTransform-       -      Name of each transform      2.15.3     -
+                        char   Feedback-                 feedback varying variable
+                               VaryingEXT
+
+   (Add new Table, Query Object State.  Note:  There is nothing transform 
+    feedback-specific here; this table should be in the core specification.)
+
+    Get Value           Type  Get Command   Init. Value  Description                 Sec     Attribute
+    ----------------    ----  ------------  -----------  -------------------------   ------  ---------
+    QUERY_RESULT        Z+    GetQuery-          0       Query object result         6.1.12     -
+                               Objectiv                   (query type-dependent)
+    QUERY_RESULT_       Z+    GetQuery-        TRUE      Is the query object         6.1.12     -
+      AVAILABLE                Objectiv                    result available?
+
+
+New Implementation Dependent State
+
+   (Modify Table 6.34, p. 295.  Update the query object state to cover
+   transform feedback.)
+
+    Get Value               Type Get Command  Minimum Value  Description                  Sec     Attribute
+    --------------------    ---- -----------  -------------  --------------------------   ------  ---------
+    QUERY_COUNTER_BITS      2xZ+ GetQueryiv   see 6.1.12     Asynchronous query counter   6.1.12    -
+                                                             bits (occlusion, timer, 
+                                                             tranform feedback queries)
+
+   (Add a new table, Table 6.X. Transform Feedback State.)
+
+   NOTE:  In the "GetValue" columns below, MXFB stands for
+   "MAX_TRANSFORM_FEEDBACK".
+
+    Get Value               Type Get Command  Minimum Value  Description                  Sec     Attribute
+    --------------------    ---- -----------  -------------  --------------------------   ------  ---------
+    MXFB_INTERLEAVED_       Z+   GetIntegerv  64             Max number of components to  2.Y       -
+    COMPONENTS_EXT                                           write to a single buffer in
+                                                             interleaved mode
+    MXFB_SEPARATE_          Z+   GetIntegerv  4              Max number of separate       2.Y       -
+    ATTRIBS_EXT                                              attributes or vayings that
+                                                             can be captured in transform
+                                                             feedback
+    MXFB_SEPARATE_          Z+   GetIntegerv  4              Max number of components     2.Y       -
+    COMPONENTS_EXT                                           per attribute or varying 
+                                                             in separate mode
+
+Issues
+
+    1. How does transform feedback differ from core GL feedback?
+
+      * Transform feedback writes vertex data to buffer objects, which allows
+        the data returned to be used directly by vertex pulling.  GL feedback
+        mode writes vertex data to a buffer in system memory.
+
+      * Transform feedback is done after transformation, but prior to
+        clipping.  The primitives returned contain the original transformed
+        vertices produced by vertex or geometry program execution, and does
+        not contain any primitives inserted by clipping.
+
+      * Transform feedback supports only a single basic output primitive type
+        (points, lines, or triangles), while core GL feedback mode supports
+        all primitive types.  Since only one primitive type is supported, the
+        data returned does not contain tokens describing each primitive being
+        fed back.  Primitive tokens make the data returned by GL feedback mode
+        irregular and unsuitable for vertex pulling.
+
+    2. What should this extension be called, and how does it differ from
+       previous extensions?
+
+      RESOLVED:  The current name is "EXT_transform_feedback", playing off the
+      fact that it is transformed primitives that are handled and the
+      similarities to GL feedback mode.  
+
+      This extension is new version of the shipping NV_transform_feedback
+      extension with some capabilities removed to ease multi-vendor adoption.
+      See the "Interactions with NV_transform_feedback" section for more
+      information on the functional differences.
+
+    3. What happens if you bind a buffer for transform feedback that is
+       currently bound for other purposes?  Should we somehow detect this case
+       and produce an error?
+
+      !!! NBC I feel strongly that we should follow the precedent for
+      Map/Unmap. The reason that MapBuffer and UnmapBuffer are a precedent
+      here is because while a buffer object is in the mapped state, no GL
+      commands are allowed to operate on the buffer object's data.  So by
+      analogy, while a buffer is being used for transform feedback, no other
+      GL commands should be allowed to operate on the buffer object's data.
+      This includes initiating any rendering which would cause the GL to
+      source data from an active transform feedback buffer object.
+
+      UNRESOLVED
+
+    4. Should this extension include any new buffer object binding targets, or
+       should it overload ARRAY_BUFFER, or should we skip the binding target
+       altogether in favor of a buffer object name accepted directly by the
+       new GL commands?
+
+      RESOLVED: There are new binding points for XFB along with a new API
+      (BindBufferBase etc) to set the internal binding points. A new binding
+      point, TRANSFORM_FEEDBACK_BUFFER_EXT is also introduced.
+
+    5. Previous buffer object extensions provided a way to have existing GL
+       commands reference a buffer object instead of a user-supplied buffer.
+       Should the new commands introduced here allow referencing a
+       user-supplied buffer in addition to a buffer object?
+
+      RESOLVED: No. A program can get the contents of the feedback buffer back
+      to the CPU using MapBuffer and GetBufferSubData.
+
+    6. Is BeginTransformFeedback really necessary? Could the query just
+       initiate the transform feedback mode?
+
+      RESOLUTION: Using BeginTransformFeedback and EndTransformFeedback gives
+      a clean place to spec all of the transform-feedback-specific issues
+      without cluttering up the query language. Also, the queries don't have
+      to be done at the same time as beginning and ending the feedback
+      process.
+
+    7. What usage enums should be provided to glBufferData for use in
+       conjunction with transform feedback?
+
+      RESOLVED: STREAM_COPY or STREAM_READ are expected to be the most common
+      usages. If a buffer object is being written by the GL through transform
+      feedback, and the contents of the buffer object are subsequently being
+      consumed by the GL (e.g. by being used as a vertex buffer object), then
+      this is a *_COPY usage. If the buffer object is being written by the GL
+      through transform feedback, but is being consumed by the application
+      (e.g. being mapped for read), this is a *_READ usage.  The temporal
+      (STREAM, STATIC, or DYNAMIC) component of the usage enum is determined
+      by the ratio between how often the contents of the buffer object are
+      modified and how often operations that source data from the buffer
+      object occur.
+
+    8. What should the behavior be when a buffer object is the active target
+       of transform feedback, and it is deleted via DeleteBuffers?
+
+      RESOLVED: Deletion is deferred until the EndTransformFeedback if
+      transform feedback is active.
+
+    9. Should we allow more buffers to be bound than are used?
+
+      RESOLVED: Yes. The extra buffers are not in the way and can stay bound.
+
+    10. Should we allow feedback to buffer lists with holes (i.e. 0 and 2
+        bound)?
+
+      RESOLVED: No. This makes for an ugly API with the potential for bugs,
+      without any real benefit. The application can as well bind all buffers
+      needed to incremented indices. It is an invalid operation to not have a
+      buffer bound where one is required.
+
+    11. Why only one feedback primitive mode per feedback invocation?
+
+      RESOLVED: Having primitive tokens breaks up the stream and makes it less
+      amenable to being read back in as a vertex buffer. Also, mixing multiple
+      primitive types makes the counting of primitives less clear for the
+      application.
+
+    12. Is RasterPos fed back?
+
+      RESOLVED: No.
+
+    13. Is DrawPixels/CopyPixels/Bitmap fed back?
+
+      RESOLVED: No. Rasterization occurs as normal, but there is no
+      output to the feedback buffer. This is consistent with taking a
+      tap out of the pipe before clipping.
+
+    14. Why do we need new BindBuffer* functions?
+
+      RESOLVED: All previous buffer object extensions have been retrofits of
+      existing pointer-based APIs. New extensions built assuming buffer
+      objects don't have that history, so need a new API. The functionality of
+      these new functions combines the functionality of BindBuffer, to set the
+      external bind point used by calls like MapBuffer and BufferSubData, with
+      the functionality to set an internal bind point like VertexAttribPointer
+      does.
+
+    15. How do the transform feedback indices, passed to the BindBuffer*
+        commands, work with multiple bindings?
+
+      RESOLVED:  The same way that they work with vertex arrays.  There is one
+      external bind point, TRANSFORM_FEEDBACK_BUFFER_EXT.  There are n
+      internal bind points, selected with the <index> parameter to the
+      BindBuffer* commands, where n is some implementation dependent limit.
+      The BindBuffer* commands take the buffer passed and bind it to the
+      external bind point, as well as to the selected internal bind point.
+
+      For example:
+
+        BindBufferOffsetEXT(TRANSFORM_FEEDBACK_BUFFER_EXT, 0, 1, 12); 
+        // XFB index 0 points at buffer 1 with offset 12
+
+        BindBuffer(TRANSFORM_FEEDBACK_BUFFER_EXT, 2); 
+        // Buffer 2 is now bound to the external bind point. XFB index 0 still
+        // points at buffer 1
+
+        MapBuffer(TRANSFORM_FEEDBACK_BUFFER_EXT, ...); 
+        // Maps buffer 2
+
+    16. How are quads/quadstrips/polygons tesselated into triangles?
+
+      RESOLVED: In an implementation-dependent manner. OpenGL doesn't define
+      quads or polygons in terms of triangles, so there is no one correct way
+      to do it, and different gpus may implement the behavior differently. A
+      quad may be split into two triangles in several different ways, and an
+      application may not rely on this behavior.
+
+    17. How does this extension interact with display lists?
+
+      RESOLVED: Just like the VBO extension, none of the BindBuffer* commands
+      are compiled into a display list.
+
+    18. Does polygon mode state affect the logic that determines if the
+        transform feed back primitive mode and the render mode states are
+        valid at the start of transform feedback mode?
+
+      RESOLVED: PolygonMode has no influence on the BeginTransFormFeedback
+      primitiveMode check since it is performed later in the pipeline.
+
+    19. What to do with incomplete primitives?
+
+      RESOLVED: If there is no room to store one or more vertices of a
+      primitive in a buffer object, none of the vertices in that primitive are
+      written to the buffer. If a partial primitive enters transform feedback
+      (i.e. only two vertices sent in triangles mode), none of the vertices in
+      that primitive are written to the buffer object.
+
+    20. Why does TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT have a
+        TRANSFORM_FEEDBACK prefix but PRIMITIVES_GENERATED_EXT doesn't?
+
+      RESOLVED: The number of primitives generated is independent of any
+      feedback that is active. The number of primitives that are written is
+      only valid for transform feedback - another extension could conceivably
+      have a different way of writing out primitives that would require a
+      similar but distinct token.
+
+    25. Are primitives sent down the pipeline after transform feedback, or
+        discarded?
+
+      RESOLVED: Primitives can be optionally discarded before rasterization by
+      calling Enable and Disable with RASTERIZER_DISCARD_EXT. When enabled,
+      primitives are discarded after vertex attributes are recorded into the
+      buffer objects bound to transform feedback.  When disabled, primitives
+      are passed through to the rasterization stage to be clipped and
+      rasterized normally. All rasterization operations are discarded, not
+      just those that are fed back into the buffer.
+
+      This applies to DrawPixels, CopyPixels, Bitmap, Clear, Accum as well.
+
+    26. If a varying is declared as an array, is the whole array streamed out?
+
+      RESOLVED: No, the application has to specify which elements of an array
+      it wants to stream out. Implementations might not be able to stream out
+      a large number of components to a single buffer object.  If that is the
+      case, the application can stream each element of an array to a different
+      buffer object in TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS mode.
+
+    27. Is it possible to capture attributes when using the fixed-function
+        pipeline?
+
+      RESOLVED:  Not in this extension, which requires the use of a GLSL
+      vertex or geometry shader.  The NV_transform_feedback extension does
+      provide this capability.
+
+    28. Should we provide queries to determine the set of varying variables to
+        be captured for a program object in transform feedback mode -- i.e.,
+        the values in the array of strings <varyings> given to
+        TransformFeedbackVaryingsEXT?
+
+      RESOLVED:  Yes; the command GetTransformFeedbackVaryingEXT is provided
+      to query the name, size, and type of each varying captured for a linked
+      program object in transform feedback mode.  
+
+      Transform feedback-related queries operate only on a linked program
+      object.  There is no API available to query transform feedback varying
+      state set by TransformFeedbackVaryingsEXT until a program is linked.
+
+    29. What happens if a variable is specified in the array of names passed
+        to TransformFeedbackVaryingsEXT, but not needed by the fragment
+        shader?  The linker may normally eliminate such variables.
+
+      RESOLVED:  Varying variables specified by TransformFeedbackVaryingsEXT
+      are always considered active and count against the total limit on the
+      number of active varying components, regardless of the needs of the
+      fragment shader.  If such a program object is executed with transform
+      feedback active, the values of these variables are computed by the
+      vertex or geometry shader and stored in the appropriate buffer object.
+      If transform feedback is inactive, the values of such varyings may be
+      calculated even though they are only needed for transform feedback.
+
+
+Revision History
+
+      Rev.    Date    Author    Changes
+      ----  --------  --------  ---------------------------------------------
+       8    08/09/13  pbrown    Remove extra <varyings> parameter in
+                                TransformFeedbackVaryingsEXT.
+
+       7    07/01/13  Jon Leech Change type of TransformFeedbackVaryingsEXT
+                                parameter from 'const char **varyings' to
+                                'const char * const *varyings' (Bug 10231). 
+
+       6    01/27/11  Jon Leech Change return value for start/size queries
+                                when no buffer bound from -1 to zero, to
+                                match state tables (Bug 7318).
+
+       5    02/28/08  pbrown    Merged in edits from Apple.  Update status to
+                                shipping.  Moved per-object query results into
+                                a separate table.
+
+       4    02/20/08  pbrown    Fix incorrect minimum for MAX_TRANSFORM_
+                                FEEDBACK_SEPARATE_COMPONENTS_EXT.  Should be
+                                4, not 16.
+
+       3    12/13/07  pbrown    Clean up a number of places where "NV" 
+                                suffixes were incorrectly carried over from
+                                the NV_transform_feedback spec.
+
+       2    08/28/07  pbrown    Document that BeginTransformFeedbackEXT
+                                results in an error if no program object is
+                                active or if the active program isn't
+                                capturing any varyings.
+
+       1    11/30/06  pbrown    Created an initial EXT_transform_feedback 
+                                spec by forking off the existing
+                                NV_transform_feedback spec.

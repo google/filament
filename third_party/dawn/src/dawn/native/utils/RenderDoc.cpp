@@ -25,14 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/utils/RenderDoc.h"
+#include "src/dawn/native/utils/RenderDoc.h"
 
 #if defined(DAWN_ENABLE_RENDERDOC)
 
 #include <string>
 
-#include "dawn/common/DynamicLib.h"
-#include "dawn/common/Log.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/utils/log.h"
 
 namespace dawn::native::utils {
 

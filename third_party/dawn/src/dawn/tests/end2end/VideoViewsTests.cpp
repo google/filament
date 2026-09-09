@@ -25,19 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/end2end/VideoViewsTests.h"
+#include "src/dawn/tests/end2end/VideoViewsTests.h"
 
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/TextureUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/TextureUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 
@@ -46,11 +47,6 @@ VideoViewsTestBackend::PlatformTexture::PlatformTexture(wgpu::Texture&& texture)
 VideoViewsTestBackend::PlatformTexture::~PlatformTexture() = default;
 
 VideoViewsTestBackend::~VideoViewsTestBackend() = default;
-
-constexpr std::array<utils::RGBA8, 3> VideoViewsTestsBase::kYellowYUVAColor;
-constexpr std::array<utils::RGBA8, 3> VideoViewsTestsBase::kWhiteYUVAColor;
-constexpr std::array<utils::RGBA8, 3> VideoViewsTestsBase::kBlueYUVAColor;
-constexpr std::array<utils::RGBA8, 3> VideoViewsTestsBase::kRedYUVAColor;
 
 void VideoViewsTestsBase::SetUp() {
     DawnTestWithParams<Params>::SetUp();
@@ -125,6 +121,9 @@ std::vector<wgpu::FeatureName> VideoViewsTestsBase::GetRequiredFeatures() {
     }
     if (SupportsFeatures({wgpu::FeatureName::FlexibleTextureViews})) {
         requiredFeatures.push_back(wgpu::FeatureName::FlexibleTextureViews);
+    }
+    if (SupportsFeatures({wgpu::FeatureName::AdapterPropertiesDrm})) {
+        requiredFeatures.push_back(wgpu::FeatureName::AdapterPropertiesDrm);
     }
 
     requiredFeatures.push_back(wgpu::FeatureName::DawnInternalUsages);
@@ -407,9 +406,9 @@ std::vector<T> VideoViewsTestsBase::GetTestTextureDataWithPlaneIndex(wgpu::Textu
     std::vector<T> texelData =
         VideoViewsTestsBase::GetTestTextureData<T>(format, isCheckerboard, hasAlpha);
     auto subsampleFactor = utils::GetMultiPlaneTextureSubsamplingFactor(format, planeIndex);
-    uint32_t texelDataWidth = kYUVAImageDataWidthInTexels / subsampleFactor.horizontalFactor *
-                              utils::GetMultiPlaneTextureBytesPerElement(format, planeIndex) /
-                              sizeof(T);
+    uint32_t texelDataWidth =
+        static_cast<size_t>(kYUVAImageDataWidthInTexels) / subsampleFactor.horizontalFactor *
+        utils::GetMultiPlaneTextureBytesPerElement(format, planeIndex) / sizeof(T);
     uint32_t texelDataHeight = kYUVAImageDataHeightInTexels / subsampleFactor.verticalFactor;
 
     size_t rowPitch = bytesPerRow / sizeof(T);
@@ -521,12 +520,11 @@ class VideoViewsTests : public VideoViewsTestsBase {
         DAWN_TEST_UNSUPPORTED_IF(!IsFormatSupported());
 
         mBackend = VideoViewsTestBackend::Create();
-        mBackend->OnSetUp(device);
+        DAWN_TEST_UNSUPPORTED_IF(!mBackend->Initialize(device));
     }
 
     void TearDown() override {
         if (mBackend) {
-            mBackend->OnTearDown();
             mBackend = nullptr;
         }
         VideoViewsTestsBase::TearDown();
@@ -1845,7 +1843,8 @@ class VideoViewsRenderTargetTests : public VideoViewsValidationTests {
             wgpu::Texture planeTexture = device.CreateTexture(&planeTextureDesc);
 
             // Copy plane (Y/UV/A) data to the plane source texture.
-            size_t bytesPerRow = kYUVAImageDataWidthInTexels / subsampleFactor.horizontalFactor *
+            size_t bytesPerRow = static_cast<size_t>(kYUVAImageDataWidthInTexels) /
+                                 subsampleFactor.horizontalFactor *
                                  utils::GetMultiPlaneTextureBytesPerElement(format, planeIndex);
             std::vector<T> planeSrcData = VideoViewsTestsBase::GetTestTextureDataWithPlaneIndex<T>(
                 format, planeIndex, bytesPerRow,
@@ -2287,9 +2286,10 @@ class VideoViewsExtendedUsagesTests : public VideoViewsTestsBase {
             for (size_t plane = 0; plane < numPlanes; ++plane) {
                 auto subsampleFactor = utils::GetMultiPlaneTextureSubsamplingFactor(format, plane);
 
-                size_t bytesPerRow = VideoViewsTestsBase::kYUVAImageDataWidthInTexels /
-                                     subsampleFactor.horizontalFactor *
-                                     utils::GetMultiPlaneTextureBytesPerElement(format, plane);
+                size_t bytesPerRow =
+                    static_cast<size_t>(VideoViewsTestsBase::kYUVAImageDataWidthInTexels) /
+                    subsampleFactor.horizontalFactor *
+                    utils::GetMultiPlaneTextureBytesPerElement(format, plane);
 
                 bytesPerRow = Align(bytesPerRow, 256);
 
@@ -2317,7 +2317,7 @@ class VideoViewsExtendedUsagesTests : public VideoViewsTestsBase {
                         subsampleFactor.verticalFactor,
                     isCheckerboard, hasAlpha);
 
-                memcpy(buffer.GetMappedRange(), data.data(), bufferDesc.size);
+                DAWN_UNSAFE_TODO(memcpy(buffer.GetMappedRange(), data.data(), bufferDesc.size));
                 buffer.Unmap();
 
                 wgpu::TexelCopyBufferInfo copySrc =
@@ -2647,7 +2647,7 @@ void VideoViewsExtendedUsagesTests::RunT2BCopyPlaneAspectsTest() {
 
         // Convert 1st pixel's luma component to array of 8 bits bytes.
         uint8_t expectedYDataAsU8[sizeof(ComponentType)];
-        memcpy(expectedYDataAsU8, &expectedData[0], sizeof(expectedYDataAsU8));
+        DAWN_UNSAFE_TODO(memcpy(expectedYDataAsU8, &expectedData[0], sizeof(expectedYDataAsU8)));
 
         EXPECT_BUFFER_U8_RANGE_EQ(expectedYDataAsU8, dstBuffer, 0, sizeof(expectedYDataAsU8));
     }
@@ -2673,7 +2673,8 @@ void VideoViewsExtendedUsagesTests::RunT2BCopyPlaneAspectsTest() {
 
         // Convert 1st pixel's chroma component to array of 8 bits bytes.
         uint8_t expectedUVDataAsU8[sizeof(ComponentType) * 2];
-        memcpy(expectedUVDataAsU8, expectedData.data(), sizeof(expectedUVDataAsU8));
+        DAWN_UNSAFE_TODO(
+            memcpy(expectedUVDataAsU8, expectedData.data(), sizeof(expectedUVDataAsU8)));
 
         EXPECT_BUFFER_U8_RANGE_EQ(expectedUVDataAsU8, dstBuffer, 0, sizeof(expectedUVDataAsU8));
     }
@@ -2701,7 +2702,8 @@ void VideoViewsExtendedUsagesTests::RunT2BCopyPlaneAspectsTest() {
 
             // Convert 1st pixel's alpha component to array of 8 bits bytes.
             uint8_t expectedADataAsU8[sizeof(ComponentType)];
-            memcpy(expectedADataAsU8, expectedData.data(), sizeof(expectedADataAsU8));
+            DAWN_UNSAFE_TODO(
+                memcpy(expectedADataAsU8, expectedData.data(), sizeof(expectedADataAsU8)));
 
             EXPECT_BUFFER_U8_RANGE_EQ(expectedADataAsU8, dstBuffer, 0, sizeof(expectedADataAsU8));
         }

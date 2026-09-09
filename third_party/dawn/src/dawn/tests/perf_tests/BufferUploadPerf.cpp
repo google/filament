@@ -25,10 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/40285824): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
+#include <array>
 #include <vector>
 
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -188,8 +194,8 @@ class BufferMapExtendedUsagesPerf : public DawnPerfTestWithParams<BufferUploadPa
                          size_t offset,
                          size_t size);
 
-    wgpu::Buffer buffers[kNumIterations];
-    wgpu::Buffer stagingBuffers[kNumIterations];
+    std::array<wgpu::Buffer, kNumIterations> buffers;
+    std::array<wgpu::Buffer, kNumIterations> stagingBuffers;
     std::vector<uint8_t> data;
 };
 

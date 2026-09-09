@@ -39,6 +39,7 @@ U8::U8()
                Flag::kConstructable,
                Flag::kCreationFixedFootprint,
                Flag::kFixedFootprint,
+               Flag::kHostShareable,
            }) {}
 
 U8::~U8() = default;

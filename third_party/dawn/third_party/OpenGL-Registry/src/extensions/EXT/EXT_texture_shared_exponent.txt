@@ -1,0 +1,840 @@
+Name
+
+    EXT_texture_shared_exponent
+
+Name Strings
+
+    GL_EXT_texture_shared_exponent
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Jon Leech
+    Bruce Merry, ARM
+
+Status
+
+    Shipping
+
+Version
+
+    Date: July 18, 2008
+    Revision: 1.0
+
+Number
+
+    333
+
+Dependencies
+
+    OpenGL 1.1 required
+
+    ARB_color_buffer_float affects this extension.
+
+    EXT_framebuffer_object affects this extension.
+
+    This extension is written against the OpenGL 2.0 (September 7,
+    2004) specification.
+
+Overview
+
+    Existing texture formats provide either fixed-point formats with
+    limited range and precision but with compact encodings (allowing 32
+    or fewer bits per multi-component texel), or floating-point formats
+    with tremendous range and precision but without compact encodings
+    (typically 16 or 32 bits per component).
+
+    This extension adds a new packed format and new internal texture
+    format for encoding 3-component vectors (typically RGB colors) with
+    a single 5-bit exponent (biased up by 15) and three 9-bit mantissas
+    for each respective component.  There is no sign bit so all three
+    components must be non-negative.  The fractional mantissas are
+    stored without an implied 1 to the left of the decimal point.
+    Neither infinity nor not-a-number (NaN) are representable in this
+    shared exponent format.
+
+    This 32 bits/texel shared exponent format is particularly well-suited
+    to high dynamic range (HDR) applications where light intensity is
+    typically stored as non-negative red, green, and blue components
+    with considerable range.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage1D,
+    TexImage2D, TexImage3D, CopyTexImage1D, CopyTexImage2D, and
+    RenderbufferStorageEXT:
+
+        RGB9_E5_EXT                                    0x8C3D
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, GetTexImage, TexImage3D, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, GetHistogram, GetMinmax,
+    ConvolutionFilter1D, ConvolutionFilter2D, ConvolutionFilter3D,
+    GetConvolutionFilter, SeparableFilter2D, GetSeparableFilter,
+    ColorTable, ColorSubTable, and GetColorTable:
+
+        UNSIGNED_INT_5_9_9_9_REV_EXT                  0x8C3E
+
+    Accepted by the <pname> parameter of GetTexLevelParameterfv and
+    GetTexLevelParameteriv:
+
+        TEXTURE_SHARED_SIZE_EXT                        0x8C3F
+
+Additions to Chapter 2 of the 2.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 2.0 Specification (Rasterization)
+
+ -- Section 3.6.4, Rasterization of Pixel Rectangles
+
+    Add a new row to Table 3.5 (page 128):
+
+        type Parameter                 Corresponding  Special
+        Token Name                     GL Data Type   Interpretation
+        -----------------------------  -------------  --------------
+        UNSIGNED_INT_5_9_9_9_REV_EXT   uint           yes
+
+    Add a new row to table 3.8: Packed pixel formats (page 132):
+
+        type Parameter                 GL Data  Number of   Matching
+        Token Name                     Type     Components  Pixel Formats
+        -----------------------------  -------  ----------  -------------
+        UNSIGNED_INT_5_9_9_9_REV_EXT   uint     4           RGB
+
+    Add a new entry to table 3.11: UNSIGNED_INT formats (page 134):
+
+        UNSIGNED_INT_5_9_9_9_REV_EXT:
+
+        31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+        +-------------+--------------------------+---------------------------+--------------------------+
+        |  4th        |          3rd             |        2nd                |           1st            |
+        +-------------+--------------------------+---------------------------+--------------------------+
+
+    Add to the end of the 2nd paragraph starting "Pixels are draw using":
+
+    "If type is UNSIGNED_INT_5_9_9_9_REV_EXT and format is not RGB then
+    the error INVALID_ENUM occurs."
+
+    Add UNSIGNED_INT_5_9_9_9_REV_EXT to the list of packed formats in
+    the 10th paragraph after the "Packing" subsection (page 130).
+
+    Add before the 3rd paragraph (page 135, starting "Calling DrawPixels
+    with a type of BITMAP...") from the end of the "Packing" subsection:
+
+    "Calling DrawPixels with a type of UNSIGNED_INT_5_9_9_9_REV_EXT and
+    format of RGB is a special case in which the data are a series of GL
+    uint values.  Each uint value specifies 4 packed components as shown
+    in table 3.11.  The 1st, 2nd, 3rd, and 4th components are called
+    p_red, p_green, p_blue, and p_exp respectively and are treated as
+    unsigned integers.  These are then used to compute floating-point
+    RGB components (ignoring the "Conversion to floating-point" section
+    below in this case) as follows:
+
+       red   = p_red   * 2^(p_exp - B - N)
+       green = p_green * 2^(p_exp - B - N)
+       blue  = p_blue  * 2^(p_exp - B - N)
+
+    where B is 15 (the exponent bias) and N is 9 (the number of mantissa
+    bits)."
+
+ -- Section 3.8.1, Texture Image Specification:
+
+    "Alternatively if the internalformat is RGB9_E5_EXT, the red, green,
+    and blue bits are converted to a shared exponent format according
+    to the following procedure:
+
+    Components red, green, and blue are first clamped (in the process,
+    mapping NaN to zero) so:
+
+        red_c   = max(0, min(sharedexp_max, red))
+        green_c = max(0, min(sharedexp_max, green))
+        blue_c  = max(0, min(sharedexp_max, blue))
+
+    where sharedexp_max is (2^N-1)/2^N * 2^(Emax-B), N is the number
+    of mantissa bits per component, Emax is the maximum allowed biased
+    exponent value (careful: not necessarily 2^E-1 when E is the number of
+    exponent bits), bits, and B is the exponent bias.  For the RGB9_E5_EXT
+    format, N=9, Emax=31, and B=15.
+
+    The largest clamped component, max_c, is determined:
+
+        max_c = max(red_c, green_c, blue_c)
+
+    A preliminary shared exponent is computed:
+
+        exp_shared_p = max(-B-1, floor(log2(max_c))) + 1 + B
+
+    A refined shared exponent is then computed as:
+
+        max_s   = floor(max_c   / 2^(exp_shared_p - B - N) + 0.5)
+
+                     { exp_shared_p,    0 <= max_s <  2^N
+        exp_shared = {
+                     { exp_shared_p+1,       max_s == 2^N
+
+    These integers values in the range 0 to 2^N-1 are then computed:
+
+        red_s   = floor(red_c   / 2^(exp_shared - B - N) + 0.5)
+        green_s = floor(green_c / 2^(exp_shared - B - N) + 0.5)
+        blue_s  = floor(blue_c  / 2^(exp_shared - B - N) + 0.5)
+
+    Then red_s, green_s, and blue_s are stored along with exp_shared in
+    the red, green, blue, and shared bits respectively of the texture
+    image.
+
+    An implementation accepting pixel data of type
+    UNSIGNED_INT_5_9_9_9_REV_EXT with a format of RGB is allowed to store
+    the components "as is" if the implementation can determine the current
+    pixel transfer state act as an identity transform on the components."
+
+    Add a new row and the "shared bits" column (blank for all existing
+    rows) to Table 3.16 (page 154).
+
+        Sized                  Base             R     G     B     A     L     I     D     shared
+        Internal Format        Internal Format  bits  bits  bits  bits  bits  bits  bits  bits
+        ---------------------  ---------------  ----  ----  ----  ----  ----  ----  ----  ------
+        RGB9_E5_EXT            RGB              9     9     9                             5
+
+ -- Section 3.8.x, Shared Exponent Texture Color Conversion
+
+    Insert this section AFTER section 3.8.14 Texture Comparison Modes
+    and BEFORE section 3.8.15 Texture Application (and after the "sRGB
+    Texture Color Conversion" if EXT_texture_sRGB is supported).
+
+    "If the currently bound texture's internal format is RGB9_E5_EXT, the
+    red, green, blue, and shared bits are converted to color components
+    (prior to filtering) using the following shared exponent decoding.
+
+    The components red_s, green_s, blue_s, and exp_shared values (see
+    section 3.8.1) are treated as unsigned integers and are converted
+    to red, green, blue as follows:
+
+       red   = red_s   * 2^(exp_shared - B)
+       green = green_s * 2^(exp_shared - B)
+       blue  = blue_s  * 2^(exp_shared - B)"
+
+Additions to Chapter 4 of the 2.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+ -- Section 4.3.2, Reading Pixels
+
+    Add a row to table 4.7 (page 224);
+
+                                                 Component
+    type Parameter                 GL Data Type  Conversion Formula
+    -----------------------------  ------------  ------------------
+    UNSIGNED_INT_5_9_9_9_REV_EXT   uint          special
+
+    Replace second paragraph of "Final Conversion" (page 222) to read:
+
+    For an RGBA color, if <type> is not FLOAT or
+    UNSIGNED_INT_5_9_9_9_REV_EXT, or if the CLAMP_READ_COLOR_ARB is
+    TRUE, or CLAMP_READ_COLOR_ARB is FIXED_ONLY_ARB and the selected
+    color (or texture) buffer is a fixed-point buffer, each component
+    is first clamped to [0,1].  Then the appropriate conversion formula
+    from table 4.7 is applied the component.
+
+    In the special case when calling ReadPixels with a type of
+    UNSIGNED_INT_5_9_9_9_REV_EXT and format of RGB, the conversion
+    is done as follows:  The returned data are packed into a series of
+    GL uint values. The red, green, and blue components are converted
+    to red_s, green_s, blue_s, and exp_shared integers as described in
+    section 3.8.1 when the internalformat is RGB9_E5_EXT.  The red_s,
+    green_s, blue_s, and exp_shared are then packed as the 1st, 2nd,
+    3rd, and 4th components of the UNSIGNED_INT_5_9_9_9_REV_EXT format
+    as shown in table 3.11."
+
+Additions to Chapter 5 of the 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 2.0 Specification (State and State Requests)
+
+ -- Section 6.1.3, Enumerated Queries
+
+    Add TEXTURE_SHARED_SIZE_EXT to the list of queries in the first
+    sentence of the fifth paragraph (page 247) so it reads:
+
+    "For texture images with uncompressed internal formats, queries of
+    value of TEXTURE_RED_SIZE, TEXTURE_GREEN_SIZE, TEXTURE_BLUE_SIZE,
+    TEXTURE_ALPHA_SIZE, TEXTURE_LUMINANCE_SIZE, TEXTURE_DEPTH_SIZE,
+    TEXTURE_SHARED_SIZE_EXTT, and TEXTURE_INTENSITY_SIZE return the
+    actual resolutions of the stored image array components, not the
+    resolutions specified when the image array was defined."
+
+Additions to the OpenGL Shading Language specification
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None.
+
+Dependencies on ARB_color_buffer_float
+
+    If ARB_color_buffer_float is not supported, replace this amended
+    sentence from 4.3.2 above
+
+    "For an RGBA color, if <type> is not FLOAT or
+    UNSIGNED_INT_5_9_9_9_REV_EXT, or if the CLAMP_READ_COLOR_ARB is TRUE, or
+    CLAMP_READ_COLOR_ARB is FIXED_ONLY_ARB and the selected color buffer
+    (or texture image for GetTexImage) is a fixed-point buffer (or texture
+    image for GetTexImage), each component is first clamped to [0,1]."
+
+    with
+
+    "For an RGBA color, if <type> is not FLOAT or
+    UNSIGNED_INT_5_9_9_9_REV_EXT and the selected color buffer (or
+    texture image for GetTexImage) is a fixed-point buffer (or texture
+    image for GetTexImage), each component is first clamped to [0,1]."
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object is not supported, then
+    RenderbufferStorageEXT is not supported and the RGB9_E5_EXT
+    internalformat is therefore not supported by RenderbufferStorageEXT.
+
+Errors
+
+    Relaxation of INVALID_ENUM errors
+    ---------------------------------
+
+    TexImage1D, TexImage2D, TexImage3D, CopyTexImage1D, CopyTexImage2D,
+    and RenderbufferStorageEXT accept the new RGB9_E5_EXT token for
+    internalformat.
+
+    DrawPixels, ReadPixels, TexImage1D, TexImage2D, GetTexImage,
+    TexImage3D, TexSubImage1D, TexSubImage2D, TexSubImage3D,
+    GetHistogram, GetMinmax, ConvolutionFilter1D, ConvolutionFilter2D,
+    ConvolutionFilter3D, GetConvolutionFilter, SeparableFilter2D,
+    GetSeparableFilter, ColorTable, ColorSubTable, and GetColorTable
+    accept the new UNSIGNED_INT_5_9_9_9_REV_EXT token for type.
+
+    GetTexLevelParameterfv and GetTexLevelParameteriv accept the new
+    TEXTURE_SHARED_SIZE_EXT token for <pname>.
+
+    New errors
+    ----------
+
+    INVALID_OPERATION is generated by DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, GetHistogram, GetMinmax, ConvolutionFilter1D,
+    ConvolutionFilter2D, ConvolutionFilter3D, GetConvolutionFilter,
+    SeparableFilter2D, GetSeparableFilter, ColorTable, ColorSubTable,
+    and GetColorTable if <type> is UNSIGNED_INT_5_9_9_9_REV_EXT
+    and <format> is not RGB.
+
+New State
+
+    In table 6.17, Textures (page 278), increment the 42 in "n x Z42*"
+    by 1 for the RGB9_E5_EXT format.
+
+    [NOTE: The OpenGL 2.0 specification actually should read "n x Z48*"
+    because of the 6 generic compressed internal formats in table 3.18.]
+    
+    Add the following entry to table 6.17:
+
+Get Value                Type    Get Command            Value   Description                           Sec.  Attribute
+-----------------------  ------  --------------------  -------  ------------------------------------  ----  ---------
+TEXTURE_SHARED_SIZE_EXT  n x Z+  GetTexLevelParameter  0        xD texture image i's shared exponent  3.8   -
+                                                                field size
+
+New Implementation Dependent State
+
+    None
+
+Appendix
+
+    This source code provides ANSI C routines.  It assumes the C "float"
+    data type is stored with the IEEE 754 32-bit floating-point format.
+    Make sure you define __LITTLE_ENDIAN or __BIG_ENDIAN appropriate
+    for your target system.
+
+    XXX: code below not tested on big-endian platform...
+
+------------------- start of source code ------------------------
+
+#include <assert.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define __LITTLE_ENDIAN  1
+#define __BIG_ENDIAN     2
+
+#ifdef _WIN32
+#define __BYTE_ORDER __LITTLE_ENDIAN
+#endif
+
+#define RGB9E5_EXPONENT_BITS          5
+#define RGB9E5_MANTISSA_BITS          9
+#define RGB9E5_EXP_BIAS               15
+#define RGB9E5_MAX_VALID_BIASED_EXP   31
+
+#define MAX_RGB9E5_EXP               (RGB9E5_MAX_VALID_BIASED_EXP - RGB9E5_EXP_BIAS)
+#define RGB9E5_MANTISSA_VALUES       (1<<RGB9E5_MANTISSA_BITS)
+#define MAX_RGB9E5_MANTISSA          (RGB9E5_MANTISSA_VALUES-1)
+#define MAX_RGB9E5                   (((float)MAX_RGB9E5_MANTISSA)/RGB9E5_MANTISSA_VALUES * (1<<MAX_RGB9E5_EXP))
+#define EPSILON_RGB9E5               ((1.0/RGB9E5_MANTISSA_VALUES) / (1<<RGB9E5_EXP_BIAS))
+
+typedef struct {
+#ifdef __BYTE_ORDER
+#if __BYTE_ORDER == __BIG_ENDIAN
+  unsigned int negative:1;
+  unsigned int biasedexponent:8;
+  unsigned int mantissa:23;
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+  unsigned int mantissa:23;
+  unsigned int biasedexponent:8;
+  unsigned int negative:1;
+#endif
+#endif
+} BitsOfIEEE754;
+
+typedef union {
+  unsigned int raw;
+  float value;
+  BitsOfIEEE754 field;
+} float754;
+
+typedef struct {
+#ifdef __BYTE_ORDER
+#if __BYTE_ORDER == __BIG_ENDIAN
+  unsigned int biasedexponent:RGB9E5_EXPONENT_BITS;
+  unsigned int b:RGB9E5_MANTISSA_BITS;
+  unsigned int g:RGB9E5_MANTISSA_BITS;
+  unsigned int r:RGB9E5_MANTISSA_BITS;
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+  unsigned int r:RGB9E5_MANTISSA_BITS;
+  unsigned int g:RGB9E5_MANTISSA_BITS;
+  unsigned int b:RGB9E5_MANTISSA_BITS;
+  unsigned int biasedexponent:RGB9E5_EXPONENT_BITS;
+#endif
+#endif
+} BitsOfRGB9E5;
+
+typedef union {
+  unsigned int raw;
+  BitsOfRGB9E5 field;
+} rgb9e5;
+
+float ClampRange_for_rgb9e5(float x)
+{
+  if (x > 0.0) {
+    if (x >= MAX_RGB9E5) {
+      return MAX_RGB9E5;
+    } else {
+      return x;
+    }
+  } else {
+    /* NaN gets here too since comparisons with NaN always fail! */
+    return 0.0;
+  }
+}
+
+float MaxOf3(float x, float y, float z)
+{
+  if (x > y) {
+    if (x > z) {
+      return x;
+    } else {
+      return z;
+    }
+  } else {
+    if (y > z) {
+      return y;
+    } else {
+      return z;
+    }
+  }
+}
+
+/* Ok, FloorLog2 is not correct for the denorm and zero values, but we
+   are going to do a max of this value with the minimum rgb9e5 exponent
+   that will hide these problem cases. */
+int FloorLog2(float x)
+{
+  float754 f;
+
+  f.value = x;
+  return (f.field.biasedexponent - 127);
+}
+
+int Max(int x, int y)
+{
+  if (x > y) {
+    return x;
+  } else {
+    return y;
+  }
+}
+
+rgb9e5 float3_to_rgb9e5(const float rgb[3])
+{
+  rgb9e5 retval;
+  float maxrgb;
+  int rm, gm, bm;
+  float rc, gc, bc;
+  int exp_shared;
+  double denom;
+
+  rc = ClampRange_for_rgb9e5(rgb[0]);
+  gc = ClampRange_for_rgb9e5(rgb[1]);
+  bc = ClampRange_for_rgb9e5(rgb[2]);
+
+  maxrgb = MaxOf3(rc, gc, bc);
+  exp_shared = Max(-RGB9E5_EXP_BIAS-1, FloorLog2(maxrgb)) + 1 + RGB9E5_EXP_BIAS;
+  assert(exp_shared <= RGB9E5_MAX_VALID_BIASED_EXP);
+  assert(exp_shared >= 0);
+  /* This pow function could be replaced by a table. */
+  denom = pow(2, exp_shared - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS);
+
+  maxm = (int) floor(maxrgb / denom + 0.5);
+  if (maxm == MAX_RGB9E5_MANTISSA+1) {
+    denom *= 2;
+    exp_shared += 1;
+    assert(exp_shared <= RGB9E5_MAX_VALID_BIASED_EXP);
+  } else {
+    assert(maxm <= MAX_RGB9E5_MANTISSA);
+  }
+
+  rm = (int) floor(rc / denom + 0.5);
+  gm = (int) floor(gc / denom + 0.5);
+  bm = (int) floor(bc / denom + 0.5);
+
+  assert(rm <= MAX_RGB9E5_MANTISSA);
+  assert(gm <= MAX_RGB9E5_MANTISSA);
+  assert(bm <= MAX_RGB9E5_MANTISSA);
+  assert(rm >= 0);
+  assert(gm >= 0);
+  assert(bm >= 0);
+
+  retval.field.r = rm;
+  retval.field.g = gm;
+  retval.field.b = bm;
+  retval.field.biasedexponent = exp_shared;
+
+  return retval;
+}
+
+void rgb9e5_to_float3(rgb9e5 v, float retval[3])
+{
+  int exponent = v.field.biasedexponent - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS;
+  float scale = (float) pow(2, exponent);
+
+  retval[0] = v.field.r * scale;
+  retval[1] = v.field.g * scale;
+  retval[2] = v.field.b * scale;
+}
+
+------------------- end of source code ------------------------
+
+Issues
+
+    1)  What should this extension be called?
+
+        RESOLVED: EXT_texture_shared_exponent
+
+        The "EXT_texture" part indicates the extension is in the texture
+        domain and "shared_exponent" indicates the extension is adding
+        a new shared exponent formats.
+
+        EXT_texture_rgb9e5 was considered but there's no precedent for
+        extension names to be so explicit (or cryptic?) about format
+        specifics in the extension name.
+
+    2)  There are many possible encodings for a shared exponent format.
+        Which encoding does this extension specify?
+
+        RESOLVED:  A single 5-bit exponent stored as an unsigned
+        value biased by 15 and three 9-bit mantissas for each of 3
+        components.  There are no sign bits so all three components
+        must be non-negative.  The fractional mantissas assume an implied
+        0 left of the decimal point because having an implied leading
+        1 is inconsistent with sharing the exponent.  Neither Infinity
+        nor Not-a-Number (NaN) are representable in this shared exponent
+        format.
+
+        We chose this format because it closely matches the range and
+        precision of the s10e5 half-precision floating-point described
+        in the ARB_half_float_pixel and ARB_texture_float specifications.
+
+    3)  Why not an 8-bit shared exponent?
+
+        RESOLVED:  Greg Ward's RGBE shared exponent encoding uses an
+        8-bit exponent (same as a single-precision IEEE value) but we
+        believe the rgb9e5 is more generally useful than rgb8e8.
+
+        An 8-bit exponent provides far more range than is typically
+        required for graphics applications.  However, an extra bit
+        of precision for each component helps in situations where a
+        high magnitude component dominates a low magnitude component.
+        Having an 8-bit shared exponent and 8-bit mantissas are amenable
+        to CPUs that facilitate 8-bit sized reads and writes over non-byte
+        aligned fields, but GPUs do not suffer from this issue.
+
+        Indeed GPUs with s10e5 texture filtering can use that same
+        filtering hardware for rgb9e5 textures.
+
+        However, future extensions could add other shared exponent formats
+        so we name the tokens to indicate the 
+
+    4)  Should there be an external format and type for rgb9e5?
+
+        RESOLVED:  Yes, hence the external format GL_RGB9_E5_EXT and
+        type GL_UNSIGNED_INT_5_9_9_9_REV_EXT.  This makes it fast to load
+        GL_RGB9_E5_EXT textures without any translation by the driver.
+
+    5)  Why is the exponent bias 15?
+
+        RESOLVED:  The best technical choice of 15.  Hopefully, this
+        discussion sheds insight into the numerics of the shared exponent
+        format in general.
+
+        With conventional floating-point formats, the number corresponding
+        to a finite, non-denorm, non-zero floating-point value is
+
+            value = -1^sgn * 2^(exp-bias) * 1.frac
+
+        where sgn is the sign bit (so 1 for sgn negative because -1^-1
+        == -1 and 0 means positive because -1^0 == +1), exp is an
+        (unsigned) BIASED exponent and bias is the format's constant bias
+        to subtract to get the unbiased (possibly negative) exponent;
+        and frac is the fractional portion of the mantissa with the
+        "1." indicating an implied leading 1.
+
+        An exp value of zero indicates so-called denormalized values
+        (denorms).  With conventional floating-point formats, the number
+        corresponding to a denorm floating-point value is
+
+            value = -1^sgn * 2^(exp-bias+1) * 0.frac
+
+        where the only difference between the denorm and non-denorm case
+        is the bias is one greater in the denorm case and the implied
+        leading digit is a zero instead of a one.
+
+        Ideally, the rgb9e5 shared exponent format would represent
+        roughly the same range of finite values as the s10e5 format
+        specified by the ARB_texture_float extension.  The s10e5 format
+        has an exponent bias of 15.
+
+        While conventional floating-point formats cleverly use an implied
+        leading 1 for non-denorm, finite values, a shared exponent format
+        cannot use an implied leading 1 because each component may have
+        a different magnitude for its most-significant binary digit.
+        The implied leading 1 assumes we have the flexibility to adjust
+        the mantissa and exponent together to ensure an implied leading 1.
+        That flexibility is not present when the exponent is shared.
+
+        So the rgb9e5 format cannot assume an implied leading one.
+        Instead, an implied leading zero is assumed (much like the
+        conventional denorm case).
+
+        The rgb9e5 format eliminate support representing negative,
+        Infinite, not-a-number (NaN), and denorm values.
+
+        We've already discussed how the BIASED zero exponent is used to
+        encode denorm values (and zero) with conventional floating-point
+        formats.  The largest BIASED exponent (31 for s10e5, 127 for
+        s23e8) for conventional floating-point fomats indicates Infinity
+        and NaN values.  This means these two extrema exponent values are
+        "off limits" for run-of-the-mill values.
+
+        The numbers corresponding to a shared exponent format value are:
+
+            value_r = 2^(exp-bias) * 0.frac_r
+            value_g = 2^(exp-bias) * 0.frac_g
+            value_b = 2^(exp-bias) * 0.frac_b
+
+        where there is no sgn since all values are non-negative, exp is
+        the (unsigned) BIASED exponent and bias is the format's constant
+        bias to subtract to get the unbiased (possibly negative) exponent;
+        and frac_r, frac_g, and frac_b are the fractional portion of
+        the mantissas of the r, g, and b components respectively with
+        "0." indicating an implied leading 0.
+
+        There should be no "off limits" exponents for the shared exponent
+        format since there is no requirement for representing Infinity
+        or NaN values and denorm is not a special case.  Because of
+        the implied leading zero, any component with all zeros for its
+        mantissa is zero, no matter the shared exponent's value.
+
+        So the run-of-the-mill BIASED range of exponents for s10e5 is
+        1 to 30.  But the rgb9e5 shared exponent format consistently
+        uses the same rule for all exponents from 0 to 31.
+
+        What exponent bias best allows us to represent the range of
+        s10e5 with the rgb9e5 format?  15.
+
+        Consider the maximum representable finite s10e5 magnitude.
+        The exponent would be 30 (31 would encode an Infinite or NaN
+        value) and the binary mantissa would be 1 followed by ten
+        fractional 1's.  Effectively:
+
+            s10e5_max  =  1.1111111111 * 2^(30-15)
+                       =  1.1111111111 * 2^15
+
+        For an rgb9e5 value with a bias of 15, the largest representable
+        value is:
+
+            rgb9e5_max =  0.111111111  * 2^(31-15)
+                       =  0.111111111  * 2^16
+                       =  1.11111111   * 2^15
+
+        If you ignore two LSBs, these values are nearly identical.
+        The rgb9e5_max value is exactly representable as an s10e5 value.
+
+        For an rgb9e5 value with a bias of 15, the smallest non-zero
+        representable value is:
+
+            rgb9e5_min =  0.000000001  * 2^(0-15)
+            rgb9e5_min =  0.000000001  * 2^-15
+            rgb9e5_min =  0.0000000001 * 2^-14
+
+        So the s10e5_min and rgb9e5_min values exactly match (of course,
+        this assumes the shared exponent bias is 15 which might not be
+        the case if other components demand higher exponents).
+
+    8)  Should there be an rgb9e5 framebuffer format?
+
+        RESOLVED:  No.  Rendering to rgb9e5 is better left to another
+        extension and would require the hardware to convert from a
+        (floating-point) RGBA value into an rgb9e5 encoding.
+
+        Interactions with EXT_framebuffer_object are specified,
+        but the expectation is this is not a renderable
+        format and glCheckFramebufferStatusEXT would return
+        GL_FRAMEBUFFER_UNSUPPORTED_EXT.
+
+        An implementation certainly could make this texture internal
+        format renderable when used with a framebuffer object.  Note that
+        the shared exponent means masked components may be lossy in
+        their masking.  For example, a very small but non-zero value in
+        a masked component could get flushed to zero if a large enough
+        value is written into an unmasked component.
+
+    9)  Should automatic mipmap generation be supported for rgb9e5
+        textures?
+
+        RESOLVED:  Yes.
+
+    10) Should non-texture and non-framebuffer commands for loading
+        pixel data accept the GL_UNSIGNED_INT_5_9_9_9_REV_EXT type?
+
+        RESOLVED:  Yes.
+
+        Once the pixel path has to support the new type/format combination
+        of GL_UNSIGNED_INT_5_9_9_9_REV_EXT / GL_RGB for specifying and
+        querying texture images, it might as well be supported for all
+        commands that pack and unpack RGB pixel data.
+
+        The specification is written such that the glDrawPixels
+        type/format parameters are accepted by glReadPixels,
+        glTexGetImage, glTexImage2D, and other commands that are specified
+        in terms of glDrawPixels.
+
+    11) Should non-texture internal formats (such as for color tables,
+        convolution kernels, histogram bins, and min/max tables) accept
+        GL_RGB9_E5_EXT format?
+
+        RESOLVED:  No.
+
+        That's pointless.  No hardware is ever likely to support
+        GL_RGB9_E5_EXT internalformats for anything other than textures
+        and maybe color buffers in the future.  This format is not
+        interesting for color tables, convolution kernels, etc.
+
+    12) Should a format be supported with sign bits for each component?
+
+        RESOLVED:  No.
+
+        An srgb8e5 format with a sign bit per component could be useful
+        but is better left to another extension.
+
+    13) The rgb9e5 allows two 32-bit values encoded as rgb9e5 to
+        correspond to the exact same 3 components when expanded to
+        floating-point.  Is this a problem?
+
+        RESOLVED:  No, there's no problem here.
+
+        An encoder is likely to always pack components so at least
+        one mantissa will have an explicit leading one, but there's no
+        requirement for that.
+
+        Applications might be able to take advantage of this by quickly
+        dividing all three components by a power-of-two by simply
+        subtracting log2 of the power-of-two from the shared exponent (as
+        long as the exponent is greater than zero prior to the subtract).
+
+        Arguably, the shared exponent format could maintain a slight
+        amount of extra precision (one bit per mantissa) if the format
+        said if the most significant bits of all three mantissas are
+        either all one or all zero and the biased shared exponent was not
+        zero, then an implied leading 1 should be assumed and the shared
+        exponent should be treated as one smaller than it really is.
+        While this would preserve an extra least-significant bit of
+        mantissa precision for components of approximately the same
+        magnitude, it would complicate the encoding and decoding of
+        shared exponent values.
+
+    14) Can you provide some C code for encoding three floating-point
+        values into the rgb9e5 format?
+
+        RESOLVED:  Sure.  See the Appendix.
+
+    15) Should we support a non-REV version of the
+        GL_UNSIGNED_INT_5_9_9_9_REV_EXT token?
+
+        RESOLVED:  No.  The shared exponent is always the 5 most
+        significant bits of the 32 bit word.  The first (red) mantissa
+        is in the least significant 9 bits, followed by 9 bits for the
+        second (green) mantissa, followed by 9 bits for the third (blue)
+        mantissa.  We don't want to promote different arrangements of
+        the bitfields for rgb9e5 values.
+
+    16) Can you use the GL_UNSIGNED_INT_5_9_9_9_REV_EXT format with
+        just any format?
+
+        RESOLVED:  You can only use the GL_UNSIGNED_INT_5_9_9_9_REV_EXT
+        format with GL_RGB.  Otherwise, the GL generates
+        a GL_INVALID_OPERATION error.  Conceptually,
+        GL_UNSIGNED_INT_5_9_9_9_REV_EXT is a 3-component format
+        that just happens to have 5 shared bits too.  Just as the
+        GL_UNSIGNED_BYTE_3_3_2 format just works with GL_RGB (or else
+        the GL generates a GL_INVALID_OPERATION error), so should
+        GL_UNSIGNED_INT_5_9_9_9_REV_EXT.
+
+    17) What should GL_TEXTURE_SHARED_SIZE_EXT return when queried with
+        GetTexLevelParameter?
+
+        RESOLVED:  Return 5 for the RGB9_E5_EXT internal format and 0
+        for all other existing formats.
+
+        This is a count of the number of bits in the shared exponent.
+
+    18) What should GL_TEXTURE_RED_SIZE, GL_TEXTURE_GREEN_SIZE, and
+        GL_TEXTURE_BLUE_SIZE return when queried with GetTexLevelParameter
+        for a GL_RGB9_E5_EXT texture?
+
+        RESOLVED:  Return 9 for each.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+    0.5   02/18/07  mjk       Initial public version
+    1.0   07/18/08  mjk       correct significant errors in spec language
+                              and C code

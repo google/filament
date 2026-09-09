@@ -25,40 +25,29 @@
 //* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-{% macro wgpu_string_members(CppType) %}
+{% macro wgpu_string_members(CppType, use_absl=False) %}
     inline constexpr {{CppType}}() noexcept = default;
-
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    inline constexpr {{CppType}}(const std::string_view& sv) noexcept {
+    explicit(false) inline constexpr {{CppType}}(const std::string_view& sv) noexcept {
         this->data = sv.data();
         this->length = sv.length();
     }
-
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    inline constexpr {{CppType}}(const char* s) {
+    explicit(false) inline constexpr {{CppType}}(const char* s) {
         this->data = s;
         this->length = WGPU_STRLEN;  // use strlen
     }
-
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    inline constexpr {{CppType}}(WGPUStringView s) {
+    explicit(false) inline constexpr {{CppType}}(WGPUStringView s) {
         this->data = s.data;
         this->length = s.length;
     }
-
     inline constexpr {{CppType}}(const char* data, size_t length) {
         this->data = data;
         this->length = length;
     }
-
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    inline constexpr {{CppType}}(std::nullptr_t) {
+    explicit(false) inline constexpr {{CppType}}(std::nullptr_t) {
         this->data = nullptr;
         this->length = WGPU_STRLEN;
     }
-
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
-    inline constexpr {{CppType}}(std::nullopt_t) {
+    explicit(false) inline constexpr {{CppType}}(std::nullopt_t) {
         this->data = nullptr;
         this->length = WGPU_STRLEN;
     }
@@ -67,7 +56,7 @@
         return this->data == nullptr && this->length == wgpu::kStrlen;
     }
 
-    // NOLINTNEXTLINE(runtime/explicit) allow implicit conversion
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator std::string_view() const {
         if (this->length == wgpu::kStrlen) {
             if (IsUndefined()) {
@@ -77,6 +66,22 @@
         }
         return {this->data, this->length};
     }
+
+    {%- if use_absl %}
+
+        #ifndef ABSL_USES_STD_STRING_VIEW
+        // NOLINTNEXTLINE(google-explicit-constructor)
+        operator absl::string_view() const {
+            if (this->length == wgpu::kStrlen) {
+                if (IsUndefined()) {
+                    return {};
+                }
+                return {this->data};
+            }
+            return {this->data, this->length};
+        }
+        #endif
+    {% endif %}
 
     template <typename View,
               typename = std::enable_if_t<std::is_constructible_v<View, const char*, size_t>>>
@@ -90,3 +95,59 @@
         return {this->data, this->length};
     }
 {% endmacro %}
+
+{%- macro as_dawnType(typ) -%}
+    {%- if varargs -%}
+        {{ unreachable_code("as_dawnType: unexpected positional arguments; use named arguments (e.g., is_volatile=True)") }}
+    {%- endif -%}
+    {%- set is_volatile = kwargs.get('is_volatile', False) -%}
+    {%- if typ.__class__.__name__ in ["AnnotatedTypedMember", "RecordMember"] -%}
+        {%- if (typ.spanify | default(True)) and typ.length and typ.constant_length != 1 -%}
+            {%- if typ.type.name.canonical_case() == "void" -%}
+                {%- set raw_type = "std::byte" -%}
+            {%- else -%}
+                {%- set raw_type = as_dawnType(typ.type) -%}
+            {%- endif -%}
+            {%- set element_type = decorate(raw_type, typ).removesuffix(" *") -%}
+            {%- if is_volatile -%}
+                {%- set element_type = "volatile " + element_type -%}
+            {%- endif -%}
+            {%- set index_type = typ.index_type | default('size_t') -%}
+            {%- if typ.length == "constant" -%}
+                {%- if index_type == "size_t" -%}
+                    {%- set length = typ.constant_length -%}
+                {%- else -%}
+                    {%- set length = index_type ~ "{" ~ typ.constant_length ~ "}" -%}
+                {%- endif -%}
+            {%- else -%}
+                {%- set length = "dawn::detail::DynamicExtent<" ~ index_type ~ ">" -%}
+            {%- endif -%}
+            dawn::ityp::span<{{index_type}}, {{element_type}}, {{length}}>
+        {%- else -%}
+            {%- set raw_type = as_dawnType(typ.type) -%}
+            {%- if is_volatile -%}
+                {%- set raw_type = "volatile " + raw_type -%}
+            {%- endif -%}
+            {{decorate(raw_type, typ)}}
+        {%- endif -%}
+    {%- elif typ.__class__.__name__ == "Name" -%}
+        {{as_cppType(typ)}}
+    {%- elif typ.category == "object" -%}
+        detail::{{typ.name.CamelCase()}}*
+    {%- elif typ.category in ["bitmask", "enum"] or typ.name.get() == "bool" -%}
+        {{metadata.namespace}}::{{typ.name.CamelCase()}}
+    {%- elif typ.category == "structure" -%}
+        {{as_cppType(typ.name)}}
+    {%- else -%}
+        {{as_cType(typ.name)}}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro as_annotated_dawnType(arg) -%}
+    {%- if varargs -%}
+        {{ unreachable_code("as_annotated_dawnType: unexpected positional arguments; use named arguments (e.g., is_volatile=True)") }}
+    {%- endif -%}
+    {%- set is_volatile = kwargs.get('is_volatile', False) -%}
+    {{as_dawnType(arg, is_volatile=is_volatile)}} {{as_varName(arg.name)}}
+{%- endmacro -%}
+

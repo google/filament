@@ -25,20 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
-#include "dawn/common/windows_with_undefs.h"
+#include "src/utils/windows_with_undefs.h"
 
 #include <array>
 #include <cstdio>
 #include <thread>
 
-#include "dawn/common/Assert.h"
-#include "dawn/utils/PlatformDebugLogger.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/utils/PlatformDebugLogger.h"
+#include "src/utils/assert.h"
 
 namespace dawn::utils {
 
@@ -89,8 +84,9 @@ class WindowsDebugLogger : public PlatformDebugLogger {
                         break;
                     }
                     DAWN_ASSERT(wait == WAIT_OBJECT_0 + 1);
-                    fprintf(stderr, "%.*s\n", static_cast<int>(sizeof(dbWinBuffer->data)),
-                            dbWinBuffer->data);
+                    DAWN_UNSAFE_TODO(fprintf(stderr, "%.*s\n",
+                                             static_cast<int>(sizeof(dbWinBuffer->data)),
+                                             dbWinBuffer->data));
                     fflush(stderr);
                 }
 

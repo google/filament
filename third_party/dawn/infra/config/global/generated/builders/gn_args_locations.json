@@ -1,5 +1,7 @@
 {
   "ci": {
+    "dawn-android-arm-builder-rel": "ci/dawn-android-arm-builder-rel/gn-args.json",
+    "dawn-android-arm64-builder-rel": "ci/dawn-android-arm64-builder-rel/gn-args.json",
     "dawn-linux-x64-builder-dbg": "ci/dawn-linux-x64-builder-dbg/gn-args.json",
     "dawn-linux-x64-builder-rel": "ci/dawn-linux-x64-builder-rel/gn-args.json",
     "dawn-linux-x64-builder-tsan": "ci/dawn-linux-x64-builder-tsan/gn-args.json",
@@ -23,6 +25,8 @@
     "dawn-win-x86-builder-rel": "ci/dawn-win-x86-builder-rel/gn-args.json"
   },
   "try": {
+    "dawn-cq-android-arm-rel": "try/dawn-cq-android-arm-rel/gn-args.json",
+    "dawn-cq-android-arm64-rel": "try/dawn-cq-android-arm64-rel/gn-args.json",
     "dawn-cq-linux-x64-dbg": "try/dawn-cq-linux-x64-dbg/gn-args.json",
     "dawn-cq-linux-x64-fuzz-dbg": "try/dawn-cq-linux-x64-fuzz-dbg/gn-args.json",
     "dawn-cq-linux-x64-fuzz-rel": "try/dawn-cq-linux-x64-fuzz-rel/gn-args.json",
@@ -53,6 +57,7 @@
     "dawn-try-linux-x86-fuzz-rel": "try/dawn-try-linux-x86-fuzz-rel/gn-args.json",
     "dawn-try-linux-x86-sws-dbg": "try/dawn-try-linux-x86-sws-dbg/gn-args.json",
     "dawn-try-linux-x86-sws-rel": "try/dawn-try-linux-x86-sws-rel/gn-args.json",
+    "dawn-try-mac-arm64-apple-m2-exp-rel": "try/dawn-try-mac-arm64-apple-m2-exp-rel/gn-args.json",
     "dawn-try-mac-arm64-apple-m2-rel": "try/dawn-try-mac-arm64-apple-m2-rel/gn-args.json",
     "dawn-try-mac-x64-amd-5300m-rel": "try/dawn-try-mac-x64-amd-5300m-rel/gn-args.json",
     "dawn-try-mac-x64-amd-555x-rel": "try/dawn-try-mac-x64-amd-555x-rel/gn-args.json",

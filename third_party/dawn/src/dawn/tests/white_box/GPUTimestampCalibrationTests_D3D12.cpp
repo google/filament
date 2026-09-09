@@ -27,10 +27,10 @@
 
 #include <memory>
 
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/QueueD3D12.h"
-#include "dawn/tests/white_box/GPUTimestampCalibrationTests.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/QueueD3D12.h"
+#include "src/dawn/tests/white_box/GPUTimestampCalibrationTests.h"
 
 namespace dawn {
 namespace {

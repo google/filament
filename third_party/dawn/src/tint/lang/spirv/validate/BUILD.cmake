@@ -58,14 +58,9 @@ tint_target_add_dependencies(tint_lang_spirv_validate lib
 )
 
 tint_target_add_external_dependencies(tint_lang_spirv_validate lib
+  "spirv-tools"
   "src_utils"
 )
-
-if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
-  tint_target_add_external_dependencies(tint_lang_spirv_validate lib
-    "spirv-tools"
-  )
-endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
 
 endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
 if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
@@ -79,6 +74,7 @@ tint_add_target(tint_lang_spirv_validate_test test
 )
 
 tint_target_add_dependencies(tint_lang_spirv_validate_test test
+  tint_lang_spirv_validate
   tint_utils
   tint_utils_ice
   tint_utils_macros
@@ -87,16 +83,8 @@ tint_target_add_dependencies(tint_lang_spirv_validate_test test
 
 tint_target_add_external_dependencies(tint_lang_spirv_validate_test test
   "gtest"
+  "spirv-tools"
   "src_utils"
 )
-
-if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
-  tint_target_add_dependencies(tint_lang_spirv_validate_test test
-    tint_lang_spirv_validate
-  )
-  tint_target_add_external_dependencies(tint_lang_spirv_validate_test test
-    "spirv-tools"
-  )
-endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
 
 endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)

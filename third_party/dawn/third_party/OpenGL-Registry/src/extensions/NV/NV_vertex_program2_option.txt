@@ -1,0 +1,1551 @@
+Name
+
+    NV_vertex_program2_option
+
+Name Strings
+
+    GL_NV_vertex_program2_option
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified:      06/23/2004
+    NVIDIA Revision:    3
+
+Number
+
+    305
+
+Dependencies
+
+    ARB_vertex_program is required.
+
+Overview
+
+    This extension provides additional vertex program functionality
+    to extend the standard ARB_vertex_program language and execution
+    environment.  ARB programs wishing to use this added functionality
+    need only add:
+
+        OPTION NV_vertex_program2;
+
+    to the beginning of their vertex programs.
+
+    The functionality provided by this extension, which is roughly
+    equivalent to that provided by the NV_vertex_program2 extension,
+    includes:
+
+      * general purpose dynamic branching,
+
+      * subroutine calls,
+
+      * data-dependent conditional write masks,
+
+      * programmable user clip distances,
+
+      * address registers with four components (instead of just one),
+
+      * absolute value operator on scalar and swizzled operand loads,
+
+      * rudimentary address register math,
+
+      * SIN and COS trigonometry instructions, and
+
+      * fully orthogonal "set on" instructions, including a "set sign"
+        instruction.
+
+Issues
+
+    Why is this a separate extension, rather than just an additional
+    feature of NV_vertex_program2?
+
+      RESOLVED:  The NV_vertex_program2 specification was completed
+      (with a published implementation) prior to the completion of
+      ARB_vertex_program.  Future NVIDIA vertex program extensions should
+      contain extensions to the ARB_vertex_program execution environment
+      as a standard feature.
+
+    NV_vertex_program1_1 contains one feature not found in
+    ARB_vertex_program: the "RCC" (reciprocal clamped) instruction.
+    Should a "NV_vertex_program1_1" program option be provided to expose
+    this small amount of missing functionality?
+
+      RESOLVED:  No.  By itself, that functionality is not all that
+      interesting.
+
+    Should this extension provide a mechanism to specify an "ARB"
+    version of NV_vertex_program state programs (!!VSP1.0)?
+
+      RESOLVED:  No.
+
+    Should a similar option be provided to expose ARB_vertex_program
+    features not found in NV_vertex_program (e.g., local parameters, state
+    bindings, certain "macro" instructions) under the NV_vertex_program
+    interface?
+
+      RESOLVED:  No.  Why not just write an ARB program in that case?
+
+    The ARB_vertex_program spec has a minor grammar bug that requires
+    that inline scalar constants used as scalar operands include a
+    component selector.  In other words, you have to say "11.0.x" to
+    use the constant "11.0".  What should we do here?
+
+      RESOLVED:  The NV_vertex_program2_option grammar will correct
+      this problem, which should be fixed in future revisions to the
+      ARB language.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetProgramivARB:
+
+        MAX_PROGRAM_EXEC_INSTRUCTIONS_NV                0x88F4
+        MAX_PROGRAM_CALL_DEPTH_NV                       0x88F5
+
+Additions to Chapter 2 of the OpenGL 1.4 Specification (OpenGL Operation)
+
+    Modify Section 2.11, Clipping (p. 42)
+
+    (insert before the second paragraph, p. 43) In vertex program mode,
+    conventional user clipping is performed if the vertex program is
+    position-invariant (section 2.14.4.5.1).  When the vertex program
+    is not position-invariant, it can write a single floating-point clip
+    distance for each supported clip plane.  The half-space corresponding
+    to clip plane <n> is given by the set of points that satisfy the
+    inequality
+
+      c_n(P) >=0,
+
+    where c_n(P) is the value of clip distance <n> at point P.  For point
+    primitives, c_n(P) is simply the clip distance for the vertex in
+    question.  For line and triangle primitives, per-vertex clip distances
+    are interpolated using a weighted mean, with weights derived according
+    to the algorithms described in sections 3.4 and 3.5.
+
+    Modify Section 2.14.2, Vertex Program Grammar and Restrictions
+
+    (mostly add to existing grammar rules, modify a few existing grammar
+    rules -- changes marked with "***")
+
+    <optionName>            ::= "NV_vertex_program2"
+
+    <statement>             ::= <branchLabel> ":"
+
+    <instruction>           ::= <FlowInstruction>
+
+    <ALUInstruction>        ::= <ARAop_instruction>
+
+    <FlowInstruction>       ::= <BRAop_instruction>
+                              | <FLOWCCop_instruction>
+
+    <VECTORop>              ::= "SSG"
+
+    <SCALARop>              ::= "COS"
+                              | "RCC"
+                              | "SIN"
+
+    <BINop>                 ::= "SEQ"
+                              | "SFL"
+                              | "SGT"
+                              | "SLE"
+                              | "SNE"
+                              | "STR"
+
+    <ARLop>                 ::= "ARR"
+
+    <ARLop_src>             ::= <instOperandV>  
+                                  (*** instead of <instOperandS>)
+
+    <ARAop_instruction>     ::= <ARAop> <instResultAddr> "," 
+                                <instOperandAddrVNS>
+
+    <ARAop>                 ::= "ARA"
+
+    <BRAop_instruction>     ::= <BRAop> <branchLabel> <optBranchCond>
+
+    <BRAop>                 ::= "BRA"
+                              | "CAL"
+
+    <FLOWCCop_instruction>  ::= <FLOWCCop> <optBranchCond>
+
+    <FLOWCCop>              ::= "RET"
+
+    <optBranchCond>         ::= /* empty */
+                              | <ccMask>
+
+    <instOperandV>          ::= <instOperandAbsV>
+
+    <instOperandAbsV>       ::= <optSign> "|" <instOperandBaseV> "|"
+
+    <instOperandS>          ::= <instOperandAbsS>
+
+    <instOperandAbsS>       ::= <optSign> "|" <instOperandBaseS> "|"
+
+
+    <instOperandAddrVNS>    ::= <addrUseVNS>
+
+    <instResult>            ::= <instResultCC>
+
+    <instResultCC>          ::= <instResultBase> <ccMask>
+
+    <instResultAddr>        ::= <instResultAddrCC>
+
+    <instResultAddrCC>      ::= <instResultAddrBase> <ccMask>
+
+    <branchLabel>           ::= <identifier>
+
+    <paramUseV>             ::= <constantScalar> 
+                                  (*** instead of <constantScalar>
+                                       <swizzleSuffix>)
+
+    <paramUseS>             ::= <constantScalar> 
+                                  (*** instead of <constantScalar>
+                                       <scalarSuffix>)
+
+    <resultVtxBasic>        ::= "clip" "[" <clipPlaneNum> "]"
+
+    <addrUseVNS>            ::= <addrVarName>
+
+    <addrUseW>              ::= <addrVarName> <optAddrWriteMask>
+                                  (*** instead of <addrVarName> 
+                                       <addrWriteMask>)
+
+    <ccMask>                ::= "(" <ccTest> ")"
+
+    <ccTest>                ::= <ccMaskRule> <swizzleSuffix>
+
+    <ccMaskRule>            ::= "EQ"
+                              | "GE"
+                              | "GT"
+                              | "LE"
+                              | "LT"
+                              | "NE"
+                              | "TR"
+                              | "FL"
+
+    <optAddrWriteMask>      ::= <optWriteMask> 
+                                  (*** instead of "." "x")
+
+    <addrComponent>         ::= <xyzwComponent> 
+                                  (*** instead of "x")
+
+    (modify description of reserved identifiers)
+    
+    ... The following strings are reserved keywords and may not be used
+    as identifiers:
+
+        ABS, ADD, ADDRESS, ALIAS, ARA, ARL, ARR, ATTRIB, BRA, CAL, COS,
+        DP3, DP4, DPH, DST, END, EX2, EXP, FLR, FRC, LG2, LIT, LOG, MAD,
+        MAX, MIN, MOV, MUL, OPTION, OUTPUT, PARAM, POW, RCC, RCP, RET,
+        RSQ, SEQ, SFL, SGE, SGT, SIN, SLE, SLT, SNE, SUB, SSG, STR, SWZ,
+        TEMP, XPD, program, result, state, and vertex.
+
+    Add to Section 2.14.3.4, Vertex Program Results
+
+    (add to binding table)
+
+      Binding                        Components  Description
+      -----------------------------  ----------  ----------------------------
+      result.clip[n]                 (d,*,*,*)   clip plane distance
+
+    (add a paragraph before the last one) If a result variable binding
+    matches "result.clip[n]", updates to the "x" component of the result
+    variable set the clip distance for clip plane <n>.
+
+    (modify last paragraph) When in vertex program mode, all attributes
+    of a transformed vertex, except for clip distances, are undefined
+    at each vertex program invocation.  Any results, or even individual
+    components of results, that are not written to during vertex program
+    execution remain undefined.  All clip distances are initially zero,
+    and remain zero if not written by the vertex program.
+
+    Modify Section 2.14.3.5, Vertex Program Address Registers
+
+    (modify first paragraph) Vertex program address register variables are
+    a set of four-component signed integer vectors.  Address registers
+    are used as indices when performing relative addressing in program
+    parameter arrays (section 2.14.4.2).
+
+    (modify third paragraph) Vertex program address register variables are
+    undefined at each vertex program invocation.  Address registers can
+    be written by the ARA, ARL, and ARL instructions (section 2.14.5),
+    and will be read by the ARA instruction and when a program uses
+    relative addressing in program parameter arrays.
+
+    Add New Section 2.14.3.X, Condition Code Register (insert after
+    Section 2.14.3.5, Vertex Program Address Registers)
+
+    The vertex program condition code register is a single four-component
+    vector.  Each component of this register is one of four enumerated
+    values: GT (greater than), EQ (equal), LT (less than), or UN
+    (unordered).  The condition code register can be used to mask writes
+    to registers and to evaluate conditional branches.
+
+    Most vertex program instructions can optionally update the condition
+    code register.  When a vertex program instruction updates the
+    condition code register, a condition code component is set to LT if
+    the corresponding component of the result is less than zero, EQ if it
+    is equal to zero, GT if it is greater than zero, and UN if it is NaN
+    (not a number).
+
+    The condition code register is initialized to a vector of EQ values
+    each time a vertex program executes.
+
+    Modify Section 2.14.4, Vertex Program Execution Environment
+
+    (modify 3rd paragraph) Vertex programs execute a sequence of
+    instructions, with support for conditional and unconditional branches,
+    subroutine calls, and returns.  Vertex programs begin by executing
+    the instruction following the label "main".  If no label "main" is
+    defined, execution begins at the first instruction in the program.
+    Instructions are executed in the order specified in the program,
+    jumping when specified in branch instructions, until the end of the
+    program is reached.
+
+    (modify instruction table) There are forty-two vertex program
+    instructions.  Vertex program instructions may have an optional
+    suffix of "C" to allow an update of the condition code register
+    (section 2.14.3.X).  For example, there are two instructions to
+    perform vector addition, "ADD" and "ADDC".  The instructions and their
+    respective input and output parameters are summarized in Table X.5.
+
+      Instruction    Inputs  Output   Description
+      -----------    ------  ------   --------------------------------
+      ABS[C]         v       v        absolute value
+      ADD[C]         v,v     v        add
+      ARA[C]         a       a        address register add
+      ARL[C]         s       a        address register load
+      ARR[C]         v       a        address register load (round)
+      BRA            c       -        branch
+      CAL            c       -        subroutine call
+      COS[C]         s       ssss     cosine
+      DP3[C]         v,v     ssss     3-component dot product
+      DP4[C]         v,v     ssss     4-component dot product
+      DPH[C]         v,v     ssss     homogeneous dot product
+      DST[C]         v,v     v        distance vector
+      EX2[C]         s       ssss     exponential base 2
+      EXP[C]         s       v        exponential base 2 (approximate)
+      FLR[C]         v       v        floor
+      FRC[C]         v       v        fraction
+      LG2[C]         s       ssss     logarithm base 2
+      LIT[C]         v       v        compute light coefficients
+      LOG[C]         s       v        logarithm base 2 (approximate)
+      MAD[C]         v,v,v   v        multiply and add
+      MAX[C]         v,v     v        maximum
+      MIN[C]         v,v     v        minimum
+      MOV[C]         v       v        move
+      MUL[C]         v,v     v        multiply
+      POW[C]         s,s     ssss     exponentiate
+      RCC[C]         s       ssss     reciprocal (clamped)
+      RCP[C]         s       ssss     reciprocal
+      RET            c       -        subroutine return
+      RSQ[C]         s       ssss     reciprocal square root
+      SEQ[C]         v,v     v        set on equal
+      SFL[C]         v,v     v        set on false
+      SGE[C]         v,v     v        set on greater than or equal
+      SGT[C]         v,v     v        set on greater than
+      SIN[C]         s       ssss     sine
+      SLE[C]         v,v     v        set on less than or equal
+      SLT[C]         v,v     v        set on less than
+      SNE[C]         v,v     v        set on not equal
+      SSG[C]         v       v        set sign
+      STR[C]         v,v     v        set on true
+      SUB[C]         v,v     v        subtract
+      SWZ[C]         v       v        extended swizzle
+      XPD[C]         v,v     v        cross product
+
+      Table X.5:  Summary of vertex program instructions.  "[C]" indicates
+      that the opcode supports the condition code update modifier. "v"
+      indicates a floating-point vector input or output, "s" indicates
+      a floating-point scalar input, "ssss" indicates a scalar output
+      replicated across a 4-component result vector, "a" indicates a
+      vector address register, and "c" indicates a condition code test.
+
+    Modify Section 2.14.4.1, Vertex Program Operands
+
+    (add prior to the discussion of negation) A component-wise absolute
+    value operation can optionally performed on the operand if the operand
+    is surrounded with two "|" characters.  For example, "|src|" indicates
+    that a component-wise absolute value operation should be performed on
+    the variable named "src".  In terms of the grammar, this operation
+    is performed if the <instOperandV> or <instOperandS> grammar rules
+    match <instOperandAbsV> or <instOperandAbsS>, respectively.
+
+    (modify operand load pseudo-code) The following pseudo-code spells
+    out the operand generation process.  In the example, "float" is a
+    floating-point scalar type, while "floatVec" is a four-component
+    vector.  "source" refers to the register used for the operand,
+    matching the <srcReg> rule.  "abs" is TRUE if an absolute value
+    operation should be performed on the operand (<instOperandAbsV> or
+    <instOperandAbsS> rules) "negate" is TRUE if the <optionalSign> rule
+    in <scalarSrcReg> or <swizzleSrcReg> matches "-" and FALSE otherwise.
+    The ".c***", ".*c**", ".**c*", ".***c" modifiers refer to the x,
+    y, z, and w components obtained by the swizzle operation; the ".c"
+    modifier refers to the single component selected for a scalar load.
+
+      floatVec VectorLoad(floatVec source)
+      {
+          floatVec operand;
+
+          operand.x = source.c***;
+          operand.y = source.*c**;
+          operand.z = source.**c*;
+          operand.w = source.***c;
+          if (abs) {
+             operand.x = abs(operand.x);
+             operand.y = abs(operand.y);
+             operand.z = abs(operand.z);
+             operand.w = abs(operand.w);
+          }
+          if (negate) {
+             operand.x = -operand.x;
+             operand.y = -operand.y;
+             operand.z = -operand.z;
+             operand.w = -operand.w;
+          }
+
+          return operand;
+      }
+
+      float ScalarLoad(floatVec source) 
+      {
+          float operand;
+
+          operand = source.c;
+          if (abs) {
+            operand = abs(operand);
+          if (negate) {
+            operand = -operand;
+          }
+
+          return operand;
+      }
+
+    Rewrite Section 2.14.4.3,  Vertex Program Destination Register Update
+
+    Most vertex program instructions write a 4-component result vector to
+    a single temporary or vertex result register.  Writes to individual
+    components of the destination register are controlled by individual
+    component write masks specified as part of the instruction.
+
+    The component write mask is specified by the <optionalMask> rule
+    found in the <maskedDstReg> rule.  If the optional mask is "",
+    all components are enabled.  Otherwise, the optional mask names
+    the individual components to enable.  The characters "x", "y",
+    "z", and "w" match the x, y, z, and w components respectively.
+    For example, an optional mask of ".xzw" indicates that the x, z,
+    and w components should be enabled for writing but the y component
+    should not.  The grammar requires that the destination register mask
+    components must be listed in "xyzw" order.
+
+    The condition code write mask is specified by the <ccMask> rule found
+    in the <instResultCC> and <instResultAddrCC> rules.  The condition
+    code register is loaded and swizzled according to the swizzle
+    codes specified by <swizzleSuffix>.  Each component of the swizzled
+    condition code is tested according to the rule given by <ccMaskRule>.
+    <ccMaskRule> may have the values "EQ", "NE", "LT", "GE", LE", or "GT",
+    which mean to enable writes if the corresponding condition code field
+    evaluates to equal, not equal, less than, greater than or equal, less
+    than or equal, or greater than, respectively.  Comparisons involving
+    condition codes of "UN" (unordered) evaluate to true for "NE" and
+    false otherwise.  For example, if the condition code is (GT,LT,EQ,GT)
+    and the condition code mask is "(NE.zyxw)", the swizzle operation
+    will load (EQ,LT,GT,GT) and the mask will thus will enable writes on
+    the y, z, and w components.  In addition, "TR" always enables writes
+    and "FL" always disables writes, regardless of the condition code.
+    If the condition code mask is empty, it is treated as "(TR)".
+
+    Each component of the destination register is updated with the result
+    of the vertex program instruction if and only if the component is
+    enabled for writes by both the component write mask and the condition
+    code write mask.  Otherwise, the component of the destination register
+    remains unchanged.
+
+    A vertex program instruction can also optionally update the condition
+    code register.  The condition code is updated if the condition
+    code register update suffix "C" is present in the instruction.
+    The instruction "ADDC" will update the condition code; the otherwise
+    equivalent instruction "ADD" will not.  If condition code updates
+    are enabled, each component of the destination register enabled
+    for writes is compared to zero.  The corresponding component of
+    the condition code is set to "LT", "EQ", or "GT", if the written
+    component is less than, equal to, or greater than zero, respectively.
+    Condition code components are set to "UN" if the written component is
+    NaN (not a number).  Values of -0.0 and +0.0 both evaluate to "EQ".
+    If a component of the destination register is not enabled for writes,
+    the corresponding condition code component is also unchanged.
+
+    In the following example code,
+
+        # R1=(-2, 0, 2, NaN)              R0                  CC
+        MOVC R0, R1;               # ( -2,  0,   2, NaN) (LT,EQ,GT,UN)
+        MOVC R0.xyz, R1.yzwx;      # (  0,  2, NaN, NaN) (EQ,GT,UN,UN)
+        MOVC R0 (NE), R1.zywx;     # (  0,  0, NaN,  -2) (EQ,EQ,UN,LT)
+
+    the first instruction writes (-2,0,2,NaN) to R0 and updates the
+    condition code to (LT,EQ,GT,UN).  The second instruction, only the
+    "x", "y", and "z" components of R0 and the condition code are updated,
+    so R0 ends up with (0,2,NaN,NaN) and the condition code ends up with
+    (EQ,GT,UN,UN).  In the third instruction, the condition code mask
+    disables writes to the x component (its condition code field is "EQ"),
+    so R0 ends up with (0,0,NaN,-2) and the condition code ends up with
+    (EQ,EQ,UN,LT).
+
+    The following pseudocode illustrates the process of writing a result
+    vector to the destination register.  In the pseudocode, "instrmask"
+    refers to the component write mask given by the <optWriteMask>
+    rule.  "ccMaskRule" refers to the condition code mask rule given
+    by <ccMask> and "updatecc" is TRUE if and only if condition code
+    updates are enabled.  "result", "destination", and "cc" refer to
+    the result vector, the register selected by <dstRegister> and the
+    condition code, respectively.  Condition codes do not exist in the
+    VP1 execution environment.
+
+      boolean TestCC(CondCode field) {
+          switch (ccMaskRule) {
+          case "EQ":  return (field == "EQ");
+          case "NE":  return (field != "EQ");
+          case "LT":  return (field == "LT");
+          case "GE":  return (field == "GT" || field == "EQ");
+          case "LE":  return (field == "LT" || field == "EQ");
+          case "GT":  return (field == "GT");
+          case "TR":  return TRUE;
+          case "FL":  return FALSE;
+          case "":    return TRUE;
+          }
+      }
+
+      enum GenerateCC(float value) {
+        if (value == NaN) {
+          return UN;
+        } else if (value < 0) {
+          return LT;
+        } else if (value == 0) {
+          return EQ;
+        } else {
+          return GT;
+        }
+      }
+
+      void UpdateDestination(floatVec destination, floatVec result)
+      {
+          floatVec merged;
+          ccVec    mergedCC;
+
+          // Merge the converted result into the destination register, under
+          // control of the compile- and run-time write masks.
+          merged = destination;
+          mergedCC = cc;
+          if (instrMask.x && TestCC(cc.c***)) {
+              merged.x = result.x;
+              if (updatecc) mergedCC.x = GenerateCC(result.x);
+          }
+          if (instrMask.y && TestCC(cc.*c**)) {
+              merged.y = result.y;
+              if (updatecc) mergedCC.y = GenerateCC(result.y);
+          }
+          if (instrMask.z && TestCC(cc.**c*)) {
+              merged.z = result.z;
+              if (updatecc) mergedCC.z = GenerateCC(result.z);
+          }
+          if (instrMask.w && TestCC(cc.***c)) {
+              merged.w = result.w;
+              if (updatecc) mergedCC.w = GenerateCC(result.w);
+          }
+
+          // Write out the new destination register and condition code.
+          destination = merged;
+          cc = mergedCC;
+      }
+
+    While this rule describes floating-point results, the same logic
+    applies to the integer results generated by the ARA, ARL, and ARR
+    instructions.
+
+    Add Section 2.14.4.X, Vertex Program Branching (before Section
+    2.14.4.4, Vertex Program Result Processing)
+
+    Vertex programs can contain one or more instruction labels, matching
+    the grammar rule <branchLabel>.  An instruction label can be referred
+    to explicitly in branch (BRA) or subroutine call (CAL) instructions.
+    Instruction labels can be defined or used at any point in the body
+    of a program, and can be used in instructions before being defined
+    in the program string.
+
+    Branching instructions can be conditional.  The branch condition
+    is specified by the <optBranchCond> grammar rule and may depend on
+    the contents of the condition code register.  Branch conditions are
+    evaluated by evaluating a condition code write mask in exactly the
+    same manner as done for register writes (section 2.14.2.2).  If any
+    of the four components of the condition code write mask are enabled,
+    the branch is taken and execution continues with the instruction
+    following the label specified in the instruction.  Otherwise, the
+    instruction is ignored and vertex program execution continues with
+    the next instruction.  In the following example code,
+
+        MOVC CC, c[0];         # c[0]=(-2, 0, 2, NaN), CC gets (LT,EQ,GT,UN)
+        BRA label1 (LT.xyzw);
+        MOV R0,R1;             # not executed
+      label1:
+        BRA label2 (LT.wyzw);
+        MOV R0,R2;             # executed
+      label2:
+
+    the first BRA instruction loads a condition code of (LT,EQ,GT,UN)
+    while the second BRA instruction loads a condition code of
+    (UN,EQ,GT,UN).  The first branch will be taken because the "x"
+    component evaluates to LT; the second branch will not be taken
+    because no component evaluates to LT.
+
+    Vertex programs can specify subroutine calls.  When a subroutine
+    call (CAL) instruction is executed, a reference to the instruction
+    immediately following the CAL instruction is pushed onto the
+    call stack.  When a subroutine return (RET) instruction is
+    executed, an instruction reference is popped off the call stack
+    and program execution continues with the popped instruction.
+    A vertex program will terminate if a CAL instruction is executed
+    with MAX_PROGRAM_CALL_DEPTH_NV entries already in the call stack or
+    if a RET instruction is executed with an empty call stack.
+
+    If a vertex program has an instruction label "main", program
+    execution begins with the instruction immediately following the
+    instruction label.  Otherwise, program execution begins with the
+    first instruction of the program.  Instructions will be executed
+    sequentially in the order specified in the program, although
+    branch instructions will affect the instruction execution order,
+    as described above.  A vertex program will terminate after executing
+    a RET instruction with an empty call stack.  A vertex program will
+    also terminate after executing the last instruction in the program,
+    unless that instruction was a taken branch.
+
+    A vertex program will fail to load if an instruction refers to a
+    label that is not defined in the program string.
+
+    A vertex program will terminate abnormally if a subroutine call
+    instruction produces a call stack overflow.  Additionally,
+    a vertex program will terminate abnormally after executing
+    MAX_PROGRAM_EXEC_INSTRUCTIONS instructions to prevent hangs caused
+    by infinite loops in the program.
+
+    When a vertex program terminates, normally or abnormally, it will
+    emit a vertex whose attributes are taken from the final values of
+    the vertex result registers (section 2.14.1.5).
+
+    Modify Section 2.14.4.4,  Vertex Program Result Processing
+
+    (modify 3rd paragraph) Transformed vertices are then assembled into
+    primitives and clipped as described in section 2.11.  Clip distance
+    results are used to control user clip planes.
+    
+    Add to Section 2.14.4.5, Vertex Program Options:
+
+    Section 2.14.4.5.2, NV_vertex_program2 Option
+
+    If a vertex program specifies the "NV_vertex_program2" program option,
+    the grammar will be extended to support the features found in the
+    NV_vertex_program2 extension not present in the ARB_vertex_program
+    extension, including:
+
+      * the availability of the following instructions:  
+
+          - ARA (address register add, useful for looping), 
+          - ARR (address register load with round), 
+          - BRA (branch), 
+          - CAL (subroutine call), 
+          - COS (cosine), 
+          - RET (subroutine return), 
+          - SEQ (set on equal), 
+          - SFL (set on false), 
+          - SGT (set on greater than), 
+          - SIN (sine), 
+          - SLE (set on less than or equal), 
+          - SNE (set on not equal), 
+          - SSG (set sign), and
+          - STR (set on true).
+
+      * up to MAX_CALL_DEPTH_NV levels of subroutine calls/returns,
+
+      * a four-component condition code register to hold the sign of
+        result vector components (useful for comparisons),
+
+      * a condition code update opcode suffix "C", where the results of
+        the instruction are used to update the condition code register,
+
+      * a condition code write mask operator, where the condition code
+        register is swizzled and tested, and the test results are used
+        to mask register writes,
+
+      * six clip distance result bindings that can be used to perform
+        more complicated user clipping operations than those provided
+        with the position invariant program option,
+
+      * four-component address registers (instead of one-component
+        registers in ARB_vertex_program), with the "ARL" instruction
+        extended to produce a vector result,
+
+      * an absolute value operator on scalar and swizzled operands.
+
+    The added functionality is identical to that provided by
+    NV_vertex_program2 extension specification.
+
+    Modify Section 2.14.5.3,  ARL:  Address Register Load
+
+    The ARL instruction loads a single vector operand and performs a
+    component-wise floor operation to generate a signed integer result
+    vector.
+
+      tmp = VectorLoad(op0);
+      iresult.x = floor(tmp.x);
+      iresult.y = floor(tmp.y);
+      iresult.z = floor(tmp.z);
+      iresult.w = floor(tmp.w);
+
+    The floor operation returns the largest integer less than or equal
+    to the operand.  For example floor(-1.7) = -2.0, floor(+1.0) = +1.0,
+    and floor(+3.7) = +3.0.
+
+    Note that in the unextended ARB_vertex_program specification, the ARL
+    instruction loads a scalar operand and generates a scalar result.  
+
+    Add to Section 2.14.5,  Vertex Program Instruction Set
+
+    Section 2.14.5.28,  ARA:  Address Register Add
+
+    The ARA instruction adds two pairs of components of a vector address
+    register operand to produce an integer result vector.  The "x" and "z"
+    components of the result vector contain the sum of the "x" and "z"
+    components of the operand; the "y" and "w" components of the result
+    vector contain the sum of the "y" and "w" components of the operand.
+
+      itmp = AddrVectorLoad(op0);
+      iresult.x = itmp.x + itmp.z;
+      iresult.y = itmp.y + itmp.w;
+      iresult.z = itmp.x + itmp.z;
+      iresult.w = itmp.y + itmp.w;
+
+    Component swizzling is not supported when the operand is loaded.
+
+    Section 2.14.5.29,  ARR:  Address Register Load (with round)
+
+    The ARR instruction loads a single vector operand and performs a
+    component-wise round operation to generate a signed integer result
+    vector.
+
+      tmp = VectorLoad(op0);
+      iresult.x = round(tmp.x);
+      iresult.y = round(tmp.y);
+      iresult.z = round(tmp.z);
+      iresult.w = round(tmp.w);
+
+    The round operation returns the nearest integer to the operand.  If the
+    fractional portion of the operand is 0.5, round() selects the nearest even
+    integer.  For example round(-1.7) = -2.0, round(+1.0) = +1.0, and
+    round(+3.7) = +4.0.
+
+    Section 2.14.5.30,  BRA:  Branch
+
+    The BRA instruction conditionally transfers control to the instruction
+    following the label specified in the instruction.  The following
+    pseudocode describes the operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        // continue execution at instruction following <branchLabel>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <branchLabel> is the label specified in the
+    instruction according to the <branchLabel> grammar rule.
+
+    Section 2.14.5.31,  CAL:  Subroutine Call
+
+    The CAL instruction conditionally transfers control to the instruction
+    following the label specified in the instruction.  It also pushes a
+    reference to the instruction immediately following the CAL instruction
+    onto the call stack, where execution will continue after executing
+    the matching RET instruction.  The following pseudocode describes
+    the operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        if (callStackDepth >= MAX_PROGRAM_CALL_DEPTH_NV) {
+          // terminate vertex program
+        } else {
+          callStack[callStackDepth] = nextInstruction;
+          callStackDepth++;
+        }
+        // continue execution at instruction following <branchLabel>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <branchLabel> is the label specified in the
+    instruction matching the <branchLabel> grammar rule, <callStackDepth>
+    is the current depth of the call stack, <callStack> is an array
+    holding the call stack, and <nextInstruction> is a reference to the
+    instruction immediately following the present one in the program
+    string.
+
+    If the call stack overflows, the vertex program terminates abnormally and
+    all vertex program results are undefined.
+
+    Section 2.14.5.32,  COS:  Cosine
+
+    The COS instruction approximates the cosine of the angle specified
+    by the scalar operand and replicates the approximation to all four
+    components of the result vector.  The angle is specified in radians
+    and does not have to be in the range [0,2*PI].
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxCosine(tmp);
+      result.y = ApproxCosine(tmp);
+      result.z = ApproxCosine(tmp);
+      result.w = ApproxCosine(tmp);
+
+    Section 2.14.5.33,  RCC:  Reciprocal (Clamped)
+
+    The RCC instruction approximates the reciprocal of the scalar operand,
+    clamps the result to one of two ranges, and replicates the clamped
+    result to all four components of the result vector.
+
+    If the approximated reciprocal is greater than 0.0, the result is
+    clamped to the range [2^-64, 2^+64].  If the approximate reciprocal
+    is not greater than zero, the result is clamped to the range [-2^+64,
+    -2^-64].
+
+      tmp = ScalarLoad(op0);
+      result.x = ClampApproxReciprocal(tmp);
+      result.y = ClampApproxReciprocal(tmp);
+      result.z = ClampApproxReciprocal(tmp);
+      result.w = ClampApproxReciprocal(tmp);
+
+    The following rule applies to reciprocation:
+
+      1. ApproxReciprocal(+1.0) = +1.0.
+
+    Section 2.14.5.34,  RET:  Subroutine Call Return
+
+    The RET instruction conditionally returns from a subroutine initiated
+    by a CAL instruction by popping an instruction reference off the
+    top of the call stack and transferring control to the referenced
+    instruction.  The following pseudocode describes the operation of
+    the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        if (callStackDepth <= 0) {
+          // terminate vertex program
+        } else {
+          callStackDepth--;
+          instruction = callStack[callStackDepth];
+        }
+
+        // continue execution at <instruction>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <callStackDepth> is the depth of the call stack,
+    <callStack> is an array holding the call stack, and <instruction> is
+    a reference to an instruction previously pushed onto the call stack.
+
+    If the call stack is empty when RET executes, the vertex program
+    terminates normally.
+
+    Section 2.14.5.35,  SEQ:  Set on Equal
+
+    The SEQ instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operand is equal to that of
+    the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x == tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y == tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z == tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w == tmp1.w) ? 1.0 : 0.0;
+
+    Section 2.14.5.36,  SFL:  Set on False
+
+    The SFL instruction is a degenerate case of the other "Set on"
+    instructions that sets all components of the result vector to 0.0.
+
+      result.x = 0.0;
+      result.y = 0.0;
+      result.z = 0.0;
+      result.w = 0.0;
+
+    Section 2.14.5.37,  SGT:  Set on Greater Than
+
+    The SGT instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operands is greater than that
+    of the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x > tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y > tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z > tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w > tmp1.w) ? 1.0 : 0.0;
+
+    Section 2.14.5.38,  SIN:  Sine
+
+    The SIN instruction approximates the sine of the angle specified by
+    the scalar operand and replicates it to all four components of the
+    result vector.  The angle is specified in radians and does not have
+    to be in the range [0,2*PI].
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxSine(tmp);
+      result.y = ApproxSine(tmp);
+      result.z = ApproxSine(tmp);
+      result.w = ApproxSine(tmp);
+
+    Section 2.14.5.39,  SLE:  Set on Less Than or Equal
+
+    The SLE instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operand is less than or equal
+    to that of the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x <= tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y <= tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z <= tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w <= tmp1.w) ? 1.0 : 0.0;
+
+    Section 2.14.5.40,  SNE:  Set on Not Equal
+
+    The SNE instruction performs a component-wise comparison of the
+    two operands.  Each component of the result vector is 1.0 if the
+    corresponding component of the first operand is not equal to that
+    of the second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x != tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y != tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z != tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w != tmp1.w) ? 1.0 : 0.0;
+
+    Section 2.14.5.41,  SSG:  Set Sign
+
+    The SSG instruction generates a result vector containing the signs of
+    each component of the single vector operand.  Each component of the
+    result vector is 1.0 if the corresponding component of the operand
+    is greater than zero, 0.0 if the corresponding component of the
+    operand is equal to zero, and -1.0 if the corresponding component
+    of the operand is less than zero.
+
+      tmp = VectorLoad(op0);
+      result.x = SetSign(tmp.x);
+      result.y = SetSign(tmp.y);
+      result.z = SetSign(tmp.z);
+      result.w = SetSign(tmp.w);
+
+    Section 2.14.5.42,  STR:  Set on True
+
+    The STR instruction is a degenerate case of the other "Set on"
+    instructions that sets all components of the result vector to 1.0.
+
+      result.x = 1.0;
+      result.y = 1.0;
+      result.z = 1.0;
+      result.w = 1.0;
+
+Additions to Chapter 3 of the OpenGL 1.4 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and State
+Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.4 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on ARB_vertex_program
+
+    This specification is based on a modified version of the grammar
+    published in the ARB_vertex_program specification.  This modified
+    grammar (see below) includes a few structural changes to better
+    accommodate new functionality from this and other extensions, but
+    should be functionally equivalent to the ARB_vertex_program grammar.
+
+    <program>               ::= <optionSequence> <statementSequence> "END"
+
+    <optionSequence>        ::= <optionSequence> <option>
+                              | /* empty */
+
+    <option>                ::= "OPTION" <optionName> ";"
+
+    <optionName>            ::= "ARB_position_invariant"
+
+    <statementSequence>     ::= <statement> <statementSequence>
+                              | /* empty */
+
+    <statement>             ::= <instruction> ";"
+                              | <namingStatement> ";"
+
+    <instruction>           ::= <ALUInstruction>
+
+    <ALUInstruction>        ::= <VECTORop_instruction>
+                              | <SCALARop_instruction>
+                              | <BINSCop_instruction>
+                              | <BINop_instruction>
+                              | <TRIop_instruction>
+                              | <SWZop_instruction>
+                              | <ARLop_instruction>
+
+    <VECTORop_instruction>  ::= <VECTORop> <instResult> "," <instOperandV>
+
+    <VECTORop>              ::= "ABS"
+                              | "FLR"
+                              | "FRC"
+                              | "LIT"
+                              | "MOV"
+
+    <SCALARop_instruction>  ::= <SCALARop> <instResult> "," <instOperandS>
+
+    <SCALARop>              ::= "EX2"
+                              | "EXP"
+                              | "LG2"
+                              | "LOG"
+                              | "RCP"
+                              | "RSQ"
+
+    <BINSCop_instruction>   ::= <BINSCop> <instResult> "," <instOperandS> "," 
+                                <instOperandS>
+
+    <BINSCop>               ::= "POW"
+
+    <BINop_instruction>     ::= <BINop> <instResult> "," <instOperandV> "," 
+                                <instOperandV>
+
+    <BINop>                 ::= "ADD"
+                              | "DP3"
+                              | "DP4"
+                              | "DPH"
+                              | "DST"
+                              | "MAX"
+                              | "MIN"
+                              | "MUL"
+                              | "SGE"
+                              | "SLT"
+                              | "SUB"
+                              | "XPD"
+
+    <TRIop_instruction>     ::= <TRIop> <instResult> "," <instOperandV> "," 
+                                <instOperandV> "," <instOperandV>
+
+    <TRIop>                 ::= "MAD"
+
+    <SWZop_instruction>     ::= <SWZop> <instResult> "," <instOperandVNS> "," 
+                                <extendedSwizzle>
+
+    <SWZop>                 ::= "SWZ"
+
+    <ARLop_instruction>     ::= <ARLop> <instResultAddr> "," <ARLop_src>
+
+    <ARLop>                 ::= "ARL"
+
+    <ARLop_src>             ::= <instOperandS>
+
+    <instOperandV>          ::= <instOperandBaseV>
+
+    <instOperandBaseV>      ::= <optSign> <attribUseV>
+                              | <optSign> <tempUseV>
+                              | <optSign> <paramUseV>
+
+    <instOperandS>          ::= <instOperandBaseS>
+
+    <instOperandBaseS>      ::= <optSign> <attribUseS>
+                              | <optSign> <tempUseS>
+                              | <optSign> <paramUseS>
+
+    <instOperandVNS>        ::= <attribUseVNS>
+                              | <tempUseVNS>
+                              | <paramUseVNS>
+
+    <instResult>            ::= <instResultBase>
+
+    <instResultBase>        ::= <tempUseW>
+                              | <resultUseW>
+
+    <instResultAddr>        ::= <instResultAddrBase>
+
+    <instResultAddrBase>    ::= <addrUseW>
+
+    <namingStatement>       ::= <ATTRIB_statement>
+                              | <PARAM_statement>
+                              | <TEMP_statement>
+                              | <OUTPUT_statement>
+                              | <ALIAS_statement>
+                              | <ADDRESS_statement>
+
+    <ATTRIB_statement>      ::= "ATTRIB" <establishName> "=" <attribUseD>
+
+    <PARAM_statement>       ::= <PARAM_singleStmt>
+                              | <PARAM_multipleStmt>
+
+    <PARAM_singleStmt>      ::= "PARAM" <establishName> <paramSingleInit>
+
+    <PARAM_multipleStmt>    ::= "PARAM" <establishName> "[" <optArraySize> "]" 
+                                <paramMultipleInit>
+
+    <optArraySize>          ::= /* empty */
+                              | <integer> /* [1,MAX_PROGRAM_PARAMETERS_ARB]*/
+
+    <paramSingleInit>       ::= "=" <paramUseDB>
+
+    <paramMultipleInit>     ::= "=" "{" <paramMultInitList> "}"
+
+    <paramMultInitList>     ::= <paramUseDM>
+                              | <paramUseDM> "," <paramMultInitList>
+
+    <TEMP_statement>        ::= "TEMP" <varNameList>
+
+    <OUTPUT_statement>      ::= "OUTPUT" <establishName> "=" <resultUseD>
+
+    <ALIAS_statement>       ::= "ALIAS" <establishName> "=" <establishedName>
+
+    <establishedName>       ::= <tempVarName>
+                              | <addrVarName>
+                              | <attribVarName>
+                              | <paramArrayVarName>
+                              | <paramSingleVarName>
+                              | <resultVarName>
+
+    <ADDRESS_statement>     ::= "ADDRESS" <varNameList>
+
+    <varNameList>           ::= <establishName>
+                              | <establishName> "," <varNameList>
+
+    <establishName>         ::= <identifier>
+
+    <attribUseV>            ::= <attribBasic> <swizzleSuffix>
+                              | <attribVarName> <swizzleSuffix>
+                              | <attribColor> <swizzleSuffix>
+                              | <attribColor> "." <colorType> <swizzleSuffix>
+
+    <attribUseS>            ::= <attribBasic> <scalarSuffix>
+                              | <attribVarName> <scalarSuffix>
+                              | <attribColor> <scalarSuffix>
+                              | <attribColor> "." <colorType> <scalarSuffix>
+
+    <attribUseVNS>          ::= <attribBasic>
+                              | <attribVarName>
+                              | <attribColor>
+                              | <attribColor> "." <colorType>
+
+    <attribUseD>            ::= <attribBasic>
+                              | <attribColor>
+                              | <attribColor> "." <colorType>
+
+    <attribBasic>           ::= "vertex" "." <attribVtxBasic>
+
+    <attribVtxBasic>        ::= "position"
+                              | "weight" <vtxOptWeightNum>
+                              | "normal"
+                              | "fogcoord"
+                              | "texcoord" <optTexCoordNum>
+                              | "matrixindex" "[" <vtxWeightNum> "]"
+                              | "attrib" "[" <vtxAttribNum> "]"
+
+    <attribColor>           ::= "vertex" "." "color"
+
+    <paramUseV>             ::= <paramSingleVarName> <swizzleSuffix>
+                              | <paramArrayVarName> "[" <arrayMem> "]" 
+                                <swizzleSuffix>
+                              | <stateSingleItem> <swizzleSuffix>
+                              | <programSingleItem> <swizzleSuffix>
+                              | <constantVector> <swizzleSuffix>
+                              | <constantScalar> <swizzleSuffix>
+
+    <paramUseS>             ::= <paramSingleVarName> <scalarSuffix>
+                              | <paramArrayVarName> "[" <arrayMem> "]" 
+                                <scalarSuffix>
+                              | <stateSingleItem> <scalarSuffix>
+                              | <programSingleItem> <scalarSuffix>
+                              | <constantVector> <scalarSuffix>
+                              | <constantScalar> <scalarSuffix>
+
+    <paramUseVNS>           ::= <paramSingleVarName>
+                              | <paramArrayVarName> "[" <arrayMem> "]"
+                              | <stateSingleItem>
+                              | <programSingleItem>
+                              | <constantVector>
+                              | <constantScalar>
+
+    <paramUseDB>            ::= <stateSingleItem>
+                              | <programSingleItem>
+                              | <constantVector>
+                              | <signedConstantScalar>
+
+    <paramUseDM>            ::= <stateMultipleItem>
+                              | <programMultipleItem>
+                              | <constantVector>
+                              | <signedConstantScalar>
+
+    <stateMultipleItem>     ::= <stateSingleItem>
+                              | "state" "." <stateMatrixRows>
+
+    <stateSingleItem>       ::= "state" "." <stateMaterialItem>
+                              | "state" "." <stateLightItem>
+                              | "state" "." <stateLightModelItem>
+                              | "state" "." <stateLightProdItem>
+                              | "state" "." <stateFogItem>
+                              | "state" "." <stateMatrixRow>
+                              | "state" "." <stateTexGenItem>
+                              | "state" "." <stateClipPlaneItem>
+                              | "state" "." <statePointItem>
+
+    <stateMaterialItem>     ::= "material" "." <stateMatProperty>
+                              | "material" "." <faceType> "." 
+                                <stateMatProperty>
+
+    <stateMatProperty>      ::= "ambient"
+                              | "diffuse"
+                              | "specular"
+                              | "emission"
+                              | "shininess"
+
+    <stateLightItem>        ::= "light" "[" <stateLightNumber> "]" "." 
+                                <stateLightProperty>
+
+    <stateLightProperty>    ::= "ambient"
+                              | "diffuse"
+                              | "specular"
+                              | "position"
+                              | "attenuation"
+                              | "spot" "." <stateSpotProperty>
+                              | "half"
+
+    <stateSpotProperty>     ::= "direction"
+
+    <stateLightModelItem>   ::= "lightmodel" <stateLModProperty>
+
+    <stateLModProperty>     ::= "." "ambient"
+                              | "." "scenecolor"
+                              | "." <faceType> "." "scenecolor"
+
+    <stateLightProdItem>    ::= "lightprod" "[" <stateLightNumber> "]" "." 
+                                <stateLProdProperty>
+                              | "lightprod" "[" <stateLightNumber> "]" "." 
+                                <faceType> "." <stateLProdProperty>
+
+    <stateLProdProperty>    ::= "ambient"
+                              | "diffuse"
+                              | "specular"
+
+    <stateLightNumber>      ::= <integer> /* [0,MAX_LIGHTS-1] */
+
+    <stateFogItem>          ::= "fog" "." <stateFogProperty>
+
+    <stateFogProperty>      ::= "color"
+                              | "params"
+
+    <stateMatrixRows>       ::= <stateMatrixItem>
+                              | <stateMatrixItem> "." <stateMatModifier>
+                              | <stateMatrixItem> "." "row" "[" 
+                                <stateMatrixRowNum> ".." <stateMatrixRowNum> 
+                                "]"
+                              | <stateMatrixItem> "." <stateMatModifier> "." 
+                                "row" "[" <stateMatrixRowNum> ".." 
+                                <stateMatrixRowNum> "]"
+
+    <stateMatrixRow>        ::= <stateMatrixItem> "." "row" "[" 
+                                <stateMatrixRowNum> "]"
+                              | <stateMatrixItem> "." <stateMatModifier> "." 
+                                "row" "[" <stateMatrixRowNum> "]"
+
+    <stateMatrixItem>       ::= "matrix" "." <stateMatrixName>
+
+    <stateMatModifier>      ::= "inverse"
+                              | "transpose"
+                              | "invtrans"
+
+    <stateMatrixName>       ::= "modelview" <stateOptModMatNum>
+                              | "projection"
+                              | "mvp"
+                              | "texture" <optTexCoordNum>
+                              | "palette" "[" <statePaletteMatNum> "]"
+                              | "program" "[" <stateProgramMatNum> "]"
+
+    <stateMatrixRowNum>     ::= <integer> /* [0,3] */
+
+    <stateOptModMatNum>     ::= /* empty */
+                              | "[" <stateModMatNum> "]"
+
+    <stateModMatNum>        ::= <integer> /*[0,MAX_VERTEX_UNITS_ARB-1]*/
+
+    <statePaletteMatNum>    ::= <integer> /*[0,MAX_PALETTE_MATRICES_ARB-1]*/
+
+    <stateProgramMatNum>    ::= <integer> /*[0,MAX_PROGRAM_MATRICES_ARB-1]*/
+
+    <stateTexGenItem>       ::= "texgen" <optTexCoordNum> "." 
+                                <stateTexGenType> "." <stateTexGenCoord>
+
+    <stateTexGenType>       ::= "eye"
+                              | "object"
+
+    <stateTexGenCoord>      ::= "s"
+                              | "t"
+                              | "r"
+                              | "q"
+
+    <stateClipPlaneItem>    ::= "clip" "[" <clipPlaneNum> "]" "." "plane"
+
+    <statePointItem>        ::= "point" "." <statePointProperty>
+
+    <statePointProperty>    ::= "size"
+                              | "attenuation"
+
+    <programSingleItem>     ::= <progEnvParam>
+                              | <progLocalParam>
+
+    <programMultipleItem>   ::= <progEnvParams>
+                              | <progLocalParams>
+
+    <progEnvParams>         ::= "program" "." "env" "[" <progEnvParamNums> "]"
+
+    <progEnvParamNums>      ::= <progEnvParamNum>
+                              | <progEnvParamNum> ".." <progEnvParamNum>
+
+    <progEnvParam>          ::= "program" "." "env" "[" <progEnvParamNum> "]"
+
+    <progLocalParams>       ::= "program" "." "local" "[" <progLocalParamNums> 
+                                "]"
+
+    <progLocalParamNums>    ::= <progLocalParamNum>
+                              | <progLocalParamNum> ".." <progLocalParamNum>
+
+    <progLocalParam>        ::= "program" "." "local" "[" <progLocalParamNum> 
+                                "]"
+
+    <progEnvParamNum>       ::= <integer> 
+                                /*[0,MAX_PROGRAM_ENV_PARAMETERS_ARB-1]*/
+
+    <progLocalParamNum>     ::= <integer> 
+                                /*[0,MAX_PROGRAM_LOCAL_PARAMETERS_ARB-1]*/
+
+    <constantVector>        ::= "{" <constantVectorList> "}"
+
+    <constantVectorList>    ::= <signedConstantScalar>
+                              | <signedConstantScalar> "," 
+                                <signedConstantScalar>
+                              | <signedConstantScalar> "," 
+                                <signedConstantScalar> "," 
+                                <signedConstantScalar>
+                              | <signedConstantScalar> "," 
+                                <signedConstantScalar> "," 
+                                <signedConstantScalar> "," 
+                                <signedConstantScalar>
+
+    <signedConstantScalar>  ::= <optSign> <constantScalar>
+
+    <constantScalar>        ::= <floatConstant>
+
+    <floatConstant>         ::= <float>
+
+    <tempUseV>              ::= <tempVarName> <swizzleSuffix>
+
+    <tempUseS>              ::= <tempVarName> <scalarSuffix>
+
+    <tempUseVNS>            ::= <tempVarName>
+
+    <tempUseW>              ::= <tempVarName> <optWriteMask>
+
+    <resultUseW>            ::= <resultBasic> <optWriteMask>
+                              | <resultVarName> <optWriteMask>
+                              | <resultVtxColor> <optWriteMask>
+                              | <resultVtxColor> "." <colorType> 
+                                <optWriteMask>
+                              | <resultVtxColor> "." <faceType> <optWriteMask>
+                              | <resultVtxColor> "." <faceType> "." 
+                                <colorType> "." <optWriteMask>
+
+    <resultUseD>            ::= <resultBasic>
+                              | <resultVtxColor>
+                              | <resultVtxColor> "." <colorType>
+                              | <resultVtxColor> "." <faceType>
+                              | <resultVtxColor> "." <faceType> "." 
+                                <colorType>
+
+    <resultBasic>           ::= "result" "." <resultVtxBasic>
+
+    <resultVtxBasic>        ::= "position"
+                              | "fogcoord"
+                              | "pointsize"
+                              | "texcoord" <optTexCoordNum>
+
+    <resultVtxColor>        ::= "result" "." "color"
+
+    <arrayMem>              ::= <arrayMemAbs>
+                              | <arrayMemRel>
+
+    <arrayMemRel>           ::= <addrUseS> <arrayMemRelOffset>
+
+    <arrayMemAbs>           ::= <integer>
+
+    <arrayMemRelOffset>     ::= /* empty */
+                              | "+" <integer>
+                              | "-" <integer>
+
+    <addrUseS>              ::= <addrVarName> <scalarAddrSuffix>
+
+    <addrUseW>              ::= <addrVarName> <addrWriteMask>
+
+    <addrWriteMask>         ::= "." "x"
+
+    <optWriteMask>          ::= /* empty */
+                              | <xyzwMask>
+
+    <xyzwMask>              ::= "." "x"
+                              | "." "y"
+                              | "." "xy"
+                              | "." "z"
+                              | "." "xz"
+                              | "." "yz"
+                              | "." "xyz"
+                              | "." "w"
+                              | "." "xw"
+                              | "." "yw"
+                              | "." "xyw"
+                              | "." "zw"
+                              | "." "xzw"
+                              | "." "yzw"
+                              | "." "xyzw"
+
+    <swizzleSuffix>         ::= /* empty */
+                              | "." <component>
+                              | "." <xyzwComponent> <xyzwComponent> 
+                                <xyzwComponent> <xyzwComponent>
+
+    <extendedSwizzle>       ::= <extSwizComp> "," <extSwizComp> "," 
+                                <extSwizComp> "," <extSwizComp>
+
+    <extSwizComp>           ::= <optSign> <xyzwExtSwizSel>
+
+    <xyzwExtSwizSel>        ::= "0"
+                              | "1"
+                              | <xyzwComponent>
+
+    <scalarAddrSuffix>      ::= "." <addrComponent>
+
+    <addrComponent>         ::= "x"
+
+    <scalarSuffix>          ::= "." <component>
+
+    <component>             ::= <xyzwComponent>
+
+    <xyzwComponent>         ::= "x"
+                              | "y"
+                              | "z"
+                              | "w"
+
+    <optSign>               ::= /* empty */
+                              | "-"
+                              | "+"
+
+    <faceType>              ::= "front"
+                              | "back"
+
+    <colorType>             ::= "primary"
+                              | "secondary"
+
+    <vtxAttribNum>          ::= <integer> /*[0,MAX_VERTEX_ATTRIBS_ARB-1]*/
+
+    <vtxOptWeightNum>       ::= /* empty */
+                              | "[" <vtxWeightNum> "]"
+
+    <vtxWeightNum>          ::= <integer> /*[0,MAX_VERTEX_UNITS_ARB-1] must be 
+                                divisible by four */
+
+    <optTexCoordNum>        ::= /* empty */
+                              | "[" <texCoordNum> "]"
+
+    <texCoordNum>           ::= <integer> /*[0,MAX_TEXTURE_COORDS_ARB-1]*/
+
+    <clipPlaneNum>          ::= <integer> /*[0,MAX_CLIP_PLANES-1]*/
+
+    The <integer>, <float>, and <identifier> grammar rules match
+    integer constants, floating point constants, and identifier names
+    as described in the ARB_vertex_program specification.  The <float>
+    grammar rule here is identical to the <floatConstant> grammar rule
+    in ARB_vertex_program.
+
+    The grammar rules <tempVarName>, <addrVarName>, <attribVarName>,
+    <paramArrayVarName>, <paramSingleVarName>, <resultVarName> refer
+    to the names of temporary, address register, attribute, program
+    parameter array, program parameter, and result variables declared
+    in the program text.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+
+New Implementation Dependent State
+                                                                  Min
+    Get Value                            Type    Get Command      Value   Description         Sec       Attrib
+    -----------------------------------  ----    ---------------  ------  -----------------   --------  ------
+    MAX_PROGRAM_EXEC_INSTRUCTIONS_NV     Z+      GetProgramivARB  65536   maximum program     2.14.4.4  -
+                                                                          execution inst-
+                                                                          ruction count
+    MAX_PROGRAM_CALL_DEPTH_NV            Z+      GetProgramivARB  4       maximum program     2.14.4.4  -
+                                                                          call stack depth
+
+    (add to Table X.11.  New Implementation-Dependent Values Introduced
+    by ARB_vertex_program.  Values queried by GetProgramivARB require
+    a <pname> of VERTEX_PROGRAM_ARB.)
+
+Revision History
+
+    Rev.  Date      Author   Changes
+    ----  --------  -------  --------------------------------------------
+    3     06/23/04  pbrown   Documented that vertex results are undefined
+                             if the call stack overflows, and clarified that
+                             RET with an empty call stack is not an error.
+
+    2     05/16/04  pbrown   Documented terminals in modified vertex program
+                             grammar. 
+
+    1     --------  pbrown   Internal pre-release revisions.

@@ -25,11 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/replay/Capture.h"
+#include "src/dawn/replay/Capture.h"
 
 #include <span>
 #include <sstream>
 #include <utility>
+
+#include "src/dawn/replay/SurfaceDiscovery.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::replay {
 
@@ -48,11 +51,11 @@ std::unique_ptr<CaptureImpl> CaptureImpl::Create(CaptureStream& commandStream,
                                                  size_t contentSize) {
     std::vector<uint8_t> commands;
     commands.resize(commandSize);
-    commandStream.read(reinterpret_cast<char*>(commands.data()), commandSize);
+    commandStream.read(reinterpret_cast<char*>(commands.data()), sign_cast(commandSize));
 
     std::vector<uint8_t> content;
     content.resize(contentSize);
-    contentStream.read(reinterpret_cast<char*>(content.data()), contentSize);
+    contentStream.read(reinterpret_cast<char*>(content.data()), sign_cast(contentSize));
 
     return std::unique_ptr<CaptureImpl>(new CaptureImpl(std::move(commands), std::move(content)));
 }
@@ -63,7 +66,18 @@ CaptureImpl::CaptureImpl(std::vector<uint8_t> commands, std::vector<uint8_t> con
 CaptureImpl::~CaptureImpl() {}
 
 bool CaptureImpl::Walk(RootCommandVisitor& visitor) {
-    return CaptureWalker::Walk(visitor).IsSuccess();
+    auto result = CaptureWalker::Walk(visitor);
+    if (result.IsError()) {
+        result.AcquireError();
+        return false;
+    }
+    return true;
+}
+
+std::vector<SurfaceInfo> CaptureImpl::GetSurfaceInfos() const {
+    SurfaceDiscoveryVisitor discovery;
+    const_cast<CaptureImpl*>(this)->Walk(discovery);
+    return discovery.GetSurfaceInfos();
 }
 
 ReadHead CaptureImpl::GetCommandReadHead() const {

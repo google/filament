@@ -33,11 +33,11 @@
 
 #include "absl/container/inlined_vector.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/PassResourceUsage.h"
-#include "dawn/native/Texture.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PassResourceUsage.h"
+#include "src/dawn/native/Texture.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native {
 struct CopyTextureToTextureCmd;
@@ -103,7 +103,10 @@ class Texture final : public TextureBase {
 
     // As D3D11 SRV doesn't support 'Shader4ComponentMapping' for depth-stencil textures, we can't
     // sample the stencil component directly. As a workaround we create an internal R8Uint texture,
-    // holding the copy of its stencil data, and use the internal texture's SRV instead.
+    // holding the copy of its stencil data.
+    MaybeError UpdateStencilCopyForView(const ScopedCommandRecordingContext* commandContext,
+                                        const TextureView* view);
+
     ResultOrError<ComPtr<ID3D11ShaderResourceView>> GetStencilSRV(
         const ScopedCommandRecordingContext* commandContext,
         const TextureView* view);
@@ -206,7 +209,8 @@ class TextureView final : public TextureViewBase {
     static Ref<TextureView> Create(TextureBase* texture,
                                    const UnpackedPtr<TextureViewDescriptor>& descriptor);
 
-    ResultOrError<ID3D11ShaderResourceView*> GetOrCreateD3D11ShaderResourceView();
+    ResultOrError<ID3D11ShaderResourceView*> GetOrCreateD3D11ShaderResourceView(
+        const ScopedCommandRecordingContext* commandContext);
     ResultOrError<ID3D11RenderTargetView*> GetOrCreateD3D11RenderTargetView(
         uint32_t depthSlice = 0u);
     ResultOrError<ID3D11DepthStencilView*> GetOrCreateD3D11DepthStencilView(bool depthReadOnly,

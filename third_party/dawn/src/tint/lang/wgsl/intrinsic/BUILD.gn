@@ -42,34 +42,37 @@ import("${tint_src_dir}/tint.gni")
 if (tint_build_unittests || tint_build_benchmarks) {
   import("//testing/test.gni")
 }
-
-libtint_source_set("intrinsic") {
-  sources = [
-    "ctor_conv.cc",
-    "ctor_conv.h",
-    "data.cc",
-    "dialect.h",
-    "type_matchers.h",
-  ]
-  deps = [
-    "${dawn_root}/src/utils",
-    "${tint_src_dir}/api/common",
-    "${tint_src_dir}/lang/core",
-    "${tint_src_dir}/lang/core/constant",
-    "${tint_src_dir}/lang/core/intrinsic",
-    "${tint_src_dir}/lang/core/type",
-    "${tint_src_dir}/lang/wgsl",
-    "${tint_src_dir}/utils",
-    "${tint_src_dir}/utils/containers",
-    "${tint_src_dir}/utils/diagnostic",
-    "${tint_src_dir}/utils/ice",
-    "${tint_src_dir}/utils/macros",
-    "${tint_src_dir}/utils/math",
-    "${tint_src_dir}/utils/memory",
-    "${tint_src_dir}/utils/rtti",
-    "${tint_src_dir}/utils/symbol",
-    "${tint_src_dir}/utils/text",
-  ]
+if (tint_build_wgsl_reader || tint_build_wgsl_writer) {
+  libtint_source_set("intrinsic") {
+    sources = [
+      "${root_gen_dir}/src/tint/lang/wgsl/intrinsic/ctor_conv.cc",
+      "${root_gen_dir}/src/tint/lang/wgsl/intrinsic/ctor_conv.h",
+      "${root_gen_dir}/src/tint/lang/wgsl/intrinsic/data.cc",
+      "dialect.h",
+      "type_matchers.h",
+    ]
+    deps = [
+      "${dawn_root}/src/utils",
+      "${tint_src_dir}:generate_sources",
+      "${tint_src_dir}/api/common",
+      "${tint_src_dir}/lang/core",
+      "${tint_src_dir}/lang/core/constant",
+      "${tint_src_dir}/lang/core/intrinsic",
+      "${tint_src_dir}/lang/core/type",
+      "${tint_src_dir}/lang/wgsl",
+      "${tint_src_dir}/utils",
+      "${tint_src_dir}/utils/containers",
+      "${tint_src_dir}/utils/diagnostic",
+      "${tint_src_dir}/utils/ice",
+      "${tint_src_dir}/utils/macros",
+      "${tint_src_dir}/utils/math",
+      "${tint_src_dir}/utils/memory",
+      "${tint_src_dir}/utils/reflection",
+      "${tint_src_dir}/utils/rtti",
+      "${tint_src_dir}/utils/symbol",
+      "${tint_src_dir}/utils/text",
+    ]
+  }
 }
 if (tint_build_unittests) {
   if (tint_build_wgsl_reader) {
@@ -89,6 +92,7 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/wgsl/intrinsic",
         "${tint_src_dir}/lang/wgsl/program",
         "${tint_src_dir}/lang/wgsl/resolver",
+        "${tint_src_dir}/lang/wgsl/resolver:unittests",
         "${tint_src_dir}/lang/wgsl/sem",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
@@ -97,14 +101,11 @@ if (tint_build_unittests) {
         "${tint_src_dir}/utils/macros",
         "${tint_src_dir}/utils/math",
         "${tint_src_dir}/utils/memory",
+        "${tint_src_dir}/utils/reflection",
         "${tint_src_dir}/utils/rtti",
         "${tint_src_dir}/utils/symbol",
         "${tint_src_dir}/utils/text",
       ]
-
-      if (tint_build_wgsl_reader) {
-        deps += [ "${tint_src_dir}/lang/wgsl/resolver:unittests" ]
-      }
     }
   }
 }

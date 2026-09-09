@@ -1,0 +1,433 @@
+Name
+
+    SGIS_color_range
+
+Name Strings
+
+    GLX_SGIS_color_range
+    GL_SGIS_color_range
+
+Version
+
+    $Date: 1999/06/23 23:25:41 $ $Revision: 1.9 $
+
+Number
+
+    115
+
+Dependencies
+
+    OpenGL 1.1 is required
+    SGIX_fbconfig is required
+    SGIX_fbconfig_float is recommended
+    EXT_histogram affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+    SGIS_multisample affects the definition of this extension
+
+Overview
+
+    This extension enhances the fbconfig types to support fbconfigs
+    (visuals) with extended range color data. The range of color data is
+    extended from [0,1] to [min,max], e.g., [-1.5,4.0].  Most OpenGL data
+    paths which clamp colors to [0,1] are modified to clamp colors to
+    [min,max].  The range is a fixed property of the fbconfig. Extended
+    range color is useful for imaging calculations and multipass shading
+    operations which often require signed data or increased dynamic range.
+
+IP Status
+
+    Silicon Graphics has filed for patent protection for some of the
+    techniques described in this extension document.
+
+Issues
+
+    * how does an application request the color range it needs to represent?
+      should the min/max values be interpreted specially in ChooseConfig
+      or should they be of a more limited usefulness exact match style?
+
+        They are interpreted uniquely.  An fbconfig is chosen with the
+        tightest possible bound which meets or exceeds the range
+        indicated by the application.
+
+    * the spec does not distinguish between old-style [0,1] color
+      and extended range color (i.e. no attribute bits, just
+      the min and max values).  Is this okay?   NO!!!
+
+        Added EXTENDED_RANGE_SGI attribute to distinguish extended
+        range visuals from other visuals.
+
+    * float input pixel values and float colors automatically support the
+      extended range.  Integer colors are still scaled to [0,1].
+      This means that GetIntegerv of an extended range color can not
+      represent an extended color range. Is this okay? YES.
+
+    * when the color range is extended this implies that accumulation buffers
+      and texture colors also support the extended range. Is this okay?
+
+      it has been suggested that accumulation stay as [-1,1] which would
+      imply that out of range results would leave the acbuf undefined?
+
+    * if a component isn't stored in the framebuffer (bits == 0) what should
+      range queries return.  0 seems obvious for R, G, and B, but what about
+      alpha.  If there is no alpha value, should alpha be the max value?
+
+      no, alpha is 1.0
+
+    * treatment of alpha in general - whenever it would have been set to
+      1.0 it continues to be 1.0 not <max>
+
+    * do the ONE_MINUS* blend functions change?  no.  they are still 1.0-x
+      If the resulting value is negative it is clamped to <min> not 0.
+      Same is true for texture environment calculations.
+
+    * do transparent pixel values need to be embellished?
+
+    * floating point representations need some more clarification:
+        1. internal formats  (need new extensions for these)
+        2. logic op          (operates on mantissa or on the raw value?)
+        3. color table lookups (raw bits or clamped[0,1]
+        4. color indices     - not supported
+        5. GLX_{RGBA}_SIZE   - returns number of bits in the representation
+
+    * float versions of glXGetFBConfigAttribSGIX?   YES!
+
+    * is clamp to [0,1] behavior necessary?  it could be useful to have this
+      behavior where colors are used for blend factors in the texture
+      environment and color buffer blending operations.
+
+    * Is this extension SGI, SGIX, or SGIS?  SGIS, because it does not
+      apply to all SGI platforms, however unlike SGIX, is intended for
+      wide acceptance.
+
+
+New Procedures and Functions
+
+    None
+
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev, the <attrib_list> parameter of
+    glXChooseFBConfigSGIX, and the <int_attrib_list> and
+    <flt_attrib_list> parameters of glXChooseFBConfigWithFltSGIX.
+
+        EXTENDED_RANGE_SGIS             0x85A5
+        MIN_RED_SGIS                    0x85A6
+        MAX_RED_SGIS                    0x85A7
+        MIN_GREEN_SGIS                  0x85A8
+        MAX_GREEN_SGIS                  0x85A9
+        MIN_BLUE_SGIS                   0x85AA
+        MAX_BLUE_SGIS                   0x85AB
+        MIN_ALPHA_SGIS                  0x85AC
+        MAX_ALPHA_SGIS                  0x85AD
+
+    Accepted by the <attribute> parameter of glXGetFBConfigAttribSGIX
+    and glXGetFBConfigFltAttribSGIX, the <attrib_list> parameter of
+    glXChooseFBConfigSGIX, and the <int_attrib_list> and
+    <flt_attrib_list> parameters of glXChooseFBConfigWithFltSGIX:
+
+        GLX_EXTENDED_RANGE_SGIS         0x????
+        GLX_MIN_RED_SGIS                0x????
+        GLX_MAX_RED_SGIS                0x????
+        GLX_MIN_GREEN_SGIS              0x????
+        GLX_MAX_GREEN_SGIS              0x????
+        GLX_MIN_BLUE_SGIS               0x????
+        GLX_MAX_BLUE_SGIS               0x????
+        GLX_MIN_ALPHA_SGIS              0x????
+        GLX_MAX_ALPHA_SGIS              0x????
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    Section 2.7 Vertex Specification
+
+    Versions of the Color command that take floating-point values
+    accept values nominally between <min> and <max>.  <min> corresponds
+    to the minimum value while <max> corresponds to the maximum (machine
+    dependent) value that a component may take on in the framebuffer.
+
+    The three component variants of the color command set A to 1.0
+
+
+    Section 2.13 Colors and Coloring
+
+    Unsigned integer colors are still scaled to the range [0,1] and thus cannot
+    directly represent colors outside the range [0,1].  Signed integer and
+    floating-point colors can be used to represent colors outside the range
+    [0,1].
+
+    Section 2.13.6 (Clamping or Masking)
+
+    After lighting, RGBA colors are clamped to the range [min, max].
+
+    Section 2.13.9 (Final Color Processing)
+
+    For an RGBA color, each color component (which lies in [min,max]) is
+    converted (by rounding to nearest) to a value with m bits.
+    If the value is fixed-point we assume that the
+    representation used represents each value min+(max-min)k/(2^m - 1),
+    where k is in {0, 1, ..., 2^m - 1}, as
+    k (e.g. <max> is represented in binary as a string of all ones).  m
+    must be at least as large as the number of bits in the corresponding
+    component of the framebuffer.
+    [XXX what should we assume if the value is not a fixed point value?]
+
+    [XXXare the rules for the msbs of unsigned color values matching the
+     framebuffer components true for color ranges outside [0,1]?]
+
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Section 3.6.3 (Rasterization of Pixel Rectangles)
+
+    Final Expansion to RGBA
+
+    if a group does not contain an A element, then A is added and set to 1.0.
+    If any of R, G, or B is missing from the group, each missing element is
+    assigned a value of 0.0.
+
+    RGBA to RGBA Lookup
+
+    First, each component is clamped to the range [0,1]. If there is a
+    table associated with each of the R, G, B, and A component elements:
+    PIXEL_MAP_R_TO_R for R, PIXEL_MAP_G_TO_G for G, PIXEL_MAP_B_TO_B for B,
+    and PIXEL_MAP_A_TO_A for A.  Each element is multiplied by t
+    where t is an integer one less than the size of the corresponding table,
+    and, for each element, an address is found by rounding this value to
+    the nearest integer.  For each element, the addressed value in the
+    corresponding table replaces the element.
+
+    Histogram
+
+    If HISTOGRAM_EXT is enabled and the width of the table is non-zero, and
+    the pixel groups contain RGBA values, then indices Ri, Gi, Bi, and Ai
+    are derived from the red, green, blue, and alpha components of each
+    pixel group (without modifying these components) by clamping the
+    components to [0,1], multiplying each by t/(max-min) where t is one
+    less than the width of the histogram table, and rounding each to the
+    nearest integer.  The color components used to index the histogram
+    are clamped, the original values are passed through unmodified to
+    the min/max stage.
+
+    Color Table
+
+    The color components of each group that are being replaced by table
+    values are converted to indices by clamping the components to
+    [0,1], multiplying each by t, where t is one less than
+    the width of the color table, and rounding each to the nearest
+    integer.  The component value (R, G, B, or A) is then replaced by the
+    value in color table indicated in table E14.2, at the computed index.
+
+
+    Final Conversion
+
+    For RGBA components each element is clamped to [min,max].  The resulting
+    values are converted to fixed-point according to the rules given in
+    section 2.12.9 (Final Color Processing).
+
+
+    Section 3.8 (Texturing)
+
+    Each R, G, B, and A value so extracted is clamped to [min,max].
+    Each of the four values set by TEXTURE_BORDER_COLOR is clamped to lie
+    in [min,max].
+
+    Section 3.8.5 (Texture Environments and Texture Functions)
+
+    TEXTURE_ENV_COLOR is set to an RGBA color by providing four
+    single-precision floating-point values in the range [min,max] (values
+    outside this range are clamped to it).
+
+    R, G, B, and A values after being obtained from a supplied texture image,
+    are in the range [min, max].
+
+    [modifications to table 3.9???]
+
+    Section 3.9 (Fog)
+
+    Each component of Cf is clamped to [min, max] when specified.
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    Color buffers consist of either unsigned integer color indices or
+    R, G, B, and , optionally A unsigned or signed integer values.
+    [XXXfloating point]
+
+    4.1.2.5 Multisample Fragment Operations
+
+    If SAMPLE_ALPHA_TO_MASK_SGIS is enabled, the fragment alpha value used
+    for mask conversion is clamped to [0,1] before the mask is generated, but
+    the fragment alpha value is left unchanged.  If SAMPLE_ALPHA_TO_ONE_SGIS
+    is enabled the fragment alpha is set to 1.0.
+
+    Section 4.1.3 (Alpha Test)
+
+    ref is clamped to lie in [min, max], and then converted to a fixed-point
+    value according to the rules given for an A component in section 2.13.9.
+
+    Section 4.2.3 (Clearing the Buffers)
+
+    void ClearColor(clampf r, clampf g, clampf b, clampf a);
+
+    sets the clear value for the color buffers in RGBA mode.  Each of the
+    specified components is clamped to [min, max] and converted to fixed-point
+    according to the rules of section 2.12.9.
+
+    void ClearAccum(clampf r, clampf g, clampf b, clampf a);
+
+    takes four floating-point arguments that are the values, in order, to which
+    to set the R, G, B, and A values of the accumulation buffer (see the next
+    section).  These values are clamped to the range [min2,max] where min2
+    = minimum(-1,<min>) when they are specified.
+
+
+    Section 4.2.4 (The Accumulation Buffer)
+
+    Accumulation buffer values are taken to be signed values in the range
+    [min2,max] where min2 = minimum(-1,<min>).  Using ACCUM obtains the R, G,
+    B, and A components from the buffer current selected for
+    reading (section 4.3.2).  Each component, considered as a fixed-point
+    values in [min,max] (see section 2.12.9) is converted to floating-point.
+    Each result is then multiplied by value.
+
+    The color components operated on by Accum must be clamped only if the
+    operation is RETURN.  In this case, a value sent to the enabled color
+    buffers is first clamped to [min,max].  Otherwise, results are undefined
+    if the result of an operation on a color component is too large (in
+    magnitude) to be represented by the number of available bits.
+
+    4.3.2 (Reading Pixels)
+
+    Conversion to RGBA values
+
+    The R, G, and B (and possibly A) values form a group of elements.  Each
+    element is taken to be a fixed-point value in [min,max] with m bits, where
+    m is the number of bits in the corresponding color component of the
+    selected buffer (see section 2.12.9)
+
+    Final Conversion
+
+    For a component, if the type is floating point then each component is first
+    clamped to [min, max]; if the type is signed integer, then the component is
+    clamped to the more restrictive of [-1,1] and [min,max], otherwise each
+    component is first clamped to [0,1].  Then the appropriate conversion
+    formula from Table 4.7 is applied to the component.
+
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    [Added to the description of glXChooseFBConfigSGIX ]
+
+    If GLX_EXTENDED_RANGE_SGIS is specified as True, and if any of
+    GLX_MIN_RED_SGIS, GLX_MAX_RED_SGIS, GLX_MIN_GREEN_SGIS,
+    GLX_MAX_GREEN_SGIS, GLX_MIN_BLUE_SGIS, GLX_MAX_BLUE_SGIS,
+    GLX_MIN_ALPHA_SGIS, or GLX_MAX_ALPHA_SGIS are specified in <attrib_list>
+    then the value that follows indicates the minimum or maximum value
+    which can be represented in the OpenGL pipeline as a color.  Any
+    OpenGL state which stores color values (e.g. current color, texture
+    data, the color buffer, accumulation buffer, aux buffers, etc) can
+    represent values between the minimum and maximum range.  Integer
+    values for MIN and MAX attributes are cast to double precision
+    floating point, which is the internal representation of these
+    attributes.  Non-integral values for these attributes may be
+    specified using glXChooseFBConfigWithFltSGIX, which is
+    defined in the SGIX_fbconfig_float GLX extension.
+
+    The visuals returned by glXChooseFBConfigSGIX are sorted on the
+    basis of color range if and only if GLX_EXTENDED_RANGE_SGIS is
+    specified as True.  In that case, color range has a higher
+    precedence than GLX_DEPTH_BITS and a lower precedence than
+    GLX_SAMPLES_SGIS.
+
+    Extended color range visuals can be specified for both displayable
+    (window) and non-displayable (pixmap) drawables.  Extended range
+    visuals are displayed in a device-dependant manner, however for
+    traditional color displays they will typically be clamped to the
+    range [0,1].
+
+    [Added to Table 3]
+
+    Attribute                       Type     Description
+    ---------                       ----     -----------
+    GLX_EXTENDED_RANGE_SGIS         boolean  true if visual is extended range
+    GLX_MIN_RED_SGIS                double   minimum value of red component
+    GLX_MAX_RED_SGIS                double   maximum value of red component
+    GLX_MIN_GREEN_SGIS              double   minimum value of green component
+    GLX_MAX_GREEN_SGIS              double   maximum value of green component
+    GLX_MIN_BLUE_SGIS               double   minimum value of blue component
+    GLX_MAX_BLUE_SGIS               double   maximum value of blue component
+    GLX_MIN_ALPHA_SGIS              double   minimum value of alpha component
+    GLX_MAX_ALPHA_SGIS              double   maximum value of alpha component
+
+    [Added to Table 4]
+
+    Attribute                       Default     Sorting Criterion
+    ---------                       -------     -----------------
+    GLX_EXTENDED_RANGE_SGIS         False       exact
+    GLX_MIN_RED_SGIS                0.0         range
+    GLX_MAX_RED_SGIS                1.0         range
+    GLX_MIN_GREEN_SGIS              0.0         range
+    GLX_MAX_GREEN_SGIS              1.0         range
+    GLX_MIN_BLUE_SGIS               0.0         range
+    GLX_MAX_BLUE_SGIS               1.0         range
+    GLX_MIN_ALPHA_SGIS              0.0         range
+    GLX_MAX_ALPHA_SGIS              1.0         range
+
+        range - configs with a [MIN,MAX] range that meets or exceeds
+          the specified range are returned, with precedence given to
+          tighter bounds (that is, less negative MIN and less positive
+          MAX).
+
+GLX Protocol
+
+    [tbd]
+
+Dependencies on EXT_histogram
+
+    If EXT_histogram is not implemented, then the references to
+    GetHistogramEXT and GetMinmaxEXT in this file are invalid, and should be
+    ignored.
+
+Dependencies on SGI_color_table
+
+    If SGI_color_table is not implemented, then the references to
+    ColorTableSGI and GetColorTableSGI in this file are invalid, and should
+    be ignored.
+
+Dependencies on SGIS_multisample
+
+    If SGIS_multisample is not implemented, then the references to
+    SAMPLE_ALPHA_TO_MASK_SGIS and SAMPLE_ALPHA_TO_ONE_SGIS are invalid,
+    and should be ignored.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    Get Value           Get Command     Type    Minimum Value   Maximum Value
+    ---------           -----------     ----    -------------   -------------
+    EXTENDED_RANGE_SGIS GetBooleanv     B
+    MIN_RED_SGIS        GetFloatv       R       -               0.0
+    MAX_RED_SGIS        GetFloatv       R+      1.0             -
+    MIN_GREEN_SGIS      GetFloatv       R       -               0.0
+    MAX_GREEN_SGIS      GetFloatv       R+      1.0             -
+    MIN_BLUE_SGIS       GetFloatv       R       -               0.0
+    MAX_BLUE_SGIS       GetFloatv       R+      1.0             -
+    MIN_ALPHA_SGIS      GetFloatv       R       -               0.0
+    MAX_ALPHA_SGIS      GetFloatv       R+      1.0             -

@@ -29,9 +29,11 @@
 #include <limits>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -364,7 +366,8 @@ TEST_P(ImmediateDataTests, SetImmediatesWithRangeOffset) {
         // data range.
         computePassEncoder.SetImmediates(kHalfImmediateDataSize, immediateData.data(),
                                          kHalfImmediateDataSize);
-        computePassEncoder.SetImmediates(0, immediateData.data() + 2, kHalfImmediateDataSize);
+        computePassEncoder.SetImmediates(0, DAWN_UNSAFE_TODO(immediateData.data() + 2),
+                                         kHalfImmediateDataSize);
         computePassEncoder.SetBindGroup(0, CreateBindGroup());
         computePassEncoder.DispatchWorkgroups(1);
         computePassEncoder.End();
@@ -434,7 +437,7 @@ TEST_P(ImmediateDataTests, SetImmediatesMultipleTimes) {
     }
 }
 
-// Test that clamp frag depth(supported by internal immediate constants)
+// Test that clamp frag depth(supported by internal immediates)
 // works fine when shaders have user immediate data
 TEST_P(ImmediateDataTests, UsingImmediateDataDontAffectClampFragDepth) {
     // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
@@ -491,7 +494,7 @@ TEST_P(ImmediateDataTests, UsingImmediateDataDontAffectClampFragDepth) {
     EXPECT_PIXEL_FLOAT_EQ(0.5f, depthTexture, 0, 0);
 }
 
-// Test that vertex_index (supported by internal immediate constants)
+// Test that vertex_index (supported by internal immediates)
 // works fine when the immediates are unused and optimized out by the driver.
 TEST_P(ImmediateDataTests, VertexIndexOptimizedOut) {
     DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
@@ -720,34 +723,57 @@ TEST_P(ImmediateDataTests, BundlesDontCarePreviousImmediatesState) {
     EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8(51, 102, 153, 255), renderPass.color, 0, 0);
 }
 
-// Switching pipelines with different internal push constant sizes (e.g. frag_depth adds
-// clampFragDepth) must rebind all bind groups due to VkPipelineLayout change.
-TEST_P(ImmediateDataTests, BindGroupsReboundOnDifferentInternalImmediateSize) {
+// Switching between render pipelines that trigger different internal immediates changes the
+// internal push-constant / root-signature size, which must rebind all bind groups. Pipeline A uses
+// neither vertex_index nor frag_depth; pipeline B uses both (firstVertex + clampFragDepth) and
+// reads the bind group. The size difference appears on D3D11/D3D12 (firstVertex), Vulkan/Metal
+// (clampFragDepth) and OpenGL (both).
+// TODO(crbug.com/366291600): On D3D12 firstVertex is always allocated and clampFragDepth is absent,
+// so both pipelines share one PipelineLayoutHandle and the switch is a no-op there (control case)
+// until the internal root constants become conditionally allocated.
+TEST_P(ImmediateDataTests, RenderBindGroupsReboundOnDifferentInternalImmediateSize) {
+    // TODO(crbug.com/522872463): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
         device, {{0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Uniform}});
 
     wgpu::PipelineLayout layout = utils::MakePipelineLayout(device, {bgl}, 4);
 
-    // Single shader module with shared VS and two FS entry points:
-    //  - fsRed: outputs solid red (no frag_depth, smaller internal push constant range).
-    //  - fsFromBindGroup: reads the bind group and writes frag_depth (larger range).
+    // Single module, two pipelines each drawing one point (a point covers the 1x1 target without
+    // needing vertex_index in pipeline A):
+    //  - Pipeline A (vsPlain + fsRed): no vertex_index, no frag_depth -> smallest internal
+    //  immediate.
+    //  - Pipeline B (vsIndexed + fsFromBindGroup): uses vertex_index and writes frag_depth, and
+    //  reads the bind group. flat+either keeps vertex_index valid in compatibility mode.
     wgpu::ShaderModule shaderModule = utils::CreateShaderModule(device, R"(
         @group(0) @binding(0) var<uniform> color: vec4f;
         var<immediate> imm: f32;
-        @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
-            let p = array(vec2f(1,-1), vec2f(-1,-1), vec2f(0,1));
-            return vec4f(p[i], 0, 1);
+
+        @vertex fn vsPlain() -> @builtin(position) vec4f { return vec4f(0, 0, 0, 1); }
+        @fragment fn fsRed() -> @location(0) vec4f { return vec4f(1, 0, 0, 1); }
+
+        struct VsOut {
+            @builtin(position) position: vec4f,
+            @location(0) @interpolate(flat, either) vertexIndex: u32,
         }
-        @fragment fn fsRed() -> @location(0) vec4f { return vec4f(1,0,0,1); }
-        struct Out { @location(0) c: vec4f, @builtin(frag_depth) d: f32 }
-        @fragment fn fsFromBindGroup() -> Out { return Out(color, 0.5); }
+        @vertex fn vsIndexed(@builtin(vertex_index) i: u32) -> VsOut {
+            return VsOut(vec4f(0, 0, 0, 1), i);
+        }
+        struct FsOut { @location(0) c: vec4f, @builtin(frag_depth) d: f32 }
+        @fragment fn fsFromBindGroup(@location(0) @interpolate(flat, either) vertexIndex: u32)
+            -> FsOut {
+            return FsOut(vec4f(f32(vertexIndex) / 255.0, color.g, color.b, 1.0), 0.5);
+        }
     )");
 
-    auto MakePipeline = [&](wgpu::ShaderModule mod, bool useDepthWrite) {
+    auto MakePipeline = [&](const char* vsEntry, const char* fsEntry, bool useDepthWrite) {
         utils::ComboRenderPipelineDescriptor desc;
-        desc.vertex.module = mod;
-        desc.cFragment.module = mod;
-        desc.cFragment.entryPoint = useDepthWrite ? "fsFromBindGroup" : "fsRed";
+        desc.vertex.module = shaderModule;
+        desc.vertex.entryPoint = vsEntry;
+        desc.primitive.topology = wgpu::PrimitiveTopology::PointList;
+        desc.cFragment.module = shaderModule;
+        desc.cFragment.entryPoint = fsEntry;
         desc.cFragment.targetCount = 1;
         desc.layout = layout;
         auto* ds = desc.EnableDepthStencil(wgpu::TextureFormat::Depth32Float);
@@ -757,13 +783,13 @@ TEST_P(ImmediateDataTests, BindGroupsReboundOnDifferentInternalImmediateSize) {
         return device.CreateRenderPipeline(&desc);
     };
 
-    // Pipeline A: fsRed (no frag_depth).
-    wgpu::RenderPipeline pipelineWithoutFragDepth = MakePipeline(shaderModule, false);
-    // Pipeline B: fsFromBindGroup (with frag_depth, different push constant range).
-    wgpu::RenderPipeline pipelineWithFragDepth = MakePipeline(shaderModule, true);
+    // Pipeline A: no internal immediates. Pipeline B: firstVertex + clampFragDepth.
+    wgpu::RenderPipeline pipelineWithoutInternalImmediates =
+        MakePipeline("vsPlain", "fsRed", false);
+    wgpu::RenderPipeline pipelineWithInternalImmediates =
+        MakePipeline("vsIndexed", "fsFromBindGroup", true);
 
-    // The color uniform provides the expected output: {0.2, 0.4, 0.6, 1.0} -> rgba8
-    // {51,102,153,255}.
+    // color = {_, 0.4, 0.6, _} -> G = 102, B = 153.
     wgpu::Buffer colorBuf =
         utils::CreateBufferFromData(device, wgpu::BufferUsage::Uniform, {0.2f, 0.4f, 0.6f, 1.0f});
     wgpu::BindGroup bg = utils::MakeBindGroup(device, bgl, {{0, colorBuf}});
@@ -778,22 +804,85 @@ TEST_P(ImmediateDataTests, BindGroupsReboundOnDifferentInternalImmediateSize) {
     rpDesc.UnsetDepthStencilLoadStoreOpsForFormat(wgpu::TextureFormat::Depth32Float);
 
     float immData = 0.0f;
+    constexpr uint32_t kFirstVertex = 5;
     wgpu::CommandEncoder enc = device.CreateCommandEncoder();
     wgpu::RenderPassEncoder pass = enc.BeginRenderPass(&rpDesc);
     pass.SetBindGroup(0, bg);
     pass.SetImmediates(0, &immData, sizeof(float));
-    // Draw with Pipeline A (red), then switch to Pipeline B without re-setting bind groups.
-    // The Vulkan backend needs to reapply VkDescriptorSets after setting B because the change
-    // in push constant size will invalidate the currently bound VkDescriptorSets.
-    pass.SetPipeline(pipelineWithoutFragDepth);
-    pass.Draw(3);
-    pass.SetPipeline(pipelineWithFragDepth);
-    pass.Draw(3);
+    // Draw Pipeline A, then switch to Pipeline B without re-setting the bind group. A backend whose
+    // internal immediate size changes across the switch must reapply the bind group bindings.
+    pass.SetPipeline(pipelineWithoutInternalImmediates);
+    pass.Draw(1);
+    pass.SetPipeline(pipelineWithInternalImmediates);
+    pass.Draw(1, 1, kFirstVertex, 0);
     pass.End();
     wgpu::CommandBuffer commands = enc.Finish();
     queue.Submit(1, &commands);
 
-    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8(51, 102, 153, 255), rp.color, 0, 0);
+    // R == firstVertex proves vertex_index includes the offset (the D3D12 internal root constant);
+    // G/B prove the bind group is still applied after switching internal immediate sizes.
+    EXPECT_PIXEL_RGBA8_EQ(utils::RGBA8(kFirstVertex, 102, 153, 255), rp.color, 0, 0);
+}
+
+// Switching between compute pipelines that trigger different internal immediates must rebind all
+// bind groups. Pipeline A uses no num_workgroups; pipeline B uses num_workgroups (internal root
+// constant on D3D12, internal immediate on D3D11; native on Vulkan/Metal/OpenGL). After switching
+// A->B without re-setting the bind group, B's write to the bound storage buffer must still land.
+TEST_P(ImmediateDataTests, ComputeBindGroupsReboundOnDifferentInternalImmediateSize) {
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Storage}});
+    wgpu::PipelineLayout layout = utils::MakeBasicPipelineLayout(device, &bgl);
+
+    // Single module, two entry points sharing the layout:
+    //  - csPlain: no num_workgroups -> smallest internal immediate footprint.
+    //  - csNumWorkgroups: uses num_workgroups -> internal root constant (D3D12) / immediate
+    //  (D3D11).
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+        @group(0) @binding(0) var<storage, read_write> output : vec3u;
+
+        @compute @workgroup_size(1, 1, 1) fn csPlain() {
+            output = vec3u(111u, 111u, 111u);
+        }
+
+        @compute @workgroup_size(1, 1, 1) fn csNumWorkgroups(@builtin(num_workgroups) n : vec3u) {
+            output = n;
+        }
+    )");
+
+    auto MakePipeline = [&](const char* entryPoint) {
+        wgpu::ComputePipelineDescriptor desc;
+        desc.layout = layout;
+        desc.compute.module = module;
+        desc.compute.entryPoint = entryPoint;
+        return device.CreateComputePipeline(&desc);
+    };
+    wgpu::ComputePipeline pipelineWithoutInternalImmediates = MakePipeline("csPlain");
+    wgpu::ComputePipeline pipelineWithInternalImmediates = MakePipeline("csNumWorkgroups");
+
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = sizeof(uint32_t) * 4;
+    bufferDesc.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::Storage;
+    wgpu::Buffer output = device.CreateBuffer(&bufferDesc);
+    wgpu::BindGroup bg = utils::MakeBindGroup(device, bgl, {{0, output}});
+
+    constexpr uint32_t kX = 2, kY = 3, kZ = 4;
+    wgpu::CommandEncoder enc = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = enc.BeginComputePass();
+    pass.SetBindGroup(0, bg);
+    // Dispatch Pipeline A, then switch to Pipeline B without re-setting the bind group. A backend
+    // whose internal immediate size changes across the switch must reapply the bind group.
+    pass.SetPipeline(pipelineWithoutInternalImmediates);
+    pass.DispatchWorkgroups(1, 1, 1);
+    pass.SetPipeline(pipelineWithInternalImmediates);
+    pass.DispatchWorkgroups(kX, kY, kZ);
+    pass.End();
+    wgpu::CommandBuffer commands = enc.Finish();
+    queue.Submit(1, &commands);
+
+    // {2,3,4} (not A's 111) proves B's num_workgroups is correct and the bind group is still
+    // applied after the pipeline switch.
+    std::array<uint32_t, 3> expected = {kX, kY, kZ};
+    EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), output, 0, expected.size());
 }
 
 // Switching pipelines with different calculated PipelineLayout immediateSize must rebind all
@@ -904,6 +993,58 @@ TEST_P(ImmediateDataTests, AutoCalculatedPipelineLayoutImmediateSize) {
     EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), mStorageBuffer, 0, expected.size());
 }
 
+// A compute entry point that uses a vec3u user immediate (12 bytes, not a multiple of 16) together
+// with @builtin(num_workgroups). The user immediate block precedes num_workgroups in the internal
+// immediate layout, so the 12-byte user block pushes num_workgroups onto a 4-aligned, non-16-byte
+// offset. Both the user immediate and num_workgroups must read back correctly.
+TEST_P(ImmediateDataTests, ComputeVec3UserImmediateWithNumWorkgroups) {
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+        var<immediate> userImm : vec3u;
+        struct Output {
+            userImm : vec3u,
+            numWorkgroups : vec3u,
+        };
+        @group(0) @binding(0) var<storage, read_write> output : Output;
+
+        @compute @workgroup_size(1, 1, 1) fn csMain(@builtin(num_workgroups) n : vec3u) {
+            output.userImm = userImm;
+            output.numWorkgroups = n;
+        }
+    )");
+
+    wgpu::ComputePipelineDescriptor desc;
+    desc.compute.module = module;
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&desc);
+
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = sizeof(uint32_t) * 8;
+    bufferDesc.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::Storage;
+    wgpu::Buffer output = device.CreateBuffer(&bufferDesc);
+    wgpu::BindGroup bg =
+        utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, output}});
+
+    std::array<uint32_t, 3> userImm = {11, 22, 33};
+    constexpr uint32_t kX = 2, kY = 3, kZ = 4;
+
+    wgpu::CommandEncoder enc = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = enc.BeginComputePass();
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bg);
+    pass.SetImmediates(0, userImm.data(), userImm.size() * sizeof(uint32_t));
+    pass.DispatchWorkgroups(kX, kY, kZ);
+    pass.End();
+    wgpu::CommandBuffer commands = enc.Finish();
+    queue.Submit(1, &commands);
+
+    // The Output struct places userImm at byte offset 0 and numWorkgroups at byte offset 16 (vec3u
+    // members are 16-byte aligned in std430). The EXPECT_BUFFER offset argument is in bytes.
+    std::array<uint32_t, 3> expectedUserImm = {11, 22, 33};
+    std::array<uint32_t, 3> expectedNumWorkgroups = {kX, kY, kZ};
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedUserImm.data(), output, 0, expectedUserImm.size());
+    EXPECT_BUFFER_U32_RANGE_EQ(expectedNumWorkgroups.data(), output, 16,
+                               expectedNumWorkgroups.size());
+}
+
 DAWN_INSTANTIATE_TEST(ImmediateDataTests,
                       D3D11Backend(),
                       D3D12Backend(),
@@ -911,6 +1052,89 @@ DAWN_INSTANTIATE_TEST(ImmediateDataTests,
                       OpenGLESBackend(),
                       VulkanBackend(),
                       WebGPUBackend());
+
+// f16 immediates are tested in their own suite so it can require the shader-f16 feature and be
+// instantiated only on backends that can enable it (on D3D12 that means DXC).
+class ImmediateDataF16Tests : public DawnTest {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        if (SupportsFeatures({wgpu::FeatureName::ShaderF16})) {
+            return {wgpu::FeatureName::ShaderF16};
+        }
+        return {};
+    }
+
+    void SetUp() override {
+        DawnTest::SetUp();
+        // GetRequiredFeatures only requests shader-f16 when the adapter advertises it, but the
+        // device can still be created without it: on D3D12 the adapter reports support even when
+        // the pipeline uses FXC, while enabling the feature requires DXC, so device creation drops
+        // it. Skip when the feature did not make it onto the device. This runs per test because
+        // DawnTest recreates the device for each test case.
+        DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::ShaderF16));
+    }
+};
+
+// Authoritative check that Tint's f16 immediate member byte offsets agree with the bytes Dawn
+// uploads via SetImmediates. Three f16 members sit at byte offsets 0/2/4, so the last of the two
+// uint32_t slots is only partially used, exercising the padded-tail case.
+TEST_P(ImmediateDataF16Tests, Vec3) {
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+        enable f16;
+        struct Immediate {
+            a: f16,
+            b: f16,
+            c: f16,
+        };
+        var<immediate> imm: Immediate;
+        @group(0) @binding(0) var<storage, read_write> output : vec3f;
+
+        @compute @workgroup_size(1, 1, 1)
+        fn csMain() {
+            output = vec3f(f32(imm.a), f32(imm.b), f32(imm.c));
+        })");
+
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = sizeof(float) * 3;
+    bufferDesc.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::Storage;
+    wgpu::Buffer storageBuffer = device.CreateBuffer(&bufferDesc);
+
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = module;
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&csDesc);
+
+    wgpu::BindGroup bindGroup =
+        utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, storageBuffer}});
+
+    // These values are exactly representable in f16 but carry dense mantissa bits and mixed signs,
+    // so they catch bit-level packing errors as well as offset/stride/ordering errors. Packed
+    // contiguously, the three uint16_t values occupy byte offsets 0/2/4 -- matching the WGSL struct
+    // member offsets.
+    std::array<float, 3> values = {1.5f, -2.25f, 3.75f};
+    std::array<uint16_t, 4> packed = {
+        Float32ToFloat16(values[0]),
+        Float32ToFloat16(values[1]),
+        Float32ToFloat16(values[2]),
+        0,
+    };
+
+    wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder computePassEncoder = commandEncoder.BeginComputePass();
+    computePassEncoder.SetPipeline(pipeline);
+    computePassEncoder.SetImmediates(0, packed.data(), packed.size() * sizeof(uint16_t));
+    computePassEncoder.SetBindGroup(0, bindGroup);
+    computePassEncoder.DispatchWorkgroups(1);
+    computePassEncoder.End();
+    wgpu::CommandBuffer commands = commandEncoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_FLOAT_RANGE_EQ(values.data(), storageBuffer, 0, values.size());
+}
+
+DAWN_INSTANTIATE_TEST(ImmediateDataF16Tests,
+                      D3D12Backend({"use_dxc"}),
+                      MetalBackend(),
+                      VulkanBackend());
 
 class ImmediateDataWithResourceTableTests : public DawnTest {
   protected:

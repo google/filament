@@ -262,6 +262,25 @@ var<immediate> pc: f32;
     EXPECT_EQ(4u, result[0].immediate_data_size);
 }
 
+// Test that immediate_data_size is rounded up to 4 (bytes) for a single f16
+// immediate data, which has a raw size of 2 bytes.
+TEST_F(InspectorGetEntryPointTest, ImmediateDataSizeF16RoundsUpToFour) {
+    auto* src = R"(
+enable f16;
+
+var<immediate> x : f16;
+
+@compute @workgroup_size(1) fn main() { _ = x; }
+)";
+    Inspector& inspector = Initialize(src);
+
+    auto result = inspector.GetEntryPoints();
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(4u, result[0].immediate_data_size);
+}
+
 TEST_F(InspectorGetEntryPointTest, NonDefaultWorkgroupSize) {
     auto* src = R"(
 @compute @workgroup_size(8i, 2i, 1i)
@@ -2007,18 +2026,14 @@ fn ep_func() {
 
 TEST_F(InspectorGetResourceBindingsTest, TextureFilterable) {
     auto* src = R"(
-@group(0) @binding(0) var tex1 : texture_2d<f32, filterable>;
 @group(0) @binding(1) var tex2 : texture_2d<f32>;
-@group(0) @binding(2) var tex3 : texture_2d<f32, unfilterable>;
 @group(0) @binding(3) var tex4 : texture_depth_2d;
 @group(0) @binding(4) var tex5 : texture_multisampled_2d<f32>;
 @group(0) @binding(5) var tex6 : texture_2d<i32>;
 
 @fragment
 fn ep_func() {
-    _ = tex1;
     _ = tex2;
-    _ = tex3;
     _ = tex4;
     _ = tex5;
     _ = tex6;
@@ -2028,50 +2043,36 @@ fn ep_func() {
 
     auto result = inspector.GetResourceBindings("ep_func");
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
-    ASSERT_EQ(6u, result.size());
+    ASSERT_EQ(4u, result.size());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[0].resource_type);
     EXPECT_EQ(0u, result[0].bind_group);
-    EXPECT_EQ(0u, result[0].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SampledKind::kFilterable, result[0].sampled_kind);
+    EXPECT_EQ(1u, result[0].binding);
+    EXPECT_EQ(inspector::ResourceBinding::SampledKind::kUnknownFilterable, result[0].sampled_kind);
 
-    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[1].resource_type);
+    EXPECT_EQ(ResourceBinding::ResourceType::kDepthTexture, result[1].resource_type);
     EXPECT_EQ(0u, result[1].bind_group);
-    EXPECT_EQ(1u, result[1].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SampledKind::kUnknownFilterable, result[1].sampled_kind);
+    EXPECT_EQ(3u, result[1].binding);
 
-    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[2].resource_type);
+    EXPECT_EQ(ResourceBinding::ResourceType::kMultisampledTexture, result[2].resource_type);
     EXPECT_EQ(0u, result[2].bind_group);
-    EXPECT_EQ(2u, result[2].binding);
+    EXPECT_EQ(4u, result[2].binding);
     EXPECT_EQ(inspector::ResourceBinding::SampledKind::kUnfilterable, result[2].sampled_kind);
 
-    EXPECT_EQ(ResourceBinding::ResourceType::kDepthTexture, result[3].resource_type);
+    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[3].resource_type);
     EXPECT_EQ(0u, result[3].bind_group);
-    EXPECT_EQ(3u, result[3].binding);
-
-    EXPECT_EQ(ResourceBinding::ResourceType::kMultisampledTexture, result[4].resource_type);
-    EXPECT_EQ(0u, result[4].bind_group);
-    EXPECT_EQ(4u, result[4].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SampledKind::kUnfilterable, result[4].sampled_kind);
-
-    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[5].resource_type);
-    EXPECT_EQ(0u, result[5].bind_group);
-    EXPECT_EQ(5u, result[5].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SampledKind::kSInt, result[5].sampled_kind);
+    EXPECT_EQ(5u, result[3].binding);
+    EXPECT_EQ(inspector::ResourceBinding::SampledKind::kSInt, result[3].sampled_kind);
 }
 
 TEST_F(InspectorGetResourceBindingsTest, SamplerFiltering) {
     auto* src = R"(
-@group(0) @binding(0) var samp1 : sampler<filtering>;
-@group(0) @binding(1) var samp2 : sampler;
-@group(0) @binding(2) var samp3 : sampler<non_filtering>;
+@group(0) @binding(0) var samp1 : sampler;
 @group(0) @binding(3) var samp4 : sampler_comparison;
 
 @fragment
 fn ep_func() {
     _ = samp1;
-    _ = samp2;
-    _ = samp3;
     _ = samp4;
 }
 )";
@@ -2079,27 +2080,17 @@ fn ep_func() {
 
     auto result = inspector.GetResourceBindings("ep_func");
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
-    ASSERT_EQ(4u, result.size());
+    ASSERT_EQ(2u, result.size());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kSampler, result[0].resource_type);
     EXPECT_EQ(0u, result[0].bind_group);
     EXPECT_EQ(0u, result[0].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SamplerType::kFiltering, result[0].sampler_type);
+    EXPECT_EQ(inspector::ResourceBinding::SamplerType::kUnknownFiltering, result[0].sampler_type);
 
     EXPECT_EQ(ResourceBinding::ResourceType::kSampler, result[1].resource_type);
     EXPECT_EQ(0u, result[1].bind_group);
-    EXPECT_EQ(1u, result[1].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SamplerType::kUnknownFiltering, result[1].sampler_type);
-
-    EXPECT_EQ(ResourceBinding::ResourceType::kSampler, result[2].resource_type);
-    EXPECT_EQ(0u, result[2].bind_group);
-    EXPECT_EQ(2u, result[2].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SamplerType::kNonFiltering, result[2].sampler_type);
-
-    EXPECT_EQ(ResourceBinding::ResourceType::kSampler, result[3].resource_type);
-    EXPECT_EQ(0u, result[3].bind_group);
-    EXPECT_EQ(3u, result[3].binding);
-    EXPECT_EQ(inspector::ResourceBinding::SamplerType::kComparison, result[3].sampler_type);
+    EXPECT_EQ(3u, result[1].binding);
+    EXPECT_EQ(inspector::ResourceBinding::SamplerType::kComparison, result[1].sampler_type);
 }
 
 TEST_F(InspectorGetResourceBindingsTest, InputAttachment) {
@@ -2719,7 +2710,8 @@ TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Direct_Vec4f) {
 
     ASSERT_EQ(1u, result.size());
     EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
-    EXPECT_EQ(32u, result[0].size);
+    // Offset is not counted for binding size.
+    EXPECT_EQ(16u, result[0].size);
 }
 
 TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Direct_Struct) {
@@ -2744,15 +2736,14 @@ struct T { // size 32 (8 bytes padding)
 
     ASSERT_EQ(1u, result.size());
     EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
-    EXPECT_EQ(160u, result[0].size);
+    EXPECT_EQ(144u, result[0].size);
 }
 
-TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Indirect_ArrayU32_Size) {
+TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Indirect_ArrayU32) {
     auto* src = R"(
 @group(0) @binding(0) var<storage> buf : buffer;
-var<private> offset = 0u; // hides from constant eval
 fn foo(p : ptr<storage, buffer>) {
-  let q = bufferArrayView<array<u32>>(p, offset, 128u);
+  let q = bufferArrayView<array<u32>>(p, 0u, 128u);
 }
 fn bar(p : ptr<storage, buffer>) {
   foo(p);
@@ -2769,15 +2760,15 @@ fn ep() {
 
     ASSERT_EQ(1u, result.size());
     EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
-    EXPECT_EQ(128u, result[0].size);
+    EXPECT_EQ(4u, result[0].size);
 }
 
-TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Indirect_ArrayU32_Offset) {
+TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Indirect_ArrayVec4u) {
     auto* src = R"(
 @group(0) @binding(0) var<storage> buf : buffer;
 var<private> size = 0u; // hides from constant eval
 fn foo(p : ptr<storage, buffer>) {
-  let q = bufferArrayView<array<u32>>(p, 32u, size);
+  let q = bufferArrayView<array<vec4u>>(p, 32u, size);
 }
 fn bar() {
   foo(&buf);
@@ -2794,7 +2785,7 @@ fn ep() {
 
     ASSERT_EQ(1u, result.size());
     EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
-    EXPECT_EQ(36u, result[0].size);
+    EXPECT_EQ(16u, result[0].size);
 }
 
 TEST_F(InspectorGetResourceBindingsTest, UnsizedBuffer_Indirect_RuntimeStruct) {
@@ -2847,8 +2838,8 @@ fn foo(p : ptr<storage, buffer, read_write>) {
   let q = bufferArrayView<S>(p, offset, size);
 }
 fn bar(p : ptr<storage, buffer, read_write>) {
-  // Req size = SizeOf(T) + StrideOf(array<vec3f>) + offset = 64
-  let q = bufferView<S>(p, 16u);
+  // Req size = SizeOf(array<vec3f, 4> = 64
+  let q = bufferView<array<vec3f, 4>>(p, 16u);
 }
 @compute @workgroup_size(1)
 fn ep() {
@@ -2887,6 +2878,319 @@ fn foo(p : ptr<storage, buffer, read_write>) {
     ASSERT_EQ(1u, result.size());
     EXPECT_EQ(ResourceBinding::ResourceType::kStorageBuffer, result[0].resource_type);
     EXPECT_EQ(16u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Direct) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : array<f32>;
+@compute @workgroup_size(16) fn ep() {
+  _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>, col_major>(&v, 0, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(256u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Indirect) {
+    auto* src = R"(
+enable f16;
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : array<f16>;
+@compute @workgroup_size(16) fn ep() {
+  foo();
+}
+fn foo() {
+  _ = subgroupMatrixLoad<subgroup_matrix_left<f16, 8, 8>, col_major>(&v, 0, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(128u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Indirect_PointerArg) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage, read_write> v : array<u32>;
+@compute @workgroup_size(16) fn ep() {
+  foo(&v);
+}
+fn foo(p : ptr<storage, array<u32>, read_write>) {
+  subgroupMatrixStore<row_major>(p, 0, subgroup_matrix_result<u8, 16, 8>(), 4);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(128u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Direct_RuntimeStruct) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+struct S {
+  a : vec4f,
+  b : array<i32>,
+}
+@group(0) @binding(0) var<storage, read_write> v : S;
+@compute @workgroup_size(16) fn ep() {
+  subgroupMatrixStore<row_major>(&v.b, 0, subgroup_matrix_result<i8, 16, 16>(), 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(272u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Indirect_RuntimeStruct) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+struct S {
+  a : vec4f,
+  b : array<i32>,
+}
+@group(0) @binding(0) var<storage, read_write> v : S;
+@compute @workgroup_size(16) fn ep() {
+  foo(&v);
+}
+fn foo(p : ptr<storage, S, read_write>) {
+  bar(&p.b);
+}
+fn bar(p : ptr<storage, array<i32>, read_write>) {
+  subgroupMatrixStore<row_major>(p, 0, subgroup_matrix_result<i8, 16, 16>(), 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(272u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Direct_Deprecated) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : array<f32>;
+@compute @workgroup_size(16) fn ep() {
+  _ = subgroupMatrixLoad<subgroup_matrix_left<f32, 8, 8>>(&v, 0, true, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(256u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_Indirect_Deprecated) {
+    auto* src = R"(
+enable f16;
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : array<f16>;
+@compute @workgroup_size(16) fn ep() {
+  foo();
+}
+fn foo() {
+  _ = subgroupMatrixLoad<subgroup_matrix_left<f16, 8, 8>>(&v, 0, false, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(128u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferView_ArrayU32) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  let p = bufferView<array<u32>>(&v, 0);
+  _ = subgroupMatrixLoad<subgroup_matrix_right<u32, 8, 8>, col_major>(p, 0, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(256u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferArrayView_ArrayU32) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  let p = bufferArrayView<array<u32>>(&v, 0, 256);
+  _ = subgroupMatrixLoad<subgroup_matrix_right<u32, 8, 8>, col_major>(p, 0, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(256u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferView_RuntimeStruct) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+struct S {
+  a : vec4f,
+  b : array<u32>,
+}
+@group(0) @binding(0) var<storage> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  let p = bufferView<S>(&v, 0);
+  _ = subgroupMatrixLoad<subgroup_matrix_right<u32, 8, 8>, col_major>(&(*p).b, 0, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(272u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferArrayView_RuntimeStruct) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+struct S {
+  a : vec4f,
+  b : array<u32>,
+}
+@group(0) @binding(0) var<storage> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  let p = bufferArrayView<S>(&v, 0, 272);
+  let p2 = &p.b;
+  _ = subgroupMatrixLoad<subgroup_matrix_right<u32, 8, 8>, col_major>(p2, 0, 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(272u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferView_RuntimeStruct_Parameters) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+struct S {
+  a : vec4f,
+  b : array<u32>,
+}
+@group(0) @binding(0) var<storage, read_write> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  let p = &v;
+  foo(p);
+}
+fn foo(p : ptr<storage, buffer, read_write>) {
+  let q = &(*p);
+  let r = &*(&*(&*q));
+  let view = bufferView<S>(r, 0);
+  let s = view;
+  bar(s);
+}
+fn bar(p : ptr<storage, S, read_write>) {
+  let q = &(*p).b;
+  foobar(q);
+}
+fn foobar(p : ptr<storage, array<u32>, read_write>) {
+  subgroupMatrixStore<row_major>(p, 0, subgroup_matrix_result<u32, 8, 8>(), 8);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(272u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferView_Max1) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  _ = bufferView<array<u32, 257>>(&v, 0);
+  let p = bufferView<array<u32>>(&v, 0);
+  _ = subgroupMatrixLoad<subgroup_matrix_left<u32, 16, 16>, col_major>(p, 0, 16);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(1028u, result[0].size);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, SubgroupMatrix_BufferView_Max2) {
+    auto* src = R"(
+enable chromium_experimental_subgroup_matrix;
+@group(0) @binding(0) var<storage> v : buffer;
+@compute @workgroup_size(1) fn ep() {
+  _ = bufferView<array<u32, 255>>(&v, 0);
+  let p = bufferView<array<u32>>(&v, 0);
+  _ = subgroupMatrixLoad<subgroup_matrix_left<u32, 16, 16>, col_major>(p, 0, 16);
+}
+    )";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[0].resource_type);
+    EXPECT_EQ(1024u, result[0].size);
 }
 
 std::string CoordsType(core::type::TextureDimension dim, std::string_view name) {
@@ -3317,7 +3621,7 @@ TEST_F(InspectorGetResourceTableInfoTest, ResourceTable) {
 enable chromium_experimental_resource_table;
 
 @fragment fn ep() {
-  _ = hasResource<texture_2d<f32, filterable>>(0);
+  _ = hasResource<texture_2d<f32>>(0);
   _ = getResource<texture_3d<i32>>(1);
 }
 )";
@@ -3331,7 +3635,7 @@ enable chromium_experimental_resource_table;
 
     std::vector<ResourceType> types(result.begin(), result.end());
     std::sort(types.begin(), types.end());
-    EXPECT_EQ(ResourceType::kTexture2d_f32_filterable, types[0]);
+    EXPECT_EQ(ResourceType::kTexture2d_f32_unknown_filterable, types[0]);
     EXPECT_EQ(ResourceType::kTexture3d_i32, types[1]);
 }
 
@@ -3340,12 +3644,11 @@ TEST_F(InspectorGetResourceTableInfoTest, ResourceTable_Multiple) {
 enable chromium_experimental_resource_table;
 
 @fragment fn ep() {
-  _ = textureDimensions(getResource<texture_cube<f32, unfilterable>>(3));
-  _ = textureDimensions(getResource<texture_cube<f32, filterable>>(3));
-  _ = textureDimensions(getResource<texture_1d<f32, filterable>>(3));
+  _ = textureDimensions(getResource<texture_cube<f32>>(3));
+  _ = textureDimensions(getResource<texture_1d<f32>>(3));
 
-  _ = hasResource<texture_2d<f32, filterable>>(0);
-  _ = getResource<texture_3d<f32, filterable>>(1);
+  _ = hasResource<texture_2d<f32>>(0);
+  _ = getResource<texture_3d<f32>>(1);
 }
 )";
 
@@ -3354,16 +3657,15 @@ enable chromium_experimental_resource_table;
     auto result = inspector.GetResourceTableInfo("ep");
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
 
-    ASSERT_EQ(5u, result.size());
+    ASSERT_EQ(4u, result.size());
 
     std::vector<ResourceType> types(result.begin(), result.end());
     std::sort(types.begin(), types.end());
 
-    EXPECT_EQ(ResourceType::kTexture1d_f32_filterable, types[0]);
-    EXPECT_EQ(ResourceType::kTexture2d_f32_filterable, types[1]);
-    EXPECT_EQ(ResourceType::kTexture3d_f32_filterable, types[2]);
-    EXPECT_EQ(ResourceType::kTextureCube_f32_filterable, types[3]);
-    EXPECT_EQ(ResourceType::kTextureCube_f32_unfilterable, types[4]);
+    EXPECT_EQ(ResourceType::kTexture1d_f32_unknown_filterable, types[0]);
+    EXPECT_EQ(ResourceType::kTexture2d_f32_unknown_filterable, types[1]);
+    EXPECT_EQ(ResourceType::kTexture3d_f32_unknown_filterable, types[2]);
+    EXPECT_EQ(ResourceType::kTextureCube_f32_unknown_filterable, types[3]);
 }
 
 TEST_F(InspectorGetResourceTableInfoTest, ResourceTable_Nested) {
@@ -3371,13 +3673,11 @@ TEST_F(InspectorGetResourceTableInfoTest, ResourceTable_Nested) {
 enable chromium_experimental_resource_table;
 
 fn nested() {
-  _ = textureDimensions(getResource<texture_cube<f32, filterable>>(3));
-  _ = textureDimensions(getResource<texture_1d<f32, unfilterable>>(3));
+  _ = textureDimensions(getResource<texture_cube<f32>>(3));
+  _ = textureDimensions(getResource<texture_1d<f32>>(3));
 
-  _ = hasResource<texture_2d<f32, filterable>>(0);
-  _ = getResource<texture_3d<f32, filterable>>(1);
-  _ = hasResource<texture_2d<f32, unfilterable>>(0);
-  _ = getResource<texture_3d<f32, unfilterable>>(1);
+  _ = hasResource<texture_2d<f32>>(0);
+  _ = getResource<texture_3d<f32>>(1);
 }
 
 @fragment fn ep() {
@@ -3390,17 +3690,15 @@ fn nested() {
     auto result = inspector.GetResourceTableInfo("ep");
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
 
-    ASSERT_EQ(6u, result.size());
+    ASSERT_EQ(4u, result.size());
 
     std::vector<ResourceType> types(result.begin(), result.end());
     std::sort(types.begin(), types.end());
 
-    EXPECT_EQ(ResourceType::kTexture1d_f32_unfilterable, types[0]);
-    EXPECT_EQ(ResourceType::kTexture2d_f32_filterable, types[1]);
-    EXPECT_EQ(ResourceType::kTexture2d_f32_unfilterable, types[2]);
-    EXPECT_EQ(ResourceType::kTexture3d_f32_filterable, types[3]);
-    EXPECT_EQ(ResourceType::kTexture3d_f32_unfilterable, types[4]);
-    EXPECT_EQ(ResourceType::kTextureCube_f32_filterable, types[5]);
+    EXPECT_EQ(ResourceType::kTexture1d_f32_unknown_filterable, types[0]);
+    EXPECT_EQ(ResourceType::kTexture2d_f32_unknown_filterable, types[1]);
+    EXPECT_EQ(ResourceType::kTexture3d_f32_unknown_filterable, types[2]);
+    EXPECT_EQ(ResourceType::kTextureCube_f32_unknown_filterable, types[3]);
 }
 
 TEST_F(InspectorGetResourceTableInfoTest, ResourceTable_Samplers) {
@@ -3408,7 +3706,7 @@ TEST_F(InspectorGetResourceTableInfoTest, ResourceTable_Samplers) {
 enable chromium_experimental_resource_table;
 
 @fragment fn ep() {
-  _ = hasResource<sampler<filtering>>(0);
+  _ = hasResource<sampler>(0);
   _ = getResource<sampler_comparison>(1);
 }
 )";
@@ -3422,7 +3720,7 @@ enable chromium_experimental_resource_table;
 
     std::vector<ResourceType> types(result.begin(), result.end());
     std::sort(types.begin(), types.end());
-    EXPECT_EQ(ResourceType::kSampler_filtering, types[0]);
+    EXPECT_EQ(ResourceType::kSampler, types[0]);
     EXPECT_EQ(ResourceType::kSampler_comparison, types[1]);
 }
 

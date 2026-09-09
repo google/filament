@@ -38,12 +38,6 @@ class Module;
 
 namespace tint::spirv::writer::raise {
 
-// The capabilities that the transform can support.
-const core::ir::Capabilities kKeepBindingArrayAsPointerCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowNonCoreTypes,
-};
-
 /// KeepBindingArrayAsPointer is a transform that ensures that binding_arrays are never stored by
 /// value but only used via a pointer to them. This is used to produce SPIR-V that's more similar to
 /// what drivers typically ingest where OpTypeArray<OpTypeImage> is always kept as a pointer.

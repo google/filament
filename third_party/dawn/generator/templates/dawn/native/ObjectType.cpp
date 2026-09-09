@@ -29,7 +29,10 @@
 {% set namespace_name = Name(metadata.native_namespace) %}
 {% set native_namespace = namespace_name.namespace_case() %}
 {% set native_dir = impl_dir + namespace_name.Dirs() %}
-#include "{{native_dir}}/ObjectType_autogen.h"
+{% set include_dir = namespace_name.Dirs() %}
+#include "{{include_dir}}/ObjectType_autogen.h"
+
+#include "src/utils/assert.h"
 
 namespace {{native_namespace}} {
 

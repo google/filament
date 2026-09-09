@@ -54,7 +54,6 @@ struct State {
 
     /// Process the module.
     void Process() {
-        Vector<core::ir::Switch*, 4> worklist;
         for (auto* inst : ir.Instructions()) {
             if (auto* swtch = inst->As<core::ir::Switch>()) {
                 if (swtch->Cases().Length() == 1 && swtch->Cases()[0].selectors.Length() == 1 &&
@@ -98,8 +97,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ReplaceDefaultOnlySwitch(core::ir::Module& ir) {
-    AssertValid(ir, core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings},
-                "before hlsl.ReplaceDefaultOnlySwitch");
+    AssertValid(ir, "before hlsl.ReplaceDefaultOnlySwitch");
 
     State{ir}.Process();
 

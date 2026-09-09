@@ -59,10 +59,10 @@ class BlockAllocator {
     /// Pointers are allocated out of the block memory.
     struct Pointers {
         static constexpr size_t kMax = 32;
-        std::array<T*, kMax> ptrs;
-        Pointers* next;
-        Pointers* prev;
-        size_t count;
+        std::array<T*, kMax> ptrs = {};
+        Pointers* next = nullptr;
+        Pointers* prev = nullptr;
+        size_t count = 0;
     };
 
     /// Block is linked list of memory blocks.

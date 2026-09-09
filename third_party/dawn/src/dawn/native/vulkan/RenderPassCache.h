@@ -34,14 +34,14 @@
 #include <mutex>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native::vulkan {
 
@@ -65,7 +65,7 @@ struct RenderPassCacheQuery {
                          bool depthReadOnly,
                          wgpu::LoadOp stencilLoadOp,
                          wgpu::StoreOp stencilStoreOp,
-                         bool stencilRendOnly);
+                         bool stencilReadOnly);
     void SetSampleCount(uint32_t sampleCount);
 
     ColorAttachmentMask colorMask;

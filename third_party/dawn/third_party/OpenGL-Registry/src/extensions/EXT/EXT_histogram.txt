@@ -1,0 +1,684 @@
+Name
+
+    EXT_histogram
+
+Name Strings
+
+    GL_EXT_histogram
+
+Version
+
+    $Date: 1996/04/05 19:17:02 $ $Revision: 1.24 $
+
+Number
+
+    11
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture is required
+
+Overview
+
+    This extension defines pixel operations that count occurences of
+    specific color component values (histogram) and that track the minimum
+    and maximum color component values (minmax).  An optional mode allows
+    pixel data to be discarded after the histogram and/or minmax operations
+    are completed.  Otherwise the pixel data continue on to the next
+    operation unaffected.
+
+New Procedures and Functions
+
+    void HistogramEXT(enum target,
+                      sizei width,
+                      enum internalformat,
+                      boolean sink);
+
+    void ResetHistogramEXT(enum target);
+
+    void GetHistogramEXT(enum target,
+                         boolean reset,
+                         enum format,
+                         enum type,
+                         void* values);
+
+    void GetHistogramParameterivEXT(enum target,
+                                    enum pname,
+                                    int* params);
+
+    void GetHistogramParameterfvEXT(enum target,
+                                    enum pname,
+                                    float* params);
+
+    void MinmaxEXT(enum target,
+                   enum internalformat,
+                   boolean sink);
+
+    void ResetMinmaxEXT(enum target);
+
+    void GetMinmaxEXT(enum target,
+                      boolean reset,
+                      enum format,
+                      enum type,
+                      void* values);
+
+    void GetMinmaxParameterivEXT(enum target,
+                                 enum pname,
+                                 int* params);
+
+    void GetMinmaxParameterfvEXT(enum target,
+                                 enum pname,
+                                 float* params);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of HistogramEXT,
+    ResetHistogramEXT, GetHistogramEXT, GetHistogramParameterivEXT, and
+    GetHistogramParameterfvEXT:
+
+        HISTOGRAM_EXT                       0x8024
+
+    Accepted by the <target> parameter of HistogramEXT,
+    GetHistogramParameterivEXT, and GetHistogramParameterfvEXT:
+
+        PROXY_HISTOGRAM_EXT                 0x8025
+
+    Accepted by the <pname> parameter of GetHistogramParameterivEXT and
+    GetHistogramParameterfvEXT:
+
+        HISTOGRAM_WIDTH_EXT                 0x8026
+        HISTOGRAM_FORMAT_EXT                0x8027
+        HISTOGRAM_RED_SIZE_EXT              0x8028
+        HISTOGRAM_GREEN_SIZE_EXT            0x8029
+        HISTOGRAM_BLUE_SIZE_EXT             0x802A
+        HISTOGRAM_ALPHA_SIZE_EXT            0x802B
+        HISTOGRAM_LUMINANCE_SIZE_EXT        0x802C
+        HISTOGRAM_SINK_EXT                  0x802D
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of MinmaxEXT, ResetMinmaxEXT,
+    GetMinmaxEXT, GetMinmaxParameterivEXT, and GetMinmaxParameterfvEXT:
+
+        MINMAX_EXT                          0x802E
+
+    Accepted by the <pname> parameter of GetMinmaxParameterivEXT and
+    GetMinmaxParameterfvEXT:
+
+        MINMAX_FORMAT_EXT                   0x802F
+        MINMAX_SINK_EXT                     0x8030
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    A new error token value, TABLE_TOO_LARGE_EXT, is defined and added to
+    table 2.3:
+                                                                           Offending
+                                                                           command
+        Error                   Description                                ignored?
+        -----                   -----------                                ---------
+        INVALID_ENUM            enum argument out of range                 Yes
+        INVALID_VALUE           Numeric argument out of range              Yes
+        INVALID_OPERATION       Operation illegal in current state         Yes
+        STACK_OVERFLOW          Command would cause a stack overflow       Yes
+        STACK_UNDERFLOW         Command would cause a stack underflow      Yes
+        OUT_OF_MEMORY           Not enough memory left to execute command  Unknown
+        TEXTURE_TOO_LARGE_EXT   The specified texture is too large         Yes
+        TABLE_TOO_LARGE_EXT     The specified table is too large           Yes
+
+        Table 2.3: Summary of GL errors
+
+    and defined as follows:
+
+        GL_TABLE_TOO_LARGE_EXT              0x8031
+
+
+Additions to Chapter 3 of the 1.0 specification (Rasterization)
+
+    The specification of histogram and minmax operators is added to
+    the GL Specification in section 3.6.2, "Pixel Transfer Modes."  A
+    histogram table is specified using the HistogramEXT command.  Its
+    <target> parameter must be HISTOGRAM_EXT if a histogram table is
+    to be specified.  (Optional target value PROXY_HISTOGRAM_EXT is
+    described below.)  Its <width> parameter, which must be a power of
+    2, specifies the number of entries in the histogram table, and its
+    <internalformat> parameter specifies the format of each table
+    entry.  <sink> specifies whether pixel groups will be consumed by
+    the histogram operation (TRUE) or passed on to the minmax
+    operation (FALSE).  The error INVALID_VALUE results if <width> is
+    specified less than zero or is not a power of 2.  The error
+    TABLE_TOO_LARGE_EXT results if the specified histogram table is
+    too large for the implementation.  (See the PROXY discussion
+    below.)  The error INVALID_ENUM results if <internalformat> is not
+    one of the values accepted by the <components> parameter of
+    TexImage2D (as defined by EXT_texture), except that values 1, 2,
+    3, 4, INTENSITY_EXT, INTENSITY4_EXT, INTENSITY8_EXT,
+    INTENSITY12_EXT, and INTENSITY16_EXT are not accepted.
+
+    If no error results from the execution of HistogramEXT, the specified
+    histogram table is redefined to have <width> entries, each with the
+    specified internal format.  The entries are indexed zero through N-1,
+    where N is the <width> of the table.  Each value in each entry is set
+    to zero.  The values in the previous histogram table, if any, are lost.
+    
+    It is acceptable for an implementation to vary its allocation of
+    internal component resolution based any HistogramEXT parameter, but the
+    allocation must not be a function of any other factor, and cannot be
+    changed once it is established.  In particular, allocations must be
+    invariant -- the same allocation must be made each time a histogram is
+    specified with the same parameter values.  Provision is made for an
+    application to determine what component resolutions are available
+    without having to fully specify the histogram (see below).
+
+    A minmax table is specified using the MinmaxEXT command.  Its <target>
+    parameter must be MINMAX_EXT.  <internalformat> may be any of the token
+    values accepted by the <components> parameter of TexImage2D, except that
+    1, 2, 3, 4, INTENSITY_EXT, INTENSITY4_EXT, INTENSITY8_EXT,
+    INTENSITY12_EXT, and INTENSITY16_EXT are not accepted.  <sink> is set
+    to TRUE or FALSE.  The resulting minmax table always has 2 entries,
+    each with values corresponding only to the components of the internal
+    format.
+
+    The operations of the histogram and minmax are added to the GL
+    Specification in section 3.6.3, "Rasterization of Pixel
+    Rectangles, immediately following the subsection "Index Lookup",
+    and immediately prior to the subsection "Final Conversion".
+    Histogram and minmax operations are performed only for RGBA pixel
+    groups, though these groups may have been specified as color
+    indices and converted to RGBA by index table lookup.  Histogram
+    and minmax are enabled and disabled by calling Enable or Disable
+    with HISTOGRAM_EXT or MINMAX_EXT passed as the <cap> parameter.
+    If HISTOGRAM_EXT is enabled and the width of the table is
+    non-zero, and the pixel groups contain RGBA values, then indices
+    Ri, Gi, Bi, and Ai are derived from the red, green, blue, and
+    alpha components of each pixel group (without modifying these
+    components) by clamping the components to [0,1], multiplying each
+    by one less than the width of the histogram table, and rounding
+    each to the nearest integer.  If the format of the HISTOGRAM_EXT
+    table includes red or luminance, the red or luminance component of
+    histogram entry Ri is incremented by one.  If the format of the
+    HISTOGRAM_EXT table includes green, the green component of
+    histogram entry Gi is incremented by one.  The blue and alpha
+    components of histogram entries Bi and Ai are incremented in the
+    same way.  If a histogram entry component is incremented beyond
+    its maximum value, its value becomes undefined.  (This is not an
+    error.)
+
+    If MINMAX_EXT is enabled, and the pixel groups contain RGBA values, then
+    the red, green, blue, and alpha components of each group are compared
+    to the minimum and maximum values for each, which are stored in the
+    2-element minmax table.  (The first element stores the minimum values,
+    the second stores the maximum values.)  If the format of this table
+    includes red or luminance, the red component value replaces the red or
+    luminance value in the minimum table element if and only if it is less
+    than that component.  Likewise, if the format includes red or luminance
+    and the red component of the group is greater than the red or luminance
+    value in the maximum element, the red group component replaces the red
+    or luminance maximum component.  If the format of the table includes
+    green, the green group component conditionally replaces the green
+    minimum and/or maximum if it is smaller or larger, respectively.  The
+    blue and alpha group components are similarly tested and replaced, if
+    the table format includes blue and/or alpha.  The internal type of the
+    minimum and maximum component values is floating point -- there are no
+    semantics defined for the treatment of group component values that are
+    outside the representable range of the minimum and maximum values.
+
+    By default histogram and minmax operations have no effect on the stream
+    of pixel groups being processed.  If HISTOGRAM_EXT is enabled and the
+    histogram <sink> parameter was specified as TRUE, however, all RGBA
+    pixel groups are discarded immediately after the histogram operation
+    is completed.  Because histogram precedes minmax, no minmax operation
+    is performed.  No pixel fragments are generated, no change is made to
+    texture memory contents, and no pixel values are returned.  If
+    MINMAX_EXT is enabled and the minmax <sink> parameter was specified
+    as TRUE, all RGBA pixel groups are discarded immediately after the
+    minmax operation is completed.  Because minmax follows histogram, a
+    histogram operation with <sink> set to FALSE may precede such a minmax
+    operation.  Again no pixel fragments are generated, no change is made
+    to texture memory contents, and no pixel values are returned.
+
+    The current contents of the histogram tables are queried using
+    GetHistogramEXT.  <target> must be HISTOGRAM_EXT.  <format> must be one
+    of RED, GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA.  <type> must be UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT,
+    SHORT, UNSIGNED_INT, INT, or FLOAT.  A 1-dimensional image with the
+    same width as the histogram is returned to <values>.  No pixel
+    transfer operations are performed on this image, but pixel storage
+    modes that are applicable to ReadPixels are performed.  Color
+    components that are requested in the specified <format>, but which are
+    not included in the internal format of the histogram, are returned as
+    zero.  The assignments of internal color components to the components
+    requested by <format> are
+
+                internal component      resulting component
+                ------------------      -------------------
+                red                     red
+                green                   green
+                blue                    blue
+                alpha                   alpha
+                luminance               red
+    
+    <reset> is either TRUE or FALSE.  If TRUE, each component counter that
+    is actually returned is reset to zero.  Counters that are not returned
+    are not modified.  All counters of all elements of histogram <target>
+    are reset to zero when ResetHistogramEXT is called.  <target> must be
+    either HISTOGRAM_EXT.  It is not an error to reset or query the contents
+    of a histogram table with zero entries.
+
+    The current contents of the minmax tables are queried using
+    GetMinmaxEXT.  <target> must be MINMAX_EXT.  <format> must be one
+    of RED, GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA.  <type> must be UNSIGNED_BYTE, BYTE,
+    UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.  A
+    1-dimensional image with width of 2 is returned to values.  No
+    pixel transfer operations are performed on this image, but pixel
+    storage modes that are applicable to ReadPixels are
+    performed. Color components that are requested in the specified
+    <format>, but which are not included in the internal format of the
+    minmax table, are returned as zero.  The assignment of internal
+    color components to the components requested by <format> are the
+    same as for histogram return.
+
+    <reset> is either TRUE or FALSE.  If TRUE, each minimum value that is
+    actually returned is reset to the maximum representable value, and each
+    maximum value that is returned is reset to the minimum representable
+    value.  Minimum and maximum values that are not returned are not
+    modified.  All minimum and maximum values of minmax table <target> are
+    reset to their maximum and minimum representable values, respectively,
+    when ResetMinmaxEXT is called.  <target> must be MINMAX_EXT.
+
+    Query support
+    -------------
+
+    Alternate sets of partial histogram state are defined for the
+    proxy histogram PROXY_HISTOGRAM_EXT.  Specifically,
+    HISTOGRAM_WIDTH_EXT, HISTOGRAM_FORMAT, HISTOGRAM_RED_SIZE_EXT,
+    HISTOGRAM_GREEN_SIZE_EXT, HISTOGRAM_BLUE_SIZE_EXT,
+    HISTOGRAM_ALPHA_SIZE_EXT, and HISTOGRAM_LUMINANCE_SIZE_EXT are
+    maintained for the proxy histogram.  When HistogramEXT is called
+    with <target> set to PROXY_HISTOGRAM_EXT, these proxy state values
+    are always recomputed and updated, even if the histogram is too
+    large to actually be used.  If the histogram is too large, all of
+    these state variables are set to zero.  If the histogram could be
+    accommodated by Histogram called with <target> HISTOGRAM_EXT,
+    these values are set as though HISTOGRAM_EXT were being defined.
+    All of these state values can be queried with
+    GetHistogramParameterivEXT or GetHistogramParameterfvEXT with
+    <target> set to PROXY_HISTOGRAM_EXT.  Calling HistogramEXT with
+    <target> PROXY_HISTOGRAM_EXT has no effect on the actual
+    histogram.
+
+    There is no image associated with PROXY_HISTOGRAM_EXT.  Therefore
+    PROXY_HISTOGRAM_EXT cannot be used as a histogram, and its image must
+    never be queried using GetHistogramEXT.  (The error INVALID_ENUM
+    results if this is attempted.)
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The operation of histogram and minmax during pixel copy and query
+    operations is identical to the operation during pixel drawing and
+    texture image definition.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    HistogramEXT with a proxy target, GetHistogramEXT,
+    GetHistogramParameterivEXT, GetHistogramParameterfvEXT, GetMinmaxEXT,
+    GetMinmaxParameterivEXT, and GetMinmaxParameterfvEXT are not included in
+    display lists -- they are executed immediately when called.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    Integer and floating point query functions GetHistogramParameterivEXT
+    and GetHistogramParameterfvEXT are provided.  <target> must be
+    HISTOGRAM_EXT or PROXY_HISTOGRAM_EXT.  <pname> is one of
+    HISTOGRAM_FORMAT_EXT, HISTOGRAM_WIDTH_EXT, HISTOGRAM_RED_SIZE_EXT,
+    HISTOGRAM_GREEN_SIZE_EXT, HISTOGRAM_BLUE_SIZE_EXT,
+    HISTOGRAM_ALPHA_SIZE_EXT, HISTOGRAM_LUMINANCE_SIZE_EXT,
+    or HISTOGRAM_SINK_EXT.  The value of the specified parameter is
+    returned in <params>.
+
+    Integer and floating point query functions GetMinmaxParameterivEXT and
+    GetMinmaxParameterfvEXT are provided.  <target> must be MINMAX_EXT.
+    <pname> is MINMAX_FORMAT_EXT or MINMAX_SINK_EXT.  The value of the
+    specified parameter is returned in <params>.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Ten new GL commands are added.
+
+    The following four rendering commands are sent to the server as
+    part of a glXRender request:
+
+        HistogramEXT
+            2           20              rendering command length
+            2           4110            rendering command opcode
+            4           ENUM            target
+            4           INT32           width
+            4           ENUM            internalformat
+            1           BOOL            sink
+            3                           unused
+
+        ResetHistogramEXT
+            2           8               rendering command length
+            2           4112            rendering command opcode
+            4           ENUM            target
+
+        MinmaxEXT
+            2           16              rendering command length
+            2           4111            rendering command opcode
+            4           ENUM            target
+            4           ENUM            internalformat
+            1           BOOL            sink
+            3                           unused
+
+        ResetMinmaxEXT
+            2           8               rendering command length
+            2           4113            rendering command opcode
+            4           ENUM            target
+
+
+    The remaining commands are non-rendering commands. These commands
+    are sent separately (i.e., not as part of a glXRender or
+    glXRenderLarge request), using the glXVendorPrivateWithReply
+    request:
+
+        GetHistogramEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           5               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            format
+            4           ENUM            type
+            1           BOOL            swap_bytes
+            1           BOOL            reset
+            2                           unused
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            24                          unused
+            4*n         LISTofBYTE      pixels
+
+        If <format> or <type> is not valid then the command is
+        erroneous and n=0. The structure of <pixels> is described in
+        Appendix A of the GLX Protocol Specification, "Pixel Data",
+        using the parameters <swap_bytes>, <format>, and <type>. No
+        extra padding is needed after <pixels> because the image
+        format already pads to 32 bits.
+
+
+        GetHistogramParameterfvEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           6               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        Note that n may be zero, indicating that a GL error
+        occurred. Also, n>1, is for future extensibility.
+
+
+        GetHistogramParameterivEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           7               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        Note that n may be zero, indicating that a GL error
+        occurred. Also, n>1, is for future extensibility.
+
+
+        GetMinmaxEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           8               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            format
+            4           ENUM            type
+            1           BOOL            swap_bytes
+            1           BOOL            reset
+            2                           unused
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            24                          unused
+            4*n         LISTofBYTE      pixels
+
+        If <format> or <type> is not valid then the command is
+        erroneous and n=0. The structure of <pixels> is described in
+        Appendix A of the GLX Protocol Specification, "Pixel Data",
+        using the parameters <swap_bytes>, <format>, and <type>. No
+        extra padding is needed after <pixels> because the image
+        format already pads to 32 bits.
+
+
+        GetMinmaxParameterfvEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           9               vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        Note that n may be zero, indicating that a GL error
+        occurred. Also, n>1, is for future extensibility.
+
+
+        GetMinmaxParameterivEXT
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           10              vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+
+        Note that n may be zero, indicating that a GL error
+        occurred. Also, n>1, is for future extensibility.
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is supported, the <format> parameters of GetHistogramEXT
+    and GetMinmaxEXT accept ABGR_EXT.  Otherwise they do not.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of
+    internal image format, which is defined by EXT_texture.
+
+Errors
+
+    INVALID_ENUM is generated if HistogramEXT parameter <target> is not
+    HISTOGRAM_EXT or PROXY_HISTOGRAM_EXT.
+
+    INVALID_VALUE is generated if HistogramEXT parameter <width> is less
+    than zero or is not a power of 2.
+
+    INVALID_ENUM is generated if HistogramEXT parameter <internalformat> is
+    not ALPHA, RGB, RGBA, LUMINANCE, LUMINANCE_ALPHA, or one of the tokens
+    defined by the EXT_texture extension.  (Values 1, 2, 3, and 4 are not
+    accepted as internal formats by HistogramEXT).
+
+    TABLE_TOO_LARGE_EXT is generated if HistogramEXT is called with
+    parameter <target> of HISTOGRAM_EXT and the histogram as specified is
+    too large for the implementation.
+
+    INVALID_ENUM is generated if ResetHistogramEXT parameter <target> is
+    not HISTOGRAM_EXT.
+
+    INVALID_ENUM is generated if GetHistogramEXT parameter <target> is not
+    HISTOGRAM_EXT.
+
+    INVALID_ENUM is generated if GetHistogramEXT parameter <format> is not
+    RED, GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA.
+
+    INVALID_ENUM is generated if GetHistogramEXT parameter <type> is not
+    UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_ENUM is generated if GetHistogramParameterivEXT or
+    GetHistogramParameterfvEXT parameter <target> is not HISTOGRAM_EXT or
+    PROXY_HISTOGRAM_EXT.
+
+    INVALID_ENUM is generated if GetHistogramParameterivEXT or
+    GetHistogramParameterfvEXT parameter <pname> is not
+    HISTOGRAM_FORMAT_EXT, HISTOGRAM_WIDTH_EXT, HISTOGRAM_RED_SIZE_EXT,
+    HISTOGRAM_GREEN_SIZE_EXT, HISTOGRAM_BLUE_SIZE_EXT,
+    HISTOGRAM_ALPHA_SIZE_EXT, HISTOGRAM_LUMINANCE_SIZE_EXT, or
+    HISTOGRAM_SINK_EXT.  INVALID_ENUM is also generated if
+    GetHistogramParameterivEXT or GetHistogramParameterfvEXT parameter
+    <target> specifies the proxy histogram and <pname> specifies a
+    piece of state which is not maintained for the proxy histogram.
+
+    INVALID_OPERATION is generated if HistogramEXT, ResetHistogramEXT,
+    GetHistogramEXT, GetHistogramParameterivEXT, or
+    GetHistogramParameterfvEXT is called between execution of Begin and the
+    corresponding execution of End.
+
+    INVALID_ENUM is generated if MinmaxEXT parameter <target> is not
+    MINMAX_EXT.
+
+    INVALID_ENUM is generated if MinmaxEXT parameter <internalformat> is
+    not ALPHA, RGB, RGBA, LUMINANCE, LUMINANCE_ALPHA, or one of the tokens
+    defined by the EXT_texture extension.  (Values 1, 2, 3, and 4 are not
+    accepted as internal formats by MinmaxEXT).
+
+    INVALID_ENUM is generated if ResetMinmaxEXT parameter <target> is not
+    MINMAX_EXT.
+
+    INVALID_ENUM is generated if GetMinmaxEXT parameter <target> is not
+    MINMAX_EXT.
+
+    INVALID_ENUM is generated if GetMinmaxEXT parameter <format> is not
+    RED, GREEN, BLUE, ALPHA, RGB, RGBA, ABGR_EXT, LUMINANCE, or
+    LUMINANCE_ALPHA.
+
+    INVALID_ENUM is generated if GetMinmaxEXT parameter <type> is not
+    UNSIGNED_BYTE, BYTE, UNSIGNED_SHORT, SHORT, UNSIGNED_INT, INT, or FLOAT.
+
+    INVALID_ENUM is generated if GetMinmaxParameterivEXT or
+    GetMinmaxParameterfvEXT parameter <target> is not MINMAX_EXT.
+
+    INVALID_ENUM is generated if GetMinmaxParameterivEXT or
+    GetMinmaxParameterfvEXT parameter <pname> is not MINMAX_FORMAT_EXT or
+    MINMAX_SINK_EXT.
+
+    INVALID_OPERATION is generated if MinmaxEXT, ResetMinmaxEXT,
+    GetMinmaxEXT, GetMinmaxParameterivEXT, or GetMinmaxParameterfvEXT is
+    called between execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value                       Get Command                 Type    Initial Value           Attribute
+    ---------                       -----------                 ----    -------------           ---------
+    HISTOGRAM_EXT                   IsEnabled                   B       False                   pixel/enable
+    HISTOGRAM                       GetHistogramEXT             I       empty                       -
+    HISTOGRAM_WIDTH_EXT             GetHistogramParameterivEXT  Z+      0                           -
+    HISTOGRAM_FORMAT_EXT            GetHistogramParameterivEXT  Z33     RGBA                        -
+    HISTOGRAM_RED_SIZE_EXT          GetHistogramParameterivEXT  Z+      0                           -
+    HISTOGRAM_GREEN_SIZE_EXT        GetHistogramParameterivEXT  Z+      0                           -
+    HISTOGRAM_BLUE_SIZE_EXT         GetHistogramParameterivEXT  Z+      0                           -
+    HISTOGRAM_ALPHA_SIZE_EXT        GetHistogramParameterivEXT  Z+      0                           -
+    HISTOGRAM_LUMINANCE_SIZE_EXT    GetHistogramParameterivEXT  Z+      0                           -
+    HISTOGRAM_SINK_EXT              GetHistogramParameterivEXT  B       False                       -
+
+    MINMAX_EXT                      IsEnabled                   B       False                   pixel/enable
+    MINMAX                          GetMinmaxEXT                Rn      (M,M,M,M),(m,m,m,m)         -
+    MINMAX_FORMAT_EXT               GetMinmaxParameterivEXT     Z33     RGBA                        -
+    MINMAX_SINK_EXT                 GetMinmaxParameterivEXT     B       False                       -
+
+    Note, M and m are the maximum and minimum representable values of the
+    minmax components.
+
+New Implementation Dependent State
+
+    None

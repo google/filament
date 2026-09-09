@@ -43,7 +43,10 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using IR_Std140Test = TransformTest;
+struct IR_Std140Test : public TransformTest {
+  protected:
+    void SetUp() override { mod.properties.Add(Property::kAllow16BitFloats); }
+};
 
 TEST_F(IR_Std140Test, NoRootBlock) {
     auto* func = b.Function("foo", ty.void_());

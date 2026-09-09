@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.13)
 project(LibProtobufMutator CXX)
 
 enable_language(C)
 enable_language(CXX)
 
 option(LIB_PROTO_MUTATOR_TESTING "Enable test building" ON)
+option(LIB_PROTO_MUTATOR_EXAMPLES "Enable examples building" ON)
 option(LIB_PROTO_MUTATOR_DOWNLOAD_PROTOBUF
        "Automatically download working protobuf" OFF)
 option(LIB_PROTO_MUTATOR_WITH_ASAN "Enable address sanitizer" OFF)
-option(PKG_CONFIG_PATH "Directory to install pkgconfig file" "share/pkgconfig")
+option(LIB_PROTO_MUTATOR_EXAMPLES_USE_LATEST "Use latest libexpat/libxml2 for expat_example/libxml2_example" OFF)
+set(PKG_CONFIG_PATH "share/pkgconfig" CACHE STRING "Directory to install pkgconfig file")
 set(LIB_PROTO_MUTATOR_FUZZER_LIBRARIES "" CACHE STRING "Fuzzing engine libs")
 
 # External dependencies
@@ -59,6 +61,10 @@ if (MSVC)
   endif (LIB_PROTO_MUTATOR_DOWNLOAD_PROTOBUF OR LIB_PROTO_MUTATOR_MSVC_STATIC_RUNTIME)
 endif (MSVC)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL Clang AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+    message(SEND_ERROR "Clang/libFuzzer >=12.0.0 is needed but you are using ${CMAKE_CXX_COMPILER_VERSION}, please fix.")
+endif()
+
 set(CMAKE_REQUIRED_FLAGS "-fsanitize=address")
 check_cxx_compiler_flag(-fsanitize=address LIB_PROTO_MUTATOR_HAS_SANITIZE_ADDRESS)
 check_cxx_compiler_flag("-fsanitize=address -fsanitize-address-use-after-scope"
@@ -80,7 +86,7 @@ unset(CMAKE_REQUIRED_FLAGS)
 check_cxx_compiler_flag(-Wstring-conversion LIB_PROTO_MUTATOR_HAS_WSTRING_CONVERSION)
 
 if (NOT MSVC)
-  set(EXTRA_FLAGS "-fno-exceptions -Werror -Wall")
+  set(EXTRA_FLAGS "-fno-exceptions -Wall")
   if (LIB_PROTO_MUTATOR_HAS_WSTRING_CONVERSION)
     set(EXTRA_FLAGS "${EXTRA_FLAGS} -Wstring-conversion")
   endif()
@@ -101,7 +107,7 @@ if ("${LIB_PROTO_MUTATOR_FUZZER_LIBRARIES}" STREQUAL "")
     set(FUZZING_FLAGS "-fsanitize=fuzzer-no-link")
     set(FUZZING_FLAGS_BINARY "-fsanitize=fuzzer")
   endif()
-  if (LIB_PROTO_MUTATOR_HAS_SANITIZE_NO_FUZZER)
+  if (LIB_PROTO_MUTATOR_HAS_NO_SANITIZE_FUZZER)
     set(NO_FUZZING_FLAGS "-fno-sanitize=fuzzer")
   endif()
 endif()
@@ -120,6 +126,7 @@ if(CMAKE_USE_PTHREADS_INIT)
 endif()
 
 if (LIB_PROTO_MUTATOR_DOWNLOAD_PROTOBUF)
+  cmake_minimum_required(VERSION 3.24)  # due to use of LINK_GROUP
   include(protobuf)
 else()
   find_package(Protobuf REQUIRED)
@@ -143,8 +150,12 @@ endif()
 
 add_subdirectory(src)
 
-if (NOT "${LIB_PROTO_MUTATOR_FUZZER_LIBRARIES}" STREQUAL "" OR
-    NOT "${FUZZING_FLAGS}" STREQUAL "")
+if (LIB_PROTO_MUTATOR_EXAMPLES AND (NOT "${LIB_PROTO_MUTATOR_FUZZER_LIBRARIES}" STREQUAL "" OR
+                                    NOT "${FUZZING_FLAGS}" STREQUAL ""))
+  # NOTE: We need the maximum from:
+  # - CMake >=3.10 for libexpat 2.6.4
+  # - CMake >=3.18 for libxml2 2.13.6
+  cmake_minimum_required(VERSION 3.18)
   add_subdirectory(examples EXCLUDE_FROM_ALL)
 endif()
 

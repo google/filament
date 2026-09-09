@@ -36,10 +36,11 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/RefCounted.h"
-#include "dawn/common/Time.h"
-#include "dawn/native/SystemEvent.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/Time.h"
+#include "src/dawn/native/SystemEvent.h"
+#include "src/utils/numeric.h"
 
 namespace dawn::native {
 
@@ -83,20 +84,20 @@ bool WaitListEvent::WaitAny(It eventAndReadyStateBegin,
     static_assert(std::is_same_v<typename std::iterator_traits<It>::value_type,
                                  std::pair<Ref<WaitListEvent>, bool*>>);
 
-    const size_t count = std::distance(eventAndReadyStateBegin, eventAndReadyStateEnd);
+    const size_t count = sign_cast(std::distance(eventAndReadyStateBegin, eventAndReadyStateEnd));
     if (count == 0) {
         return false;
     }
 
     struct EventState {
         raw_ptr<WaitListEvent> event = nullptr;
-        size_t origIndex;
+        size_t origIndex = 0;
         bool isReady = false;
     };
     std::vector<EventState> events(count);
 
     for (size_t i = 0; i < count; i++) {
-        const auto& event = (*(eventAndReadyStateBegin + i)).first;
+        const auto& event = (*(eventAndReadyStateBegin + sign_cast(i))).first;
         events[i].event = event.Get();
         events[i].origIndex = i;
     }
@@ -134,7 +135,8 @@ bool WaitListEvent::WaitAny(It eventAndReadyStateBegin,
             // and can cause different values of isReady for multiple waits on the same event.
             if (events[count - 1 - i].isReady) {
                 bool* isReady =
-                    (*(eventAndReadyStateBegin + events[count - 1 - i].origIndex)).second;
+                    (*(eventAndReadyStateBegin + sign_cast(events[count - 1 - i].origIndex)))
+                        .second;
                 *isReady = true;
             }
             // Skip over multiple waits on the same event.
@@ -195,7 +197,7 @@ bool WaitListEvent::WaitAny(It eventAndReadyStateBegin,
             std::erase(event->mSyncWaiters, &waiter);
         }
         if (events[i].isReady) {
-            bool* isReady = (*(eventAndReadyStateBegin + events[i].origIndex)).second;
+            bool* isReady = (*(eventAndReadyStateBegin + sign_cast(events[i].origIndex))).second;
             *isReady = true;
             foundSignaled = true;
         }

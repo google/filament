@@ -30,11 +30,12 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/GPUInfo.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/GPUInfo.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -249,7 +250,7 @@ fn main(
             }
             // Validate that subgroup_size of all invocation are identical.
             for (uint32_t i = 1; i < mWorkgroupSize; i++) {
-                const uint32_t& outputSubgroupSize = actual[i];
+                const uint32_t& outputSubgroupSize = DAWN_UNSAFE_TODO(actual[i]);
                 if (outputSubgroupSize != outputSubgroupSizeAt0) {
                     testing::AssertionResult result = testing::AssertionFailure()
                                                       << "Got inconsistent subgroup_size output: "
@@ -277,6 +278,53 @@ TEST_P(SubgroupsShaderTests, ReadSubgroupSize) {
     for (uint32_t workgroupSize : {1, 2, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256}) {
         TestReadSubgroupSize(workgroupSize);
     }
+}
+
+// Regression test for a crash in the AMD driver when using nested subgroupMin/Max operations.
+// See crbug.com/508265321.
+TEST_P(SubgroupsShaderTests, NestedSubgroupMinMax) {
+    DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
+
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+        enable subgroups;
+
+        @group(0) @binding(0) var<storage, read> in: i32;
+        @group(0) @binding(1) var<storage, read_write> out: i32;
+
+        @compute @workgroup_size(1)
+        fn main() {
+            let t = subgroupMax(in);
+            let r = t;
+            out = subgroupMin(r);
+        }
+    )");
+
+    wgpu::ComputePipelineDescriptor descriptor;
+    descriptor.layout = nullptr;
+    descriptor.compute.module = module;
+    descriptor.compute.entryPoint = "main";
+
+    wgpu::ComputePipeline pipeline = device.CreateComputePipeline(&descriptor);
+
+    wgpu::Buffer inputBuffer =
+        utils::CreateBufferFromData(device, wgpu::BufferUsage::Storage, {42});
+    wgpu::Buffer outputBuffer = utils::CreateBufferFromData(
+        device, wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc, {0});
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {{0, inputBuffer}, {1, outputBuffer}});
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+    pass.SetPipeline(pipeline);
+    pass.SetBindGroup(0, bindGroup);
+    pass.DispatchWorkgroups(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_EQ(42u, outputBuffer, 0);
 }
 
 // DawnTestBase::CreateDeviceImpl always enables allow_unsafe_apis toggle.
@@ -388,6 +436,9 @@ class SubgroupsShaderTestsFragment : public SubgroupsTestsBase<AdapterTestParam>
 // Test that subgroup_size builtin attribute read by each invocation is valid and identical for any
 // workgroup size between 1 and 256.
 TEST_P(SubgroupsShaderTestsFragment, ReadSubgroupSize) {
+    // TODO(crbug.com/523272957): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
     FragmentSubgroupSizeTest();
 }
@@ -653,7 +704,7 @@ fn main(
             uint32_t valueFromInvocation0Count = 0;
             uint32_t valueFromOtherInvocationCount = 0;
             for (uint32_t i = 0; i < mWorkgroupSize; i++) {
-                int32_t broadcastOutput = actual[i + 1];
+                int32_t broadcastOutput = DAWN_UNSAFE_TODO(actual[i + 1]);
                 if (broadcastOutput == valueFromInvocation0) {
                     valueFromInvocation0Count++;
                 } else if (broadcastOutput == SubgroupRegisterInitializer) {
@@ -864,18 +915,19 @@ fn main(
                                          : kValueInShader;
             float expected_value = init_value;
             for (uint32_t i = 0; i < mWorkgroupSize; i++) {
-                if (!approximate_f(actual[i], expected_value)) {
+                if (!approximate_f(DAWN_UNSAFE_TODO(actual[i]), expected_value)) {
                     // This could be the next subgroup so retest with the initial value.
                     float old_expected_value = expected_value;
                     expected_value = init_value;
-                    if (!approximate_f(actual[i], expected_value)) {
+                    if (!approximate_f(DAWN_UNSAFE_TODO(actual[i]), expected_value)) {
                         testing::AssertionResult result =
                             testing::AssertionFailure()
                             << "Unexpected result for " << GetParam().mSubgroupIntrinsicOp
                             << " for type " << GetParam().mSubgroupOpDataType << " for element "
                             << i << " of a workgroup size of " << mWorkgroupSize
-                            << ". The actual value was " << actual[i] << " and the expected was "
-                            << expected_value << " or " << old_expected_value;
+                            << ". The actual value was " << DAWN_UNSAFE_TODO(actual[i])
+                            << " and the expected was " << expected_value << " or "
+                            << old_expected_value;
 
                         return result;
                     }
@@ -935,11 +987,9 @@ class SubgroupSizeControlTests : public DawnTest {
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         // Always require related features if available.
         std::vector<wgpu::FeatureName> requiredFeatures;
-        if (SupportsFeatures({wgpu::FeatureName::Subgroups,
-                              wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl})) {
+        if (SupportsFeatures({wgpu::FeatureName::SubgroupSizeControl})) {
             mSupportsSubgroupSizeControl = true;
-            requiredFeatures.push_back(wgpu::FeatureName::Subgroups);
-            requiredFeatures.push_back(wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl);
+            requiredFeatures.push_back(wgpu::FeatureName::SubgroupSizeControl);
         }
         return requiredFeatures;
     }
@@ -987,7 +1037,7 @@ class SubgroupSizeControlTests : public DawnTest {
 
         code << R"(
 enable subgroups;
-enable chromium_experimental_subgroup_size_control;)";
+enable subgroup_size_control;)";
 
         if (setSubgroupSizeAsOverride) {
             code << "override kSubgroupSize : u32;\n";
@@ -1024,64 +1074,55 @@ fn main(@builtin(subgroup_size) sg_size : u32) {
     bool mSupportsSubgroupSizeControl = false;
 };
 
-// Test all the values that are between `minExplicitComputeSubgroupSize` and
-// `maxExplicitComputeSubgroupSize` and are a power of 2 can be used as WGSL attribute
-// `@subgroup_size` and the value of the WGSL builtin `subgroup_size` exactly matches the value of
-// the WGSL attribute `@subgroup_size`.
-TEST_P(SubgroupSizeControlTests, TestAllSubgroupSizes) {
+// Test the use of WGSL attribute `@subgroup_size`. The value of the WGSL builtin `subgroup_size`
+// should exactly match the value of the WGSL attribute `@subgroup_size`.
+TEST_P(SubgroupSizeControlTests, TestSubgroupSizeAttribute) {
     DAWN_TEST_UNSUPPORTED_IF(!SupportSubgroupSizeControl());
 
     wgpu::AdapterInfo info;
-    wgpu::AdapterPropertiesExplicitComputeSubgroupSizeConfigs subgroupSizeConfigs;
-    info.nextInChain = &subgroupSizeConfigs;
     adapter.GetInfo(&info);
 
-    ASSERT_TRUE(IsPowerOfTwo(subgroupSizeConfigs.minExplicitComputeSubgroupSize));
-    for (uint32_t subgroupSize = subgroupSizeConfigs.minExplicitComputeSubgroupSize;
-         subgroupSize <= subgroupSizeConfigs.maxExplicitComputeSubgroupSize; subgroupSize *= 2) {
-        DoTest(subgroupSize);
+    for (uint32_t subgroupSize = info.subgroupMinSize; subgroupSize <= info.subgroupMaxSize;
+         subgroupSize *= 2) {
+        // On Intel Gen12 `subgroupMinSize`(8) is less than `WaveLaneCountMin`(16) so we cannot use
+        // 8 as @subgroup_size attribute on Intel Gen12 GPUs.
+        if (IsD3D12() && IsIntelGen12() && subgroupSize == 8) {
+            ASSERT_DEVICE_ERROR(CreateComputePipelineWithSubgroupSizeAttribute(subgroupSize, true));
+        } else {
+            DoTest(subgroupSize);
+        }
     }
 }
 
-// Test an error occurs when a value that is less than `minExplicitComputeSubgroupSize` is used as
-// the attribute `@subgroup_size`.
-TEST_P(SubgroupSizeControlTests, LessThanMinExplicitComputeSubgroupSize) {
+// Test an error occurs when a value that is less than `subgroupMinSize` is used as the attribute
+// `@subgroup_size`.
+TEST_P(SubgroupSizeControlTests, LessThanSubgroupMinSize) {
     DAWN_TEST_UNSUPPORTED_IF(!SupportSubgroupSizeControl());
 
     wgpu::AdapterInfo info;
-    wgpu::AdapterPropertiesExplicitComputeSubgroupSizeConfigs subgroupSizeConfigs;
-    info.nextInChain = &subgroupSizeConfigs;
     adapter.GetInfo(&info);
 
-    ASSERT_TRUE(IsPowerOfTwo(subgroupSizeConfigs.minExplicitComputeSubgroupSize));
+    DAWN_TEST_UNSUPPORTED_IF(info.subgroupMinSize <= 1u);
 
-    uint32_t invalidSubgroupSize = subgroupSizeConfigs.minExplicitComputeSubgroupSize / 2;
-    ASSERT_TRUE(invalidSubgroupSize > 0);
-
+    uint32_t tooSmallSubgroupSize = info.subgroupMinSize / 2;
     for (bool setSubgroupSizeAsOverride : {true, false}) {
         ASSERT_DEVICE_ERROR(CreateComputePipelineWithSubgroupSizeAttribute(
-            invalidSubgroupSize, setSubgroupSizeAsOverride));
+            tooSmallSubgroupSize, setSubgroupSizeAsOverride));
     }
 }
 
-// Test an error occurs when a value that is more than `maxExplicitComputeSubgroupSize` is used as
-// the attribute `@subgroup_size`.
-TEST_P(SubgroupSizeControlTests, MoreThanMaxExplicitComputeSubgroupSize) {
+// Test an error occurs when a value that is more than `subgroupMaxSize` is used as the attribute
+// `@subgroup_size`.
+TEST_P(SubgroupSizeControlTests, MoreThanSubgroupMaxSize) {
     DAWN_TEST_UNSUPPORTED_IF(!SupportSubgroupSizeControl());
 
     wgpu::AdapterInfo info;
-    wgpu::AdapterPropertiesExplicitComputeSubgroupSizeConfigs subgroupSizeConfigs;
-    info.nextInChain = &subgroupSizeConfigs;
     adapter.GetInfo(&info);
 
-    ASSERT_TRUE(IsPowerOfTwo(subgroupSizeConfigs.maxExplicitComputeSubgroupSize));
-
-    uint32_t invalidSubgroupSize = subgroupSizeConfigs.maxExplicitComputeSubgroupSize * 2;
-    ASSERT_TRUE(invalidSubgroupSize > 0);
-
+    uint32_t tooLargeSubgroupSize = info.subgroupMaxSize * 2;
     for (bool setSubgroupSizeAsOverride : {true, false}) {
         ASSERT_DEVICE_ERROR(CreateComputePipelineWithSubgroupSizeAttribute(
-            invalidSubgroupSize, setSubgroupSizeAsOverride));
+            tooLargeSubgroupSize, setSubgroupSizeAsOverride));
     }
 }
 

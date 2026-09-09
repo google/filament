@@ -213,7 +213,7 @@ const ast::Attribute* CreateAttribute(const Source& source,
                                       AttributeKind kind) {
     switch (kind) {
         case AttributeKind::kAlign:
-            return builder.MemberAlign(source, 4_i);
+            return builder.MemberAlign(source, 16_i);
         case AttributeKind::kBinding:
             return builder.Binding(source, 1_a);
         case AttributeKind::kBuiltinPosition:
@@ -267,7 +267,7 @@ struct TestWithParams : ResolverTestWithParam<TestParams> {
                 break;
             case AttributeKind::kSubgroupSize:
                 Enable(wgsl::Extension::kSubgroups);
-                Enable(wgsl::Extension::kChromiumExperimentalSubgroupSizeControl);
+                Enable(wgsl::Extension::kSubgroupSizeControl);
                 break;
             default:
                 break;
@@ -1423,11 +1423,19 @@ INSTANTIATE_TEST_SUITE_P(
             R"(1:2 error: '@subgroup_size' is not valid for 'struct' members)",
         }));
 
-TEST_F(StructMemberAttributeTest, Align_Attribute_Const) {
-    GlobalConst("val", ty.i32(), Expr(1_i));
+TEST_F(StructMemberAttributeTest, Align_Attribute_Const_Good) {
+    GlobalConst("val", ty.i32(), Expr(4_i));
 
     Structure("mystruct", Vector{Member("a", ty.f32(), Vector{MemberAlign("val")})});
     EXPECT_TRUE(r()->Resolve()) << r()->error();
+}
+
+TEST_F(StructMemberAttributeTest, Align_Attribute_Const_Bad) {
+    GlobalConst("val", ty.i32(), Expr(1_i));
+
+    Structure("mystruct", Vector{Member("a", ty.f32(), Vector{MemberAlign("val")})});
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), R"(error: alignment must be a multiple of '4' bytes)");
 }
 
 TEST_F(StructMemberAttributeTest, Align_Attribute_ConstNegative) {
@@ -1460,19 +1468,28 @@ TEST_F(StructMemberAttributeTest, Align_Attribute_ConstF32) {
 }
 
 TEST_F(StructMemberAttributeTest, Align_Attribute_ConstU32) {
-    GlobalConst("val", ty.u32(), Expr(2_u));
+    GlobalConst("val", ty.u32(), Expr(4_u));
 
     Structure("mystruct",
               Vector{Member("a", ty.f32(), Vector{MemberAlign(Source{{12, 34}}, "val")})});
     EXPECT_TRUE(r()->Resolve());
 }
 
-TEST_F(StructMemberAttributeTest, Align_Attribute_ConstAInt) {
-    GlobalConst("val", Expr(2_a));
+TEST_F(StructMemberAttributeTest, Align_Attribute_ConstAInt_Good) {
+    GlobalConst("val", Expr(4_a));
 
     Structure("mystruct",
               Vector{Member("a", ty.f32(), Vector{MemberAlign(Source{{12, 34}}, "val")})});
     EXPECT_TRUE(r()->Resolve()) << r()->error();
+}
+
+TEST_F(StructMemberAttributeTest, Align_Attribute_ConstAInt_Bad) {
+    GlobalConst("val", Expr(2_a));
+
+    Structure("mystruct",
+              Vector{Member("a", ty.f32(), Vector{MemberAlign(Source{{12, 34}}, "val")})});
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), R"(error: alignment must be a multiple of '4' bytes)");
 }
 
 TEST_F(StructMemberAttributeTest, Align_Attribute_ConstAFloat) {
@@ -1690,96 +1707,6 @@ TEST_F(VariableAttributeTest, LocalVar) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: '@binding' is not valid for function-scope 'var'");
 }
-
-TEST_F(VariableAttributeTest, LocalLet) {
-    auto* v = Let("a", Vector{Binding(Source{{12, 34}}, 2_a)}, Expr(1_a));
-
-    WrapInFunction(v);
-
-    EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: '@binding' is not valid for 'let' declaration");
-}
-
-using ConstantAttributeTest = TestWithParams;
-TEST_P(ConstantAttributeTest, IsValid) {
-    EnableRequiredExtensions();
-
-    GlobalConst("a", ty.f32(), Expr(1.23_f), CreateAttributes());
-
-    CHECK();
-}
-INSTANTIATE_TEST_SUITE_P(
-    ResolverAttributeValidationTest,
-    ConstantAttributeTest,
-    testing::Values(
-        TestParams{
-            {AttributeKind::kAlign},
-            R"(1:2 error: '@align' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kBinding},
-            R"(1:2 error: '@binding' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kBlendSrc},
-            R"(1:2 error: '@blend_src' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kBuiltinPosition},
-            R"(1:2 error: '@builtin' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kDiagnostic},
-            R"(1:2 error: '@diagnostic' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kGroup},
-            R"(1:2 error: '@group' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kId},
-            R"(1:2 error: '@id' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kInputAttachmentIndex},
-            R"(1:2 error: '@input_attachment_index' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kInterpolate},
-            R"(1:2 error: '@interpolate' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kInvariant},
-            R"(1:2 error: '@invariant' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kLocation},
-            R"(1:2 error: '@location' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kMustUse},
-            R"(1:2 error: '@must_use' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kSize},
-            R"(1:2 error: '@size' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kStageCompute},
-            R"(1:2 error: '@compute' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kWorkgroupSize},
-            R"(1:2 error: '@workgroup_size' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kBinding, AttributeKind::kGroup},
-            R"(1:2 error: '@binding' is not valid for 'const' declaration)",
-        },
-        TestParams{
-            {AttributeKind::kSubgroupSize},
-            R"(1:2 error: '@subgroup_size' is not valid for 'const' declaration)",
-        }));
 
 using OverrideAttributeTest = TestWithParams;
 TEST_P(OverrideAttributeTest, IsValid) {

@@ -30,9 +30,9 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/common/PlacementAllocated.h"
-#include "dawn/native/BindGroup.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/common/PlacementAllocated.h"
+#include "src/dawn/native/BindGroup.h"
 
 namespace dawn::native::metal {
 

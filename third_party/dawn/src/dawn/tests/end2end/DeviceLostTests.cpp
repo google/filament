@@ -30,19 +30,18 @@
 #include <string>
 
 #include "dawn/native/DawnNative.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "gmock/gmock.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
 
 using testing::_;
 using testing::EmptySizedString;
-using testing::Exactly;
 using testing::HasSubstr;
 using testing::MockCppCallback;
 
@@ -299,7 +298,7 @@ TEST_P(DeviceLostTest, CreateBuffer) {
     // allocates `0x8000000000000000`
     DAWN_TEST_UNSUPPORTED_IF(IsTsan());
 
-    uint64_t kStupidLarge = uint64_t(1) << uint64_t(63);
+    uint64_t kStupidLarge = uint64_t{1} << uint64_t{63};
     LoseDeviceForTesting();
 
     // Each test either expects null or an ErrorBuffer.
@@ -499,6 +498,9 @@ TEST_P(DeviceLostTest, QueueOnSubmittedWorkDoneAfterDeviceLost) {
 
 // Test QueueOnSubmittedWorkDone when the device is lost after calling OnSubmittedWorkDone
 TEST_P(DeviceLostTest, QueueOnSubmittedWorkDoneBeforeLossFails) {
+    // Fails on Xclipse with ANGLE Vulkan.
+    DAWN_SUPPRESS_TEST_IF(IsSamsung() && IsOpenGLES() && IsANGLE());
+
     // Callback should have success status
     EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success, EmptySizedString()));
     queue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents, mWorkDoneCb.Callback());

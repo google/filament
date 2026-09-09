@@ -25,20 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <fcntl.h>
 #include <gbm.h>
-#include <unistd.h>
 #include <webgpu/webgpu_cpp.h>
 
-#include <memory>
+#include <array>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "src/utils/compiler.h"
+
 // This must be included instead of vulkan.h so that we can wrap it with vulkan_platform.h.
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/tests/white_box/SharedTextureMemoryTests.h"
-#include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/DRMUtils.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/tests/white_box/SharedTextureMemoryTests.h"
 
 namespace dawn {
 namespace {
@@ -64,7 +64,8 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
 
     std::vector<wgpu::FeatureName> RequiredFeatures(const wgpu::Adapter&) const override {
         return {wgpu::FeatureName::SharedTextureMemoryDmaBuf,
-                wgpu::FeatureName::DawnMultiPlanarFormats, FenceFeature};
+                wgpu::FeatureName::DawnMultiPlanarFormats, wgpu::FeatureName::AdapterPropertiesDrm,
+                FenceFeature};
     }
 
     static std::string MakeLabel(const wgpu::SharedTextureMemoryDmaBufDescriptor& desc) {
@@ -81,23 +82,30 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
                                          uint32_t format,
                                          uint32_t usage,
                                          CreateFn createFn) {
-        gbm_bo* bo = gbm_bo_create(mGbmDevice, size, size, format, usage);
+        OwnedGbmBo bo(gbm_bo_create(mGbmDevice.get(), size, size, format, usage));
         EXPECT_NE(bo, nullptr) << "Failed to create GBM buffer object";
 
         wgpu::SharedTextureMemoryDmaBufDescriptor dmaBufDesc;
         dmaBufDesc.size = {size, size};
         dmaBufDesc.drmFormat = format;
-        dmaBufDesc.drmModifier = gbm_bo_get_modifier(bo);
+        dmaBufDesc.drmModifier = gbm_bo_get_modifier(bo.get());
 
-        wgpu::SharedTextureMemoryDmaBufPlane planes[GBM_MAX_PLANES];
-        dmaBufDesc.planeCount = gbm_bo_get_plane_count(bo);
-        dmaBufDesc.planes = planes;
-        DAWN_ASSERT(dmaBufDesc.planeCount <= GBM_MAX_PLANES);
+        std::array<wgpu::SharedTextureMemoryDmaBufPlane, GBM_MAX_PLANES> planes = {};
+        const int gbmPlaneCount = gbm_bo_get_plane_count(bo.get());
+        DAWN_ASSERT(gbmPlaneCount > 0);
+        const size_t planeCount = static_cast<size_t>(gbmPlaneCount);
+        DAWN_ASSERT(planeCount <= planes.size());
+        dmaBufDesc.planeCount = planeCount;
+        dmaBufDesc.planes = planes.data();
 
-        for (uint32_t plane = 0; plane < dmaBufDesc.planeCount; ++plane) {
-            planes[plane].fd = gbm_bo_get_fd(bo);
-            planes[plane].stride = gbm_bo_get_stride_for_plane(bo, plane);
-            planes[plane].offset = gbm_bo_get_offset(bo, plane);
+        std::array<SystemHandle, GBM_MAX_PLANES> planeFDs;
+        for (size_t plane = 0; plane < planeCount; ++plane) {
+            const int gbmPlane = static_cast<int>(plane);
+            planeFDs[plane] = SystemHandle::Acquire(gbm_bo_get_fd(bo.get()));
+            EXPECT_TRUE(planeFDs[plane].IsValid());
+            planes[plane].fd = planeFDs[plane].Get();
+            planes[plane].stride = gbm_bo_get_stride_for_plane(bo.get(), gbmPlane);
+            planes[plane].offset = gbm_bo_get_offset(bo.get(), gbmPlane);
         }
 
         std::string label = MakeLabel(dmaBufDesc);
@@ -105,14 +113,7 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
         desc.label = label.c_str();
         desc.nextInChain = &dmaBufDesc;
 
-        auto ret = createFn(desc);
-
-        for (uint32_t plane = 0; plane < dmaBufDesc.planeCount; ++plane) {
-            close(planes[plane].fd);
-        }
-        gbm_bo_destroy(bo);
-
-        return ret;
+        return createFn(desc);
     }
 
     // Create one basic shared texture memory. It should support most operations.
@@ -121,7 +122,7 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
         auto format = GBM_FORMAT_ABGR8888;
         auto usage = GBM_BO_USE_LINEAR;
 
-        DAWN_ASSERT(gbm_device_is_format_supported(mGbmDevice, format, usage));
+        DAWN_ASSERT(gbm_device_is_format_supported(mGbmDevice.get(), format, usage));
 
         return CreateSharedTextureMemoryHelper(
             16, format, usage, [&](const wgpu::SharedTextureMemoryDescriptor& desc) {
@@ -149,7 +150,7 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
                      GBM_BO_USE_RENDERING,
                      gbm_bo_flags(GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR),
                  }) {
-                if (!gbm_device_is_format_supported(mGbmDevice, format, usage)) {
+                if (!gbm_device_is_format_supported(mGbmDevice.get(), format, usage)) {
                     continue;
                 }
                 for (uint32_t size : {4, 64}) {
@@ -171,53 +172,31 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
 
   private:
     void SetUp(const wgpu::Device& device) override {
-        // Render nodes [1] are the primary interface for communicating with the GPU on
-        // devices that support DRM. The actual filename of the render node is
-        // implementation-specific, so we must scan through all possible filenames to find
-        // one that we can use [2].
-        //
-        // [1] https://dri.freedesktop.org/docs/drm/gpu/drm-uapi.html#render-nodes
-        // [2]
-        // https://cs.chromium.org/chromium/src/ui/ozone/platform/wayland/gpu/drm_render_node_path_finder.cc
-        const uint32_t kRenderNodeStart = 128;
-        const uint32_t kRenderNodeEnd = kRenderNodeStart + 16;
-        const std::string kRenderNodeTemplate = "/dev/dri/renderD";
+        wgpu::AdapterPropertiesDrm drmProperties;
+        wgpu::AdapterInfo adapterInfo;
+        adapterInfo.nextInChain = &drmProperties;
+        DAWN_TEST_UNSUPPORTED_IF(device.GetAdapter().GetInfo(&adapterInfo) !=
+                                     wgpu::Status::Success ||
+                                 !drmProperties.hasRender);
+        SystemHandle renderNode =
+            OpenDRMRenderNode(drmProperties.renderMajor, drmProperties.renderMinor);
+        DAWN_TEST_UNSUPPORTED_IF(!renderNode.IsValid());
 
-        for (uint32_t i = kRenderNodeStart; i < kRenderNodeEnd; i++) {
-            std::string renderNode = kRenderNodeTemplate + std::to_string(i);
-            mRenderNodeFd = open(renderNode.c_str(), O_RDWR);
-            if (mRenderNodeFd >= 0) {
-                break;
-            }
-        }
-
-        // Failed to get file descriptor for render node and mGbmDevice is nullptr.
-        DAWN_TEST_UNSUPPORTED_IF(mRenderNodeFd < 0);
-
-        mGbmDevice = gbm_create_device(mRenderNodeFd);
-        DAWN_TEST_UNSUPPORTED_IF(mGbmDevice == nullptr);
+        OwnedGbmDevice gbmDevice(gbm_create_device(renderNode.Get()));
+        DAWN_TEST_UNSUPPORTED_IF(gbmDevice == nullptr);
 
         // Make sure we can successfully create a basic buffer object.
-        gbm_bo* bo = gbm_bo_create(mGbmDevice, 16, 16, GBM_FORMAT_XBGR8888, GBM_BO_USE_LINEAR);
-        if (bo != nullptr) {
-            gbm_bo_destroy(bo);
-        }
+        OwnedGbmBo bo(
+            gbm_bo_create(gbmDevice.get(), 16, 16, GBM_FORMAT_XBGR8888, GBM_BO_USE_LINEAR));
         DAWN_TEST_UNSUPPORTED_IF(bo == nullptr);
+
+        mGbmDevice = std::move(gbmDevice);
+        mRenderNode = std::move(renderNode);
     }
 
-    void TearDown() override {
-        if (mGbmDevice) {
-            gbm_device_destroy(mGbmDevice);
-            mGbmDevice = nullptr;
-        }
-        if (mRenderNodeFd >= 0) {
-            close(mRenderNodeFd);
-        }
-    }
-
-    int mRenderNodeFd = -1;
-    // TODO(crbug.com/485825675): Investigate why this pointer is dangling.
-    raw_ptr<gbm_device, DanglingUntriaged> mGbmDevice = nullptr;
+    // Declare first so the render node outlives the GBM device.
+    SystemHandle mRenderNode;
+    OwnedGbmDevice mGbmDevice;
 };
 
 DAWN_INSTANTIATE_PREFIXED_TEST_P(

@@ -5,7 +5,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-import vulkan_hpp;
+import vulkan;
 
 int test_version()
 {

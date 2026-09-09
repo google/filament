@@ -293,10 +293,10 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
             //    where certain constants may be optimized out of the shader based
             //    on build configuration, etc.
             //
-            // to bypass these problems, we do not use override constants in the
-            // WebGPU backend, instead replacing placeholder constants in the shader
-            // text before creating the shader module (essentially implementing
-            // override constants ourselves)
+            // To bypass the first limitation, filamat emits constants that determine buffer
+            // layouts as ordinary shader constants. To bypass the second, WebGPUProgram applies
+            // the remaining Program specialization constants to WGSL override defaults before
+            // creating the shader module. Therefore, no constants are passed to the pipeline.
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = request.vertexBufferSlots.size(),

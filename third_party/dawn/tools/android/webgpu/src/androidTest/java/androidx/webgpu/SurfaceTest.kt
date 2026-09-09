@@ -22,6 +22,13 @@ import androidx.test.filters.SmallTest
 import androidx.webgpu.ValidationException
 import androidx.webgpu.helper.WebGpu
 import androidx.webgpu.helper.createWebGpu
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -40,24 +47,35 @@ class SurfaceTest {
     private const val HEIGHT = 800
   }
 
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
   private lateinit var surfaceTexture: SurfaceTexture
   private lateinit var validSurface: Surface
   private lateinit var webGpu: WebGpu
 
   @Before
-  fun setup() {
+  fun setup(): Unit = runBlocking {
     surfaceTexture = SurfaceTexture(0)
     surfaceTexture.setDefaultBufferSize(WIDTH, HEIGHT)
     validSurface = Surface(surfaceTexture)
 
-    webGpu = runBlocking { createWebGpu(validSurface) }
+    webGpu = createWebGpu(dispatcher = dispatcher, surface = validSurface)
+    testScope.launch {
+      webGpu.processEventsLoop()
+    }
   }
 
   @After
   fun teardown() {
+    if (::webGpu.isInitialized) {
+      webGpu.close()
+    }
     validSurface.release()
     surfaceTexture.release()
-    webGpu.close()
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
   }
 
   /**
@@ -70,31 +88,35 @@ class SurfaceTest {
    */
   @Test
   fun surfaceLifecycle_configureAndPresent_succeeds() {
-    val surface = webGpu.webgpuSurface
-    val adapter = runBlocking { webGpu.instance.requestAdapter() }
+    runBlocking {
+      webGpu.execute {
+        val surface = webGpu.webgpuSurface
+        val adapter = webGpu.adapter
 
-    val capabilities = surface.getCapabilities(adapter)
-    val desiredFormat = TextureFormat.RGBA8Unorm
+        val capabilities = surface.getCapabilities(adapter)
+        val desiredFormat = TextureFormat.RGBA8Unorm
 
-    if (desiredFormat !in capabilities.formats) {
-      // If not, skip this test. It's not a failure, just not applicable.
-      Assume.assumeTrue("Adapter does not support $desiredFormat for this surface", false)
+        if (desiredFormat !in capabilities.formats) {
+          // If not, skip this test. It's not a failure, just not applicable.
+          Assume.assumeTrue("Adapter does not support $desiredFormat for this surface", false)
+        }
+        val config =
+          GPUSurfaceConfiguration(
+            device = webGpu.device,
+            format = desiredFormat,
+            height = HEIGHT,
+            width = WIDTH,
+          )
+        surface.configure(config)
+        // ensure no errors are thrown
+        val currentTexture = surface.getCurrentTexture().texture
+        assertEquals(currentTexture.format, desiredFormat)
+        assertEquals(currentTexture.height, HEIGHT)
+        assertEquals(currentTexture.width, WIDTH)
+        // The testcase will fail in case present() throws WebGpuException
+        surface.present()
+      }
     }
-    val config =
-      GPUSurfaceConfiguration(
-        device = webGpu.device,
-        format = desiredFormat,
-        height = HEIGHT,
-        width = WIDTH,
-      )
-    surface.configure(config)
-    // ensure no errors are thrown
-    val currentTexture = surface.getCurrentTexture().texture
-    assertEquals(currentTexture.format, desiredFormat)
-    assertEquals(currentTexture.height, HEIGHT)
-    assertEquals(currentTexture.width, WIDTH)
-    // The testcase will fail in case present() throws WebGpuException
-    surface.present()
   }
 
   /**
@@ -103,16 +125,20 @@ class SurfaceTest {
    */
   @Test
   fun configure_withInvalidParameters_fails() {
-    val surface = webGpu.webgpuSurface
-    val invalidConfig =
-      GPUSurfaceConfiguration(
-        device = webGpu.device,
-        format = TextureFormat.RGBA8Unorm,
-        height = HEIGHT,
-        width = -1, // Invalid parameter
-      )
+    runBlocking {
+      val unused = webGpu.execute {
+        val surface = webGpu.webgpuSurface
+        val invalidConfig =
+          GPUSurfaceConfiguration(
+            device = webGpu.device,
+            format = TextureFormat.RGBA8Unorm,
+            height = HEIGHT,
+            width = -1, // Invalid parameter
+          )
 
-    // Assert that calling configure with this invalid descriptor throws an error.
-    assertThrows(ValidationException::class.java) { surface.configure(invalidConfig) }
+        // Assert that calling configure with this invalid descriptor throws an error.
+        assertThrows(ValidationException::class.java) { surface.configure(invalidConfig) }
+      }
+    }
   }
 }

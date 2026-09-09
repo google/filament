@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_D3D_FORWARD_H_
 #define SRC_DAWN_NATIVE_D3D_FORWARD_H_
 
-#include "dawn/native/ToBackend.h"
+#include "src/dawn/native/ToBackend.h"
 
 namespace dawn::native::d3d {
 

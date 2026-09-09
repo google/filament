@@ -28,11 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_D3D12_PLATFORM_H_
 #define SRC_DAWN_NATIVE_D3D12_D3D12_PLATFORM_H_
 
-#include "dawn/native/d3d/d3d_platform.h"
-
-// clang-format off
-#include <d3d12.h>
-#include <d3d11on12.h>
-// clang-format on
+#include "dawn/native/D3D12Backend.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 #endif  // SRC_DAWN_NATIVE_D3D12_D3D12_PLATFORM_H_

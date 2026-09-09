@@ -1,0 +1,361 @@
+parameters:
+  - name: lavapipeVersion
+    displayName: 'lavapipe (Mesa) version'
+    type: string
+    default: '26.1.2'
+  - name: warpVersion
+    displayName: 'WARP version'
+    type: string
+    default: '1.0.19'
+
+trigger:
+  - main
+  - release*
+
+pr: 
+  - main
+  - release*
+  
+resources:
+- repo: self
+
+stages:
+- stage: Build
+  jobs:
+  - job: Windows
+    timeoutInMinutes: 180
+
+    pool:
+      vmImage: windows-2022
+
+    variables:
+      HLSL_SRC_DIR: '$(Build.SourcesDirectory)'
+      HLSL_BLD_DIR: '$(Agent.BuildDirectory)'
+      platform: x64
+
+    strategy:
+      matrix:
+        VS2022_Release:
+         configuration: Release
+         spirvBuildFlag: -spirvtest
+         artifactName: dxc_spirv_release
+         offloadCandidate: true
+        VS2022_Debug:
+         configuration: Debug
+         spirvBuildFlag: -spirvtest
+        VS2022_Release_NoSPIRV:
+         configuration: Release
+         spirvBuildFlag: ''
+
+    steps:
+    - checkout: self
+      clean: true
+      submodules: true
+    - pwsh: |
+        $run = $true
+        if ("$(Build.Reason)" -eq "PullRequest") {
+          $run = $false
+          try {
+            $labels = Invoke-RestMethod "https://api.github.com/repos/$(Build.Repository.Name)/issues/$(System.PullRequest.PullRequestNumber)/labels" -ErrorAction Stop
+            if ($labels.name -contains "run-offload-tests") { $run = $true }
+          } catch {
+            Write-Warning "Unable to check pull request labels; skipping offload tests: $_"
+          }
+        }
+        Write-Host "Build.Reason=$(Build.Reason) runOffloadTests=$run"
+        Write-Host "##vso[task.setvariable variable=runOffloadTests;isOutput=true]$($run.ToString().ToLower())"
+      name: decide
+      displayName: 'Decide whether to run offload tests'
+      condition: and(succeeded(), eq(variables['offloadCandidate'], 'true'))
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hctbuild.cmd -vs2022 -$(platform) -$(configuration) -show-cmake-log $(spirvBuildFlag) -warp-nuget-version 1.0.16.1
+      displayName: 'Building'
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) noexec
+      displayName: 'DXIL Tests'
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) exec
+      displayName: 'DXIL Execution Tests'        
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) extdxil
+      displayName: 'External DXIL Validator Tests'
+      condition: succeededOrFailed()
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) compat-suite v1.6.2112
+      displayName: 'DXIL Compat Suite Tests (1.6 release)'
+      condition: succeededOrFailed()
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) compat-suite v1.7.2308
+      displayName: 'DXIL Compat Suite Tests (1.7 release)'
+      condition: succeededOrFailed()
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) compat-suite v1.8.2502
+      displayName: 'DXIL Compat Suite Tests (1.8 release)'
+      condition: succeededOrFailed()
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) compat-suite v1.8.2505.1
+      displayName: 'DXIL Compat Suite Tests (1.8 point release)'
+      condition: succeededOrFailed()
+    - script: |
+        call utils\hct\hctstart.cmd %HLSL_SRC_DIR% %HLSL_BLD_DIR%
+        call utils\hct\hcttest.cmd -$(configuration) spirv
+      displayName: 'SPIR-V Tests'
+      condition: and(succeeded(), ne(variables['spirvBuildFlag'], ''))
+    - pwsh: |
+        $bin = "$(HLSL_BLD_DIR)\$(configuration)\bin"
+        $dst = "$(Build.ArtifactStagingDirectory)\dxc"
+        New-Item -ItemType Directory -Force -Path $dst | Out-Null
+        foreach ($f in @("dxc.exe","dxv.exe","dxcompiler.dll","dxil.dll")) {
+          if (Test-Path "$bin\$f") { Copy-Item "$bin\$f" $dst } else { throw "Required file not found: $bin\$f" }
+        }
+      displayName: 'Stage DXC binaries'
+      condition: and(succeeded(), eq(variables['decide.runOffloadTests'], 'true'))
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish DXC binaries'
+      condition: and(succeeded(), eq(variables['decide.runOffloadTests'], 'true'))
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)\dxc'
+        artifact: '$(artifactName)'
+
+
+  - job: Nix
+    timeoutInMinutes: 165
+
+    variables:
+      macOS: macOS-latest
+      linux: Ubuntu-24.04
+
+    strategy:
+      matrix:
+        Linux_Clang_RelWithDebInfo:
+          image: ${{ variables.linux }}
+          configuration: RelWithDebInfo
+          CC: clang-18
+          CXX: clang++-18
+          CMAKE_OPTS: -DLLVM_ENABLE_WERROR=On -DLLVM_USE_SANITIZER='Address;Undefined' -DLLVM_ENABLE_LIBCXX=On -DLLVM_USE_LINKER=lld-18
+          CHECK_ALL_ENV: ASAN_OPTIONS=alloc_dealloc_mismatch=0 LSAN_OPTIONS=suppressions=$BUILD_SOURCESDIRECTORY/utils/asan/x86_64-pc-linux-gnu.lsan.supp:print_suppressions=0 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 LSAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18
+          OS: Linux
+        Linux_Clang_Debug:
+          image: ${{ variables.linux }}
+          configuration: Debug
+          CC: clang
+          CXX: clang++
+          CMAKE_OPTS: -DLLVM_ENABLE_WERROR=On -DLLVM_USE_LINKER=lld
+        Linux_Gcc_Release:
+          image: ${{ variables.linux }}
+          configuration: Release
+          CC: gcc
+          CXX: g++
+        Linux_Gcc_Debug:
+          image: ${{ variables.linux }}
+          configuration: Debug
+          CC: gcc
+          CXX: g++
+          CMAKE_OPTS: -DLLVM_USE_SPLIT_DWARF=On
+        MacOS_Clang_Release:
+          image: ${{ variables.macOS }}
+          configuration: Release
+          CC: clang
+          CXX: clang++
+          CMAKE_OPTS: -DLLVM_ENABLE_WERROR=On
+          OS: MacOS
+        MacOS_Clang_Debug:
+          image: ${{ variables.macOS }}
+          configuration: Debug
+          CC: clang
+          CXX: clang++
+          CMAKE_OPTS: -DLLVM_ENABLE_WERROR=On
+
+    pool:
+      vmImage: $(image)
+
+    steps:
+    - checkout: self
+      clean: true
+      submodules: true
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+
+    - bash: |
+        sudo apt-get update
+        sudo apt-get upgrade libc6 libc6-dbg
+        sudo apt-get install ninja-build
+        wget https://apt.llvm.org/llvm.sh
+        chmod u+x llvm.sh
+        sudo ./llvm.sh 18
+        sudo apt-get install libc++-18-dev
+      displayName: 'Installing dependencies'
+      condition: eq(variables['image'], variables['linux'])
+
+    - bash: |
+        brew update
+        brew install ninja
+        ulimit -Sn 1024
+      displayName: 'Installing dependencies'
+      condition: eq(variables['image'], variables['macOS'])
+    - bash: |
+        cmake -B build -G Ninja $BUILD_SOURCESDIRECTORY -DLLVM_LIT_ARGS='-v --xunit-xml-output=testresults.xunit.xml' -C $BUILD_SOURCESDIRECTORY/cmake/caches/PredefinedParams.cmake -DSPIRV_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=$(configuration) -DCMAKE_C_COMPILER=$(CC) -DCMAKE_CXX_COMPILER=$(CXX) $(CMAKE_OPTS)
+      displayName: 'Running Cmake'
+    - bash: |
+        ninja -C build test-depends
+      displayName: 'Building'
+    - bash: |
+        ./build/bin/dxc -T ps_6_0 tools/clang/test/CodeGenSPIRV/passthru-ps.hlsl2spv
+        ./build/bin/dxc -T ps_6_0 -Fo passthru-ps.dxil tools/clang/test/CodeGenSPIRV/passthru-ps.hlsl2spv
+        ./build/bin/dxc -T ps_6_0 -Fo passthru-ps.spv tools/clang/test/CodeGenSPIRV/passthru-ps.hlsl2spv -spirv
+        ls -ld $AGENT_BUILDDIRECTORY
+        ls -ld $BUILD_SOURCESDIRECTORY
+      displayName: 'Smoke tests'
+    - bash: $(CHECK_ALL_ENV) ninja -C build check-all
+      displayName: 'DXC tests'
+    - bash: $(CHECK_ALL_ENV) ninja -C build check-extdxil
+      displayName: 'External DXIL Validator tests'
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/testresults.xunit.xml'
+      condition: succeededOrFailed()
+
+  - job: Offload
+    dependsOn: Windows
+    condition: and(succeededOrFailed(), eq(dependencies.Windows.outputs['VS2022_Release.decide.runOffloadTests'], 'true'))
+    timeoutInMinutes: 180
+    pool:
+      vmImage: windows-2025
+    workspace:
+      clean: all
+    strategy:
+      matrix:
+        spirv_release:
+          artifact: 'dxc_spirv_release'
+          runLavapipe: 'true'
+    steps:
+    - checkout: none
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download DXC binaries'
+      inputs:
+        artifact: '$(artifact)'
+        path: '$(Agent.TempDirectory)\dxc'
+
+    - pwsh: |
+        $dxc = Get-ChildItem "$(Agent.TempDirectory)\dxc" -Recurse -Filter dxc.exe | Select-Object -First 1
+        if (-not $dxc) { throw "dxc.exe not found in artifact $(artifact)" }
+        Write-Host "##vso[task.setvariable variable=DXC_DIR]$($dxc.Directory.FullName)"
+        Write-Host "DXC_DIR = $($dxc.Directory.FullName)"
+      displayName: 'Locate DXC_DIR'
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+    - script: choco install ninja -y
+      displayName: 'Install Ninja'
+    - pwsh: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (-not $vs) { throw "Visual Studio with the VC toolset was not found" }
+        Write-Host "##vso[task.setvariable variable=VCVARS]$vs\VC\Auxiliary\Build\vcvars64.bat"
+      displayName: 'Find vcvars'
+    - task: BatchScript@1
+      displayName: 'Set up MSVC environment'
+      inputs:
+        filename: '$(VCVARS)'
+        modifyEnvironment: true
+
+    - pwsh: |
+        $exe = "$(Agent.TempDirectory)\VulkanSDK.exe"
+        Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe?Human=true" -OutFile $exe
+        Start-Process $exe -ArgumentList "--accept-licenses","--default-answer","--confirm-command","install" -Wait
+        $sdk = (Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
+        if (-not $sdk) { throw "Vulkan SDK install dir not found under C:\VulkanSDK" }
+        Write-Host "##vso[task.setvariable variable=VULKAN_SDK]$sdk"
+        Write-Host "##vso[task.prependpath]$sdk\Bin"
+      displayName: 'Install Vulkan SDK'
+      condition: and(succeeded(), eq(variables['runLavapipe'], 'true'))
+
+    - pwsh: |
+        $ver = "${{ parameters.lavapipeVersion }}"
+        $url = "https://github.com/pal1000/mesa-dist-win/releases/download/$ver/mesa3d-$ver-release-msvc.7z"
+        Invoke-WebRequest $url -OutFile "$(Agent.TempDirectory)\mesa.7z"
+        7z x "$(Agent.TempDirectory)\mesa.7z" -o"$(Agent.TempDirectory)\mesa" -y | Out-Null
+        $lvp = (Get-ChildItem "$(Agent.TempDirectory)\mesa" -Recurse -Filter "lvp_icd.x86_64.json" | Select-Object -First 1).FullName
+        if (-not $lvp) { throw "lavapipe ICD (lvp_icd.x86_64.json) not found in Mesa package" }
+        reg add "HKLM\SOFTWARE\Khronos\Vulkan\Drivers" /v "$lvp" /t REG_DWORD /d 0 /f /reg:64
+        Write-Host "##vso[task.setvariable variable=MESA_BIN]$(Split-Path $lvp)"
+        Write-Host "Registered lavapipe ICD: $lvp"
+      displayName: 'Install lavapipe (Mesa) and register the ICD'
+      condition: and(succeeded(), eq(variables['runLavapipe'], 'true'))
+
+    - pwsh: |
+        git clone --depth 1 https://github.com/llvm/offload-test-suite OffloadTest
+        git clone --depth 1 https://github.com/llvm/llvm-project llvm-project
+        git clone --depth 1 https://github.com/llvm/offload-golden-images golden-images
+        python -m pip install -r OffloadTest/test/requirements.txt
+        $py = (python -c "import sys; print(sys.executable)").Trim() -replace '\\','/'
+        Write-Host "##vso[task.setvariable variable=PYTHON_EXE]$py"
+      displayName: 'Checkout offload-test-suite + LLVM'
+      workingDirectory: '$(Agent.TempDirectory)'
+
+    - script: >
+        cmake -G Ninja -B llvm-project/build
+        -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=On
+        -DLLVM_EXTERNAL_PROJECTS=OffloadTest
+        -C llvm-project/clang/cmake/caches/HLSL.cmake
+        -DPython3_EXECUTABLE="$(PYTHON_EXE)"
+        -DDXC_DIR="$(DXC_DIR)"
+        -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=$(Agent.TempDirectory)/OffloadTest
+        -DGOLDENIMAGE_DIR=$(Agent.TempDirectory)/golden-images
+        -DOFFLOADTEST_TEST_CLANG=Off
+        -DOFFLOADTEST_ENABLE_DEBUG=Off
+        -DWARP_VERSION=${{ parameters.warpVersion }}
+        -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v"
+        llvm-project/llvm
+      displayName: 'Configure LLVM + OffloadTest against DXC'
+      workingDirectory: '$(Agent.TempDirectory)'
+
+    - pwsh: |
+        $line = (Select-String -Path "llvm-project/build/CMakeCache.txt" -Pattern '^Python3_EXECUTABLE:').Line
+        $py = ($line -split '=', 2)[1]
+        if (-not $py) { throw "Python3_EXECUTABLE not found in CMakeCache.txt" }
+        Write-Host "lit Python: $py"
+        & "$py" -m pip install -r OffloadTest/test/requirements.txt
+      displayName: 'Install offload requirements into lit Python'
+      workingDirectory: '$(Agent.TempDirectory)'
+
+    - script: cmake --build llvm-project/build --target hlsl-test-depends
+      displayName: 'Build offload test dependencies'
+      workingDirectory: '$(Agent.TempDirectory)'
+
+    - pwsh: |
+        $out = "$(Agent.TempDirectory)/results-d3d12-warp.xml" -replace '\\','/'
+        $env:LIT_OPTS = "--xunit-xml-output=$out"
+        cmake --build llvm-project/build --target check-hlsl-warp-d3d12
+      displayName: 'DirectX offload tests on WARP'
+      condition: succeededOrFailed()
+      workingDirectory: '$(Agent.TempDirectory)'
+
+    - pwsh: |
+        $env:PATH = "$(MESA_BIN);$env:PATH"
+        $env:VK_LOADER_DEBUG = "all"
+        $out = "$(Agent.TempDirectory)/results-vk-lavapipe.xml" -replace '\\','/'
+        $env:LIT_OPTS = "--xunit-xml-output=$out"
+        cmake --build llvm-project/build --target check-hlsl-vk
+      displayName: 'Vulkan offload tests on lavapipe'
+      condition: and(succeededOrFailed(), eq(variables['runLavapipe'], 'true'))
+      workingDirectory: '$(Agent.TempDirectory)'
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '$(Agent.TempDirectory)/results-*.xml'

@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d11/SharedFenceD3D11.h"
+#include "src/dawn/native/d3d11/SharedFenceD3D11.h"
 
 #include <utility>
 
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/PlatformFunctions.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/native/d3d11/QueueD3D11.h"
-#include "dawn/utils/SystemHandle.h"
+#include "src/dawn/common/SystemHandle.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/PlatformFunctions.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/native/d3d11/QueueD3D11.h"
 
 namespace dawn::native::d3d11 {
 
@@ -62,7 +62,7 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(
         return queueFence;
     }
 
-    utils::SystemHandle ownedHandle = utils::SystemHandle::Duplicate(descriptor->handle);
+    SystemHandle ownedHandle = SystemHandle::Duplicate(descriptor->handle);
 
     Ref<SharedFence> fence = AcquireRef(new SharedFence(device, label, std::move(ownedHandle)));
     DAWN_TRY(CheckHRESULT(device->GetD3D11Device5()->OpenSharedFence(descriptor->handle,
@@ -76,7 +76,7 @@ ResultOrError<Ref<SharedFence>> SharedFence::Create(
 ResultOrError<Ref<SharedFence>> SharedFence::Create(Device* device,
                                                     StringView label,
                                                     ComPtr<ID3D11Fence> d3d11Fence) {
-    utils::SystemHandle ownedHandle;
+    SystemHandle ownedHandle;
     DAWN_TRY(CheckHRESULT(
         d3d11Fence->CreateSharedHandle(nullptr, GENERIC_ALL, nullptr, ownedHandle.GetMut()),
         "D3D11: creating fence shared handle"));

@@ -30,8 +30,8 @@
 
 #include <string>
 
-#include "dawn/native/ErrorInjector.h"
-#include "dawn/native/vulkan/VulkanFunctions.h"
+#include "src/dawn/native/ErrorInjector.h"
+#include "src/dawn/native/vulkan/VulkanFunctions.h"
 
 constexpr VkResult VK_FAKE_ERROR_FOR_TESTING = VK_RESULT_MAX_ENUM;
 constexpr VkResult VK_FAKE_DEVICE_OOM_FOR_TESTING = static_cast<VkResult>(VK_RESULT_MAX_ENUM - 1);

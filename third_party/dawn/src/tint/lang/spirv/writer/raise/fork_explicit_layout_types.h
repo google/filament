@@ -28,7 +28,8 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_FORK_EXPLICIT_LAYOUT_TYPES_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_FORK_EXPLICIT_LAYOUT_TYPES_H_
 
-#include "src/tint/lang/core/ir/validator.h"
+#include <cstdint>
+
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -40,16 +41,6 @@ enum class SpvVersion : uint32_t;
 }
 
 namespace tint::spirv::writer::raise {
-
-/// The capabilities that the transform can support.
-const core::ir::Capabilities kForkExplicitLayoutTypesCapabilities{
-    core::ir::Capability::kAllowDuplicateBindings,
-    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
-    core::ir::Capability::kAllowNonCoreTypes,
-    core::ir::Capability::kAllow8BitIntegers,
-    core::ir::Capability::kLoosenValidationForShaderIO,
-    core::ir::Capability::kAllowPointSizeBuiltin,
-};
 
 /// ForkExplicitLayoutTypes is a transform that forks array and structures types that are shared
 /// between address spaces that require explicit layout in SPIR-V and those that cannot have them.

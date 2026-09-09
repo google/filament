@@ -96,5 +96,15 @@ TEST_F(IR_LetTest, Clone_NoName) {
     EXPECT_FALSE(mod.NameOf(new_let).IsValid());
 }
 
+TEST_F(IR_LetTest, LetWithResult) {
+    auto* value = b.Constant(1_f);
+    auto* res = b.InstructionResult(b.ir.Types().f32());
+    auto* let = b.LetWithResult(res, value);
+    EXPECT_EQ(let->Results().Length(), 1u);
+    EXPECT_EQ(let->Result(), res);
+    EXPECT_EQ(let->Value(), value);
+    EXPECT_EQ(let->Result()->Type(), b.ir.Types().f32());  // remains f32
+}
+
 }  // namespace
 }  // namespace tint::core::ir

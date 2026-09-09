@@ -134,6 +134,10 @@
 #define VK_VENDOR_ID_FILTER_ENV_VAR "VK_LOADER_VENDOR_ID_FILTER"
 #define VK_DRIVER_ID_FILTER_ENV_VAR "VK_LOADER_DRIVER_ID_FILTER"
 
+#if defined(__APPLE__)
+#define VK_LOADER_SEARCH_ONLY_IN_BUNDLE_ENV_VAR "VK_LOADER_SEARCH_ONLY_IN_BUNDLE"
+#endif
+
 // Override layer information
 #define VK_OVERRIDE_LAYER_NAME "VK_LAYER_LUNARG_override"
 
@@ -307,6 +311,9 @@ static inline char *loader_platform_executable_path(char *buffer, size_t size) {
     ssize_t count = readlink("/proc/self/exe", buffer, size);
     if (count == -1) return NULL;
     if (count == 0) return NULL;
+    // readlink does not append a null terminator and returns up to size bytes, so a target of size or more
+    // would leave no room for the terminator and buffer[count] would write past the end.
+    if ((size_t)count >= size) return NULL;
     buffer[count] = '\0';
     return buffer;
 }

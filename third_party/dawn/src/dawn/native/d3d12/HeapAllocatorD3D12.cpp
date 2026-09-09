@@ -25,26 +25,29 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d12/HeapAllocatorD3D12.h"
+#include "src/dawn/native/d3d12/HeapAllocatorD3D12.h"
 
 #include <utility>
 
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/HeapD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
-#include "dawn/native/d3d12/UtilsD3D12.h"
+#include "src/dawn/native/Queue.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/HeapD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/native/d3d12/UtilsD3D12.h"
 
 namespace dawn::native::d3d12 {
 
 HeapAllocator::HeapAllocator(Device* device,
                              ResourceHeapKind resourceHeapKind,
                              D3D12_HEAP_FLAGS heapFlags,
-                             MemorySegment memorySegment)
+                             MemorySegment memorySegment,
+                             AllocationSizeTracker* allocationMemoryTracker)
     : mDevice(device),
       mResourceHeapKind(resourceHeapKind),
       mHeapFlags(heapFlags),
-      mMemorySegment(memorySegment) {}
+      mMemorySegment(memorySegment),
+      mAllocationMemoryTracker(allocationMemoryTracker) {}
 
 ResultOrError<std::unique_ptr<ResourceHeapBase>> HeapAllocator::AllocateResourceHeap(
     uint64_t size) {
@@ -67,6 +70,7 @@ ResultOrError<std::unique_ptr<ResourceHeapBase>> HeapAllocator::AllocateResource
 
     std::unique_ptr<ResourceHeapBase> heapBase =
         std::make_unique<Heap>(std::move(d3d12Heap), mMemorySegment, size);
+    mAllocationMemoryTracker->Increment(size);
 
     // Calling CreateHeap implicitly calls MakeResident on the new heap. We must track this to
     // avoid calling MakeResident a second time.
@@ -75,7 +79,10 @@ ResultOrError<std::unique_ptr<ResourceHeapBase>> HeapAllocator::AllocateResource
 }
 
 void HeapAllocator::DeallocateResourceHeap(std::unique_ptr<ResourceHeapBase> heap) {
-    mDevice->ReferenceUntilUnused(static_cast<Heap*>(heap.get())->GetD3D12Heap());
+    Heap* d3d12Heap = static_cast<Heap*>(heap.get());
+    mDevice->ReferenceUntilUnused(d3d12Heap->GetD3D12Heap());
+    mAllocationMemoryTracker->Decrement(mDevice->GetQueue()->GetPendingCommandSerial(),
+                                        d3d12Heap->GetSize());
 }
 
 }  // namespace dawn::native::d3d12

@@ -45,6 +45,12 @@ Hashmap<const core::type::Type*, core::ir::Var*, 4> ResourceTableHelper::Generat
     for (auto& type : types) {
         auto* t = core::type::ResourceTypeToType(b.ir.Types(), type);
 
+        // The defaults can include both filterable/unfilterable variants, but they collapse to the
+        // same type in WGSL, so only emit them once.
+        if (res.Contains(t)) {
+            continue;
+        }
+
         auto* spv_ty = b.ir.Types().Get<core::type::ResourceTable>(t);
         auto* v = b.Var(b.ir.Types().ptr(handle, spv_ty));
         v->SetBindingPoint(bp.group, bp.binding);

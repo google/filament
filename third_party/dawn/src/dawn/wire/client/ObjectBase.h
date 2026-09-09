@@ -30,12 +30,13 @@
 
 #include <webgpu/webgpu.h>
 
-#include "dawn/common/Ref.h"
-#include "dawn/common/RefCounted.h"
-#include "dawn/wire/ObjectHandle.h"
 #include "dawn/wire/ObjectType_autogen.h"
-#include "dawn/wire/client/EventManager.h"
+#include "dawn/wire/client/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/wire/ObjectHandle.h"
+#include "src/dawn/wire/client/EventManager.h"
 
 namespace dawn::wire::client {
 
@@ -55,7 +56,6 @@ class ObjectBase : public RefCounted {
   public:
     explicit ObjectBase(const ObjectBaseParams& params);
 
-    virtual void CancelCallbacksForDisconnect() {}
     virtual ObjectType GetObjectType() const = 0;
 
     // Objects are assumed to be registered with the wire on creation but can be unregistered
@@ -74,23 +74,23 @@ class ObjectBase : public RefCounted {
     const ObjectHandle mHandle;
 };
 
+class Instance;
+
 // Compositable functionality for objects on the client side that need to have access to the event
 // manager.
 class ObjectWithEventsBase : public ObjectBase {
   public:
-    // Note that the ObjectHandle associated with an EventManager is the same handle associated to
-    // the Instance that "owns" the EventManager.
-    ObjectWithEventsBase(const ObjectBaseParams& params, const ObjectHandle& eventManager);
+    ObjectWithEventsBase(const ObjectBaseParams& params, Ref<Instance> instance);
 
-    const ObjectHandle& GetEventManagerHandle() const;
+    Ref<Instance> GetInstance() const;
     EventManager& GetEventManager() const;
 
   private:
-    // The EventManager is owned by the client and long-lived. When the client is destroyed all
-    // objects are also freed.
-    ObjectHandle mEventManagerHandle;
+    Ref<Instance> mInstance;
 };
 
+// TODO(https://crbug.com/526537254): Remove ReturnToAPI2 and replace ReturnToAPI with it once all
+// callsites are updated.
 template <class T>
 auto ReturnToAPI(Ref<T>&& object) {
     if constexpr (T::HasExternalRefCount) {
@@ -99,6 +99,15 @@ auto ReturnToAPI(Ref<T>&& object) {
         object->IncrementExternalRefCount();
     }
     return ToAPI(object.Detach());
+}
+template <class T>
+T* ReturnToAPI2(Ref<T>&& object) {
+    if constexpr (T::HasExternalRefCount) {
+        // For an object which has external ref count, just need to increase the external ref count,
+        // and keep the total ref count unchanged.
+        object->IncrementExternalRefCount();
+    }
+    return object.Detach();
 }
 
 }  // namespace dawn::wire::client

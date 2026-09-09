@@ -40,12 +40,7 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-class WgslWriter_PtrToRefTest : public core::ir::transform::TransformTest {
-  public:
-    void SetUp() override {
-        capabilities = core::ir::Capabilities{core::ir::Capability::kAllowRefTypes};
-    }
-};
+using WgslWriter_PtrToRefTest = core::ir::transform::TransformTest;
 
 TEST_F(WgslWriter_PtrToRefTest, PtrParam_NoChange) {
     auto fn = b.Function(ty.void_());

@@ -40,7 +40,10 @@ using namespace tint::core::number_suffixes;  // NOLINT
 namespace tint::msl::writer::raise {
 namespace {
 
-using MslWriter_BinaryPolyfillTest = core::ir::transform::TransformTest;
+struct MslWriter_BinaryPolyfillTest : public core::ir::transform::TransformTest {
+  protected:
+    void SetUp() override { mod.properties.Add(core::ir::Property::kAllow16BitFloats); }
+};
 
 TEST_F(MslWriter_BinaryPolyfillTest, FMod_Scalar) {
     auto* lhs = b.FunctionParam<f32>("lhs");

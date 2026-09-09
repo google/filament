@@ -30,6 +30,7 @@
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/utils/ice/ice.h"
 #include "src/tint/utils/result.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
@@ -46,36 +47,89 @@ struct State {
     core::type::Manager& ty{ir.Types()};
 
     void Process() {
-        Vector<core::ir::Unary*, 4> unary_worklist;
-        Vector<core::ir::CoreBuiltinCall*, 4> builtin_worklist;
+        // Find all f16 instructions and promote them to f32.
+        Vector<core::ir::Unary*, 4> f16_unary_worklist;
+        Vector<core::ir::CoreBuiltinCall*, 4> f16_builtin_worklist;
         for (auto* inst : ir.Instructions()) {
             if (auto* unary = inst->As<core::ir::Unary>()) {
-                if (config.polyfill_f32_negation && unary->Op() == core::UnaryOp::kNegation &&
-                    unary->Result()->Type()->DeepestElement()->Is<core::type::F32>()) {
-                    unary_worklist.Push(unary);
+                if (config.polyfill_float_negation && unary->Op() == core::UnaryOp::kNegation &&
+                    unary->Result()->Type()->DeepestElement()->Is<core::type::F16>()) {
+                    f16_unary_worklist.Push(unary);
                 }
             } else if (auto* builtin = inst->As<core::ir::CoreBuiltinCall>()) {
-                if (config.polyfill_f32_abs && builtin->Func() == core::BuiltinFn::kAbs &&
-                    builtin->Result()->Type()->DeepestElement()->Is<core::type::F32>()) {
-                    builtin_worklist.Push(builtin);
+                if (config.polyfill_float_abs && builtin->Func() == core::BuiltinFn::kAbs &&
+                    builtin->Result()->Type()->DeepestElement()->Is<core::type::F16>()) {
+                    f16_builtin_worklist.Push(builtin);
                 }
             }
         }
 
-        for (auto* unary : unary_worklist) {
+        for (auto* unary : f16_unary_worklist) {
+            TINT_ASSERT(unary->Op() == core::UnaryOp::kNegation);
+            PromoteToF32(unary);
+        }
+        for (auto* builtin : f16_builtin_worklist) {
+            TINT_ASSERT(builtin->Func() == core::BuiltinFn::kAbs);
+            PromoteToF32(builtin);
+        }
+
+        // Find all f32 instructions (including newly promoted ones) and polyfill them.
+        Vector<core::ir::Unary*, 4> f32_unary_worklist;
+        Vector<core::ir::CoreBuiltinCall*, 4> f32_builtin_worklist;
+        for (auto* inst : ir.Instructions()) {
+            if (auto* unary = inst->As<core::ir::Unary>()) {
+                if (config.polyfill_float_negation && unary->Op() == core::UnaryOp::kNegation &&
+                    unary->Result()->Type()->DeepestElement()->Is<core::type::F32>()) {
+                    f32_unary_worklist.Push(unary);
+                }
+            } else if (auto* builtin = inst->As<core::ir::CoreBuiltinCall>()) {
+                if (config.polyfill_float_abs && builtin->Func() == core::BuiltinFn::kAbs &&
+                    builtin->Result()->Type()->DeepestElement()->Is<core::type::F32>()) {
+                    f32_builtin_worklist.Push(builtin);
+                }
+            }
+        }
+
+        for (auto* unary : f32_unary_worklist) {
+            TINT_ASSERT(unary->Op() == core::UnaryOp::kNegation);
             PolyfillF32Negation(unary);
         }
-        for (auto* builtin : builtin_worklist) {
+        for (auto* builtin : f32_builtin_worklist) {
+            TINT_ASSERT(builtin->Func() == core::BuiltinFn::kAbs);
             PolyfillF32Abs(builtin);
         }
+    }
+
+    void PromoteToF32(core::ir::Unary* unary) {
+        auto* val = unary->Val();
+        auto* type = val->Type();
+        b.InsertBefore(unary, [&] {
+            auto* f32_ty = ty.MatchWidth(ty.f32(), type);
+            auto* f32_val = b.Convert(f32_ty, val);
+            auto* f32_neg = b.Negation(f32_val);
+            b.ConvertWithResult(unary->DetachResult(), f32_neg->Result());
+        });
+        unary->Destroy();
+    }
+
+    void PromoteToF32(core::ir::CoreBuiltinCall* builtin) {
+        auto* val = builtin->Args()[0];
+        auto* type = val->Type();
+        b.InsertBefore(builtin, [&] {
+            auto* f32_ty = ty.MatchWidth(ty.f32(), type);
+            auto* f32_val = b.Convert(f32_ty, val);
+            auto* f32_abs = b.Call(f32_ty, core::BuiltinFn::kAbs, f32_val);
+            b.ConvertWithResult(builtin->DetachResult(), f32_abs->Result());
+        });
+        builtin->Destroy();
     }
 
     void PolyfillF32Negation(core::ir::Unary* unary) {
         auto* val = unary->Val();
         auto* type = val->Type();
 
-        // AMD mesa front end optimizer bug for unary negation and abs.
-        // Fixed in 25.3 - See crbug.com/448294721
+        // AMD Mesa front end optimizer bug for unary f32 (and indirectly f16) negation and abs.
+        // Fixed in 25.3 - See crbug.com/448294721 and crbug.com/500099471
         // Note we use bitcast as a hammer to avoid the optimizer seeing through other possible
         // workarounds.
         b.InsertBefore(unary, [&] {
@@ -92,8 +146,8 @@ struct State {
         auto* val = builtin->Args()[0];
         auto* type = val->Type();
 
-        // AMD mesa front end optimizer bug for unary negation and abs.
-        // Fixed in 25.3 - See crbug.com/448294721
+        // AMD Mesa front end optimizer bug for unary f32 (and indirectly f16) negation and abs.
+        // Fixed in 25.3 - See crbug.com/500099471
         // Note we use bitcast as a hammer to avoid the optimizer seeing through other possible
         // workarounds.
         b.InsertBefore(builtin, [&] {
@@ -110,7 +164,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> UnaryPolyfill(core::ir::Module& module, const UnaryPolyfillConfig& config) {
-    AssertValid(module, kPolyfillUnaryCapabilities, "before spirv.UnaryPolyfill");
+    AssertValid(module, "before spirv.UnaryPolyfill");
 
     State{module, config}.Process();
 

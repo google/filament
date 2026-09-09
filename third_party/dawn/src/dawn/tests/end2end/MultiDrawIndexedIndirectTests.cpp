@@ -27,10 +27,11 @@
 
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderBundleEncoderDescriptor.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderBundleEncoderDescriptor.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -186,7 +187,7 @@ TEST_P(MultiDrawIndexedIndirectTest, BaseVertex) {
 
     const int negFour = -4;
     uint32_t unsignedNegFour;
-    std::memcpy(&unsignedNegFour, &negFour, sizeof(int));
+    DAWN_UNSAFE_TODO(std::memcpy(&unsignedNegFour, &negFour, sizeof(int)));
 
     // Test negative baseVertex
     // Test a draw with only the first 3 indices of the first quad (bottom left triangle)
@@ -590,12 +591,6 @@ class MultiDrawIndexedIndirectUsingInstanceIndexTest
             @fragment fn main() -> @location(0) vec4f {
                 return vec4f(0.0, 1.0, 0.0, 1.0);
             })");
-    }
-
-    void SetUp() override {
-        DawnTest::SetUp();
-        DAWN_TEST_UNSUPPORTED_IF(!device.HasFeature(wgpu::FeatureName::MultiDrawIndirect));
-        GeneralSetup();
     }
 };
 

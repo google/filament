@@ -1,0 +1,153 @@
+Name
+
+    AMD_blend_minmax_factor
+
+
+Name Strings
+
+    GL_AMD_blend_minmax_factor
+
+
+Contributors
+
+    Graham Sellers
+    Pierre Boudier
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+
+Status
+
+    Shipping.
+
+
+Version
+
+    Last Modified Date:         April 8, 2011
+    Author Revision:            3
+
+
+Number
+
+    404
+
+Dependencies
+
+    The extension is written against the OpenGL 4.1 (Core) Specification.
+
+    OpenGL 1.0 is required.
+
+Overview
+
+    The EXT_blend_minmax extension extended the GL's blending functionality
+    to allow the blending equation to be specified by the application. That
+    extension introduced the MIN_EXT and MAX_EXT blend equations, which caused the
+    result of the blend equation to become the minimum or maximum of the source
+    color and destination color, respectively.
+
+    The MIN_EXT and MAX_EXT blend equations, however, do not include the source
+    or destination blend factors in the arguments to the min and max functions.
+    This extension provides two new blend equations that produce the minimum
+    or maximum of the products of the source color and source factor, and the
+    destination color and destination factor.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <mode> parameter of BlendEquation and BlendEquationi, and by
+    the <modeRGB> and <modeAlpha> parameters of BlendEquationSeparate and
+    BlendEquationSeparatei:
+
+        FACTOR_MIN_AMD                              0x901C
+        FACTOR_MAX_AMD                              0x901D
+
+Additions to Chapter 2 of the OpenGL 4.1 (Core) Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.1 (Core) Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.1 (Core) Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify the list of accepted tokens for <mode>, <modeRGB> and <modeAlpha>
+    in the description of BlendEquation{i} and BlendEquationSeparate{i}, p.262:
+
+    "... <mode>, <modeRGB>, <modeAlpha> must be one of FUNC_ADD, FUNC_SUBTRACT,
+    FUNC_REVERSE_SUBTRACT, MIN, MAX, FACTOR_MIN_AMD, or FACTOR_MAX_AMD. ..."
+
+    Add to Table 4.1: RGB and Alpha Blend Equations
+
+    +-----------------+---------------------------+-----------------------------+
+    | Mode            | RGB Components            | Alpha Component             |
+    +-----------------+---------------------------+-----------------------------+
+    | FACTOR_MIN_AMD  | R = min(Rs * Sr, Rd * Dr) | A = min(As * Sa, Ad * Da)   |
+    |                 | G = min(Gs * Sg, Gd * Dg) |                             |
+    |                 | B = min(Bs * Sb, Bd * Db) |                             |
+    +-----------------+---------------------------+-----------------------------+
+    | FACTOR_MAX_AMD  | R = max(Rs * Sr, Rd * Dr) | A = max(As * Sa, Ad * Da)   |
+    |                 | G = max(Gs * Sg, Gd * Dg) |                             |
+    |                 | B = max(Bs * Sb, Bd * Db) |                             |
+    +-----------------+---------------------------+-----------------------------+
+
+Additions to Chapter 5 of the OpenGL 4.1 (Core) Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.1 (Core) Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 4.1 (Core) Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    Modify Table 6.21: Pixel Operations (cont.) p.343
+
+    Change entries for BLEND_EQUATION_ALPHA and BLEND_EQUATION_RGB to:
+
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+    | Get Value            | Type    | Get Command   | Initial Value | Description             | Sec.  |
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+    | BLEND_EQUATION_RGB   | 8* x Z7 | GetIntegeri_v | FUNC_ADD      | RGB Blending Equation   | 4.1.7 |
+    |                      |         |               |               | for Draw Buffer i       |       |
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+    | BLEND_EQUATION_ALPHA | 8* x Z7 | GetIntegeri_v | FUNC_ADD      | Alpha Blending Equation | 4.1.7 |
+    |                      |         |               |               | for Draw Buffer i       |       |
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+
+    * Note that the only change change is that BLEND_EQUATION_RGB and
+      BLEND_EQUATION_ALPHA are now Z7 rather than Z5.
+
+Issues
+
+    None, so far.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     3    04/08/2011  gsellers  Fix typo bug in Table 4.1 (caught by Brian Paul)
+     2    09/15/2010  gsellers  Update to stand against OpenGL 4.1
+                                Add token values.
+                                Rename to AMD_blend_minmax_factor.
+     1    03/16/2010  gsellers  Initial draft.

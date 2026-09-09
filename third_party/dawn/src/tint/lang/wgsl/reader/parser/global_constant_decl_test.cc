@@ -74,6 +74,18 @@ TEST_F(WGSLParserTest, GlobalConstDecl) {
     EXPECT_TRUE(c->initializer->Is<ast::LiteralExpression>());
 }
 
+TEST_F(WGSLParserTest, GlobalConstDecl_AttributesNotAllowed) {
+    auto p = parser("@id(1) const a : f32 = 1.");
+    auto attrs = p->attribute_list();
+    EXPECT_FALSE(attrs.errored);
+    EXPECT_TRUE(attrs.matched);
+    auto e = p->global_constant_decl(attrs.value);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_EQ(p->error(), "1:8: 'const' declaration does not accept attributes");
+}
+
 TEST_F(WGSLParserTest, GlobalConstDecl_Inferred) {
     auto p = parser("const a = 1.");
     auto attrs = p->attribute_list();

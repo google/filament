@@ -87,6 +87,7 @@ class CaseStatement final : public Castable<CaseStatement, CompoundStatement> {
     ~CaseStatement() override;
 
     /// @return the AST node for this statement
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::CaseStatement* Declaration() const;
 
     /// @param body the case body block statement

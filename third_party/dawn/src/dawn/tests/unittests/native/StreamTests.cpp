@@ -38,16 +38,17 @@
 #include <variant>
 #include <vector>
 
-#include "dawn/common/TypedInteger.h"
-#include "dawn/native/Blob.h"
-#include "dawn/native/Serializable.h"
-#include "dawn/native/ShaderModule.h"
-#include "dawn/native/TintUtils.h"
-#include "dawn/native/stream/BlobSource.h"
-#include "dawn/native/stream/ByteVectorSink.h"
-#include "dawn/native/stream/Stream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/Blob.h"
+#include "src/dawn/native/Serializable.h"
+#include "src/dawn/native/ShaderModule.h"
+#include "src/dawn/native/TintUtils.h"
+#include "src/dawn/native/stream/BlobSource.h"
+#include "src/dawn/native/stream/ByteVectorSink.h"
+#include "src/dawn/native/stream/Stream.h"
+#include "src/utils/compiler.h"
+#include "src/utils/typed_integer.h"
 #include "tint/tint.h"
 
 namespace dawn::native::stream {
@@ -80,15 +81,14 @@ void Stream<Nested>::Write(Sink* s, const Nested& t) {
 // Custom printer for ByteVectorSink for clearer debug testing messages.
 void PrintTo(const ByteVectorSink& key, std::ostream* stream) {
     *stream << std::hex;
-    for (const int b : key) {
-        *stream << std::setfill('0') << std::setw(2) << b << " ";
+    for (const std::byte b : key) {
+        *stream << std::setfill('0') << std::setw(2) << static_cast<int>(b) << " ";
     }
     *stream << std::dec;
 }
 
 namespace {
 
-using ::testing::InSequence;
 using ::testing::NotNull;
 using ::testing::PrintToString;
 using ::testing::Ref;
@@ -97,7 +97,8 @@ using TypedIntegerForTest = TypedInteger<struct TypedIntegerForTestTag, uint32_t
 
 // Matcher to compare ByteVectorSinks for easier testing.
 MATCHER_P(VectorEq, key, PrintToString(key)) {
-    return arg.size() == key.size() && memcmp(arg.data(), key.data(), key.size()) == 0;
+    return arg.size() == key.size() &&
+           DAWN_UNSAFE_TODO(memcmp(arg.data(), key.data(), key.size())) == 0;
 }
 
 #define EXPECT_CACHE_KEY_EQ(lhs, rhs)       \
@@ -151,18 +152,19 @@ TEST(SerializeTests, StreamInNested) {
 TEST(SerializeTests, IntegralTypes) {
     // Only testing explicitly sized types for simplicity, and using 0s for larger types to
     // avoid dealing with endianess.
-    EXPECT_CACHE_KEY_EQ('c', ByteVectorSink({'c'}));
-    EXPECT_CACHE_KEY_EQ(uint8_t(255), ByteVectorSink({255}));
-    EXPECT_CACHE_KEY_EQ(uint16_t(0), ByteVectorSink({0, 0}));
-    EXPECT_CACHE_KEY_EQ(uint32_t(0), ByteVectorSink({0, 0, 0, 0}));
+    EXPECT_CACHE_KEY_EQ('c', ByteVectorSink({std::byte('c')}));
+    EXPECT_CACHE_KEY_EQ(uint8_t{255}, ByteVectorSink({std::byte(255)}));
+    EXPECT_CACHE_KEY_EQ(uint16_t{0}, ByteVectorSink({std::byte(0), std::byte(0)}));
+    EXPECT_CACHE_KEY_EQ(uint32_t{0},
+                        ByteVectorSink({std::byte(0), std::byte(0), std::byte(0), std::byte(0)}));
 }
 
 // Test that ByteVectorSink serializes floating-point data as expected.
 TEST(SerializeTests, FloatingTypes) {
     // Using 0s to avoid dealing with implementation specific float details.
     ByteVectorSink k1, k2;
-    EXPECT_CACHE_KEY_EQ(float{0}, ByteVectorSink(sizeof(float), 0));
-    EXPECT_CACHE_KEY_EQ(double{0}, ByteVectorSink(sizeof(double), 0));
+    EXPECT_CACHE_KEY_EQ(float{0}, ByteVectorSink(sizeof(float), std::byte(0)));
+    EXPECT_CACHE_KEY_EQ(double{0}, ByteVectorSink(sizeof(double), std::byte(0)));
 }
 
 // Test that ByteVectorSink serializes literal strings as expected.
@@ -171,8 +173,9 @@ TEST(SerializeTests, LiteralStrings) {
     std::string str = "string";
 
     ByteVectorSink expected;
-    expected.insert(expected.end(), str.begin(), str.end());
-    expected.push_back('\0');
+    auto strBytes = std::as_bytes(std::span(str));
+    expected.insert(expected.end(), strBytes.begin(), strBytes.end());
+    expected.push_back(std::byte('\0'));
 
     EXPECT_CACHE_KEY_EQ("string", expected);
 }
@@ -182,8 +185,9 @@ TEST(SerializeTests, StdStrings) {
     std::string str = "string";
 
     ByteVectorSink expected;
-    StreamIn(&expected, size_t(6));
-    expected.insert(expected.end(), str.begin(), str.end());
+    StreamIn(&expected, size_t{6});
+    auto strBytes = std::as_bytes(std::span(str));
+    expected.insert(expected.end(), strBytes.begin(), strBytes.end());
 
     EXPECT_CACHE_KEY_EQ(str, expected);
 }
@@ -197,7 +201,7 @@ TEST(SerializeTests, StdWStrings) {
 
     StreamIn(&expected, size_t(str.length()));
     size_t bytes = str.length() * sizeof(wchar_t);
-    memcpy(expected.GetSpace(bytes), str.data(), bytes);
+    DAWN_UNSAFE_TODO(memcpy(expected.GetSpace(bytes).data(), str.data(), bytes));
 
     EXPECT_CACHE_KEY_EQ(str, expected);
 }
@@ -207,8 +211,9 @@ TEST(SerializeTests, StdStringViews) {
     static constexpr std::string_view str("string");
 
     ByteVectorSink expected;
-    StreamIn(&expected, size_t(6));
-    expected.insert(expected.end(), str.begin(), str.end());
+    StreamIn(&expected, size_t{6});
+    auto strBytes = std::as_bytes(std::span(str));
+    expected.insert(expected.end(), strBytes.begin(), strBytes.end());
 
     EXPECT_CACHE_KEY_EQ(str, expected);
 }
@@ -220,7 +225,7 @@ TEST(SerializeTests, StdWStringViews) {
     ByteVectorSink expected;
     StreamIn(&expected, size_t(str.length()));
     size_t bytes = str.length() * sizeof(wchar_t);
-    memcpy(expected.GetSpace(bytes), str.data(), bytes);
+    DAWN_UNSAFE_TODO(memcpy(expected.GetSpace(bytes).data(), str.data(), bytes));
 
     EXPECT_CACHE_KEY_EQ(str, expected);
 }
@@ -232,14 +237,15 @@ TEST(SerializeTests, Blob) {
 
     ByteVectorSink expected;
     StreamIn(&expected, sizeof(data));
-    expected.insert(expected.end(), data, data + sizeof(data));
+    auto dataBytes = std::as_bytes(std::span(data));
+    expected.insert(expected.end(), dataBytes.begin(), dataBytes.end());
 
     EXPECT_CACHE_KEY_EQ(blob, expected);
 }
 
 // Test that ByteVectorSink serializes other ByteVectorSinks as expected.
 TEST(SerializeTests, ByteVectorSinks) {
-    ByteVectorSink data = {'d', 'a', 't', 'a'};
+    ByteVectorSink data = {std::byte('d'), std::byte('a'), std::byte('t'), std::byte('a')};
 
     ByteVectorSink expected;
     expected.insert(expected.end(), data.begin(), data.end());
@@ -253,7 +259,7 @@ TEST(SerializeTests, SerializeDeserializeVectorSizeOutOfBounds) {
     ByteVectorSink sink;
     StreamIn(&sink, value);
 
-    BlobSource source(CreateBlob(std::move(sink)));
+    BlobSource source(Blob::Create(std::move(sink)));
     std::vector<uint8_t> deserialized;
     auto err = StreamOut(&source, &deserialized);
     EXPECT_TRUE(err.IsError());
@@ -266,7 +272,7 @@ TEST(SerializeTests, SerializeDeserializeNoElementsInVector) {
     ByteVectorSink sink;
     StreamIn(&sink, value);
 
-    BlobSource source(CreateBlob(std::move(sink)));
+    BlobSource source(Blob::Create(std::move(sink)));
     std::vector<uint8_t> deserialized;
     auto err = StreamOut(&source, &deserialized);
     EXPECT_TRUE(err.IsError());
@@ -278,9 +284,9 @@ TEST(SerializeTests, StdPair) {
     std::string_view s = "hi!";
 
     ByteVectorSink expected;
-    StreamIn(&expected, s, uint32_t(42));
+    StreamIn(&expected, s, uint32_t{42});
 
-    EXPECT_CACHE_KEY_EQ(std::make_pair(s, uint32_t(42)), expected);
+    EXPECT_CACHE_KEY_EQ(std::make_pair(s, uint32_t{42}), expected);
 }
 
 // Test that ByteVectorSink serializes std::optional as expected.
@@ -309,14 +315,14 @@ TEST(SerializeTests, StdVariant) {
         // Type id of std::string_view is 0 in VariantType
         VariantType v1 = stringViewInput;
         ByteVectorSink expected;
-        StreamIn(&expected, /* Type id */ size_t(0), stringViewInput);
+        StreamIn(&expected, /* Type id */ size_t{0}, stringViewInput);
         EXPECT_CACHE_KEY_EQ(v1, expected);
     }
     {
         // Type id of uint32_t is 1 in VariantType
         VariantType v2 = u32Input;
         ByteVectorSink expected;
-        StreamIn(&expected, /* Type id */ size_t(1), u32Input);
+        StreamIn(&expected, /* Type id */ size_t{1}, u32Input);
         EXPECT_CACHE_KEY_EQ(v2, expected);
     }
 }
@@ -365,9 +371,9 @@ TEST(SerializeTests, StdUnorderedMap) {
 
     // Expect the number of entries, followed by (K, V) pairs sorted in order of key.
     ByteVectorSink expected;
-    StreamIn(&expected, size_t(4), std::make_pair(uint32_t(1), m[1]),
-             std::make_pair(uint32_t(3), m[3]), std::make_pair(uint32_t(4), m[4]),
-             std::make_pair(uint32_t(7), m[7]));
+    StreamIn(&expected, size_t{4}, std::make_pair(uint32_t{1}, m[1]),
+             std::make_pair(uint32_t{3}, m[3]), std::make_pair(uint32_t{4}, m[4]),
+             std::make_pair(uint32_t{7}, m[7]));
 
     EXPECT_CACHE_KEY_EQ(m, expected);
 }
@@ -378,7 +384,7 @@ TEST(SerializeTests, StdUnorderedSet) {
 
     // Expect the number of entries, followed by values sorted in order of key.
     ByteVectorSink expected;
-    StreamIn(&expected, size_t(4), 1, 4, 6, 99);
+    StreamIn(&expected, size_t{4}, 1, 4, 6, 99);
 
     EXPECT_CACHE_KEY_EQ(input, expected);
 }
@@ -386,13 +392,13 @@ TEST(SerializeTests, StdUnorderedSet) {
 // Test that ByteVectorSink serializes ityp::array as expected.
 TEST(SerializeTests, ItypArray) {
     const ityp::array<TypedIntegerForTest, TypedIntegerForTest, 4> input = {
-        TypedIntegerForTest(99), TypedIntegerForTest(4), TypedIntegerForTest(6),
-        TypedIntegerForTest(1)};
+        TypedIntegerForTest(99u), TypedIntegerForTest(4u), TypedIntegerForTest(6u),
+        TypedIntegerForTest(1u)};
 
     // Expect all values.
     ByteVectorSink expected;
-    StreamIn(&expected, TypedIntegerForTest(99), TypedIntegerForTest(4), TypedIntegerForTest(6),
-             TypedIntegerForTest(1));
+    StreamIn(&expected, TypedIntegerForTest(99u), TypedIntegerForTest(4u), TypedIntegerForTest(6u),
+             TypedIntegerForTest(1u));
 
     EXPECT_CACHE_KEY_EQ(input, expected);
 }
@@ -408,9 +414,9 @@ TEST(SerializeTests, AbslFlatHashMap) {
 
     // Expect the number of entries, followed by (K, V) pairs sorted in order of key.
     ByteVectorSink expected;
-    StreamIn(&expected, size_t(4), std::make_pair(uint32_t(1), m[1]),
-             std::make_pair(uint32_t(3), m[3]), std::make_pair(uint32_t(4), m[4]),
-             std::make_pair(uint32_t(7), m[7]));
+    StreamIn(&expected, size_t{4}, std::make_pair(uint32_t{1}, m[1]),
+             std::make_pair(uint32_t{3}, m[3]), std::make_pair(uint32_t{4}, m[4]),
+             std::make_pair(uint32_t{7}, m[7]));
 
     EXPECT_CACHE_KEY_EQ(m, expected);
 }
@@ -421,7 +427,7 @@ TEST(SerializeTests, AbslFlatHashSet) {
 
     // Expect the number of entries, followed by values sorted in order of key.
     ByteVectorSink expected;
-    StreamIn(&expected, size_t(4), 1, 4, 6, 99);
+    StreamIn(&expected, size_t{4}, 1, 4, 6, 99);
 
     EXPECT_CACHE_KEY_EQ(input, expected);
 }
@@ -431,7 +437,7 @@ TEST(SerializeTests, TintSemBindingPoint) {
     tint::BindingPoint bp{3, 6};
 
     ByteVectorSink expected;
-    StreamIn(&expected, uint32_t(3), uint32_t(6));
+    StreamIn(&expected, uint32_t{3}, uint32_t{6});
 
     EXPECT_CACHE_KEY_EQ(bp, expected);
 }
@@ -442,7 +448,7 @@ TEST(SerializeTests, UnsafeUnserializedValue) {
 
     ByteVectorSink expected;
     // The second UnsafeUnserializedValue<uint32_t> is not serialized.
-    StreamIn(&expected, uint32_t(123));
+    StreamIn(&expected, uint32_t{123});
 
     EXPECT_CACHE_KEY_EQ(input, expected);
 }
@@ -456,7 +462,7 @@ TEST(StreamTests, SerializeDeserializeParamPack) {
     ByteVectorSink sink;
     StreamIn(&sink, a, b, c);
 
-    BlobSource source(CreateBlob(std::move(sink)));
+    BlobSource source(Blob::Create(std::move(sink)));
     int aOut;
     float bOut;
     std::pair<std::string, double> cOut;
@@ -504,7 +510,7 @@ TEST(StreamTests, SerializeDeserializeVisitable) {
 
     // Test that deserialization works for StructMembers, passed inline.
     {
-        BlobSource src(CreateBlob(sink));
+        BlobSource src(Blob::Create(sink));
         Foo out;
         auto err = StreamOut(&src, &out);
         EXPECT_FALSE(err.IsError());
@@ -525,27 +531,27 @@ TEST(StreamTests, SerializeDeserializeBlobs) {
         ByteVectorSink sink;
         StreamIn(&sink, blob);
 
-        BlobSource src(CreateBlob(sink));
+        BlobSource src(Blob::Create(sink));
         Blob out;
         auto err = StreamOut(&src, &out);
         EXPECT_FALSE(err.IsError());
         EXPECT_EQ(blob.Size(), out.Size());
-        EXPECT_EQ(memcmp(blob.Data(), out.Data(), blob.Size()), 0);
+        DAWN_UNSAFE_TODO(EXPECT_EQ(memcmp(blob.DataPtr(), out.DataPtr(), blob.Size()), 0));
     }
 
     // Test a blob with some data
     {
-        Blob blob = CreateBlob(std::vector<double>{6.24, 3.12222});
+        Blob blob = Blob::Create(std::vector<double>{6.24, 3.12222});
 
         ByteVectorSink sink;
         StreamIn(&sink, blob);
 
-        BlobSource src(CreateBlob(sink));
+        BlobSource src(Blob::Create(sink));
         Blob out;
         auto err = StreamOut(&src, &out);
         EXPECT_FALSE(err.IsError());
         EXPECT_EQ(blob.Size(), out.Size());
-        EXPECT_EQ(memcmp(blob.Data(), out.Data(), blob.Size()), 0);
+        DAWN_UNSAFE_TODO(EXPECT_EQ(memcmp(blob.DataPtr(), out.DataPtr(), blob.Size()), 0));
     }
 }
 
@@ -559,7 +565,7 @@ TEST(StreamTests, SerializeDeserializeUniquePtr) {
         ByteVectorSink sink;
         StreamIn(&sink, in);
 
-        BlobSource src(CreateBlob(sink));
+        BlobSource src(Blob::Create(sink));
         // Initialize the unique_ptr to a non-null value to check if it gets set to nullptr.
         std::unique_ptr<int> out = std::make_unique<int>(123);
         auto err = StreamOut(&src, &out);
@@ -574,7 +580,7 @@ TEST(StreamTests, SerializeDeserializeUniquePtr) {
         ByteVectorSink sink;
         StreamIn(&sink, in);
 
-        BlobSource src(CreateBlob(sink));
+        BlobSource src(Blob::Create(sink));
         // Initialize the unique_ptr to a nullptr. When deserializing, it should be pointed to a new
         // allocated memory holding the expected data.
         std::unique_ptr<int> out = nullptr;
@@ -596,7 +602,7 @@ TEST(StreamTests, SerializeDeserializeItypArray) {
     ByteVectorSink sink;
     StreamIn(&sink, in);
 
-    BlobSource src(CreateBlob(sink));
+    BlobSource src(Blob::Create(sink));
     // Initialize the unique_ptr to a nullptr. When deserializing, it should be pointed to a new
     // allocated memory holding the expected data.
     Array out;
@@ -622,7 +628,7 @@ TEST(StreamTests, UnsafeUnserializedValue) {
     ByteVectorSink sink;
     StreamIn(&sink, in);
 
-    BlobSource src(CreateBlob(sink));
+    BlobSource src(Blob::Create(sink));
     // Initialize the UnsafeUnserializedValue to a value different from default constructed. When
     // deserializing, it should be assigned to default constructed value.
     Type out = Type(ValueType(init2));
@@ -651,7 +657,7 @@ static auto kStreamValueVectorParams = std::make_tuple(
     // Test pairs.
     std::vector<std::pair<int, float>>{{1, 3.}, {6, 4.}},
     // Test TypedIntegers
-    std::vector<TypedIntegerForTest>{TypedIntegerForTest(42), TypedIntegerForTest(13)},
+    std::vector<TypedIntegerForTest>{TypedIntegerForTest(42u), TypedIntegerForTest(13u)},
     // Test enums
     std::vector<wgpu::TextureUsage>{wgpu::TextureUsage::CopyDst,
                                     wgpu::TextureUsage::RenderAttachment},
@@ -721,7 +727,9 @@ class StreamParameterizedTests<T[N]> : public ::testing::Test {
         return std::get<std::initializer_list<T[N]>>(kStreamValueInitListParams);
     }
 
-    void ExpectEq(const T lhs[N], const T rhs[N]) { EXPECT_EQ(memcmp(lhs, rhs, sizeof(T[N])), 0); }
+    void ExpectEq(const T lhs[N], const T rhs[N]) {
+        DAWN_UNSAFE_TODO(EXPECT_EQ(memcmp(lhs, rhs, sizeof(T[N])), 0));
+    }
 };
 
 TYPED_TEST_SUITE_P(StreamParameterizedTests);
@@ -732,7 +740,7 @@ TYPED_TEST_P(StreamParameterizedTests, SerializeDeserialize) {
         ByteVectorSink sink;
         StreamIn(&sink, value);
 
-        BlobSource source(CreateBlob(std::move(sink)));
+        BlobSource source(Blob::Create(std::move(sink)));
         TypeParam deserialized;
         auto err = StreamOut(&source, &deserialized);
         if (err.IsError()) {
@@ -749,10 +757,10 @@ TYPED_TEST_P(StreamParameterizedTests, SerializeDeserializeOutOfBounds) {
         StreamIn(&sink, value);
 
         // Make the vector 1 byte too small.
-        std::vector<uint8_t> src = sink;
+        std::vector<std::byte> src = std::move(sink);
         src.pop_back();
 
-        BlobSource source(CreateBlob(std::move(src)));
+        BlobSource source(Blob::Create(std::move(src)));
         TypeParam deserialized;
         auto err = StreamOut(&source, &deserialized);
         EXPECT_TRUE(err.IsError());
@@ -762,7 +770,7 @@ TYPED_TEST_P(StreamParameterizedTests, SerializeDeserializeOutOfBounds) {
 
 // Test that deserializing from an empty source raises an error.
 TYPED_TEST_P(StreamParameterizedTests, DeserializeEmpty) {
-    BlobSource source(CreateBlob(0));
+    BlobSource source(Blob::Create(0));
     TypeParam deserialized;
     auto err = StreamOut(&source, &deserialized);
     EXPECT_TRUE(err.IsError());

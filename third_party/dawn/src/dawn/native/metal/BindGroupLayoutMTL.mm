@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/metal/BindGroupLayoutMTL.h"
+#include "src/dawn/native/metal/BindGroupLayoutMTL.h"
 
 #include <vector>
 
-#include "dawn/common/MatchVariant.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/metal/BindGroupMTL.h"
-#include "dawn/native/metal/DeviceMTL.h"
-#include "dawn/native/metal/UtilsMetal.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/metal/BindGroupMTL.h"
+#include "src/dawn/native/metal/DeviceMTL.h"
+#include "src/dawn/native/metal/UtilsMetal.h"
 
 namespace dawn::native::metal {
 
@@ -52,40 +52,41 @@ BindGroupLayout::BindGroupLayout(DeviceBase* device,
         return;
     }
 
-    std::vector<MTLArgumentDescriptor*> descriptors;
-    for (BindingIndex bindingIndex{0}; bindingIndex < GetBindingCount(); ++bindingIndex) {
-        auto& bindingInfo = GetBindingInfo(bindingIndex);
+    // Pool to free MTLArgumentDescriptor and NSArray.
+    @autoreleasepool {
+        std::vector<MTLArgumentDescriptor*> descriptors;
+        for (BindingIndex bindingIndex{0u}; bindingIndex < GetBindingCount(); ++bindingIndex) {
+            auto& bindingInfo = GetBindingInfo(bindingIndex);
 
-        MTLArgumentDescriptor* desc = [MTLArgumentDescriptor argumentDescriptor];
-        desc.index = ToMTLArgumentBufferIndex(bindingIndex);
+            MTLArgumentDescriptor* desc = [MTLArgumentDescriptor argumentDescriptor];
+            desc.index = ToMTLArgumentBufferIndex(bindingIndex);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
-        desc.access = MTLArgumentAccessReadOnly;
+            desc.access = MTLArgumentAccessReadOnly;
 #pragma clang diagnostic pop
 
-        // TODO(crbug.com/363031535): Handle more then uniform/storage.  (e.g. samplers, textures,
-        // etc.)
-        MatchVariant(
-            bindingInfo.bindingLayout,
-            [&](const BufferBindingInfo& layout) { desc.dataType = MTLDataTypePointer; },
-            [&](const SamplerBindingInfo&) { desc.dataType = MTLDataTypeSampler; },
-            [&](const StaticSamplerBindingInfo&) {
-                // Static samplers are handled in the frontend.
-                // TODO(crbug.com/dawn/2482): Implement static samplers in the
-                // Metal backend.
-                DAWN_CHECK(false);
-            },
-            [&](const TextureBindingInfo&) { desc.dataType = MTLDataTypeTexture; },
-            [&](const StorageTextureBindingInfo&) { desc.dataType = MTLDataTypeTexture; },
-            [&](const TexelBufferBindingInfo&) { DAWN_CHECK(false); },
-            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); },
-            [](const ExternalTextureBindingInfo&) { DAWN_CHECK(false); });
+            // TODO(crbug.com/363031535): Handle more then uniform/storage.  (e.g. samplers,
+            // textures, etc.)
+            MatchVariant(
+                bindingInfo.bindingLayout,
+                [&](const BufferBindingInfo& layout) { desc.dataType = MTLDataTypePointer; },
+                [&](const SamplerBindingInfo&) { desc.dataType = MTLDataTypeSampler; },
+                [&](const StaticSamplerBindingInfo&) {
+                    // Static samplers are handled in the frontend.
+                    // TODO(crbug.com/dawn/2482): Implement static samplers in the
+                    // Metal backend.
+                    DAWN_UNREACHABLE();
+                },
+                [&](const TextureBindingInfo&) { desc.dataType = MTLDataTypeTexture; },
+                [&](const StorageTextureBindingInfo&) { desc.dataType = MTLDataTypeTexture; },
+                [&](const TexelBufferBindingInfo&) { DAWN_UNREACHABLE(); },
+                [](const InputAttachmentBindingInfo&) { DAWN_UNREACHABLE(); },
+                [](const ExternalTextureBindingInfo&) { DAWN_UNREACHABLE(); });
 
-        descriptors.push_back(desc);
-    }
+            descriptors.push_back(desc);
+        }
 
-    if (!descriptors.empty()) {
-        @autoreleasepool {
+        if (!descriptors.empty()) {
             NSArray* ary = [NSArray arrayWithObjects:descriptors.data() count:descriptors.size()];
             mArgumentEncoder = AcquireNSPRef(
                 [ToBackend(device)->GetMTLDevice() newArgumentEncoderWithArguments:ary]);
