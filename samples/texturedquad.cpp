@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/resources.h"
 
@@ -39,6 +38,7 @@
 #include <utils/getopt.h>
 #include <utils/Path.h>
 
+#include <samples/SampleConfig.h>
 #include <stb_image.h>
 
 #include <iostream> // for cerr

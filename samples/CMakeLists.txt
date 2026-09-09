@@ -226,11 +226,12 @@ target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 add_library(samples-common STATIC
     common/arguments.cpp
     common/arguments.h
-    common/Parameter.h
-    common/SampleConfig.h
+    include/samples/Parameter.h
+    include/samples/SampleConfig.h
 )
 
-target_include_directories(samples-common PRIVATE
+target_include_directories(samples-common PUBLIC
+    include
 )
 target_link_libraries(samples-common filament filamentapp)
 
@@ -335,6 +336,55 @@ if (NOT ANDROID)
     # Install resources
     install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/fonts DESTINATION bin/assets)
     install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/ibl/ DESTINATION bin/assets/ibl)
+else()
+    # ==============================================================================================
+    # Android libfilament-samples.a
+    # ==============================================================================================
+
+    # Extract samples from FILAMENT_SAMPLES_LIST macro in SampleDispatcher.cpp (single source of truth)
+    # Ensure CMake reconfigures if SampleDispatcher.cpp is modified (e.g. samples added or removed).
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/SampleDispatcher.cpp")
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/SampleDispatcher.cpp _sample_dispatcher_src)
+    string(REGEX MATCH "FILAMENT_SAMPLES_LIST\\\(V\\\)([^#]+)" _macro_content "${_sample_dispatcher_src}")
+    string(REGEX REPLACE "//[^\n\r]*" "" _macro_content "${_macro_content}")
+    string(REGEX MATCHALL "V\\\([a-zA-Z0-9_]+\\\)" _v_matches "${_macro_content}")
+    set(ANDROID_SAMPLES "")
+    foreach(_match ${_v_matches})
+        string(REGEX REPLACE "V\\\(([a-zA-Z0-9_]+)\\\)" "\\1" _sample_name "${_match}")
+        list(APPEND ANDROID_SAMPLES ${_sample_name})
+    endforeach()
+
+    if (NOT ANDROID_SAMPLES)
+        message(FATAL_ERROR "No samples parsed from FILAMENT_SAMPLES_LIST in SampleDispatcher.cpp")
+    endif()
+
+    add_library(filament-samples STATIC
+        SampleDispatcher.cpp
+        include/samples/SampleDispatcher.h
+    )
+    target_include_directories(filament-samples PUBLIC include)
+    target_link_libraries(filament-samples PRIVATE sample-resources samples-common filamentapp)
+
+    foreach(SAMPLE ${ANDROID_SAMPLES})
+        add_library(obj_${SAMPLE} OBJECT ${SAMPLE}.cpp)
+        target_compile_definitions(obj_${SAMPLE} PRIVATE
+            createSampleApp=create_${SAMPLE}_App
+            createAppParameters=create_${SAMPLE}_AppParameters)
+        target_include_directories(obj_${SAMPLE} PRIVATE ${GENERATION_ROOT} ${FILAMENT}/filament/include ${FILAMENT}/libs/math/include ${FILAMENT}/libs/filameshio/include ${FILAMENT}/libs/ktxreader/include)
+        target_compile_options(obj_${SAMPLE} PRIVATE ${COMPILER_FLAGS})
+        target_link_libraries(obj_${SAMPLE} PRIVATE sample-resources suzanne-resources samples-common filamentapp filament)
+
+        target_sources(filament-samples PRIVATE $<TARGET_OBJECTS:obj_${SAMPLE}>)
+    endforeach()
+
+    target_link_libraries(filament-samples PRIVATE filameshio suzanne-resources ktxreader)
+    target_link_libraries(filament-samples PRIVATE android log)
+
+    install(TARGETS filament-samples ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS sample-resources ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS suzanne-resources ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS samples-common ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(DIRECTORY include/samples DESTINATION include)
 endif()
 
 # ==================================================================================================

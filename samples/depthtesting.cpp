@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/resources.h"
 
@@ -37,6 +36,7 @@
 #include <utils/EntityManager.h>
 
 #include <imgui.h>
+#include <samples/SampleConfig.h>
 
 #include <cmath>
 
