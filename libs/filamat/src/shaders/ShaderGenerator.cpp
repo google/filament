@@ -53,9 +53,6 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
         !filament::Variant::isShadowSampler2DVariant(variant) :
         !filament::Variant::isDepthMomentsVariant(variant));
 
-    if (litVariants && variant.hasDirectionalLighting()) {
-        CodeGenerator::generateDefine(out, "VARIANT_HAS_DIRECTIONAL_LIGHTING");
-    }
     if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
         CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING");
     }

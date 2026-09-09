@@ -582,6 +582,11 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
     specializationConstants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
             +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS] = false;
 
+    specializationConstants
+            [CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                    +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
+                    isVariantLit;
+
     // Initialize the rest of the reserved constants with a dummy value.
     for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
             i++) {
@@ -859,6 +864,9 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
         constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
                   +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS] =
                 specialization.specKey.hasExtraDirectionalLights();
+        constants[CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                  +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING] =
+                specialization.specKey.hasDirectionalLighting();
     }
     program.specializationConstants(std::move(constants));
 
