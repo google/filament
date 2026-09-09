@@ -204,10 +204,10 @@ public:
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
 
-    // ultimately decides to use the DIR variant
+    // ultimately decides the directional-lighting specialization constant
     bool hasDirectionalLighting() const noexcept { return mHasDirectionalLighting; }
 
-    // ultimately decides to use the DYN variant
+    // ultimately decides the dynamic-lighting specialization constant
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
     bool hasExtraDirectionalLights() const noexcept { return mHasExtraDirectionalLights; }
 
