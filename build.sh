@@ -277,13 +277,14 @@ function build_tools_for_split_build {
         fi
     fi
 
+    # Host tools such as cmgen use exceptions even when the target runtime does not.
     cmake \
         -G "${BUILD_GENERATOR}" \
         -DFILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR=${PREBUILT_TOOLS_DIR} \
         -DCMAKE_BUILD_TYPE="${build_type_arg}" \
         ${WEBGPU_OPTION} \
         ${architectures} \
-        ${EXCEPTIONS_OPTION} \
+        -DFILAMENT_ENABLE_EXCEPTIONS=ON \
         ${MUTEX_DEBUG_OPTION} \
         ../..
 
