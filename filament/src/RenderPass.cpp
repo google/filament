@@ -887,6 +887,10 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
     s.r = std::min(s.r, maxvali);
     s.t = std::min(s.t, maxvali);
 
+    // If scissor and scissorViewport do not intersect, the result is an empty scissor.
+    s.r = std::max(s.l, s.r);
+    s.t = std::max(s.b, s.t);
+
     assert_invariant(s.r >= s.l && s.t >= s.b);
 
     // convert back to Viewport format
