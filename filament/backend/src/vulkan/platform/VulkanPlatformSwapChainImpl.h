@@ -138,6 +138,7 @@ private:
 
     uint32_t mArbitraryFrameId = 0;
     int64_t mPresentationTime = 0;
+    mutable bool mSurfaceLost = false;
 
 #ifdef __ANDROID__
     AndroidSwapChainHelper mImpl{};

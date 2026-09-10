@@ -19,6 +19,7 @@
 #include "VulkanCommands.h"
 #include "VulkanTexture.h"
 
+#include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
@@ -140,7 +141,7 @@ void VulkanSwapChain::present(DriverBase& driver) {
         VkResult const result =
                 mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing->getVkSemaphore());
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
-                result == VK_ERROR_OUT_OF_DATE_KHR)
+                result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_ERROR_SURFACE_LOST_KHR)
                 << "Cannot present in swapchain. error=" << static_cast<int32_t>(result);
     }
 
@@ -193,14 +194,24 @@ std::pair<bool, bool> VulkanSwapChain::acquire() {
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) {
             // Following recreates the swapchain
 
-            // Calling flush multiptle times is ok, since it's no-op if not recording.
+            // Calling flush multiple times is ok, since it's no-op if not recording.
             if (mFlushAndWaitOnResize) {
                 mCommands->flush();
                 mCommands->wait();
             }
-            mPlatform->recreate(swapChain);
-            update();
-            swapchainRecreated = true;
+            if (UTILS_LIKELY(mPlatform->recreate(swapChain) == VK_SUCCESS)) {
+                update();
+                swapchainRecreated = true;
+            } else {
+                // We failed to create the swapchain. We'll wait for the swapchain to be recreated.
+                // Note that this is different from the resize case.  If we're here then probably
+                // the backing *surface* is in a bad state, and *this* handle needs to be destroyed
+                // and recreated from the client side.
+                //
+                // Break here because we shouldn't attempt to acquire if we don't even have a
+                // swapchain.
+                break;
+            }
         }
         result = mPlatform->acquire(swapChain, &imageSyncData);
     }
