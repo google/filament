@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
+#include <filameshio/filamesh.h>
+#include <filameshio/MeshReader.h>
+
 #include <filament/Engine.h>
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
-
-#include <filameshio/filamesh.h>
-#include <filameshio/MeshReader.h>
 
 #include <math/half.h>
 #include <math/mat3.h>
@@ -272,6 +272,98 @@ TEST_F(FilameshTest, MalformedHeaderPartsOverflow) {
         .vertexCount = vertexCount,
         .vertexSize = sizeof(positions),
         .indexType = IndexType::UI16,
+        .indexCount = 3,
+        .indexSize = sizeof(uint16_t) * 3
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, positions, sizeof(positions));
+    write(stream, indices, sizeof(indices));
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, CompressedNonMultipleOfThreeIndicesRejected) {
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = COMPRESSION,
+        .offsetPosition = 0,
+        .stridePosition = sizeof(half4),
+        .offsetTangents = sizeof(half4),
+        .strideTangents = sizeof(short4),
+        .offsetColor = sizeof(half4) + sizeof(short4),
+        .strideColor = sizeof(ubyte4),
+        .offsetUV0 = sizeof(half4) + sizeof(short4) + sizeof(ubyte4),
+        .strideUV0 = sizeof(half2),
+        .offsetUV1 = maxint,
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(positions),
+        .indexType = IndexType::UI16,
+        .indexCount = 1, // Not divisible by 3
+        .indexSize = sizeof(uint16_t) * 1
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, positions, sizeof(positions));
+    write(stream, indices, sizeof(uint16_t));
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, InvalidIndexTypeRejected) {
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = 0,
+        .offsetPosition = 0,
+        .stridePosition = sizeof(half4),
+        .offsetTangents = sizeof(half4),
+        .strideTangents = sizeof(short4),
+        .offsetColor = sizeof(half4) + sizeof(short4),
+        .strideColor = sizeof(ubyte4),
+        .offsetUV0 = sizeof(half4) + sizeof(short4) + sizeof(ubyte4),
+        .strideUV0 = sizeof(half2),
+        .offsetUV1 = maxint,
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(positions),
+        .indexType = static_cast<IndexType>(2), // Invalid index type
         .indexCount = 3,
         .indexSize = sizeof(uint16_t) * 3
     };

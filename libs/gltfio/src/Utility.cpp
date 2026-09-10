@@ -93,9 +93,18 @@ bool decodeMeshoptCompression(cgltf_data* data) {
             continue;
         }
         cgltf_meshopt_compression* compression = &data->buffer_views[i].meshopt_compression;
-        const uint8_t* source = (const uint8_t*) compression->buffer->data;
-        assert_invariant(source);
-        source += compression->offset;
+        if (!compression->buffer || !compression->buffer->data) {
+            slog.e << "gltfio: meshopt decompression failed, missing buffer data." << io::endl;
+            return false;
+        }
+
+        if (compression->offset > compression->buffer->size ||
+            compression->size > compression->buffer->size - compression->offset) {
+            slog.e << "gltfio: meshopt decompression failed, buffer bounds exceeded." << io::endl;
+            return false;
+        }
+
+        const uint8_t* source = (const uint8_t*) compression->buffer->data + compression->offset;
 
         if (compression->stride == 0) {
             slog.e << "gltfio: meshopt decompression failed, stride is 0." << io::endl;
@@ -103,10 +112,83 @@ bool decodeMeshoptCompression(cgltf_data* data) {
         }
 
         size_t const theoreticalMaxCount = std::numeric_limits<size_t>::max() / compression->stride;
-        FILAMENT_CHECK_PRECONDITION(compression->count <= theoreticalMaxCount)
-                << "gltfio: meshopt decompression exceeds maximum count of " << theoreticalMaxCount
-                << " (actual=" << compression->count << ") given stride of " << compression->stride
-                << ".";
+        if (compression->count > theoreticalMaxCount) {
+            slog.e << "gltfio: meshopt decompression exceeds maximum count of " << theoreticalMaxCount
+                   << " (actual=" << compression->count << ") given stride of " << compression->stride
+                   << "." << io::endl;
+            return false;
+        }
+
+        // Validate meshopt preconditions to prevent out-of-bounds writes.
+        switch (compression->mode) {
+            case cgltf_meshopt_compression_mode_attributes:
+                // Vertex decoder decodes in 4-byte chunks with an internal 256-byte cache.
+                if (compression->stride % 4 != 0 || compression->stride > 256) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "invalid attributes stride." << io::endl;
+                    return false;
+                }
+                break;
+            case cgltf_meshopt_compression_mode_triangles:
+                // Triangle decoder writes 3 indices per batch; non-multiple of 3 overruns buffer.
+                if (compression->count % 3 != 0) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "count must be divisible by 3 for TRIANGLES mode." << io::endl;
+                    return false;
+                }
+                [[fallthrough]];
+            case cgltf_meshopt_compression_mode_indices:
+                // Index decoders only support 2-byte (uint16) or 4-byte (uint32) indices.
+                if (compression->stride != 2 && compression->stride != 4) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "stride must be 2 or 4 for index decoding." << io::endl;
+                    return false;
+                }
+                // Filters are only applicable to vertex attribute buffers.
+                if (compression->filter != cgltf_meshopt_compression_filter_none) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "filter is not allowed for index decoding." << io::endl;
+                    return false;
+                }
+                break;
+            default:
+                slog.e << "gltfio: meshopt decompression failed, unsupported mode ("
+                       << static_cast<int>(compression->mode) << ")." << io::endl;
+                return false;
+        }
+
+        switch (compression->filter) {
+            case cgltf_meshopt_compression_filter_none:
+                break;
+            case cgltf_meshopt_compression_filter_octahedral:
+                // Octahedral filter requires 4-byte (snorm8) or 8-byte (snorm16) unit vectors.
+                if (compression->stride != 4 && compression->stride != 8) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "octahedral filter requires stride 4 or 8." << io::endl;
+                    return false;
+                }
+                break;
+            case cgltf_meshopt_compression_filter_quaternion:
+                // Quaternion filter requires 8-byte (4 x snorm16) normalized quaternions.
+                if (compression->stride != 8) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "quaternion filter requires stride 8." << io::endl;
+                    return false;
+                }
+                break;
+            case cgltf_meshopt_compression_filter_exponential:
+                // Exponential filter operates on 4-byte floating-point components.
+                if (compression->stride % 4 != 0) {
+                    slog.e << "gltfio: meshopt decompression failed, "
+                           << "exponential filter requires stride multiple of 4." << io::endl;
+                    return false;
+                }
+                break;
+            default:
+                slog.e << "gltfio: meshopt decompression failed, unsupported filter ("
+                       << static_cast<int>(compression->filter) << ")." << io::endl;
+                return false;
+        }
 
         const size_t decodedSize = compression->count * compression->stride;
 
@@ -120,8 +202,6 @@ bool decodeMeshoptCompression(cgltf_data* data) {
 
         int error = 0;
         switch (compression->mode) {
-            case cgltf_meshopt_compression_mode_invalid:
-                break;
             case cgltf_meshopt_compression_mode_attributes:
                 error = meshopt_decodeVertexBuffer(destination, compression->count,
                         compression->stride, source, compression->size);
