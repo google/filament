@@ -212,7 +212,15 @@ public:
     }
 
     inline bool isVertexInputDynamicStateSupported() const noexcept {
-        return mVertexInputDynamicStateSupported;
+        return mVertexInputDynamicStateFeatures.vertexInputDynamicState == VK_TRUE;
+    }
+
+    inline bool isExtendedDynamicStateSupported() const noexcept {
+        return mExtendedDynamicStateFeatures.extendedDynamicState == VK_TRUE;
+    }
+
+    inline bool isExtendedDynamicState2Supported() const noexcept {
+        return mExtendedDynamicState2Features.extendedDynamicState2 == VK_TRUE;
     }
 
     inline bool pipelineCreationFeedbackSupported() const noexcept {
@@ -236,6 +244,10 @@ public:
                !parallelShaderCompilationDisabled() &&
                isVertexInputDynamicStateSupported() &&
                isDynamicRenderingSupported();
+    }
+
+    inline bool isPipelineDynamicStateEnabled() const noexcept {
+        return mPipelineDynamicStateEnabled;
     }
 
     inline bool isGlobalPrioritySupported() const noexcept {
@@ -272,7 +284,15 @@ private:
         // non-conformant vulkan implementation).
         .imageView2DOn3DImage = VK_TRUE,
     };
-
+    VkPhysicalDeviceVertexInputDynamicStateFeaturesEXT mVertexInputDynamicStateFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_INPUT_DYNAMIC_STATE_FEATURES_EXT,
+    };
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT mExtendedDynamicStateFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
+    };
+    VkPhysicalDeviceExtendedDynamicState2FeaturesEXT mExtendedDynamicState2Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+    };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
     // These are options that are either supported or not supported in the current
@@ -285,7 +305,6 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
     bool mProtectedMemorySupported = false;
-    bool mVertexInputDynamicStateSupported = false;
     bool mGlobalPrioritySupported = false;
     bool mDriverPropertiesSupported = false;
 
@@ -296,6 +315,7 @@ private:
     bool mAsyncPipelineCachePrewarmingEnabled = false;
     bool mParallelShaderCompileDisabled = false;
     bool mStagingBufferBypassEnabled = false;
+    bool mPipelineDynamicStateEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
