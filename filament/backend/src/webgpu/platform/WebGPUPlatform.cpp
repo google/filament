@@ -99,7 +99,7 @@ enum class LimitToValidate : uint8_t {
 // at runtime. Thus, if you add a limit here add the associated enum value in LimitToValidate!
 constexpr wgpu::Limits REQUIRED_LIMITS = {
     .maxBindGroups = filament::backend::MAX_DESCRIPTOR_SET_COUNT,
-    .maxBindingsPerBindGroup = filament::backend::MAX_DESCRIPTOR_COUNT,
+    .maxBindingsPerBindGroup = 2 * filament::backend::MAX_DESCRIPTOR_COUNT,
     .maxSamplersPerShaderStage = 16, // TODO should be set to filament::backend::MAX_SAMPLER_COUNT,
     .maxStorageBuffersPerShaderStage = filament::backend::MAX_SSBO_COUNT,
     .maxVertexBuffers = 8, // TODO should be set to filament::backend::MAX_VERTEX_BUFFER_COUNT,

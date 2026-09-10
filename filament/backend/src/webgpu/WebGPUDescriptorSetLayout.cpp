@@ -82,6 +82,9 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     mBindGroupEntries.reserve(wEntries.capacity());
 
     for (auto fEntry: layout.descriptors) {
+        FILAMENT_CHECK_PRECONDITION(fEntry.binding < MAX_DESCRIPTOR_COUNT)
+                << "Descriptor binding " << +fEntry.binding << " exceeds MAX_DESCRIPTOR_COUNT ("
+                << MAX_DESCRIPTOR_COUNT << ").";
         auto& wEntry = wEntries.emplace_back();
         auto& entryInfo = mBindGroupEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
