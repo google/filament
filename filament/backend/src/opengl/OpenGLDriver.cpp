@@ -3313,16 +3313,11 @@ void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
 void OpenGLDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
         uint32_t const index, Handle<HwBufferObject> boh, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    getJobQueue()->push([this, vbh, index, boh,
-            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        DEBUG_MARKER_NAME("setVertexBufferObjectAsyncR")
-        setVertexBufferObjectCommon(vbh, index, boh);
-        // glFlush() should be called when using a shared context for this operation. Without it,
-        // the driver may delay submitting commands to the GPU, preventing other contexts from
-        // seeing the changes immediately. This ensures submitting the current commands right away.
-        glFlush();
-        completion.schedule(AsyncCallStatus::COMPLETED);
-    }, jobId);
+    DEBUG_MARKER()
+
+    // No GL command to issue, only a buffer name and a version to set, which the draws read.
+    runAsyncCallNow(getJobQueue(), jobId, handler, callback, user,
+            [&] { setVertexBufferObjectCommon(vbh, index, boh); });
 }
 
 void OpenGLDriver::updateIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,

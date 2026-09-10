@@ -1658,15 +1658,9 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
 void MetalDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
         uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    // There is no GPU work here, only a pointer to set, so unlike the uploads this runs right
-    // here rather than on a job. The id that `setVertexBufferObjectAsyncS()` reserved in the job
-    // queue must still be released, or its empty placeholder stays in the queue for good.
-    AsyncCompletion completion(this, handler, callback, user);
-    if (!getJobQueue()->cancel(jobId)) {
-        return;
-    }
-    setVertexBufferObject(vbh, index, boh);
-    completion.schedule(AsyncCallStatus::COMPLETED);
+    // No GPU work, only a pointer to set, which the draws read.
+    runAsyncCallNow(getJobQueue(), jobId, handler, callback, user,
+            [&] { setVertexBufferObject(vbh, index, boh); });
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,

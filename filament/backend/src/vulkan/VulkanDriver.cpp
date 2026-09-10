@@ -1965,19 +1965,9 @@ void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVerte
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
 
-    // We cannot pass a resource handle into the lambda because the `cast` method has a strict
-    // precondition, which is "the handle must not have been marked as destroyed". If an app
-    // destroys a resource on the backend thread while an asynchronous update job for the same
-    // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
-    // pass a resource_ptr instead, which is ref-counted.
-    auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
-    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-
-    getJobQueue()->push([this, vb, bo, index,
-            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        setVertexBufferObjectCommon(vb, index, bo);
-        completion.schedule(AsyncCallStatus::COMPLETED);
-    }, jobId);
+    // No GPU work, only buffer handles to set, which the draws read.
+    runAsyncCallNow(getJobQueue(), jobId, handler, callback, user,
+            [&] { setVertexBufferObject(vbh, index, boh); });
 }
 
 void VulkanDriver::updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib,
