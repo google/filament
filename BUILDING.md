@@ -84,6 +84,12 @@ The following CMake options are boolean options specific to Filament:
 
 Note: If you intend to use the JNI library (Android/Java build), you need to have `FILAMENT_ENABLE_EXCEPTIONS` enabled. If you are using Filament on Android as a pure native library and want to save space, you can disable it (e.g., using `./build.sh -E`).
 
+With `build.sh`, `-E` disables exceptions for the target build. Separately built host tools
+(`-y release`, the default, or `-y debug`) retain exceptions because tools such as `cmgen` and
+their `imageio` dependency require them. These executables run on the build machine and are not
+linked into the target application. This exemption does not apply when the separate build is
+disabled with `-y none`, or when configuring CMake directly.
+
 To turn an option on or off:
 
 ```shell
