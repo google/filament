@@ -607,8 +607,7 @@ private:
     uint32_t mWarmupFrames = MAX_WARMUP_FRAMES;
     float const mFixedTimeStep = 0.0f;
     uint32_t mCurrentFrame = 0;
-    double mVirtualTime = 0.0;
-    double mLastVirtualTime = 0.0;
+    double mLastDisplayManagerTime = 0.0;
 
     std::unique_ptr<Cube> mCameraCube;
     std::unique_ptr<Grid> mCameraGrid;

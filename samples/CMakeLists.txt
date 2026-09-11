@@ -252,6 +252,8 @@ endif()
 # Test apps
 # ==================================================================================================
 
+set_property(GLOBAL PROPERTY FILAMENT_SAMPLES_LIST "")
+
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
@@ -264,6 +266,8 @@ function(add_demo NAME)
         set_target_properties(${NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
         set_target_properties(${NAME} PROPERTIES INSTALL_RPATH /usr/local/lib)
     endif()
+
+    set_property(GLOBAL APPEND PROPERTY FILAMENT_SAMPLES_LIST ${NAME})
 endfunction()
 
 if (NOT ANDROID)
@@ -306,6 +310,10 @@ if (NOT ANDROID)
     add_demo(texturedquad)
     add_demo(vbotest)
     add_demo(viewtest)
+
+    get_property(ALL_SAMPLES GLOBAL PROPERTY FILAMENT_SAMPLES_LIST)
+    add_custom_target(filament-samples DEPENDS ${ALL_SAMPLES})
+    set_target_properties(filament-samples PROPERTIES FOLDER Samples)
 
     # Sample app specific
 
