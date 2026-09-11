@@ -1988,7 +1988,7 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // destroys a resource on the backend thread while an asynchronous update job for the same
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
-    auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
+    auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
 
     getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
@@ -2021,7 +2021,7 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // destroys a resource on the backend thread while an asynchronous update job for the same
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
-    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
+    auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
 
     getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
@@ -2075,7 +2075,7 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     // destroys a resource on the backend thread while an asynchronous update job for the same
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
-    auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+    auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
             data = std::move(data),
