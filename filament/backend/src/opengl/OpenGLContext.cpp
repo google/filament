@@ -487,6 +487,11 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // AMD/ATI GPU
         } else if (strstr(renderer, "Mozilla")) {
             bugs->disable_invalidate_framebuffer = true;
+        } else if (strstr(renderer, "virgl") || strstr(renderer, "virtio")) {
+            // When running in a VM over virgl, timer queries can frequently
+            // return 0 on some underlying hardware (like Adreno), causing
+            // Filament to crash.
+            bugs->dont_use_timer_query = true;
         }
 
         if (strstr(vendor, "Mesa")) {
