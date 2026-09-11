@@ -32,7 +32,8 @@ namespace filament::backend {
 
 class WebGPUVertexBuffer final : public HwVertexBuffer {
 public:
-    WebGPUVertexBuffer(uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo>);
+    WebGPUVertexBuffer(uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo>,
+            bool asynchronous = false);
 
     [[nodiscard]] Handle<HwVertexBufferInfo>& getVertexBufferInfoHandle() {
         return mVertexBufferInfoHandle;

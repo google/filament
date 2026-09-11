@@ -31,6 +31,7 @@
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
+#include "JobQueue.h"
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -80,6 +81,31 @@ private:
     void readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level, uint32_t layer, uint32_t x,
             uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& p);
 
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
+
+    // Shared between each create*R and create*AsyncR pair, since the two only differ in the
+    // `asynchronous` flag and whether the completion callback is deferred (see
+    // deferCreationCompletionCallback).
+    void createVertexBufferCommon(Handle<HwVertexBuffer> vertexBufferHandle, uint32_t vertexCount,
+            Handle<HwVertexBufferInfo> vertexBufferInfoHandle, bool asynchronous,
+            utils::ImmutableCString&& tag);
+    void createIndexBufferCommon(Handle<HwIndexBuffer> indexBufferHandle, ElementType elementType,
+            uint32_t indexCount, bool asynchronous, utils::ImmutableCString&& tag);
+    void createBufferObjectCommon(Handle<HwBufferObject> bufferObjectHandle, uint32_t byteCount,
+            BufferObjectBinding bindingType, bool asynchronous, utils::ImmutableCString&& tag);
+    void createTextureCommon(Handle<HwTexture> textureHandle, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+            uint32_t depth, TextureUsage usage, bool asynchronous, utils::ImmutableCString&& tag);
+    void createTextureViewSwizzleCommon(Handle<HwTexture> textureHandle,
+            Handle<HwTexture> sourceTextureHandle, TextureSwizzle r, TextureSwizzle g,
+            TextureSwizzle b, TextureSwizzle a, utils::ImmutableCString&& tag);
+
+    // Shared by every create*AsyncR: pushes a job that does nothing but fire the completion
+    // callback, so it's correctly FIFO-ordered relative to other outstanding async calls.
+    void deferCreationCompletionCallback(CallbackHandler* handler, AsyncCallback callback,
+            void* user);
+
     // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform.
     WebGPUPlatform& mPlatform;
@@ -102,6 +128,8 @@ private:
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
     WebGPUBlitter mBlitter;
     webgpuutils::AsyncTaskCounter mReadPixelMapsCounter{};
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 
     struct {
         // For push constant
