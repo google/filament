@@ -2,9 +2,13 @@ name: Android
 run-name: ${{ github.event.workflow_run.display_title }}
 
 on:
+  # zizmor: ignore[dangerous-triggers] - workflow_run is safe here: triggers on internal postsubmit push, no code checkout or untrusted artifact execution
   workflow_run:
     workflows: ["Postsubmit CI"]
     types: [completed]
+
+permissions:
+  actions: read
 
 jobs:
   status:
@@ -17,7 +21,7 @@ jobs:
             const { data: { jobs } } = await github.rest.actions.listJobsForWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: ${{ github.event.workflow_run.id }}
+              run_id: context.payload.workflow_run.id
             });
             const job = jobs.find(j => j.name === 'build-android');
             if (job && job.conclusion !== 'success') {

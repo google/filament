@@ -1783,7 +1783,8 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    baseVariant.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
+    // TODO: Remove this after DIR is fully transferred to spec constant
+    baseVariant.setDirectionalLighting(false);
     baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
@@ -1830,6 +1831,7 @@ FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecC
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
     baseKey.setExtraDirectionalLights(isMaterialLit && view->hasExtraDirectionalLights());
+    baseKey.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
 
     keys.push_back(baseKey);
 

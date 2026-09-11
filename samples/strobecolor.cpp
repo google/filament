@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
@@ -24,6 +23,8 @@
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/View.h>
+
+#include <samples/SampleConfig.h>
 
 #include <cmath>
 
