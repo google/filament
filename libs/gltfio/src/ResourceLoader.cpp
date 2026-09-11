@@ -897,10 +897,10 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     const size_t cacheIdx = any(flags & TextureProvider::TextureFlags::sRGB) ? 1 : 0;
 
     // Check if the texture slot uses BufferView data.
-    if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
+    if (bv && bv->buffer->data) {
         assert_invariant(!dataUriContent);
-        const size_t offset = bv ? bv->offset : 0;
-        const uint8_t* sourceData = offset + (const uint8_t*) *bufferViewData;
+        const size_t offset = bv->offset;
+        const uint8_t* sourceData = offset + (const uint8_t*) bv->buffer->data;
         if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
                 iter != mBufferTextureCache[cacheIdx].end()) {
             return {iter->second, CacheResult::FOUND};
