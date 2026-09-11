@@ -206,7 +206,7 @@ if (NOT FILAMENT_OSMESA_PATH STREQUAL "")
     if (NOT EXISTS ${FILAMENT_OSMESA_PATH}/)
         message(FATAL_ERROR "Cannot find specified OSMesa build directory: ${FILAMENT_OSMESA_PATH}")
     endif()
-    set(FILAMENT_SUPPORTS_OSMESA TRUE)
+    set(FILAMENT_SUPPORTS_OSMESA TRUE CACHE BOOL "Enable OSMesa (headless GL context) for Filament" FORCE)
 endif()
 
 if (LINUX)

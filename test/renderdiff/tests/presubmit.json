@@ -53,6 +53,14 @@
             "gltf_test": {
                 "models": ["lucy"]
             }
+        },
+        {
+            "name": "base_sample",
+            "sample_test": {
+                "warmup_frames": 10,
+                "fixed_timestep": 0.0166667,
+                "args": ["--window-size", "512x512"]
+            }
         }
     ],
     "tests": [
@@ -151,6 +159,30 @@
                 "rendering": {
                     "view.screenSpaceReflections.enabled": true
                 }
+            }
+        },
+        {
+            "name": "HelloTriangle",
+            "description": "Triangle primitive sample test",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hellotriangle"
+            }
+        },
+        {
+            "name": "HelloPBR",
+            "description": "Standard PBR pipeline sample test",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hellopbr"
+            }
+        },
+        {
+            "name": "Suzanne",
+            "description": "Filamesh model with standard material sample test",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "suzanne"
             }
         }
     ]

@@ -436,6 +436,10 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
             << "bufferIndex must be < bufferCount";
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
         << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+        << "buffer data cannot be null";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+        << "VertexBuffer creation failed or is not complete";
 
     engine.getDriverApi().updateBufferObject(mBufferObjects[bufferIndex],
             std::move(buffer), byteOffset);
@@ -450,6 +454,8 @@ AsyncCallId FVertexBuffer::setBufferAtAsync(FEngine& engine, uint8_t const buffe
             << "bufferIndex must be < bufferCount";
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
         << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+        << "buffer data cannot be null";
 
     using VertexBufferCallbackAdapter = CallbackAdapter<VertexBuffer>;
     auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
@@ -461,11 +467,15 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex
         FBufferObject const* bufferObject) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
             << "buffer objects disabled, use setBufferAt() instead";
+    FILAMENT_CHECK_PRECONDITION(bufferObject != nullptr)
+            << "bufferObject cannot be null";
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
             << "bufferObject binding type must be VERTEX but is "
             << to_string(bufferObject->getBindingType());
     FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
             << "bufferIndex must be < bufferCount";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "VertexBuffer creation failed or is not complete";
 
     auto const boh = bufferObject->getHwHandle();
     engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, boh);
@@ -479,6 +489,8 @@ AsyncCallId FVertexBuffer::setBufferObjectAtAsync(FEngine& engine, uint8_t const
         AsyncCompletionCallback callback, void* user) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
             << "buffer objects disabled, use setBufferAt() instead";
+    FILAMENT_CHECK_PRECONDITION(bufferObject != nullptr)
+            << "bufferObject cannot be null";
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
             << "bufferObject binding type must be VERTEX but is "
             << to_string(bufferObject->getBindingType());
@@ -502,6 +514,8 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
         std::unique_ptr<uint16_t[]> skinJoints,
         std::unique_ptr<float[]> skinWeights) {
     FILAMENT_CHECK_PRECONDITION(mAdvancedSkinningEnabled) << "No advanced skinning enabled";
+    FILAMENT_CHECK_PRECONDITION(skinJoints != nullptr) << "skinJoints cannot be null";
+    FILAMENT_CHECK_PRECONDITION(skinWeights != nullptr) << "skinWeights cannot be null";
     auto jointsData = skinJoints.release();
     uint8_t const indicesIndex = mAttributes[BONE_INDICES].buffer;
     engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex], {

@@ -153,6 +153,10 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
             << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+            << "buffer data cannot be null";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "IndexBuffer creation failed or is not complete";
 
     engine.getDriverApi().updateIndexBuffer(mHandle, std::move(buffer), byteOffset);
 }
@@ -163,6 +167,8 @@ backend::AsyncCallId FIndexBuffer::setBufferAsync(FEngine& engine, BufferDescrip
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
             << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+            << "buffer data cannot be null";
 
     using IndexBufferCallbackAdapter = CallbackAdapter<IndexBuffer>;
     auto* const cbWrapper = IndexBufferCallbackAdapter::make(std::move(callback), this, user);

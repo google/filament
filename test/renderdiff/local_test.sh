@@ -25,7 +25,22 @@ else
     GOLDEN_BRANCH=$(git log -1 | python3 test/renderdiff/src/commit_msg.py)
 fi
 
-bash `dirname $0`/generate.sh "$@" && \
+TEST_CONFIG="${RENDERDIFF_TEST_DIR}/tests/presubmit.json"
+PASSTHROUGH_ARGS=()
+
+for i in "$@"
+do
+case $i in
+    --test=*)
+    TEST_CONFIG="${i#*=}"
+    ;;
+    *)
+    PASSTHROUGH_ARGS+=("$i")
+    ;;
+esac
+done
+
+bash `dirname $0`/generate.sh --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}" && \
     ./build.sh release diffimg && \
     python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py \
             --branch=${GOLDEN_BRANCH} \
@@ -35,8 +50,7 @@ bash `dirname $0`/generate.sh "$@" && \
             --dest=${RENDER_OUTPUT_DIR} \
             --out=${DIFF_OUTPUT_DIR} \
             --diffimg="$(pwd)/out/cmake-release/tools/diffimg/diffimg" \
-            --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" "$@"
+            --test="${TEST_CONFIG}" "${PASSTHROUGH_ARGS[@]}"
 
-    # $@ Pass arguments to generate.sh, e.g. --test_filter
 end_
 
