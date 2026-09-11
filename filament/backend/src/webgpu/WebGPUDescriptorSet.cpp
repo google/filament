@@ -38,7 +38,7 @@ namespace filament::backend {
 
 namespace {
 
-constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
+constexpr uint8_t INVALID_INDEX = WebGPUDescriptorSet::MAX_WEBGPU_BINDINGS_PER_SET + 1;
 
 } // namespace
 
@@ -76,7 +76,7 @@ void WebGPUDescriptorSet::addEntry(const unsigned int index, wgpu::BindGroupEntr
     // layout index for efficiency. Add guards if wrong.
     FILAMENT_CHECK_POSTCONDITION(index < mEntryIndexByBinding.size())
             << "impossible/invalid index for a descriptor/binding (out of range or >= "
-               "MAX_DESCRIPTOR_COUNT) "
+               "MAX_WEBGPU_BINDINGS_PER_SET) "
             << index;
     uint8_t entryIndex = mEntryIndexByBinding[index];
     FILAMENT_CHECK_POSTCONDITION(entryIndex != INVALID_INDEX && entryIndex < mEntries.size())

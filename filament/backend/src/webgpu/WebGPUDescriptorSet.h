@@ -40,6 +40,8 @@ namespace filament::backend {
   */
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
+    static constexpr size_t MAX_WEBGPU_BINDINGS_PER_SET = 2 * MAX_DESCRIPTOR_COUNT;
+
     WebGPUDescriptorSet(wgpu::BindGroupLayout const&,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
     ~WebGPUDescriptorSet();
@@ -79,7 +81,7 @@ public:
 
 private:
     wgpu::BindGroupLayout mLayout = nullptr;
-    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
+    std::array<uint8_t, MAX_WEBGPU_BINDINGS_PER_SET> mEntryIndexByBinding{};
     std::vector<wgpu::BindGroupEntry> mEntries;
     const size_t mEntriesWithDynamicOffsetsCount;
     // This is created lazily when lockAndReturn is called.
