@@ -79,7 +79,8 @@ int main(int argc, char** argv) {
             { .parameters = createAppParameters() });
 
     auto dm = samples::getDisplayManager(config);
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
 
     return 0;

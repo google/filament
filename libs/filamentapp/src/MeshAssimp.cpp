@@ -350,12 +350,12 @@ struct State {
 };
 
 //TODO: Remove redundant method from sample_full_pbr
-static void loadTexture(Engine *engine, const std::string &filePath, Texture **map,
-        bool sRGB, bool hasAlpha) {
+static void loadTexture(Engine* engine, const std::string& filePath, Texture** map, bool sRGB,
+        bool hasAlpha, filament::app::AssetLoader* loader) {
 
-    if (!filePath.empty()) {
-        Path path(filePath);
-        if (path.exists()) {
+    if (!filePath.empty() && loader) {
+        auto buf = loader->load(Path(filePath));
+        if (!buf.empty()) {
             int w, h, n;
             int numChannels = hasAlpha ? 4 : 3;
 
@@ -368,7 +368,7 @@ static void loadTexture(Engine *engine, const std::string &filePath, Texture **m
 
             Texture::Format outputFormat = hasAlpha ? Texture::Format::RGBA : Texture::Format::RGB;
 
-            uint8_t *data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, numChannels);
+            uint8_t* data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, numChannels);
             if (data != nullptr) {
                 *map = Texture::Builder()
                         .width(uint32_t(w))
@@ -386,10 +386,10 @@ static void loadTexture(Engine *engine, const std::string &filePath, Texture **m
                 (*map)->setImage(*engine, 0, std::move(buffer));
                 (*map)->generateMipmaps(*engine);
             } else {
-                std::cout << "The texture " << path.c_str() << " could not be loaded" << std::endl;
+                std::cout << "The texture " << filePath << " could not be loaded" << std::endl;
             }
         } else {
-            std::cout << "The texture " << path.c_str() << " does not exist" << std::endl;
+            std::cout << "The texture " << filePath << " does not exist" << std::endl;
         }
     }
 }
@@ -479,7 +479,8 @@ void setTextureFromPath(const aiScene* scene, Engine* engine,
         std::vector<filament::Texture*> textures, const aiString& textureFile,
         const std::string& materialName, const std::string& textureDirectory,
         aiTextureMapMode* mapMode, const char* parameterName,
-        std::map<utils::CString, MaterialInstance*>& outMaterials, unsigned int aiMinFilterType = 0,
+        std::map<utils::CString, MaterialInstance*>& outMaterials,
+        filament::app::AssetLoader* loader, unsigned int aiMinFilterType = 0,
         unsigned int aiMagFilterType = 0) {
 
     TextureSampler::MinFilter minFilterType = aiMinFilterToFilament(aiMinFilterType);
@@ -510,7 +511,8 @@ void setTextureFromPath(const aiScene* scene, Engine* engine,
     if (embeddedId != -1) {
         loadEmbeddedTexture(engine, scene->mTextures[embeddedId], &textureMap, isSRGB, hasAlpha);
     } else {
-        loadTexture(engine, textureDirectory + textureFile.C_Str(), &textureMap, isSRGB, hasAlpha);
+        loadTexture(engine, textureDirectory + textureFile.C_Str(), &textureMap, isSRGB, hasAlpha,
+                loader);
     }
 
     textures.push_back(textureMap);
@@ -1083,8 +1085,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, magType);
 
-        setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
-                materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
+        setTextureFromPath(scene, &mEngine, mTextures, baseColorPath, materialName, dirName,
+                mapMode, "baseColorMap", outMaterials, mAssetLoader, minType, magType);
     } else {
         outMaterials[utils::CString(materialName.c_str())]->setParameter("baseColorMap",
                 mDefaultMap, sampler);
@@ -1097,8 +1099,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, magType);
 
-        setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
-                dirName, mapMode, "metallicRoughnessMap", outMaterials, minType, magType);
+        setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName, dirName, mapMode,
+                "metallicRoughnessMap", outMaterials, mAssetLoader, minType, magType);
     } else {
         outMaterials[utils::CString(materialName.c_str())]->setParameter("metallicRoughnessMap",
                 mDefaultMap, sampler);
@@ -1114,8 +1116,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_LIGHTMAP, 0, magType);
-        setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
-                dirName, mapMode, "aoMap", outMaterials, minType, magType);
+        setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName, dirName, mapMode,
+                "aoMap", outMaterials, mAssetLoader, minType, magType);
     } else {
         outMaterials[utils::CString(materialName.c_str())]->setParameter("aoMap", mDefaultMap,
                 sampler);
@@ -1127,8 +1129,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_NORMALS, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_NORMALS, 0, magType);
-        setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
-                dirName, mapMode, "normalMap", outMaterials, minType, magType);
+        setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName, dirName, mapMode,
+                "normalMap", outMaterials, mAssetLoader, minType, magType);
     } else {
         outMaterials[utils::CString(materialName.c_str())]->setParameter("normalMap",
                 mDefaultNormalMap, sampler);
@@ -1140,8 +1142,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_EMISSIVE, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_EMISSIVE, 0, magType);
-        setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName,
-                dirName, mapMode, "emissiveMap", outMaterials, minType, magType);
+        setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName, dirName, mapMode,
+                "emissiveMap", outMaterials, mAssetLoader, minType, magType);
     }  else {
         outMaterials[utils::CString(materialName.c_str())]->setParameter("emissiveMap", mDefaultMap,
                 sampler);

@@ -53,17 +53,18 @@ struct GroundPlane {
 };
 
 struct App {
-    FilamentApp2* filamentApp;
-    Skybox* skybox;
-    utils::Entity light;
+    FilamentApp2* filamentApp = nullptr;
+    Skybox* skybox = nullptr;
+    utils::Entity light{};
     std::map<utils::CString, MaterialInstance*> materials;
-    MeshAssimp* meshes;
-    mat4f transform;
-    GroundPlane plane;
+    MeshAssimp* meshes = nullptr;
+    mat4f transform{};
+    GroundPlane plane{};
     SampleConfig config;
 };
 
 constexpr const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+constexpr const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 constexpr bool ENABLE_SHADOWS = true;
 
@@ -132,6 +133,9 @@ GroundPlane createGroundPlane(Engine* engine) {
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory = utils::CString(IBL_FOLDER);
+    }
     app->config = config;
 
     auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
@@ -141,15 +145,17 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         // Add geometry into the scene.
         app->meshes = new MeshAssimp(*engine, loader);
-        app->meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app->materials);
-        auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
-        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        for (auto renderable: app->meshes->getRenderables()) {
-            auto instance = rcm.getInstance(renderable);
-            if (rcm.hasComponent(renderable)) {
-                rcm.setCastShadows(instance, ENABLE_SHADOWS);
-                rcm.setReceiveShadows(instance, false);
-                scene->addEntity(renderable);
+        app->meshes->addFromFile(MODEL_FILE, app->materials);
+        if (!app->meshes->getRenderables().empty()) {
+            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+            app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+            for (auto renderable: app->meshes->getRenderables()) {
+                auto instance = rcm.getInstance(renderable);
+                if (rcm.hasComponent(renderable)) {
+                    rcm.setCastShadows(instance, ENABLE_SHADOWS);
+                    rcm.setReceiveShadows(instance, false);
+                    scene->addEntity(renderable);
+                }
             }
         }
 
@@ -172,16 +178,22 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->plane.renderable);
+        if (app->plane.renderable) {
+            engine->destroy(app->plane.renderable);
+            utils::EntityManager::get().destroy(app->plane.renderable);
+        }
         engine->destroy(app->plane.mat);
         engine->destroy(app->plane.vb);
         engine->destroy(app->plane.ib);
-        engine->destroy(app->light);
+        if (app->light) {
+            engine->destroy(app->light);
+            utils::EntityManager::get().destroy(app->light);
+        }
         engine->destroy(app->skybox);
+        delete app->meshes;
         for (auto& item: app->materials) {
             engine->destroy(item.second);
         }
-        delete app->meshes;
     };
 
 
@@ -189,10 +201,12 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
-                            auto& tcm = engine->getTransformManager();
-                            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
-                            tcm.setTransform(ti,
-                                     app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                            if (app->meshes && !app->meshes->getRenderables().empty()) {
+                                auto& tcm = engine->getTransformManager();
+                                auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+                                tcm.setTransform(ti,
+                                        app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                            }
                         })
                         .build();
     app->filamentApp = fApp.get();
@@ -210,10 +224,9 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto app = createSampleApp(config, dm.get(), loader);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
-    delete loader;
     return 0;
 }
 #endif

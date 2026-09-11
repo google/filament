@@ -40,6 +40,12 @@ FilamentApp2::Builder getBuilder(const SampleConfig& config,
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config);
 
+#ifndef __ANDROID__
+utils::Path getDefaultAssetPath();
+std::unique_ptr<filament::app::AssetLoader> getAssetLoader(const SampleConfig& config);
+std::unique_ptr<filament::app::AssetWriter> getAssetWriter(const SampleConfig& config);
+#endif
+
 SampleParameters getCommonParameters();
 
 struct CommandLineSpecification {

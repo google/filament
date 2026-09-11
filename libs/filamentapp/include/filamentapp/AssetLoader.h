@@ -29,6 +29,10 @@ public:
     virtual ~AssetLoader() = default;
 
     virtual std::vector<uint8_t> load(utils::Path const& path) const = 0;
+
+    virtual bool exists(utils::Path const& path) const { return !load(path).empty(); }
+
+    virtual utils::Path resolve(utils::Path const& path) const { return path; }
 };
 
 } // namespace filament::app

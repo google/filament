@@ -26,11 +26,22 @@
 
 namespace filament::app {
 
-class DesktopAssetLoader : public AssetLoader {
+class UTILS_PUBLIC DesktopAssetLoader : public AssetLoader {
 public:
+    DesktopAssetLoader()
+            : mRootPath() {}
+    explicit DesktopAssetLoader(utils::Path rootPath)
+            : mRootPath(std::move(rootPath)) {}
     ~DesktopAssetLoader() override = default;
 
     std::vector<uint8_t> load(utils::Path const& path) const override;
+    bool exists(utils::Path const& path) const override;
+    utils::Path resolve(utils::Path const& path) const override;
+
+    utils::Path const& getRootPath() const noexcept { return mRootPath; }
+
+private:
+    const utils::Path mRootPath;
 };
 
 } // namespace filament::app

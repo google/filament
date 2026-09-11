@@ -296,7 +296,7 @@ void FilamentApp2::init() {
 
     if (mImguiCallback) {
         mAppGui = std::make_unique<FilamentAppGui>(mEngine, mUiView->getView(),
-                getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
+                mAssetLoader->resolve("assets/fonts/Roboto-Medium.ttf"));
     }
 
     mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth,
@@ -788,18 +788,6 @@ void FilamentApp2::shutdown() {
     }
 
     mInitialized = false;
-}
-
-// RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
-// generators, like Visual Studio or Xcode.
-#ifndef RELATIVE_ASSET_PATH
-#define RELATIVE_ASSET_PATH "."
-#endif
-
-const utils::Path& FilamentApp2::getRootAssetsPath() {
-    static const utils::Path root =
-            utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
-    return root;
 }
 
 void FilamentApp2::loadIBL(std::string_view path) {

@@ -151,8 +151,7 @@ void setup(Engine* engine, View*, Scene* scene) {
         g_meshSet->addFromFile(filename, g_meshMaterialInstances);
     }
     if (g_config.positionalArgs.empty()) {
-        g_meshSet->addFromFile(FilamentApp2::getRootAssetsPath() +
-                                       "assets/models/material_sphere/material_sphere.obj",
+        g_meshSet->addFromFile("assets/models/material_sphere/material_sphere.obj",
                 g_meshMaterialInstances);
     }
 
@@ -1042,20 +1041,19 @@ int main(const int argc, char* argv[]) {
 
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
     for (const auto& fname : config.positionalArgs) {
         Path filename(fname.c_str_safe());
-        if (!filename.exists()) {
+        if (!loader->exists(filename)) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
     }
 
     config.title = "Material Sandbox";
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto fApp = createSampleApp(config, dm.get(), loader);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
-    delete loader;
     return 0;
 }
 #endif

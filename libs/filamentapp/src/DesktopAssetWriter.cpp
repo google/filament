@@ -21,10 +21,23 @@
 
 namespace filament::app {
 
+utils::Path DesktopAssetWriter::resolve(utils::Path const& path) const {
+    if (path.isAbsolute() || mRootPath.isEmpty()) {
+        return path;
+    }
+    return mRootPath + path;
+}
+
 bool DesktopAssetWriter::write(utils::Path const& path, uint8_t const* data, size_t size) const {
-    std::ofstream out(path.c_str(), std::ios::binary | std::ios::trunc);
+    utils::Path targetPath = resolve(path);
+    std::ofstream out(targetPath.c_str(), std::ios::binary | std::ios::trunc);
     if (!out.is_open()) {
-        return false;
+        if (targetPath != path) {
+            out.open(path.c_str(), std::ios::binary | std::ios::trunc);
+        }
+        if (!out.is_open()) {
+            return false;
+        }
     }
     out.write(reinterpret_cast<const char*>(data), size);
     return out.good();
