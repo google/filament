@@ -42,6 +42,10 @@ Entity const* TransformManager::getEntities() const noexcept {
     return downcast(this)->getEntities();
 }
 
+Slice<Entity const> TransformManager::getAllEntities() const noexcept {
+    return downcast(this)->getAllEntities();
+}
+
 TransformManager::Instance TransformManager::getInstance(Entity const e) const noexcept {
     return downcast(this)->getInstance(e);
 }

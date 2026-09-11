@@ -21,6 +21,8 @@
 #include <filament/RenderableManager.h>
 
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
+#include <utils/Slice.h>
 #include <utils/StaticString.h>
 
 #include <math/mathfwd.h>
@@ -69,6 +71,8 @@ public:
          */
         Builder& initialize(bool initialize = true) noexcept;
 
+        using BuilderNameMixin<Builder>::name;
+
         /**
          * Associate an optional name with this SkinningBuffer for debugging purposes.
          *
@@ -84,6 +88,7 @@ public:
          * @deprecated Use name(utils::StaticString const&) instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
@@ -94,7 +99,19 @@ public:
          * @param name A string literal to identify this SkinningBuffer
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this SkinningBuffer for debugging purposes.
+         *
+         * @param name A string to identify this SkinningBuffer
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         * It is provided primarily for bindings to other languages.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
 
         /**
          * Creates the SkinningBuffer object and returns a pointer to it.
@@ -115,26 +132,40 @@ public:
     };
 
     /**
-     * Updates the bone transforms in the range [offset, offset + count).
+     * Updates the bone transforms in the range [offset, offset + transforms.size()).
      * @param engine Reference to the filament::Engine to associate this SkinningBuffer with.
-     * @param transforms pointer to at least count Bone
-     * @param count number of Bone elements in transforms
-     * @param offset offset in elements (not bytes) in the SkinningBuffer (not in transforms)
+     * @param transforms slice of Bone transforms
+     * @param offset offset in elements (not bytes) in the SkinningBuffer
      * @see RenderableManager::setSkinningBuffer
      */
-    void setBones(Engine& engine, RenderableManager::Bone const* UTILS_NONNULL transforms,
-            size_t count, size_t offset = 0);
+    UTILS_APIGEN_ALTERNATE_NAME(setBonesAsQuaternions)
+    void setBones(Engine& engine, utils::Slice<const RenderableManager::Bone> transforms,
+            size_t offset = 0);
+
+    UTILS_NOAPIGEN
+    inline void setBones(Engine& engine,
+            RenderableManager::Bone const* UTILS_NONNULL transforms,
+            size_t count, size_t offset = 0) {
+        setBones(engine, { transforms, count }, offset);
+    }
 
     /**
-     * Updates the bone transforms in the range [offset, offset + count).
+     * Updates the bone transforms in the range [offset, offset + transforms.size()).
      * @param engine Reference to the filament::Engine to associate this SkinningBuffer with.
-     * @param transforms pointer to at least count mat4f
-     * @param count number of mat4f elements in transforms
-     * @param offset offset in elements (not bytes) in the SkinningBuffer (not in transforms)
+     * @param transforms slice of mat4f transforms
+     * @param offset offset in elements (not bytes) in the SkinningBuffer
      * @see RenderableManager::setSkinningBuffer
      */
-    void setBones(Engine& engine, math::mat4f const* UTILS_NONNULL transforms,
-            size_t count, size_t offset = 0);
+    UTILS_APIGEN_ALTERNATE_NAME(setBonesAsMatrices)
+    void setBones(Engine& engine, utils::Slice<const math::mat4f> transforms,
+            size_t offset = 0);
+
+    UTILS_NOAPIGEN
+    inline void setBones(Engine& engine,
+            math::mat4f const* UTILS_NONNULL transforms,
+            size_t count, size_t offset = 0) {
+        setBones(engine, { transforms, count }, offset);
+    }
 
     /**
      * Returns the size of this SkinningBuffer in elements.
