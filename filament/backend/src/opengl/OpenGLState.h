@@ -374,6 +374,13 @@ void OpenGLState::activeTexture(GLuint unit) noexcept {
 void OpenGLState::bindSampler(GLuint unit, GLuint sampler) noexcept {
     assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
     assert_invariant(mContext.getFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1);
+    // `unit` is the texture unit the program assigned to a descriptor; that assignment is
+    // driven by the material file, which could be malicious or broken (see
+    // OpenGLProgram::initializeProgramState), so the assert above is not sufficient: it
+    // indexes state.textures.units[] below.
+    if (UTILS_VERY_UNLIKELY(unit >= MAX_TEXTURE_UNIT_COUNT)) {
+        return;
+    }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     update_state(state.textures.units[unit].sampler, sampler, [&]() {
         glBindSampler(unit, sampler);
@@ -435,6 +442,7 @@ void OpenGLState::bindVertexArray(RenderPrimitive const* p) noexcept {
 void OpenGLState::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
     assert_invariant(mContext.getFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1);
+    assert_invariant(index < MAX_BUFFER_BINDINGS);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 #   ifdef BACKEND_OPENGL_LEVEL_GLES31
@@ -447,6 +455,13 @@ void OpenGLState::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
                 || target == GL_UNIFORM_BUFFER
                 || target == GL_TRANSFORM_FEEDBACK_BUFFER);
 #   endif
+    // `index` is the binding point the program assigned to a descriptor; that assignment is
+    // driven by the material file, which could be malicious or broken (see
+    // OpenGLProgram::initializeProgramState), so the assert above is not sufficient: it
+    // indexes the buffers[] cache below.
+    if (UTILS_VERY_UNLIKELY(index >= MAX_BUFFER_BINDINGS)) {
+        return;
+    }
     size_t const targetIndex = getIndexForBufferTarget(target);
     // this ALSO sets the generic binding
     assert_invariant(targetIndex < sizeof(state.buffers.targets) / sizeof(*state.buffers.targets));
@@ -463,6 +478,11 @@ void OpenGLState::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
 }
 
 void OpenGLState::bindTexture(GLuint unit, GLuint target, GLuint texId, bool external) noexcept {
+    assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
+    // see bindSampler() above: `unit` is ultimately driven by the material file.
+    if (UTILS_VERY_UNLIKELY(unit >= MAX_TEXTURE_UNIT_COUNT)) {
+        return;
+    }
     //  another texture is bound to the same unit with a different target,
     //  unbind the texture from the current target
     update_state(state.textures.units[unit].target, target, [&]() {
