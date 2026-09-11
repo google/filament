@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/resources.h"
 
@@ -51,6 +50,7 @@
 #include <math/vec4.h>
 
 #include <imgui.h>
+#include <samples/SampleConfig.h>
 
 #include <fstream>
 #include <iostream>

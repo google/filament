@@ -2413,6 +2413,8 @@ void VulkanDriver::endRenderPass(int) {
     mCurrentRenderPass.renderTarget = {};
     mCurrentRenderPass.renderPass = {};
     mCurrentRenderPass.commandBuffer = nullptr;
+
+    mPipelineCache.resetBoundDynamicState();
 }
 
 void VulkanDriver::nextSubpass(int) {

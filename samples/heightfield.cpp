@@ -51,7 +51,7 @@
 
 #include <imgui.h>
 
-#include "common/SampleConfig.h"
+#include <samples/SampleConfig.h>
 #include "generated/resources/resources.h"
 
 using namespace filament;

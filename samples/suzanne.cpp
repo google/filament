@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/monkey.h"
 #include "generated/resources/resources.h"
@@ -43,6 +42,7 @@
 #include <utils/Log.h>
 #include <utils/Path.h>
 
+#include <samples/SampleConfig.h>
 #include <stb_image.h>
 
 #include <iostream>

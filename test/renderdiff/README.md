@@ -1,7 +1,6 @@
 # Rendering Difference Test
 
-This tool (`/test/renderdiff`) is a collections of scripts to run `gltf_viewer` and produce headless
-renderings.
+This tool (`/test/renderdiff`) is a collection of scripts to run visual regression tests on both `gltf_viewer` models and standalone Filament sample applications, producing headless renderings for automated diff comparison against golden references.
 
 This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around [Mesa]'s
@@ -10,11 +9,14 @@ Additionally, we should be able to use GPUs where available (though this is more
 work).
 
 The script `render.py` contains the core logic for taking input parameters (such as the test
-description file) and then running `gltf_viewer` to produce the renderings.
+description file) and executing the corresponding tests.
 
-In the `test` directory is a list of test descriptions that are specified in json. Please see
-`sample.json` to glean the structure. These tests declare which **renderers** they run on
-using the `platform-backend` specification format (e.g., `"desktop-opengl"`, `"desktop-vulkan"`).
+In the `test` directory is a list of test descriptions that are specified in JSON. Please see
+[`test/renderdiff/FORMAT.md`](FORMAT.md) and [`test/renderdiff/tests/sample.json`](tests/sample.json)
+to glean the structure, and [`arch.md`](../../arch.md) for the end-to-end framework architecture.
+These tests support both `gltf_test` (glTF models) and `sample_test`
+(standalone sample binaries), declaring which **renderers** they run on using the `platform-backend`
+specification format (e.g., `"desktop-opengl"`, `"desktop-vulkan"`).
 
 ## Setting up python
 

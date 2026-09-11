@@ -251,6 +251,10 @@ struct Variant {
             return variant & UNLIT_MASK;
         }
 
+        // Directional lighting is now handled via dynamic specialization constants.
+        // We strip the DIR bit to prevent compiling duplicate identical variants.
+        variant.key &= ~DIR;
+
         // if shadow receiver is disabled, we pick the shadow sampler
         if (!(variant.key & SRE)) {
             return variant & ~S2D;
