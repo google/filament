@@ -175,7 +175,7 @@ public:
     }
 
     UTILS_NOINLINE
-    void destroy(size_t const n, Entity* entities) noexcept {
+    void destroy(size_t const n, Entity const* entities) noexcept {
         UniqueLock stateLock(mDestructionLock);
         uint8_t* const gens = mGens;
         for (size_t i = 0; i < n; i++) {

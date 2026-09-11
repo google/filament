@@ -42,6 +42,10 @@ Entity const* LightManager::getEntities() const noexcept {
     return downcast(this)->getEntities();
 }
 
+Slice<Entity const> LightManager::getAllEntities() const noexcept {
+    return downcast(this)->getAllEntities();
+}
+
 LightManager::Instance LightManager::getInstance(Entity const e) const noexcept {
     return downcast(this)->getInstance(e);
 }

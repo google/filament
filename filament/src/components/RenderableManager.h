@@ -122,6 +122,10 @@ public:
         return mManager.getEntities();
     }
 
+    utils::Slice<const utils::Entity> getAllEntities() const noexcept {
+        return { mManager.getEntities(), mManager.getComponentCount() };
+    }
+
     const utils::PagedArenaBitset& getEntityBitset() const noexcept {
         return mManager.getEntityBitset();
     }

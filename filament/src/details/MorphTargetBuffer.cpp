@@ -82,6 +82,10 @@ MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(utils::StaticString
     return BuilderNameMixin::name(name);
 }
 
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createMorphTargetBuffer(*this);
 }

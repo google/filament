@@ -164,6 +164,10 @@ Texture::Builder& Texture::Builder::name(StaticString const& name) noexcept {
     return BuilderNameMixin::name(name);
 }
 
+Texture::Builder& Texture::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 Texture::Builder& Texture::Builder::async(
         CallbackHandler* handler,
         AsyncCompletionCallback callback,

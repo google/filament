@@ -25,6 +25,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
 #include <utils/StaticString.h>
 
 #include <functional>
@@ -68,6 +69,7 @@ public:
     class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
     public:
+        using IndexType = IndexBuffer::IndexType;
         Builder() noexcept;
         Builder(Builder const& rhs) noexcept;
         Builder(Builder&& rhs) noexcept;
@@ -89,6 +91,8 @@ public:
          */
         Builder& bufferType(IndexType indexType) noexcept;
 
+        using BuilderNameMixin<Builder>::name;
+
         /**
          * Associate an optional name with this IndexBuffer for debugging purposes.
          *
@@ -104,6 +108,7 @@ public:
          * @deprecated Use name(utils::StaticString const&) instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
@@ -114,7 +119,19 @@ public:
          * @param name A string literal to identify this IndexBuffer
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this IndexBuffer for debugging purposes.
+         *
+         * @param name A string to identify this IndexBuffer
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         * It is provided primarily for bindings to other languages.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
 
         /**
          * Specifies a callback that will execute once the resource's data has been fully allocated

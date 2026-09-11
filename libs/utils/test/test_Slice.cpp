@@ -168,3 +168,19 @@ TEST(SliceTest, DeductionGuides) {
     EXPECT_EQ(s.size(), 3);
 }
 #endif
+
+TEST(SliceTest, NullEmptySlice) {
+    Slice<int> s(static_cast<int*>(nullptr), size_t(0));
+    EXPECT_TRUE(s.empty());
+    EXPECT_EQ(s.size(), 0);
+    EXPECT_EQ(s.data(), nullptr);
+}
+
+#ifndef NDEBUG
+TEST(SliceTest, NullNonEmptySliceAssert) {
+    EXPECT_DEATH({
+        Slice<int> s(static_cast<int*>(nullptr), size_t(10));
+        (void) s;
+    }, "");
+}
+#endif

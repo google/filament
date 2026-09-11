@@ -26,6 +26,7 @@
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
 #include <utils/StaticString.h>
 
@@ -83,7 +84,7 @@ public:
     using Format = backend::PixelDataFormat;                         //!< Pixel color format
     using Type = backend::PixelDataType;                             //!< Pixel data format
     using CompressedType = backend::CompressedPixelDataType;         //!< Compressed pixel data format
-    using Usage = backend::TextureUsage;                             //!< Usage affects texel layout
+    using Usage = backend::TextureUsage;                            //!< Usage affects texel layout
     using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
     using ExternalImageHandle = backend::Platform::ExternalImageHandle;
     using ExternalImageHandleRef = backend::Platform::ExternalImageHandleRef;
@@ -225,6 +226,8 @@ public:
          */
         Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
 
+        using BuilderNameMixin<Builder>::name;
+
         /**
          * Associate an optional name with this Texture for debugging purposes.
          *
@@ -240,6 +243,7 @@ public:
          * @deprecated Use name(utils::StaticString const&) instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
@@ -250,7 +254,19 @@ public:
          * @param name A string literal to identify this Texture
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this Texture for debugging purposes.
+         *
+         * @param name A string to identify this Texture
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         * It is provided primarily for bindings to other languages.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
 
         /**
          * Creates an external texture. The content must be set using setExternalImage().
@@ -290,6 +306,7 @@ public:
          * @param user The custom data that will be passed as the second argument to the `callback`.
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& async(backend::CallbackHandler* UTILS_NULLABLE handler,
                 AsyncCompletionCallback callback = nullptr,
                 void* UTILS_NULLABLE user = nullptr) noexcept;
@@ -336,6 +353,7 @@ public:
          *
          * @return This Builder, for chaining calls.
          */
+        UTILS_APIGEN_ALTERNATE_NAME(importTexture)
         Builder& import(intptr_t id) noexcept;
 
     private:
@@ -420,10 +438,7 @@ public:
     /**
      * inline helper to update a 2D texture
      *
-     * @see setImage(Engine& engine, size_t level,
-     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-     *              uint32_t width, uint32_t height, uint32_t depth,
-     *              PixelBufferDescriptor&& buffer)
+     * @see setImage
      */
     void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
         setImage(engine, level, 0, 0, 0,
@@ -433,10 +448,7 @@ public:
     /**
      * inline helper to update a 2D texture
      *
-     * @see setImage(Engine& engine, size_t level,
-     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-     *              uint32_t width, uint32_t height, uint32_t depth,
-     *              PixelBufferDescriptor&& buffer)
+     * @see setImage
      */
     void setImage(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
@@ -480,6 +492,7 @@ public:
      *
      * @see Builder::sampler()
      */
+    UTILS_NOAPIGEN
     AsyncCallId setImageAsync(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
@@ -491,13 +504,9 @@ public:
     /**
      * inline helper to update a 2D texture asynchronously
      *
-     * @see setImageAsync(Engine& engine, size_t level,
-     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-     *              uint32_t width, uint32_t height, uint32_t depth,
-     *              PixelBufferDescriptor&& buffer,
-     *              backend::CallbackHandler* UTILS_NULLABLE handler,
-     *              AsyncCompletionCallback callback, void* user)
+     * @see setImageAsync
      */
+    UTILS_NOAPIGEN
     AsyncCallId setImageAsync(Engine& engine, size_t level, PixelBufferDescriptor&& buffer,
             backend::CallbackHandler* UTILS_NULLABLE handler, AsyncCompletionCallback callback,
             void* UTILS_NULLABLE user = nullptr) const {
@@ -509,13 +518,9 @@ public:
     /**
      * inline helper to update a 2D texture asynchronously
      *
-     * @see setImageAsync(Engine& engine, size_t level,
-     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-     *              uint32_t width, uint32_t height, uint32_t depth,
-     *              PixelBufferDescriptor&& buffer,
-     *              backend::CallbackHandler* UTILS_NULLABLE handler,
-     *              AsyncCompletionCallback callback, void* user)
+     * @see setImageAsync
      */
+    UTILS_NOAPIGEN
     AsyncCallId setImageAsync(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             PixelBufferDescriptor&& buffer,
@@ -571,6 +576,7 @@ public:
      * @deprecated Instead, use setExternalImage(Engine& engine, ExternalImageHandleRef image)
      */
     UTILS_DEPRECATED
+    UTILS_NOAPIGEN
     void setExternalImage(Engine& engine, void* UTILS_NONNULL image);
 
     /**

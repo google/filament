@@ -264,16 +264,16 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(size_t const bo
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
-        size_t const boneCount, Bone const* bones) noexcept {
-    mImpl->mSkinningBoneCount = boneCount;
-    mImpl->mUserBones = bones;
+        Slice<const Bone> bones) noexcept {
+    mImpl->mSkinningBoneCount = bones.size();
+    mImpl->mUserBones = bones.data();
     return *this;
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
-        size_t const boneCount, mat4f const* transforms) noexcept {
-    mImpl->mSkinningBoneCount = boneCount;
-    mImpl->mUserBoneMatrices = transforms;
+        Slice<const mat4f> transforms) noexcept {
+    mImpl->mSkinningBoneCount = transforms.size();
+    mImpl->mUserBoneMatrices = transforms.data();
     return *this;
 }
 
