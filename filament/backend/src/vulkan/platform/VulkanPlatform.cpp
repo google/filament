@@ -310,6 +310,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
 
         VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME,
 
+        VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
+        VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
+
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
 #endif
@@ -1079,6 +1082,18 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     if (setContains(deviceExts, VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME)) {
         chainStruct(&context.mPhysicalDeviceFeatures, &globalPriorityFeatures);
     }
+        
+    if (setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mVertexInputDynamicStateFeatures);
+    }
+
+    if (setContains(deviceExts, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mExtendedDynamicStateFeatures);
+    }
+
+    if (setContains(deviceExts, VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mExtendedDynamicState2Features);
+    }
 
     if (vkGetPhysicalDeviceProperties2) {
         chainStruct(&context.mPhysicalDeviceProperties, &context.mDriverProperties);
@@ -1114,8 +1129,6 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
                 setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         context.mPipelineCreationFeedbackSupported =
                 setContains(deviceExts, VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
-        context.mVertexInputDynamicStateSupported =
-                setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
         context.mGlobalPrioritySupported = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
         context.mGoogleDisplayTimingEnabled =
                 setContains(deviceExts, VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME);
@@ -1133,6 +1146,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mStagingBufferBypassEnabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
                                                        .enable_staging_buffer_bypass
+                                             : false);
+    context.mPipelineDynamicStateEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .vulkan.enable_pipeline_dynamic_state
                                              : false);
 
     // We know we need to allocate the protected version of the VK objects
@@ -1297,6 +1314,18 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     };
     if (requiresGpuPriority) {
         chainStruct(&deviceCreateInfo, &globalPriority);
+    }
+
+    if (setContains(deviceExtensions, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &mImpl->mContext.mVertexInputDynamicStateFeatures);
+    }
+
+    if (setContains(deviceExtensions, VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &mImpl->mContext.mExtendedDynamicStateFeatures);
+    }
+
+    if (setContains(deviceExtensions, VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &mImpl->mContext.mExtendedDynamicState2Features);
     }
 
     mImpl->mDevice = createVkDevice(deviceCreateInfo);
