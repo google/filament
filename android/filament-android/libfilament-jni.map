@@ -21,6 +21,7 @@ LIBFILAMENT {
     *filament*IndexBuffer*;
     *filament*VertexBuffer*;
     *filament*View*;
+    *filament*Viewport*;
     *filament*Texture*;
     *filament*geometry*;
     *filament*MorphTargetBuffer*;

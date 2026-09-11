@@ -171,7 +171,7 @@ class ModelViewer(
 
         light = EntityManager.get().create()
 
-        val (r, g, b) = Colors.cct(6_500.0f)
+        val (r, g, b) = Colors.cct(6_500.0f, null)
         LightManager.Builder(LightManager.Type.SUN)
                 .color(r, g, b)
                 .intensity(100_000.0f)
