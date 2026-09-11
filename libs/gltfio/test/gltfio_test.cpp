@@ -552,7 +552,89 @@ static std::vector<uint8_t> makeMalformedEightBitIndexGlb(uint32_t indexCount) {
     return glb;
 }
 
+static std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount) {
+    std::string targets;
+    std::string weights = "[";
+    for (int i = 0; i < morphTargetCount; ++i) {
+        targets += (i == 0) ? "{\"TANGENT\":2}" : ",{\"TANGENT\":2}";
+        weights += (i == 0) ? "0.0" : ",0.0";
+    }
+    weights += "]";
+
+    std::string json =
+            "{\"asset\":{\"version\":\"2.0\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],"
+            "\"nodes\":[{\"mesh\":0}],"
+            "\"meshes\":[{\"weights\":" + weights + ",\"primitives\":[{\"attributes\":{\"POSITION\":0,\"TANGENT\":1},\"mode\":4,"
+            "\"targets\":[" + targets + "]}]}],"
+            "\"accessors\":["
+            "{\"bufferView\":0,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\","
+            "\"min\":[0,0,0],\"max\":[1,1,1]},"
+            "{\"bufferView\":1,\"componentType\":5126,\"count\":3,\"type\":\"VEC4\"},"
+            "{\"bufferView\":2,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\"}],"
+            "\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":36},"
+            "{\"buffer\":0,\"byteOffset\":36,\"byteLength\":48},"
+            "{\"buffer\":0,\"byteOffset\":84,\"byteLength\":36}],"
+            "\"buffers\":[{\"byteLength\":120}]}";
+
+    while ((json.size() % 4u) != 0u) {
+        json.push_back(' ');
+    }
+
+    std::vector<uint8_t> bin(120, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // 3 vertices positions
+    fbin[0] = 0.0f; fbin[1] = 0.0f; fbin[2] = 0.0f;
+    fbin[3] = 1.0f; fbin[4] = 0.0f; fbin[5] = 0.0f;
+    fbin[6] = 0.0f; fbin[7] = 1.0f; fbin[8] = 0.0f;
+    // 3 vertices base tangents (vec4) at byteOffset 36 = float offset 9
+    fbin[9]  = 1.0f; fbin[10] = 0.0f; fbin[11] = 0.0f; fbin[12] = 1.0f;
+    fbin[13] = 1.0f; fbin[14] = 0.0f; fbin[15] = 0.0f; fbin[16] = 1.0f;
+    fbin[17] = 1.0f; fbin[18] = 0.0f; fbin[19] = 0.0f; fbin[20] = 1.0f;
+    // 3 vertices target tangent deltas (vec3) at byteOffset 84 = float offset 21
+    fbin[21] = 0.0f; fbin[22] = 0.0f; fbin[23] = 0.0f;
+    fbin[24] = 0.0f; fbin[25] = 0.0f; fbin[26] = 0.0f;
+    fbin[27] = 0.0f; fbin[28] = 0.0f; fbin[29] = 0.0f;
+
+    while ((bin.size() % 4u) != 0u) {
+        bin.push_back(0);
+    }
+
+    const uint32_t jsonSize = uint32_t(json.size());
+    const uint32_t binSize = uint32_t(bin.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), bin.begin(), bin.end());
+
+    return glb;
+}
+
 } // namespace
+
+TEST_F(glTFIOTest, MorphTargetsExceedingMaxComputeTangents) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> glb = makeMorphTargetGlb(300);
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
 
 TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
     AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });

@@ -284,6 +284,9 @@ JobSystem::~JobSystem() {
 }
 
 inline void JobSystem::incRef(Job const* job) noexcept {
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
     // no action is taken when incrementing the reference counter, therefore we can safely use
     // memory_order_relaxed.
     UTILS_UNUSED_IN_RELEASE auto const c = job->refCount.fetch_add(1, std::memory_order_relaxed);
@@ -292,6 +295,9 @@ inline void JobSystem::incRef(Job const* job) noexcept {
 
 UTILS_NOINLINE
 void JobSystem::decRef(Job const* job) noexcept {
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
 
     // We must ensure that accesses from other threads happen before deleting the Job.
     // To accomplish this, we need to guarantee that no read/writes are reordered after the
@@ -325,6 +331,9 @@ inline bool JobSystem::hasActiveJobs() const noexcept {
 }
 
 inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
+    if (UTILS_UNLIKELY(!job)) {
+        return true;
+    }
     return (job->runningJobCount.load(std::memory_order_acquire) & JOB_COUNT_MASK) == 0;
 }
 
@@ -354,6 +363,10 @@ inline void JobSystem::waitForJob(UniqueLock& lock) noexcept {
 inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     // signal we are waiting
+
+    if (UTILS_UNLIKELY(!job)) {
+        return 0;
+    }
 
     if (exitRequested()) {
         return job->runningJobCount.load(std::memory_order_acquire);
@@ -413,7 +426,10 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
 }
 
 void JobSystem::put(ThreadState& state, Job const* job) noexcept {
-    assert(job);
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
+
     assert(job >= mJobStorageBase && job < mJobStorageBase + MAX_JOB_COUNT);
 
     uint16_t const index = uint16_t(job - mJobStorageBase + 1);
@@ -620,6 +636,10 @@ UTILS_NOINLINE
 void JobSystem::finish(Job* job) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
+
     bool notify = false;
 
     // terminate this job and notify its parent
@@ -682,23 +702,32 @@ JobSystem::Job* JobSystem::create(Job* parent, JobFunc const func) noexcept {
 }
 
 void JobSystem::cancel(Job*& job) noexcept {
-    finish(job);
-    job = nullptr;
+    if (UTILS_LIKELY(job)) {
+        finish(job);
+        job = nullptr;
+    }
 }
 
 JobSystem::Job* JobSystem::retain(Job* job) noexcept {
-    Job* retained = job;
-    incRef(retained);
-    return retained;
+    if (UTILS_LIKELY(job)) {
+        incRef(job);
+    }
+    return job;
 }
 
 void JobSystem::release(Job*& job) noexcept {
-    decRef(job);
-    job = nullptr;
+    if (UTILS_LIKELY(job)) {
+        decRef(job);
+        job = nullptr;
+    }
 }
 
 void JobSystem::run(Job*& job) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
 
     ThreadState& state(getState());
 
@@ -711,6 +740,10 @@ void JobSystem::run(Job*& job) noexcept {
 void JobSystem::run(Job*& job, uint8_t const id) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
+
     ThreadState& state = mThreadStates[id];
     assert_invariant(&state == &getState());
 
@@ -721,6 +754,9 @@ void JobSystem::run(Job*& job, uint8_t const id) noexcept {
 }
 
 JobSystem::Job* JobSystem::runAndRetain(Job* job) noexcept {
+    if (UTILS_UNLIKELY(!job)) {
+        return nullptr;
+    }
     Job* retained = retain(job);
     run(job);
     return retained;
@@ -728,6 +764,10 @@ JobSystem::Job* JobSystem::runAndRetain(Job* job) noexcept {
 
 void JobSystem::waitAndRelease(Job*& job) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
 
     assert(job);
     assert(job->refCount.load(std::memory_order_relaxed) >= 1);
@@ -772,6 +812,9 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
 
 void JobSystem::runAndWait(Job*& job) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+    if (UTILS_UNLIKELY(!job)) {
+        return;
+    }
     runAndRetain(job);
     waitAndRelease(job);
 }
