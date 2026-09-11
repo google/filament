@@ -19,6 +19,7 @@
 #include "GLTexture.h"
 #include "GLUtils.h"
 #include "OpenGLDriver.h"
+#include "OpenGLState.h"
 #include "ShaderCompilerService.h"
 
 #include <backend/DriverEnums.h>
@@ -191,7 +192,16 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
                         if (UTILS_LIKELY(!gls.isES2())) {
                             GLuint const index = glGetUniformBlockIndex(program,
                                     entry.name.c_str());
-                            if (index != GL_INVALID_INDEX) {
+                            // `binding` is the buffer binding point we assign to this
+                            // descriptor; GLDescriptorSet::bind() reads it back and uses it to
+                            // index OpenGLState's per-target buffer binding cache, which has
+                            // MAX_BUFFER_BINDINGS entries. The descriptor list comes from the
+                            // material file (see ChunkDescriptorBindingsInfo) and can name the
+                            // same uniform block repeatedly, in which case glGetUniformBlockIndex
+                            // succeeds every time and this counter keeps growing, so it has to be
+                            // capped here. Descriptors past the cap are simply not bound.
+                            if (index != GL_INVALID_INDEX &&
+                                    UTILS_LIKELY(binding < OpenGLState::MAX_BUFFER_BINDINGS)) {
                                 // this can fail if the program doesn't use this descriptor
                                 glUniformBlockBinding(program, index, binding);
                                 mBindingMap.insert(set, entry.binding,
@@ -249,7 +259,16 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
                 case DescriptorType::SAMPLER_EXTERNAL: {
                     if (!entry.name.empty()) {
                         GLint const loc = glGetUniformLocation(program, entry.name.c_str());
-                        if (loc >= 0) {
+                        // `tmu` is the texture unit we assign to this sampler;
+                        // GLDescriptorSet::bind() reads it back and uses it to index
+                        // OpenGLState's texture unit cache, which has MAX_TEXTURE_UNIT_COUNT
+                        // entries. The descriptor list comes from the material file (see
+                        // ChunkDescriptorBindingsInfo) and can name the same sampler
+                        // repeatedly, in which case glGetUniformLocation returns the same
+                        // valid location every time and this counter keeps growing, so it has
+                        // to be capped here. Descriptors past the cap are simply not bound.
+                        if (loc >= 0 &&
+                                UTILS_LIKELY(tmu < OpenGLState::MAX_TEXTURE_UNIT_COUNT)) {
                             // this can fail if the program doesn't use this descriptor
                             mBindingMap.insert(set, entry.binding, { tmu, entry.type });
                             glUniform1i(loc, GLint(tmu));
