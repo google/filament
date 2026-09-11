@@ -339,7 +339,10 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
     };
     VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
-    if (set->dynamicUboMask.test(binding)) {
+    if (set->dynamicUboMask.test(
+                binding + fvkutils::getVertexStageShift<fvkutils::UniformBufferBitmask>()) ||
+            set->dynamicUboMask.test(
+                    binding + fvkutils::getFragmentStageShift<fvkutils::UniformBufferBitmask>())) {
         type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     }
     VkWriteDescriptorSet descriptorWrite = {

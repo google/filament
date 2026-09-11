@@ -211,11 +211,12 @@ golden repo.</li>
 </li>
 </ul>
 <h2 id="command-line-options"><a class="header" href="#command-line-options">Command-line Options</a></h2>
-<p>You can control the behavior of the test scripts with the following flags passed to <code>local_test.sh</code>:</p>
 <ul>
+<li><code>--test=&lt;path&gt;</code>: Path to the test suite configuration JSON file (defaults to
+<code>test/renderdiff/tests/presubmit.json</code>). For example, <code>--test=test/renderdiff/tests/sample.json</code>.</li>
 <li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests using fnmatch wildcards (<code>*</code>). It filters against
-the pattern <code>{test.name}.{platform}-{backend}.{model}</code>.</li>
-<li><code>--no_rebuild</code>: Skip rebuilding the <code>gltf_viewer</code> executable.</li>
+the pattern <code>{test.name}.{platform}-{backend}.{target}</code>.</li>
+<li><code>--no_rebuild</code>: Skip rebuilding the executables (<code>gltf_viewer</code> and <code>filament-samples</code>).</li>
 <li><code>--num_threads=&lt;number&gt;</code>: Set the number of threads for rendering. If not set, the system's default is used.</li>
 </ul>
 <p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding and using 8 threads:</p>
