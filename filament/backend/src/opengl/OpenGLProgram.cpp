@@ -56,6 +56,46 @@ struct OpenGLProgram::LazyInitializationData {
     FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
 };
 
+namespace {
+
+// Number of 'uint32_t' read out of the uniform buffer for a *single* element of a uniform of
+// the given type. This must match exactly what the glUniform*v() calls in updateUniforms()
+// consume, in particular MAT3 is read as a std140 mat3, i.e. 3 columns of 4 floats.
+// Returns 0 for types we don't upload (STRUCT) and for out-of-range values.
+constexpr uint32_t getUniformWordCount(UniformType const type) noexcept {
+    switch (type) {
+        case UniformType::BOOL:
+        case UniformType::FLOAT:
+        case UniformType::INT:
+        case UniformType::UINT:
+            return 1;
+        case UniformType::BOOL2:
+        case UniformType::FLOAT2:
+        case UniformType::INT2:
+        case UniformType::UINT2:
+            return 2;
+        case UniformType::BOOL3:
+        case UniformType::FLOAT3:
+        case UniformType::INT3:
+        case UniformType::UINT3:
+            return 3;
+        case UniformType::BOOL4:
+        case UniformType::FLOAT4:
+        case UniformType::INT4:
+        case UniformType::UINT4:
+            return 4;
+        case UniformType::MAT3:
+            return 12;  // std140 mat3: 3 columns of vec4
+        case UniformType::MAT4:
+            return 16;
+        case UniformType::STRUCT:
+            break;      // not supported
+    }
+    return 0;
+}
+
+} // anonymous namespace
+
 
 OpenGLProgram::OpenGLProgram() noexcept = default;
 
@@ -167,8 +207,15 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
                                 return std::get<1>(item) == name;
                             });
                             if (pos != lazyInitializationData.bindingUniformInfo.end()) {
-                                binding = std::get<0>(*pos);
-                                mBindingMap.insert(set, entry.binding, { binding, entry.type });
+                                // This index comes from the material file and is used as the
+                                // binding point for this buffer; GLDescriptorSet::bind() reads
+                                // it back and passes it to updateUniforms(), where it indexes
+                                // mUniformsRecords. It must be in range.
+                                uint8_t const uniformBufferIndex = std::get<0>(*pos);
+                                if (UTILS_LIKELY(uniformBufferIndex < Program::UNIFORM_BINDING_COUNT)) {
+                                    binding = uniformBufferIndex;
+                                    mBindingMap.insert(set, entry.binding, { binding, entry.type });
+                                }
                             }
                         }
                     }
@@ -223,6 +270,9 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
         UniformsRecord* const uniformsRecords = new(std::nothrow) UniformsRecord[Program::UNIFORM_BINDING_COUNT];
         UTILS_NOUNROLL
         for (auto&& [index, name, uniforms] : lazyInitializationData.bindingUniformInfo) {
+            if (UTILS_VERY_UNLIKELY(index >= Program::UNIFORM_BINDING_COUNT)) {
+                continue;
+            }
             uniformsRecords[index].locations.reserve(uniforms.size());
             uniformsRecords[index].locations.resize(uniforms.size());
             for (size_t j = 0, c = uniforms.size(); j < c; j++) {
@@ -268,10 +318,18 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
 }
 
 void OpenGLProgram::updateUniforms(
-        uint32_t const index, GLuint const id, void const* buffer,
+        uint32_t const index, GLuint const id, void const* buffer, uint32_t const size,
         uint16_t const age, uint32_t const offset) const noexcept {
     assert_invariant(mUniformsRecords);
     assert_invariant(buffer);
+
+    // `index` is the binding point recorded in mBindingMap, which for ES2 comes from the
+    // material file (see ChunkBindingUniformInfo::unflatten). Both the parser and
+    // initializeProgramState() reject out-of-range values, check again here because this is
+    // what indexes mUniformsRecords, which has exactly UNIFORM_BINDING_COUNT entries.
+    if (UTILS_VERY_UNLIKELY(index >= Program::UNIFORM_BINDING_COUNT)) {
+        return;
+    }
 
     // only update the uniforms if the UBO has changed since last time we updated
     UniformsRecord const& records = mUniformsRecords[index];
@@ -285,7 +343,16 @@ void OpenGLProgram::updateUniforms(
     assert_invariant(records.uniforms.size() == records.locations.size());
 
     // apply the offset to the buffer
+    if (UTILS_VERY_UNLIKELY(offset > size)) {
+        // the dynamic offset is past the end of the buffer, there is nothing we can read
+        return;
+    }
     buffer = static_cast<char const*>(buffer) + offset;
+
+    // number of 'uint32_t' readable at `buffer`; u.offset and u.size come verbatim from the
+    // material file and are not validated at parse time (the size of the buffer isn't known
+    // then), so every read below must be checked against this.
+    uint32_t const availableWords = uint32_t((size - offset) / sizeof(uint32_t));
 
     for (size_t i = 0, c = records.uniforms.size(); i < c; i++) {
         Program::Uniform const& u = records.uniforms[i];
@@ -295,7 +362,15 @@ void OpenGLProgram::updateUniforms(
         if (loc < 0 || loc == mRec709Location) {
             continue;
         }
-        // u.offset is in 'uint32_t' units
+        // u.offset is in 'uint32_t' units. Both terms are small (u.offset is a uint16_t and
+        // u.size a uint8_t), so this cannot overflow.
+        uint32_t const wordCount = uint32_t(u.size) * getUniformWordCount(u.type);
+        if (UTILS_VERY_UNLIKELY(!wordCount || uint32_t(u.offset) + wordCount > availableWords)) {
+            // the material declares a uniform that doesn't fit in the buffer it's bound to;
+            // reading it would be out-of-bounds. This can only happen with a broken or
+            // malicious material.
+            continue;
+        }
         GLfloat const* const bf = reinterpret_cast<GLfloat const*>(buffer) + u.offset;
         GLint const* const bi = reinterpret_cast<GLint const*>(buffer) + u.offset;
 
