@@ -116,7 +116,7 @@ void GLMemoryMappedBuffer::unmap(OpenGLState& gls, HandleAllocatorGL& handleAllo
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 #   if !defined(__EMSCRIPTEN__)
-    gls.bindBuffer(gl.binding, gl.id);
+        gls.bindBuffer(gl.binding, gl.id);
         // don't unmap if we don't have a mapping or it didn't work
         if (UTILS_LIKELY(gl.vaddr)) {
             if (UTILS_UNLIKELY(glUnmapBuffer(gl.binding) == GL_FALSE)) {
