@@ -1,0 +1,339 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/09_exceptions.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<math/vec3.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "ExceptionsTest",
+      "qualified_name": "ExceptionsTest",
+      "location": {
+        "file": "tools/apigen/tests/java/09_exceptions.h",
+        "line": 3
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "ExceptionsTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "doNoexcept",
+          "qualified_name": "doNoexcept(int)",
+          "location": {
+            "file": "tools/apigen/tests/java/09_exceptions.h",
+            "line": 5
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getNoexcept",
+          "qualified_name": "getNoexcept(int)",
+          "location": {
+            "file": "tools/apigen/tests/java/09_exceptions.h",
+            "line": 6
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "int",
+            "qualified_name": "int",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "doThrow",
+          "qualified_name": "doThrow(int)",
+          "location": {
+            "file": "tools/apigen/tests/java/09_exceptions.h",
+            "line": 7
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getThrow",
+          "qualified_name": "getThrow(int)",
+          "location": {
+            "file": "tools/apigen/tests/java/09_exceptions.h",
+            "line": 8
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "int",
+            "qualified_name": "int",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getVectorNoexcept",
+          "qualified_name": "getVectorNoexcept(int)",
+          "location": {
+            "file": "tools/apigen/tests/java/09_exceptions.h",
+            "line": 9
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "filament::math::float3",
+            "qualified_name": "filament::math::details::TVec3<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getVectorThrow",
+          "qualified_name": "getVectorThrow(int)",
+          "location": {
+            "file": "tools/apigen/tests/java/09_exceptions.h",
+            "line": 10
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "filament::math::float3",
+            "qualified_name": "filament::math::details::TVec3<float>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int",
+                "qualified_name": "int",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": []
+    }
+  ],
+  "functions": []
+}
