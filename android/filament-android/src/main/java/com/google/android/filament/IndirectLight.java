@@ -381,7 +381,7 @@ public class IndirectLight {
      *
      * @param rotation an array of 9 floats to receive the rigid-body transformation applied to
      *                 the IBL or <code>null</code>
-     * @return the <code>rotation</code> paramter if it was provided, or a newly allocated float
+     * @return the <code>rotation</code> parameter if it was provided, or a newly allocated float
      * array containing the rigid-body transformation applied to the IBL
      */
     @NonNull @Size(min = 9)
@@ -407,7 +407,7 @@ public class IndirectLight {
      * @param sh        pre-scaled 3-bands spherical harmonics
      * @param direction an array of 3 floats to receive a unit vector representing the direction of
      *                 the dominant light or <code>null</code>
-     * @return the <code>direction</code> paramter if it was provided, or a newly allocated float
+     * @return the <code>direction</code> parameter if it was provided, or a newly allocated float
      * array containing a unit vector representing the direction of the dominant light
      *
      * @see LightManager.Builder#direction
