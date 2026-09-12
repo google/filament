@@ -21,6 +21,7 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
 #include <utils/StaticString.h>
 
 #include <math/mathfwd.h>
@@ -82,6 +83,8 @@ public:
          */
         Builder& count(size_t count) noexcept;
 
+        using BuilderNameMixin<Builder>::name;
+
         /**
          * Associate an optional name with this MorphTargetBuffer for debugging purposes.
          *
@@ -97,6 +100,7 @@ public:
          * @deprecated Use name(utils::StaticString const&) instead.
          */
         UTILS_DEPRECATED
+        UTILS_NOAPIGEN
         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
@@ -107,7 +111,19 @@ public:
          * @param name A string literal to identify this MorphTargetBuffer
          * @return This Builder, for chaining calls.
          */
+        UTILS_NOAPIGEN
         Builder& name(utils::StaticString const& name) noexcept;
+
+        /**
+         * Associate an optional name with this MorphTargetBuffer for debugging purposes.
+         *
+         * @param name A string to identify this MorphTargetBuffer
+         * @return This Builder, for chaining calls.
+         *
+         * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+         * It is provided primarily for bindings to other languages.
+         */
+        Builder& name(utils::ImmutableCString const& name) noexcept;
 
         /**
          * Enables and allocates the built-in buffer for position morphing.

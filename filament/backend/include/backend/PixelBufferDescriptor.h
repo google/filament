@@ -43,7 +43,7 @@ namespace filament::backend {
  *
  * PixelBufferDescriptor releases ownership of the memory-buffer when it's destroyed.
  */
-class UTILS_PUBLIC PixelBufferDescriptor : public BufferDescriptor {
+class UTILS_PUBLIC UTILS_NOAPIGEN PixelBufferDescriptor : public BufferDescriptor {
 public:
     using PixelDataFormat = backend::PixelDataFormat;
     using PixelDataType = backend::PixelDataType;

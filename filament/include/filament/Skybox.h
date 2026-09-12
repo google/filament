@@ -188,7 +188,7 @@ public:
     /**
      * @return the associated texture
      */
-    Texture const* UTILS_NONNULL getTexture() const noexcept;
+    Texture const* UTILS_NULLABLE getTexture() const noexcept;
 
 protected:
     // prevent heap allocation

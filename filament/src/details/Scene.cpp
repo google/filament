@@ -587,9 +587,9 @@ void FScene::addEntity(Entity const entity) {
 }
 
 UTILS_NOINLINE
-void FScene::addEntities(const Entity* entities, size_t const count) {
-    for (size_t i = 0; i < count; ++i, ++entities) {
-        addEntity(*entities);
+void FScene::addEntities(utils::Slice<const Entity> entities) {
+    for (Entity const entity : entities) {
+        addEntity(entity);
     }
 }
 
@@ -599,9 +599,9 @@ void FScene::remove(Entity const entity) {
 }
 
 UTILS_NOINLINE
-void FScene::removeEntities(const Entity* entities, size_t const count) {
-    for (size_t i = 0; i < count; ++i, ++entities) {
-        remove(*entities);
+void FScene::removeEntities(utils::Slice<const Entity> entities) {
+    for (Entity const entity : entities) {
+        remove(entity);
     }
 }
 

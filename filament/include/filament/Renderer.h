@@ -236,6 +236,7 @@ public:
      *
      * @return A pointer to the Engine instance this Renderer is associated to.
      */
+    UTILS_APIGEN_RETAINED
     Engine* UTILS_NONNULL getEngine() noexcept;
 
     /**
@@ -243,6 +244,7 @@ public:
      *
      * @return A constant pointer to the Engine instance this Renderer is associated to.
      */
+    UTILS_APIGEN_RETAINED
     Engine const* UTILS_NONNULL getEngine() const noexcept {
         return const_cast<Renderer *>(this)->getEngine();
     }
@@ -285,11 +287,11 @@ public:
     /**
      * The use of this method is optional. It sets the VSYNC time expressed as the duration in
      * nanosecond since epoch of std::chrono::steady_clock.
-     * If called, passing 0 to vsyncSteadyClockTimeNano in Renderer::BeginFrame will use this
+     * If called, passing 0 to vsyncSteadyClockTimeNano in Renderer::beginFrame will use this
      * time instead.
      * @param steadyClockTimeNano duration in nanosecond since epoch of std::chrono::steady_clock
      * @see Engine::getSteadyClockTimeNano()
-     * @see Renderer::BeginFrame()
+     * @see Renderer::beginFrame()
      */
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 

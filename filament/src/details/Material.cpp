@@ -109,9 +109,9 @@ BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-Material::Builder& Material::Builder::package(const void* payload, size_t const size) {
-    mImpl->mPayload = payload;
-    mImpl->mSize = size;
+Material::Builder& Material::Builder::package(utils::Slice<const uint8_t> payload) {
+    mImpl->mPayload = payload.data();
+    mImpl->mSize = payload.size();
     return *this;
 }
 

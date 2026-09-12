@@ -265,7 +265,7 @@ public:
      *
      * @see RenderableManager::setLayerMask().
      *
-     * @note By default only layer 0 (bitmask 0x01) is visible.
+     * @note By default, only layer 0 (bitmask 0x01) is visible.
      * @note This is a convenient way to quickly show or hide sets of Renderable objects.
      */
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
@@ -274,9 +274,9 @@ public:
      * Helper function to enable or disable a visibility layer.
      * @param layer     layer between 0 and 7 to enable or disable
      * @param enabled   true to enable the layer, false to disable it
-     * @see RenderableManager::setVisibleLayers()
+     * @see RenderableManager::setLayerMask()
      */
-    inline void setLayerEnabled(size_t layer, bool enabled) noexcept {
+    inline void setLayerEnabled(size_t const layer, bool const enabled) noexcept {
         const uint8_t mask = 1u << layer;
         setVisibleLayers(mask, enabled ? mask : 0);
     }
@@ -322,16 +322,16 @@ public:
      * Note that post-processing is disabled at FL0. If the feature level is 
      * set to 0, values passed to this function are ignored.
      *
-     * @param count number of samples to use for multi-sampled anti-aliasing.\n
+     * @param count number of samples to use for multi-sampled antialiasing.\n
      *              0: treated as 1
-     *              1: no anti-aliasing
+     *              1: no antialiasing
      *              n: sample count. Effective sample could be different depending on the
      *                 GPU capabilities.
      *
-     * @note Anti-aliasing can also be performed in the post-processing stage, generally at lower
-     *       cost. See setAntialiasing.
+     * @note Antialiasing can also be performed in the post-processing stage, generally at lower
+     *       cost. See setAntiAliasing.
      *
-     * @see setAntialiasing
+     * @see setAntiAliasing
      * @deprecated use setMultiSampleAntiAliasingOptions instead
      */
     UTILS_DEPRECATED
@@ -348,36 +348,36 @@ public:
     uint8_t getSampleCount() const noexcept;
 
     /**
-     * Enables or disables anti-aliasing in the post-processing stage. Enabled by default.
+     * Enables or disables antialiasing in the post-processing stage. Enabled by default.
      * MSAA can be enabled in addition, see setSampleCount().
      *
-     * @param type FXAA for enabling, NONE for disabling anti-aliasing.
+     * @param type FXAA for enabling, NONE for disabling antialiasing.
      *
-     * @note For MSAA anti-aliasing, see setSamplerCount().
+     * @note For MSAA antialiasing, see setSamplerCount().
      *
      * @see setSampleCount
      */
     void setAntiAliasing(AntiAliasing type) noexcept;
 
     /**
-     * Queries whether anti-aliasing is enabled during the post-processing stage. To query
+     * Queries whether antialiasing is enabled during the post-processing stage. To query
      * whether MSAA is enabled, see getSampleCount().
      *
-     * @return The post-processing anti-aliasing method.
+     * @return The post-processing antialiasing method.
      */
     AntiAliasing getAntiAliasing() const noexcept;
 
     /**
-     * Enables or disable temporal anti-aliasing (TAA). Disabled by default.
+     * Enables or disable temporal antialiasing (TAA). Disabled by default.
      *
-     * @param options temporal anti-aliasing options
+     * @param options temporal antialiasing options
      */
     void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept;
 
     /**
-     * Returns temporal anti-aliasing options.
+     * Returns temporal antialiasing options.
      *
-     * @return temporal anti-aliasing options
+     * @return temporal antialiasing options
      */
     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
 
@@ -410,18 +410,18 @@ public:
     GuardBandOptions const& getGuardBandOptions() const noexcept;
 
     /**
-     * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     * Enables or disable multi-sample antialiasing (MSAA). Disabled by default.
      * Note that MSAA is a post-processing effect, and post-processing is disabled at FL0. 
      * If the feature level is set to 0, values passed to this function are ignored.
      * 
-     * @param options multi-sample anti-aliasing options
+     * @param options multi-sample antialiasing options
      */
     void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
 
     /**
-     * Returns multi-sample anti-aliasing options.
+     * Returns multi-sample antialiasing options.
      *
-     * @return multi-sample anti-aliasing options
+     * @return multi-sample antialiasing options
      */
     MultiSampleAntiAliasingOptions const& getMultiSampleAntiAliasingOptions() const noexcept;
 
@@ -684,7 +684,7 @@ public:
     SoftShadowOptions getSoftShadowOptions() const noexcept;
 
     /**
-     * Enables or disables post processing. Enabled by default.
+     * Enables or disables post-processing. Enabled by default.
      *
      * Post-processing includes:
      *  - Depth-of-field
@@ -696,11 +696,11 @@ public:
      *  - FXAA
      *  - Dynamic scaling
      *
-     * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
+     * Disabling post-processing forgoes color correctness as well as some antialiasing techniques
      * and should only be used for debugging, UI overlays or when using custom render targets
      * (see RenderTarget).
      *
-     * @param enabled true enables post processing, false disables it.
+     * @param enabled true enables post-processing, false disables it.
      *
      * @see setBloomOptions, setColorGrading, setAntiAliasing, setDithering, setSampleCount
      */
@@ -710,7 +710,7 @@ public:
     bool isPostProcessingEnabled() const noexcept;
 
     /**
-     * Inverts the winding order of front faces. By default front faces use a counter-clockwise
+     * Inverts the winding order of front faces. By default, front faces use a counter-clockwise
      * winding order. When the winding order is inverted, front faces are faces with a clockwise
      * winding order.
      *
@@ -817,13 +817,15 @@ public:
     void setDebugCamera(Camera* UTILS_NULLABLE camera) noexcept;
 
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
+    UTILS_NOAPIGEN
     utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
     //! debugging: enable or disable froxel visualisation for this view.
+    UTILS_NOAPIGEN
     void setFroxelVizEnabled(bool enabled) noexcept;
 
     //! debugging: returns information about the froxel configuration
-    struct FroxelConfigurationInfo {
+    struct UTILS_NOAPIGEN FroxelConfigurationInfo {
         uint16_t width;
         uint16_t height;
         uint16_t depth;
@@ -836,11 +838,12 @@ public:
         math::float4 clipTransform;
     };
 
-    struct FroxelConfigurationInfoWithAge {
+    struct UTILS_NOAPIGEN FroxelConfigurationInfoWithAge {
         FroxelConfigurationInfo info;
         uint32_t age;
     };
 
+    UTILS_NOAPIGEN
     FroxelConfigurationInfoWithAge getFroxelConfigurationInfo() const noexcept;
 
     /** Result of a picking query */
@@ -888,6 +891,7 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
+    UTILS_NOAPIGEN
     void pick(uint32_t x, uint32_t y, T* UTILS_NONNULL instance,
             backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
@@ -908,6 +912,7 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
+    UTILS_NOAPIGEN
     void pick(uint32_t x, uint32_t y, T instance,
             backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
         static_assert(sizeof(instance) <= sizeof(PickingQuery::storage), "user data too large");
@@ -929,7 +934,8 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T>
-    void pick(uint32_t x, uint32_t y, T functor,
+    UTILS_NOAPIGEN
+    void pick(uint32_t const x, uint32_t const y, T functor,
             backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
         static_assert(sizeof(functor) <= sizeof(PickingQuery::storage), "functor too large");
         PickingQuery& query = pick(x, y, handler,
@@ -942,11 +948,11 @@ public:
     }
 
     /**
-     * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).
+     * Creates a picking query. Multiple queries can be created (e.g.: multitouch).
      * Picking queries are all executed when Renderer::render() is called on this View.
      * The provided callback is guaranteed to be called at some point in the future.
      *
-     * Typically it takes a couple frames to receive the result of a picking query.
+     * Typically, it takes a couple frames to receive the result of a picking query.
      *
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
@@ -956,6 +962,7 @@ public:
      *                  8*sizeof(void*) bytes of user data. This user data is later accessible
      *                  in the PickingQueryResultCallback callback 3rd parameter.
      */
+    UTILS_NOAPIGEN
     PickingQuery& pick(uint32_t x, uint32_t y,
             backend::CallbackHandler* UTILS_NULLABLE handler,
             PickingQueryResultCallback UTILS_NONNULL callback) noexcept;
