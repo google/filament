@@ -514,7 +514,18 @@ void FEngine::init() {
 
     if (UTILS_UNLIKELY(getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
         // UBO batching is not supported in feature level 0
-        if (features.material.enable_material_instance_uniform_batching) {
+        bool uboBatching = features.material.enable_material_instance_uniform_batching;
+#if defined(__EMSCRIPTEN__)
+        if (uboBatching) {
+            // ANGLE's Metal backend can incur significant overhead when binding many ranges from a
+            // large UBO, especially when uniform layout conversion is required. In practice,
+            // batching is slower than using individual UBOs on this path.
+            LOG(WARNING) << "material.enable_material_instance_uniform_batching is not supported "
+                            "on WebGL and is being forced off.";
+            uboBatching = false;
+        }
+#endif
+        if (uboBatching) {
             // Ubo size of each material instance is at least 16 bytes.
             constexpr BufferAllocator::allocation_size_t minSlotSize = 16;
             auto const uboOffsetAlignment = static_cast<BufferAllocator::allocation_size_t>(
