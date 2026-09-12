@@ -98,7 +98,7 @@ jobs:
 
   build-mac:
     name: build-mac
-    runs-on: macos-14-xlarge
+    runs-on: macos-15-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
     permissions:
       contents: write
@@ -279,7 +279,7 @@ jobs:
 
   build-ios:
     name: build-ios
-    runs-on: macos-14-xlarge
+    runs-on: macos-15-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
     permissions:
       contents: write
@@ -296,8 +296,8 @@ jobs:
           ref: ${{ steps.git_ref.outputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/mac-prereq
-      - name: Select Xcode 16.2
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
