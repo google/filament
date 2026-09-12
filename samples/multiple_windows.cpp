@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/monkey.h"
 #include "generated/resources/resources.h"
@@ -44,6 +43,7 @@
 
 #include <math/mat4.h>
 
+#include <samples/SampleConfig.h>
 #include <SDL.h>
 
 #include <functional>

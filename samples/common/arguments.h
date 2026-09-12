@@ -17,10 +17,8 @@
 #ifndef TNT_SAMPLES_ARGUMENTS_H
 #define TNT_SAMPLES_ARGUMENTS_H
 
-#include "Parameter.h"
-#include "SampleConfig.h"
-
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/AssetWriter.h>
 #include <filamentapp/DisplayManager.h>
 #include <filamentapp/FilamentApp2.h>
 
@@ -29,14 +27,20 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <samples/Parameter.h>
+#include <samples/SampleConfig.h>
+
 #include <memory>
 
 namespace samples {
 
 FilamentApp2::Builder getBuilder(const SampleConfig& config,
-        filament::app::DisplayManager* dm = nullptr, filament::app::AssetLoader* loader = nullptr);
+        filament::app::DisplayManager* dm = nullptr, filament::app::AssetLoader* loader = nullptr,
+        filament::app::AssetWriter* writer = nullptr);
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config);
+
+SampleParameters getCommonParameters();
 
 struct CommandLineSpecification {
     utils::CString sampleDescription;

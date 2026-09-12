@@ -23,6 +23,9 @@ concurrency:
 #    The 'skip' output is only set to 'true' if it's a push to main AND the commit is verified.
 #    In all other cases (including PRs where the job is skipped), it defaults to empty.
 
+permissions:
+  contents: read
+
 jobs:
   check-verification:
     if: github.event_name == 'push'
@@ -46,7 +49,7 @@ jobs:
 
   build-desktop-mac:
     name: build-mac
-    runs-on: 'macos-14-xlarge'
+    runs-on: 'macos-15-xlarge'
     timeout-minutes: 45
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
@@ -54,6 +57,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/mac-prereq
       - name: Run build script
         run: |
@@ -69,6 +73,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         run: |
@@ -86,6 +91,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
@@ -101,6 +107,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
@@ -132,7 +139,7 @@ jobs:
 
   build-ios:
     name: build-iOS
-    runs-on: 'macos-14-xlarge'
+    runs-on: 'macos-15-xlarge'
     timeout-minutes: 45
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
@@ -140,9 +147,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/mac-prereq
-      - name: Select Xcode 16.2
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
@@ -160,6 +168,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/web-prereq
       - name: Run build script
@@ -175,6 +184,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
@@ -185,7 +195,7 @@ jobs:
 
   test-renderdiff:
     name: test-renderdiff
-    runs-on: 'macos-14-xlarge'
+    runs-on: 'macos-15-xlarge'
     timeout-minutes: 45
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
@@ -193,6 +203,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check if accepting new goldens
@@ -205,6 +216,13 @@ jobs:
           else
             echo "accept=false" >> "$GITHUB_OUTPUT"
           fi
+      - uses: ./.github/actions/get-gltf-assets
+      - name: Validate renderdiff test schemas
+        run: |
+          python3 test/renderdiff/src/test_schema.py \
+              test/renderdiff/tests/presubmit.json \
+              test/renderdiff/tests/sample.json \
+              android/samples/sample-render-validation/src/main/assets/default_test.json
         shell: bash
       - name: Renderdiff generate
         if: steps.check_accept.outputs.accept != 'true'
@@ -267,6 +285,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         run: ./build.sh -W debug test_filamat filament gltf_viewer
@@ -283,19 +302,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
-      - name: Run build script
-        # We need to build before clang-tidy can run analysis
-        run: |
-          # This will build for all three desktop backends on mac
-          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
-          ./build.sh -b -p desktop debug
-          # This will build and install the release build
-          ./build.sh -p desktop release && ninja -C out/cmake-release install
-      - name: Check - clang-tidy (exception escape)
-        run: bash test/code-correctness/clang-tidy-proxy.sh
-      - name: Check - public header inclusion
-        run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Get commit message
         id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
@@ -317,6 +325,17 @@ jobs:
           else
             bash test/code-correctness/check-headers.sh ${GITHUB_SHA}
           fi
+      - name: Run build script
+        # We need to build before clang-tidy can run analysis
+        run: |
+          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
+          ./build.sh -b -p desktop debug
+          # This will build and install the release build
+          ./build.sh -p desktop release && ninja -C out/cmake-release install
+      - name: Check - clang-tidy (exception escape)
+        run: bash test/code-correctness/clang-tidy-proxy.sh
+      - name: Check - public header inclusion
+        run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Check - Filament unit tests
         run: bash test/filament-unit-test/test.sh
 
@@ -330,6 +349,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/get-mesa
       - uses: ./.github/actions/get-vulkan-sdk
