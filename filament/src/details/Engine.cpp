@@ -734,9 +734,10 @@ void FEngine::shutdown() {
         assert_invariant(mDeferredAsyncObjectDestruction.empty());
     }
 
-    // Finally, call user callbacks that might have been scheduled.
+    // Finally, call user callbacks that might have been scheduled. This is the last chance to run
+    // them, so it has to drain the ones that schedule other callbacks.
     // These callbacks CANNOT call driver APIs.
-    getDriver().purge();
+    getDriver().purgeAll();
 
     // and destroy the CommandStream
     std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));

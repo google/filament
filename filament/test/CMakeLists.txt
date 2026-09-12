@@ -66,6 +66,7 @@ if (FILAMENT_BUILD_TESTING)
                 test_BufferStuffingDetector.cpp
                 test_CircularQueue.cpp
                 test_compact.cpp
+                test_EngineShutdown.cpp
                 test_FenceManager.cpp
                 test_FramePacer.cpp
                 test_UboManager.cpp

@@ -122,6 +122,7 @@ public:
     void debugCommandEnd(CommandStream* cmds, bool synchronous,
             const char* methodName) noexcept override {}
     void purge() noexcept override {}
+    void purgeAll() noexcept override {}
     void scheduleCallback(CallbackHandler* handler, void* user,
             CallbackHandler::Callback callback) override {}
 
