@@ -1666,8 +1666,9 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
 void MetalDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
         uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
-    setVertexBufferObject(vbh, index, boh);
-    scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+    // No GPU work, only a pointer to set, which the draws read.
+    runAsyncCallNow(getJobQueue(), jobId, handler, callback, user,
+            [&] { setVertexBufferObject(vbh, index, boh); });
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,

@@ -273,4 +273,53 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
     EXPECT_FALSE(api.cancelAsyncJob(id));
 }
 
+TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    AsyncState state;
+    AttributeArray attributes = { Attribute{ .offset = 0,
+        .stride = sizeof(float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0 } };
+    VertexBufferInfoHandle vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
+    VertexBufferHandle vbh = addCleanup(api.createVertexBufferAsync(3, vbih, nullptr,
+            signalCallback, &state.vertexBufferCreated));
+    BufferObjectHandle boh =
+            addCleanup(api.createBufferObjectAsync(sizeof(float2) * 3, BufferObjectBinding::VERTEX,
+                    BufferUsage::STATIC, nullptr, signalCallback, &state.bufferObjectCreated));
+    waitFor(state.vertexBufferCreated);
+    waitFor(state.bufferObjectCreated);
+
+    // Same race as above. This call is worth its own test because the Metal backend doesn't run
+    // it on a job, it only sets a pointer on the backend thread, so both honoring the cancellation
+    // and releasing the reserved id are done by hand there.
+    AsyncCallResult result;
+    AsyncCallId const id = api.setVertexBufferObjectAsync(vbh, 0, boh, nullptr, recordCallback,
+            &result);
+    EXPECT_TRUE(api.cancelAsyncJob(id));
+
+    waitFor(result.fired);
+    EXPECT_EQ(AsyncCallStatus::CANCELED, result.status)
+            << "a canceled call must report that it was canceled, not that it completed";
+    EXPECT_FALSE(api.cancelAsyncJob(id));
+}
+
 } // namespace test
