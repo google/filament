@@ -222,6 +222,8 @@ TEST_F(BackendTest, BasicAsyncFlow) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
+        // Hash recorded on the Apple silicon simulator; A-series devices
+        // rasterize this scene differently (measured 2793888331 on an A10X).
         EXPECT_IMAGE(renderTarget,
                 ScreenshotParams(kRenderTargetSize, kRenderTargetSize, "BasicAsyncFlow",
                         1079009730u));
