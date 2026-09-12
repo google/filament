@@ -75,7 +75,11 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
                 while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
                     serviceThreadCondition.wait(lock);
                 }
-                if (mExitRequested) {
+                // Exit only after the queue is drained. Abandoning callbacks would strand callers
+                // waiting on a completion that never arrives (e.g. FEngine defers freeing an
+                // asynchronous object until its creation callback settles it).
+                if (serviceThreadCallbackQueue.empty()) {
+                    assert_invariant(mExitRequested);
                     break;
                 }
                 // move the callbacks to a temporary vector
