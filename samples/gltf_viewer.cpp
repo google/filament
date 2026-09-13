@@ -440,8 +440,7 @@ bool checkGLTFAsset(const utils::Path& filename) {
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
     if (config.iblDirectory.empty()) {
-        config.iblDirectory =
-                utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+        config.iblDirectory = utils::CString(DEFAULT_IBL);
     }
     auto app = std::make_shared<App>();
     app->config = config;
@@ -1204,7 +1203,7 @@ samples::SampleParameters createAppParameters() {
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Filament";
-    config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    config.iblDirectory = utils::CString(DEFAULT_IBL);
     samples::CommandLineSpecification spec = {
         .sampleDescription = "GLTF_VIEWER is a tool for viewing glTF models with Filament.",
         .positionalArgsDescription = { "gltf/glb file" },
@@ -1214,10 +1213,9 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto app = createSampleApp(config, dm.get(), loader);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
-    delete loader;
     return 0;
 }
 #endif
