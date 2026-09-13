@@ -50,15 +50,15 @@ using namespace filament::math;
 
 namespace {
 struct App {
-    FilamentApp2* filamentApp;
+    FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
-    VertexBuffer* vb;
-    VertexBuffer* vb2;
-    IndexBuffer* ib;
-    Material* mat;
-    Camera* cam;
+    VertexBuffer* vb = nullptr;
+    VertexBuffer* vb2 = nullptr;
+    IndexBuffer* ib = nullptr;
+    Material* mat = nullptr;
+    Camera* cam = nullptr;
     Entity camera;
-    Skybox* skybox;
+    Skybox* skybox = nullptr;
     Entity renderable;
 };
 
@@ -80,10 +80,8 @@ const VertexWithBones TRIANGLE_VERTICES_WITHBONES[6] = {
 
 constexpr uint16_t TRIANGLE_INDICES[6] = { 0, 1, 2, 3 };
 
-mat4f transforms[] = {mat4f(1),
-                      mat4f::translation(float3(1, 0, 0)),
-                      mat4f::translation(float3(1, 1, 0)),
-                      mat4f::translation(float3(0, 1, 0))};
+static const mat4f transforms[] = { mat4f(1), mat4f::translation(float3(1, 0, 0)),
+    mat4f::translation(float3(1, 1, 0)), mat4f::translation(float3(0, 1, 0)) };
 } // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
@@ -124,9 +122,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                                    VertexBuffer::AttributeType::FLOAT4, 20, 36)
                            .build(*engine);
         app->vb->setBufferAt(*engine, 0,
-                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES_WITHBONES, 154, nullptr));
+                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES_WITHBONES,
+                        4 * sizeof(VertexWithBones), nullptr));
         app->vb2->setBufferAt(*engine, 0,
-                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES_WITHBONES + 3, 108, nullptr));
+                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES_WITHBONES + 3,
+                        3 * sizeof(VertexWithBones), nullptr));
         app->ib = IndexBuffer::Builder()
                           .indexCount(4)
                           .bufferType(IndexBuffer::IndexType::USHORT)
@@ -159,14 +159,29 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->skybox);
-        engine->destroy(app->renderable);
-        engine->destroy(app->mat);
-        engine->destroy(app->vb);
-        engine->destroy(app->vb2);
-        engine->destroy(app->ib);
-        engine->destroyCameraComponent(app->camera);
-        utils::EntityManager::get().destroy(app->camera);
+        if (app->skybox) {
+            engine->destroy(app->skybox);
+        }
+        if (app->renderable) {
+            engine->destroy(app->renderable);
+            utils::EntityManager::get().destroy(app->renderable);
+        }
+        if (app->mat) {
+            engine->destroy(app->mat);
+        }
+        if (app->vb) {
+            engine->destroy(app->vb);
+        }
+        if (app->vb2) {
+            engine->destroy(app->vb2);
+        }
+        if (app->ib) {
+            engine->destroy(app->ib);
+        }
+        if (app->cam) {
+            engine->destroyCameraComponent(app->camera);
+            utils::EntityManager::get().destroy(app->camera);
+        }
     };
 
 
@@ -179,18 +194,23 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         const uint32_t w = view->getViewport().width;
                         const uint32_t h = view->getViewport().height;
                         const float aspect = (float) w / h;
-                        app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
-                                aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                        if (app->cam) {
+                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                    aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                        }
 
                         auto& rm = engine->getRenderableManager();
 
                         // Bone skinning animation
-                        float tr = (float) (sin(now));
-                        mat4f trans[] = { filament::math::mat4f::translation(
-                                                  filament::math::float3{ tr, 0, 0 }),
-                            filament::math::mat4f::translation(filament::math::float3{ -1, tr, 0 }),
-                            filament::math::mat4f(1.f) };
-                        rm.setBones(rm.getInstance(app->renderable), trans, 3, 0);
+                        if (app->renderable) {
+                            float tr = (float) (sin(now));
+                            mat4f trans[] = { filament::math::mat4f::translation(
+                                                      filament::math::float3{ tr, 0, 0 }),
+                                filament::math::mat4f::translation(
+                                        filament::math::float3{ -1, tr, 0 }),
+                                filament::math::mat4f(1.f) };
+                            rm.setBones(rm.getInstance(app->renderable), trans, 3, 0);
+                        }
                     })
                     .build();
 
@@ -208,8 +228,8 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
 
     return 0;
