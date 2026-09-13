@@ -237,6 +237,13 @@ target_link_libraries(samples-common filament filamentapp)
 
 set_target_properties(samples-common PROPERTIES FOLDER Samples/Common)
 
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_isMultiConfig)
+    target_compile_definitions(samples-common PRIVATE RELATIVE_ASSET_PATH="..")
+else()
+    target_compile_definitions(samples-common PRIVATE RELATIVE_ASSET_PATH=".")
+endif()
+
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
@@ -326,7 +333,7 @@ if (NOT ANDROID)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
-    target_link_libraries(sample_normal_map PRIVATE filameshio)
+    target_link_libraries(sample_normal_map PRIVATE filameshio suzanne-resources)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
     if (FILAMENT_DISABLE_MATOPT)

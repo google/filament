@@ -41,6 +41,7 @@
 #include <samples/SampleConfig.h>
 #include <stb_image.h>
 
+#include <cmath>
 #include <iostream> // for cerr
 
 using namespace filament;
@@ -53,16 +54,16 @@ using MagFilter = TextureSampler::MagFilter;
 namespace {
 
 struct App {
-    FilamentApp2* filamentApp;
+    FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
-    VertexBuffer* vb;
-    IndexBuffer* ib;
-    Material* mat;
-    MaterialInstance* matInstance;
-    Camera* cam;
+    VertexBuffer* vb = nullptr;
+    IndexBuffer* ib = nullptr;
+    Material* mat = nullptr;
+    MaterialInstance* matInstance = nullptr;
+    Camera* cam = nullptr;
     Entity camera;
-    Skybox* skybox;
-    Texture* tex;
+    Skybox* skybox = nullptr;
+    Texture* tex = nullptr;
     Entity renderable;
 };
 
@@ -90,23 +91,21 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto app = std::make_shared<App>();
     app->config = config;
 
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
         // Load texture
-        Path path = FilamentApp2::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
-        if (!path.exists()) {
-            std::cerr << "The texture " << path.c_str() << " does not exist" << std::endl;
-            exit(1);
+        int w = 0, h = 0, n = 0;
+        unsigned char* data = nullptr;
+        auto buf = loader->load("textures/Moss_01/Moss_01_Color.png");
+        if (!buf.empty()) {
+            data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 4);
         }
-        int w, h, n;
-        unsigned char* data = stbi_load(path.c_str(), &w, &h, &n, 4);
         if (data == nullptr) {
-            std::cerr << "The texture " << path.c_str() << " could not be loaded" << std::endl;
-            exit(1);
+            std::cerr << "The texture could not be loaded" << std::endl;
+            return;
         }
         std::cout << "Loaded texture: " << w << "x" << h << std::endl;
-        Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
-                Texture::Format::RGBA, Texture::Type::UBYTE,
-                (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
+        Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4), Texture::Format::RGBA,
+                Texture::Type::UBYTE, [](void* buffer, size_t, void*) { stbi_image_free(buffer); });
         app->tex = Texture::Builder()
                            .width(uint32_t(w))
                            .height(uint32_t(h))
@@ -161,16 +160,33 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->skybox);
-        engine->destroy(app->renderable);
-        engine->destroy(app->matInstance);
-        engine->destroy(app->mat);
-        engine->destroy(app->tex);
-        engine->destroy(app->vb);
-        engine->destroy(app->ib);
+        if (app->skybox) {
+            engine->destroy(app->skybox);
+        }
+        if (app->renderable) {
+            engine->destroy(app->renderable);
+            EntityManager::get().destroy(app->renderable);
+        }
+        if (app->matInstance) {
+            engine->destroy(app->matInstance);
+        }
+        if (app->mat) {
+            engine->destroy(app->mat);
+        }
+        if (app->tex) {
+            engine->destroy(app->tex);
+        }
+        if (app->vb) {
+            engine->destroy(app->vb);
+        }
+        if (app->ib) {
+            engine->destroy(app->ib);
+        }
 
-        engine->destroyCameraComponent(app->camera);
-        utils::EntityManager::get().destroy(app->camera);
+        if (app->cam) {
+            engine->destroyCameraComponent(app->camera);
+            utils::EntityManager::get().destroy(app->camera);
+        }
     };
 
 
@@ -178,12 +194,17 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
-                            const float zoom = 2.0 + 2.0 * sin(now);
+                            if (!app->cam) {
+                                return;
+                            }
+                            const float zoom = 2.0f + 1.9f * (float) std::sin(now);
                             const uint32_t w = view->getViewport().width;
                             const uint32_t h = view->getViewport().height;
-                            const float aspect = (float) w / h;
-                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * zoom,
-                                    aspect * zoom, -zoom, zoom, -1, 1);
+                            if (h > 0 && zoom > 0.001f) {
+                                const float aspect = (float) w / h;
+                                app->cam->setProjection(Camera::Projection::ORTHO, -aspect * zoom,
+                                        aspect * zoom, -zoom, zoom, -1, 1);
+                            }
                         })
                         .build();
 
@@ -201,8 +222,9 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
 
     return 0;

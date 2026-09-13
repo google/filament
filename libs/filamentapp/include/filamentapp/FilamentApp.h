@@ -87,8 +87,6 @@ public:
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
 
-    static const utils::Path& getRootAssetsPath();
-
 private:
     FilamentApp();
 
