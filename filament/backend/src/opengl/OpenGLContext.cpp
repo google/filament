@@ -546,6 +546,18 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         bugs->disable_depth_precache_for_default_material = true;
     }
 
+#if defined(__EMSCRIPTEN__)
+    // Seen on
+    // [WebGL]
+    // [ANGLE's Metal backend]
+    // ANGLE's Metal backend can incur significant overhead when a large UBO is accessed through
+    // many different ranges, especially when uniform layout conversion is required. This
+    // regression has only been observed with the Metal backend so far, but since the underlying
+    // ANGLE backend cannot be reliably identified at runtime on WebGL, apply the workaround to
+    // all WASM builds.
+    bugs->disable_material_instance_uniform_batching = true;
+#endif
+
 #ifdef BACKEND_OPENGL_VERSION_GLES
 #   ifndef FILAMENT_IOS // FILAMENT_IOS is guaranteed to have ES3.x
     if (UTILS_UNLIKELY(major == 2)) {
