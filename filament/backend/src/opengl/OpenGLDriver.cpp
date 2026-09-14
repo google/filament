@@ -3118,6 +3118,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
             return mContext.bugs.disable_depth_precache_for_default_material;
         case Workaround::EMULATE_SRGB_SWAPCHAIN:
             return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
+        case Workaround::DISABLE_MATERIAL_INSTANCE_UNIFORM_BATCHING:
+            return mContext.bugs.disable_material_instance_uniform_batching;
         default:
             return false;
     }
