@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-#include <fstream>
-#include <iostream>
+#include "filament_test_resources.h"
+#include "MaterialParser.h"
 
 #include <gtest/gtest.h>
 
-#include "MaterialParser.h"
-
-#include "filament_test_resources.h"
+#include <fstream>
+#include <iostream>
 
 using namespace filament;
 
@@ -39,6 +38,67 @@ TEST(MaterialParser, Parse) {
             "Material filament/test/test_material.filamat could not be parsed by MaterialParser." << std::endl <<
             "Does MATERIAL_VERSION need to be updated?" << std::endl <<
             "See instructions in filament_test_material_parser.cpp" << std::endl;
+}
+
+TEST(MaterialParser, RejectOOBDescriptorBindings) {
+    // 1 descriptor: name = "u_sampler\0", type = 1, binding = MAX_DESCRIPTOR_COUNT (64) -> OOB!
+    std::vector<uint8_t> buffer = {
+        1,                                                  // descriptorCount
+        'u', '_', 's', 'a', 'm', 'p', 'l', 'e', 'r', '\0',  // name
+        1,                                                  // type
+        static_cast<uint8_t>(backend::MAX_DESCRIPTOR_COUNT) // binding (64 -> invalid)
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorBindingsContainer container;
+    EXPECT_FALSE(ChunkDescriptorBindingsInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, AcceptValidDescriptorBindings) {
+    // 1 descriptor: name = "u_sampler\0", type = 1, binding = MAX_DESCRIPTOR_COUNT - 1 (63) ->
+    // Valid!
+    std::vector<uint8_t> buffer = {
+        1,                                                      // descriptorCount
+        'u', '_', 's', 'a', 'm', 'p', 'l', 'e', 'r', '\0',      // name
+        1,                                                      // type
+        static_cast<uint8_t>(backend::MAX_DESCRIPTOR_COUNT - 1) // binding (63 -> valid)
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorBindingsContainer container;
+    EXPECT_TRUE(ChunkDescriptorBindingsInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, RejectOOBDescriptorSetLayout) {
+    // 1 descriptor: type = 0, stageFlags = 1, binding = 64 (OOB), flags = 0, count = 0 (uint16_t)
+    std::vector<uint8_t> buffer = {
+        1,                                                   // descriptorCount
+        0,                                                   // type
+        1,                                                   // stageFlags
+        static_cast<uint8_t>(backend::MAX_DESCRIPTOR_COUNT), // binding (64 -> invalid)
+        0,                                                   // flags
+        0, 0                                                 // count (uint16_t)
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_FALSE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
+}
+
+TEST(MaterialParser, AcceptValidDescriptorSetLayout) {
+    // 1 descriptor: type = 0, stageFlags = 1, binding = 63 (valid), flags = 0, count = 0 (uint16_t)
+    std::vector<uint8_t> buffer = {
+        1,                                                       // descriptorCount
+        0,                                                       // type
+        1,                                                       // stageFlags
+        static_cast<uint8_t>(backend::MAX_DESCRIPTOR_COUNT - 1), // binding (63 -> valid)
+        0,                                                       // flags
+        0, 0                                                     // count (uint16_t)
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorSetLayoutContainer container;
+    EXPECT_TRUE(ChunkDescriptorSetLayoutInfo::unflatten(unflattener, &container));
 }
 
 int main(int argc, char** argv) {
