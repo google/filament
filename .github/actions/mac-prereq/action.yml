@@ -5,7 +5,7 @@ runs:
     - uses: ./.github/actions/dep-versions
     - name: Set up Homebrew
       id: set-up-homebrew
-      uses: Homebrew/actions/setup-homebrew@master
+      uses: Homebrew/actions/setup-homebrew@1f8e202ffddf94def7f42f6fa3a482e821489f9c # 2026.07.10.1
     - name: Set up Python
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
       with:
@@ -15,7 +15,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/Library/Caches/Homebrew
-        key: ${{ runner.os }}-brew-20251211
+        key: ${{ runner.os }}-brew-20260914
     - name: Install Mac Prerequisites
       shell: bash
       run: |
