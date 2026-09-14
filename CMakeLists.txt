@@ -944,7 +944,11 @@ add_subdirectory(${EXTERNAL}/cgltf/tnt)
 add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
-add_subdirectory(${EXTERNAL}/perfetto/tnt)
+if (NOT APPLETV)
+    # Perfetto's subprocess support uses fork()/exec*(), which are __TVOS_PROHIBITED.
+    # The library is only consumed on Android (FILAMENT_ENABLE_PERFETTO).
+    add_subdirectory(${EXTERNAL}/perfetto/tnt)
+endif()
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 
 # imageio-lite is needed for viewer
