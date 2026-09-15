@@ -87,14 +87,14 @@ public:
      * @class Listener
      * @brief Abstract base class for receiving global entity lifecycle notifications.
      */
-    class Listener {
+    class UTILS_NOAPIGEN Listener {
     public:
         /**
          * @brief Invoked asynchronously after a batch of entities has been globally destroyed.
          * @param[in] n The number of entities contained in the destruction batch.
          * @param[in] entities Pointer to the contiguous array of destroyed Entity identities.
          */
-        virtual void onEntitiesDestroyed(size_t n, Entity const* entities) noexcept = 0;
+        virtual void onEntitiesDestroyed(size_t n, Entity const* UTILS_NONNULL entities) noexcept = 0;
     protected:
         virtual ~Listener() noexcept;
     };
@@ -106,13 +106,15 @@ public:
      * @param[in] token Unique identifier key for the listener (e.g., 'this' pointer).
      * @param[in] callback The invocable target function to execute.
      */
-    void registerChangeCallback(void const* token, ChangeCallback callback) noexcept;
+    UTILS_NOAPIGEN
+    void registerChangeCallback(void const* UTILS_NONNULL token, ChangeCallback callback) noexcept;
 
     /**
      * @brief Unregisters a pre-existing change notification callback.
      * @param[in] token The unique identifier key used during registration.
      */
-    void unregisterChangeCallback(void const* token) noexcept;
+    UTILS_NOAPIGEN
+    void unregisterChangeCallback(void const* UTILS_NONNULL token) noexcept;
 
     /**
      * @brief Flushes all pending entity lifecycle change notifications to registered callbacks.
@@ -136,18 +138,26 @@ public:
     size_t getEntityCount() const noexcept;
 
     /**
-     * @brief Allocates and creates a batch of 'n' new or recycled Entities.
-     * @param[in] n The number of Entity identities to generate.
-     * @param[out] entities Pointer to the output array receiving the populated Entity IDs.
+     * @brief Allocates and creates a batch of new or recycled Entities.
+     * @param[out] entities Slice to the output array receiving the populated Entity IDs.
      */
-    void create(size_t n, Entity* entities);
+    void create(Slice<Entity> entities);
+
+    UTILS_NOAPIGEN
+    inline void create(size_t n, Entity* UTILS_NONNULL entities) {
+        create({ entities, n });
+    }
 
     /**
-     * @brief Globally and logically destroys a batch of 'n' Entities.
-     * @param[in] n The number of Entity identities to destroy.
-     * @param[in] entities Pointer to the contiguous array of Entities to logically kill.
+     * @brief Globally and logically destroys a batch of Entities.
+     * @param[in] entities Slice to the contiguous array of Entities to logically kill.
      */
-    void destroy(size_t n, Entity* entities) noexcept;
+    void destroy(Slice<const Entity> entities) noexcept;
+
+    UTILS_NOAPIGEN
+    inline void destroy(size_t n, Entity const* UTILS_NONNULL entities) noexcept {
+        destroy({ entities, n });
+    }
 
     /**
      * @brief Allocates and creates a single new or recycled Entity.
@@ -155,7 +165,7 @@ public:
      */
     Entity create() {
         Entity e;
-        create(1, &e);
+        create({ &e, 1 });
         return e;
     }
 
@@ -164,7 +174,7 @@ public:
      * @param[in] e The Entity to logically kill.
      */
     void destroy(Entity e) noexcept {
-        destroy(1, &e);
+        destroy({ &e, 1 });
     }
 
     /**
@@ -178,18 +188,21 @@ public:
      * @brief Subscribes an abstract Listener to global entity destruction notifications.
      * @param[in] l Pointer to the abstract Listener subclass.
      */
-    void registerListener(Listener* l) noexcept;
+    UTILS_NOAPIGEN
+    void registerListener(Listener* UTILS_NONNULL l) noexcept;
 
     /**
      * @brief Unregisters a pre-existing abstract Listener from the system.
      * @param[in] l Pointer to the Listener instance to remove.
      */
-    void unregisterListener(Listener* l) noexcept;
+    UTILS_NOAPIGEN
+    void unregisterListener(Listener* UTILS_NONNULL l) noexcept;
 
     /**
      * @brief Extracts the complete tracking bitset representing all logically alive Entities.
      * @return PagedArenaBitset containing bits for every active 32-bit Entity index.
      */
+    UTILS_NOAPIGEN
     PagedArenaBitset getAliveEntities() const noexcept;
 
     /**
@@ -202,8 +215,9 @@ public:
      *
      * @param watermark Pointer to the reader's atomic watermark.
      */
-    void registerWatermark(std::atomic<uint64_t>* watermark, utils::ImmutableCString name = "Unknown",
-            const PagedArenaBitset* entityBitset = nullptr, Mutex* entityBitsetLock = nullptr) noexcept;
+    UTILS_NOAPIGEN
+    void registerWatermark(std::atomic<uint64_t>* UTILS_NONNULL watermark, utils::ImmutableCString name = "Unknown",
+            const PagedArenaBitset* UTILS_NULLABLE entityBitset = nullptr, Mutex* UTILS_NULLABLE entityBitsetLock = nullptr) noexcept;
 
     /**
      * @brief Unregisters a reader's watermark from the EBR system.
@@ -215,7 +229,8 @@ public:
      *
      * @param watermark Pointer to the reader's atomic watermark.
      */
-    void unregisterWatermark(std::atomic<uint64_t>* watermark) noexcept;
+    UTILS_NOAPIGEN
+    void unregisterWatermark(std::atomic<uint64_t>* UTILS_NONNULL watermark) noexcept;
 
     /**
      * @brief Atomically rebinds a component manager's EBR watermark to a new memory address.
@@ -244,9 +259,10 @@ public:
      * @warning Never substitute this method with an unregister/register pair when moving
      * a Component Manager.
      */
-    void rebindWatermark(std::atomic<uint64_t> const* oldW, std::atomic<uint64_t>* newW,
-            ImmutableCString newName, const PagedArenaBitset* newEntityBitset = nullptr,
-            Mutex* newEntityBitsetLock = nullptr) noexcept;
+    UTILS_NOAPIGEN
+    void rebindWatermark(std::atomic<uint64_t> const* UTILS_NONNULL oldW, std::atomic<uint64_t>* UTILS_NONNULL newW,
+            ImmutableCString newName, const PagedArenaBitset* UTILS_NULLABLE newEntityBitset = nullptr,
+            Mutex* UTILS_NULLABLE newEntityBitsetLock = nullptr) noexcept;
 
     /**
      * @brief Advances the timeline to the next epoch.
@@ -274,13 +290,16 @@ public:
      * @param readerWatermark The current watermark of the requesting reader.
      * @return Reference to the populated target vector @p out.
      */
+    UTILS_NOAPIGEN
     uint64_t getMissedGarbage(
             std::vector<const PagedArenaBitset*>& out, uint64_t readerWatermark) noexcept;
 
-    // Reclaims and recycles all indices from epochs that are safe to reclaim.
-    // Note: This method is intended EXCLUSIVELY for testing, unit test harnesses, and micro-benchmarks 
-    // to trigger harvesting sweeps in isolation. In production, Filament NEVER needs to call this method, 
-    // as advanceEpoch() automatically and synchronously invokes the identical recycling sweep.
+    /**
+     * @brief Reclaims and recycles all indices from epochs that are safe to reclaim.
+     * @note This method is intended EXCLUSIVELY for testing, unit test harnesses, and micro-benchmarks 
+     * to trigger harvesting sweeps in isolation. In production, Filament NEVER needs to call this method, 
+     * as advanceEpoch() automatically and synchronously invokes the identical recycling sweep.
+     */
     void reclaimSafeEpochs() noexcept;
 
     /**
@@ -298,11 +317,17 @@ public:
     EntityManager& operator=(const EntityManager& rhs) = delete;
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
+    UTILS_NOAPIGEN
     std::vector<Entity> getActiveEntities() const;
+    UTILS_NOAPIGEN
     void dumpActiveEntities(utils::io::ostream& out) const;
 #endif
 
-    // use carefully, several entities can have the same index.
+    /**
+     * @brief Use carefully, several entities can have the same index.
+     * @param e The entity to query.
+     * @return The entity index.
+     */
     static Entity::Type getIndex(Entity const e) noexcept  {
         return e.getId() & INDEX_MASK;
     }

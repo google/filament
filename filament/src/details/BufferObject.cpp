@@ -66,6 +66,10 @@ BufferObject::Builder& BufferObject::Builder::name(utils::StaticString const& na
     return BuilderNameMixin::name(name);
 }
 
+BufferObject::Builder& BufferObject::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 BufferObject* BufferObject::Builder::build(Engine& engine) {
     return downcast(engine).createBufferObject(*this);
 }

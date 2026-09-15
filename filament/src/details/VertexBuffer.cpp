@@ -157,6 +157,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(StaticString const& name) noe
     return BuilderNameMixin::name(name);
 }
 
+VertexBuffer::Builder& VertexBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
         AsyncCompletionCallback callback, void* user) noexcept {
     mImpl->mAsynchronous = true;
