@@ -63,13 +63,35 @@ template <typename Builder>
 class UTILS_PUBLIC BuilderNameMixin {
 public:
     UTILS_DEPRECATED
+    UTILS_NOAPIGEN
     Builder& name(const char* name, size_t len) noexcept {
         builderMakeName(mName, name, len);
         return static_cast<Builder&>(*this);
     }
 
+    UTILS_NOAPIGEN
     Builder& name(utils::StaticString const& name) noexcept {
         builderMakeName(mName, name.data(), name.size());
+        return static_cast<Builder&>(*this);
+    }
+
+    template<size_t N>
+    UTILS_NOAPIGEN
+    Builder& name(const char (&str)[N]) noexcept {
+        return name(utils::StaticString(str));
+    }
+
+    /**
+     * Set the name of the object.
+     *
+     * @param name A string to identify this object.
+     * @return This Builder, for chaining calls.
+     *
+     * @note This method should be avoided in C++ in favor of the `StaticString` overload.
+     * It is provided primarily for bindings to other languages.
+     */
+    Builder& name(utils::ImmutableCString const& name) noexcept {
+        builderMakeName(mName, name.c_str(), name.size());
         return static_cast<Builder&>(*this);
     }
 
