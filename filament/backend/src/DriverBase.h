@@ -193,6 +193,7 @@ public:
     ~DriverBase() noexcept override;
 
     void purge() noexcept final;
+    void purgeAll() noexcept final;
 
     // Helpers...
     struct CallbackData {
@@ -412,6 +413,9 @@ protected:
     void stopServiceThread() noexcept;
 
 private:
+    // Dispatches the callbacks queued so far. Returns false if there were none.
+    bool dispatchQueuedCallbacks() noexcept;
+
     const Platform::DriverConfig mDriverConfig;
 
     mutable utils::Mutex mPurgeLock;
