@@ -299,6 +299,78 @@ TEST_F(FilameshTest, MalformedHeaderPartsOverflow) {
     engine->destroy(mi);
 }
 
+TEST_F(FilameshTest, CompressedUV1MismatchRejected) {
+    // Regression test for heap out-of-bounds write (CWE-787).
+    //
+    // The uncompressed vertex buffer is sized using hasUV1, which is derived
+    // from Header.offsetUV1/strideUV1. The non-interleaved compressed decode
+    // dispatch, however, keys its uv1 write off CompressionHeader.uv1, an
+    // independent field in the vertex payload. If sizes.uv1 != 0 while
+    // hasUV1 == false, the decoder writes sizeof(ushort2)*vertexCount bytes
+    // past the end of the allocation.
+    //
+    // This test crafts a .filamesh buffer that triggers the inconsistency and
+    // verifies loadMeshFromBuffer rejects it cleanly (returns an empty mesh).
+
+    // CompressionHeader embedded at the start of the vertex payload.
+    // All compressed-stream sizes are zero except uv1, which claims 1 byte.
+    CompressionHeader compHdr = {};
+    compHdr.uv1 = 1;
+
+    // Total vertex payload = CompressionHeader + 1 byte (for the claimed uv1).
+    const uint32_t vertPayloadSize = sizeof(CompressionHeader) + 1;
+    uint8_t vertexPayload[sizeof(CompressionHeader) + 1] = {};
+    memcpy(vertexPayload, &compHdr, sizeof(CompressionHeader));
+
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .flags = COMPRESSION,   // compressed, NOT interleaved
+        .offsetPosition = 0,
+        .stridePosition = 0,
+        .offsetTangents = 0,
+        .strideTangents = 0,
+        .offsetColor = 0,
+        .strideColor = 0,
+        .offsetUV0 = 0,
+        .strideUV0 = 0,
+        .offsetUV1 = maxint,    // hasUV1 = false
+        .strideUV1 = maxint,    // hasUV1 = false
+        .vertexCount = 4,
+        .vertexSize = vertPayloadSize,
+        .indexType = IndexType::UI16,
+        .indexCount = 3,
+        .indexSize = sizeof(uint16_t) * 3
+    };
+
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, vertexPayload, sizeof(vertexPayload));
+    write(stream, indices, sizeof(indices));
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(),
+            serialized.size(), nullptr, nullptr, mi);
+
+    // The loader must reject this inconsistent input.
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
+    engine->destroy(mi);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

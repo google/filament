@@ -415,6 +415,20 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
             CompressionHeader sizes;
             memcpy(&sizes, vertexData, sizeof(CompressionHeader));
 
+            // Validate that CompressionHeader.uv1 is consistent with hasUV1.
+            // The destination buffer was allocated using hasUV1 (derived from
+            // Header.offsetUV1/strideUV1). If CompressionHeader.uv1 is
+            // non-zero but hasUV1 is false, the uv1 decode below would write
+            // sizeof(ushort2)*vertexCount bytes past the allocation.
+            if (!hasUV1 && sizes.uv1 != 0) {
+                utils::slog.e << "CompressionHeader.uv1 is non-zero but header"
+                        " lacks UV1 attribute." << utils::io::endl;
+                free(uncompressed);
+                engine->destroy(mesh.vertexBuffer);
+                engine->destroy(mesh.indexBuffer);
+                return {};
+            }
+
             size_t compressedSum = sizeof(CompressionHeader) +
                                    size_t(sizes.positions) +
                                    size_t(sizes.tangents) +
