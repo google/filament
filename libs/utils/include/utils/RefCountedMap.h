@@ -63,6 +63,11 @@ struct DefaultValue {
  *
  * Don't use RAII here, both because we sometimes want to deliberately leak memory, and because
  * we're managing GL resources that require more managed destruction.
+ *
+ * Key lifetime: a Key is allowed to hold pointers or references into its associated value. This map
+ * therefore guarantees that the key it stores for an entry is always the key that was supplied
+ * together with that entry's value, and never a lookup key belonging to a different value. Callers
+ * relying on this must still make sure the pointee outlives the entry.
  */
 template<typename Key, typename T, typename Hash = std::hash<Key>,
          typename NullValue = refcountedmap::DefaultValue<T>>
@@ -114,8 +119,8 @@ public:
             return &deref(it.value().value);
         }
 
-        if (std::optional<T> lruValue = mLruCache.pop(key, hash)) {
-            return &insert(key, std::move(*lruValue));
+        if (auto lruItem = mLruCache.pop(key, hash)) {
+            return &insert(std::move(lruItem->key), std::move(lruItem->value));
         }
 
         T r = factory();
@@ -145,8 +150,8 @@ public:
             return &deref(it.value().value);
         }
 
-        if (std::optional<T> lruValue = mLruCache.pop(key, hash)) {
-            return &insert(key, std::move(*lruValue));
+        if (auto lruItem = mLruCache.pop(key, hash)) {
+            return &insert(std::move(lruItem->key), std::move(lruItem->value));
         }
 
         // TODO: how to use above computed hash here?
@@ -276,9 +281,9 @@ private:
     tsl::robin_map<Key, Entry, Hash> mMap;
     utils::LruCache<Key, T, Hash> mLruCache;
 
-    TValue& insert(KeyRef key, T value) {
+    TValue& insert(Key key, T value) {
         // TODO: how to use computed hash here?
-        auto it = mMap.insert({ key, Entry{ 1, std::move(value) } });
+        auto it = mMap.insert({ std::move(key), Entry{ 1, std::move(value) } });
         return deref(it.first.value().value);
     }
 };
