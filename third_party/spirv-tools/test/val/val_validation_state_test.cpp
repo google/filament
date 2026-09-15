@@ -15,9 +15,11 @@
 // Basic tests for the ValidationState_t datastructure.
 
 #include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "source/spirv_validator_options.h"
+#include "source/util/string_utils.h"
 #include "test/unit_spirv.h"
 #include "test/val/val_fixtures.h"
 
@@ -232,6 +234,31 @@ TEST_F(ValidationStateTest, CheckAccessChainIndexesLimitOption) {
   EXPECT_EQ(100u, options_->universal_limits_.max_access_chain_indexes);
 }
 
+TEST_F(ValidationStateTest, CheckDescriptorHeapLayoutOptions) {
+  EXPECT_EQ(0u, options_->buffer_descriptor_layout.size);
+  EXPECT_EQ(1u, options_->buffer_descriptor_layout.alignment);
+  EXPECT_EQ(0u, options_->image_descriptor_layout.size);
+  EXPECT_EQ(1u, options_->image_descriptor_layout.alignment);
+  EXPECT_EQ(0u, options_->sampler_descriptor_layout.size);
+  EXPECT_EQ(1u, options_->sampler_descriptor_layout.alignment);
+  EXPECT_EQ(0u, options_->tensor_descriptor_layout.size);
+  EXPECT_EQ(1u, options_->tensor_descriptor_layout.alignment);
+
+  spvValidatorOptionsSetBufferDescriptorLayout(options_, 16u, 8u);
+  spvValidatorOptionsSetImageDescriptorLayout(options_, 64u, 16u);
+  spvValidatorOptionsSetSamplerDescriptorLayout(options_, 32u, 8u);
+  spvValidatorOptionsSetTensorDescriptorLayout(options_, 128u, 32u);
+
+  EXPECT_EQ(16u, options_->buffer_descriptor_layout.size);
+  EXPECT_EQ(8u, options_->buffer_descriptor_layout.alignment);
+  EXPECT_EQ(64u, options_->image_descriptor_layout.size);
+  EXPECT_EQ(16u, options_->image_descriptor_layout.alignment);
+  EXPECT_EQ(32u, options_->sampler_descriptor_layout.size);
+  EXPECT_EQ(8u, options_->sampler_descriptor_layout.alignment);
+  EXPECT_EQ(128u, options_->tensor_descriptor_layout.size);
+  EXPECT_EQ(32u, options_->tensor_descriptor_layout.alignment);
+}
+
 TEST_F(ValidationStateTest, CheckNonRecursiveBodyGood) {
   std::string spirv = std::string(kHeader) + kNonRecursiveBody;
   CompileSuccessfully(spirv);
@@ -280,6 +307,45 @@ TEST_F(ValidationStateTest, CheckVulkanIndirectlyRecursiveBodyBad) {
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Entry points may not have a call graph with cycles.\n "
                         " %1 = OpFunction %void Pure|Const %3\n"));
+}
+
+TEST_F(ValidationStateTest, EvalConstantValWiderThan64BitsIsNotEvaluable) {
+  const uint32_t kInt128Id = 1;
+  const uint32_t kConstId = 2;
+
+  std::vector<uint32_t> words = spvtest::Concatenate({
+      {spv::MagicNumber, 0x10000, 0u, 3u /* id bound */, 0u},
+      spvtest::MakeInstruction(spv::Op::OpCapability,
+                               {uint32_t(spv::Capability::Shader)}),
+      spvtest::MakeInstruction(
+          spv::Op::OpCapability,
+          {uint32_t(spv::Capability::ArbitraryPrecisionIntegersINTEL)}),
+      spvtest::MakeInstruction(spv::Op::OpCapability,
+                               {uint32_t(spv::Capability::Linkage)}),
+      spvtest::MakeInstruction(
+          spv::Op::OpExtension,
+          utils::MakeVector("SPV_INTEL_arbitrary_precision_integers")),
+      spvtest::MakeInstruction(spv::Op::OpMemoryModel,
+                               {uint32_t(spv::AddressingModel::Logical),
+                                uint32_t(spv::MemoryModel::GLSL450)}),
+      spvtest::MakeInstruction(spv::Op::OpTypeInt, {kInt128Id, 128u, 0u}),
+      spvtest::MakeInstruction(spv::Op::OpConstant,
+                               {kInt128Id, kConstId, 4u, 0u, 0u, 0u}),
+  });
+
+  spv_diagnostic diagnostic = nullptr;
+  spvtest::ScopedContext context;
+  EXPECT_EQ(SPV_SUCCESS,
+            spvtools::val::ValidateBinaryAndKeepValidationState(
+                context.context, getValidatorOptions(), words.data(),
+                words.size(), &diagnostic, &vstate_));
+  spvDiagnosticDestroy(diagnostic);
+
+  uint64_t uval = 0xdeadbeef;
+  EXPECT_FALSE(vstate_->EvalConstantValUint64(kConstId, &uval));
+
+  int64_t ival = 0xdeadbeef;
+  EXPECT_FALSE(vstate_->EvalConstantValInt64(kConstId, &ival));
 }
 
 }  // namespace

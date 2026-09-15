@@ -17,6 +17,7 @@
 #include <memory>
 #include <vector>
 
+#include "effcee/effcee.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
@@ -333,6 +334,62 @@ OpFunctionEnd
   EXPECT_EQ(1, non_semantic_ids.count(8));
   EXPECT_EQ(1, non_semantic_ids.count(11));
   EXPECT_EQ(1, non_semantic_ids.count(12));
+}
+
+// Assembles `text`, serializes it to binary (with duplicate decorations
+// filtered if `filter_duplicate_decorations` is true), disassembles it, and
+// checks the output against the Effcee checks in `text` using the given
+// `prefix`.
+void AssembleDisassembleAndCheck(const std::string& text,
+                                 const std::string& prefix,
+                                 bool filter_duplicate_decorations) {
+  std::unique_ptr<IRContext> context = BuildModule(text);
+  std::vector<uint32_t> binary;
+
+  context->module()->ToBinary(&binary, false, filter_duplicate_decorations);
+
+  SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  std::string s;
+  tools.Disassemble(binary, &s);
+
+  effcee::Options options;
+  options.SetPrefix(prefix);
+
+  auto match_result = effcee::Match(s, text, options);
+  EXPECT_EQ(effcee::Result::Status::Ok, match_result.status())
+      << match_result.message() << "\nDisassembly:\n"
+      << s;
+}
+
+TEST(ModuleTest, ToBinaryFiltersDuplicateDecorations) {
+  const std::string text = R"(
+; CHECK-FILTER: OpDecorate [[id:%[0-9]+]] RelaxedPrecision
+; CHECK-FILTER-NOT: OpDecorate [[id]] RelaxedPrecision
+; CHECK-FILTER: %void = OpTypeVoid
+
+; CHECK-NO-FILTER: OpDecorate [[id:%[0-9]+]] RelaxedPrecision
+; CHECK-NO-FILTER: OpDecorate [[id]] RelaxedPrecision
+; CHECK-NO-FILTER: %void = OpTypeVoid
+
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %2 "main"
+OpExecutionMode %2 LocalSize 1 1 1
+OpDecorate %1 RelaxedPrecision
+OpDecorate %1 RelaxedPrecision
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%2 = OpFunction %void None %4
+%5 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  // Test with filtering enabled (default)
+  AssembleDisassembleAndCheck(text, "CHECK-FILTER", true);
+
+  // Test with filtering disabled
+  AssembleDisassembleAndCheck(text, "CHECK-NO-FILTER", false);
 }
 }  // namespace
 }  // namespace opt

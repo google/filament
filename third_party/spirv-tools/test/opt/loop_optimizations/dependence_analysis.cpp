@@ -126,7 +126,7 @@ TEST(DependencyAnalysis, ZIV) {
   std::vector<const Loop*> loops{loop};
   LoopDependenceAnalysis analysis{context.get(), loops};
 
-  const Instruction* store[4];
+  const Instruction* store[4] = {};
   int stores_found = 0;
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, 13)) {
     if (inst.opcode() == spv::Op::OpStore) {
@@ -283,7 +283,7 @@ TEST(DependencyAnalysis, SymbolicZIV) {
   std::vector<const Loop*> loops{loop};
   LoopDependenceAnalysis analysis{context.get(), loops};
 
-  const Instruction* store[4];
+  const Instruction* store[4] = {};
   int stores_found = 0;
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, 22)) {
     if (inst.opcode() == spv::Op::OpStore) {
@@ -519,7 +519,7 @@ TEST(DependencyAnalysis, SIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 17)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -592,7 +592,7 @@ TEST(DependencyAnalysis, SIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 68)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -913,7 +913,7 @@ TEST(DependencyAnalysis, SymbolicSIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 29)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -969,7 +969,7 @@ TEST(DependencyAnalysis, SymbolicSIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 114)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -1837,7 +1837,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 19)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -1905,7 +1905,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 54)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -1972,7 +1972,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     Loop* loop = &ld.GetLoopByIndex(0);
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 84)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -2040,7 +2040,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     std::vector<const Loop*> loops{loop};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[4];
+    const Instruction* store[4] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 111)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -2201,7 +2201,7 @@ TEST(DependencyAnalysis, MultipleSubscriptZIVSIV) {
   std::vector<const Loop*> loops{loop};
   LoopDependenceAnalysis analysis{context.get(), loops};
 
-  const Instruction* store[6];
+  const Instruction* store[6] = {};
   int stores_found = 0;
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, 11)) {
     if (inst.opcode() == spv::Op::OpStore) {
@@ -2434,7 +2434,7 @@ TEST(DependencyAnalysis, IrrelevantSubscripts) {
                                    &ld.GetLoopByIndex(0)};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[1];
+    const Instruction* store[1] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 25)) {
       if (inst.opcode() == spv::Op::OpStore) {
@@ -2470,7 +2470,7 @@ TEST(DependencyAnalysis, IrrelevantSubscripts) {
                                    &ld.GetLoopByIndex(0)};
     LoopDependenceAnalysis analysis{context.get(), loops};
 
-    const Instruction* store[1];
+    const Instruction* store[1] = {};
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 56)) {
       if (inst.opcode() == spv::Op::OpStore) {

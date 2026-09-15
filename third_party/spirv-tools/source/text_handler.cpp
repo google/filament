@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <string_view>
 #include <tuple>
 
 #include "source/assembly_grammar.h"
@@ -150,6 +151,40 @@ bool startsWithOp(spv_text text, spv_position position) {
   char ch1 = text->str[position->index + 1];
   char ch2 = text->str[position->index + 2];
   return ('O' == ch0 && 'p' == ch1 && ('A' <= ch2 && ch2 <= 'Z'));
+}
+
+// Returns false if the the floating point encoding requires a bit width
+// different from the given width. Write the expected bit width via *expected.
+bool validBitWidthForFPEncoding(spv_fp_encoding_t enc, uint32_t width,
+                                uint32_t* expected) {
+  switch (enc) {
+    case SPV_FP_ENCODING_IEEE754_BINARY16:
+    case SPV_FP_ENCODING_BFLOAT16:
+      *expected = 16;
+      break;
+    case SPV_FP_ENCODING_IEEE754_BINARY32:
+      *expected = 32;
+      break;
+    case SPV_FP_ENCODING_IEEE754_BINARY64:
+      *expected = 64;
+      break;
+    case SPV_FP_ENCODING_FLOAT4_E2M1:
+      *expected = 4;
+      break;
+    case SPV_FP_ENCODING_FLOAT6_E2M3:
+    case SPV_FP_ENCODING_FLOAT6_E3M2:
+      *expected = 6;
+      break;
+    case SPV_FP_ENCODING_FLOAT8_E5M2:
+    case SPV_FP_ENCODING_FLOAT8_E4M3:
+    case SPV_FP_ENCODING_FLOAT8_UNSIGNED_E8M0:
+    case SPV_FP_ENCODING_MXINT8:
+      *expected = 8;
+      break;
+    default:
+      return true;
+  }
+  return width == *expected;
 }
 
 }  // namespace
@@ -342,6 +377,15 @@ spv_result_t AssemblyContext::recordTypeDefinition(
       if (status == SPV_SUCCESS) {
         enc = spvFPEncodingFromOperandFPEncoding(
             static_cast<spv::FPEncoding>(desc->value));
+        uint32_t expected_width;
+        if (!validBitWidthForFPEncoding(enc, pInst->words[2],
+                                        &expected_width)) {
+          const auto& name_span = desc->name();
+          const std::string_view name(name_span.data(), name_span.size() - 1);
+          return diagnostic() << "Invalid bit width " << pInst->words[2]
+                              << " for floating point encoding " << name
+                              << "; expected " << expected_width;
+        }
       } else {
         return diagnostic() << "Invalid OpTypeFloat encoding";
       }

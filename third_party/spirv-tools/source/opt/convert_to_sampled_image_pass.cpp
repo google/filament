@@ -36,7 +36,8 @@ using utils::ParseNumber;
 // Returns true if the given char is ':', '\0' or considered as blank space
 // (i.e.: '\n', '\r', '\v', '\t', '\f' and ' ').
 bool IsSeparator(char ch) {
-  return std::strchr(":\0", ch) || std::isspace(ch) != 0;
+  return std::strchr(":\0", ch) ||
+         std::isspace(static_cast<unsigned char>(ch)) != 0;
 }
 
 // Reads characters starting from |str| until it meets a separator. Parses a
@@ -436,7 +437,7 @@ ConvertToSampledImagePass::ParseDescriptorSetBindingPairsString(
     descriptor_set_binding_pairs->push_back({descriptor_set, binding});
 
     // Skip trailing spaces.
-    while (std::isspace(*str)) str++;
+    while (std::isspace(static_cast<unsigned char>(*str))) str++;
   }
 
   return descriptor_set_binding_pairs;

@@ -69,7 +69,7 @@ class DebugInlinedAtContext {
 };
 
 // A class for analyzing, managing, and creating OpenCL.DebugInfo.100 and
-// NonSemantic.Shader.DebugInfo.100 extension instructions.
+// NonSemantic.Shader.DebugInfo extension instructions.
 class DebugInfoManager {
  public:
   // Constructs a debug information manager from the given |context|.

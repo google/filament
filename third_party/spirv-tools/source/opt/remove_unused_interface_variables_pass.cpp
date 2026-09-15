@@ -34,7 +34,9 @@ class RemoveUnusedInterfaceVariablesContext {
         instruction.ForEachInId([&](const uint32_t* id) {
           if (used_variables_.count(*id)) return;
           auto* var = parent_.get_def_use_mgr()->GetDef(*id);
-          if (!var || var->opcode() != spv::Op::OpVariable) return;
+          if (!var || (var->opcode() != spv::Op::OpVariable &&
+                       var->opcode() != spv::Op::OpUntypedVariableKHR))
+            return;
           auto storage_class =
               spv::StorageClass(var->GetSingleWordInOperand(0));
           if (storage_class != spv::StorageClass::Function &&

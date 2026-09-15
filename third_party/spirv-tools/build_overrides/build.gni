@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Get user-specfied settings. This path is specified in the top-level DEPS file.
+import("//build/config/gclient_args.gni")
+
+spirv_tools_standalone = true
+
 # Variable that can be used to support multiple build scenarios, like having
 # Chromium specific targets in a client project's GN file etc.
 build_with_chromium = false

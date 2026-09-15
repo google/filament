@@ -86,8 +86,14 @@ void FeatureManager::AddExtInstImportIds(Module* module) {
   extinst_importid_GLSLstd450_ = module->GetExtInstImportId("GLSL.std.450");
   extinst_importid_OpenCL100DebugInfo_ =
       module->GetExtInstImportId("OpenCL.DebugInfo.100");
-  extinst_importid_Shader100DebugInfo_ =
-      module->GetExtInstImportId("NonSemantic.Shader.DebugInfo.100");
+  // Match any version of NonSemantic.Shader.DebugInfo.
+  for (auto& ei : module->ext_inst_imports()) {
+    const std::string name = ei.GetInOperand(0).AsString();
+    if (name.compare(0, 29, "NonSemantic.Shader.DebugInfo.") == 0) {
+      extinst_importid_ShaderDebugInfo_ = ei.result_id();
+      break;
+    }
+  }
 }
 
 bool operator==(const FeatureManager& a, const FeatureManager& b) {
@@ -115,8 +121,8 @@ bool operator==(const FeatureManager& a, const FeatureManager& b) {
     return false;
   }
 
-  if (a.extinst_importid_Shader100DebugInfo_ !=
-      b.extinst_importid_Shader100DebugInfo_) {
+  if (a.extinst_importid_ShaderDebugInfo_ !=
+      b.extinst_importid_ShaderDebugInfo_) {
     return false;
   }
 

@@ -36,6 +36,101 @@
 namespace spvtools {
 namespace utils {
 
+namespace {
+// Returns true if floating point value a equals b.
+// This is refactored to localize turning off warnings.
+template <typename FloatTy>
+bool FloatEquals(FloatTy a, FloatTy b) {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#endif
+  return a == b;
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+}
+}  // namespace
+
+class Float4_E2M1 {
+ public:
+  Float4_E2M1(uint8_t v) : val(v) {}
+  Float4_E2M1() = default;
+
+  static bool isNan(const Float4_E2M1&) {
+    return false;  // E2M1 has no NAN representation
+  }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(const Float4_E2M1&) {
+    return false;  // E2M1 has no infinity representation
+  }
+  Float4_E2M1(const Float4_E2M1& other) { val = other.val; }
+  uint8_t get_value() const { return val; }
+
+  // Returns the maximum normal value.
+  static Float4_E2M1 max() { return Float4_E2M1(0x7); }
+  // Returns the lowest normal value.
+  static Float4_E2M1 lowest() { return Float4_E2M1(0x2); }
+
+ private:
+  uint8_t val;
+};
+
+class Float6_E2M3 {
+ public:
+  Float6_E2M3(uint8_t v) : val(v) {}
+  Float6_E2M3() = default;
+
+  static bool isNan(const Float6_E2M3&) {
+    return false;  // E2M3 has no NAN representation
+  }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(const Float6_E2M3&) {
+    return false;  // E2M3 has no infinity representation
+  }
+  Float6_E2M3(const Float6_E2M3& other) { val = other.val; }
+  uint8_t get_value() const { return val; }
+
+  // Returns the maximum normal value.
+  static Float6_E2M3 max() { return Float6_E2M3(0x1f); }
+  // Returns the lowest normal value.
+  static Float6_E2M3 lowest() { return Float6_E2M3(0x8); }
+
+ private:
+  uint8_t val;
+};
+
+class Float6_E3M2 {
+ public:
+  Float6_E3M2(uint8_t v) : val(v) {}
+  Float6_E3M2() = default;
+
+  static bool isNan(const Float6_E3M2&) {
+    return false;  // E3M2 has no NAN representation
+  }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(const Float6_E3M2&) {
+    return false;  // E3M2 has no infinity representation
+  }
+  Float6_E3M2(const Float6_E3M2& other) { val = other.val; }
+  uint8_t get_value() const { return val; }
+
+  // Returns the maximum normal value.
+  static Float6_E3M2 max() { return Float6_E3M2(0x1f); }
+  // Returns the lowest normal value.
+  static Float6_E3M2 lowest() { return Float6_E3M2(0x4); }
+
+ private:
+  uint8_t val;
+};
+
 class Float8_E4M3 {
  public:
   Float8_E4M3(uint8_t v) : val(v) {}
@@ -75,6 +170,48 @@ class Float8_E5M2 {
   static Float8_E5M2 max() { return Float8_E5M2(0x7b); }
   // Returns the lowest normal value.
   static Float8_E5M2 lowest() { return Float8_E5M2(0x4); }
+
+ private:
+  uint8_t val;
+};
+
+class Float8_E8M0 {
+ public:
+  Float8_E8M0(uint16_t v) : val(v) {}
+  Float8_E8M0() = default;
+  static bool isNan(const Float8_E8M0& val) { return (val.val & 0xff) == 0xff; }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(const Float8_E8M0&) {
+    return false;  // E4M3 has no infinity representation
+  }
+  Float8_E8M0(const Float8_E8M0& other) { val = other.val; }
+  uint16_t get_value() const { return val; }
+
+  // Returns the maximum normal value.
+  static Float8_E8M0 max() { return Float8_E8M0(0xfe); }
+  // Returns the lowest normal value.
+  static Float8_E8M0 lowest() { return Float8_E8M0(0x0); }
+
+ private:
+  uint16_t val;
+};
+
+class Float8_MXInt8 {
+ public:
+  Float8_MXInt8(uint8_t v) : val(v) {}
+  Float8_MXInt8() = default;
+  static bool isNan(const Float8_MXInt8&) { return false; }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(const Float8_MXInt8&) {
+    return false;  // E4M3 has no infinity representation
+  }
+  Float8_MXInt8(const Float8_MXInt8& other) { val = other.val; }
+  uint8_t get_value() const { return val; }
+
+  // Returns the maximum normal value.
+  static Float8_MXInt8 max() { return Float8_MXInt8(0xfe); }
+  // Returns the lowest normal value.
+  static Float8_MXInt8 lowest() { return Float8_MXInt8(0x0); }
 
  private:
   uint8_t val;
@@ -183,6 +320,66 @@ struct FloatProxyTraits<double> {
 };
 
 template <>
+struct FloatProxyTraits<Float4_E2M1> {
+  using uint_type = uint8_t;
+  static bool isNan(Float4_E2M1 f) { return Float4_E2M1::isNan(f); }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(Float4_E2M1 f) { return Float4_E2M1::isInfinity(f); }
+  // Returns the maximum normal value.
+  static Float4_E2M1 max() { return Float4_E2M1::max(); }
+  // Returns the lowest normal value.
+  static Float4_E2M1 lowest() { return Float4_E2M1::lowest(); }
+  // Returns the value as the native floating point format.
+  static Float4_E2M1 getAsFloat(const uint_type& t) { return Float4_E2M1(t); }
+  // Returns the bits from the given floating pointer number.
+  static uint_type getBitsFromFloat(const Float4_E2M1& t) {
+    return t.get_value();
+  }
+  // Returns the bitwidth.
+  static uint32_t width() { return 4u; }
+};
+
+template <>
+struct FloatProxyTraits<Float6_E2M3> {
+  using uint_type = uint8_t;
+  static bool isNan(Float6_E2M3 f) { return Float6_E2M3::isNan(f); }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(Float6_E2M3 f) { return Float6_E2M3::isInfinity(f); }
+  // Returns the maximum normal value.
+  static Float6_E2M3 max() { return Float6_E2M3::max(); }
+  // Returns the lowest normal value.
+  static Float6_E2M3 lowest() { return Float6_E2M3::lowest(); }
+  // Returns the value as the native floating point format.
+  static Float6_E2M3 getAsFloat(const uint_type& t) { return Float6_E2M3(t); }
+  // Returns the bits from the given floating pointer number.
+  static uint_type getBitsFromFloat(const Float6_E2M3& t) {
+    return t.get_value();
+  }
+  // Returns the bitwidth.
+  static uint32_t width() { return 6u; }
+};
+
+template <>
+struct FloatProxyTraits<Float6_E3M2> {
+  using uint_type = uint8_t;
+  static bool isNan(Float6_E3M2 f) { return Float6_E3M2::isNan(f); }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(Float6_E3M2 f) { return Float6_E3M2::isInfinity(f); }
+  // Returns the maximum normal value.
+  static Float6_E3M2 max() { return Float6_E3M2::max(); }
+  // Returns the lowest normal value.
+  static Float6_E3M2 lowest() { return Float6_E3M2::lowest(); }
+  // Returns the value as the native floating point format.
+  static Float6_E3M2 getAsFloat(const uint_type& t) { return Float6_E3M2(t); }
+  // Returns the bits from the given floating pointer number.
+  static uint_type getBitsFromFloat(const Float6_E3M2& t) {
+    return t.get_value();
+  }
+  // Returns the bitwidth.
+  static uint32_t width() { return 6u; }
+};
+
+template <>
 struct FloatProxyTraits<Float8_E4M3> {
   using uint_type = uint8_t;
   static bool isNan(Float8_E4M3 f) { return Float8_E4M3::isNan(f); }
@@ -216,6 +413,26 @@ struct FloatProxyTraits<Float8_E5M2> {
   static Float8_E5M2 getAsFloat(const uint_type& t) { return Float8_E5M2(t); }
   // Returns the bits from the given floating pointer number.
   static uint_type getBitsFromFloat(const Float8_E5M2& t) {
+    return t.get_value();
+  }
+  // Returns the bitwidth.
+  static uint32_t width() { return 8u; }
+};
+
+template <>
+struct FloatProxyTraits<Float8_E8M0> {
+  using uint_type = uint16_t;
+  static bool isNan(Float8_E8M0 f) { return Float8_E8M0::isNan(f); }
+  // Returns true if the given value is any kind of infinity.
+  static bool isInfinity(Float8_E8M0 f) { return Float8_E8M0::isInfinity(f); }
+  // Returns the maximum normal value.
+  static Float8_E8M0 max() { return Float8_E8M0::max(); }
+  // Returns the lowest normal value.
+  static Float8_E8M0 lowest() { return Float8_E8M0::lowest(); }
+  // Returns the value as the native floating point format.
+  static Float8_E8M0 getAsFloat(const uint_type& t) { return Float8_E8M0(t); }
+  // Returns the bits from the given floating pointer number.
+  static uint_type getBitsFromFloat(const Float8_E8M0& t) {
     return t.get_value();
   }
   // Returns the bitwidth.
@@ -280,8 +497,8 @@ class FloatProxy {
 
   // This is helpful to have and is guaranteed not to stomp bits.
   FloatProxy<T> operator-() const {
-    return static_cast<uint_type>(data_ ^
-                                  (uint_type(0x1) << (sizeof(T) * 8 - 1)));
+    return static_cast<uint_type>(
+        data_ ^ (uint_type(0x1) << (FloatProxyTraits<T>::width() - 1)));
   }
 
   // Returns the data as a floating point value.
@@ -361,6 +578,9 @@ struct HexFloatTraits {
   // value to get the correct value.)
   static const uint32_t exponent_bias = 0;
   static const bool has_infinity = true;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint32_t NaN_pattern = 0;
 };
 
@@ -378,6 +598,9 @@ struct HexFloatTraits<FloatProxy<float>> {
   static const uint_type num_fraction_bits = 23;
   static const uint_type exponent_bias = 127;
   static const bool has_infinity = true;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint_type NaN_pattern = 0x7f80000;
 };
 
@@ -395,7 +618,70 @@ struct HexFloatTraits<FloatProxy<double>> {
   static const uint_type num_fraction_bits = 52;
   static const uint_type exponent_bias = 1023;
   static const bool has_infinity = true;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint_type NaN_pattern = 0x7FF0000000000000;
+};
+
+// Traits for FP4 E2M1.
+// 1 sign bit, 2 exponent bits, 1 fractional bits.
+template <>
+struct HexFloatTraits<FloatProxy<Float4_E2M1>> {
+  using uint_type = uint8_t;
+  using int_type = int8_t;
+  using underlying_type = FloatProxy<Float4_E2M1>;
+  using underlying_typetraits = FloatProxyTraits<Float4_E2M1>;
+  using native_type = uint8_t;
+  static const uint_type num_used_bits = 4;
+  static const uint_type num_exponent_bits = 2;
+  static const uint_type num_fraction_bits = 1;
+  static const uint_type exponent_bias = 1;
+  static const bool has_infinity = false;
+  static const bool has_NaN = false;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
+  static const uint_type NaN_pattern = 0x0;
+};
+
+// Traits for FP6 E2M3.
+// 1 sign bit, 2 exponent bits, 3 fractional bits.
+template <>
+struct HexFloatTraits<FloatProxy<Float6_E2M3>> {
+  using uint_type = uint8_t;
+  using int_type = int8_t;
+  using underlying_type = FloatProxy<Float6_E2M3>;
+  using underlying_typetraits = FloatProxyTraits<Float6_E2M3>;
+  using native_type = uint8_t;
+  static const uint_type num_used_bits = 6;
+  static const uint_type num_exponent_bits = 2;
+  static const uint_type num_fraction_bits = 3;
+  static const uint_type exponent_bias = 1;
+  static const bool has_infinity = false;
+  static const bool has_NaN = false;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
+  static const uint_type NaN_pattern = 0x0;
+};
+
+// Traits for FP6 E3M2.
+// 1 sign bit, 3 exponent bits, 2 fractional bits.
+template <>
+struct HexFloatTraits<FloatProxy<Float6_E3M2>> {
+  using uint_type = uint8_t;
+  using int_type = int8_t;
+  using underlying_type = FloatProxy<Float6_E3M2>;
+  using underlying_typetraits = FloatProxyTraits<Float6_E3M2>;
+  using native_type = uint8_t;
+  static const uint_type num_used_bits = 6;
+  static const uint_type num_exponent_bits = 3;
+  static const uint_type num_fraction_bits = 2;
+  static const uint_type exponent_bias = 3;
+  static const bool has_infinity = false;
+  static const bool has_NaN = false;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
+  static const uint_type NaN_pattern = 0x0;
 };
 
 // Traits for FP8 E4M3.
@@ -412,6 +698,9 @@ struct HexFloatTraits<FloatProxy<Float8_E4M3>> {
   static const uint_type num_fraction_bits = 3;
   static const uint_type exponent_bias = 7;
   static const bool has_infinity = false;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint_type NaN_pattern = 0x7F;
 };
 
@@ -429,7 +718,30 @@ struct HexFloatTraits<FloatProxy<Float8_E5M2>> {
   static const uint_type num_fraction_bits = 2;
   static const uint_type exponent_bias = 15;
   static const bool has_infinity = true;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint_type NaN_pattern = 0x7c;
+};
+
+// Traits for FP8 E8M0.
+// 0 sign bit, 8 exponent bits, 0 fractional bits.
+template <>
+struct HexFloatTraits<FloatProxy<Float8_E8M0>> {
+  using uint_type = uint16_t;
+  using int_type = int16_t;
+  using underlying_type = FloatProxy<Float8_E8M0>;
+  using underlying_typetraits = FloatProxyTraits<Float8_E8M0>;
+  using native_type = uint16_t;
+  static const uint_type num_used_bits = 8;
+  static const uint_type num_exponent_bits = 8;
+  static const uint_type num_fraction_bits = 0;
+  static const uint_type exponent_bias = 127;
+  static const bool has_infinity = false;
+  static const bool has_NaN = true;
+  static const bool has_zero = false;
+  static const bool has_sign = false;
+  static const uint_type NaN_pattern = 0xff;
 };
 
 // Traits for IEEE half.
@@ -446,6 +758,9 @@ struct HexFloatTraits<FloatProxy<Float16>> {
   static const uint_type num_fraction_bits = 10;
   static const uint_type exponent_bias = 15;
   static const bool has_infinity = true;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint_type NaN_pattern = 0x7c00;
 };
 
@@ -463,6 +778,9 @@ struct HexFloatTraits<FloatProxy<BFloat16>> {
   static const uint_type num_fraction_bits = 7;
   static const uint_type exponent_bias = 127;
   static const bool has_infinity = true;
+  static const bool has_NaN = true;
+  static const bool has_zero = true;
+  static const bool has_sign = true;
   static const uint_type NaN_pattern = 0x7F80;
 };
 
@@ -472,6 +790,52 @@ enum class round_direction {
   kToPositiveInfinity,
   kToNegativeInfinity,
   max = kToNegativeInfinity
+};
+
+template <typename T, typename Traits>
+class HexFloat;
+
+struct MXInt8 {
+  using uint_type = uint8_t;
+  using int_type = int8_t;
+  static constexpr uint_type num_used_bits = 8;
+  static constexpr uint_type num_fraction_bits = 7;
+  static constexpr int implicit_exponent = -6;
+  static constexpr double implicit_exponent_double = 0x1p-6;
+  static constexpr double implicit_exponent_inverse_double = 0x1p6;
+  static constexpr int is_signed = true;
+  static constexpr float maxf = 0x7fp-6;
+  static constexpr float minf = -0x7fp-6;
+  static constexpr uint_type max = 0x7f;
+  static constexpr uint_type min = 0x80;
+};
+
+template <class traits>
+class HexFixedPoint {
+  using uint_type = typename traits::uint_type;
+
+  uint_type value_;
+
+  // The mask for the encoded fraction. It does include the
+  // implicit bit.
+  // static const uint_type fraction_encode_mask =
+  //     SetBits<uint_type, 0, traits::num_fraction_bits>::get;
+
+ public:
+  HexFixedPoint(uint_type v) : value_(v) {}
+  HexFixedPoint() : value_(0) {}
+  uint_type value() const { return value_; }
+  void set_value(uint_type v) { value_ = v; }
+
+  template <typename other_T, typename other_traits>
+  void castTo(HexFloat<other_T, other_traits>& other,
+              round_direction round_dir) const;
+};
+
+enum class CastResult {
+  Success = 0,
+  LostPrecision,
+  NotRepresentable,
 };
 
 // Template class that houses a floating pointer number.
@@ -515,10 +879,6 @@ class HexFloat {
   static const uint_type fraction_represent_mask =
       SetBits<uint_type, 0, num_fraction_bits + num_overflow_bits>::get;
 
-  // The topmost bit in the nibble-aligned fraction.
-  static const uint_type fraction_top_bit =
-      uint_type(1) << (num_fraction_bits + num_overflow_bits - 1);
-
   // The least significant bit in the exponent, which is also the bit
   // immediately to the left of the significand.
   static const uint_type first_exponent_bit = uint_type(1)
@@ -530,7 +890,8 @@ class HexFloat {
       SetBits<uint_type, 0, num_fraction_bits>::get;
 
   // The bit that is used as a sign.
-  static const uint_type sign_mask = uint_type(1) << top_bit_left_shift;
+  static const uint_type sign_mask =
+      Traits::has_sign ? uint_type(1) << top_bit_left_shift : uint_type(0);
 
   // The bits that represent the exponent.
   static const uint_type exponent_mask =
@@ -578,7 +939,8 @@ class HexFloat {
   // If the number was normalized, returns the unbiased exponent.
   // If the number was denormal, normalize the exponent first.
   const int_type getUnbiasedNormalizedExponent() const {
-    if ((getBits() & ~sign_mask) == 0) {  // special case if everything is 0
+    if (Traits::has_zero &&
+        (getBits() & ~sign_mask) == 0) {  // special case if everything is 0
       return 0;
     }
     int_type exp = getUnbiasedExponent();
@@ -619,20 +981,23 @@ class HexFloat {
   // 0 actually means 0.
   // If underflow_round_up is set, then on underflow, if a number is non-0
   // and would underflow, we round up to the smallest denorm.
-  void setFromSignUnbiasedExponentAndNormalizedSignificand(
+  CastResult setFromSignUnbiasedExponentAndNormalizedSignificand(
       bool negative, int_type exponent, uint_type significand,
       bool round_denorm_up) {
+    CastResult result = CastResult::Success;
     bool significand_is_zero = significand == 0;
 
-    if (exponent <= min_exponent) {
+    if (exponent <= min_exponent && num_fraction_bits != 0) {
       // If this was denormalized, then we have to shift the bit on, meaning
       // the significand is not zero.
       significand_is_zero = false;
       significand |= first_exponent_bit;
+      if (significand & 1) result = CastResult::LostPrecision;
       significand = static_cast<uint_type>(significand >> 1);
     }
 
     while (exponent < min_exponent) {
+      if (significand & 1) result = CastResult::LostPrecision;
       significand = static_cast<uint_type>(significand >> 1);
       ++exponent;
     }
@@ -647,15 +1012,21 @@ class HexFloat {
     if (negative) {
       new_value = static_cast<uint_type>(new_value | sign_mask);
     }
-    exponent = static_cast<int_type>(exponent + exponent_bias);
-    assert(exponent >= 0);
+    uint_type unsigned_exponent =
+        static_cast<uint_type>(static_cast<int64_t>(exponent) + exponent_bias);
 
     // put it all together
-    exponent = static_cast<uint_type>((exponent << exponent_left_shift) &
-                                      exponent_mask);
+    unsigned_exponent = static_cast<uint_type>(
+        (unsigned_exponent << exponent_left_shift) & exponent_mask);
+
+    if (significand & ~fraction_encode_mask) result = CastResult::LostPrecision;
+
     significand = static_cast<uint_type>(significand & fraction_encode_mask);
-    new_value = static_cast<uint_type>(new_value | (exponent | significand));
+    new_value =
+        static_cast<uint_type>(new_value | (unsigned_exponent | significand));
     value_ = T(new_value);
+
+    return result;
   }
 
   // Increments the significand of this number by the given amount.
@@ -744,8 +1115,9 @@ class HexFloat {
   // bit of the rounded number lines up with the most significant bit
   // of the returned significand.
   template <typename other_T>
-  typename other_T::uint_type getRoundedNormalizedSignificand(
-      round_direction dir, bool* carry_bit) {
+  CastResult getRoundedNormalizedSignificand(
+      round_direction dir, typename other_T::uint_type* out_val,
+      bool* carry_bit) {
     using other_uint_type = typename other_T::uint_type;
     static const int_type num_throwaway_bits =
         static_cast<int_type>(num_fraction_bits) -
@@ -766,21 +1138,22 @@ class HexFloat {
         SetBits<uint_type, 0, throwaway_mask_bits>::get;
 
     *carry_bit = false;
-    other_uint_type out_val = 0;
+    *out_val = 0;
     uint_type significand = getNormalizedSignificand();
     // If we are up-casting, then we just have to shift to the right location.
     if (num_throwaway_bits <= 0) {
-      out_val = static_cast<other_uint_type>(significand);
+      *out_val = static_cast<other_uint_type>(significand);
       uint_type shift_amount = static_cast<uint_type>(-num_throwaway_bits);
-      out_val = static_cast<other_uint_type>(out_val << shift_amount);
-      return out_val;
+      *out_val = static_cast<other_uint_type>(*out_val << shift_amount);
+      return CastResult::Success;
     }
 
     // If every non-representable bit is 0, then we don't have any casting to
     // do.
     if ((significand & throwaway_mask) == 0) {
-      return static_cast<other_uint_type>(
+      *out_val = static_cast<other_uint_type>(
           negatable_right_shift<num_throwaway_bits>::val(significand));
+      return CastResult::Success;
     }
 
     bool round_away_from_zero = false;
@@ -816,38 +1189,45 @@ class HexFloat {
     }
 
     if (round_away_from_zero) {
-      return static_cast<other_uint_type>(
+      *out_val = static_cast<other_uint_type>(
           negatable_right_shift<num_throwaway_bits>::val(incrementSignificand(
               significand, last_significant_bit, carry_bit)));
     } else {
-      return static_cast<other_uint_type>(
+      *out_val = static_cast<other_uint_type>(
           negatable_right_shift<num_throwaway_bits>::val(significand));
     }
+    return CastResult::LostPrecision;
   }
 
   // Casts this value to another HexFloat. If the cast is widening,
   // then round_dir is ignored. If the cast is narrowing, then
   // the result is rounded in the direction specified.
-  // This number will retain Nan and Inf values.
-  // It will also saturate to Inf if the number overflows, and
-  // underflow to (0 or min depending on rounding) if the number underflows.
+  // This number will retain Nan and Inf values, when possible.
+  // It will also saturate to Inf (or max if inf is not supported) if the number
+  // overflows, and underflow to (0 or min depending on rounding) if the number
+  // underflows. We use 0 when casting from NaN if it is not supported in the
+  // target type.
   template <typename other_T>
-  void castTo(other_T& other, round_direction round_dir) {
+  CastResult castTo(other_T& other, round_direction round_dir) {
     using other_traits = typename other_T::traits;
     using other_underlyingtraits = typename other_traits::underlying_typetraits;
 
     other = other_T(static_cast<typename other_T::native_type>(0));
     bool negate = isNegative();
-    if (getUnsignedBits() == 0) {
+
+    // assume zero encoding is 00...0 or -00...0
+    if (Traits::has_zero && getUnsignedBits() == 0) {
       if (negate) {
         other.set_value(-other.value());
       }
-      return;
+      return other_traits::has_zero ? CastResult::Success
+                                    : CastResult::NotRepresentable;
     }
     uint_type significand = getSignificandBits();
     bool carried = false;
-    typename other_T::uint_type rounded_significand =
-        getRoundedNormalizedSignificand<other_T>(round_dir, &carried);
+    typename other_T::uint_type rounded_significand = 0;
+    CastResult r = getRoundedNormalizedSignificand<other_T>(
+        round_dir, &rounded_significand, &carried);
 
     int_type exponent = getUnbiasedExponent();
     if (exponent == min_exponent) {
@@ -879,24 +1259,32 @@ class HexFloat {
                 (negate ? other_T::sign_mask : 0) |
                 other_underlyingtraits::getBitsFromFloat(
                     other_underlyingtraits::max()))));
-      return;
+      return r;
     }
     if (is_nan) {
-      typename other_T::uint_type shifted_significand;
-      shifted_significand = static_cast<typename other_T::uint_type>(
-          negatable_left_shift<
-              static_cast<int_type>(other_T::num_fraction_bits) -
-              static_cast<int_type>(num_fraction_bits)>::val(significand));
+      if (other_traits::has_NaN) {
+        typename other_T::uint_type shifted_significand;
+        shifted_significand = static_cast<typename other_T::uint_type>(
+            negatable_left_shift<
+                static_cast<int_type>(other_T::num_fraction_bits) -
+                static_cast<int_type>(num_fraction_bits)>::val(significand));
 
-      // We are some sort of Nan. We try to keep the bit-pattern of the Nan
-      // as close as possible. If we had to shift off bits so we are 0, then we
-      // just set the last bit.
-      other.set_value(typename other_T::underlying_type(
-          static_cast<typename other_T::uint_type>(
-              other_traits::NaN_pattern | (negate ? other_T::sign_mask : 0) |
-              other_T::exponent_mask |
-              (shifted_significand == 0 ? 0x1 : shifted_significand))));
-      return;
+        // We are some sort of Nan. We try to keep the bit-pattern of the Nan
+        // as close as possible. If we had to shift off bits so we are 0, then
+        // we just set the last bit.
+        other.set_value(typename other_T::underlying_type(
+            static_cast<typename other_T::uint_type>(
+                other_traits::NaN_pattern | (negate ? other_T::sign_mask : 0) |
+                other_T::exponent_mask |
+                (shifted_significand == 0 ? 0x1 : shifted_significand))));
+      } else {
+        // FP4_E2M1, FP6_E2M3, and FP6_E3M2 do not support NaN. Conversion
+        // from NaNs is implementation defined. Use 0.
+        other.set_value(typename other_T::underlying_type(
+            static_cast<typename other_T::uint_type>(0)));
+        return CastResult::NotRepresentable;
+      }
+      return r;
     }
 
     bool round_underflow_up =
@@ -905,20 +1293,79 @@ class HexFloat {
     using other_int_type = typename other_T::int_type;
     // setFromSignUnbiasedExponentAndNormalizedSignificand will
     // zero out any underflowing value (but retain the sign).
-    other.setFromSignUnbiasedExponentAndNormalizedSignificand(
+    CastResult r2 = other.setFromSignUnbiasedExponentAndNormalizedSignificand(
         negate, static_cast<other_int_type>(exponent), rounded_significand,
         round_underflow_up);
-    return;
+    return r2 > r ? r2 : r;
+  }
+
+  template <typename other_traits>
+  CastResult castTo(HexFixedPoint<other_traits>& other,
+                    round_direction round_dir) {
+    HexFloat<FloatProxy<double>> hf(0.0);
+    castTo(hf, round_dir);
+
+    using other_int_type = typename other_traits::int_type;
+    using other_uint_type = typename other_traits::uint_type;
+
+    double d = static_cast<double>(hf.value().getAsFloat()) *
+               other_traits::implicit_exponent_inverse_double;
+    const other_int_type max = std::numeric_limits<other_int_type>::max();
+    const other_int_type min = std::numeric_limits<other_int_type>::min();
+    if (FloatEquals(d, std::numeric_limits<double>::infinity()) || d > max) {
+      // saturate
+      other.set_value(static_cast<other_uint_type>(max));
+      return CastResult::LostPrecision;
+    }
+    if (FloatEquals(d, -std::numeric_limits<double>::infinity()) || d < min) {
+      // saturate
+      other.set_value(static_cast<other_uint_type>(min));
+      return CastResult::LostPrecision;
+    }
+    other_int_type rounded = static_cast<other_int_type>(std::round(d));
+    other.set_value(static_cast<other_uint_type>(rounded));
+    return FloatEquals(d - rounded, 0.0) ? CastResult::Success
+                                         : CastResult::LostPrecision;
   }
 
  private:
   T value_;
 
   static_assert(num_used_bits ==
-                    Traits::num_exponent_bits + Traits::num_fraction_bits + 1,
+                    Traits::num_exponent_bits + Traits::num_fraction_bits +
+                        (Traits::num_fraction_bits > 0
+                             ? 1
+                             : 0),  // assume no sign bit if no fraction
                 "The number of bits do not fit");
   static_assert(sizeof(T) == sizeof(uint_type), "The type sizes do not match");
 };
+
+template <class traits>
+template <typename other_T, typename other_traits>
+void HexFixedPoint<traits>::castTo(HexFloat<other_T, other_traits>& other,
+                                   round_direction round_dir) const {
+  using other_uint_type = typename other_T::uint_type;
+  if (value() == 0) {
+    other.set_value(static_cast<other_uint_type>(0));
+  }
+  using HFdouble =
+      HexFloat<FloatProxy<double>, HexFloatTraits<FloatProxy<double>>>;
+
+  static_assert(traits::num_used_bits <= other_traits::num_fraction_bits,
+                "Fixed point type significand cannot fit in a double");
+  static_assert(traits::implicit_exponent <=
+                        HexFloat<other_T, other_traits>::max_exponent &&
+                    traits::implicit_exponent >=
+                        HexFloat<other_T, other_traits>::min_exponent,
+                "Fixed point exponent cannot fit in a double");
+
+  double f =
+      static_cast<double>(static_cast<typename traits::int_type>(value())) *
+      traits::implicit_exponent_double;
+
+  HFdouble d(f);
+  d.castTo(other, round_dir);
+}
 
 // Returns 4 bits represented by the hex character.
 inline uint8_t get_nibble_from_character(int character) {
@@ -949,8 +1396,8 @@ std::ostream& operator<<(std::ostream& os, const HexFloat<T, Traits>& value) {
                 "num_used_bits must be non-zero for a valid float");
   static_assert(HF::num_exponent_bits != 0,
                 "num_exponent_bits must be non-zero for a valid float");
-  static_assert(HF::num_fraction_bits != 0,
-                "num_fractin_bits must be non-zero for a valid float");
+  // static_assert(HF::num_fraction_bits != 0,
+  //               "num_fractin_bits must be non-zero for a valid float");
 
   const uint_type bits = value.value().data();
   const char* const sign = (bits & HF::sign_mask) ? "-" : "";
@@ -960,8 +1407,8 @@ std::ostream& operator<<(std::ostream& os, const HexFloat<T, Traits>& value) {
   uint_type fraction = static_cast<uint_type>((bits & HF::fraction_encode_mask)
                                               << HF::num_overflow_bits);
 
-  const bool is_zero = exponent == 0 && fraction == 0;
-  const bool is_denorm = exponent == 0 && !is_zero;
+  const bool is_zero = Traits::has_zero && exponent == 0 && fraction == 0;
+  const bool is_denorm = Traits::has_zero && exponent == 0 && !is_zero;
 
   // exponent contains the biased exponent we have to convert it back into
   // the normal range.
@@ -973,15 +1420,21 @@ std::ostream& operator<<(std::ostream& os, const HexFloat<T, Traits>& value) {
   // If we are denorm, then start shifting, and decreasing the exponent until
   // our leading bit is 1.
 
-  if (is_denorm) {
-    while ((fraction & HF::fraction_top_bit) == 0) {
-      fraction = static_cast<uint_type>(fraction << 1);
-      int_exponent = static_cast<int_type>(int_exponent - 1);
+  if constexpr (Traits::num_fraction_bits > 0) {
+    if (is_denorm) {
+      // The topmost bit in the nibble-aligned fraction.
+      static const uint_type fraction_top_bit =
+          uint_type(1) << (HF::num_fraction_bits + HF::num_overflow_bits - 1);
+
+      while ((fraction & fraction_top_bit) == 0) {
+        fraction = static_cast<uint_type>(fraction << 1);
+        int_exponent = static_cast<int_type>(int_exponent - 1);
+      }
+      // Since this is denormalized, we have to consume the leading 1 since it
+      // will end up being implicit.
+      fraction = static_cast<uint_type>(fraction << 1);  // eat the leading 1
+      fraction &= HF::fraction_represent_mask;
     }
-    // Since this is denormalized, we have to consume the leading 1 since it
-    // will end up being implicit.
-    fraction = static_cast<uint_type>(fraction << 1);  // eat the leading 1
-    fraction &= HF::fraction_represent_mask;
   }
 
   uint_type fraction_nibbles = HF::fraction_nibbles;
@@ -1011,13 +1464,17 @@ std::ostream& operator<<(std::ostream& os, const HexFloat<T, Traits>& value) {
   return os;
 }
 
-// Returns true if negate_value is true and the next character on the
-// input stream is a plus or minus sign.  In that case we also set the fail bit
-// on the stream and set the value to the zero value for its type.
+// Encodes whether a leading sign has been seen, and if so which one.
+enum class LeadingSign { None, Plus, Minus };
+
+// Returns true if leading_sign is either Plus or Minus, and the next character
+// on the input stream is a plus or minus sign.  In that case we also set the
+// fail bit on the stream and set the value to the zero value for its type.
 template <typename T, typename Traits>
-inline bool RejectParseDueToLeadingSign(std::istream& is, bool negate_value,
+inline bool RejectParseDueToLeadingSign(std::istream& is,
+                                        LeadingSign leading_sign,
                                         HexFloat<T, Traits>& value) {
-  if (negate_value) {
+  if (leading_sign != LeadingSign::None) {
     auto next_char = is.peek();
     if (next_char == '-' || next_char == '+') {
       // Fail the parse.  Emulate standard behaviour by setting the value to
@@ -1032,22 +1489,24 @@ inline bool RejectParseDueToLeadingSign(std::istream& is, bool negate_value,
 
 // Parses a floating point number from the given stream and stores it into the
 // value parameter.
-// If negate_value is true then the number may not have a leading minus or
-// plus, and if it successfully parses, then the number is negated before
-// being stored into the value parameter.
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
+// then the number is negated before being stored into the value parameter.
 // If the value cannot be correctly parsed or overflows the target floating
 // point type, then set the fail bit on the stream.
 // TODO(dneto): Promise C++11 standard behavior in how the value is set in
 // the error case, but only after all target platforms implement it correctly.
 // In particular, the Microsoft C++ runtime appears to be out of spec.
 template <typename T, typename Traits>
-inline std::istream& ParseNormalFloat(std::istream& is, bool negate_value,
+inline std::istream& ParseNormalFloat(std::istream& is,
+                                      LeadingSign leading_sign,
                                       HexFloat<T, Traits>& value) {
-  if (RejectParseDueToLeadingSign(is, negate_value, value)) {
+  if (RejectParseDueToLeadingSign(is, leading_sign, value)) {
     return is;
   }
   T val;
   is >> val;
+  const bool negate_value = leading_sign == LeadingSign::Minus;
   if (negate_value) {
     val = -val;
   }
@@ -1070,8 +1529,9 @@ inline std::istream& ParseNormalFloat(std::istream& is, bool negate_value,
 // This will parse the float as it were a 32-bit floating point number,
 // and then round it down to fit into a Float16 value.
 // The number is rounded towards zero.
-// If negate_value is true then the number may not have a leading minus or
-// plus, and if it successfully parses, then the number is negated before
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
+// then the number is negated before being stored into the value parameter.
 // being stored into the value parameter.
 // If the value cannot be correctly parsed or overflows the target floating
 // point type, then set the fail bit on the stream.
@@ -1081,11 +1541,11 @@ inline std::istream& ParseNormalFloat(std::istream& is, bool negate_value,
 template <>
 inline std::istream&
 ParseNormalFloat<FloatProxy<Float16>, HexFloatTraits<FloatProxy<Float16>>>(
-    std::istream& is, bool negate_value,
+    std::istream& is, LeadingSign leading_sign,
     HexFloat<FloatProxy<Float16>, HexFloatTraits<FloatProxy<Float16>>>& value) {
   // First parse as a 32-bit float.
   HexFloat<FloatProxy<float>> float_val(0.0f);
-  ParseNormalFloat(is, negate_value, float_val);
+  ParseNormalFloat(is, leading_sign, float_val);
 
   // Then convert to 16-bit float, saturating at infinities, and
   // rounding toward zero.
@@ -1106,11 +1566,11 @@ ParseNormalFloat<FloatProxy<Float16>, HexFloatTraits<FloatProxy<Float16>>>(
 template <>
 inline std::istream&
 ParseNormalFloat<FloatProxy<BFloat16>, HexFloatTraits<FloatProxy<BFloat16>>>(
-    std::istream& is, bool negate_value,
+    std::istream& is, LeadingSign leading_sign,
     HexFloat<FloatProxy<BFloat16>, HexFloatTraits<FloatProxy<BFloat16>>>&
         value) {
   HexFloat<FloatProxy<float>> float_val(0.0f);
-  ParseNormalFloat(is, negate_value, float_val);
+  ParseNormalFloat(is, leading_sign, float_val);
 
   float_val.castTo(value, round_direction::kToZero);
 
@@ -1121,12 +1581,129 @@ ParseNormalFloat<FloatProxy<BFloat16>, HexFloatTraits<FloatProxy<BFloat16>>>(
   return is;
 }
 
+// Specialization of ParseNormalFloat for FloatProxy<Float4_E2M1> values.
+// This will parse the float as it were a 32-bit floating point number,
+// and then round it down to fit into a Float4_E2M1 value.
+// The number is rounded towards zero.
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
+// then the number is negated before
+// being stored into the value parameter.
+// If the value cannot be correctly parsed or overflows the target floating
+// point type, then set the fail bit on the stream.
+// TODO(dneto): Promise C++11 standard behavior in how the value is set in
+// the error case, but only after all target platforms implement it correctly.
+// In particular, the Microsoft C++ runtime appears to be out of spec.
+template <>
+inline std::istream& ParseNormalFloat<FloatProxy<Float4_E2M1>,
+                                      HexFloatTraits<FloatProxy<Float4_E2M1>>>(
+    std::istream& is, LeadingSign leading_sign,
+    HexFloat<FloatProxy<Float4_E2M1>, HexFloatTraits<FloatProxy<Float4_E2M1>>>&
+        value) {
+  // First parse as a 32-bit float.
+  HexFloat<FloatProxy<float>> float_val(0.0f);
+  ParseNormalFloat(is, leading_sign, float_val);
+
+  if (float_val.value().getAsFloat() > 6.0f) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(Float4_E2M1::max());
+    return is;
+  } else if (float_val.value().getAsFloat() < -6.0f) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(0x8 | Float4_E2M1::max().get_value());
+    return is;
+  }
+  // Then convert to Float4_E2M1, saturating at infinities, and rounding toward
+  // zero.
+  float_val.castTo(value, round_direction::kToZero);
+
+  return is;
+}
+
+// Specialization of ParseNormalFloat for FloatProxy<Float6_E2M3> values.
+// This will parse the float as it were a 32-bit floating point number,
+// and then round it down to fit into a Float6_E2M3 value.
+// The number is rounded towards zero.
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
+// then the number is negated before
+// being stored into the value parameter.
+// If the value cannot be correctly parsed or overflows the target floating
+// point type, then set the fail bit on the stream.
+// TODO(dneto): Promise C++11 standard behavior in how the value is set in
+// the error case, but only after all target platforms implement it correctly.
+// In particular, the Microsoft C++ runtime appears to be out of spec.
+template <>
+inline std::istream& ParseNormalFloat<FloatProxy<Float6_E2M3>,
+                                      HexFloatTraits<FloatProxy<Float6_E2M3>>>(
+    std::istream& is, LeadingSign leading_sign,
+    HexFloat<FloatProxy<Float6_E2M3>, HexFloatTraits<FloatProxy<Float6_E2M3>>>&
+        value) {
+  // First parse as a 32-bit float.
+  HexFloat<FloatProxy<float>> float_val(0.0f);
+  ParseNormalFloat(is, leading_sign, float_val);
+
+  if (float_val.value().getAsFloat() > 7.5f) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(Float6_E2M3::max());
+    return is;
+  } else if (float_val.value().getAsFloat() < -7.5f) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(0x20 | Float6_E2M3::max().get_value());
+    return is;
+  }
+  // Then convert to Float6_E2M3, saturating at infinities, and rounding toward
+  // zero.
+  float_val.castTo(value, round_direction::kToZero);
+
+  return is;
+}
+
+// Specialization of ParseNormalFloat for FloatProxy<Float6_E3M2> values.
+// This will parse the float as it were a 32-bit floating point number,
+// and then round it down to fit into a Float6_E3M2 value.
+// The number is rounded towards zero.
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
+// then the number is negated before
+// being stored into the value parameter.
+// If the value cannot be correctly parsed or overflows the target floating
+// point type, then set the fail bit on the stream.
+// TODO(dneto): Promise C++11 standard behavior in how the value is set in
+// the error case, but only after all target platforms implement it correctly.
+// In particular, the Microsoft C++ runtime appears to be out of spec.
+template <>
+inline std::istream& ParseNormalFloat<FloatProxy<Float6_E3M2>,
+                                      HexFloatTraits<FloatProxy<Float6_E3M2>>>(
+    std::istream& is, LeadingSign leading_sign,
+    HexFloat<FloatProxy<Float6_E3M2>, HexFloatTraits<FloatProxy<Float6_E3M2>>>&
+        value) {
+  // First parse as a 32-bit float.
+  HexFloat<FloatProxy<float>> float_val(0.0f);
+  ParseNormalFloat(is, leading_sign, float_val);
+
+  if (float_val.value().getAsFloat() > 28.0f) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(Float6_E3M2::max());
+    return is;
+  } else if (float_val.value().getAsFloat() < -28.0f) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(0x20 | Float6_E3M2::max().get_value());
+    return is;
+  }
+  // Then convert to Float6_E3M2, saturating at infinities, and rounding toward
+  // zero.
+  float_val.castTo(value, round_direction::kToZero);
+
+  return is;
+}
+
 // Specialization of ParseNormalFloat for FloatProxy<Float8_E4M3> values.
 // This will parse the float as it were a 32-bit floating point number,
 // and then round it down to fit into a Float8_E4M3 value.
 // The number is rounded towards zero.
-// If negate_value is true then the number may not have a leading minus or
-// plus, and if it successfully parses, then the number is negated before
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
 // being stored into the value parameter.
 // If the value cannot be correctly parsed or overflows the target floating
 // point type, then set the fail bit on the stream.
@@ -1136,12 +1713,12 @@ ParseNormalFloat<FloatProxy<BFloat16>, HexFloatTraits<FloatProxy<BFloat16>>>(
 template <>
 inline std::istream& ParseNormalFloat<FloatProxy<Float8_E4M3>,
                                       HexFloatTraits<FloatProxy<Float8_E4M3>>>(
-    std::istream& is, bool negate_value,
+    std::istream& is, LeadingSign leading_sign,
     HexFloat<FloatProxy<Float8_E4M3>, HexFloatTraits<FloatProxy<Float8_E4M3>>>&
         value) {
   // First parse as a 32-bit float.
   HexFloat<FloatProxy<float>> float_val(0.0f);
-  ParseNormalFloat(is, negate_value, float_val);
+  ParseNormalFloat(is, leading_sign, float_val);
 
   if (float_val.value().getAsFloat() > 448.0f) {
     is.setstate(std::ios_base::failbit);
@@ -1162,8 +1739,8 @@ inline std::istream& ParseNormalFloat<FloatProxy<Float8_E4M3>,
 // This will parse the float as it were a Float8_E5M2 floating point number,
 // and then round it down to fit into a Float16 value.
 // The number is rounded towards zero.
-// If negate_value is true then the number may not have a leading minus or
-// plus, and if it successfully parses, then the number is negated before
+// If leading_sign is Plus or Minus, then the number may not have a leading
+// minus or plus. If it successfully parses, and the leading sign was Minus,
 // being stored into the value parameter.
 // If the value cannot be correctly parsed or overflows the target floating
 // point type, then set the fail bit on the stream.
@@ -1173,12 +1750,12 @@ inline std::istream& ParseNormalFloat<FloatProxy<Float8_E4M3>,
 template <>
 inline std::istream& ParseNormalFloat<FloatProxy<Float8_E5M2>,
                                       HexFloatTraits<FloatProxy<Float8_E5M2>>>(
-    std::istream& is, bool negate_value,
+    std::istream& is, LeadingSign leading_sign,
     HexFloat<FloatProxy<Float8_E5M2>, HexFloatTraits<FloatProxy<Float8_E5M2>>>&
         value) {
   // First parse as a 32-bit float.
   HexFloat<FloatProxy<float>> float_val(0.0f);
-  ParseNormalFloat(is, negate_value, float_val);
+  ParseNormalFloat(is, leading_sign, float_val);
 
   // Then convert to Float8_E5M2 float, saturating at infinities, and
   // rounding toward zero.
@@ -1270,14 +1847,19 @@ std::istream& operator>>(std::istream& is, HexFloat<T, Traits>& value) {
   }
 
   auto next_char = is.peek();
-  bool negate_value = false;
 
-  if (next_char != '-' && next_char != '0') {
-    return ParseNormalFloat(is, negate_value, value);
+  auto leading_sign = LeadingSign::None;
+
+  if (next_char != '-' && next_char != '0' && next_char != '+') {
+    return ParseNormalFloat(is, LeadingSign::None, value);
   }
 
   if (next_char == '-') {
-    negate_value = true;
+    leading_sign = LeadingSign::Minus;
+    is.get();
+    next_char = is.peek();
+  } else if (next_char == '+') {
+    leading_sign = LeadingSign::Plus;
     is.get();
     next_char = is.peek();
   }
@@ -1287,12 +1869,12 @@ std::istream& operator>>(std::istream& is, HexFloat<T, Traits>& value) {
     auto maybe_hex_start = is.peek();
     if (maybe_hex_start != 'x' && maybe_hex_start != 'X') {
       is.unget();
-      return ParseNormalFloat(is, negate_value, value);
+      return ParseNormalFloat(is, leading_sign, value);
     } else {
       is.get();  // Throw away the 'x';
     }
   } else {
-    return ParseNormalFloat(is, negate_value, value);
+    return ParseNormalFloat(is, leading_sign, value);
   }
 
   // This "looks" like a hex-float so treat it as one.
@@ -1508,7 +2090,8 @@ std::istream& operator>>(std::istream& is, HexFloat<T, Traits>& value) {
   }
 
   uint_type output_bits = static_cast<uint_type>(
-      static_cast<uint_type>(negate_value ? 1 : 0) << HF::top_bit_left_shift);
+      static_cast<uint_type>(leading_sign == LeadingSign::Minus ? 1 : 0)
+      << HF::top_bit_left_shift);
   output_bits |= fraction;
 
   uint_type shifted_exponent = static_cast<uint_type>(
@@ -1518,6 +2101,68 @@ std::istream& operator>>(std::istream& is, HexFloat<T, Traits>& value) {
 
   T output_float(output_bits);
   value.set_value(output_float);
+
+  return is;
+}
+
+template <>
+inline std::istream& operator>>
+    <>(std::istream& is,
+       HexFloat<FloatProxy<Float8_E8M0>,
+                HexFloatTraits<FloatProxy<Float8_E8M0>>>& value) {
+  // need a double since 0x1p-127 is out of float32 range
+  HexFloat<FloatProxy<double>> float_val(0.0);
+  is >> float_val;
+  if (is.fail()) return is;
+
+  if (float_val.value().getAsFloat() > 0x1p127) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(Float8_E8M0::max());
+    return is;
+  } else if (float_val.value().getAsFloat() < 0x1p-127) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(Float8_E8M0::lowest());
+    return is;
+  }
+
+  CastResult r = float_val.castTo(value, round_direction::kToZero);
+  // Return an error if value is not representable or we lose precision.
+  // Rounding probably does not make sense for E8M0 exponent literals.
+  if (r != CastResult::Success) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(0);
+    return is;
+  }
+
+  return is;
+}
+
+inline std::istream& operator>>(std::istream& is,
+                                HexFixedPoint<MXInt8>& value) {
+  // need a double since 0x1p-127 is out of float32 range
+  HexFloat<FloatProxy<double>> float_val(0.0);
+  is >> float_val;
+  if (is.fail()) return is;
+
+  if (float_val.value().getAsFloat() > static_cast<double>(MXInt8::maxf)) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(MXInt8::max);
+    return is;
+  } else if (float_val.value().getAsFloat() <
+             static_cast<double>(MXInt8::minf)) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(MXInt8::min);
+    return is;
+  }
+
+  CastResult r = float_val.castTo(value, round_direction::kToZero);
+  // Return an error if value is not representable or we lose precision.
+  // Rounding probably does not make sense for MXInt8 literals here.
+  if (r != CastResult::Success) {
+    is.setstate(std::ios_base::failbit);
+    value.set_value(0);
+    return is;
+  }
 
   return is;
 }
@@ -1559,6 +2204,34 @@ inline std::ostream& operator<< <BFloat16>(std::ostream& os,
 }
 
 template <>
+inline std::ostream& operator<< <Float4_E2M1>(
+    std::ostream& os, const FloatProxy<Float4_E2M1>& value) {
+  os << HexFloat<FloatProxy<Float4_E2M1>>(value);
+  return os;
+}
+
+template <>
+inline std::ostream& operator<< <Float6_E2M3>(
+    std::ostream& os, const FloatProxy<Float6_E2M3>& value) {
+  os << HexFloat<FloatProxy<Float6_E2M3>>(value);
+  return os;
+}
+
+template <>
+inline std::ostream& operator<< <Float6_E3M2>(
+    std::ostream& os, const FloatProxy<Float6_E3M2>& value) {
+  os << HexFloat<FloatProxy<Float6_E3M2>>(value);
+  return os;
+}
+
+template <>
+inline std::ostream& operator<< <Float8_E8M0>(
+    std::ostream& os, const FloatProxy<Float8_E8M0>& value) {
+  os << HexFloat<FloatProxy<Float8_E8M0>>(value);
+  return os;
+}
+
+template <>
 inline std::ostream& operator<< <Float8_E4M3>(
     std::ostream& os, const FloatProxy<Float8_E4M3>& value) {
   os << HexFloat<FloatProxy<Float8_E4M3>>(value);
@@ -1569,6 +2242,14 @@ template <>
 inline std::ostream& operator<< <Float8_E5M2>(
     std::ostream& os, const FloatProxy<Float8_E5M2>& value) {
   os << HexFloat<FloatProxy<Float8_E5M2>>(value);
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os,
+                                const HexFixedPoint<MXInt8>& value) {
+  HexFloat<FloatProxy<float>> hf(0.0f);
+  value.castTo(hf, round_direction::kToNearestEven);
+  os << hf;
   return os;
 }
 

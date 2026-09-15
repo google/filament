@@ -36,7 +36,7 @@ chmod +x ninja
 export PATH="$PWD:$PATH"
 
 cd $SRC
-python3 utils/git-sync-deps --treeless
+python3 utils/git-sync-deps --prefix=external --treeless
 
 mkdir build && cd $SRC/build
 

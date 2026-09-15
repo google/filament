@@ -18,7 +18,7 @@
 #define SOURCE_COMMON_DEBUG_INFO_HEADER_H_
 
 // This enum defines the known common set of instructions that are the same
-// between OpenCL.DebugInfo.100 and NonSemantic.Shader.DebugInfo.100.
+// between OpenCL.DebugInfo.100 and NonSemantic.Shader.DebugInfo.
 // Note that NonSemantic.Shader.* instructions can still have slightly
 // different encoding, as it does not use literals anywhere and only constants.
 enum CommonDebugInfoInstructions {

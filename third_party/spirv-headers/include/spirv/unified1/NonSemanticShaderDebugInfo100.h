@@ -1,10 +1,14 @@
 // SPDX-FileCopyrightText: 2018-2024 The Khronos Group Inc.
 // SPDX-License-Identifier: MIT
-// 
+//
 // MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS
 // KHRONOS STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS
 // SPECIFICATIONS AND HEADER INFORMATION ARE LOCATED AT
 //    https://www.khronos.org/registry/
+//
+// This file is a frozen snapshot of the NonSemantic.Shader.DebugInfo version
+// 100 instruction set. It will not be updated with new instructions. New code
+// should include NonSemanticShaderDebugInfo.h, which covers all versions.
 
 #ifndef SPIRV_UNIFIED1_NonSemanticShaderDebugInfo100_H_
 #define SPIRV_UNIFIED1_NonSemanticShaderDebugInfo100_H_

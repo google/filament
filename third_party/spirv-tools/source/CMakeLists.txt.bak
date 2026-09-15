@@ -28,11 +28,13 @@ set(EI_amd_evp "${GRAMMAR_DIR}/extinst.spv-amd-shader-explicit-vertex-parameter.
 set(EI_amd_trimm "${GRAMMAR_DIR}/extinst.spv-amd-shader-trinary-minmax.grammar.json")
 set(EI_amd_gcn "${GRAMMAR_DIR}/extinst.spv-amd-gcn-shader.grammar.json")
 set(EI_amd_ballot "${GRAMMAR_DIR}/extinst.spv-amd-shader-ballot.grammar.json")
-set(EI_ns_debuginfo "${GRAMMAR_DIR}/extinst.nonsemantic.shader.debuginfo.100.grammar.json")
+set(EI_ns_debuginfo "${GRAMMAR_DIR}/extinst.nonsemantic.shader.debuginfo.grammar.json")
 set(EI_ns_clspvreflect "${GRAMMAR_DIR}/extinst.nonsemantic.clspvreflection.grammar.json")
 set(EI_ns_vkspreflect "${GRAMMAR_DIR}/extinst.nonsemantic.vkspreflection.grammar.json")
 set(EI_tosa_001000_1 "${GRAMMAR_DIR}/extinst.tosa.001000.1.grammar.json")
 set(EI_arm_motion_engine_100 "${GRAMMAR_DIR}/extinst.arm.motion-engine.100.grammar.json")
+set(EI_ns_graph_debug_info "${GRAMMAR_DIR}/extinst.nonsemantic.graph.debuginfo.grammar.json")
+set(EI_arm_experimental_ml_operations "${GRAMMAR_DIR}/extinst.arm.experimental-ml-operations.grammar.json")
 
 set(CORE_TABLES_BODY_INC_FILE ${spirv-tools_BINARY_DIR}/core_tables_body.inc)
 set(CORE_TABLES_HEADER_INC_FILE ${spirv-tools_BINARY_DIR}/core_tables_header.inc)
@@ -54,6 +56,8 @@ add_custom_command(OUTPUT ${CORE_TABLES_BODY_INC_FILE} ${CORE_TABLES_HEADER_INC_
       --extinst=,${EI_ns_vkspreflect}
       --extinst=TOSA_,${EI_tosa_001000_1}
       --extinst=,${EI_arm_motion_engine_100}
+      --extinst=,${EI_ns_graph_debug_info}
+      --extinst=,${EI_arm_experimental_ml_operations}
     DEPENDS ${GGT_SCRIPT}
             ${SPIRV_CORE_GRAMMAR_JSON_FILE}
 	    ${EI_glsl}
@@ -69,6 +73,8 @@ add_custom_command(OUTPUT ${CORE_TABLES_BODY_INC_FILE} ${CORE_TABLES_HEADER_INC_
 	    ${EI_ns_vkspreflect}
 	    ${EI_tosa_001000_1}
 	    ${EI_arm_motion_engine_100}
+	    ${EI_ns_graph_debug_info}
+	    ${EI_arm_experimental_ml_operations}
     COMMENT "Generate grammar tables")
 add_custom_target(spirv-tools-tables DEPENDS ${CORE_TABLES_BODY_INC_FILE} ${CORE_TABLES_HEADER_INC_FILE})
 
@@ -104,7 +110,6 @@ endmacro(spvtools_extinst_lang_headers)
 
 spvtools_extinst_lang_headers("DebugInfo" ${EI_debuginfo})
 spvtools_extinst_lang_headers("OpenCLDebugInfo100" ${EI_cldebuginfo})
-spvtools_extinst_lang_headers("NonSemanticShaderDebugInfo100" ${EI_ns_debuginfo})
 
 spvtools_vimsyntax("unified1" "1.0")
 add_custom_target(spirv-tools-vimsyntax DEPENDS ${VIMSYNTAX_FILE})
@@ -149,11 +154,6 @@ add_custom_command(OUTPUT ${SPIRV_TOOLS_BUILD_VERSION_INC}
    DEPENDS ${SPIRV_TOOLS_BUILD_VERSION_INC_GENERATOR}
            ${SPIRV_TOOLS_CHANGES_FILE}
    COMMENT "Update build-version.inc in the SPIRV-Tools build directory (if necessary).")
-# Convenience target for standalone generation of the build-version.inc file.
-# This is not required for any dependence chain.
-add_custom_target(spirv-tools-build-version
-   DEPENDS ${SPIRV_TOOLS_BUILD_VERSION_INC})
-set_property(TARGET spirv-tools-build-version PROPERTY FOLDER "SPIRV-Tools build")
 
 list(APPEND PCH_DEPENDS
 	${CORE_TABLES_HEADER_INC_FILE}
@@ -260,10 +260,13 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_debug.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_decorations.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_derivatives.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_dot_product.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_extensions.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_execution_limitations.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_explicit_layout.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_function.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_graph.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_group.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_id.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_interfaces.cpp
@@ -278,6 +281,7 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_misc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_mode_setting.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_non_uniform.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_pipe.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_primitives.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_ray_query.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_ray_tracing.cpp
@@ -337,7 +341,7 @@ function(spirv_tools_default_target_options target)
   )
   set_property(TARGET ${target} PROPERTY FOLDER "SPIRV-Tools libraries")
   spvtools_check_symbol_exports(${target})
-  add_dependencies(${target} spirv-tools-build-version core_tables extinst_tables)
+  add_dependencies(${target} core_tables extinst_tables)
 endfunction()
 
 # Always build ${SPIRV_TOOLS}-shared. This is expected distro packages, and

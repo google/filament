@@ -12,9 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Use the mostly-generic build configuration that comes from Chromium.
+# Do this to ensure that this project can be embedded in Chromium itself
+# or a Chromium-adjacent project.
 buildconfig = "//build/config/BUILDCONFIG.gn"
+
+# Use Python3 to run scripts. On Windows this will use python.exe or python.bat
+script_executable = "python3"
 
 default_args = {
   clang_use_chrome_plugins = false
+
+  # Requst a non-hermetic build.
+  # This is reasonable for standalone usage in upstream Glslang.
+  # It avoids a lot of overhead in the DEPS file and developer source trees.
+  # For example, don't download and use a custom Clang and libc++.
+  is_clang = false
+
+  # Disable various things that are are automatically turned on even
+  # we don't request a hermetic build with Clang.
   use_custom_libcxx = false
+
+  # Needed only for std::atomic_ref<T> for large Ts http://crbug.com/402171653
+  # Disable it to avoid the need to add the compiler-rt third_party dependency.
+  use_llvm_libatomic = false
 }
+
+# Export compile_commands.json to the build dir for all generated targets.
+# This is useful for editors that parse the compilation database for symbol lookup.
+export_compile_commands = [ "*" ]

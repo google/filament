@@ -70,7 +70,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"100:1024   \n \r\t \t \v \f ", true,
          SpecIdToValueStrMap{{100, "1024"}}},
         // 6. maximum spec id
-        {"4294967295:0", true, SpecIdToValueStrMap{{4294967295, "0"}}},
+        {"4294967295:0", true, SpecIdToValueStrMap{{4294967295u, "0"}}},
         // 7. minimum spec id
         {"0:100", true, SpecIdToValueStrMap{{0, "100"}}},
         // 8. random content without spaces are allowed
@@ -1027,6 +1027,114 @@ INSTANTIATE_TEST_SUITE_P(
             "%3 = OpSpecConstant %uchar 0\n"
             "%4 = OpSpecConstant %uchar 214\n",
         },
+        // 23. ConstantData - no spec provided
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%2 = OpSpecConstant %uint 1\n"
+            "%_arr_uint_2 = OpTypeArray %uint %2\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_2 0\n",
+            // default values
+            SpecIdToValueBitPatternMap{{888, {0x01020304}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%2 = OpSpecConstant %uint 1\n"
+            "%_arr_uint_2 = OpTypeArray %uint %2\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_2 0\n",
+        },
+        // 24. ConstantData - only data - uint32
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%uint_1 = OpConstant %uint 1\n"
+            "%_arr_uint_uint_1 = OpTypeArray %uint %uint_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_uint_1 0\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {0x01020304}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%uint_1 = OpConstant %uint 1\n"
+            "%_arr_uint_uint_1 = OpTypeArray %uint %uint_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_uint_1 16909060\n",
+        },
+        // 25. ConstantData - only data - int8
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "%char = OpTypeInt 8 1\n"
+            "%char_1 = OpConstant %char 1\n"
+            "%_arr_char_char_1 = OpTypeArray %char %char_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_char_char_1 0\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {0x01020304}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "%char = OpTypeInt 8 1\n"
+            "%char_1 = OpConstant %char 1\n"
+            "%_arr_char_char_1 = OpTypeArray %char %char_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_char_char_1 16909060\n",
+        },
+        // 26. ConstantData - only data - uint64
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "%ulong = OpTypeInt 64 0\n"
+            "%ulong_1 = OpConstant %ulong 1\n"
+            "%_arr_ulong_ulong_1 = OpTypeArray %ulong %ulong_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_ulong_ulong_1 0 0\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {0x01020304, 0x1}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "%ulong = OpTypeInt 64 0\n"
+            "%ulong_1 = OpConstant %ulong 1\n"
+            "%_arr_ulong_ulong_1 = OpTypeArray %ulong %ulong_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_ulong_ulong_1 16909060 1\n",
+        },
+        // 27. ConstantData - expand length - uint32
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%2 = OpSpecConstant %uint 1\n"
+            "%_arr_uint_2 = OpTypeArray %uint %2\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_2 0\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {0x1, 0x2, 0x3, 0x4}}, {101, {4}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%2 = OpSpecConstant %uint 4\n"
+            "%_arr_uint_2 = OpTypeArray %uint %2\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_2 1 2 3 4\n",
+        },
+        // 28. ConstantData - shrink length - uint32
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%2 = OpSpecConstant %uint 4\n"
+            "%_arr_uint_2 = OpTypeArray %uint %2\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_2 1 2 3 4\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {0x5, 0x6}}, {101, {2}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%2 = OpSpecConstant %uint 2\n"
+            "%_arr_uint_2 = OpTypeArray %uint %2\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_2 5 6\n",
+        },
     }));
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1161,6 +1269,40 @@ INSTANTIATE_TEST_SUITE_P(
             "%1 = OpSpecConstant %int 100\n"
             "%2 = OpSpecConstant %ulong 200\n"
             "%3 = OpSpecConstant %double 3.141592653\n",
+        },
+        // 7. ConstantData - expand length
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%uint_1 = OpConstant %uint 1\n"
+            "%_arr_uint_uint_1 = OpTypeArray %uint %uint_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_uint_1 0\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {0x01020304, 0x0, 0x1, 0x2}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%uint_1 = OpConstant %uint 1\n"
+            "%_arr_uint_uint_1 = OpTypeArray %uint %uint_1\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_uint_1 16909060 0 1 2\n",
+        },
+        // 8. ConstantData - shrink length
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%uint_4 = OpConstant %uint 4\n"
+            "%_arr_uint_uint_4 = OpTypeArray %uint %uint_4\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_uint_4 0 1 2 3\n",
+            // default values
+            SpecIdToValueBitPatternMap{{100, {4, 5}}},
+            // expected
+            "OpDecorate %1 SpecId 100\n"
+            "%uint = OpTypeInt 32 0\n"
+            "%uint_4 = OpConstant %uint 4\n"
+            "%_arr_uint_uint_4 = OpTypeArray %uint %uint_4\n"
+            "%1 = OpSpecConstantDataKHR %_arr_uint_uint_4 4 5\n",
         },
     }));
 

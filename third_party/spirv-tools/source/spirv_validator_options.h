@@ -35,6 +35,11 @@ struct validator_universal_limits_t {
   uint32_t max_id_bound{0x3FFFFF};
 };
 
+struct OpaqueResourceLayout {
+  uint32_t size{0};
+  uint32_t alignment{1};
+};
+
 // Manages command line options passed to the SPIR-V Validator. New struct
 // members may be added for any new option.
 struct spv_validator_options_t {
@@ -66,6 +71,11 @@ struct spv_validator_options_t {
   bool allow_vulkan_32_bit_bitwise;
   bool before_hlsl_legalization;
   bool use_friendly_names;
+
+  OpaqueResourceLayout buffer_descriptor_layout;
+  OpaqueResourceLayout image_descriptor_layout;
+  OpaqueResourceLayout sampler_descriptor_layout;
+  OpaqueResourceLayout tensor_descriptor_layout;
 };
 
 #endif  // SOURCE_SPIRV_VALIDATOR_OPTIONS_H_

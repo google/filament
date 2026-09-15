@@ -45,7 +45,7 @@
 #include "spirv-tools/libspirv.h"
 
 bool spvIsValidIDCharacter(const char value) {
-  return value == '_' || 0 != ::isalnum(value);
+  return value == '_' || 0 != ::isalnum(static_cast<unsigned char>(value));
 }
 
 // Returns true if the given string represents a valid ID name.
@@ -247,6 +247,12 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
           SPV_SUCCESS) {
         // if we know about this extended instruction, push the numeric value
         spvInstructionAddWord(pInst, desc->value);
+
+        // Push VARIABLE_ID so extra trailing operands from future NSDI
+        // versions are silently absorbed after the instruction-specific ones.
+        if (spvExtInstIsNonSemantic(pInst->extInstType)) {
+          pExpectedOperands->push_back(SPV_OPERAND_TYPE_VARIABLE_ID);
+        }
 
         // Prepare to parse the operands for the extended instructions.
         spvPushOperandTypes(desc->operands(), pExpectedOperands);
@@ -788,6 +794,18 @@ spv_result_t spvTextEncodeOpcode(const spvtools::AssemblyGrammar& grammar,
         if (spvOperandIsOptional(type)) {
           break;
         } else {
+          if (opcodeName == "OpSpecConstantOp" &&
+              type == SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER) {
+            std::string operandValue;
+            error = context->getWord(&operandValue, &nextPosition);
+            spv::Op opcode;
+            if (!grammar.lookupSpecConstantOpcode(operandValue.c_str() + 2,
+                                                  &opcode)) {
+              return context->diagnostic()
+                     << "Invalid " << opcodeName << " opcode '" << operandValue
+                     << "'. Did you mean '" << operandValue.substr(2) << "'?";
+            }
+          }
           return context->diagnostic()
                  << "Expected operand for " << opcodeName
                  << " instruction, but found the next instruction instead.";

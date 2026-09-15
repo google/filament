@@ -245,5 +245,18 @@ StructuredCFGAnalysis::FindFuncsCalledFromContinue() {
   return called_from_continue;
 }
 
+bool StructuredCFGAnalysis::operator==(
+    const StructuredCFGAnalysis& other) const {
+  if (bb_to_construct_.size() != other.bb_to_construct_.size()) return false;
+  for (const auto& pair : bb_to_construct_) {
+    uint32_t bb_id = pair.first;
+    const ConstructInfo& info = pair.second;
+    auto it = other.bb_to_construct_.find(bb_id);
+    if (it == other.bb_to_construct_.end()) return false;
+    if (!(info == it->second)) return false;
+  }
+  return merge_blocks_ == other.merge_blocks_;
+}
+
 }  // namespace opt
 }  // namespace spvtools

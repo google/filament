@@ -179,9 +179,9 @@ inline float32x4_t v_atan2q_f32(float32x4_t const y, float32x4_t const x) {
  */
 UTILS_ALWAYS_INLINE
 inline void v_oetf_sRGB(float32x4_t& cg_r, float32x4_t& cg_g, float32x4_t& cg_b) {
-    float32x4_t const r_cond = vcleq_f32(cg_r, vdupq_n_f32(0.0031308f));
-    float32x4_t const g_cond = vcleq_f32(cg_g, vdupq_n_f32(0.0031308f));
-    float32x4_t const b_cond = vcleq_f32(cg_b, vdupq_n_f32(0.0031308f));
+    uint32x4_t const r_cond = vcleq_f32(cg_r, vdupq_n_f32(0.0031308f));
+    uint32x4_t const g_cond = vcleq_f32(cg_g, vdupq_n_f32(0.0031308f));
+    uint32x4_t const b_cond = vcleq_f32(cg_b, vdupq_n_f32(0.0031308f));
 
     float32x4_t const r_lin = vmulq_n_f32(cg_r, 12.92f);
     float32x4_t const g_lin = vmulq_n_f32(cg_g, 12.92f);

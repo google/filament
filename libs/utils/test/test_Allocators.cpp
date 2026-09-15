@@ -20,7 +20,6 @@
 
 #include <algorithm>
 #include <bitset>
-#include <functional>
 #include <utility>
 #include <vector>
 
@@ -66,14 +65,14 @@ TEST(AllocatorTest, LinearAllocator) {
     EXPECT_EQ(scratch+8, p);
 
     // check alignment
-    la.alloc(1, 1);
+    (void) la.alloc(1, 1);
     p = la.alloc(24, 32);
     EXPECT_NE(nullptr, p);
-    EXPECT_EQ(0, uintptr_t(p) & 31);
+    EXPECT_EQ(0, reinterpret_cast<uintptr_t>(p) & 31);
 
     // now check that next allocation doesn't overlap previous one
     q = la.alloc(1, 1);
-    EXPECT_EQ(uintptr_t(q), uintptr_t(p) + 24);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(q), reinterpret_cast<uintptr_t>(p) + 24);
 
     // check free() of the top allocation
     la.reset();
@@ -124,9 +123,9 @@ TEST(AllocatorTest, PoolAllocator) {
     std::bitset<16> used;
 
     // verify buffers have not been clobbered
-    auto check = [](char const* p, int const v, size_t const s)->bool {
-        for (size_t i = 0; i<s ; ++i) {
-            if (p[i] != v) {
+    auto check = [](char const* ptr, int const v, size_t const s)->bool {
+        for (size_t i = 0; i < s ; ++i) {
+            if (ptr[i] != v) {
                 return false;
             }
         }
@@ -143,11 +142,11 @@ TEST(AllocatorTest, PoolAllocator) {
         for (size_t i = 0; i < 16; i++) {
             p = pa.alloc();
             EXPECT_NE(nullptr, p);
-            EXPECT_EQ(0, uintptr_t(p) & 31);
+            EXPECT_EQ(0, reinterpret_cast<uintptr_t>(p) & 31);
 
-            size_t const j = (uintptr_t(p) - uintptr_t(b)) / 64;
+            size_t const j = (reinterpret_cast<uintptr_t>(p) - reinterpret_cast<uintptr_t>(b)) / 64;
             //printf("%3d", j);
-            memset(p, int(j + 1), 64);
+            memset(p, static_cast<int>(j + 1), 64);
         }
         //printf("\n");
 
@@ -158,7 +157,7 @@ TEST(AllocatorTest, PoolAllocator) {
         // check that buffers where not clobbered
         q = b;
         for (size_t i = 0; i < 16; i++) {
-            EXPECT_TRUE(check((char const*)q, int(i + 1), 64));
+            EXPECT_TRUE(check(static_cast<char const*>(q), static_cast<int>(i + 1), 64));
             q = pointermath::add(q, 64);
         }
 
@@ -173,11 +172,13 @@ TEST(AllocatorTest, PoolAllocator) {
             used[j] = false;
             if (j > 0 && used[j - 1]) {
                 // check that the previous buffer didn't get clobbered
-                EXPECT_TRUE(check((char const*) pointermath::add(p, -64), int(j - 1 + 1), 64));
+                EXPECT_TRUE(check(static_cast<char const*>(pointermath::add(p, -64)),
+                        static_cast<int>(j - 1 + 1), 64));
             }
             if (j < 15 && used[j + 1]) {
                 // check that the following buffer didn't get clobbered
-                EXPECT_TRUE(check((char const*) pointermath::add(p, +64), int(j + 1 + 1), 64));
+                EXPECT_TRUE(check(static_cast<char const*>(pointermath::add(p, +64)),
+                        static_cast<int>(j + 1 + 1), 64));
             }
         }
         EXPECT_FALSE(used.any());
@@ -188,8 +189,8 @@ TEST(AllocatorTest, PoolAllocator) {
 TEST(AllocatorTest, CppAllocator) {
     struct Tracking {
         Tracking() noexcept { }
-        Tracking(const char* name, void const* base, size_t size) noexcept { }
-        void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
+        Tracking(const char*, void const*, size_t) noexcept { }
+        void onAlloc(void* p, size_t, size_t, size_t) {
             allocations.push_back(p);
         }
         void onFree(void* p, size_t) {
@@ -297,7 +298,7 @@ TEST(AllocatorTest, STLAllocator) {
         void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
             allocations.push_back(p);
         }
-        void onFree(void* p, size_t) {
+        void onFree(void const* p, size_t) {
             auto const pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
             allocations.erase(pos);
@@ -306,7 +307,7 @@ TEST(AllocatorTest, STLAllocator) {
             onFree(p, size);
         }
         void onReset() noexcept { }
-        void onRewind(void const* addr) noexcept { }
+        void onRewind(void const*) noexcept { }
         size_t getActiveAllocationCount() const noexcept { return allocations.size(); }
         size_t getActiveAllocationBytes() const noexcept { return 0; }
         std::vector<void*> allocations;
@@ -404,10 +405,9 @@ TEST(AllocatorTest, LeakDetectorNestedScopes) {
     using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
     LeakArena arena("LeakArenaNested", 1024);
 
-    void* p0 = nullptr;
     {
         ArenaScope outerScope(arena);
-        p0 = arena.alloc(64);
+        void* p0 = arena.alloc(64);
         EXPECT_NE(nullptr, p0);
         EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
 
@@ -461,8 +461,8 @@ TEST(AllocatorTest, LeakDetectorReset) {
     using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
     LeakArena arena("LeakArenaReset", 1024);
 
-    arena.alloc(64);
-    arena.alloc(128);
+    (void) arena.alloc(64);
+    (void) arena.alloc(128);
     EXPECT_EQ(2u, arena.getListener().getActiveAllocationCount());
     EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
 
@@ -695,7 +695,7 @@ TEST(AllocatorTest, LinearAllocatorStackOverflowFree) {
 
     // Now stack history has been exhausted (mCount == 0).
     // Attempting to free the 9th allocation (ptrs[3]) must return false.
-    size_t const overflowIdx = NUM_ALLOCS - 1 - LinearAllocator::STACK_DEPTH; // index 3
+    constexpr size_t overflowIdx = NUM_ALLOCS - 1 - LinearAllocator::STACK_DEPTH; // index 3
     EXPECT_FALSE(la.free(ptrs[overflowIdx], BLOCK_SIZE));
 
     // Current pointer must remain untouched

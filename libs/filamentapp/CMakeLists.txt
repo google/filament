@@ -19,7 +19,9 @@ set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
 
 set(PUBLIC_HDRS
         include/filamentapp/AssetLoader.h
+        include/filamentapp/AssetWriter.h
         include/filamentapp/DesktopAssetLoader.h
+        include/filamentapp/DesktopAssetWriter.h
         include/filamentapp/Config.h
         include/filamentapp/Cube.h
         include/filamentapp/Grid.h
@@ -35,6 +37,7 @@ set(PUBLIC_HDRS
 set(SRCS
         src/Cube.cpp
         src/DesktopAssetLoader.cpp
+        src/DesktopAssetWriter.cpp
         src/Grid.cpp
         src/FilamentApp.cpp
         src/FilamentApp2.cpp
@@ -76,6 +79,7 @@ set(LIBS
         filament-iblprefilter
         geometry
         image
+        imageio-lite
         ktxreader
         math
         stb
@@ -89,10 +93,6 @@ if (IS_HOST_PLATFORM)
         imgui
         imageio
         sdl2
-    )
-else()
-    list(APPEND LIBS
-        imageio-lite
     )
 endif()
 

@@ -57,6 +57,10 @@ add_library(uberarchive STATIC IMPORTED)
 set_target_properties(uberarchive PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libuberarchive.a)
 
+add_library(zstd STATIC IMPORTED)
+set_target_properties(zstd PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libzstd.a)
+
 set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
@@ -117,6 +121,7 @@ target_link_libraries(gltfio-jni
         PRIVATE uberzlib
         PRIVATE perfetto        # needed only when FILAMENT_ENABLE_PERFETTO is defined
         PRIVATE log             # needed only when perfetto above is used
+        PRIVATE zstd
 )
 if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
         target_link_libraries(gltfio-jni PRIVATE webpdecoder)

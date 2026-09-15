@@ -473,11 +473,9 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 
 #if defined(MATERIAL_HAS_LIGHTING)
 // get texture coordinate for directional and spot shadow maps
-#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 highp vec4 getShadowPosition(const int cascade) {
     return getCascadeLightSpacePosition(cascade);
 }
-#endif
 
 highp vec4 getShadowPosition(const int index,  const highp vec3 dir, const highp float zLight) {
     return getSpotLightSpacePosition(index, dir, zLight);

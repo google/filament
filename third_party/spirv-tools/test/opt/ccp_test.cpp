@@ -581,7 +581,7 @@ TEST_F(CCPTest, SkipSpecConstantInstrucitons) {
   EXPECT_EQ(std::get<1>(res), Pass::Status::SuccessWithoutChange);
 }
 
-TEST_F(CCPTest, FoldConstantCompositeInstrucitonsWithSpecConst) {
+TEST_F(CCPTest, FoldConstantCompositeInstructionsWithSpecConst) {
   const std::string spv_asm = R"(
                OpCapability Shader
                OpMemoryModel Logical GLSL450
@@ -595,7 +595,7 @@ TEST_F(CCPTest, FoldConstantCompositeInstrucitonsWithSpecConst) {
        %true = OpConstantTrue %bool
 ; CHECK: [[spec_const:%\w+]] = OpSpecConstantComposite %v3bool
          %11 = OpSpecConstantComposite %v3bool %true %true %true
-         %12 = OpConstantComposite %_struct_8 %11
+         %12 = OpSpecConstantComposite %_struct_8 %11
 ; CHECK: OpFunction
           %1 = OpFunction %void None %4
          %29 = OpLabel

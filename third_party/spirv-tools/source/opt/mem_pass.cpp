@@ -72,7 +72,8 @@ bool MemPass::IsTargetType(const Instruction* typeInst) const {
 
 bool MemPass::IsNonPtrAccessChain(const spv::Op opcode) const {
   return opcode == spv::Op::OpAccessChain ||
-         opcode == spv::Op::OpInBoundsAccessChain;
+         opcode == spv::Op::OpInBoundsAccessChain ||
+         opcode == spv::Op::OpUntypedAccessChainKHR;
 }
 
 bool MemPass::IsPtr(uint32_t ptrId) {
@@ -88,11 +89,14 @@ bool MemPass::IsPtr(uint32_t ptrId) {
     ptrInst = get_def_use_mgr()->GetDef(varId);
   }
   const spv::Op op = ptrInst->opcode();
-  if (op == spv::Op::OpVariable || IsNonPtrAccessChain(op)) return true;
+  if (op == spv::Op::OpVariable || op == spv::Op::OpUntypedVariableKHR ||
+      IsNonPtrAccessChain(op))
+    return true;
   const uint32_t varTypeId = ptrInst->type_id();
   if (varTypeId == 0) return false;
   const Instruction* varTypeInst = get_def_use_mgr()->GetDef(varTypeId);
-  return varTypeInst->opcode() == spv::Op::OpTypePointer;
+  return varTypeInst->opcode() == spv::Op::OpTypePointer ||
+         varTypeInst->opcode() == spv::Op::OpTypeUntypedPointerKHR;
 }
 
 Instruction* MemPass::GetPtr(uint32_t ptrId, uint32_t* varId) {
@@ -102,11 +106,13 @@ Instruction* MemPass::GetPtr(uint32_t ptrId, uint32_t* varId) {
 
   switch (ptrInst->opcode()) {
     case spv::Op::OpVariable:
+    case spv::Op::OpUntypedVariableKHR:
     case spv::Op::OpFunctionParameter:
       varInst = ptrInst;
       break;
     case spv::Op::OpAccessChain:
     case spv::Op::OpInBoundsAccessChain:
+    case spv::Op::OpUntypedAccessChainKHR:
     case spv::Op::OpPtrAccessChain:
     case spv::Op::OpInBoundsPtrAccessChain:
     case spv::Op::OpImageTexelPointer:
@@ -119,7 +125,8 @@ Instruction* MemPass::GetPtr(uint32_t ptrId, uint32_t* varId) {
       break;
   }
 
-  if (varInst->opcode() == spv::Op::OpVariable) {
+  if (varInst->opcode() == spv::Op::OpVariable ||
+      varInst->opcode() == spv::Op::OpUntypedVariableKHR) {
     *varId = varInst->result_id();
   } else {
     *varId = 0;

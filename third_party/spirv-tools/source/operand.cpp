@@ -225,6 +225,8 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
       return "NonSemantic.Shader.DebugInfo.100 debug operation";
     case SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_TYPE_QUALIFIER:
       return "NonSemantic.Shader.DebugInfo.100 debug type qualifier";
+    case SPV_OPERAND_TYPE_GATHER_MODES:
+      return "gather modes";
 
     case SPV_OPERAND_TYPE_NONE:
       return "NONE";
@@ -347,6 +349,7 @@ bool spvOperandIsConcrete(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_INFO_FLAGS:
     case SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_OPERATION:
     case SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_TYPE_QUALIFIER:
+    case SPV_OPERAND_TYPE_GATHER_MODES:
       return true;
     default:
       break;
@@ -546,6 +549,11 @@ std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
       out = [](unsigned index) { return index == 2; };
       break;
 
+    case spv::Op::OpConstantFunctionPointerINTEL:
+      // The Function parameter.
+      out = [](unsigned index) { return index == 2; };
+      break;
+
     case spv::Op::OpPhi:
       out = [](unsigned index) { return index > 1; };
       break;
@@ -572,10 +580,10 @@ std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
     case spv::Op::OpTypeArray:
       out = [](unsigned index) { return index == 1; };
       break;
-    case spv::Op::OpCooperativeMatrixPerElementOpNV:
+    case spv::Op::OpCooperativeMatrixPerElementOpEXT:
       out = [](unsigned index) { return index == 3; };
       break;
-    case spv::Op::OpCooperativeMatrixReduceNV:
+    case spv::Op::OpCooperativeMatrixReduceEXT:
       out = [](unsigned index) { return index == 4; };
       break;
     case spv::Op::OpCooperativeMatrixLoadTensorNV:
@@ -642,6 +650,16 @@ spv_fp_encoding_t spvFPEncodingFromOperandFPEncoding(spv::FPEncoding encoding) {
       return SPV_FP_ENCODING_FLOAT8_E4M3;
     case spv::FPEncoding::Float8E5M2EXT:
       return SPV_FP_ENCODING_FLOAT8_E5M2;
+    case spv::FPEncoding::Float6E2M3EXT:
+      return SPV_FP_ENCODING_FLOAT6_E2M3;
+    case spv::FPEncoding::Float6E3M2EXT:
+      return SPV_FP_ENCODING_FLOAT6_E3M2;
+    case spv::FPEncoding::Float4E2M1EXT:
+      return SPV_FP_ENCODING_FLOAT4_E2M1;
+    case spv::FPEncoding::Float8UnsignedE8M0EXT:
+      return SPV_FP_ENCODING_FLOAT8_UNSIGNED_E8M0;
+    case spv::FPEncoding::MXInt8EXT:
+      return SPV_FP_ENCODING_MXINT8;
     case spv::FPEncoding::Max:
       break;
   }

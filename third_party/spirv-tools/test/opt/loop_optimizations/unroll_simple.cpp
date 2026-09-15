@@ -3939,6 +3939,102 @@ TEST_F(PassClassTest, ApplyDecorationsToClonedInstructions) {
   SinglePassRunAndMatch<LoopUnroller>(text, true);
 }
 
+// When the loop-carried induction phi is itself decorated, unrolling used to
+// transfer that decoration (via ReplaceAllUsesWith) onto the value that
+// replaces the phi, the final iteration's body value which already
+// carries its own cloned decoration. The result was an id decorated
+// RelaxedPrecision twice, which fails validation. The induction phi's
+// decorations must be dropped before the replacement. Running with
+// validation enabled is what catches the regression.
+//
+// The SPIR-V below is the following GLSL compiled with glslang, then run
+// through `--eliminate-local-multi-store --ssa-rewrite`, that is what
+// `-O` hands to the loop unroller:
+//
+//   #version 450
+//   #extension GL_EXT_control_flow_attributes : require
+//   layout(local_size_x = 1) in;
+//   layout(std430, binding = 0) buffer Buf { float data[]; } buf;
+//   void main() {
+//     mediump float acc = 0.0;
+//     [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+//       mediump float x = buf.data[i];  // mediump local
+//       acc += x;                       // mediump + mediump -> mediump
+//     }
+//     buf.data[0] = acc;
+//   }
+//
+// The essential pattern: an unrolled loop whose mediump/min16 accumulator is
+// loop-carried, with an update expression that is also mediump, so both the
+// accumulator phi and the loop-body result end up RelaxedPrecision-decorated.
+TEST_F(PassClassTest, DoNotDuplicateDecorationsOnLoopCarriedValue) {
+  const std::string text = R"(
+; The loop has one RelaxedPrecision-decorated body value and is unrolled
+; four times, so the result must carry exactly four such decorations. A
+; fifth -- the induction phi's decoration leaking onto its replacement --
+; is the regression, and also fails the enabled validation.
+; CHECK: OpDecorate {{%\w+}} RelaxedPrecision
+; CHECK-NEXT: OpDecorate {{%\w+}} RelaxedPrecision
+; CHECK-NEXT: OpDecorate {{%\w+}} RelaxedPrecision
+; CHECK-NEXT: OpDecorate {{%\w+}} RelaxedPrecision
+; CHECK-NOT: RelaxedPrecision
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpDecorate %rt_arr ArrayStride 4
+               OpDecorate %buf_struct Block
+               OpMemberDecorate %buf_struct 0 Offset 0
+               OpDecorate %buf Binding 0
+               OpDecorate %buf DescriptorSet 0
+               OpDecorate %add RelaxedPrecision
+               OpDecorate %acc_phi RelaxedPrecision
+       %void = OpTypeVoid
+    %fn_type = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %float_0 = OpConstant %float 0
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_4 = OpConstant %uint 4
+       %bool = OpTypeBool
+     %rt_arr = OpTypeRuntimeArray %float
+ %buf_struct = OpTypeStruct %rt_arr
+    %buf_ptr = OpTypePointer StorageBuffer %buf_struct
+        %buf = OpVariable %buf_ptr StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+  %float_ptr = OpTypePointer StorageBuffer %float
+      %int_1 = OpConstant %int 1
+       %main = OpFunction %void None %fn_type
+      %entry = OpLabel
+               OpBranch %header
+     %header = OpLabel
+    %acc_phi = OpPhi %float %float_0 %entry %add %latch
+      %i_phi = OpPhi %uint %uint_0 %entry %i_next %latch
+               OpLoopMerge %merge %latch Unroll
+               OpBranch %cond_blk
+   %cond_blk = OpLabel
+       %cond = OpULessThan %bool %i_phi %uint_4
+               OpBranchConditional %cond %body %merge
+       %body = OpLabel
+     %elem_p = OpAccessChain %float_ptr %buf %int_0 %i_phi
+       %elem = OpLoad %float %elem_p
+        %add = OpFAdd %float %acc_phi %elem
+               OpBranch %latch
+      %latch = OpLabel
+     %i_next = OpIAdd %uint %i_phi %int_1
+               OpBranch %header
+      %merge = OpLabel
+    %store_p = OpAccessChain %float_ptr %buf %int_0 %int_0
+               OpStore %store_p %acc_phi
+               OpReturn
+               OpFunctionEnd
+)";
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_3);
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

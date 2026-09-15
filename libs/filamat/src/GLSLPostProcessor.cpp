@@ -1023,6 +1023,10 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
 
+    // Renumber live IDs and reset ID bound before canonicalization to prevent
+    // ID overflow in large or complex shaders.
+    optimizer->RegisterPass(CreateCompactIdsPass());
+
     // Always add the CanonicalizeIds Pass.
     // The CanonicalIds pass replaces the old SPIR-V remapper in Glslang.
     optimizer->RegisterPass(CreateCanonicalizeIdsPass());
@@ -1067,6 +1071,13 @@ void GLSLPostProcessor::fixupClipDistance(
 //   while-if-break, unclear if it helps for anything.
 // However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
+//
+// CreateCompactIdsPass():
+// Passes such as inlining, scalar replacement, and loop unrolling monotonically allocate new
+// SSA IDs. In complex shaders, the cumulative ID count can exceed the SPIR-V maximum ID bound
+// (0x3FFFFF = 4,194,303), causing spirv-tools to abort with "ID overflow. Try running
+// compact-ids". Inserting CreateCompactIdsPass() periodically after code-expanding passes and
+// before canonicalization renumbers live IDs starting from 1 and resets the bound.
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     auto RegisterPass = [&](Optimizer::PassToken&& pass,
@@ -1085,12 +1096,14 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateInlineExhaustivePass());
+    RegisterPass(CreateCompactIdsPass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
     RegisterPass(CreateLocalSingleStoreElimPass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateScalarReplacementPass());
+    RegisterPass(CreateCompactIdsPass());
     RegisterPass(CreateLocalAccessChainConvertPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
     RegisterPass(CreateLocalSingleStoreElimPass());
@@ -1129,12 +1142,15 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateInlineExhaustivePass());
+    RegisterPass(CreateCompactIdsPass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));
+    RegisterPass(CreateCompactIdsPass());
     RegisterPass(CreateLocalMultiStoreElimPass());
     RegisterPass(CreateCCPPass());
     RegisterPass(CreateLoopUnrollPass(true));
+    RegisterPass(CreateCompactIdsPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateScalarReplacementPass(0));
     RegisterPass(CreateLocalSingleStoreElimPass());

@@ -119,6 +119,7 @@ spv_result_t GetImportExportPairs(const MessageConsumer& consumer,
                                   const DefUseManager& def_use_manager,
                                   const DecorationManager& decoration_manager,
                                   bool allow_partial_linkage,
+                                  bool allow_multiple_exports,
                                   LinkageTable* linkings_to_do);
 
 // Checks that for each pair of import and export, the import and export have
@@ -416,6 +417,7 @@ spv_result_t GetImportExportPairs(const MessageConsumer& consumer,
                                   const DefUseManager& def_use_manager,
                                   const DecorationManager& decoration_manager,
                                   bool allow_partial_linkage,
+                                  bool allow_multiple_exports,
                                   LinkageTable* linkings_to_do) {
   spv_position_t position = {};
 
@@ -504,6 +506,23 @@ spv_result_t GetImportExportPairs(const MessageConsumer& consumer,
              << possible_export.second.name << "\".";
   }
 
+  // Detect multiple strong definitions of the same symbol.
+  // The import-matching loop below only visits symbols that are imported, so it
+  // would silently accept multiple exports when nothing imports them.  Check
+  // all exports here so that duplicates are always rejected.
+  //
+  // The function-variants (multitarget) flow intentionally keeps several
+  // exports of the same name (one per variant), so skip the check in that case.
+  if (!allow_multiple_exports) {
+    for (const auto& exp : exports) {
+      if (exp.second.size() > 1u)
+        return DiagnosticStream(position, consumer, "",
+                                SPV_ERROR_INVALID_BINARY)
+               << "Too many external references, " << exp.second.size()
+               << ", were found for \"" << exp.first << "\".";
+    }
+  }
+
   // Find the import/export pairs
   for (const auto& import : imports) {
     std::vector<LinkageSymbolInfo> possible_exports;
@@ -512,10 +531,6 @@ spv_result_t GetImportExportPairs(const MessageConsumer& consumer,
     if (possible_exports.empty() && !allow_partial_linkage)
       return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_BINARY)
              << "Unresolved external reference to \"" << import.name << "\".";
-    else if (possible_exports.size() > 1u)
-      return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_BINARY)
-             << "Too many external references, " << possible_exports.size()
-             << ", were found for \"" << import.name << "\".";
 
     if (!possible_exports.empty())
       linkings_to_do->emplace_back(import, possible_exports.front());
@@ -910,10 +925,10 @@ spv_result_t Link(const Context& context, const uint32_t* const* binaries,
 
   // Phase 5: Find the import/export pairs
   LinkageTable linkings_to_do;
-  res = GetImportExportPairs(consumer, linked_context,
-                             *linked_context.get_def_use_mgr(),
-                             *linked_context.get_decoration_mgr(),
-                             options.GetAllowPartialLinkage(), &linkings_to_do);
+  res = GetImportExportPairs(
+      consumer, linked_context, *linked_context.get_def_use_mgr(),
+      *linked_context.get_decoration_mgr(), options.GetAllowPartialLinkage(),
+      make_multitarget, &linkings_to_do);
   if (res != SPV_SUCCESS) return res;
 
   // Phase 6: Ensure the import and export have the same types and decorations.

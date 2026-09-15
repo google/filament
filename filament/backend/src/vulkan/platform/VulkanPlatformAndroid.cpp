@@ -125,13 +125,13 @@ std::pair<TextureFormat, TextureUsage> getFilamentFormatAndUsage(const AHardware
 }
 
 uint32_t selectMemoryTypeForExternalImage(VkPhysicalDevice physicalDevice, VkDevice device,
-        VkImage image, uint32_t types, VkFlags requiredMemoryFlags) {
+        VkImage image, uint32_t types, VkFlags requiredMemoryFlags, bool enableRenderDocCapture) {
     VkPhysicalDeviceMemoryProperties memoryProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
     uint32_t const memoryTypeIndex =
             VulkanContext::selectMemoryType(memoryProperties, types, requiredMemoryFlags);
 
-    if constexpr (FVK_RENDERDOC_CAPTURE_MODE) {
+    if (enableRenderDocCapture) {
         // RenderDoc will replay external resources as non-external.
         // Adjust properties that will trip it up when replaying, even though these are not valid.
         // Update memory type index if necessary so that we can replay the capture.
@@ -404,6 +404,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
 
     VkDevice const device = getDevice();
     VkPhysicalDevice const physicalDevice = getPhysicalDevice();
+    bool const renderDocCaptureEnabled = isRenderDocCaptureEnabled();
     auto buildImage = [&](ExternalImageMetadata const& metadata) {
         bool const isExternalFormat = metadata.isChromaConversionRequired &&
             !metadata.isStagingRequired;
@@ -487,7 +488,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
         }
 
         uint32_t const memoryTypeIndex = selectMemoryTypeForExternalImage(physicalDevice, device,
-                image, metadata.memoryTypeBits, requiredMemoryFlags);
+                image, metadata.memoryTypeBits, requiredMemoryFlags, renderDocCaptureEnabled);
 
         VkMemoryAllocateInfo const allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,

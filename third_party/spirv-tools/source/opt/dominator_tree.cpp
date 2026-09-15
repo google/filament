@@ -381,5 +381,24 @@ void DominatorTree::DumpTreeAsDot(std::ostream& out_stream) const {
   out_stream << "}\n";
 }
 
+bool DominatorTree::operator==(const DominatorTree& other) const {
+  if (postdominator_ != other.postdominator_) return false;
+  if (nodes_.size() != other.nodes_.size()) return false;
+
+  for (const auto& pair : nodes_) {
+    uint32_t id = pair.first;
+    const DominatorTreeNode& node = pair.second;
+    const DominatorTreeNode* other_node = other.GetTreeNode(id);
+    if (!other_node) return false;
+
+    if ((node.parent_ == nullptr) != (other_node->parent_ == nullptr))
+      return false;
+    if (node.parent_ != nullptr) {
+      if (node.parent_->id() != other_node->parent_->id()) return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace opt
 }  // namespace spvtools

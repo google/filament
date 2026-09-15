@@ -1,6 +1,7 @@
 // Copyright (c) 2018 Google LLC.
 // Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
 // reserved.
+// Copyright (C) 2026 Qualcomm Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -7159,6 +7160,385 @@ TEST_F(ValidateBuiltIns, MeshBuiltinUnsignedInt) {
 
   CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateBuiltIns, HitTriangleVertexPositionExecutionModel) {
+  const std::string spirv = R"(
+                OpCapability RayTracingKHR
+               OpCapability RayTracingPositionFetchKHR
+               OpExtension "SPV_KHR_ray_tracing"
+               OpExtension "SPV_KHR_ray_tracing_position_fetch"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint IntersectionKHR %main "main" %gl_HitTriangleVertexPositionsEXT
+               OpDecorate %gl_HitTriangleVertexPositionsEXT BuiltIn HitTriangleVertexPositionsKHR
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+%_arr_v3float_uint_3 = OpTypeArray %v3float %uint_3
+%_ptr_Input__arr_v3float_uint_3 = OpTypePointer Input %_arr_v3float_uint_3
+%gl_HitTriangleVertexPositionsEXT = OpVariable %_ptr_Input__arr_v3float_uint_3 Input
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %v19 = OpVariable %_ptr_Function_v3float Function
+         %18 = OpAccessChain %_ptr_Input_v3float %gl_HitTriangleVertexPositionsEXT %int_0
+         %19 = OpLoad %v3float %18
+               OpStore %v19 %19
+               OpTerminateRayKHR
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Vulkan spec does not allow BuiltIn HitTriangleVertexPositionsKHR to "
+          "be used with the execution model IntersectionKHR"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-HitTriangleVertexPositionsKHR-"
+                      "HitTriangleVertexPositionsKHR-08747"));
+}
+
+TEST_F(ValidateBuiltIns, HitTriangleVertexPositionType) {
+  const std::string spirv = R"(
+                OpCapability RayTracingKHR
+               OpCapability RayTracingPositionFetchKHR
+               OpExtension "SPV_KHR_ray_tracing"
+               OpExtension "SPV_KHR_ray_tracing_position_fetch"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint AnyHitKHR %main "main" %gl_HitTriangleVertexPositionsEXT
+               OpDecorate %gl_HitTriangleVertexPositionsEXT BuiltIn HitTriangleVertexPositionsKHR
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_v3float_uint_4 = OpTypeArray %v3float %uint_4
+%_ptr_Input__arr_v3float_uint_4 = OpTypePointer Input %_arr_v3float_uint_4
+%gl_HitTriangleVertexPositionsEXT = OpVariable %_ptr_Input__arr_v3float_uint_4 Input
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %v19 = OpVariable %_ptr_Function_v3float Function
+         %18 = OpAccessChain %_ptr_Input_v3float %gl_HitTriangleVertexPositionsEXT %int_0
+         %19 = OpLoad %v3float %18
+               OpStore %v19 %19
+               OpTerminateRayKHR
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("array length must be 3"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-HitTriangleVertexPositionsKHR-"
+                      "HitTriangleVertexPositionsKHR-08749"));
+}
+
+TEST_F(ValidateBuiltIns, TileOffsetRequiresFragmentOrGLComputeExecutionModel) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %gl_TileOffsetQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileOffsetQCOM BuiltIn TileOffsetQCOM
+               OpDecorate %gl_TileOffsetQCOM Flat
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+%_ptr_Input_v2uint = OpTypePointer Input %v2uint
+%gl_TileOffsetQCOM = OpVariable %_ptr_Input_v2uint Input
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+ %tileOffset = OpVariable %_ptr_Function_v2uint Function
+         %13 = OpLoad %v2uint %gl_TileOffsetQCOM
+               OpStore %tileOffset %13
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
+TEST_F(ValidateBuiltIns, TileOffsetRequiresInputStorageClass) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_TileOffsetQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileOffsetQCOM BuiltIn TileOffsetQCOM
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Output_v2uint = OpTypePointer Output %v2uint
+%gl_TileOffsetQCOM = OpVariable %_ptr_Output_v2uint Output
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-TileOffsetQCOM-TileOffsetQCOM-10627"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Vulkan spec allows BuiltIn TileOffsetQCOM to be "
+                        "only used for variables with Input storage class."));
+}
+
+TEST_F(ValidateBuiltIns,
+       TileOffsetRequiresTwoComponent32BitUnsignedIntegerVector) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_TileOffsetQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileOffsetQCOM BuiltIn TileOffsetQCOM
+               OpDecorate %gl_TileOffsetQCOM Flat
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_TileOffsetQCOM = OpVariable %_ptr_Input_v3uint Input
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+ %tileOffset = OpVariable %_ptr_Function_v3uint Function
+         %13 = OpLoad %v3uint %gl_TileOffsetQCOM
+               OpStore %tileOffset %13
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-TileOffsetQCOM-TileOffsetQCOM-10628"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("According to the Vulkan spec BuiltIn TileOffsetQCOM "
+                        "variable must be a 2-component 32-bit "
+                        "unsigned int vector."));
+}
+
+TEST_F(ValidateBuiltIns,
+       TileDimensionRequiresFragmentOrGLComputeExecutionModel) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %gl_TileDimensionQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileDimensionQCOM BuiltIn TileDimensionQCOM
+               OpDecorate %gl_TileDimensionQCOM Flat
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_TileDimensionQCOM = OpVariable %_ptr_Input_v3uint Input
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+    %tileDim = OpVariable %_ptr_Function_v3uint Function
+         %13 = OpLoad %v3uint %gl_TileDimensionQCOM
+               OpStore %tileDim %13
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
+TEST_F(ValidateBuiltIns, TileDimensionRequiresInputStorageClass) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_TileDimensionQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileDimensionQCOM BuiltIn TileDimensionQCOM
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Output_v3uint = OpTypePointer Output %v3uint
+%gl_TileDimensionQCOM = OpVariable %_ptr_Output_v3uint Output
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-TileDimensionQCOM-TileDimensionQCOM-10630"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Vulkan spec allows BuiltIn TileDimensionQCOM to be "
+                        "only used for variables with Input storage class."));
+}
+
+TEST_F(ValidateBuiltIns,
+       TileDimensionRequiresThreeComponent32BitUnsignedIntegerVector) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_TileDimensionQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileDimensionQCOM BuiltIn TileDimensionQCOM
+               OpDecorate %gl_TileDimensionQCOM Flat
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+%_ptr_Input_v2uint = OpTypePointer Input %v2uint
+%gl_TileDimensionQCOM = OpVariable %_ptr_Input_v2uint Input
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+    %tileDim = OpVariable %_ptr_Function_v2uint Function
+         %13 = OpLoad %v2uint %gl_TileDimensionQCOM
+               OpStore %tileDim %13
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-TileDimensionQCOM-TileDimensionQCOM-10631"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("According to the Vulkan spec BuiltIn TileDimensionQCOM "
+                "variable must be a 3-component 32-bit "
+                "unsigned int vector."));
+}
+
+TEST_F(ValidateBuiltIns,
+       TileApronSizeRequiresFragmentOrGLComputeExecutionModel) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %gl_TileApronSizeQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileApronSizeQCOM BuiltIn TileApronSizeQCOM
+               OpDecorate %gl_TileApronSizeQCOM Flat
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+%_ptr_Input_v2uint = OpTypePointer Input %v2uint
+%gl_TileApronSizeQCOM = OpVariable %_ptr_Input_v2uint Input
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+  %apronSize = OpVariable %_ptr_Function_v2uint Function
+         %13 = OpLoad %v2uint %gl_TileApronSizeQCOM
+               OpStore %apronSize %13
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
+TEST_F(ValidateBuiltIns, TileApronSizeRequiresInputStorageClass) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_TileApronSizeQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileApronSizeQCOM BuiltIn TileApronSizeQCOM
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Output_v2uint = OpTypePointer Output %v2uint
+%gl_TileApronSizeQCOM = OpVariable %_ptr_Output_v2uint Output     
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-TileApronSizeQCOM-TileApronSizeQCOM-10633"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Vulkan spec allows BuiltIn TileApronSizeQCOM to be "
+                        "only used for variables with Input storage class."));
+}
+
+TEST_F(ValidateBuiltIns,
+       TileApronSizeRequiresTwoComponent32BitUnsignedIntegerVector) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_TileApronSizeQCOM
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %gl_TileApronSizeQCOM BuiltIn TileApronSizeQCOM
+               OpDecorate %gl_TileApronSizeQCOM Flat
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_TileApronSizeQCOM = OpVariable %_ptr_Input_v3uint Input     
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-TileApronSizeQCOM-TileApronSizeQCOM-10634"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("According to the Vulkan spec BuiltIn TileApronSizeQCOM "
+                "variable must be a 2-component 32-bit "
+                "unsigned int vector."));
 }
 
 }  // namespace

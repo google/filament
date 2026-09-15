@@ -30,6 +30,7 @@ namespace spvtools {
 namespace utils {
 namespace {
 
+using spvtools::utils::LeadingSign;
 using ::testing::Eq;
 
 // In this file "encode" means converting a number into a string,
@@ -775,6 +776,14 @@ TEST(HexFloatOperationTests,
             set_from_sign(true, -128, bits_set({0, 1, 4}), false));
 }
 
+template <typename other_T, typename T>
+typename other_T::uint_type getRoundedNormalizedSignificandIgnoreResult(
+    HexFloat<T> hf, round_direction dir, bool* carry_bit) {
+  typename other_T::uint_type significand = 0;
+  hf.template getRoundedNormalizedSignificand<other_T>(dir, &significand,
+                                                       carry_bit);
+  return significand;
+}
 TEST(HexFloatOperationTests, NonRounding) {
   // Rounding from 32-bit hex-float to 32-bit hex-float should be trivial,
   // except in the denorm case which is a bit more complex.
@@ -788,29 +797,31 @@ TEST(HexFloatOperationTests, NonRounding) {
 
   // Everything fits, so this should be straight-forward
   for (round_direction round : rounding) {
-    EXPECT_EQ(bits_set({}),
-              HF(0.f).getRoundedNormalizedSignificand<HF>(round, &carry_bit));
+    EXPECT_EQ(bits_set({}), getRoundedNormalizedSignificandIgnoreResult<HF>(
+                                HF(0.f), round, &carry_bit));
     EXPECT_FALSE(carry_bit);
 
     EXPECT_EQ(bits_set({0}),
-              HF(float_fractions({0, 1}))
-                  .getRoundedNormalizedSignificand<HF>(round, &carry_bit));
+              getRoundedNormalizedSignificandIgnoreResult<HF>(
+                  HF(float_fractions({0, 1})), round, &carry_bit));
     EXPECT_FALSE(carry_bit);
 
     EXPECT_EQ(bits_set({1, 3}),
-              HF(float_fractions({0, 2, 4}))
-                  .getRoundedNormalizedSignificand<HF>(round, &carry_bit));
+              getRoundedNormalizedSignificandIgnoreResult<HF>(
+                  HF(float_fractions({0, 2, 4})), round, &carry_bit));
     EXPECT_FALSE(carry_bit);
 
     EXPECT_EQ(
         bits_set({0, 1, 4}),
-        HF(static_cast<float>(-ldexp(float_fractions({0, 1, 2, 5}), -128)))
-            .getRoundedNormalizedSignificand<HF>(round, &carry_bit));
+        getRoundedNormalizedSignificandIgnoreResult<HF>(
+            HF(static_cast<float>(-ldexp(float_fractions({0, 1, 2, 5}), -128))),
+            round, &carry_bit));
     EXPECT_FALSE(carry_bit);
 
     EXPECT_EQ(bits_set({0, 1, 4, 22}),
-              HF(static_cast<float>(float_fractions({0, 1, 2, 5, 23})))
-                  .getRoundedNormalizedSignificand<HF>(round, &carry_bit));
+              getRoundedNormalizedSignificandIgnoreResult<HF>(
+                  HF(static_cast<float>(float_fractions({0, 1, 2, 5, 23}))),
+                  round, &carry_bit));
     EXPECT_FALSE(carry_bit);
   }
 }
@@ -831,8 +842,8 @@ TEST_P(HexFloatRoundTest, RoundDownToFP16) {
   HF input_value(GetParam().source_float);
   bool carry_bit = false;
   EXPECT_EQ(GetParam().expected_results.first,
-            input_value.getRoundedNormalizedSignificand<HF16>(GetParam().round,
-                                                              &carry_bit));
+            getRoundedNormalizedSignificandIgnoreResult<HF16>(
+                input_value, GetParam().round, &carry_bit));
   EXPECT_EQ(carry_bit, GetParam().expected_results.second);
 }
 
@@ -914,8 +925,8 @@ TEST_P(HexFloatRoundTestE4M3, RoundDownToFPE4M3) {
   HF input_value(GetParam().source_float);
   bool carry_bit = false;
   EXPECT_EQ(GetParam().expected_results.first,
-            input_value.getRoundedNormalizedSignificand<HFE4M3>(
-                GetParam().round, &carry_bit));
+            getRoundedNormalizedSignificandIgnoreResult<HFE4M3>(
+                input_value, GetParam().round, &carry_bit));
   EXPECT_EQ(carry_bit, GetParam().expected_results.second);
 }
 
@@ -996,8 +1007,8 @@ TEST_P(HexFloatRoundTestE5M2, RoundDownToFPE4M3) {
   HF input_value(GetParam().source_float);
   bool carry_bit = false;
   EXPECT_EQ(GetParam().expected_results.first,
-            input_value.getRoundedNormalizedSignificand<HFE5M2>(
-                GetParam().round, &carry_bit));
+            getRoundedNormalizedSignificandIgnoreResult<HFE5M2>(
+                input_value, GetParam().round, &carry_bit));
   EXPECT_EQ(carry_bit, GetParam().expected_results.second);
 }
 
@@ -1067,11 +1078,12 @@ TEST_P(HexFloatRoundUpSignificandTest, Widening) {
   for (round_direction round : rounding) {
     carry_bit = false;
     HF16 input_value(GetParam().source_half);
-    EXPECT_EQ(
-        GetParam().expected_result,
-        input_value.getRoundedNormalizedSignificand<HF>(round, &carry_bit))
+    EXPECT_EQ(GetParam().expected_result,
+              getRoundedNormalizedSignificandIgnoreResult<HF>(
+                  input_value, round, &carry_bit))
         << std::hex << "0x"
-        << input_value.getRoundedNormalizedSignificand<HF>(round, &carry_bit)
+        << getRoundedNormalizedSignificandIgnoreResult<HF>(input_value, round,
+                                                           &carry_bit)
         << "  0x" << GetParam().expected_result;
     EXPECT_FALSE(carry_bit);
   }
@@ -1569,73 +1581,96 @@ TEST(HexFloatOperationTests, NanTests) {
 template <typename T>
 struct FloatParseCase {
   std::string literal;
-  bool negate_value;
+  LeadingSign leading_sign;
   bool expect_success;
   HexFloat<FloatProxy<T>> expected_value;
 };
+
+const char* str(const LeadingSign& ls) {
+  switch (ls) {
+    case LeadingSign::None:
+      return "(none)";
+    case LeadingSign::Minus:
+      return "-";
+    case LeadingSign::Plus:
+      return "+";
+  }
+  return "";  // should not happen
+}
 
 using ParseNormalFloatTest = ::testing::TestWithParam<FloatParseCase<float>>;
 
 TEST_P(ParseNormalFloatTest, Samples) {
   std::stringstream input(GetParam().literal);
   HexFloat<FloatProxy<float>> parsed_value(0.0f);
-  ParseNormalFloat(input, GetParam().negate_value, parsed_value);
+  ParseNormalFloat(input, GetParam().leading_sign, parsed_value);
   EXPECT_NE(GetParam().expect_success, input.fail())
       << " literal: " << GetParam().literal
-      << " negate: " << GetParam().negate_value;
+      << " leading_sign: " << str(GetParam().leading_sign);
   if (GetParam().expect_success) {
     EXPECT_THAT(parsed_value.value(), Eq(GetParam().expected_value.value()))
         << " literal: " << GetParam().literal
-        << " negate: " << GetParam().negate_value;
+        << " leading_sign: " << str(GetParam().leading_sign);
   }
 }
 
 // Returns a FloatParseCase with expected failure.
 template <typename T>
-FloatParseCase<T> BadFloatParseCase(std::string literal, bool negate_value,
+FloatParseCase<T> BadFloatParseCase(std::string literal,
+                                    LeadingSign leading_sign,
                                     T expected_value) {
   HexFloat<FloatProxy<T>> proxy_expected_value(expected_value);
-  return FloatParseCase<T>{literal, negate_value, false, proxy_expected_value};
+  return FloatParseCase<T>{literal, leading_sign, false, proxy_expected_value};
 }
 
 // Returns a FloatParseCase that should successfully parse to a given value.
 template <typename T>
-FloatParseCase<T> GoodFloatParseCase(std::string literal, bool negate_value,
+FloatParseCase<T> GoodFloatParseCase(std::string literal,
+                                     LeadingSign leading_sign,
                                      T expected_value) {
   HexFloat<FloatProxy<T>> proxy_expected_value(expected_value);
-  return FloatParseCase<T>{literal, negate_value, true, proxy_expected_value};
+  return FloatParseCase<T>{literal, leading_sign, true, proxy_expected_value};
 }
 
 INSTANTIATE_TEST_SUITE_P(
     FloatParse, ParseNormalFloatTest,
     ::testing::ValuesIn(std::vector<FloatParseCase<float>>{
         // Failing cases due to trivially incorrect syntax.
-        BadFloatParseCase("abc", false, 0.0f),
-        BadFloatParseCase("abc", true, 0.0f),
+        BadFloatParseCase("abc", LeadingSign::None, 0.0f),
+        BadFloatParseCase("abc", LeadingSign::Minus, 0.0f),
+        BadFloatParseCase("abc", LeadingSign::Plus, 0.0f),
 
         // Valid cases.
-        GoodFloatParseCase("0", false, 0.0f),
-        GoodFloatParseCase("0.0", false, 0.0f),
-        GoodFloatParseCase("-0.0", false, -0.0f),
-        GoodFloatParseCase("2.0", false, 2.0f),
-        GoodFloatParseCase("-2.0", false, -2.0f),
-        GoodFloatParseCase("+2.0", false, 2.0f),
-        // Cases with negate_value being true.
-        GoodFloatParseCase("0.0", true, -0.0f),
-        GoodFloatParseCase("2.0", true, -2.0f),
+        GoodFloatParseCase("0", LeadingSign::None, 0.0f),
+        GoodFloatParseCase("0.0", LeadingSign::None, 0.0f),
+        GoodFloatParseCase("-0.0", LeadingSign::None, -0.0f),
+        GoodFloatParseCase("2.0", LeadingSign::None, 2.0f),
+        GoodFloatParseCase("-2.0", LeadingSign::None, -2.0f),
+        GoodFloatParseCase("+2.0", LeadingSign::None, 2.0f),
+        // Cases with leading sign
+        GoodFloatParseCase("0.0", LeadingSign::Minus, -0.0f),
+        GoodFloatParseCase("2.0", LeadingSign::Minus, -2.0f),
+        GoodFloatParseCase("0", LeadingSign::Plus, 0.0f),
+        GoodFloatParseCase("0.0", LeadingSign::Plus, 0.0f),
+        GoodFloatParseCase("2.0", LeadingSign::Plus, 2.0f),
 
-        // When negate_value is true, we should not accept a
+        // When a leading sign is present, we should not accept a
         // leading minus or plus.
-        BadFloatParseCase("-0.0", true, 0.0f),
-        BadFloatParseCase("-2.0", true, 0.0f),
-        BadFloatParseCase("+0.0", true, 0.0f),
-        BadFloatParseCase("+2.0", true, 0.0f),
+        BadFloatParseCase("-0.0", LeadingSign::Minus, 0.0f),
+        BadFloatParseCase("-2.0", LeadingSign::Minus, 0.0f),
+        BadFloatParseCase("+0.0", LeadingSign::Minus, 0.0f),
+        BadFloatParseCase("+2.0", LeadingSign::Minus, 0.0f),
+        BadFloatParseCase("-0.0", LeadingSign::Plus, 0.0f),
+        BadFloatParseCase("-2.0", LeadingSign::Plus, 0.0f),
+        BadFloatParseCase("+0.0", LeadingSign::Plus, 0.0f),
+        BadFloatParseCase("+2.0", LeadingSign::Plus, 0.0f),
 
         // Overflow is an error for 32-bit float parsing.
-        BadFloatParseCase("1e40", false, FLT_MAX),
-        BadFloatParseCase("1e40", true, -FLT_MAX),
-        BadFloatParseCase("-1e40", false, -FLT_MAX),
-        // We can't have -1e40 and negate_value == true since
+        BadFloatParseCase("1e40", LeadingSign::None, FLT_MAX),
+        BadFloatParseCase("1e40", LeadingSign::Plus, FLT_MAX),
+        BadFloatParseCase("1e40", LeadingSign::Minus, -FLT_MAX),
+        BadFloatParseCase("-1e40", LeadingSign::None, -FLT_MAX),
+        // We can't have -1e40 and leading sign == Minus since
         // that represents an original case of "--1e40" which
         // is invalid.
     }));
@@ -1646,14 +1681,14 @@ using ParseNormalFloat16Test =
 TEST_P(ParseNormalFloat16Test, Samples) {
   std::stringstream input(GetParam().literal);
   HexFloat<FloatProxy<Float16>> parsed_value(0);
-  ParseNormalFloat(input, GetParam().negate_value, parsed_value);
+  ParseNormalFloat(input, GetParam().leading_sign, parsed_value);
   EXPECT_NE(GetParam().expect_success, input.fail())
       << " literal: " << GetParam().literal
-      << " negate: " << GetParam().negate_value;
+      << " leading_sign: " << str(GetParam().leading_sign);
   if (GetParam().expect_success) {
     EXPECT_THAT(parsed_value.value(), Eq(GetParam().expected_value.value()))
         << " literal: " << GetParam().literal
-        << " negate: " << GetParam().negate_value;
+        << " leading_sign: " << str(GetParam().leading_sign);
   }
 }
 
@@ -1661,26 +1696,40 @@ INSTANTIATE_TEST_SUITE_P(
     Float16Parse, ParseNormalFloat16Test,
     ::testing::ValuesIn(std::vector<FloatParseCase<Float16>>{
         // Failing cases due to trivially incorrect syntax.
-        BadFloatParseCase<Float16>("abc", false, uint16_t{0}),
-        BadFloatParseCase<Float16>("abc", true, uint16_t{0}),
+        BadFloatParseCase<Float16>("abc", LeadingSign::None, uint16_t{0}),
+        BadFloatParseCase<Float16>("abc", LeadingSign::Minus, uint16_t{0}),
+        BadFloatParseCase<Float16>("abc", LeadingSign::Plus, uint16_t{0}),
 
         // Valid cases.
-        GoodFloatParseCase<Float16>("0", false, uint16_t{0}),
-        GoodFloatParseCase<Float16>("0.0", false, uint16_t{0}),
-        GoodFloatParseCase<Float16>("-0.0", false, uint16_t{0x8000}),
-        GoodFloatParseCase<Float16>("2.0", false, uint16_t{0x4000}),
-        GoodFloatParseCase<Float16>("-2.0", false, uint16_t{0xc000}),
-        GoodFloatParseCase<Float16>("+2.0", false, uint16_t{0x4000}),
-        // Cases with negate_value being true.
-        GoodFloatParseCase<Float16>("0.0", true, uint16_t{0x8000}),
-        GoodFloatParseCase<Float16>("2.0", true, uint16_t{0xc000}),
+        GoodFloatParseCase<Float16>("0", LeadingSign::None, uint16_t{0}),
+        GoodFloatParseCase<Float16>("0.0", LeadingSign::None, uint16_t{0}),
+        GoodFloatParseCase<Float16>("-0.0", LeadingSign::None,
+                                    uint16_t{0x8000}),
+        GoodFloatParseCase<Float16>("2.0", LeadingSign::None, uint16_t{0x4000}),
+        GoodFloatParseCase<Float16>("-2.0", LeadingSign::None,
+                                    uint16_t{0xc000}),
+        GoodFloatParseCase<Float16>("+2.0", LeadingSign::None,
+                                    uint16_t{0x4000}),
+        // Cases with leading sign
+        GoodFloatParseCase<Float16>("0", LeadingSign::Plus, uint16_t{0}),
+        GoodFloatParseCase<Float16>("0.0", LeadingSign::Plus, uint16_t{0}),
+        GoodFloatParseCase<Float16>("2.0", LeadingSign::Plus, uint16_t{0x4000}),
+        GoodFloatParseCase<Float16>("0.0", LeadingSign::Minus,
+                                    uint16_t{0x8000}),
+        GoodFloatParseCase<Float16>("2.0", LeadingSign::Minus,
+                                    uint16_t{0xc000}),
 
-        // When negate_value is true, we should not accept a leading minus or
+        // When a leading sign is present, we should not accept a leading minus
+        // or
         // plus.
-        BadFloatParseCase<Float16>("-0.0", true, uint16_t{0}),
-        BadFloatParseCase<Float16>("-2.0", true, uint16_t{0}),
-        BadFloatParseCase<Float16>("+0.0", true, uint16_t{0}),
-        BadFloatParseCase<Float16>("+2.0", true, uint16_t{0}),
+        BadFloatParseCase<Float16>("-0.0", LeadingSign::Minus, uint16_t{0}),
+        BadFloatParseCase<Float16>("-2.0", LeadingSign::Minus, uint16_t{0}),
+        BadFloatParseCase<Float16>("+0.0", LeadingSign::Minus, uint16_t{0}),
+        BadFloatParseCase<Float16>("+2.0", LeadingSign::Minus, uint16_t{0}),
+        BadFloatParseCase<Float16>("-0.0", LeadingSign::Plus, uint16_t{0}),
+        BadFloatParseCase<Float16>("-2.0", LeadingSign::Plus, uint16_t{0}),
+        BadFloatParseCase<Float16>("+0.0", LeadingSign::Plus, uint16_t{0}),
+        BadFloatParseCase<Float16>("+2.0", LeadingSign::Plus, uint16_t{0}),
     }));
 
 using ParseNormalFloatE4M3Test =
@@ -1689,14 +1738,14 @@ using ParseNormalFloatE4M3Test =
 TEST_P(ParseNormalFloatE4M3Test, Samples) {
   std::stringstream input(GetParam().literal);
   HexFloat<FloatProxy<Float8_E4M3>> parsed_value(0);
-  ParseNormalFloat(input, GetParam().negate_value, parsed_value);
+  ParseNormalFloat(input, GetParam().leading_sign, parsed_value);
   EXPECT_NE(GetParam().expect_success, input.fail())
       << " literal: " << GetParam().literal
-      << " negate: " << GetParam().negate_value;
+      << " leading_sign: " << str(GetParam().leading_sign);
   if (GetParam().expect_success) {
     EXPECT_THAT(parsed_value.value(), Eq(GetParam().expected_value.value()))
         << " literal: " << GetParam().literal
-        << " negate: " << GetParam().negate_value;
+        << " leading_sign: " << str(GetParam().leading_sign);
   }
 }
 
@@ -1704,26 +1753,42 @@ INSTANTIATE_TEST_SUITE_P(
     FloatE4M3Parse, ParseNormalFloatE4M3Test,
     ::testing::ValuesIn(std::vector<FloatParseCase<Float8_E4M3>>{
         // Failing cases due to trivially incorrect syntax.
-        BadFloatParseCase<Float8_E4M3>("abc", false, uint8_t{0}),
-        BadFloatParseCase<Float8_E4M3>("abc", true, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("abc", LeadingSign::None, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("abc", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("abc", LeadingSign::Plus, uint8_t{0}),
 
         // Valid cases.
-        GoodFloatParseCase<Float8_E4M3>("0", false, uint8_t{0}),
-        GoodFloatParseCase<Float8_E4M3>("0.0", false, uint8_t{0}),
-        GoodFloatParseCase<Float8_E4M3>("-0.0", false, uint8_t{0x80}),
-        GoodFloatParseCase<Float8_E4M3>("2.0", false, uint8_t{0x40}),
-        GoodFloatParseCase<Float8_E4M3>("-2.0", false, uint8_t{0xc0}),
-        GoodFloatParseCase<Float8_E4M3>("+2.0", false, uint8_t{0x40}),
-        // Cases with negate_value being true.
-        GoodFloatParseCase<Float8_E4M3>("0.0", true, uint8_t{0x80}),
-        GoodFloatParseCase<Float8_E4M3>("2.0", true, uint8_t{0xc0}),
+        GoodFloatParseCase<Float8_E4M3>("0", LeadingSign::None, uint8_t{0}),
+        GoodFloatParseCase<Float8_E4M3>("0.0", LeadingSign::None, uint8_t{0}),
+        GoodFloatParseCase<Float8_E4M3>("-0.0", LeadingSign::None,
+                                        uint8_t{0x80}),
+        GoodFloatParseCase<Float8_E4M3>("2.0", LeadingSign::None,
+                                        uint8_t{0x40}),
+        GoodFloatParseCase<Float8_E4M3>("-2.0", LeadingSign::None,
+                                        uint8_t{0xc0}),
+        GoodFloatParseCase<Float8_E4M3>("+2.0", LeadingSign::None,
+                                        uint8_t{0x40}),
+        // Cases with leading sign.
+        GoodFloatParseCase<Float8_E4M3>("0", LeadingSign::Plus, uint8_t{0}),
+        GoodFloatParseCase<Float8_E4M3>("0.0", LeadingSign::Plus, uint8_t{0}),
+        GoodFloatParseCase<Float8_E4M3>("2.0", LeadingSign::Plus,
+                                        uint8_t{0x40}),
+        GoodFloatParseCase<Float8_E4M3>("0.0", LeadingSign::Minus,
+                                        uint8_t{0x80}),
+        GoodFloatParseCase<Float8_E4M3>("2.0", LeadingSign::Minus,
+                                        uint8_t{0xc0}),
 
-        // When negate_value is true, we should not accept a leading minus or
+        // When a leading sign is present, we should not accept a leading minus
+        // or
         // plus.
-        BadFloatParseCase<Float8_E4M3>("-0.0", true, uint8_t{0}),
-        BadFloatParseCase<Float8_E4M3>("-2.0", true, uint8_t{0}),
-        BadFloatParseCase<Float8_E4M3>("+0.0", true, uint8_t{0}),
-        BadFloatParseCase<Float8_E4M3>("+2.0", true, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("-0.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("-2.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("+0.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("+2.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("-0.0", LeadingSign::Plus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("-2.0", LeadingSign::Plus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("+0.0", LeadingSign::Plus, uint8_t{0}),
+        BadFloatParseCase<Float8_E4M3>("+2.0", LeadingSign::Plus, uint8_t{0}),
     }));
 
 using ParseNormalFloatE5M2Test =
@@ -1732,14 +1797,14 @@ using ParseNormalFloatE5M2Test =
 TEST_P(ParseNormalFloatE5M2Test, Samples) {
   std::stringstream input(GetParam().literal);
   HexFloat<FloatProxy<Float8_E5M2>> parsed_value(0);
-  ParseNormalFloat(input, GetParam().negate_value, parsed_value);
+  ParseNormalFloat(input, GetParam().leading_sign, parsed_value);
   EXPECT_NE(GetParam().expect_success, input.fail())
       << " literal: " << GetParam().literal
-      << " negate: " << GetParam().negate_value;
+      << " leading_sign: " << str(GetParam().leading_sign);
   if (GetParam().expect_success) {
     EXPECT_THAT(parsed_value.value(), Eq(GetParam().expected_value.value()))
         << " literal: " << GetParam().literal
-        << " negate: " << GetParam().negate_value;
+        << " leading_sign: " << str(GetParam().leading_sign);
   }
 }
 
@@ -1747,26 +1812,42 @@ INSTANTIATE_TEST_SUITE_P(
     FloatE5M2Parse, ParseNormalFloatE5M2Test,
     ::testing::ValuesIn(std::vector<FloatParseCase<Float8_E5M2>>{
         // Failing cases due to trivially incorrect syntax.
-        BadFloatParseCase<Float8_E5M2>("abc", false, uint8_t{0}),
-        BadFloatParseCase<Float8_E5M2>("abc", true, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("abc", LeadingSign::None, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("abc", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("abc", LeadingSign::Plus, uint8_t{0}),
 
         // Valid cases.
-        GoodFloatParseCase<Float8_E5M2>("0", false, uint8_t{0}),
-        GoodFloatParseCase<Float8_E5M2>("0.0", false, uint8_t{0}),
-        GoodFloatParseCase<Float8_E5M2>("-0.0", false, uint8_t{0x80}),
-        GoodFloatParseCase<Float8_E5M2>("2.0", false, uint8_t{0x40}),
-        GoodFloatParseCase<Float8_E5M2>("-2.0", false, uint8_t{0xc0}),
-        GoodFloatParseCase<Float8_E5M2>("+2.0", false, uint8_t{0x40}),
-        // Cases with negate_value being true.
-        GoodFloatParseCase<Float8_E5M2>("0.0", true, uint8_t{0x80}),
-        GoodFloatParseCase<Float8_E5M2>("2.0", true, uint8_t{0xc0}),
+        GoodFloatParseCase<Float8_E5M2>("0", LeadingSign::None, uint8_t{0}),
+        GoodFloatParseCase<Float8_E5M2>("0.0", LeadingSign::None, uint8_t{0}),
+        GoodFloatParseCase<Float8_E5M2>("-0.0", LeadingSign::None,
+                                        uint8_t{0x80}),
+        GoodFloatParseCase<Float8_E5M2>("2.0", LeadingSign::None,
+                                        uint8_t{0x40}),
+        GoodFloatParseCase<Float8_E5M2>("-2.0", LeadingSign::None,
+                                        uint8_t{0xc0}),
+        GoodFloatParseCase<Float8_E5M2>("+2.0", LeadingSign::None,
+                                        uint8_t{0x40}),
+        // Cases with a leading sign
+        GoodFloatParseCase<Float8_E5M2>("0", LeadingSign::Plus, uint8_t{0}),
+        GoodFloatParseCase<Float8_E5M2>("0.0", LeadingSign::Plus, uint8_t{0}),
+        GoodFloatParseCase<Float8_E5M2>("2.0", LeadingSign::Plus,
+                                        uint8_t{0x40}),
+        GoodFloatParseCase<Float8_E5M2>("0.0", LeadingSign::Minus,
+                                        uint8_t{0x80}),
+        GoodFloatParseCase<Float8_E5M2>("2.0", LeadingSign::Minus,
+                                        uint8_t{0xc0}),
 
-        // When negate_value is true, we should not accept a leading minus or
+        // When a leading sign is present, we should not accept a leading minus
+        // or
         // plus.
-        BadFloatParseCase<Float8_E5M2>("-0.0", true, uint8_t{0}),
-        BadFloatParseCase<Float8_E5M2>("-2.0", true, uint8_t{0}),
-        BadFloatParseCase<Float8_E5M2>("+0.0", true, uint8_t{0}),
-        BadFloatParseCase<Float8_E5M2>("+2.0", true, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("-0.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("-2.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("+0.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("+2.0", LeadingSign::Minus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("-0.0", LeadingSign::Plus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("-2.0", LeadingSign::Plus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("+0.0", LeadingSign::Plus, uint8_t{0}),
+        BadFloatParseCase<Float8_E5M2>("+2.0", LeadingSign::Plus, uint8_t{0}),
     }));
 
 // A test case for detecting infinities.
@@ -2139,6 +2220,18 @@ INSTANTIATE_TEST_SUITE_P(
     }));
 
 INSTANTIATE_TEST_SUITE_P(
+    Underflow, Float32StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        // Underflow
+        {"0x1.p-149", true, "", ldexpf(1, -149)},
+        {"0x1.p-150", true, "", 0.0f},
+        {"+0x1.p-149", true, "", ldexpf(1, -149)},
+        {"+0x1.p-150", true, "", 0.0f},
+        {"-0x1.p-149", true, "", -ldexpf(1, -149)},
+        {"-0x1.p-150", true, "", -0.0f},
+    }));
+
+INSTANTIATE_TEST_SUITE_P(
     HexFloat16ExcessSignificantDigits, Float16StreamParseTest,
     ::testing::ValuesIn(std::vector<StreamParseCase<Float16>>{
         // Zero
@@ -2241,6 +2334,18 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x8.5a40000p0", true, "", makeF16(0, 3, 0x02d)},
         {"0x8.5a7ffffp0", true, "", makeF16(0, 3, 0x02d)}}));
 
+INSTANTIATE_TEST_SUITE_P(
+    Underflow, Float16StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<Float16>>{
+        // Underflow
+        {"0x1.p-24", true, "", Float16(uint16_t(1))},
+        {"0x1.p-25", true, "", Float16(uint16_t(0))},
+        {"+0x1.p-24", true, "", Float16(uint16_t(1))},
+        {"+0x1.p-25", true, "", Float16(uint16_t(0))},
+        {"-0x1.p-24", true, "", Float16(uint16_t(0x8001))},
+        {"-0x1.p-25", true, "", Float16(uint16_t(0x8000))},
+    }));
+
 // Returns a E4M3 constructed from its sign bit, unbiased exponent, and
 // mantissa.
 Float8_E4M3 makeE4M3(int sign_bit, int unbiased_exp, int mantissa) {
@@ -2318,6 +2423,18 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x8.5a40000p0", true, "", makeE4M3(0, 3, 0x0)},
         {"0x8.5a7ffffp0", true, "", makeE4M3(0, 3, 0x0)}}));
 
+INSTANTIATE_TEST_SUITE_P(
+    Underflow, FloatE4M3StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<Float8_E4M3>>{
+        // Underflow
+        {"0x1.p-9", true, "", Float8_E4M3(uint8_t(1))},
+        {"0x1.p-10", true, "", Float8_E4M3(uint8_t(0))},
+        {"+0x1.p-9", true, "", Float8_E4M3(uint8_t(1))},
+        {"+0x1.p-10", true, "", Float8_E4M3(uint8_t(0))},
+        {"-0x1.p-9", true, "", Float8_E4M3(uint8_t(0x81))},
+        {"-0x1.p-10", true, "", Float8_E4M3(uint8_t(0x80))},
+    }));
+
 // Returns a E5M2 constructed from its sign bit, unbiased exponent, and
 // mantissa.
 Float8_E5M2 makeE5M2(int sign_bit, int unbiased_exp, int mantissa) {
@@ -2393,7 +2510,20 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x4.aa40000p0", true, "", makeE5M2(0, 2, 0x0)},
         {"0x4.aa7ffffp0", true, "", makeE5M2(0, 2, 0x0)},
         {"0x8.aa40000p0", true, "", makeE5M2(0, 3, 0x0)},
-        {"0x8.aa7ffffp0", true, "", makeE5M2(0, 3, 0x0)}}));
+        {"0x8.aa7ffffp0", true, "", makeE5M2(0, 3, 0x0)},
+    }));
+
+INSTANTIATE_TEST_SUITE_P(
+    Underflow, FloatE5M2StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<Float8_E5M2>>{
+        // Underflow
+        {"0x1.p-16", true, "", Float8_E5M2(uint8_t(1))},
+        {"0x1.p-17", true, "", Float8_E5M2(uint8_t(0))},
+        {"+0x1.p-16", true, "", Float8_E5M2(uint8_t(1))},
+        {"+0x1.p-17", true, "", Float8_E5M2(uint8_t(0))},
+        {"-0x1.p-16", true, "", Float8_E5M2(uint8_t(0x81))},
+        {"-0x1.p-17", true, "", Float8_E5M2(uint8_t(0x80))},
+    }));
 
 }  // namespace
 }  // namespace utils

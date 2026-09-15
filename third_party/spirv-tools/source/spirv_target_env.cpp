@@ -226,7 +226,8 @@ bool spvReadEnvironmentFromText(const std::vector<char>& text,
         char minor = text[minor_digit_pos];
         char next_char =
             minor_digit_pos + 1 < text.size() ? text[minor_digit_pos + 1] : 0;
-        if (std::isdigit(minor) && !std::isdigit(next_char)) {
+        if (std::isdigit(static_cast<unsigned char>(minor)) &&
+            !std::isdigit(static_cast<unsigned char>(next_char))) {
           const auto index = minor - '0';
           assert(index >= 0);
           if (static_cast<size_t>(index) < ordered_universal_envs.size()) {
@@ -243,7 +244,7 @@ bool spvReadEnvironmentFromText(const std::vector<char>& text,
       for (; i < text.size(); ++i) {
         if (text[i] == '\n') break;
       }
-    } else if (!std::isspace(c)) {
+    } else if (!std::isspace(static_cast<unsigned char>(c))) {
       // Allow blanks, but end the search if we find something else.
       break;
     }

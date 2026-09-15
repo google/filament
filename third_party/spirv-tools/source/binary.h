@@ -35,6 +35,14 @@ spv_result_t spvBinaryHeaderGet(const spv_const_binary binary,
 // replacement for C11's strnlen_s which might not exist in all environments.
 size_t spv_strnlen_s(const char* str, size_t strsz);
 
+// Like spvBinaryParse, but accepts a bitmask of spv_binary_to_text_options_t
+// flags to control parser behavior during disassembly.
+spv_result_t spvBinaryParseWithOptions(
+    const spv_const_context context, void* user_data, const uint32_t* code,
+    const size_t num_words, spv_parsed_header_fn_t parsed_header,
+    spv_parsed_instruction_fn_t parsed_instruction, spv_diagnostic* diagnostic,
+    uint32_t options);
+
 // Decode the string literal operand with index operand_index from instruction
 // inst.
 std::string spvDecodeLiteralStringOperand(const spv_parsed_instruction_t& inst,

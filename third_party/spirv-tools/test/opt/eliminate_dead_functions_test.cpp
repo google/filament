@@ -550,6 +550,79 @@ OpFunctionEnd
   SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
 }
 
+TEST_F(EliminateDeadFunctionsBasicTest, UAF_DebugLine) {
+  const std::string text = R"(
+; CHECK: OpEntryPoint Vertex [[main:%\w+]]
+; CHECK: [[main]] = OpFunction
+; CHECK: OpFunctionEnd
+; CHECK-NOT: = OpFunction
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%nsdi = OpExtInstImport "NonSemantic.Shader.DebugInfo.9999"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+%file = OpString "poc.hlsl"
+%void = OpTypeVoid
+%fn = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%u1 = OpConstant %uint 1
+%src = OpExtInst %void %nsdi DebugSource %file
+%main = OpFunction %void None %fn
+%main_l = OpLabel
+OpReturn
+OpFunctionEnd
+%F = OpFunction %void None %fn
+%F_l = OpLabel
+%x = OpIAdd %uint %u1 %u1
+%dl = OpExtInst %void %nsdi DebugLine %src %u1 %u1 %u1 %u1 %x
+%y = OpIAdd %uint %u1 %u1
+%dnl = OpExtInst %void %nsdi DebugNoLine
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
+TEST_F(EliminateDeadFunctionsBasicTest, NonSemanticDebugFunctionRemoved) {
+  const std::string text = R"(
+; CHECK: OpEntryPoint Vertex [[main:%\w+]]
+; CHECK: [[main]] = OpFunction
+; CHECK: OpFunctionEnd
+; CHECK-NOT: DebugFunction
+; CHECK-NOT: DebugFunctionDefinition
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%nsdi = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+%file = OpString "poc.hlsl"
+%void = OpTypeVoid
+%fn = OpTypeFunction %void
+%name = OpString "foo"
+%uint = OpTypeInt 32 0
+%uint_1 = OpConstant %uint 1
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_5 = OpConstant %uint 5
+%src = OpExtInst %void %nsdi DebugSource %file
+%cu = OpExtInst %void %nsdi DebugCompilationUnit %uint_1 %uint_4 %src %uint_5
+%type_fn = OpExtInst %void %nsdi DebugTypeFunction %uint_3 %void
+%dbg_fn = OpExtInst %void %nsdi DebugFunction %name %type_fn %src %uint_1 %uint_1 %cu %name %uint_3 %uint_1
+%main = OpFunction %void None %fn
+%main_l = OpLabel
+OpReturn
+OpFunctionEnd
+%F = OpFunction %void None %fn
+%F_l = OpLabel
+%dbg_def = OpExtInst %void %nsdi DebugFunctionDefinition %dbg_fn %F
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

@@ -868,6 +868,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
     bool const isSupportedType = type == PixelDataType::UINT_2_10_10_10_REV;
+    // Medium state supports linear or sRGB.
+    bool const isSupportedColorSpace = builder->outputColorSpace == Rec709-sRGB-D65 ||
+                                       builder->outputColorSpace == Rec709-Linear-D65;
 
     bool const isDefaultState = !mIsOneDimensional &&
                                 !builder->hasAdjustments &&
@@ -879,7 +882,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                                 engine.features.engine.color_grading.use_optimized_default_builder &&
                                 builder->toneMapping == ToneMapping::ACES_LEGACY && 
                                 builder->outputColorSpace == Rec709-sRGB-D65 &&
-                                type == PixelDataType::UINT_2_10_10_10_REV &&
+                                isSupportedType &&
                                 (config.lutDimension & (config.lutDimension - 1)) == 0 &&
                                 (config.lutDimension * config.lutDimension * config.lutDimension) % 4 == 0;
 
@@ -887,7 +890,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                                !mIsOneDimensional &&
                                builder->fastMath &&
                                engine.features.engine.color_grading.use_optimized_default_builder &&
-                               builder->outputColorSpace == Rec709-sRGB-D65 &&
+                               isSupportedColorSpace &&
                                isSupportedType &&
                                (config.lutDimension & (config.lutDimension - 1)) == 0 &&
                                (config.lutDimension * config.lutDimension * config.lutDimension) % 4 == 0;
@@ -1097,7 +1100,6 @@ float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
 
 #if defined(__ARM_NEON)
 
-UTILS_NOINLINE
 void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
         Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
@@ -1184,6 +1186,7 @@ UTILS_NOINLINE
 void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
+    bool const isSrgb = (builder->outputColorSpace == Rec709-sRGB-D65);
     uint32_t const dim = config.lutDimension;
     assert_invariant((dim & (dim - 1)) == 0); // dim is power of 2
 
@@ -1191,7 +1194,7 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
     auto *slices = js.createJob();
 
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, &builder](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, &builder, &isSrgb](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
@@ -1303,7 +1306,9 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
                     cg_g = vmaxq_f32(vminq_f32(cg_g, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
                     cg_b = vmaxq_f32(vminq_f32(cg_b, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
 
-                    v_oetf_sRGB(cg_r, cg_g, cg_b);
+                    if (UTILS_LIKELY(isSrgb)) {
+                        v_oetf_sRGB(cg_r, cg_g, cg_b);
+                    }
 
                     if (UTILS_UNLIKELY(!builder->customLutData.empty())) {
                         auto const* clData = builder->customLutData.data();

@@ -491,6 +491,10 @@ spv_result_t InstructionPass(ValidationState_t& _, const Instruction* inst) {
         spv::ExecutionMode::OutputPrimitivesEXT) {
       _.RegisterEntryPointOutputPrimitivesEXT(entry_point, inst);
     }
+    if (inst->GetOperandAs<spv::ExecutionMode>(1) ==
+        spv::ExecutionMode::OutputVertices) {
+      _.RegisterEntryPointOutputVertices(entry_point, inst);
+    }
   } else if (opcode == spv::Op::OpVariable) {
     const auto storage_class = inst->GetOperandAs<spv::StorageClass>(2);
     if (auto error = LimitCheckNumVars(_, inst->id(), storage_class)) {

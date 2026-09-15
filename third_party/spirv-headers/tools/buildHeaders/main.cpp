@@ -35,6 +35,7 @@ void Usage()
            "     Lua    - Lua module\n"
            "     Python - Python module (also accepts Py)\n"
            "     C#     - C# module (also accepts CSharp)\n"
+           "     Java   - Java module\n"
            "     D      - D module\n"
            "     Beef   - Beef module\n"
            "  -H print header in all supported languages to files in current directory\n"
@@ -79,6 +80,8 @@ bool ProcessArguments(int argc, char* argv[])
                     Language = spv::ELangPython;
                 } else if (language == "c#" || language == "csharp") {
                     Language = spv::ELangCSharp;
+                } else if (language == "java") {
+                    Language = spv::ELangJava;
                 } else if (language == "d") {
                     Language = spv::ELangD;
                 } else if (language == "beef") {

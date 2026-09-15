@@ -60,6 +60,7 @@ using ValidateOpenCLStdFractLike = spvtest::ValidateBase<std::string>;
 using ValidateOpenCLStdFrexpLike = spvtest::ValidateBase<std::string>;
 using ValidateOpenCLStdLdexpLike = spvtest::ValidateBase<std::string>;
 using ValidateOpenCLStdUpsampleLike = spvtest::ValidateBase<std::string>;
+using ValidateArmExperimentalMLOperations = spvtest::ValidateBase<bool>;
 using ValidateClspvReflection = spvtest::ValidateBase<bool>;
 
 // Returns number of components in Pack/Unpack extended instructions.
@@ -97,17 +98,10 @@ OpCapability Int64
   ss << "%extinst = OpExtInstImport \"GLSL.std.450\"\n";
   ss << "OpMemoryModel Logical GLSL450\n";
   ss << "OpEntryPoint " << execution_model << " %main \"main\""
-     << " %f32_output"
-     << " %f32vec2_output"
-     << " %u32_output"
-     << " %u32vec2_output"
-     << " %u64_output"
-     << " %f32_input"
-     << " %f32vec2_input"
-     << " %u32_input"
-     << " %u32vec2_input"
-     << " %u64_input"
-     << "\n";
+     << " %f32_output" << " %f32vec2_output" << " %u32_output"
+     << " %u32vec2_output" << " %u64_output" << " %f16_input"
+     << " %f16vec2_input" << " %f32_input" << " %f32vec2_input" << " %u32_input"
+     << " %u32vec2_input" << " %u64_input" << "\n";
   if (execution_model == "Fragment") {
     ss << "OpExecutionMode %main OriginUpperLeft\n";
   }
@@ -125,6 +119,7 @@ OpCapability Int64
 %s64 = OpTypeInt 64 1
 %u16 = OpTypeInt 16 0
 %s16 = OpTypeInt 16 1
+%f16vec2 = OpTypeVector %f16 2
 %f32vec2 = OpTypeVector %f32 2
 %f32vec3 = OpTypeVector %f32 3
 %f32vec4 = OpTypeVector %f32 4
@@ -168,6 +163,7 @@ OpCapability Int64
 %f16_0 = OpConstant %f16 0
 %f16_1 = OpConstant %f16 1
 %f16_h = OpConstant %f16 0.5
+%f16vec2_01 = OpConstantComposite %f16vec2 %f16_0 %f16_1
 
 %u32_0 = OpConstant %u32 0
 %u32_1 = OpConstant %u32 1
@@ -220,6 +216,9 @@ OpCapability Int64
 
 %u64_output = OpVariable %u64_ptr_output Output
 
+%f16_ptr_input = OpTypePointer Input %f16
+%f16vec2_ptr_input = OpTypePointer Input %f16vec2
+
 %f32_ptr_input = OpTypePointer Input %f32
 %f32vec2_ptr_input = OpTypePointer Input %f32vec2
 
@@ -227,6 +226,9 @@ OpCapability Int64
 %u32vec2_ptr_input = OpTypePointer Input %u32vec2
 
 %u64_ptr_input = OpTypePointer Input %u64
+
+%f16_input = OpVariable %f16_ptr_input Input
+%f16vec2_input = OpVariable %f16vec2_ptr_input Input
 
 %f32_input = OpVariable %f32_ptr_input Input
 %f32vec2_input = OpVariable %f32vec2_ptr_input Input
@@ -2471,6 +2473,21 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidSuccess) {
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidF16Success) {
+  const std::string body = R"(
+%val1 = OpExtInst %f16 %extinst InterpolateAtCentroid %f16_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtCentroid %f16vec2_input
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidInternalSuccess) {
   const std::string body = R"(
 %ld1  = OpLoad %f32 %f32_input
@@ -2481,6 +2498,24 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidInternalSuccess) {
 
   CompileSuccessfully(
       GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  getValidatorOptions()->before_hlsl_legalization = true;
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidF16InternalSuccess) {
+  const std::string body = R"(
+%ld1  = OpLoad %f16 %f16_input
+%val1 = OpExtInst %f16 %extinst InterpolateAtCentroid %ld1
+%ld2  = OpLoad %f16vec2 %f16vec2_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtCentroid %ld2
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
   getValidatorOptions()->before_hlsl_legalization = true;
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
@@ -2499,6 +2534,24 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidInternalInvalidDataF32) {
                         "expected Interpolant to be a pointer"));
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidInternalInvalidDataF16) {
+  const std::string body = R"(
+%ld1  = OpLoad %f16 %f16_input
+%val1 = OpExtInst %f16 %extinst InterpolateAtCentroid %ld1
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtCentroid: "
+                        "expected Interpolant to be a pointer"));
+}
+
 TEST_F(ValidateExtInst,
        GlslStd450InterpolateAtCentroidInternalInvalidDataF32Vec2) {
   const std::string body = R"(
@@ -2508,6 +2561,25 @@ TEST_F(ValidateExtInst,
 
   CompileSuccessfully(
       GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtCentroid: "
+                        "expected Interpolant to be a pointer"));
+}
+
+TEST_F(ValidateExtInst,
+       GlslStd450InterpolateAtCentroidInternalInvalidDataF16Vec2) {
+  const std::string body = R"(
+%ld2  = OpLoad %f16vec2 %f16vec2_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtCentroid %ld2
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("GLSL.std.450 InterpolateAtCentroid: "
@@ -2540,6 +2612,20 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidIntResultType) {
                         "or vector type"));
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidF16ResultType) {
+  const std::string body = R"(
+%val1 = OpExtInst %f16 %extinst InterpolateAtCentroid %f16_input
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtCentroid: "
+                        "expected Result Type to be a 32-bit float scalar "
+                        "or vector type"));
+}
+
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidF64ResultType) {
   const std::string body = R"(
 %val1 = OpExtInst %f64 %extinst InterpolateAtCentroid %f32_input
@@ -2552,6 +2638,25 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidF64ResultType) {
               HasSubstr("GLSL.std.450 InterpolateAtCentroid: "
                         "expected Result Type to be a 32-bit float scalar "
                         "or vector type"));
+}
+
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidF64ResultTypeAmdExt) {
+  const std::string body = R"(
+%val1 = OpExtInst %f64 %extinst InterpolateAtCentroid %f32_input
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("GLSL.std.450 InterpolateAtCentroid: "
+                "expected Result Type to be a 16-bit or 32-bit float scalar "
+                "or vector type"));
 }
 
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtCentroidNotPointer) {
@@ -2618,6 +2723,21 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleSuccess) {
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleF16Success) {
+  const std::string body = R"(
+%val1 = OpExtInst %f16 %extinst InterpolateAtSample %f16_input %u32_1
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtSample %f16vec2_input %u32_1
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleInternalSuccess) {
   const std::string body = R"(
 %ld1  = OpLoad %f32 %f32_input
@@ -2628,6 +2748,24 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleInternalSuccess) {
 
   CompileSuccessfully(
       GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  getValidatorOptions()->before_hlsl_legalization = true;
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleF16InternalSuccess) {
+  const std::string body = R"(
+%ld1  = OpLoad %f16 %f16_input
+%val1 = OpExtInst %f16 %extinst InterpolateAtSample %ld1 %u32_1
+%ld2  = OpLoad %f16vec2 %f16vec2_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtSample %ld2 %u32_1
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
   getValidatorOptions()->before_hlsl_legalization = true;
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
@@ -2646,6 +2784,24 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleInternalInvalidDataF32) {
                         "expected Interpolant to be a pointer"));
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleInternalInvalidDataF16) {
+  const std::string body = R"(
+%ld1  = OpLoad %f16 %f16_input
+%val1 = OpExtInst %f16 %extinst InterpolateAtSample %ld1 %u32_1
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtSample: "
+                        "expected Interpolant to be a pointer"));
+}
+
 TEST_F(ValidateExtInst,
        GlslStd450InterpolateAtSampleInternalInvalidDataF32Vec2) {
   const std::string body = R"(
@@ -2655,6 +2811,25 @@ TEST_F(ValidateExtInst,
 
   CompileSuccessfully(
       GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtSample: "
+                        "expected Interpolant to be a pointer"));
+}
+
+TEST_F(ValidateExtInst,
+       GlslStd450InterpolateAtSampleInternalInvalidDataF16Vec2) {
+  const std::string body = R"(
+%ld2  = OpLoad %f16vec2 %f16vec2_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtSample %ld2 %u32_1
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("GLSL.std.450 InterpolateAtSample: "
@@ -2687,6 +2862,20 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleIntResultType) {
                         "or vector type"));
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleF16ResultType) {
+  const std::string body = R"(
+%val1 = OpExtInst %f16 %extinst InterpolateAtSample %f16_input %u32_1
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtSample: "
+                        "expected Result Type to be a 32-bit float scalar "
+                        "or vector type"));
+}
+
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleF64ResultType) {
   const std::string body = R"(
 %val1 = OpExtInst %f64 %extinst InterpolateAtSample %f32_input %u32_1
@@ -2699,6 +2888,25 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleF64ResultType) {
               HasSubstr("GLSL.std.450 InterpolateAtSample: "
                         "expected Result Type to be a 32-bit float scalar "
                         "or vector type"));
+}
+
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleF64ResultTypeAmdExt) {
+  const std::string body = R"(
+%val1 = OpExtInst %f64 %extinst InterpolateAtSample %f32_input %u32_1
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("GLSL.std.450 InterpolateAtSample: "
+                "expected Result Type to be a 16-bit or 32-bit float scalar "
+                "or vector type"));
 }
 
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtSampleNotPointer) {
@@ -2791,6 +2999,21 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetSuccess) {
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetF16Success) {
+  const std::string body = R"(
+%val1 = OpExtInst %f16 %extinst InterpolateAtOffset %f16_input %f16vec2_01
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtOffset %f16vec2_input %f16vec2_01
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetInternalSuccess) {
   const std::string body = R"(
 %ld1  = OpLoad %f32 %f32_input
@@ -2801,6 +3024,24 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetInternalSuccess) {
 
   CompileSuccessfully(
       GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  getValidatorOptions()->before_hlsl_legalization = true;
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetF16InternalSuccess) {
+  const std::string body = R"(
+%ld1  = OpLoad %f16 %f16_input
+%val1 = OpExtInst %f16 %extinst InterpolateAtOffset %ld1 %f16vec2_01
+%ld2  = OpLoad %f16vec2 %f16vec2_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtOffset %ld2 %f16vec2_01
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
   getValidatorOptions()->before_hlsl_legalization = true;
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
@@ -2819,6 +3060,24 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetInternalInvalidDataF32) {
                         "expected Interpolant to be a pointer"));
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetInternalInvalidDataF16) {
+  const std::string body = R"(
+%ld1  = OpLoad %f16 %f16_input
+%val1 = OpExtInst %f16 %extinst InterpolateAtOffset %ld1 %f16vec2_01
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtOffset: "
+                        "expected Interpolant to be a pointer"));
+}
+
 TEST_F(ValidateExtInst,
        GlslStd450InterpolateAtOffsetInternalInvalidDataF32Vec2) {
   const std::string body = R"(
@@ -2828,6 +3087,25 @@ TEST_F(ValidateExtInst,
 
   CompileSuccessfully(
       GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtOffset: "
+                        "expected Interpolant to be a pointer"));
+}
+
+TEST_F(ValidateExtInst,
+       GlslStd450InterpolateAtOffsetInternalInvalidDataF16Vec2) {
+  const std::string body = R"(
+%ld2  = OpLoad %f16 %f16_input
+%val2 = OpExtInst %f16vec2 %extinst InterpolateAtOffset %ld2 %f16vec2_01
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("GLSL.std.450 InterpolateAtOffset: "
@@ -2860,6 +3138,20 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetIntResultType) {
                         "or vector type"));
 }
 
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetF16ResultType) {
+  const std::string body = R"(
+%val1 = OpExtInst %f16 %extinst InterpolateAtOffset %f16_input %f16vec2_01
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body, "OpCapability InterpolationFunction\n"));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("GLSL.std.450 InterpolateAtOffset: "
+                        "expected Result Type to be a 32-bit float scalar "
+                        "or vector type"));
+}
+
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetF64ResultType) {
   const std::string body = R"(
 %val1 = OpExtInst %f64 %extinst InterpolateAtOffset %f32_input %f32vec2_01
@@ -2872,6 +3164,25 @@ TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetF64ResultType) {
               HasSubstr("GLSL.std.450 InterpolateAtOffset: "
                         "expected Result Type to be a 32-bit float scalar "
                         "or vector type"));
+}
+
+TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetF64ResultTypeAmdExt) {
+  const std::string body = R"(
+%val1 = OpExtInst %f64 %extinst InterpolateAtOffset %f32_input %f32vec2_01
+)";
+
+  const std::string capabilities_and_extensions = R"(
+OpCapability InterpolationFunction
+OpExtension  "SPV_AMD_gpu_shader_half_float"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, capabilities_and_extensions));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("GLSL.std.450 InterpolateAtOffset: "
+                "expected Result Type to be a 16-bit or 32-bit float scalar "
+                "or vector type"));
 }
 
 TEST_F(ValidateExtInst, GlslStd450InterpolateAtOffsetNotPointer) {
@@ -6053,6 +6364,108 @@ INSTANTIATE_TEST_SUITE_P(AllUpsampleLike, ValidateOpenCLStdUpsampleLike,
                              "s_upsample",
                          }));
 
+TEST_F(ValidateArmExperimentalMLOperations, ValidVersion) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "Arm.ExperimentalMLOperations.1"
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateArmExperimentalMLOperations, MissingVersion) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "Arm.ExperimentalMLOperations."
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Missing Arm.ExperimentalMLOperations import version"));
+}
+
+TEST_F(ValidateArmExperimentalMLOperations, BadVersion0) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "Arm.ExperimentalMLOperations.0"
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Unknown Arm.ExperimentalMLOperations import version"));
+}
+
+TEST_F(ValidateArmExperimentalMLOperations, BadVersionNotANumber) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "Arm.ExperimentalMLOperations.1a"
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Arm.ExperimentalMLOperations import does not encode "
+                        "the version correctly"));
+}
+
+TEST_F(ValidateArmExperimentalMLOperations, UnsupportedVersion) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "Arm.ExperimentalMLOperations.2"
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Unknown Arm.ExperimentalMLOperations import version"));
+}
+
+TEST_F(ValidateArmExperimentalMLOperations, ValidCallInstruction) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability VulkanMemoryModel
+OpCapability Int8
+OpCapability GraphARM
+OpCapability TensorsARM
+OpExtension "SPV_ARM_graph"
+OpExtension "SPV_ARM_tensors"
+%ext = OpExtInstImport "Arm.ExperimentalMLOperations.1"
+OpMemoryModel Logical Vulkan
+OpDecorate %var_tensor DescriptorSet 0
+OpDecorate %var_tensor Binding 0
+%uint = OpTypeInt 32 0
+%int8 = OpTypeInt 8 1
+%uint_0 = OpConstant %uint 0
+%uint_4 = OpConstant %uint 4
+%tensor = OpTypeTensorARM %int8 %uint_4
+%ptr_tensor = OpTypePointer UniformConstant %tensor
+%var_tensor = OpVariable %ptr_tensor UniformConstant
+%graph_type = OpTypeGraphARM 1 %tensor %tensor
+OpGraphEntryPointARM %graph "main" %var_tensor %var_tensor
+%graph = OpGraphARM %graph_type
+%input = OpGraphInputARM %tensor %uint_0
+%call = OpExtInst %tensor %ext CALL 42 %input
+OpGraphSetOutputARM %call %uint_0
+OpGraphEndARM
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
 TEST_F(ValidateClspvReflection, RequiresNonSemanticExtension) {
   const std::string text = R"(
 OpCapability Shader
@@ -7567,6 +7980,92 @@ TEST_F(ValidateExtInst, OpExtInstRequiresNonSemanticBefore16) {
                 "extensions: SPV_KHR_relaxed_extended_instruction \n"
                 "  %11 = OpExtInstWithForwardRefsKHR %void %1 "
                 "DebugTypeFunction %uint_0 %12\n"));
+}
+
+using ValidateNSDI = spvtest::ValidateBase<bool>;
+
+TEST_F(ValidateNSDI, ValidVersion100) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+)";
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateNSDI, MissingVersion) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo."
+OpMemoryModel Logical GLSL450
+)";
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("NonSemantic.Shader.DebugInfo import does not encode "
+                        "the version correctly"));
+}
+
+TEST_F(ValidateNSDI, BadVersionNotANumber) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.1a"
+OpMemoryModel Logical GLSL450
+)";
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("NonSemantic.Shader.DebugInfo import does not encode "
+                        "the version correctly"));
+}
+
+TEST_F(ValidateNSDI, BadVersionTooLow) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.99"
+OpMemoryModel Logical GLSL450
+)";
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("NonSemantic.Shader.DebugInfo import version 99 is "
+                        "below the minimum supported version 100"));
+}
+
+TEST_F(ValidateNSDI, AcceptedFutureVersion) {
+  // Any version >= 100 is accepted; later versions are supersets of earlier
+  // ones.
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.999"
+OpMemoryModel Logical GLSL450
+)";
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateNSDI, FutureVersion101) {
+  // Version 101 is >= kNSDIMinVersion; the validator imposes no upper bound.
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.101"
+OpMemoryModel Logical GLSL450
+)";
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 }  // namespace

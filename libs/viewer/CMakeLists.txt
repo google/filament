@@ -61,4 +61,8 @@ if (FILAMENT_BUILD_TESTING AND NOT ANDROID AND NOT WASM AND NOT IOS)
     add_executable(test_settings tests/test_settings.cpp)
     target_link_libraries(test_settings PRIVATE ${TARGET} gtest)
     set_target_properties(test_settings PROPERTIES FOLDER Tests)
+
+    add_executable(test_viewergui tests/test_viewergui.cpp)
+    target_link_libraries(test_viewergui PRIVATE ${TARGET} gtest)
+    set_target_properties(test_viewergui PROPERTIES FOLDER Tests)
 endif()

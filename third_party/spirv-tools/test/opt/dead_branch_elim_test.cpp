@@ -16,7 +16,6 @@
 #include <string>
 
 #include "test/opt/pass_fixture.h"
-#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -3347,6 +3346,95 @@ OpFunctionEnd
 )";
 
   SinglePassRunAndCheck<DeadBranchElimPass>(text, text, false);
+}
+
+TEST_F(DeadBranchElimTest, CFGAndDominatorsStaleCrash) {
+  const std::string text = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability Int64
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %1 "main_kernel"
+       %void = OpTypeVoid
+       %uint = OpTypeInt 32 0
+      %ulong = OpTypeInt 64 0
+%_ptr_CrossWorkgroup_uint = OpTypePointer CrossWorkgroup %uint
+          %6 = OpTypeFunction %void %_ptr_CrossWorkgroup_uint %ulong
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+          %1 = OpFunction %void None %6
+          %9 = OpFunctionParameter %_ptr_CrossWorkgroup_uint
+         %10 = OpFunctionParameter %ulong
+         %11 = OpLabel
+               OpSelectionMerge %12 None
+               OpBranchConditional %true %12 %13
+         %12 = OpLabel
+               OpBranch %14
+         %13 = OpLabel
+               OpReturn
+         %15 = OpLabel
+               OpLoopMerge %16 %17 None
+               OpBranch %18
+         %18 = OpLabel
+               OpSelectionMerge %19 None
+               OpBranchConditional %true %20 %20
+         %20 = OpLabel
+               OpBranch %19
+         %19 = OpLabel
+               OpBranch %17
+         %17 = OpLabel
+               OpBranch %15
+         %16 = OpLabel
+               OpBranch %14
+         %14 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context = BuildModule(
+      SPV_ENV_UNIVERSAL_1_1, nullptr, text, SPV_TEXT_TO_BINARY_OPTION_NONE);
+  ASSERT_NE(nullptr, context);
+
+  // Force dominator analysis to be cached for the function.
+  Function* func = &*context->module()->begin();
+  context->GetDominatorAnalysis(func);
+
+  DeadBranchElimPass pass;
+  auto status = pass.Run(context.get());
+
+  EXPECT_EQ(Pass::Status::SuccessWithChange, status);
+
+  std::vector<uint32_t> optimized_bin;
+  context->module()->ToBinary(&optimized_bin, /* skip_nop = */ true);
+  std::string optimized_asm;
+  SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  EXPECT_TRUE(tools.Disassemble(optimized_bin, &optimized_asm));
+
+  const std::string expected = R"(OpCapability Addresses
+OpCapability Kernel
+OpCapability Int64
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %1 "main_kernel"
+%void = OpTypeVoid
+%uint = OpTypeInt 32 0
+%ulong = OpTypeInt 64 0
+%_ptr_CrossWorkgroup_uint = OpTypePointer CrossWorkgroup %uint
+%6 = OpTypeFunction %void %_ptr_CrossWorkgroup_uint %ulong
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%1 = OpFunction %void None %6
+%9 = OpFunctionParameter %_ptr_CrossWorkgroup_uint
+%10 = OpFunctionParameter %ulong
+%11 = OpLabel
+OpBranch %12
+%12 = OpLabel
+OpBranch %14
+%14 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  EXPECT_EQ(expected, optimized_asm);
 }
 
 // TODO(greg-lunarg): Add tests to verify handling of these cases:

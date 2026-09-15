@@ -21,6 +21,7 @@
 #include <fstream>
 #include <cstring>
 #include <cstdio>
+#include <cerrno>
 #include <algorithm>
 #include <memory>
 #include <cctype>
@@ -39,6 +40,13 @@
 #pragma warning(disable:4996)
 #define snprintf _snprintf
 #endif
+
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
+
 
 // This file converts SPIR-V definitions to an internal JSON
 // representation, and then generates language specific
@@ -167,7 +175,7 @@ https://www.khronos.org/registry/)";
 
     const std::string TPrinter::DocComment2 =
         "Enumeration tokens for SPIR-V, in various styles:\n"
-        "  C, C++, C++11, JSON, Lua, Python, C#, D, Beef\n"
+        "  C, C++, C++11, JSON, Lua, Python, C#, Java, D, Beef\n"
         "\n"
         "- C will have tokens with a \"Spv\" prefix, e.g.: SpvSourceLanguageGLSL\n"
         "- C++ will have tokens in the \"spv\" name space, e.g.: spv::SourceLanguageGLSL\n"
@@ -176,6 +184,8 @@ https://www.khronos.org/registry/)";
         "- Python will use dictionaries, e.g.: spv['SourceLanguage']['GLSL']\n"
         "- C# will use enum classes in the Specification class located in the \"Spv\" namespace,\n"
         "    e.g.: Spv.Specification.SourceLanguage.GLSL\n"
+        "- Java will use enum classes in the Spv class in the org.khronos.spv package,\n"
+        "    e.g.: Spv.SourceLanguage.GLSL\n"
         "- D will have tokens under the \"spv\" module, e.g: spv.SourceLanguage.GLSL\n"
         "- Beef will use enum classes in the Specification class located in the \"Spv\" namespace,\n"
         "    e.g.: Spv.Specification.SourceLanguage.GLSL\n"
@@ -779,6 +789,43 @@ https://www.khronos.org/registry/)";
         }
     };
 
+    // Java printer
+    class TPrinterJava final : public TPrinter {
+    private:
+        std::string commentBOL() const override { return "// ";  }
+
+        void printPrologue(std::ostream& out) const override {
+            out << "package org.khronos.spv;\n\n";
+            out << "public class Spv {\n";
+        }
+
+        void printEpilogue(std::ostream& out) const override {
+            out << "}\n";
+        }
+
+        std::string enumBeg(const std::string& s, enumStyle_t style) const override {
+            return indent(1) + "public enum " + s + styleStr(style) + " {\n";
+        }
+
+        std::string enumEnd(const std::string& s, enumStyle_t style, bool isLast) const override {
+            return "\n" + indent(2) + "public final int value;\n\n" + indent(2) + s + styleStr(style) +
+                "(int value) {\n" + indent(3) + "this.value = value;\n" + indent(2) + "}\n" +
+                    indent(1) + "}" + + (isLast ? "\n" : "\n\n");
+        }
+
+        std::string enumFmt(const std::string& s, const valpair_t& v,
+                            enumStyle_t style, bool isLast) const override {
+            return indent(2) + prependIfDigit(s, v.second) + "(" + fmtStyleVal(v.first, style)+ ")" +
+                (isLast ? ";" : ",") + "\n";
+        }
+
+        std::string fmtConstInt(unsigned val, const std::string& name,
+                                const char* fmt, bool isLast) const override {
+            return indent(1) + std::string("public static final int ") + name +
+                " = " + fmtNum(fmt, val) + (isLast ? ";\n\n" : ";\n");
+        }
+    };
+
     // D printer
     class TPrinterD final : public TPrinter {
     private:
@@ -850,6 +897,25 @@ https://www.khronos.org/registry/)";
         }
     };
 
+    bool makeDirectory(const std::string& path) {
+#ifdef _WIN32
+        const int result = _mkdir(path.c_str());
+#else
+        const int result = mkdir(path.c_str(), 0755);
+#endif
+        return result == 0 || errno == EEXIST;
+    }
+
+    bool ensureParentDirectories(const std::string& filename) {
+        std::string::size_type pos = 0;
+        while ((pos = filename.find("/", pos)) != std::string::npos) {
+            const std::string path = filename.substr(0, pos);
+            ++pos;
+            if (!path.empty() && !makeDirectory(path))
+                return false;
+        }
+        return true;
+    }
 } // namespace
 
 namespace spv {
@@ -865,10 +931,12 @@ namespace spv {
         langInfo.push_back(std::make_pair(ELangLua,     "spirv.lua"));
         langInfo.push_back(std::make_pair(ELangPython,  "spirv.py"));
         langInfo.push_back(std::make_pair(ELangCSharp,  "spirv.cs"));
+        langInfo.push_back(std::make_pair(ELangJava,    "org/khronos/spv/Spv.java"));
         langInfo.push_back(std::make_pair(ELangD,       "spv.d"));
         langInfo.push_back(std::make_pair(ELangBeef,    "spirv.bf"));
 
         for (const auto& lang : langInfo) {
+            ensureParentDirectories(lang.second);
             std::ofstream out(lang.second, std::ios::out);
 
             if ((out.rdstate() & std::ifstream::failbit)) {
@@ -893,6 +961,7 @@ namespace spv {
             case ELangLua:     p = TPrinterPtr(new TPrinterLua);     break;
             case ELangPython:  p = TPrinterPtr(new TPrinterPython);  break;
             case ELangCSharp:  p = TPrinterPtr(new TPrinterCSharp);  break;
+            case ELangJava:    p = TPrinterPtr(new TPrinterJava);    break;
             case ELangD:       p = TPrinterPtr(new TPrinterD);       break;
             case ELangBeef:    p = TPrinterPtr(new TPrinterBeef);    break;
             case ELangAll:     PrintAllHeaders();                    break;

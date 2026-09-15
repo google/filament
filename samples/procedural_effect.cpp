@@ -60,7 +60,7 @@ struct App {
     Entity renderable;
     Entity camera;
     Camera* cam = nullptr;
-    double startTime = 0.0;
+    double startTime = -1.0;
 };
 } // namespace
 
@@ -121,7 +121,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                             app->cam->setProjection(Camera::Projection::ORTHO, -aspect, aspect,
                                     -1.0f, 1.0f, 0.0f, 1.0f);
 
-                            if (app->startTime == 0.0) {
+                            if (app->startTime < 0.0) {
                                 app->startTime = now;
                             }
 

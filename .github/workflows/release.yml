@@ -41,6 +41,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         env:
@@ -76,6 +77,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         env:
@@ -111,6 +113,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/mac-prereq
       - name: Run build script
         env:
@@ -146,6 +149,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/web-prereq
       - name: Run build script
@@ -182,6 +186,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
@@ -242,6 +247,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
@@ -288,6 +294,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - uses: ./.github/actions/mac-prereq
       - name: Select Xcode 16.2
         run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
@@ -326,6 +333,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+          persist-credentials: false
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}

@@ -122,6 +122,14 @@ struct App {
     bool originIsFarAway = false;
     float originDistance = 1.0f;
 
+    // Frame stepping (see Settings::debug.frameStep). frameStepTime is a virtual animation clock
+    // that only advances when a step is requested, so a step always advances by the same amount
+    // no matter how long the frame stayed paused. frameStepRenderPending carries the request from
+    // the animation callback -- which consumes it and advances the clock -- over to preRender,
+    // which is what actually lets a frame through.
+    double frameStepTime = 0.0;
+    bool frameStepRenderPending = false;
+
     struct Scene {
         Entity groundPlane;
         VertexBuffer* groundVertexBuffer;
@@ -952,6 +960,24 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         // Gradually add renderables to the scene as their textures become ready.
         app->viewer->populateScene();
 
+        auto& debugSettings = app->viewer->getSettings().debug;
+        if (debugSettings.frameStep) {
+            // Consume a pending step here rather than in preRender: animation has to be advanced
+            // before the frame that shows it is rendered, and this callback runs first.
+            if (debugSettings.frameStepRequested) {
+                debugSettings.frameStepRequested = false;
+                app->frameStepTime += debugSettings.frameStepDeltaSeconds;
+                app->frameStepRenderPending = true;
+            }
+            // Substitute the virtual clock for the wall clock, freezing animation between steps.
+            now = app->frameStepTime;
+        } else {
+            // Keep the virtual clock aligned with the wall clock while stepping is off, so
+            // enabling it doesn't jump the animation.
+            app->frameStepTime = now;
+            app->frameStepRenderPending = false;
+        }
+
         auto const& animSettings = app->viewer->getSettings().animation;
         if (animSettings.enabled) {
             double animTime = now;
@@ -983,6 +1009,21 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        // Frame stepping: hold the frame by telling the renderer to skip it, which makes
+        // beginFrame() return false so nothing is rendered OR presented -- the window keeps
+        // showing the last stepped frame instead of cycling stale swap chain buffers. ImGui is
+        // still updated every iteration (it runs before this), so the UI stays interactive even
+        // while frozen; only its display is held. A step lets exactly one frame through, which
+        // is also what advances TAA's history by exactly one iteration.
+        auto const& debugSettings = app->viewer->getSettings().debug;
+        if (debugSettings.frameStep) {
+            if (app->frameStepRenderPending) {
+                app->frameStepRenderPending = false;
+            } else {
+                renderer->skipNextFrames(1);
+            }
+        }
+
         auto& rcm = engine->getRenderableManager();
         auto instance = rcm.getInstance(app->scene.groundPlane);
         const auto viewerOptions = app->automationEngine->getViewerOptions();

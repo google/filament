@@ -106,7 +106,7 @@ bool ReplaceInvalidOpcodePass::RewriteFunction(Function* function,
             uint32_t file_name_id = 0;
             if (last_line_dbg_inst->opcode() == spv::Op::OpLine) {
               file_name_id = last_line_dbg_inst->GetSingleWordInOperand(0);
-            } else {  // Shader100::DebugLine
+            } else {  // NSDI::DebugLine
               uint32_t debug_source_id =
                   last_line_dbg_inst->GetSingleWordInOperand(2);
               Instruction* debug_source_inst =

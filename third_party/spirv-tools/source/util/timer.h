@@ -23,6 +23,11 @@
 #include <cassert>
 #include <iostream>
 
+#if defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 // A macro to call spvtools::utils::PrintTimerDescription(std::ostream*, bool).
 // The first argument must be given as std::ostream*. If it is NULL, the
 // function does nothing. Otherwise, it prints resource types measured by Timer
@@ -381,6 +386,10 @@ class CumulativeTimer : public Timer {
 
 }  // namespace utils
 }  // namespace spvtools
+
+#if defined(__GNUG__)
+#pragma GCC diagnostic pop
+#endif
 
 #else  // defined(SPIRV_TIMER_ENABLED)
 

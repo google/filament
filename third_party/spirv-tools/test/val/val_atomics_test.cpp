@@ -282,8 +282,9 @@ TEST_F(ValidateAtomics, AtomicLoadVulkanWrongStorageClass) {
               AnyVUID("VUID-StandaloneSpirv-None-04645"));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("in Vulkan environment, Workgroup Storage Class is limited to "
-                "MeshNV, TaskNV, and GLCompute execution model"));
+      HasSubstr(
+          "in Vulkan environment, Workgroup Storage Class is limited to "
+          "MeshEXT, TaskEXT, MeshNV, TaskNV, and GLCompute execution model"));
 }
 
 TEST_F(ValidateAtomics, AtomicAddIntVulkanWrongType1) {
@@ -714,8 +715,9 @@ OpAtomicStore %f32_var %device %relaxed %f32_1
               AnyVUID("VUID-StandaloneSpirv-None-04645"));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("in Vulkan environment, Workgroup Storage Class is limited to "
-                "MeshNV, TaskNV, and GLCompute execution model"));
+      HasSubstr(
+          "in Vulkan environment, Workgroup Storage Class is limited to "
+          "MeshEXT, TaskEXT, MeshNV, TaskNV, and GLCompute execution model"));
 }
 
 TEST_F(ValidateAtomics, AtomicStoreFloatVulkan) {

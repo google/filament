@@ -273,6 +273,26 @@ OpDecorate %ptr ArrayStride 4
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(DecorationTest, DecorationGroupDuplicateTarget) {
+  const std::string text = R"(
+               OpCapability ClipDistance
+               OpCapability Linkage
+               OpMemoryModel Logical Simple
+          %4 = OpDecorationGroup
+               OpGroupDecorate %4 %2 %2
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+          %2 = OpFunction %void None %19
+  %553590816 = OpLabel
+               OpUnreachable
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Targets contains duplicate id '2[%2]'"));
+}
 using MemberOnlyDecorations = spvtest::ValidateBase<std::string>;
 
 TEST_P(MemberOnlyDecorations, MemberDecoration) {

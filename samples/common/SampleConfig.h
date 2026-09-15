@@ -32,6 +32,9 @@ struct SampleConfig {
     DisplayManager displayManager = DisplayManager::SDL;
     filament::backend::AsynchronousMode asynchronousMode =
             filament::backend::AsynchronousMode::NONE;
+    utils::CString screenshotPath;
+    int warmupFrames = 10;
+    float fixedTimeStep = 0.0f;
     utils::FixedCapacityVector<utils::CString> positionalArgs;
     std::unordered_map<utils::CString, samples::Parameter> parameters;
 

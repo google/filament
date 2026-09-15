@@ -246,6 +246,7 @@ bool CodeSinkingPass::HasUniformMemorySync() {
     }
   });
   has_uniform_sync_ = has_sync;
+  checked_for_uniform_sync_ = true;
   return has_sync;
 }
 

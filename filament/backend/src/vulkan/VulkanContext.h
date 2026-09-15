@@ -71,6 +71,27 @@ struct VulkanRenderPassContext {
 // context are stored in VulkanPlatform.
 struct VulkanContext {
 public:
+    class DebugUtils {
+    public:
+        DebugUtils() = default;
+        ~DebugUtils() = default;
+
+        void init(VkInstance instance, VkDevice device, bool enabled);
+        void terminate();
+
+        void setName(VkObjectType type, uint64_t handle, char const* name) const;
+
+        inline bool isEnabled() const noexcept { return mDevice != VK_NULL_HANDLE; }
+
+    private:
+        VkInstance mInstance = VK_NULL_HANDLE;
+        VkDevice mDevice = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
+    };
+
+    inline DebugUtils const& getDebugUtils() const noexcept { return mDebugUtils; }
+    inline DebugUtils& getDebugUtils() noexcept { return mDebugUtils; }
+
     static uint32_t selectMemoryType(VkPhysicalDeviceMemoryProperties const& memoryProperties,
             uint32_t types, VkFlags reqs) {
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
@@ -159,6 +180,8 @@ public:
     inline bool isDebugUtilsEnabled() const noexcept { return mDebugUtilsEnabled; }
 
     inline bool isDebugUtilsNamesEnabled() const noexcept { return mDebugUtilsNamesEnabled; }
+
+    inline bool isRenderDocCaptureEnabled() const noexcept { return mRenderDocCaptureEnabled; }
 
     inline bool isDynamicRenderingSupported() const noexcept {
         return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
@@ -257,6 +280,7 @@ private:
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsEnabled = false;
     bool mDebugUtilsNamesEnabled = false;
+    bool mRenderDocCaptureEnabled = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
@@ -277,6 +301,8 @@ private:
     fvkutils::VkFormatList mBlittableDepthStencilFormats;
 
     std::vector<VulkanPlatform::ExternalYcbcrFormat> mPipelineCachePrewarmExternalFormats;
+
+    DebugUtils mDebugUtils;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

@@ -57,12 +57,7 @@ public:
             VkDeviceSize size) noexcept;
 
     void updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
-            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler,
-            VkDescriptorSetLayout externalSamplerLayout = VK_NULL_HANDLE) noexcept;
-
-    void updateSamplerForExternalSamplerSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
-            fvkmemory::resource_ptr<VulkanTexture> texture) noexcept;
-
+            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
 
     void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             VulkanAttachment const& attachment) noexcept;

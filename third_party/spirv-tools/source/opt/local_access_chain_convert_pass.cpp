@@ -354,15 +354,15 @@ bool LocalAccessChainConvertPass::AllExtensionsSupported() const {
     if (extensions_allowlist_.find(extName) == extensions_allowlist_.end())
       return false;
   }
-  // only allow NonSemantic.Shader.DebugInfo.100, we cannot safely optimise
-  // around unknown extended
-  // instruction sets even if they are non-semantic
+  // Only allow NonSemantic.Shader.DebugInfo (any version); we cannot safely
+  // optimise around unknown extended instruction sets even if non-semantic.
   for (auto& inst : context()->module()->ext_inst_imports()) {
     assert(inst.opcode() == spv::Op::OpExtInstImport &&
            "Expecting an import of an extension's instruction set.");
     const std::string extension_name = inst.GetInOperand(0).AsString();
     if (spvtools::utils::starts_with(extension_name, "NonSemantic.") &&
-        extension_name != "NonSemantic.Shader.DebugInfo.100") {
+        !spvtools::utils::starts_with(extension_name,
+                                      "NonSemantic.Shader.DebugInfo.")) {
       return false;
     }
   }
@@ -448,6 +448,7 @@ void LocalAccessChainConvertPass::InitExtensions() {
       "SPV_KHR_ray_query",
       "SPV_EXT_fragment_invocation_density",
       "SPV_KHR_terminate_invocation",
+      "SPV_KHR_shader_clock",
       "SPV_KHR_subgroup_uniform_control_flow",
       "SPV_KHR_integer_dot_product",
       "SPV_EXT_shader_image_int64",
@@ -469,6 +470,13 @@ void LocalAccessChainConvertPass::InitExtensions() {
       "SPV_NV_cluster_acceleration_structure",
       "SPV_NV_linear_swept_spheres",
       "SPV_KHR_maximal_reconvergence",
+      "SPV_NV_push_constant_bank",
+      "SPV_EXT_opacity_micromap",
+      "SPV_KHR_opacity_micromap",
+      "SPV_EXT_shader_invocation_reorder",
+      "SPV_EXT_shader_atomic_float16_add",
+      "SPV_KHR_abort",
+      "SPV_KHR_constant_data",
   });
 }
 

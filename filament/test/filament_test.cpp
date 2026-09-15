@@ -32,6 +32,7 @@
 #include <filament/Camera.h>
 #include <filament/Color.h>
 #include <filament/ColorGrading.h>
+#include <filament/ColorSpace.h>
 #include <filament/Engine.h>
 #include <filament/FrameHistoryStream.h>
 #include <filament/Frustum.h>
@@ -66,6 +67,7 @@
 
 using namespace filament;
 using namespace filament::math;
+using namespace filament::color;
 using namespace utils;
 
 static bool isGray(float3 const v) {
@@ -1263,6 +1265,135 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
         EXPECT_NEAR(int((cn >> 20) & 0x3FF), int((cs >> 20) & 0x3FF), 125);
     }
 
+
+    engine->destroy(cgNeon);
+    engine->destroy(cgScalar);
+    Engine::destroy((Engine**)&engine);
+}
+
+
+TEST(FilamentTest, ColorGradingNeonLinearValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+    ASSERT_NE(engine, nullptr);
+
+    struct LutData {
+        std::vector<uint32_t> pixels;
+        uint32_t width, height, depth;
+    };
+
+    auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                       backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutData*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(uint32_t));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    LutData neonLut, scalarLut;
+
+    // 1. Generate Vectorized Linear LUT (fastMath = true)
+    ColorGrading const* cgNeon = ColorGrading::Builder()
+            .fastMath(true)
+            .outputColorSpace(Rec709-Linear-D65)
+            .exportLut(exporter, &neonLut)
+            .build(*engine);
+
+    // 2. Generate Scalar Linear LUT (fastMath = false)
+    ColorGrading const* cgScalar = ColorGrading::Builder()
+            .fastMath(false)
+            .outputColorSpace(Rec709-Linear-D65)
+            .exportLut(exporter, &scalarLut)
+            .build(*engine);
+
+    // 3. Verify Metadata and Pixels
+    ASSERT_EQ(neonLut.width, scalarLut.width);
+    ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
+
+    for (size_t i = 0; i < neonLut.pixels.size(); i++) {
+        uint32_t const cn = neonLut.pixels[i];
+        uint32_t const cs = scalarLut.pixels[i];
+
+        // Unpack 10-bit channels and verify with ±5 tolerance
+        EXPECT_NEAR(int(cn & 0x3FF), int(cs & 0x3FF), 5);
+        EXPECT_NEAR(int((cn >> 10) & 0x3FF), int((cs >> 10) & 0x3FF), 5);
+        EXPECT_NEAR(int((cn >> 20) & 0x3FF), int((cs >> 20) & 0x3FF), 5);
+    }
+
+    engine->destroy(cgNeon);
+    engine->destroy(cgScalar);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+    ASSERT_NE(engine, nullptr);
+
+    struct LutData {
+        std::vector<uint32_t> pixels;
+        uint32_t width, height, depth;
+    };
+
+    auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                       backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutData*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(uint32_t));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    LutData neonLut, scalarLut;
+
+    // 1. Generate Vectorized Medium Linear LUT (fastMath = true, hasAdjustments = true)
+    ColorGrading const* cgNeon = ColorGrading::Builder()
+            .fastMath(true)
+            .outputColorSpace(Rec709-Linear-D65)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .vibrance(1.15f)
+            .exposure(0.1f)
+            .shadowsMidtonesHighlights(
+                    {0.95f, 1.0f, 1.05f, 0.0f},
+                    {1.0f, 1.05f, 1.0f, 0.0f},
+                    {1.05f, 1.0f, 0.95f, 0.0f},
+                    {0.0f, 0.33f, 0.55f, 1.0f})
+            .exportLut(exporter, &neonLut)
+            .build(*engine);
+
+    // 2. Generate Scalar Medium Linear LUT (fastMath = false, hasAdjustments = true)
+    ColorGrading const* cgScalar = ColorGrading::Builder()
+            .fastMath(false)
+            .outputColorSpace(Rec709-Linear-D65)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .vibrance(1.15f)
+            .exposure(0.1f)
+            .shadowsMidtonesHighlights(
+                    {0.95f, 1.0f, 1.05f, 0.0f},
+                    {1.0f, 1.05f, 1.0f, 0.0f},
+                    {1.05f, 1.0f, 0.95f, 0.0f},
+                    {0.0f, 0.33f, 0.55f, 1.0f})
+            .exportLut(exporter, &scalarLut)
+            .build(*engine);
+
+    // 3. Verify Metadata and Pixels
+    ASSERT_EQ(neonLut.width, scalarLut.width);
+    ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
+
+    for (size_t i = 0; i < neonLut.pixels.size(); i++) {
+        uint32_t const cn = neonLut.pixels[i];
+        uint32_t const cs = scalarLut.pixels[i];
+
+        // Unpack 10-bit channels and verify with ±125 tolerance for chained Remez vs exact math
+        EXPECT_NEAR(int(cn & 0x3FF), int(cs & 0x3FF), 125);
+        EXPECT_NEAR(int((cn >> 10) & 0x3FF), int((cs >> 10) & 0x3FF), 125);
+        EXPECT_NEAR(int((cn >> 20) & 0x3FF), int((cs >> 20) & 0x3FF), 125);
+    }
 
     engine->destroy(cgNeon);
     engine->destroy(cgScalar);

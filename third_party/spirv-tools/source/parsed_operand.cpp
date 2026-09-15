@@ -51,12 +51,32 @@ void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
           case SPV_FP_ENCODING_IEEE754_BINARY32:
             *out << spvtools::utils::FloatProxy<float>(word);
             break;
+          case SPV_FP_ENCODING_FLOAT4_E2M1:
+            *out << spvtools::utils::FloatProxy<spvtools::utils::Float4_E2M1>(
+                uint8_t(word & 0xF));
+            break;
+          case SPV_FP_ENCODING_FLOAT6_E2M3:
+            *out << spvtools::utils::FloatProxy<spvtools::utils::Float6_E2M3>(
+                uint8_t(word & 0x3F));
+            break;
+          case SPV_FP_ENCODING_FLOAT6_E3M2:
+            *out << spvtools::utils::FloatProxy<spvtools::utils::Float6_E3M2>(
+                uint8_t(word & 0x3F));
+            break;
           case SPV_FP_ENCODING_FLOAT8_E4M3:
             *out << spvtools::utils::FloatProxy<spvtools::utils::Float8_E4M3>(
                 uint8_t(word & 0xFF));
             break;
           case SPV_FP_ENCODING_FLOAT8_E5M2:
             *out << spvtools::utils::FloatProxy<spvtools::utils::Float8_E5M2>(
+                uint8_t(word & 0xFF));
+            break;
+          case SPV_FP_ENCODING_FLOAT8_UNSIGNED_E8M0:
+            *out << spvtools::utils::FloatProxy<spvtools::utils::Float8_E8M0>(
+                uint8_t(word & 0xFF));
+            break;
+          case SPV_FP_ENCODING_MXINT8:
+            *out << spvtools::utils::HexFixedPoint<spvtools::utils::MXInt8>(
                 uint8_t(word & 0xFF));
             break;
           case SPV_FP_ENCODING_BFLOAT16:

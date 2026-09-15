@@ -304,6 +304,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
             src/webgpu/utils/AsyncTaskCounter.cpp
             src/webgpu/utils/AsyncTaskCounter.h
+            src/webgpu/utils/SpecializationConstantProcessor.cpp
+            src/webgpu/utils/SpecializationConstantProcessor.h
             src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
             src/webgpu/utils/StringPlaceholderTemplateProcessor.h
             src/webgpu/WebGPUBlitter.cpp
@@ -636,7 +638,8 @@ if (FILAMENT_BUILD_TESTING)
         if (FILAMENT_SUPPORTS_WEBGPU)
             list(APPEND BACKEND_TEST_SRC
                     test/test_WebGPUAsyncTaskCounter.cpp
-                    test/test_WebGPUComposeSwizzle.cpp)
+                    test/test_WebGPUComposeSwizzle.cpp
+                    test/test_WebGPUSpecializationConstantProcessor.cpp)
         endif()
         if (APPLE)
             # Metal-specific tests

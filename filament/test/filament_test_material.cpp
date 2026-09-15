@@ -358,6 +358,36 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
             MaterialDomain::SURFACE, false).hasDynamicLighting());
 }
 
+TEST(MaterialVariant, ExtraDirectionalLightsRequireDirectionalLighting) {
+    DynamicSpecConstKey extraOnly;
+    extraOnly.setExtraDirectionalLights(true);
+
+    EXPECT_FALSE(DynamicSpecConstKey::isValidProgramSpecKey(
+            Variant{}, extraOnly, MaterialDomain::SURFACE, true));
+
+    DynamicSpecConstKey const filtered = DynamicSpecConstKey::filterProgramSpecKey(
+            Variant{}, extraOnly, MaterialDomain::SURFACE, true);
+    EXPECT_FALSE(filtered.hasExtraDirectionalLights());
+
+    DynamicSpecConstKey directionalAndExtra;
+    directionalAndExtra.setDirectionalLighting(true);
+    directionalAndExtra.setExtraDirectionalLights(true);
+    EXPECT_TRUE(DynamicSpecConstKey::isValidProgramSpecKey(
+            Variant{}, directionalAndExtra, MaterialDomain::SURFACE, true));
+
+    DynamicSpecConstKey const retained = DynamicSpecConstKey::filterProgramSpecKey(
+            Variant{}, directionalAndExtra, MaterialDomain::SURFACE, true);
+    EXPECT_TRUE(retained.hasDirectionalLighting());
+    EXPECT_TRUE(retained.hasExtraDirectionalLights());
+
+    auto const validKeys = DynamicSpecConstKey::getValidKeys(
+            Variant{}, MaterialDomain::SURFACE, true);
+    EXPECT_EQ(validKeys.size, 6);
+    for (auto const key : validKeys) {
+        EXPECT_FALSE(key.hasExtraDirectionalLights() && !key.hasDirectionalLighting());
+    }
+}
+
 TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 

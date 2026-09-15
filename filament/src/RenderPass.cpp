@@ -245,8 +245,8 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            first->info.mi->prepareProgram(driver, first->info.materialVariant, first->info.dynamicSpecConstKey,
-                    CompilerPriorityQueue::CRITICAL);
+            first->info.mi->prepareProgram(driver, first->info.materialVariant,
+                    first->info.dynamicSpecConstKey, CompilerPriorityQueue::CRITICAL);
         }
     }
 }
@@ -886,6 +886,10 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
     s.b = std::max(s.b, int64_t(0));
     s.r = std::min(s.r, maxvali);
     s.t = std::min(s.t, maxvali);
+
+    // If scissor and scissorViewport do not intersect, the result is an empty scissor.
+    s.r = std::max(s.l, s.r);
+    s.t = std::max(s.b, s.t);
 
     assert_invariant(s.r >= s.l && s.t >= s.b);
 

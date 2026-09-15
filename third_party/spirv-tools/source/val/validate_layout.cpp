@@ -15,7 +15,6 @@
 // Source code for logical layout validation as described in section 2.4
 
 #include "DebugInfo.h"
-#include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
 #include "source/opcode.h"
 #include "source/operand.h"
@@ -23,6 +22,7 @@
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
+#include "spirv/unified1/NonSemanticShaderDebugInfo.h"
 
 namespace spvtools {
 namespace val {
@@ -50,16 +50,16 @@ spv_result_t ModuleScopedInstructions(ValidationState_t& _,
           }
         } else if (inst->ext_inst_type() ==
                    SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
-          const NonSemanticShaderDebugInfo100Instructions ext_inst_key =
-              NonSemanticShaderDebugInfo100Instructions(ext_inst_index);
-          if (ext_inst_key == NonSemanticShaderDebugInfo100DebugScope ||
-              ext_inst_key == NonSemanticShaderDebugInfo100DebugNoScope ||
-              ext_inst_key == NonSemanticShaderDebugInfo100DebugDeclare ||
-              ext_inst_key == NonSemanticShaderDebugInfo100DebugValue ||
-              ext_inst_key == NonSemanticShaderDebugInfo100DebugLine ||
-              ext_inst_key == NonSemanticShaderDebugInfo100DebugNoLine ||
+          const NonSemanticShaderDebugInfoInstructions ext_inst_key =
+              NonSemanticShaderDebugInfoInstructions(ext_inst_index);
+          if (ext_inst_key == NonSemanticShaderDebugInfoDebugScope ||
+              ext_inst_key == NonSemanticShaderDebugInfoDebugNoScope ||
+              ext_inst_key == NonSemanticShaderDebugInfoDebugDeclare ||
+              ext_inst_key == NonSemanticShaderDebugInfoDebugValue ||
+              ext_inst_key == NonSemanticShaderDebugInfoDebugLine ||
+              ext_inst_key == NonSemanticShaderDebugInfoDebugNoLine ||
               ext_inst_key ==
-                  NonSemanticShaderDebugInfo100DebugFunctionDefinition) {
+                  NonSemanticShaderDebugInfoDebugFunctionDefinition) {
             local_debug_info = true;
           }
         } else {
@@ -259,16 +259,16 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
             }
           } else if (inst->ext_inst_type() ==
                      SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
-            const NonSemanticShaderDebugInfo100Instructions ext_inst_key =
-                NonSemanticShaderDebugInfo100Instructions(ext_inst_index);
-            if (ext_inst_key == NonSemanticShaderDebugInfo100DebugScope ||
-                ext_inst_key == NonSemanticShaderDebugInfo100DebugNoScope ||
-                ext_inst_key == NonSemanticShaderDebugInfo100DebugDeclare ||
-                ext_inst_key == NonSemanticShaderDebugInfo100DebugValue ||
-                ext_inst_key == NonSemanticShaderDebugInfo100DebugLine ||
-                ext_inst_key == NonSemanticShaderDebugInfo100DebugNoLine ||
+            const NonSemanticShaderDebugInfoInstructions ext_inst_key =
+                NonSemanticShaderDebugInfoInstructions(ext_inst_index);
+            if (ext_inst_key == NonSemanticShaderDebugInfoDebugScope ||
+                ext_inst_key == NonSemanticShaderDebugInfoDebugNoScope ||
+                ext_inst_key == NonSemanticShaderDebugInfoDebugDeclare ||
+                ext_inst_key == NonSemanticShaderDebugInfoDebugValue ||
+                ext_inst_key == NonSemanticShaderDebugInfoDebugLine ||
+                ext_inst_key == NonSemanticShaderDebugInfoDebugNoLine ||
                 ext_inst_key ==
-                    NonSemanticShaderDebugInfo100DebugFunctionDefinition) {
+                    NonSemanticShaderDebugInfoDebugFunctionDefinition) {
               local_debug_info = true;
             }
           } else {
@@ -400,6 +400,11 @@ spv_result_t GraphScopedInstructions(ValidationState_t& _,
         }
         break;
       default:
+        if ((opcode == spv::Op::OpExtInst) &&
+            spvExtInstIsNonSemantic(inst->ext_inst_type())) {
+          break;
+        }
+
         if (_.graph_definition_region() == kGraphDefinitionOutside) {
           return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
                  << "Op" << spvOpcodeString(opcode)

@@ -47,8 +47,8 @@ class FeatureManager {
     return extinst_importid_OpenCL100DebugInfo_;
   }
 
-  uint32_t GetExtInstImportId_Shader100DebugInfo() const {
-    return extinst_importid_Shader100DebugInfo_;
+  uint32_t GetExtInstImportId_ShaderDebugInfo() const {
+    return extinst_importid_ShaderDebugInfo_;
   }
 
   friend bool operator==(const FeatureManager& a, const FeatureManager& b);
@@ -100,9 +100,9 @@ class FeatureManager {
   // for performance.
   uint32_t extinst_importid_OpenCL100DebugInfo_ = 0;
 
-  // Common NonSemanticShader100DebugInfo external instruction import ids,
+  // Common NonSemanticShaderDebugInfo external instruction import ids,
   // cached for performance.
-  uint32_t extinst_importid_Shader100DebugInfo_ = 0;
+  uint32_t extinst_importid_ShaderDebugInfo_ = 0;
 
   friend class IRContext;
 };

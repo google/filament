@@ -467,7 +467,7 @@ if(SPIRV_BUILD_FUZZER)
         PUBLIC ${SPIRV_TOOLS_FULL_VISIBILITY}
         PUBLIC SPIRV-Tools-opt
         PUBLIC SPIRV-Tools-reduce
-        PUBLIC protobuf::libprotobuf)
+        PUBLIC $<BUILD_LOCAL_INTERFACE:protobuf::libprotobuf>)
 
   set_property(TARGET SPIRV-Tools-fuzz PROPERTY FOLDER "SPIRV-Tools libraries")
   spvtools_check_symbol_exports(SPIRV-Tools-fuzz)

@@ -29,8 +29,9 @@ using ValidateGraph = spvtest::ValidateBase<std::string>;
 
 constexpr spv_target_env SPVENV = SPV_ENV_VULKAN_1_3;
 
-std::string GenerateModule(const std::string& src) {
-  const std::string boilerplate = R"(
+std::string GenerateModuleWithExtInstImports(const std::string& imports,
+                                             const std::string& src) {
+  const std::string boilerplate_before_imports = R"(
                      OpCapability Shader
                      OpCapability VulkanMemoryModel
                      OpCapability Int8
@@ -39,7 +40,12 @@ std::string GenerateModule(const std::string& src) {
                      OpCapability RuntimeDescriptorArray
                      OpExtension "SPV_ARM_graph"
                      OpExtension "SPV_ARM_tensors"
+)";
+  const std::string boilerplate_after_imports = R"(
                      OpMemoryModel Logical Vulkan
+          %name_g = OpString "g"
+         %name_op = OpString "op"
+     %name_tensor = OpString "tensor"
                      OpDecorate %var_int8tensor DescriptorSet 0
                      OpDecorate %var_int8tensor Binding 0
                      OpDecorate %var_int32tensor DescriptorSet 0
@@ -58,6 +64,7 @@ std::string GenerateModule(const std::string& src) {
            %uint_2 = OpConstant %uint 2
            %uint_3 = OpConstant %uint 3
            %uint_4 = OpConstant %uint 4
+       %undef_uint = OpUndef %uint
           %float_1 = OpConstant %float 1.0
        %int8tensor = OpTypeTensorARM %int8 %uint_4
      %int8r3tensor = OpTypeTensorARM %int8 %uint_3
@@ -77,7 +84,20 @@ std::string GenerateModule(const std::string& src) {
 %var_int8tensor_array3 = OpVariable %ptr_UniformConstant_int8tensor_array3 UniformConstant
 %var_int8tensor_runtime_array = OpVariable %ptr_UniformConstant_int8tensor_runtime_array UniformConstant
 )";
-  return boilerplate + src;
+  return boilerplate_before_imports + imports + boilerplate_after_imports + src;
+}
+
+std::string GenerateModule(const std::string& src) {
+  return GenerateModuleWithExtInstImports("", src);
+}
+
+std::string GenerateModuleWithGraphDebugInfo(const std::string& src) {
+  return GenerateModuleWithExtInstImports(
+      R"(
+                     OpExtension "SPV_KHR_non_semantic_info"
+%graph_debug_info = OpExtInstImport "NonSemantic.Graph.DebugInfo.1"
+)",
+      src);
 }
 
 std::string GenerateModuleWithGraphEntryPoint(const std::string& header) {
@@ -643,6 +663,24 @@ TEST_F(ValidateGraph,
                             "corresponding graph I/O '.*'.*"));
 }
 
+TEST_F(ValidateGraph, InvalidGraphEntryPointDuplicateNames) {
+  const std::string src = R"(
+%graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %graph "duplicatename" %var_int8tensor %var_int8tensor
+              OpGraphEntryPointARM %graph "duplicatename" %var_int8tensor %var_int8tensor
+     %graph = OpGraphARM %graph_type
+        %in = OpGraphInputARM %int8tensor %uint_0
+              OpGraphSetOutputARM %in %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModule(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Graph entry points cannot share the same name"));
+}
+
 //
 // Graph tests
 //
@@ -759,6 +797,26 @@ TEST_F(ValidateGraph, InvalidGraphInputIndexWrongType) {
               HasSubstr("GraphInputARM InputIndex must be a 32-bit integer"));
 }
 
+TEST_F(ValidateGraph, InvalidGraphInputIndexNotConstantVulkan) {
+  const std::string src = R"(
+%graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %graph "longname" %var_int8tensor %var_int8tensor
+     %graph = OpGraphARM %graph_type
+        %in = OpGraphInputARM %int8tensor %undef_uint
+              OpGraphSetOutputARM %in %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModule(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("VUID-StandaloneSpirv-OpGraphInputARM-09931"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpGraphInputARM InputIndex must be the <id> of a "
+                        "constant instruction."));
+}
+
 TEST_F(ValidateGraph, InvalidGraphInputElementIndexWrongType) {
   const std::string src = R"(
 %graph_type = OpTypeGraphARM 1 %int8tensor_array3 %int8tensor
@@ -774,6 +832,26 @@ TEST_F(ValidateGraph, InvalidGraphInputElementIndexWrongType) {
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("GraphInputARM ElementIndex must be a 32-bit integer"));
+}
+
+TEST_F(ValidateGraph, InvalidGraphInputElementIndexNotConstantVulkan) {
+  const std::string src = R"(
+%graph_type = OpTypeGraphARM 1 %int8tensor_array3 %int8tensor
+              OpGraphEntryPointARM %graph "longname" %var_int8tensor_array3 %var_int8tensor
+     %graph = OpGraphARM %graph_type
+        %in = OpGraphInputARM %int8tensor %uint_0 %undef_uint
+              OpGraphSetOutputARM %in %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModule(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("VUID-StandaloneSpirv-OpGraphInputARM-09931"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpGraphInputARM ElementIndex must be the <id> of a "
+                        "constant instruction."));
 }
 
 TEST_F(ValidateGraph, InvalidGraphInputIndexDuplicate) {
@@ -1104,6 +1182,26 @@ TEST_F(ValidateGraph, InvalidGraphOutputIndexWrongType) {
       HasSubstr("GraphSetOutputARM OutputIndex must be a 32-bit integer"));
 }
 
+TEST_F(ValidateGraph, InvalidGraphOutputIndexNotConstantVulkan) {
+  const std::string src = R"(
+%graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %graph "longname" %var_int8tensor %var_int8tensor
+     %graph = OpGraphARM %graph_type
+        %in = OpGraphInputARM %int8tensor %uint_0
+              OpGraphSetOutputARM %in %undef_uint
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModule(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("VUID-StandaloneSpirv-OpGraphSetOutputARM-09932"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpGraphSetOutputARM OutputIndex must be the <id> of "
+                        "a constant instruction."));
+}
+
 TEST_F(ValidateGraph, InvalidGraphOutputElementIndexWrongType) {
   const std::string src = R"(
 %graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor_array3
@@ -1120,6 +1218,26 @@ TEST_F(ValidateGraph, InvalidGraphOutputElementIndexWrongType) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("GraphSetOutputARM ElementIndex must be a 32-bit integer"));
+}
+
+TEST_F(ValidateGraph, InvalidGraphOutputElementIndexNotConstantVulkan) {
+  const std::string src = R"(
+%graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor_array3
+              OpGraphEntryPointARM %graph "longname" %var_int8tensor %var_int8tensor_array3
+     %graph = OpGraphARM %graph_type
+        %in = OpGraphInputARM %int8tensor %uint_0
+              OpGraphSetOutputARM %in %uint_0 %undef_uint
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModule(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("VUID-StandaloneSpirv-OpGraphSetOutputARM-09932"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpGraphSetOutputARM ElementIndex must be the <id> of "
+                        "a constant instruction."));
 }
 
 TEST_F(ValidateGraph, InvalidGraphOutputIndexDuplicate) {
@@ -1355,6 +1473,139 @@ TEST_F(ValidateGraph, InvalidGraphNoEnd) {
   EXPECT_EQ(SPV_ERROR_INVALID_LAYOUT, ValidateInstructions(SPVENV));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Missing OpGraphEndARM at end of module"));
+}
+
+//
+// NonSemantic.Graph.DebugInfo tests
+//
+
+TEST_F(ValidateGraph, ValidNonSemanticGraphDebugInfo) {
+  const std::string src = R"(
+%default_graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %default_graph "default_entry_point" %var_int8tensor %var_int8tensor
+     %default_graph = OpGraphARM %default_graph_type
+       %debug_graph = OpExtInst %void %graph_debug_info DebugGraph %default_graph %name_g
+        %in = OpGraphInputARM %int8tensor %uint_0
+ %debug_tensor = OpExtInst %void %graph_debug_info DebugTensor %in %name_tensor
+              OpGraphSetOutputARM %in %uint_0
+%debug_operation = OpExtInst %void %graph_debug_info DebugOperation %debug_graph %name_op %in
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModuleWithGraphDebugInfo(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPVENV));
+}
+
+TEST_F(ValidateGraph, InvalidNonSemanticGraphDebugInfoImportVersion) {
+  const std::string imports = R"(
+                     OpExtension "SPV_KHR_non_semantic_info"
+%graph_debug_info = OpExtInstImport "NonSemantic.Graph.DebugInfo.2"
+)";
+  std::string spvasm = GenerateModuleWithExtInstImports(imports, "");
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("NonSemantic.Graph.DebugInfo import version 2 is not "
+                        "supported"));
+}
+
+TEST_F(ValidateGraph, InvalidNonSemanticGraphDebugInfoGraphOperand) {
+  const std::string src = R"(
+%default_graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %default_graph "default_entry_point" %var_int8tensor %var_int8tensor
+     %default_graph = OpGraphARM %default_graph_type
+       %debug_graph = OpExtInst %void %graph_debug_info DebugGraph %uint_0 %name_g
+        %in = OpGraphInputARM %int8tensor %uint_0
+              OpGraphSetOutputARM %in %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModuleWithGraphDebugInfo(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand Graph must be a result id of "
+                        "OpGraphARM"));
+}
+
+TEST_F(ValidateGraph, InvalidNonSemanticGraphDebugInfoOperationDebugGraph) {
+  const std::string src = R"(
+%default_graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %default_graph "default_entry_point" %var_int8tensor %var_int8tensor
+     %default_graph = OpGraphARM %default_graph_type
+        %in = OpGraphInputARM %int8tensor %uint_0
+              OpGraphSetOutputARM %in %uint_0
+%debug_operation = OpExtInst %void %graph_debug_info DebugOperation %in %name_op %in
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModuleWithGraphDebugInfo(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand DebugGraph must be a result id of "
+                        "NonSemantic.Graph.DebugInfo DebugGraph"));
+}
+
+TEST_F(ValidateGraph, InvalidNonSemanticGraphDebugInfoOperationInstruction) {
+  const std::string src = R"(
+%default_graph_type = OpTypeGraphARM 1 %int8tensor %int8tensor
+              OpGraphEntryPointARM %default_graph "default_entry_point" %var_int8tensor %var_int8tensor
+     %default_graph = OpGraphARM %default_graph_type
+       %debug_graph = OpExtInst %void %graph_debug_info DebugGraph %default_graph %name_g
+        %in = OpGraphInputARM %int8tensor %uint_0
+              OpGraphSetOutputARM %in %uint_0
+%debug_operation = OpExtInst %void %graph_debug_info DebugOperation %debug_graph %name_op %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModuleWithGraphDebugInfo(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand Instructions must be result ids of "
+                        "instructions within the graph described by "
+                        "DebugGraph"));
+}
+
+TEST_F(ValidateGraph, InvalidNonSemanticGraphDebugInfoTensorCompositeNoIndex) {
+  const std::string src = R"(
+%default_graph_type = OpTypeGraphARM 1 %int8tensor_array3 %int8tensor_array3
+              OpGraphEntryPointARM %default_graph "default_entry_point" %var_int8tensor_array3 %var_int8tensor_array3
+     %default_graph = OpGraphARM %default_graph_type
+        %in = OpGraphInputARM %int8tensor_array3 %uint_0
+ %debug_tensor = OpExtInst %void %graph_debug_info DebugTensor %in %name_tensor
+              OpGraphSetOutputARM %in %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModuleWithGraphDebugInfo(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand Index must be present when Tensor "
+                        "has composite type"));
+}
+
+TEST_F(ValidateGraph, InvalidNonSemanticGraphDebugInfoTensorIndexType) {
+  const std::string src = R"(
+%default_graph_type = OpTypeGraphARM 1 %int8tensor_array3 %int8tensor_array3
+              OpGraphEntryPointARM %default_graph "default_entry_point" %var_int8tensor_array3 %var_int8tensor_array3
+     %default_graph = OpGraphARM %default_graph_type
+        %in = OpGraphInputARM %int8tensor_array3 %uint_0
+ %debug_tensor = OpExtInst %void %graph_debug_info DebugTensor %in %name_tensor %float_1
+              OpGraphSetOutputARM %in %uint_0
+              OpGraphEndARM
+)";
+  std::string spvasm = GenerateModuleWithGraphDebugInfo(src);
+
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPVENV));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("expected operand Index must be a result id of "
+                        "32-bit unsigned OpConstant"));
 }
 
 }  // namespace

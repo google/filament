@@ -1447,7 +1447,8 @@ TEST_F(ValidateRayTracingReorderEXT,
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
 }
 
-TEST_F(ValidateRayTracingReorderEXT, HitObjectRecordFromQueryEXT) {
+TEST_F(ValidateRayTracingReorderEXT,
+       HitObjectRecordFromQueryEXTWithoutHitKind) {
   const std::string cap = R"(
                OpCapability RayQueryKHR
                             )";
@@ -1470,6 +1471,60 @@ TEST_F(ValidateRayTracingReorderEXT, HitObjectRecordFromQueryEXT) {
       GenerateReorderShaderCodeEXT(body, declarations, extensions, cap).c_str(),
       SPV_ENV_VULKAN_1_2);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderEXT, HitObjectRecordFromQueryEXTWithHitKind) {
+  const std::string cap = R"(
+               OpCapability RayQueryKHR
+                            )";
+  const std::string extensions = R"(
+               OpExtension "SPV_KHR_ray_query"
+               )";
+  const std::string declarations = R"(
+        %uint = OpTypeInt 32 0
+        %uint_5 = OpConstant %uint 5
+        %uint_254 = OpConstant %uint 254
+        %rayquery_type = OpTypeRayQueryKHR
+        %_ptr_Function_rayquery = OpTypePointer Function %rayquery_type
+  )";
+
+  const std::string body = R"(
+      %ray_query = OpVariable %_ptr_Function_rayquery Function
+      OpHitObjectRecordFromQueryEXT %hObj %ray_query %uint_5 %attr %uint_254
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderShaderCodeEXT(body, declarations, extensions, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderEXT,
+       HitObjectRecordFromQueryEXTHitKindWrongType) {
+  const std::string cap = R"(
+               OpCapability RayQueryKHR
+                            )";
+  const std::string extensions = R"(
+               OpExtension "SPV_KHR_ray_query"
+               )";
+  const std::string declarations = R"(
+        %uint = OpTypeInt 32 0
+        %uint_5 = OpConstant %uint 5
+        %rayquery_type = OpTypeRayQueryKHR
+        %_ptr_Function_rayquery = OpTypePointer Function %rayquery_type
+  )";
+
+  const std::string body = R"(
+      %ray_query = OpVariable %_ptr_Function_rayquery Function
+      OpHitObjectRecordFromQueryEXT %hObj %ray_query %uint_5 %attr %float_1
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderShaderCodeEXT(body, declarations, extensions, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Hit Kind must be a 32-bit unsigned int scalar"));
 }
 
 TEST_F(ValidateRayTracingReorderEXT, HitObjectRecordMissMotionEXT) {

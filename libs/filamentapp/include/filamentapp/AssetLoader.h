@@ -24,7 +24,7 @@
 
 namespace filament::app {
 
-class AssetLoader {
+class UTILS_PUBLIC AssetLoader {
 public:
     virtual ~AssetLoader() = default;
 

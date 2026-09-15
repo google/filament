@@ -356,7 +356,7 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
 
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
-        VkSampler sampler, VkDescriptorSetLayout externalSamplerLayout) noexcept {
+        VkSampler sampler) noexcept {
     VkDescriptorSet const vkset = set->getVkSet();
     VkImageSubresourceRange range = texture->getPrimaryViewRange();
     VkImageViewType const expectedType = texture->getViewType();

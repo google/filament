@@ -35,6 +35,10 @@ Pass::Status FreezeSpecConstantValuePass::Process() {
         inst->SetOpcode(spv::Op::OpConstantFalse);
         modified = true;
         break;
+      case spv::Op::OpSpecConstantDataKHR:
+        inst->SetOpcode(spv::Op::OpConstantDataKHR);
+        modified = true;
+        break;
       case spv::Op::OpDecorate:
         if (spv::Decoration(inst->GetSingleWordInOperand(1)) ==
             spv::Decoration::SpecId) {

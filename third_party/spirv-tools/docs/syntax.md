@@ -101,7 +101,7 @@ decimal and hexadecimal form.
 
 The syntax for a floating point literal is the same as floating point
 constants in the C programming language, except:
-* An optional leading minus (`-`) is part of the literal.
+* An optional leading minus (`-`) or leading plus (`+`) is part of the literal.
 * An optional type specifier suffix is not allowed.
 Infinity and NaN values are expressed in hexadecimal float literals
 by using the maximum representable exponent for the bit width.
@@ -124,6 +124,9 @@ of `%aNaN` in the previous example is the same as the word with bits
 The disassembler prints infinite, NaN, and subnormal values in hexadecimal form.
 Zero and normal values are printed in decimal form with enough digits
 to preserve all significand bits.
+
+Hex float values that underflow are rounded to zero.  If there is a leading
+minus sign, underflow goes to negative zero.
 
 ## Arbitrary Integers
 <a name="immediate"></a>

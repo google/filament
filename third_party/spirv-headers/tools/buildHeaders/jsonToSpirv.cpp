@@ -261,6 +261,7 @@ EnumValues RawAccessChainOperandsParams;
 EnumValues FPEncodingParams;
 EnumValues CooperativeVectorMatrixLayoutParams;
 EnumValues ComponentTypeParams;
+EnumValues GatherModesParams;
 
 std::pair<bool, std::string> ReadFile(const std::string& path)
 {
@@ -443,6 +444,8 @@ ClassOptionality ToOperandClassAndOptionality(const std::string& operandKind, co
             type = OperandCooperativeVectorMatrixLayout;
         } else if (operandKind == "ComponentType") {
             type = OperandComponentType;
+        } else if (operandKind == "GatherModes") {
+            type = OperandGatherModes;
         }
 
         if (type == OperandNone) {
@@ -841,6 +844,8 @@ void jsonToSpirv(const std::string& jsonPath, bool buildingHeaders)
             establishOperandClass(enumName, OperandCooperativeVectorMatrixLayout, &CooperativeVectorMatrixLayoutParams, operandEnum, category);
         } else if (enumName == "ComponentType") {
             establishOperandClass(enumName, OperandComponentType, &ComponentTypeParams, operandEnum, category);
+        } else if (enumName == "GatherModes") {
+            establishOperandClass(enumName, OperandGatherModes, &GatherModesParams, operandEnum, category);
         }
     }
 

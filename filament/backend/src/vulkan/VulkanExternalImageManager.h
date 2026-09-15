@@ -62,20 +62,8 @@ public:
     void clearTextureBinding(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
                              uint8_t bindingPoint);
 
-    void addExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> external,
-            VkSamplerYcbcrConversion const conversion);
-
-    void removeExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> image);
-
-    bool isExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> image) const;
-
     VkSamplerYcbcrConversion getVkSamplerYcbcrConversion(
             VulkanPlatform::ExternalImageMetadata const& metadata);
-
-    struct ImageData {
-        fvkmemory::resource_ptr<VulkanTexture> image;
-        VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
-    };
 
     // - Update the descriptor set layout with the external samplers. This layout will be assign the
     // respective immutable samplers to the layout.
@@ -104,7 +92,6 @@ private:
 
     // Use vectors instead of hash maps because we only expect small number of entries.
     std::vector<SetBindingInfo> mSetBindings;
-    std::vector<ImageData> mImages;
 };
 
 } // filament::backend

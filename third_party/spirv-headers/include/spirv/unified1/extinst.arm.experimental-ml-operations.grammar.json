@@ -1,0 +1,25 @@
+{
+  "copyright": [
+    "SPDX-FileCopyrightText: 2025 Arm Ltd.",
+    "SPDX-License-Identifier: MIT"
+  ],
+  "revision": 1,
+  "instructions": [
+    {
+      "opname": "CALL",
+      "opcode": 0,
+      "operands": [
+        {
+          "kind": "LiteralInteger",
+          "name": "Opcode"
+        },
+        {
+          "kind": "IdRef",
+          "quantifier": "*",
+          "name": "Parameters"
+        }
+      ]
+    }
+  ],
+  "operand_kinds": []
+}

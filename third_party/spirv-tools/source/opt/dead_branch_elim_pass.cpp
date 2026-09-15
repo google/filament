@@ -480,7 +480,12 @@ Pass::Status DeadBranchElimPass::Process() {
     return EliminateDeadBranches(fp);
   };
   bool modified = context()->ProcessReachableCallTree(pfn);
-  if (modified) FixBlockOrder();
+  if (modified) {
+    context()->InvalidateAnalyses(IRContext::kAnalysisCFG |
+                                  IRContext::kAnalysisDominatorAnalysis |
+                                  IRContext::kAnalysisStructuredCFG);
+    FixBlockOrder();
+  }
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 

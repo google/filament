@@ -18,6 +18,7 @@
 #include "common/SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/MeshAssimp.h>
 
@@ -150,7 +151,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         return false;
     };
 
-    auto setup = [app, loadTexture](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loadTexture, loader](Engine* engine, View* view, Scene* scene) {
         Path const path(app->pbrConfig.materialDir.c_str());
         utils::CString const name(path.getName().c_str());
 
@@ -334,7 +335,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             }
         }
 
-        app->meshSet = std::make_unique<MeshAssimp>(*engine);
+        app->meshSet = std::make_unique<MeshAssimp>(*engine, loader);
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialInstances, true);
         }
@@ -430,8 +431,10 @@ int main(int argc, char* argv[]) {
 
     config.title = "PBR";
 
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto app = createSampleApp(config, dm.get(), loader);
     app->run();
+    delete loader;
 
     return 0;
 }

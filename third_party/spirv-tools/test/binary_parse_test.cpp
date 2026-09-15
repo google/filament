@@ -32,7 +32,8 @@ static bool operator==(const spv_parsed_operand_t& a,
                        const spv_parsed_operand_t& b) {
   return a.offset == b.offset && a.num_words == b.num_words &&
          a.type == b.type && a.number_kind == b.number_kind &&
-         a.number_bit_width == b.number_bit_width;
+         a.number_bit_width == b.number_bit_width &&
+         a.fp_encoding == b.fp_encoding;
 }
 
 namespace spvtools {
@@ -40,13 +41,31 @@ namespace {
 
 using ::spvtest::Concatenate;
 using ::spvtest::MakeInstruction;
-using utils::MakeVector;
 using ::spvtest::ScopedContext;
 using ::testing::_;
 using ::testing::AnyOf;
 using ::testing::Eq;
 using ::testing::InSequence;
 using ::testing::Return;
+using utils::MakeVector;
+
+using MaybeFlipWordsTest = spvtest::TextToBinaryTest;
+
+TEST_F(MaybeFlipWordsTest, DoNotFlip) {
+  std::vector<uint32_t> words{0x01234567, 0x89abcdef};
+  MaybeFlipWords(false, words.begin(), words.end());
+  EXPECT_EQ(words.size(), size_t(2));
+  EXPECT_EQ(words[0], 0x01234567);
+  EXPECT_EQ(words[1], 0x89abcdef);
+}
+
+TEST_F(MaybeFlipWordsTest, Flip) {
+  std::vector<uint32_t> words{0x01234567, 0x89abcdef};
+  MaybeFlipWords(true, words.begin(), words.end());
+  EXPECT_EQ(words.size(), size_t(2));
+  EXPECT_EQ(words[0], 0x67452301);
+  EXPECT_EQ(words[1], 0xefcdab89);
+}
 
 // An easily-constructible and comparable object for the contents of an
 // spv_parsed_instruction_t.  Unlike spv_parsed_instruction_t, owns the memory
@@ -86,7 +105,8 @@ std::ostream& operator<<(std::ostream& os, const ParsedInstruction& inst) {
     os << " { offset: " << operand.offset << " num_words: " << operand.num_words
        << " type: " << int(operand.type)
        << " number_kind: " << int(operand.number_kind)
-       << " number_bit_width: " << int(operand.number_bit_width) << "}";
+       << " number_bit_width: " << int(operand.number_bit_width)
+       << " fp_encoding: " << int(operand.fp_encoding) << "}";
   }
   os << ")";
   return os;
@@ -150,6 +170,17 @@ spv_parsed_operand_t MakeSimpleOperand(uint16_t offset,
 spv_parsed_operand_t MakeLiteralNumberOperand(uint16_t offset) {
   return {offset, 1, SPV_OPERAND_TYPE_LITERAL_INTEGER, SPV_NUMBER_UNSIGNED_INT,
           32};
+}
+
+// Returns a parsed operand for a standalone literal float value at the given
+// word offset within an instruction.
+spv_parsed_operand_t MakeLiteralFloatOperand(uint16_t offset) {
+  return {offset,
+          1,
+          SPV_OPERAND_TYPE_LITERAL_FLOAT,
+          SPV_NUMBER_FLOATING,
+          32,
+          SPV_FP_ENCODING_UNKNOWN};
 }
 
 // Returns a parsed operand for a literal string value at the given
@@ -768,6 +799,28 @@ TEST_F(CxxBinaryParseTest, InstructionWithStringOperand) {
     Parse(words, true, endian_swap);
     EXPECT_EQ(nullptr, diagnostic_);
   }
+}
+
+TEST_F(BinaryParseTest, LiteralFloatOperandHasUnknownEncoding) {
+  const auto instruction = MakeInstruction(
+      spv::Op::OpDecorate,
+      {1, uint32_t(spv::Decoration::FPMaxErrorDecorationINTEL), 0x20202020});
+  const auto words = Concatenate({ExpectedHeaderForBound(2), instruction});
+  InSequence calls_expected_in_specific_order;
+  EXPECT_HEADER(2).WillOnce(Return(SPV_SUCCESS));
+  const auto operands = std::vector<spv_parsed_operand_t>{
+      MakeSimpleOperand(1, SPV_OPERAND_TYPE_ID),
+      MakeSimpleOperand(2, SPV_OPERAND_TYPE_DECORATION),
+      MakeLiteralFloatOperand(3)};
+  EXPECT_CALL(client_,
+              Instruction(ParsedInstruction(spv_parsed_instruction_t{
+                  instruction.data(), static_cast<uint16_t>(instruction.size()),
+                  uint16_t(spv::Op::OpDecorate), SPV_EXT_INST_TYPE_NONE,
+                  0 /* type id */, 0 /* no result id */, operands.data(),
+                  static_cast<uint16_t>(operands.size())})))
+      .WillOnce(Return(SPV_SUCCESS));
+
+  Parse(words, SPV_SUCCESS);
 }
 
 // Checks for non-zero values for the result_id and ext_inst_type members

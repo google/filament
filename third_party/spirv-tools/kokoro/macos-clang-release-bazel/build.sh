@@ -32,14 +32,16 @@ git config --global --add safe.directory $SRC
 cd $SRC
 /usr/bin/python3 utils/git-sync-deps --treeless
 
-# Get bazel 7.4.0
-gsutil cp gs://bazel/7.4.0/release/bazel-7.4.0-darwin-x86_64 .
-chmod +x bazel-7.4.0-darwin-x86_64
+# Get bazel 8.7.0
+BAZEL_VER=8.7.0
+gcloud config set auth/disable_credentials True
+gcloud storage cp gs://bazel/$BAZEL_VER/release/bazel-$BAZEL_VER-darwin-x86_64 .
+chmod +x bazel-$BAZEL_VER-darwin-x86_64
 
 echo $(date): Build everything...
-./bazel-7.4.0-darwin-x86_64 build --cxxopt=-std=c++17 :all
+./bazel-$BAZEL_VER-darwin-x86_64 build --cxxopt=-std=c++17 :all
 echo $(date): Build completed.
 
 echo $(date): Starting bazel test...
-./bazel-7.4.0-darwin-x86_64 test --cxxopt=-std=c++17 :all
+./bazel-$BAZEL_VER-darwin-x86_64 test --cxxopt=-std=c++17 :all
 echo $(date): Bazel test completed.

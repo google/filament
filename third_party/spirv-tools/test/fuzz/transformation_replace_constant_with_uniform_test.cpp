@@ -795,8 +795,6 @@ TEST(TransformationReplaceConstantWithUniformTest, NoConstantPresentForIndex) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  protobufs::UniformBufferElementDescriptor blockname_0 =
-      MakeUniformBufferElementDescriptor(0, 0, {0});
   protobufs::UniformBufferElementDescriptor blockname_9 =
       MakeUniformBufferElementDescriptor(0, 0, {1});
 

@@ -144,6 +144,8 @@ spv_result_t InstructionPass(ValidationState_t& _, const Instruction* inst);
 /// has been propagated down to the group members.
 spv_result_t ValidateDecorations(ValidationState_t& _);
 
+spv_result_t ValidateExplicitLayout(ValidationState_t& _);
+
 /// Performs validation of built-in variables.
 spv_result_t ValidateBuiltIns(ValidationState_t& _);
 
@@ -180,6 +182,12 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst);
 /// Validates correctness of barrier instructions.
 spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst);
 
+/// Validates correctness of DotProduct instructions.
+spv_result_t DotProductPass(ValidationState_t& _, const Instruction* inst);
+
+/// Validates correctness of Group (Kernel) instructions.
+spv_result_t GroupPass(ValidationState_t& _, const Instruction* inst);
+
 /// Validates correctness of literal numbers.
 spv_result_t LiteralsPass(ValidationState_t& _, const Instruction* inst);
 
@@ -188,6 +196,9 @@ spv_result_t ExtensionPass(ValidationState_t& _, const Instruction* inst);
 
 /// Validates correctness of annotation instructions.
 spv_result_t AnnotationPass(ValidationState_t& _, const Instruction* inst);
+
+/// Validates correctness of pipe instructions.
+spv_result_t PipePass(ValidationState_t& _, const Instruction* inst);
 
 /// Validates correctness of non-uniform group instructions.
 spv_result_t NonUniformPass(ValidationState_t& _, const Instruction* inst);

@@ -999,6 +999,7 @@ endif()
 
 if (IS_HOST_PLATFORM OR ANDROID)
    add_subdirectory(${LIBRARIES}/filamentapp)
+   add_subdirectory(${EXTERNAL}/libassimp/tnt)
 endif()
 
 if (IS_HOST_PLATFORM)
@@ -1010,7 +1011,6 @@ if (IS_HOST_PLATFORM)
 
     add_subdirectory(${FILAMENT}/samples)
 
-    add_subdirectory(${EXTERNAL}/libassimp/tnt)
     add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
     add_subdirectory(${EXTERNAL}/libz/tnt)

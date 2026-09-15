@@ -106,8 +106,10 @@ DiagnosticStream::~DiagnosticStream() {
       default:
         break;
     }
-    if (disassembled_instruction_.size() > 0)
+    if (!disassembled_instruction_.empty())
       stream_ << std::endl << "  " << disassembled_instruction_ << std::endl;
+
+    if (!shader_debug_info_.empty()) stream_ << shader_debug_info_;
 
     consumer_(level, "input", position_, stream_.str().c_str());
   }

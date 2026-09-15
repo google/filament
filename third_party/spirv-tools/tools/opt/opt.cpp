@@ -279,6 +279,10 @@ Options (in lexicographical order):)",
                option --relax-logical-pointer to the validator.)",
          GetLegalizationPasses().c_str());
   printf(R"(
+  --legalize-multidim-array
+               Replace multidimensional arrays of resources with single-dimensional
+               arrays. Run combine-access-chains before this pass.)");
+  printf(R"(
   --local-redundancy-elimination
                Looks for instructions in the same basic block that compute the
                same value, and deletes the redundant ones.)");
@@ -748,7 +752,7 @@ OptStatus ParseFlags(int argc, const char** argv,
                      spvtools::ValidatorOptions* validator_options,
                      spvtools::OptimizerOptions* optimizer_options) {
   std::vector<std::string> pass_flags;
-  bool preserve_interface = true;
+  bool preserve_interface = false;
   for (int argi = 1; argi < argc; ++argi) {
     const char* cur_arg = argv[argi];
     if ('-' == cur_arg[0]) {

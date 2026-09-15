@@ -124,7 +124,7 @@ bool isDoubleSided() {
 }
 #endif
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_SHADOWING) && defined(MATERIAL_HAS_LIGHTING)
 
 /**
  * Returns the cascade index for this fragment (between 0 and CONFIG_MAX_SHADOW_CASCADES - 1).

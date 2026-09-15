@@ -83,8 +83,9 @@ TEST(ExtractSourceTest, SimpleSource) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["compute.hlsl"] ==
-              "[numthreads(1, 1, 1)] void compute_1(){ }");
+  std::string computeHlslResult = result["compute.hlsl"];
+  ASSERT_STREQ(computeHlslResult.c_str(),
+               "[numthreads(1, 1, 1)] void compute_1(){ }");
 }
 
 TEST(ExtractSourceTest, SourceContinued) {
@@ -109,8 +110,9 @@ TEST(ExtractSourceTest, SourceContinued) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["compute.hlsl"] ==
-              "[numthreads(1, 1, 1)] void compute_1(){ }");
+  std::string computeHlslResult = result["compute.hlsl"];
+  ASSERT_STREQ(computeHlslResult.c_str(),
+               "[numthreads(1, 1, 1)] void compute_1(){ }");
 }
 
 TEST(ExtractSourceTest, OnlyFilename) {
@@ -134,7 +136,8 @@ TEST(ExtractSourceTest, OnlyFilename) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["compute.hlsl"] == "");
+  std::string computeHlslResult = result["compute.hlsl"];
+  ASSERT_STREQ(computeHlslResult.c_str(), "");
 }
 
 TEST(ExtractSourceTest, MultipleFiles) {
@@ -160,8 +163,10 @@ TEST(ExtractSourceTest, MultipleFiles) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 2);
-  ASSERT_TRUE(result["compute1.hlsl"] == "some instruction");
-  ASSERT_TRUE(result["compute2.hlsl"] == "some other instruction");
+  std::string compute1HlslResult = result["compute1.hlsl"];
+  ASSERT_STREQ(compute1HlslResult.c_str(), "some instruction");
+  std::string compute2HlslResult = result["compute2.hlsl"];
+  ASSERT_STREQ(compute2HlslResult.c_str(), "some other instruction");
 }
 
 TEST(ExtractSourceTest, MultilineCode) {
@@ -188,8 +193,9 @@ void compute_1() {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["compute.hlsl"] ==
-              "[numthreads(1, 1, 1)]\nvoid compute_1() {\n}\n");
+  std::string computeHlslResult = result["compute.hlsl"];
+  ASSERT_STREQ(computeHlslResult.c_str(),
+               "[numthreads(1, 1, 1)]\nvoid compute_1() {\n}\n");
 }
 
 TEST(ExtractSourceTest, EmptyFilename) {
@@ -213,7 +219,8 @@ TEST(ExtractSourceTest, EmptyFilename) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["unnamed-0.hlsl"] == "void compute(){}");
+  std::string unnamed0HlslResult = result["unnamed-0.hlsl"];
+  ASSERT_STREQ(unnamed0HlslResult.c_str(), "void compute(){}");
 }
 
 TEST(ExtractSourceTest, EscapeEscaped) {
@@ -237,7 +244,8 @@ TEST(ExtractSourceTest, EscapeEscaped) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["compute.hlsl"] == "// check \" escape removed");
+  std::string computeHlslResult = result["compute.hlsl"];
+  ASSERT_STREQ(computeHlslResult.c_str(), "// check \" escape removed");
 }
 
 TEST(ExtractSourceTest, OpSourceWithNoSource) {
@@ -261,5 +269,6 @@ TEST(ExtractSourceTest, OpSourceWithNoSource) {
   auto[success, result] = ExtractSource(source);
   ASSERT_TRUE(success);
   ASSERT_TRUE(result.size() == 1);
-  ASSERT_TRUE(result["compute.hlsl"] == "");
+  std::string computeHlslResult = result["compute.hlsl"];
+  ASSERT_STREQ(computeHlslResult.c_str(), "");
 }

@@ -242,12 +242,12 @@ class Loop {
   Instruction* FindConditionVariable(const BasicBlock* condition) const;
 
   // Returns the number of iterations within a loop when given the |induction|
-  // variable and the loop |condition| check. It stores the found number of
+  // variable and the loop |branch| instruction. It stores the found number of
   // iterations in the output parameter |iterations| and optionally, the step
-  // value in |step_value| and the initial value of the induction variable in
+  // value in |step_amount| and the initial value of the induction variable in
   // |init_value|.
   bool FindNumberOfIterations(const Instruction* induction,
-                              const Instruction* condition, size_t* iterations,
+                              const Instruction* branch, size_t* iterations,
                               int64_t* step_amount = nullptr,
                               int64_t* init_value = nullptr) const;
 

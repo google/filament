@@ -86,6 +86,13 @@ samples::SampleParameters getCommonParameters() {
                 { "opengl", "vulkan", "metal", "webgpu" }),
         samples::Parameter::makeBool("remote", 'x', "Run web server and enable remote control",
                 false),
+        samples::Parameter::makeString("screenshot", '\0', "Output screenshot image path", ""),
+        samples::Parameter::makeInt("frames", '\0', "Number of frames before capture / exit", 10,
+                1),
+        samples::Parameter::makeFloat("fixed-timestep", '\0',
+                "Fixed animation timestep in seconds (<=0 for wallclock)", 0.0f, 0.0f),
+        samples::Parameter::makeString("window-size", '\0', "Window size in WIDTHxHEIGHT format",
+                ""),
     };
 }
 
@@ -217,7 +224,7 @@ void printUsage(const char* name, const CommandLineSpecification& spec) {
 }
 
 FilamentApp2::Builder getBuilder(const SampleConfig& config, filament::app::DisplayManager* dm,
-        filament::app::AssetLoader* loader) {
+        filament::app::AssetLoader* loader, filament::app::AssetWriter* writer) {
     auto builder = FilamentApp2::Builder()
                            .title(config.title)
                            .size(config.width, config.height)
@@ -232,13 +239,19 @@ FilamentApp2::Builder getBuilder(const SampleConfig& config, filament::app::Disp
                            .stereoscopicEyeCount(config.stereoscopicEyeCount)
                            .vulkanGPUHint(config.vulkanGPUHint)
                            .forcedWebGPUBackend(config.forcedWebGPUBackend)
-                           .asynchronousMode(config.asynchronousMode);
+                           .asynchronousMode(config.asynchronousMode)
+                           .screenshotPath(config.screenshotPath)
+                           .warmupFrames(config.warmupFrames)
+                           .fixedTimeStep(config.fixedTimeStep);
 
     if (dm) {
         builder.displayManager(dm);
     }
     if (loader) {
         builder.assetLoader(loader);
+    }
+    if (writer) {
+        builder.assetWriter(writer);
     }
     return builder;
 }
@@ -398,6 +411,32 @@ int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
             } else if (cp.name == "remote") {
                 config->displayManager = SampleConfig::DisplayManager::WEB;
                 config->headless = true;
+            } else if (cp.name == "screenshot") {
+                config->screenshotPath = arg;
+                if (!arg.empty()) {
+                    config->headless = true;
+                }
+            } else if (cp.name == "frames") {
+                try {
+                    config->warmupFrames = std::stoi(arg.c_str());
+                } catch (...) {
+                    std::cerr << "Failed to parse argument 'frames'" << std::endl;
+                }
+            } else if (cp.name == "fixed-timestep") {
+                try {
+                    config->fixedTimeStep = std::stof(arg.c_str());
+                } catch (...) {
+                    std::cerr << "Failed to parse argument 'fixed-timestep'" << std::endl;
+                }
+            } else if (cp.name == "window-size") {
+                int w = 0, h = 0;
+                if (sscanf(arg.c_str(), "%dx%d", &w, &h) == 2 && w > 0 && h > 0) {
+                    config->width = uint32_t(w);
+                    config->height = uint32_t(h);
+                } else {
+                    std::cerr << "Failed to parse argument 'window-size'. Should be of" <<
+                            "format [int]x[int]" << std::endl;
+                }
             }
         } else {
             seenSampleParams[mapping->index] = true;

@@ -718,6 +718,28 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenRoughness) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerIridescence) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.iridescence = 1.0;
+            material.iridescenceIor = 1.3;
+            material.iridescenceThickness = 400.0;
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::IRIDESCENCE)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::IRIDESCENCE_IOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::IRIDESCENCE_THICKNESS)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {

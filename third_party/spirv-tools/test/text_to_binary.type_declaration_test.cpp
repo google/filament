@@ -278,6 +278,63 @@ TEST_F(OpSizeOfTest, ArgumentTypes) {
               Eq("Expected id to start with %."));
 }
 
+struct FloatEncodingWidthCase {
+  std::string input;
+  bool expect_pass;
+};
+
+using FloatEncodingWidthTest = spvtest::TextToBinaryTestBase<
+    ::testing::TestWithParam<FloatEncodingWidthCase>>;
+
+TEST_P(FloatEncodingWidthTest, Samples) {
+  const auto& param = GetParam();
+  if (param.expect_pass) {
+    CompileSuccessfully(param.input);
+  } else {
+    auto err = CompileFailure(param.input);
+    EXPECT_THAT(err, testing::HasSubstr("Invalid bit width"));
+    EXPECT_THAT(err, testing::HasSubstr("for floating point encoding"));
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TextToBinaryFloatWidth, FloatEncodingWidthTest,
+    ::testing::ValuesIn(std::vector<FloatEncodingWidthCase>{
+        {"%1 = OpTypeFloat 32", true},
+        {"%1 = OpTypeFloat 64", true},
+        {"%1 = OpTypeFloat 16", true},
+        {"%1 = OpTypeFloat 8", true},
+        // bfloat16
+        {"%1 = OpTypeFloat 0 BFloat16KHR", false},
+        {"%1 = OpTypeFloat 1 BFloat16KHR", false},
+        {"%1 = OpTypeFloat 15 BFloat16KHR", false},
+        {"%1 = OpTypeFloat 16 BFloat16KHR", true},
+        {"%1 = OpTypeFloat 17 BFloat16KHR", false},
+        {"%1 = OpTypeFloat 32 BFloat16KHR", false},
+        {"%1 = OpTypeFloat 64 BFloat16KHR", false},
+        {"%1 = OpTypeFloat 100 BFloat16KHR", false},
+        // fp8 E5M2
+        {"%1 = OpTypeFloat 0 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 1 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 7 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 8 Float8E5M2EXT", true},
+        {"%1 = OpTypeFloat 9 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 16 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 32 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 64 Float8E5M2EXT", false},
+        {"%1 = OpTypeFloat 100 Float8E4M3EXT", false},
+        // fp8 E4M3
+        {"%1 = OpTypeFloat 0 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 1 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 7 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 8 Float8E4M3EXT", true},
+        {"%1 = OpTypeFloat 9 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 16 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 32 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 64 Float8E4M3EXT", false},
+        {"%1 = OpTypeFloat 100 Float8E4M3EXT", false},
+    }));
+
 // TODO(dneto): OpTypeVoid
 // TODO(dneto): OpTypeBool
 // TODO(dneto): OpTypeInt

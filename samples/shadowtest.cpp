@@ -20,6 +20,7 @@
 #include "generated/resources/resources.h"
 
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/MeshAssimp.h>
 
@@ -132,13 +133,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto app = std::make_shared<App>();
     app->config = config;
 
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
 
         // Add geometry into the scene.
-        app->meshes = new MeshAssimp(*engine);
+        app->meshes = new MeshAssimp(*engine, loader);
         app->meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app->materials);
         auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
         app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
@@ -190,7 +191,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                             auto& tcm = engine->getTransformManager();
                             auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
                             tcm.setTransform(ti,
-                                    app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                                     app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
                         })
                         .build();
     app->filamentApp = fApp.get();
@@ -208,8 +209,10 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto app = createSampleApp(config, dm.get(), loader);
     app->run();
+    delete loader;
     return 0;
 }
 #endif

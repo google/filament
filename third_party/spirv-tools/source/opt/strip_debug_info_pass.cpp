@@ -95,8 +95,14 @@ Pass::Status StripDebugInfoPass::Process() {
 
   // clear OpLine information
   context()->module()->ForEachInst([&modified](Instruction* inst) {
-    modified |= !inst->dbg_line_insts().empty();
-    inst->dbg_line_insts().clear();
+    if (!inst->dbg_line_insts().empty()) {
+      modified = true;
+      inst->dbg_line_insts().clear();
+    }
+    if (inst->GetDebugScope().GetLexicalScope() != kNoDebugScope) {
+      modified = true;
+      inst->SetDebugScope({kNoDebugScope, kNoInlinedAt});
+    }
   });
 
   if (!get_module()->trailing_dbg_line_info().empty()) {

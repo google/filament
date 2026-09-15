@@ -34,6 +34,7 @@ struct Case {
   std::string delta;
   std::string cluster_size;
   std::string expected_error;  // empty for no error.
+  spv_target_env target_env = SPV_ENV_UNIVERSAL_1_0;
 };
 
 inline std::ostream& operator<<(std::ostream& out, Case c) {
@@ -69,6 +70,7 @@ std::string AssemblyForCase(const Case& c) {
   if (c.shader) {
     ss << "OpMemoryModel Logical GLSL450\n";
     ss << "OpEntryPoint GLCompute %main \"main\"\n";
+    ss << "OpExecutionMode %main LocalSize 1 1 1\n";
   } else {
     ss << "OpMemoryModel Physical32 OpenCL\n";
     ss << "OpEntryPoint Kernel %main \"main\"\n";
@@ -131,11 +133,12 @@ using ValidateSpvKHRSubgroupRotate = spvtest::ValidateBase<Case>;
 TEST_P(ValidateSpvKHRSubgroupRotate, Base) {
   const auto& c = GetParam();
   const auto& assembly = AssemblyForCase(c);
-  CompileSuccessfully(assembly);
+  CompileSuccessfully(assembly, c.target_env);
   if (c.expected_error.empty()) {
-    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions()) << getDiagnosticString();
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(c.target_env))
+        << getDiagnosticString();
   } else {
-    EXPECT_NE(SPV_SUCCESS, ValidateInstructions());
+    EXPECT_NE(SPV_SUCCESS, ValidateInstructions(c.target_env));
     EXPECT_THAT(getDiagnosticString(), HasSubstr(c.expected_error));
   }
 }
@@ -239,6 +242,26 @@ INSTANTIATE_TEST_SUITE_P(
              "%u32_1",
              "",
              "Execution scope is limited to Subgroup or Workgroup"}));
+
+INSTANTIATE_TEST_SUITE_P(Vulkan, ValidateSpvKHRSubgroupRotate,
+                         ::testing::Values(Case{{"GroupNonUniformRotateKHR"},
+                                                true,
+                                                "%u32",
+                                                "%subgroup",
+                                                "%u32_1",
+                                                "",
+                                                "",
+                                                SPV_ENV_VULKAN_1_1},
+                                           Case{{"GroupNonUniformRotateKHR"},
+                                                true,
+                                                "%u32",
+                                                "%workgroup",
+                                                "%u32_1",
+                                                "",
+                                                "in Vulkan environment "
+                                                "Execution scope is limited "
+                                                "to Subgroup",
+                                                SPV_ENV_VULKAN_1_1}));
 
 INSTANTIATE_TEST_SUITE_P(
     InvalidResultType, ValidateSpvKHRSubgroupRotate,

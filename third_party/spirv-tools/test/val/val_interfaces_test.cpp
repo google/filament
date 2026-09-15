@@ -624,6 +624,185 @@ OpFunctionEnd
                 "at location 1"));
 }
 
+TEST_F(ValidateInterfacesTest,
+       VulkanLocationsGeometryStreamsDifferentStreamsSameLocation) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Geometry
+OpCapability GeometryStreams
+OpMemoryModel Logical GLSL450
+OpEntryPoint Geometry %main "main" %var1 %var2
+OpExecutionMode %main Triangles
+OpExecutionMode %main OutputPoints
+OpExecutionMode %main OutputVertices 1
+OpDecorate %var1 Location 1
+OpDecorate %var1 Stream 0
+OpDecorate %var2 Location 1
+OpDecorate %var2 Stream 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%ptr_output_float = OpTypePointer Output %float
+%var1 = OpVariable %ptr_output_float Output
+%var2 = OpVariable %ptr_output_float Output
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateInterfacesTest,
+       VulkanLocationsGeometryStreamsSameStreamSameLocationConflict) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Geometry
+OpCapability GeometryStreams
+OpMemoryModel Logical GLSL450
+OpEntryPoint Geometry %main "main" %var1 %var2
+OpExecutionMode %main Triangles
+OpExecutionMode %main OutputPoints
+OpExecutionMode %main OutputVertices 1
+OpDecorate %var1 Location 1
+OpDecorate %var1 Stream 1
+OpDecorate %var2 Location 1
+OpDecorate %var2 Stream 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%ptr_output_float = OpTypePointer Output %float
+%var1 = OpVariable %ptr_output_float Output
+%var2 = OpVariable %ptr_output_float Output
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08722"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Entry-point has conflicting output location assignment "
+                "at location 1"));
+}
+
+TEST_F(ValidateInterfacesTest,
+       VulkanLocationsGeometryStreamsComponentSharingAcrossStreams) {
+  // Same location and component on different streams must not conflict.
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Geometry
+OpCapability GeometryStreams
+OpMemoryModel Logical GLSL450
+OpEntryPoint Geometry %main "main" %var1 %var2
+OpExecutionMode %main Triangles
+OpExecutionMode %main OutputPoints
+OpExecutionMode %main OutputVertices 1
+OpDecorate %var1 Location 1
+OpDecorate %var1 Component 0
+OpDecorate %var1 Stream 0
+OpDecorate %var2 Location 1
+OpDecorate %var2 Component 0
+OpDecorate %var2 Stream 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%ptr_output_float = OpTypePointer Output %float
+%var1 = OpVariable %ptr_output_float Output
+%var2 = OpVariable %ptr_output_float Output
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateInterfacesTest,
+       VulkanLocationsGeometryNoStreamsCapStillConflicts) {
+  // Without the GeometryStreams capability the per-stream relaxation must not
+  // apply: a Geometry shader with two outputs at the same location still
+  // conflicts, same as any other stage.
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Geometry
+OpMemoryModel Logical GLSL450
+OpEntryPoint Geometry %main "main" %var1 %var2
+OpExecutionMode %main Triangles
+OpExecutionMode %main OutputPoints
+OpExecutionMode %main OutputVertices 1
+OpDecorate %var1 Location 1
+OpDecorate %var2 Location 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%ptr_output_float = OpTypePointer Output %float
+%var1 = OpVariable %ptr_output_float Output
+%var2 = OpVariable %ptr_output_float Output
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08722"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Entry-point has conflicting output location assignment "
+                "at location 1"));
+}
+
+TEST_F(ValidateInterfacesTest,
+       VulkanLocationsGeometryStreamsInputStillConflicts) {
+  // The per-stream relaxation only applies to the Output storage class.
+  // Input variables in a Geometry+GeometryStreams entry point must still
+  // have unique locations.
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Geometry
+OpCapability GeometryStreams
+OpMemoryModel Logical GLSL450
+OpEntryPoint Geometry %main "main" %var1 %var2
+OpExecutionMode %main InputPoints
+OpExecutionMode %main OutputPoints
+OpExecutionMode %main OutputVertices 1
+OpDecorate %var1 Location 1
+OpDecorate %var2 Location 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%uint_1 = OpConstant %uint 1
+%arr_float = OpTypeArray %float %uint_1
+%ptr_input_arr = OpTypePointer Input %arr_float
+%var1 = OpVariable %ptr_input_arr Input
+%var2 = OpVariable %ptr_input_arr Input
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has conflicting input location assignment "
+                        "at location 1"));
+}
+
 TEST_F(ValidateInterfacesTest, VulkanPatchAndNonPatchOverlap) {
   const std::string text = R"(
                OpCapability Tessellation
@@ -1640,7 +1819,7 @@ OpFunctionEnd
           "Interface struct has no Block decoration but has BuiltIn members."));
 }
 
-TEST_F(ValidateInterfacesTest, InvalidLocationTypePointer) {
+TEST_F(ValidateInterfacesTest, InvalidLocationTypeSampler) {
   const std::string text = R"(
                OpCapability Shader
                OpMemoryModel Logical Simple
@@ -1649,14 +1828,13 @@ TEST_F(ValidateInterfacesTest, InvalidLocationTypePointer) {
        %void = OpTypeVoid
           %5 = OpTypeFunction %void
       %float = OpTypeFloat 32
-%_ptr_Private_void = OpTypePointer Private %void
+      %sampler = OpTypeSampler
        %uint = OpTypeInt 32 0
 %uint_4278132784 = OpConstant %uint 4278132784
-%_arr__ptr_Private_void_uint_4278132784 = OpTypeArray %_ptr_Private_void %uint_4278132784
-%_ptr_Output__arr__ptr_Private_void_uint_4278132784 = OpTypePointer Output %_arr__ptr_Private_void_uint_4278132784
-          %2 = OpVariable %_ptr_Output__arr__ptr_Private_void_uint_4278132784 Output
-%_ptr_Output__ptr_Private_void = OpTypePointer Output %_ptr_Private_void
-          %3 = OpVariable %_ptr_Output__arr__ptr_Private_void_uint_4278132784 Output
+%_arr__sampler_uint_4278132784 = OpTypeArray %sampler %uint_4278132784
+%_ptr_Output__arr__sampler_uint_4278132784 = OpTypePointer Output %_arr__sampler_uint_4278132784
+          %2 = OpVariable %_ptr_Output__arr__sampler_uint_4278132784 Output
+          %3 = OpVariable %_ptr_Output__arr__sampler_uint_4278132784 Output
           %1 = OpFunction %void None %5
          %15 = OpLabel
                OpReturn
@@ -2001,8 +2179,42 @@ OpFunctionEnd
               AnyVUID("VUID-StandaloneSpirv-OpTypeFloat-10823"));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("FP8 E4M3/E5M2 OpVariable <id> '2[%2]' must not be declared "
-                "with a Storage Class of Input or Output.\n"));
+      HasSubstr("FP8 or OCP microscaling OpVariable <id> '2[%2]' must not be "
+                "declared with a Storage Class of Input or Output.\n"));
+}
+
+TEST_F(ValidateInterfacesTest,
+       InvalidOCPMicroscalingVariableWithInputOutputStorageClass) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Float8UnsignedE8M0EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in %out
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %in Location 0
+OpDecorate %out Location 0
+%void = OpTypeVoid
+%e8m0 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+%in_ptr = OpTypePointer Input %e8m0
+%out_ptr = OpTypePointer Output %e8m0
+%in = OpVariable %in_ptr Input
+%out = OpVariable %out_ptr Output
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeFloat-10823"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("FP8 or OCP microscaling OpVariable <id> '2[%2]' must not be "
+                "declared with a Storage Class of Input or Output.\n"));
 }
 
 TEST_F(ValidateInterfacesTest,
@@ -2035,8 +2247,8 @@ OpFunctionEnd
               AnyVUID("VUID-StandaloneSpirv-OpTypeFloat-10823"));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("FP8 E4M3/E5M2 OpVariable <id> '2[%2]' must not be declared "
-                "with a Storage Class of Input or Output.\n"));
+      HasSubstr("FP8 or OCP microscaling OpVariable <id> '2[%2]' must not be "
+                "declared with a Storage Class of Input or Output.\n"));
 }
 
 TEST_F(ValidateInterfacesTest, VectorIdFragmentInputOutputPass) {

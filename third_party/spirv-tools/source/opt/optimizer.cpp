@@ -149,7 +149,9 @@ Optimizer& Optimizer::RegisterLegalizationPasses(bool preserve_interface) {
           .RegisterPass(CreateLocalSingleStoreElimPass())
           .RegisterPass(CreateAggressiveDCEPass(preserve_interface))
           .RegisterPass(CreateLocalMultiStoreElimPass())
+          .RegisterPass(CreateCombineAccessChainsPass())
           .RegisterPass(CreateAggressiveDCEPass(preserve_interface))
+          .RegisterPass(CreateLegalizeMultidimArrayPass())
           // Propagate constants to get as many constant conditions on branches
           // as possible.
           .RegisterPass(CreateCCPPass())
@@ -399,6 +401,8 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag,
     RegisterPass(CreateFoldSpecConstantOpAndCompositePass());
   } else if (pass_name == "loop-unswitch") {
     RegisterPass(CreateLoopUnswitchPass());
+  } else if (pass_name == "legalize-multidim-array") {
+    RegisterPass(CreateLegalizeMultidimArrayPass());
   } else if (pass_name == "scalar-replacement") {
     if (pass_args.size() == 0) {
       RegisterPass(CreateScalarReplacementPass(0));
@@ -461,6 +465,8 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag,
     RegisterPass(CreateReplaceInvalidOpcodePass());
   } else if (pass_name == "convert-relaxed-to-half") {
     RegisterPass(CreateConvertRelaxedToHalfPass());
+  } else if (pass_name == "convert-to-untyped") {
+    RegisterPass(CreateConvertToUntypedPass());
   } else if (pass_name == "relax-float-ops") {
     RegisterPass(CreateRelaxFloatOpsPass());
   } else if (pass_name == "simplify-instructions") {
@@ -715,7 +721,8 @@ bool Optimizer::Run(const uint32_t* original_binary,
       !context->module()->ContainsDebugInfo()) {
     std::vector<uint32_t> optimized_binary_with_nop;
     context->module()->ToBinary(&optimized_binary_with_nop,
-                                /* skip_nop = */ false);
+                                /* skip_nop = */ false,
+                                /* filter_duplicate_decorations = */ false);
     assert(optimized_binary_with_nop.size() == original_binary_size &&
            "Binary size unexpectedly changed despite the optimizer saying "
            "there was no change");
@@ -961,6 +968,11 @@ Optimizer::PassToken CreateLoopUnswitchPass() {
       MakeUnique<opt::LoopUnswitchPass>());
 }
 
+Optimizer::PassToken CreateLegalizeMultidimArrayPass() {
+  return MakeUnique<Optimizer::PassToken::Impl>(
+      MakeUnique<opt::LegalizeMultidimArrayPass>());
+}
+
 Optimizer::PassToken CreateRedundancyEliminationPass() {
   return MakeUnique<Optimizer::PassToken::Impl>(
       MakeUnique<opt::RedundancyEliminationPass>());
@@ -1043,6 +1055,11 @@ Optimizer::PassToken CreateUpgradeMemoryModelPass() {
 Optimizer::PassToken CreateConvertRelaxedToHalfPass() {
   return MakeUnique<Optimizer::PassToken::Impl>(
       MakeUnique<opt::ConvertToHalfPass>());
+}
+
+Optimizer::PassToken CreateConvertToUntypedPass() {
+  return MakeUnique<Optimizer::PassToken::Impl>(
+      MakeUnique<opt::ConvertToUntyped>());
 }
 
 Optimizer::PassToken CreateRelaxFloatOpsPass() {

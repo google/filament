@@ -83,7 +83,7 @@ INSTANTIATE_TEST_SUITE_P(
         // 6. maximum spec id
         {"4294967295:0", true,
          VectorOfDescriptorSetAndBindingPairs({DescriptorSetAndBinding{
-             4294967295, 0}})},
+             4294967295u, 0}})},
         // 7. minimum spec id
         {"0:100", true,
          VectorOfDescriptorSetAndBindingPairs({DescriptorSetAndBinding{0,

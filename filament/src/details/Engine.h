@@ -810,6 +810,10 @@ public:
             // buffer. It will also name the render passes with the top group marker so they show up
             // in RenderDoc and other GPU debugging tools.
             std::atomic<bool> enable_debug_utils_names{ false };
+            // When enabled (d.vulkan.renderdoc_capture), the Vulkan backend enables the RenderDoc
+            // capture layer and disables features incompatible with RenderDoc (such as lazily
+            // allocated memory and non-replayable external memory types) to support frame captures.
+            std::atomic<bool> enable_renderdoc_capture{ false };
         } vulkan;
         matdbg::DebugServer* server = nullptr;
         FgviewerManager* fgviewer = nullptr;

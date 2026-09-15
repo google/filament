@@ -33,7 +33,7 @@ if %VS_VERSION% == 2022 (
 )
 
 cd %SRC%
-python utils/git-sync-deps --treeless
+python utils/git-sync-deps --prefix=external --treeless
 
 mkdir build
 cd build

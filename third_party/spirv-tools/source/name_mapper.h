@@ -63,9 +63,12 @@ class FriendlyNameMapper {
  public:
   // Construct a friendly name mapper, and determine friendly names for each
   // defined Id in the specified module.  The module is specified by the code
-  // wordCount, and should be parseable in the specified context.
+  // wordCount, and should be parseable in the specified context.  The options
+  // bitmask is passed to the binary parser; pass
+  // SPV_BINARY_TO_TEXT_OPTION_HANDLE_UNKNOWN_OPCODES to tolerate unknown
+  // opcodes in the module.
   FriendlyNameMapper(const spv_const_context context, const uint32_t* code,
-                     const size_t wordCount);
+                     const size_t wordCount, uint32_t options = 0);
 
   // Returns a NameMapper which maps ids to the friendly names parsed from the
   // module provided to the constructor.

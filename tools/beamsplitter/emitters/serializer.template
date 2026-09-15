@@ -2,13 +2,14 @@
 
 #include "Settings_generated.h"
 
+#include "jsonParseUtils.h"
+
 #include <filament/Options.h>
+
 #include <utils/Log.h>
 
-#include <ostream>
 #include <cstring>
-
-#include "jsonParseUtils.h"
+#include <ostream>
 
 using namespace utils;
 
@@ -33,18 +34,6 @@ std::ostream& writeJson(std::ostream& oss, const float* v, int count) {
     return oss;
 }
 
-std::ostream& operator<<(std::ostream& out, math::float2 v) {
-    return writeJson(out, v.v, 2);
-}
-
-std::ostream& operator<<(std::ostream& out, math::float3 v) {
-    return writeJson(out, v.v, 3);
-}
-
-std::ostream& operator<<(std::ostream& out, math::float4 v) {
-    return writeJson(out, v.v, 4);
-}
-
 std::ostream& writeJson(std::ostream& oss, const double* v, int count) {
     oss << "[";
     for (int i = 0; i < count; i++) {
@@ -55,6 +44,18 @@ std::ostream& writeJson(std::ostream& oss, const double* v, int count) {
     }
     oss << "]";
     return oss;
+}
+
+std::ostream& operator<<(std::ostream& out, math::float2 v) {
+    return writeJson(out, v.v, 2);
+}
+
+std::ostream& operator<<(std::ostream& out, math::float3 v) {
+    return writeJson(out, v.v, 3);
+}
+
+std::ostream& operator<<(std::ostream& out, math::float4 v) {
+    return writeJson(out, v.v, 4);
 }
 
 std::ostream& operator<<(std::ostream& out, math::double4 v) {

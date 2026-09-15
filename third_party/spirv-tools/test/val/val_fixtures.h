@@ -56,6 +56,13 @@ class ValidateBase : public ::testing::Test,
   // This function overwrites the word at the given index with a new word.
   void OverwriteAssembledBinary(uint32_t index, uint32_t word);
 
+  // Overwrites the ID bound.
+  void OverwriteIdBound(uint32_t bound) {
+    // The ID bound is in the header at word index 3.
+    // SPIR-V section 2.3 Physical Layout of a sPIR-V Module and Instruction.
+    OverwriteAssembledBinary(3, bound);
+  }
+
   // Performs validation on the SPIR-V code.
   spv_result_t ValidateInstructions(spv_target_env env = SPV_ENV_UNIVERSAL_1_0);
 

@@ -33,7 +33,9 @@ using ValidateComposites = spvtest::ValidateBase<bool>;
 std::string GenerateShaderCode(
     const std::string& body,
     const std::string& capabilities_and_extensions = "",
-    const std::string& execution_model = "Fragment") {
+    const std::string& execution_model = "Fragment",
+    const std::string& extra_types = "",
+    const std::string& memory_model = "Logical GLSL450") {
   std::ostringstream ss;
   ss << R"(
 OpCapability Shader
@@ -41,7 +43,7 @@ OpCapability Float64
 )";
 
   ss << capabilities_and_extensions;
-  ss << "OpMemoryModel Logical GLSL450\n";
+  ss << "OpMemoryModel " << memory_model << "\n";
   ss << "OpEntryPoint " << execution_model << " %main \"main\"\n";
   if (execution_model == "Fragment") {
     ss << "OpExecutionMode %main OriginUpperLeft\n";
@@ -93,7 +95,11 @@ OpCapability Float64
 
 %ptr_big_struct = OpTypePointer Uniform %big_struct
 %var_big_struct = OpVariable %ptr_big_struct Uniform
+)";
 
+  ss << extra_types;
+
+  ss << R"(
 %main = OpFunction %void None %func
 %main_entry = OpLabel
 )";
@@ -534,6 +540,201 @@ TEST_F(ValidateComposites, CompositeConstructStructWrongConstituent) {
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Expected Constituent type to be equal to the "
                         "corresponding member type of Result Type struct"));
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateVectorGood) {
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32vec4 %f32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\n")
+          .c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateMatrixGood) {
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32mat22 %f32vec2_01
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\n",
+                         "Fragment")
+          .c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateArrayGood) {
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32vec2arr3 %f32vec2_12
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\n")
+          .c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateStructGood) {
+  const std::string copy_types = R"(
+%f32struct = OpTypeStruct %f32 %f32 %f32
+)";
+
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32struct %f32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\n",
+                         "Fragment", copy_types)
+          .c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateCoopMatGood) {
+  const std::string extra_types = R"(
+%u32_8 = OpConstant %u32 8
+%u32_16 = OpConstant %u32 16
+%subgroup = OpConstant %u32 3
+%useA = OpConstant %u32 0
+%f32mat_nv = OpTypeCooperativeMatrixNV %f32 %subgroup %u32_8 %u32_8
+%f32mat_khr = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_16 %u32_16 %useA
+)";
+
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32mat_nv %f32_0
+%val2 = OpCompositeConstructReplicateEXT %f32mat_khr %f32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\n"
+                         "OpCapability CooperativeMatrixNV\n"
+                         "OpCapability CooperativeMatrixKHR\n"
+                         "OpCapability VulkanMemoryModel\n"
+                         "OpCapability Float16\n"
+                         "OpExtension \"SPV_EXT_replicated_composites\"\n"
+                         "OpExtension \"SPV_NV_cooperative_matrix\"\n"
+                         "OpExtension \"SPV_KHR_cooperative_matrix\"\n"
+                         "OpExtension \"SPV_KHR_vulkan_memory_model\"\n",
+                         "Fragment", extra_types, "Logical Vulkan")
+          .c_str(),
+      SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateTensorGood) {
+  const std::string extra_types = R"(
+%arr = OpTypeArray %u32 %u32_1
+%c_arr = OpConstantNull %arr
+%tensor = OpTypeTensorARM %f32 %u32_1 %c_arr
+)";
+
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %tensor %f32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpCapability "
+                         "TensorsARM\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\nOpExtension "
+                         "\"SPV_ARM_tensors\"\n",
+                         "Fragment", extra_types)
+          .c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateCoopMatWrongOperand) {
+  const std::string extra_types = R"(
+%u32_8 = OpConstant %u32 8
+%subgroup = OpConstant %u32 3
+%f32mat_nv = OpTypeCooperativeMatrixNV %f32 %subgroup %u32_8 %u32_8
+)";
+
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32mat_nv %u32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\n"
+                         "OpCapability CooperativeMatrixNV\n"
+                         "OpCapability Float16\n"
+                         "OpExtension \"SPV_EXT_replicated_composites\"\n"
+                         "OpExtension \"SPV_NV_cooperative_matrix\"\n",
+                         "Fragment", extra_types)
+          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected Value type to be equal to the result's element type"));
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateTensorWrongOperand) {
+  const std::string extra_types = R"(
+%tensor = OpTypeTensorARM %f32
+)";
+
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %tensor %u32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpCapability "
+                         "TensorsARM\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\nOpExtension "
+                         "\"SPV_ARM_tensors\"\n",
+                         "Fragment", extra_types)
+          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected Value type to be equal to the result's element type"));
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateWrongOperandType) {
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32vec4 %u32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\n")
+          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected Value type to be equal to the result's element type"));
+}
+
+TEST_F(ValidateComposites, CompositeConstructReplicateNotComposite) {
+  const std::string body = R"(
+%val1 = OpCompositeConstructReplicateEXT %f32 %f32_0
+)";
+
+  CompileSuccessfully(
+      GenerateShaderCode(body,
+                         "OpCapability ReplicatedCompositesEXT\nOpExtension "
+                         "\"SPV_EXT_replicated_composites\"\n")
+          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to be a composite type"));
 }
 
 TEST_F(ValidateComposites, CopyObjectSuccess) {
@@ -3464,6 +3665,66 @@ OpFunctionEnd)";
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Opcode ExtractSubArrayQCOM requires the type of the "
                         "start index operand be 32-bit OpTypeInt"));
+}
+
+TEST_F(ValidateComposites, VectorShuffleNotVectorOp1) {
+  const std::string spirv = R"(
+OpCapability ClipDistance
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%67 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%v3float = OpTypeVector %float 3
+%_ptr_Function_float = OpTypePointer Function %float
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%3 = OpVariable %_ptr_Input_v4float Input
+%func = OpFunction %void None %67
+%label = OpLabel
+%43 = OpVariable %_ptr_Function_float Function
+%373 = OpLoad %v4float %3
+%shuffle = OpVectorShuffle %v2float %1 %373 538976288 538976288
+%422 = OpLoad %v3float %43
+OpReturnValue %422
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The type of Vector 1 must be a vector type"));
+}
+
+TEST_F(ValidateComposites, VectorShuffleNotVectorOp2) {
+  const std::string spirv = R"(
+OpCapability ClipDistance
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%67 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%v3float = OpTypeVector %float 3
+%_ptr_Function_float = OpTypePointer Function %float
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%3 = OpVariable %_ptr_Input_v4float Input
+%func = OpFunction %void None %67
+%label = OpLabel
+%43 = OpVariable %_ptr_Function_float Function
+%373 = OpLoad %v4float %3
+%shuffle = OpVectorShuffle %v2float %373 %1 538976288 538976288
+%422 = OpLoad %v3float %43
+OpReturnValue %422
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The type of Vector 2 must be a vector type"));
 }
 
 }  // namespace

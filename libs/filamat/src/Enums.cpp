@@ -56,6 +56,9 @@ std::unordered_map<std::string_view, Property> Enums::mStringToProperty = {
         { "clipSpacePosition",      Property::CLIP_SPACE_POSITION },
         { "secondRoughness",        Property::SECOND_ROUGHNESS },
         { "secondRoughnessWeight",  Property::SECOND_ROUGHNESS_WEIGHT },
+        { "iridescence",            Property::IRIDESCENCE },
+        { "iridescenceIor",         Property::IRIDESCENCE_IOR },
+        { "iridescenceThickness",   Property::IRIDESCENCE_THICKNESS },
 };
 
 template <>

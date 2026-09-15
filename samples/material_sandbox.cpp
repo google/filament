@@ -20,6 +20,7 @@
 #include "common/SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/MeshAssimp.h>
@@ -72,6 +73,7 @@ struct App {
 Scene* g_scene = nullptr;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
+filament::app::AssetLoader* g_assetLoader = nullptr;
 std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
 SandboxParameters g_params;
 ColorGradingOptions g_lastColorGradingOptions;
@@ -100,6 +102,7 @@ GroundPlane g_groundPlane;
 
 void cleanup(Engine* engine, View*, Scene*) {
     g_meshSet.reset(nullptr);
+    g_assetLoader = nullptr;
 
     if (g_groundPlane.renderable) {
         engine->destroy(g_groundPlane.renderable);
@@ -139,7 +142,7 @@ void cleanup(Engine* engine, View*, Scene*) {
 void setup(Engine* engine, View*, Scene* scene) {
     g_scene = scene;
 
-    g_meshSet = std::make_unique<MeshAssimp>(*engine);
+    g_meshSet = std::make_unique<MeshAssimp>(*engine, g_assetLoader);
 
     createInstances(g_params, *engine);
 
@@ -998,6 +1001,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     g_config = config;
+    g_assetLoader = loader;
     g_shadowPlane = config.getBool("shadow-plane");
     g_singleMode = config.getBool("single-mode");
     config.dirt = config.getString("dirt");
@@ -1048,8 +1052,10 @@ int main(const int argc, char* argv[]) {
     }
 
     config.title = "Material Sandbox";
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto fApp = createSampleApp(config, dm.get(), loader);
     fApp->run();
+    delete loader;
     return 0;
 }
 #endif

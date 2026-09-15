@@ -78,5 +78,15 @@ std::ostream& operator<<(std::ostream& out, const BitVector& bv) {
   return out;
 }
 
+bool BitVector::operator==(const BitVector& other) const {
+  size_t max_size = std::max(bits_.size(), other.bits_.size());
+  for (size_t i = 0; i < max_size; ++i) {
+    BitContainer b1 = (i < bits_.size()) ? bits_[i] : 0;
+    BitContainer b2 = (i < other.bits_.size()) ? other.bits_[i] : 0;
+    if (b1 != b2) return false;
+  }
+  return true;
+}
+
 }  // namespace utils
 }  // namespace spvtools

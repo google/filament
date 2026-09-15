@@ -543,6 +543,17 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             continue;
         }
 
+        // an asynchronously built buffer only owns backend resources once its creation
+        // succeeded; recording one that is still creating, or whose creation was canceled, would
+        // bake handles to resources that were never generated into the render primitive.
+        FILAMENT_CHECK_PRECONDITION(entry.vertices->isCreationComplete())
+                << "[entity=" << entity.getId() << ", primitive @ " << i
+                << "] the VertexBuffer's creation is still in progress or was canceled";
+
+        FILAMENT_CHECK_PRECONDITION(!entry.indices || entry.indices->isCreationComplete())
+                << "[entity=" << entity.getId() << ", primitive @ " << i
+                << "] the IndexBuffer's creation is still in progress or was canceled";
+
         // we want a feature level violation to be a hard error (exception if enabled, or crash)
         int const activeFeatureLevel = static_cast<int>(engine.getActiveFeatureLevel());
         FILAMENT_CHECK_PRECONDITION(downcast(engine).hasFeatureLevel(material->getFeatureLevel()))

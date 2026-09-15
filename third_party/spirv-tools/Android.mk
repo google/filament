@@ -53,10 +53,13 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_debug.cpp \
 		source/val/validate_decorations.cpp \
 		source/val/validate_derivatives.cpp \
+		source/val/validate_dot_product.cpp \
+		source/val/validate_explicit_layout.cpp \
 		source/val/validate_extensions.cpp \
 		source/val/validate_execution_limitations.cpp \
 		source/val/validate_function.cpp \
 		source/val/validate_graph.cpp \
+		source/val/validate_group.cpp \
 		source/val/validate_id.cpp \
 		source/val/validate_image.cpp \
 		source/val/validate_interfaces.cpp \
@@ -71,6 +74,7 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_logical_pointers.cpp \
 		source/val/validate_logicals.cpp \
 		source/val/validate_non_uniform.cpp \
+		source/val/validate_pipe.cpp \
 		source/val/validate_primitives.cpp \
 		source/val/validate_ray_query.cpp \
 		source/val/validate_ray_tracing.cpp \
@@ -102,6 +106,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/control_dependence.cpp \
 		source/opt/convert_to_sampled_image_pass.cpp \
 		source/opt/convert_to_half_pass.cpp \
+		source/opt/convert_to_untyped.cpp \
 		source/opt/copy_prop_arrays.cpp \
 		source/opt/dataflow.cpp \
 		source/opt/dead_branch_elim_pass.cpp \
@@ -142,6 +147,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/invocation_interlock_placement_pass.cpp \
 		source/opt/ir_context.cpp \
 		source/opt/ir_loader.cpp \
+		source/opt/legalize_multidim_array_pass.cpp \
 		source/opt/licm_pass.cpp \
 		source/opt/liveness.cpp \
 		source/opt/local_access_chain_convert_pass.cpp \
@@ -218,6 +224,7 @@ $(1)/core_tables_header.inc \
 	$(GRAMMAR_DIR)/extinst.debuginfo.grammar.json \
 	$(GRAMMAR_DIR)/extinst.glsl.std.450.grammar.json \
 	$(GRAMMAR_DIR)/extinst.nonsemantic.clspvreflection.grammar.json \
+	$(GRAMMAR_DIR)/extinst.nonsemantic.graph.debuginfo.grammar.json \
 	$(GRAMMAR_DIR)/extinst.nonsemantic.shader.debuginfo.100.grammar.json \
 	$(GRAMMAR_DIR)/extinst.nonsemantic.vkspreflection.grammar.json \
 	$(GRAMMAR_DIR)/extinst.opencl.debuginfo.100.grammar.json \

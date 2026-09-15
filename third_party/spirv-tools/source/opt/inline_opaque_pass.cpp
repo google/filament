@@ -16,6 +16,7 @@
 
 #include "source/opt/inline_opaque_pass.h"
 
+#include <iterator>
 #include <utility>
 
 namespace spvtools {
@@ -67,6 +68,10 @@ Pass::Status InlineOpaquePass::InlineOpaque(Function* func) {
   for (auto bi = func->begin(); bi != func->end(); ++bi) {
     for (auto ii = bi->begin(); ii != bi->end();) {
       if (IsInlinableFunctionCall(&*ii) && HasOpaqueArgsOrReturn(&*ii)) {
+        // Save instruction before the call to avoid redundant re-scanning.
+        Instruction* prev_inst =
+            (ii == bi->begin()) ? nullptr : &*std::prev(ii);
+
         // Inline call.
         std::vector<std::unique_ptr<BasicBlock>> newBlocks;
         std::vector<std::unique_ptr<Instruction>> newVars;
@@ -79,18 +84,27 @@ Pass::Status InlineOpaquePass::InlineOpaque(Function* func) {
         if (newBlocks.size() > 1) UpdateSucceedingPhis(newBlocks);
         // Replace old calling block with new block(s).
         bi = bi.Erase();
+
+        for (auto& bb : newBlocks) {
+          bb->SetParent(func);
+        }
         bi = bi.InsertBefore(&newBlocks);
         // Insert new function variables.
         if (newVars.size() > 0)
           func->begin()->begin().InsertBefore(std::move(newVars));
-        // Restart inlining at beginning of calling block.
-        ii = bi->begin();
+        // Restart inlining at the first instruction of the inlined code.
+        ii = prev_inst ? ++InstructionList::iterator(prev_inst) : bi->begin();
         modified = true;
       } else {
         ++ii;
       }
     }
   }
+
+  if (modified) {
+    FixDebugDeclares(func);
+  }
+
   return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 

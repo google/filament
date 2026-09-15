@@ -45,6 +45,11 @@ OpCapability Shader
   } else if (execution_model == "Geometry") {
     ss << "OpExecutionMode %main InputPoints\n";
     ss << "OpExecutionMode %main OutputPoints\n";
+  } else if (execution_model == "MeshEXT") {
+    ss << "OpExecutionMode %main OutputPoints\n";
+    ss << "OpExecutionMode %main OutputPrimitivesEXT 124\n";
+    ss << "OpExecutionMode %main OutputVertices 5\n";
+    ss << "OpExecutionMode %main LocalSize 1 1 1\n";
   } else if (execution_model == "GLCompute") {
     ss << "OpExecutionMode %main LocalSize 1 1 1\n";
   }
@@ -89,6 +94,11 @@ OpCapability Shader
 %workgroup_memory = OpConstant %u32 256
 %image_memory = OpConstant %u32 2048
 %uniform_image_memory = OpConstant %u32 2112
+%acquire_uniform_memory = OpConstant %u32 66
+%acquire_workgroup_memory = OpConstant %u32 258
+%release_uniform_memory = OpConstant %u32 68
+%release_workgroup_memory = OpConstant %u32 260
+%release_workgroup_memory_volatile = OpConstant %u32 33028
 
 %main = OpFunction %void None %func
 %main_entry = OpLabel
@@ -1272,6 +1282,209 @@ TEST_F(ValidateBarriers, OpControlBarrierShaderCallRayGenFailure) {
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("in Vulkan environment Execution Scope is limited to "
                         "Workgroup and Subgroup"));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierArriveWaitGLComputeSuccess) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %workgroup %workgroup %release_workgroup_memory
+OpControlBarrierWaitEXT %workgroup %workgroup %acquire_workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCodeImpl(body,
+                                             // capabilities_and_extensions
+                                             R"(
+                                               OpCapability VulkanMemoryModelKHR
+                                               OpCapability SplitBarrierEXT
+                                               OpExtension "SPV_KHR_vulkan_memory_model"
+                                               OpExtension "SPV_EXT_split_barrier"
+                                             )",
+                                             // definitions
+                                             "",
+                                             // execution_model
+                                             "GLCompute",
+                                             // memory_model
+                                             "OpMemoryModel Logical VulkanKHR"),
+                      SPV_ENV_VULKAN_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierArriveWaitInvalidVolatile) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %workgroup %workgroup %release_workgroup_memory_volatile
+OpControlBarrierWaitEXT %workgroup %workgroup %acquire_workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCodeImpl(body,
+                                             // capabilities_and_extensions
+                                             R"(
+                                               OpCapability VulkanMemoryModelKHR
+                                               OpCapability SplitBarrierEXT
+                                               OpExtension "SPV_KHR_vulkan_memory_model"
+                                               OpExtension "SPV_EXT_split_barrier"
+                                             )",
+                                             // definitions
+                                             "",
+                                             // execution_model
+                                             "GLCompute",
+                                             // memory_model
+                                             "OpMemoryModel Logical VulkanKHR"),
+                      SPV_ENV_VULKAN_1_1);
+
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-MemorySemantics-13551"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Memory Semantics with Volatile bit set must not be used with "
+                "barrier instructions"));
+}
+
+TEST_F(ValidateBarriers, SplitBarrierInvalidExecutionModel) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %workgroup %workgroup %release_workgroup_memory
+OpControlBarrierWaitEXT %workgroup %workgroup %acquire_workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body,
+                                         // capabilities_and_extensions
+                                         R"(
+                                           OpCapability MeshShadingEXT
+                                           OpCapability SplitBarrierEXT
+                                           OpExtension "SPV_EXT_mesh_shader"
+                                           OpExtension "SPV_EXT_split_barrier"
+                                         )",
+                                         // execution_model
+                                         "MeshEXT"),
+                      SPV_ENV_VULKAN_1_4);
+
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-SplitBarrierEXT-13552"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The SplitBarrierEXT capability must not be enabled in "
+                        "any stage other than GLCompute or Kernel."));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierArriveExecutionScope) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %device %workgroup %release_workgroup_memory
+OpControlBarrierWaitEXT %workgroup %workgroup %acquire_workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCodeImpl(body,
+                                             // capabilities_and_extensions
+                                             R"(
+                                               OpCapability VulkanMemoryModelKHR
+                                               OpCapability SplitBarrierEXT
+                                               OpExtension "SPV_KHR_vulkan_memory_model"
+                                               OpExtension "SPV_EXT_split_barrier"
+                                             )",
+                                             // definitions
+                                             "",
+                                             // execution_model
+                                             "GLCompute",
+                                             // memory_model
+                                             "OpMemoryModel Logical VulkanKHR"),
+                      SPV_ENV_VULKAN_1_1);
+
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpControlBarrierArriveEXT-13553"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("The execution Scope for OpControlBarrierArriveEXT and "
+                "OpControlBarrierWaitEXT must be Workgroup or Subgroup"));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierWaitExecutionScope) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %workgroup %workgroup %release_workgroup_memory
+OpControlBarrierWaitEXT %invocation %workgroup %acquire_workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCodeImpl(body,
+                                             // capabilities_and_extensions
+                                             R"(
+                                               OpCapability VulkanMemoryModelKHR
+                                               OpCapability SplitBarrierEXT
+                                               OpExtension "SPV_KHR_vulkan_memory_model"
+                                               OpExtension "SPV_EXT_split_barrier"
+                                             )",
+                                             // definitions
+                                             "",
+                                             // execution_model
+                                             "GLCompute",
+                                             // memory_model
+                                             "OpMemoryModel Logical VulkanKHR"),
+                      SPV_ENV_VULKAN_1_1);
+
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpControlBarrierArriveEXT-13553"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("The execution Scope for OpControlBarrierArriveEXT and "
+                "OpControlBarrierWaitEXT must be Workgroup or Subgroup"));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierArriveInvalidMemorySemantics) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %workgroup %workgroup %acquire_release_workgroup
+OpControlBarrierWaitEXT %workgroup %workgroup %acquire_workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCodeImpl(body,
+                                             // capabilities_and_extensions
+                                             R"(
+                                               OpCapability VulkanMemoryModelKHR
+                                               OpCapability SplitBarrierEXT
+                                               OpExtension "SPV_KHR_vulkan_memory_model"
+                                               OpExtension "SPV_EXT_split_barrier"
+                                             )",
+                                             // definitions
+                                             "",
+                                             // execution_model
+                                             "GLCompute",
+                                             // memory_model
+                                             "OpMemoryModel Logical VulkanKHR"),
+                      SPV_ENV_VULKAN_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-MemorySemantics-13556"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Memory Semantics must not have any non-relaxed memory order "
+                "set other than Release"));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierWaitInvalidMemorySemantics) {
+  const std::string body = R"(
+OpControlBarrierArriveEXT %workgroup %workgroup %release_workgroup_memory
+OpControlBarrierWaitEXT %workgroup %workgroup %acquire_release_workgroup
+)";
+
+  CompileSuccessfully(GenerateShaderCodeImpl(body,
+                                             // capabilities_and_extensions
+                                             R"(
+                                               OpCapability VulkanMemoryModelKHR
+                                               OpCapability SplitBarrierEXT
+                                               OpExtension "SPV_KHR_vulkan_memory_model"
+                                               OpExtension "SPV_EXT_split_barrier"
+                                             )",
+                                             // definitions
+                                             "",
+                                             // execution_model
+                                             "GLCompute",
+                                             // memory_model
+                                             "OpMemoryModel Logical VulkanKHR"),
+                      SPV_ENV_VULKAN_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-MemorySemantics-13557"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Memory Semantics must not have any non-relaxed memory order "
+                "set other than Acquire"));
 }
 
 }  // namespace

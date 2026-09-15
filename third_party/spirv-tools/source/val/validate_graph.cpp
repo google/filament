@@ -17,6 +17,7 @@
 #include <deque>
 
 #include "source/opcode.h"
+#include "source/spirv_target_env.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
@@ -55,6 +56,11 @@ bool IsGraphType(ValidationState_t& _, uint32_t id) {
     return false;
   }
   return true;
+}
+
+bool IsConstantInstruction(ValidationState_t& _, uint32_t id) {
+  auto def = _.FindDef(id);
+  return def && spvOpcodeIsConstant(def->opcode());
 }
 
 const uint32_t kGraphTypeIOStartWord = 3;
@@ -214,8 +220,9 @@ spv_result_t ValidateGraph(ValidationState_t& _, const Instruction* inst) {
 }
 
 spv_result_t ValidateGraphInput(ValidationState_t& _, const Instruction* inst) {
+  const uint32_t input_index_id = inst->GetOperandAs<uint32_t>(2);
   // Check type of InputIndex
-  auto input_index_inst = _.FindDef(inst->GetOperandAs<uint32_t>(2));
+  auto input_index_inst = _.FindDef(input_index_id);
   if (!input_index_inst ||
       !_.IsIntScalarType(input_index_inst->type_id(), 32)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -226,13 +233,28 @@ spv_result_t ValidateGraphInput(ValidationState_t& _, const Instruction* inst) {
   bool has_element_index = inst->operands().size() > 3;
 
   // Check type of ElementIndex
+  uint32_t element_index_id = 0;
   if (has_element_index) {
-    auto element_index_inst = _.FindDef(inst->GetOperandAs<uint32_t>(3));
+    element_index_id = inst->GetOperandAs<uint32_t>(3);
+    auto element_index_inst = _.FindDef(element_index_id);
     if (!element_index_inst ||
         !_.IsIntScalarType(element_index_inst->type_id(), 32)) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << spvOpcodeString(inst->opcode())
              << " ElementIndex must be a 32-bit integer.";
+    }
+  }
+
+  if (spvIsVulkanEnv(_.context()->target_env)) {
+    if (!IsConstantInstruction(_, input_index_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << _.VkErrorID(9931) << "OpGraphInputARM InputIndex must be the "
+             << "<id> of a constant instruction.";
+    }
+    if (has_element_index && !IsConstantInstruction(_, element_index_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << _.VkErrorID(9931) << "OpGraphInputARM ElementIndex must be "
+             << "the <id> of a constant instruction.";
     }
   }
 
@@ -328,8 +350,9 @@ spv_result_t ValidateGraphInput(ValidationState_t& _, const Instruction* inst) {
 
 spv_result_t ValidateGraphSetOutput(ValidationState_t& _,
                                     const Instruction* inst) {
+  const uint32_t output_index_id = inst->GetOperandAs<uint32_t>(1);
   // Check type of OutputIndex
-  auto output_index_inst = _.FindDef(inst->GetOperandAs<uint32_t>(1));
+  auto output_index_inst = _.FindDef(output_index_id);
   if (!output_index_inst ||
       !_.IsIntScalarType(output_index_inst->type_id(), 32)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -340,13 +363,28 @@ spv_result_t ValidateGraphSetOutput(ValidationState_t& _,
   bool has_element_index = inst->operands().size() > 2;
 
   // Check type of ElementIndex
+  uint32_t element_index_id = 0;
   if (has_element_index) {
-    auto element_index_inst = _.FindDef(inst->GetOperandAs<uint32_t>(2));
+    element_index_id = inst->GetOperandAs<uint32_t>(2);
+    auto element_index_inst = _.FindDef(element_index_id);
     if (!element_index_inst ||
         !_.IsIntScalarType(element_index_inst->type_id(), 32)) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << spvOpcodeString(inst->opcode())
              << " ElementIndex must be a 32-bit integer.";
+    }
+  }
+
+  if (spvIsVulkanEnv(_.context()->target_env)) {
+    if (!IsConstantInstruction(_, output_index_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << _.VkErrorID(9932) << "OpGraphSetOutputARM OutputIndex must "
+             << "be the <id> of a constant instruction.";
+    }
+    if (has_element_index && !IsConstantInstruction(_, element_index_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << _.VkErrorID(9932) << "OpGraphSetOutputARM ElementIndex must "
+             << "be the <id> of a constant instruction.";
     }
   }
 

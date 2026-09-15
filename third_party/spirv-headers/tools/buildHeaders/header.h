@@ -26,6 +26,7 @@ namespace spv {
         ELangLua,      // Lua
         ELangPython,   // Python
         ELangCSharp,   // CSharp
+        ELangJava,     // Java
         ELangD,        // D
         ELangBeef,     // Beef
 

@@ -21,6 +21,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -195,6 +196,13 @@ class Type {
   // Returns the number of components in a composite type.  Returns 0 for a
   // non-composite type.
   uint64_t NumberOfComponents() const;
+
+  // Returns the byte offset of the member of this type that is identified
+  // by |access_chain|.  The vector |access_chain| is a series of integers that
+  // are used to pick members as in the |OpCompositeExtract| instructions.
+  // Returns {} if the offset cannot be computed.
+  std::optional<uint32_t> GetByteOffset(
+      const std::vector<uint32_t>& access_chain) const;
 
   // A bunch of methods for casting this type to a given type. Returns this if
   // the cast can be done, nullptr otherwise.

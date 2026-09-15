@@ -16,8 +16,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstring>
-#include <tuple>
+#include <initializer_list>
 #include <vector>
 
 #include "source/opt/def_use_manager.h"
@@ -127,6 +128,11 @@ std::vector<uint32_t> ParseDefaultValueBitPattern(
       }
       return result;
     }
+  } else if (type->AsArray()) {
+    // This is only for OpSpecConstantDataKHR
+    // Since the length can be a spec constant as well,
+    // we just pass through the bit pattern
+    return std::vector<uint32_t>(input_bit_pattern);
   }
   result.clear();
   return result;
@@ -139,6 +145,7 @@ bool CanHaveSpecIdDecoration(const Instruction& inst) {
     case spv::Op::OpSpecConstant:
     case spv::Op::OpSpecConstantFalse:
     case spv::Op::OpSpecConstantTrue:
+    case spv::Op::OpSpecConstantDataKHR:
       return true;
     default:
       return false;
@@ -224,6 +231,9 @@ Pass::Status SetSpecConstantDefaultValuePass::Process() {
   constexpr uint32_t kOpDecorateSpecIdNumOperands = 3;
   // The in-operand index of the default value in a OpSpecConstant instruction.
   constexpr uint32_t kOpSpecConstantLiteralInOperandIndex = 0;
+  // The in-operand index of the default value in a OpSpecConstantData
+  // instruction.
+  constexpr uint32_t kOpSpecConstantDataLiteralInOperandIndex = 0;
 
   bool modified = false;
   // Scan through all the annotation instructions to find 'OpDecorate SpecId'
@@ -324,6 +334,23 @@ Pass::Status SetSpecConstantDefaultValuePass::Process() {
           modified = true;
         }
         break;
+      case spv::Op::OpSpecConstantDataKHR: {
+        if (spec_inst->GetInOperand(kOpSpecConstantDataLiteralInOperandIndex)
+                .words != bit_pattern) {
+          std::vector<Operand> operands;
+          // keep the result/type
+          operands.push_back(spec_inst->GetOperand(0u));
+          operands.push_back(spec_inst->GetOperand(1u));
+          // the validator is in charge of making sure the length matches
+          for (uint32_t word : bit_pattern) {
+            operands.emplace_back(SPV_OPERAND_TYPE_LITERAL_INTEGER,
+                                  std::initializer_list<uint32_t>{word});
+          }
+          spec_inst->ReplaceOperands(operands);
+          modified = true;
+        }
+        break;
+      }
       default:
         break;
     }
@@ -336,7 +363,8 @@ Pass::Status SetSpecConstantDefaultValuePass::Process() {
 // Returns true if the given char is ':', '\0' or considered as blank space
 // (i.e.: '\n', '\r', '\v', '\t', '\f' and ' ').
 bool IsSeparator(char ch) {
-  return std::strchr(":\0", ch) || std::isspace(ch) != 0;
+  return std::strchr(":\0", ch) ||
+         std::isspace(static_cast<unsigned char>(ch)) != 0;
 }
 
 std::unique_ptr<SetSpecConstantDefaultValuePass::SpecIdToValueStrMap>
@@ -348,7 +376,8 @@ SetSpecConstantDefaultValuePass::ParseDefaultValuesString(const char* str) {
   // The parsing loop, break when points to the end.
   while (*str) {
     // Find the spec id.
-    while (std::isspace(*str)) str++;  // skip leading spaces.
+    while (std::isspace(static_cast<unsigned char>(*str)))
+      str++;  // skip leading spaces.
     const char* entry_begin = str;
     while (!IsSeparator(*str)) str++;
     const char* entry_end = str;
@@ -380,7 +409,7 @@ SetSpecConstantDefaultValuePass::ParseDefaultValuesString(const char* str) {
     (*spec_id_to_value)[spec_id] = std::string(val_begin, val_end - val_begin);
 
     // Skip trailing spaces.
-    while (std::isspace(*str)) str++;
+    while (std::isspace(static_cast<unsigned char>(*str))) str++;
   }
 
   return spec_id_to_value;

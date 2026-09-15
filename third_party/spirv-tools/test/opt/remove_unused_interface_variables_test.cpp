@@ -179,6 +179,52 @@ OpFunctionEnd
                                                             true, true);
 }
 
+TEST_F(RemoveUnusedInterfaceVariablesTest,
+       DontEliminateUntypedVariableInterfaceVulkan12) {
+  const std::string spirv = R"(
+                               OpCapability Shader
+                               OpCapability SampledBuffer
+                               OpCapability ImageBuffer
+                               OpCapability Int64
+                               OpCapability DescriptorHeapEXT
+                               OpCapability UntypedPointersKHR
+                               OpExtension "SPV_EXT_descriptor_heap"
+                               OpExtension "SPV_KHR_untyped_pointers"
+                               OpMemoryModel Logical GLSL450
+                               OpEntryPoint Fragment %1 "main" %2
+; CHECK:                       OpEntryPoint Fragment %1 "main" %2
+                               OpExecutionMode %1 OriginUpperLeft
+                               OpDecorate %2 BuiltIn ResourceHeapEXT
+                               OpDecorateId %_runtimearr_type_buffer_ext ArrayStrideIdEXT %buffer_size
+                       %uint = OpTypeInt 32 0
+                      %float = OpTypeFloat 32
+                    %v4float = OpTypeVector %float 4
+                     %uint_0 = OpConstant %uint 0
+                     %uint_1 = OpConstant %uint 1
+       %type_untyped_pointer = OpTypeUntypedPointerKHR UniformConstant
+                       %void = OpTypeVoid
+                         %10 = OpTypeFunction %void
+          %type_buffer_image = OpTypeImage %float Buffer 2 0 0 1 Rgba32f
+        %type_buffer_image_0 = OpTypeImage %float Buffer 2 0 0 2 Rgba32f
+            %type_buffer_ext = OpTypeBufferEXT StorageBuffer
+                %buffer_size = OpConstantSizeOfEXT %uint %type_buffer_ext
+%_runtimearr_type_buffer_ext = OpTypeRuntimeArray %type_buffer_ext
+                          %2 = OpUntypedVariableKHR %type_untyped_pointer UniformConstant
+                          %1 = OpFunction %void None %10
+                          %3 = OpLabel
+                         %20 = OpUntypedAccessChainKHR %type_untyped_pointer %_runtimearr_type_buffer_ext %2 %uint_0
+                         %24 = OpUntypedAccessChainKHR %type_untyped_pointer %_runtimearr_type_buffer_ext %2 %uint_1
+                         %26 = OpLoad %type_buffer_image %20
+                         %28 = OpImageFetch %v4float %26 %uint_0 None
+                         %29 = OpLoad %type_buffer_image_0 %24
+                               OpImageWrite %29 %uint_0 %28 None
+                               OpReturn
+                               OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<RemoveUnusedInterfaceVariablesPass>(spirv, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

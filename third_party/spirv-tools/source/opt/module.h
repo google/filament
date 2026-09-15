@@ -114,7 +114,7 @@ class Module {
   inline void AddDebug3Inst(std::unique_ptr<Instruction> d);
 
   // Appends a debug info extension (OpenCL.DebugInfo.100,
-  // NonSemantic.Shader.DebugInfo.100, or DebugInfo) instruction to this module.
+  // NonSemantic.Shader.DebugInfo, or DebugInfo) instruction to this module.
   inline void AddExtInstDebugInfo(std::unique_ptr<Instruction> d);
 
   // Appends an annotation instruction to this module.
@@ -275,9 +275,12 @@ class Module {
   void ForEachInst(const std::function<void(const Instruction*)>& f,
                    bool run_on_debug_line_insts = false) const;
 
-  // Pushes the binary segments for this instruction into the back of *|binary|.
-  // If |skip_nop| is true and this is a OpNop, do nothing.
-  void ToBinary(std::vector<uint32_t>* binary, bool skip_nop) const;
+  // Pushes the binary segments for this module into the back of *`binary`.
+  // If `skip_nop` is true, OpNop instructions will not be added to binary.
+  // If `filter_duplicate_decorations` is true, duplicate decorations will not
+  // be added to the binary.
+  void ToBinary(std::vector<uint32_t>* binary, bool skip_nop,
+                bool filter_duplicate_decorations = true) const;
 
   // Returns 1 more than the maximum Id value mentioned in the module.
   uint32_t ComputeIdBound() const;
