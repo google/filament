@@ -36,7 +36,7 @@ namespace filament::backend {
 
 struct VulkanTexture;
 
-struct VulkanStream : public HwStream, fvkmemory::Resource {
+struct VulkanStream : public HwStream, fvkmemory::ThreadSafeResource {
 
     //-- These methods are only called from the frontend
     void acquire(const AcquiredImage& image) {
@@ -54,13 +54,11 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
     const AcquiredImage& getAcquired() const { return user_thread.mAcquired; }
 
     //-- These methods are only called from the backend thread
-    fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
-        if (auto itr = mTextures.find(ahb); itr != mTextures.end()) {
-            return itr->second;
-        }
-        return {};
-    }
-    void pushImage(void* ahb, fvkmemory::resource_ptr<VulkanTexture> tex) { mTextures[ahb] = tex; }
+    // destroyStream() is a deferred command, but updateStreams() records its work from the
+    // frontend. This means a command can be recorded for a stream that has already been destroyed
+    // by the time the command executes. This marker lets such commands detect that case.
+    void markDestroyed() { backend_thread.mDestroyed = true; }
+    bool isDestroyed() const { return backend_thread.mDestroyed; }
 
 private:
     // These are only called from the frontend
@@ -69,8 +67,10 @@ private:
         AcquiredImage mPrevious;
     } user_thread;
 
-    // #TODO b/442937292
-    std::unordered_map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
+    // These are only touched from the backend thread
+    struct {
+        bool mDestroyed = false;
+    } backend_thread;
 };
 
 struct VulkanTextureState : public fvkmemory::Resource {
