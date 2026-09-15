@@ -1733,6 +1733,7 @@ bool VulkanDriver::isTextureSwizzleSupported() {
 
 bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
     switch (format) {
+        case TextureFormat::STENCIL8:
         case TextureFormat::DEPTH16:
         case TextureFormat::DEPTH24:
         case TextureFormat::DEPTH32F:
@@ -1761,7 +1762,10 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     }
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(mPlatform->getPhysicalDevice(), vkformat, &info);
-    return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0;
+    VkFormatFeatureFlags const requiredFeature = isDepthFormat(format) || isStencilFormat(format)
+            ? VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+            : VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+    return (info.optimalTilingFeatures & requiredFeature) != 0;
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
