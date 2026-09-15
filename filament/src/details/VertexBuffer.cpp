@@ -157,6 +157,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(StaticString const& name) noe
     return BuilderNameMixin::name(name);
 }
 
+VertexBuffer::Builder& VertexBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
         AsyncCompletionCallback callback, void* user) noexcept {
     mImpl->mAsynchronous = true;
@@ -415,10 +419,13 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 
 void FVertexBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    if (!mBufferObjectsEnabled || mAdvancedSkinningEnabled) {
+    if (!mBufferObjectsEnabled) {
         for (BufferObjectHandle const& bo : mBufferObjects) {
             driver.destroyBufferObject(bo);
         }
+    } else if (mAdvancedSkinningEnabled) {
+        driver.destroyBufferObject(mBufferObjects[mAttributes[BONE_INDICES].buffer]);
+        driver.destroyBufferObject(mBufferObjects[mAttributes[BONE_WEIGHTS].buffer]);
     }
     driver.destroyVertexBuffer(mHandle);
     engine.getVertexBufferInfoFactory().destroy(driver, mVertexBufferInfoHandle);

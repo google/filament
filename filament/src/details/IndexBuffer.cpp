@@ -71,6 +71,10 @@ IndexBuffer::Builder& IndexBuffer::Builder::name(utils::StaticString const& name
     return BuilderNameMixin::name(name);
 }
 
+IndexBuffer::Builder& IndexBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* handler,
         AsyncCompletionCallback callback, void* user) noexcept {
     mImpl->mAsynchronous = true;

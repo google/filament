@@ -16,6 +16,8 @@
 
 #include "common/arguments.h"
 
+#include "generated/resources/monkey.h"
+
 #include <filameshio/MeshReader.h>
 
 #include <filamentapp/AssetLoader.h>
@@ -84,101 +86,131 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto app = std::make_shared<App>();
     app->config = config;
     utils::CString nm = config.getString("normal-map");
-    if (!nm.empty()) g_normalConfig.normalMap = nm;
+    if (!nm.empty()) {
+        g_normalConfig.normalMap = nm;
+    }
     utils::CString cnm = config.getString("clearcoat-normal-map");
-    if (!cnm.empty()) g_normalConfig.clearCoatNormalMap = cnm;
+    if (!cnm.empty()) {
+        g_normalConfig.clearCoatNormalMap = cnm;
+    }
     utils::CString bm = config.getString("basecolor-map");
-    if (!bm.empty()) g_normalConfig.baseColorMap = bm;
+    if (!bm.empty()) {
+        g_normalConfig.baseColorMap = bm;
+    }
+
+    if (g_normalConfig.normalMap.empty()) {
+        g_normalConfig.normalMap = "assets/models/monkey/normal.png";
+    }
+    if (g_normalConfig.baseColorMap.empty()) {
+        g_normalConfig.baseColorMap = "assets/models/monkey/color.png";
+    }
     g_meshScale = config.getFloat("scale", 1.0f);
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
         if (app->baseColorMap) {
             engine->destroy(app->baseColorMap);
+            app->baseColorMap = nullptr;
         }
         if (app->normalMap) {
             engine->destroy(app->normalMap);
+            app->normalMap = nullptr;
         }
         if (app->clearCoatNormalMap) {
             engine->destroy(app->clearCoatNormalMap);
+            app->clearCoatNormalMap = nullptr;
         }
         EntityManager& em = EntityManager::get();
         for (auto mesh: app->meshes) {
-            engine->destroy(mesh.vertexBuffer);
-            engine->destroy(mesh.indexBuffer);
-            engine->destroy(mesh.renderable);
-            em.destroy(mesh.renderable);
+            if (mesh.vertexBuffer) {
+                engine->destroy(mesh.vertexBuffer);
+            }
+            if (mesh.indexBuffer) {
+                engine->destroy(mesh.indexBuffer);
+            }
+            if (mesh.renderable) {
+                engine->destroy(mesh.renderable);
+                em.destroy(mesh.renderable);
+            }
         }
+        app->meshes.clear();
 
         std::vector<filament::MaterialInstance*> materialList(
                 app->materialInstances.numRegistered());
         app->materialInstances.getRegisteredMaterials(materialList.data());
         for (auto material: materialList) {
-            engine->destroy(material);
+            if (material) {
+                engine->destroy(material);
+            }
         }
         app->materialInstances.unregisterAll();
-        engine->destroy(app->material);
+        if (app->material) {
+            engine->destroy(app->material);
+            app->material = nullptr;
+        }
 
-        engine->destroy(app->light);
-        em.destroy(app->light);
+        if (app->light) {
+            engine->destroy(app->light);
+            em.destroy(app->light);
+            app->light = Entity{};
+        }
     };
 
-    auto setup = [app](Engine* engine, View*, Scene* scene) {
-        auto loadNormalMap = [](Engine* engine, Texture** normalMap, const utils::CString& path) {
+    auto setup = [app, loader](Engine* engine, View*, Scene* scene) {
+        auto loadNormalMap = [loader](Engine* engine, Texture** normalMap,
+                                     const utils::CString& path) {
             if (!path.empty()) {
-                Path p(path.c_str());
-                if (p.exists()) {
-                    int w, h, n;
-                    unsigned char* data = stbi_load(p.getAbsolutePath().c_str(), &w, &h, &n, 3);
-                    if (data != nullptr) {
-                        *normalMap = Texture::Builder()
-                                             .width(uint32_t(w))
-                                             .height(uint32_t(h))
-                                             .levels(0xff)
-                                             .format(Texture::InternalFormat::RGB8)
-                                             .usage(Texture::Usage::DEFAULT |
-                                                     Texture::Usage::GEN_MIPMAPPABLE)
-                                             .build(*engine);
-                        Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
-                                Texture::Format::RGB, Texture::Type::UBYTE,
-                                (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
-                        (*normalMap)->setImage(*engine, 0, std::move(buffer));
-                        (*normalMap)->generateMipmaps(*engine);
-                    } else {
-                        std::cout << "The normal map " << p << " could not be loaded" << std::endl;
-                    }
+                int w = 0, h = 0, n = 0;
+                unsigned char* data = nullptr;
+                auto buf = loader->load(path.c_str());
+                if (!buf.empty()) {
+                    data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
+                }
+                if (data != nullptr) {
+                    *normalMap = Texture::Builder()
+                                         .width(uint32_t(w))
+                                         .height(uint32_t(h))
+                                         .levels(0xff)
+                                         .format(Texture::InternalFormat::RGB8)
+                                         .usage(Texture::Usage::DEFAULT |
+                                                 Texture::Usage::GEN_MIPMAPPABLE)
+                                         .build(*engine);
+                    Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
+                            Texture::Format::RGB, Texture::Type::UBYTE,
+                            (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
+                    (*normalMap)->setImage(*engine, 0, std::move(buffer));
+                    (*normalMap)->generateMipmaps(*engine);
                 } else {
-                    std::cout << "The normal map " << p << " does not exist" << std::endl;
+                    std::cout << "The normal map " << path.c_str() << " could not be loaded"
+                              << std::endl;
                 }
             }
         };
 
-        auto loadBaseColorMap = [app](Engine* engine) {
+        auto loadBaseColorMap = [app, loader](Engine* engine) {
             if (!g_normalConfig.baseColorMap.empty()) {
-                Path path(g_normalConfig.baseColorMap);
-                if (path.exists()) {
-                    int w, h, n;
-                    unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
-                    if (data != nullptr) {
-                        app->baseColorMap = Texture::Builder()
-                                                    .width(uint32_t(w))
-                                                    .height(uint32_t(h))
-                                                    .levels(0xff)
-                                                    .format(Texture::InternalFormat::SRGB8)
-                                                    .usage(Texture::Usage::DEFAULT |
-                                                            Texture::Usage::GEN_MIPMAPPABLE)
-                                                    .build(*engine);
-                        Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
-                                Texture::Format::RGB, Texture::Type::UBYTE,
-                                (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
-                        app->baseColorMap->setImage(*engine, 0, std::move(buffer));
-                        app->baseColorMap->generateMipmaps(*engine);
-                    } else {
-                        std::cout << "The base color map " << path.c_str() << " could not be loaded"
-                                  << std::endl;
-                    }
+                int w = 0, h = 0, n = 0;
+                unsigned char* data = nullptr;
+                auto buf = loader->load(g_normalConfig.baseColorMap.c_str());
+                if (!buf.empty()) {
+                    data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
+                }
+                if (data != nullptr) {
+                    app->baseColorMap = Texture::Builder()
+                                                .width(uint32_t(w))
+                                                .height(uint32_t(h))
+                                                .levels(0xff)
+                                                .format(Texture::InternalFormat::SRGB8)
+                                                .usage(Texture::Usage::DEFAULT |
+                                                        Texture::Usage::GEN_MIPMAPPABLE)
+                                                .build(*engine);
+                    Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
+                            Texture::Format::RGB, Texture::Type::UBYTE,
+                            (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
+                    app->baseColorMap->setImage(*engine, 0, std::move(buffer));
+                    app->baseColorMap->generateMipmaps(*engine);
                 } else {
-                    std::cout << "The base color map " << path.c_str() << " does not exist"
-                              << std::endl;
+                    std::cout << "The base color map " << g_normalConfig.baseColorMap.c_str()
+                              << " could not be loaded" << std::endl;
                 }
             }
         };
@@ -236,6 +268,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         MaterialBuilder builder;
         builder.name("DefaultMaterial")
                 .targetApi(MaterialBuilder::TargetApi::ALL)
+                .platform(MaterialBuilder::Platform::ALL)
 #ifndef NDEBUG
                 .optimization(MaterialBuilderBase::Optimization::NONE)
 #endif
@@ -261,40 +294,52 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         Package pkg = builder.build(engine->getJobSystem());
 
         app->material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
-        const utils::CString defaultMaterialName("DefaultMaterial");
-        app->materialInstances.registerMaterialInstance(defaultMaterialName,
-                app->material->createInstance());
+        if (app->material) {
+            const utils::CString defaultMaterialName("DefaultMaterial");
+            app->materialInstances.registerMaterialInstance(defaultMaterialName,
+                    app->material->createInstance());
 
-        TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
-        sampler.setAnisotropy(8.0f);
+            TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+                    TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+            sampler.setAnisotropy(8.0f);
 
-        if (hasNormalMap) {
-            app->materialInstances.getMaterialInstance(defaultMaterialName)
-                    ->setParameter("normalMap", app->normalMap, sampler);
-        }
-        if (hasClearCoatNormalMap) {
-            app->materialInstances.getMaterialInstance(defaultMaterialName)
-                    ->setParameter("clearCoatNormalMap", app->clearCoatNormalMap, sampler);
-        }
-        if (hasBaseColorMap) {
-            app->materialInstances.getMaterialInstance(defaultMaterialName)
-                    ->setParameter("baseColorMap", app->baseColorMap, sampler);
+            if (hasNormalMap) {
+                app->materialInstances.getMaterialInstance(defaultMaterialName)
+                        ->setParameter("normalMap", app->normalMap, sampler);
+            }
+            if (hasClearCoatNormalMap) {
+                app->materialInstances.getMaterialInstance(defaultMaterialName)
+                        ->setParameter("clearCoatNormalMap", app->clearCoatNormalMap, sampler);
+            }
+            if (hasBaseColorMap) {
+                app->materialInstances.getMaterialInstance(defaultMaterialName)
+                        ->setParameter("baseColorMap", app->baseColorMap, sampler);
+            }
         }
 
         std::vector<utils::Path> filenames;
         for (const auto& fname : app->config.positionalArgs) {
             filenames.push_back(utils::Path(fname.c_str_safe()));
         }
-        if (filenames.empty()) {
-            filenames.push_back(utils::Path(
-                    (FilamentApp2::getRootAssetsPath() + "assets/models/monkey/monkey.obj")
-                            .c_str()));
-        }
         auto& tcm = engine->getTransformManager();
         for (const auto& filename: filenames) {
-            MeshReader::Mesh mesh =
-                    MeshReader::loadMeshFromFile(engine, filename, app->materialInstances);
+            MeshReader::Mesh mesh;
+            auto buf = loader->load(filename);
+            if (!buf.empty()) {
+                mesh = MeshReader::loadMeshFromBuffer(engine, buf.data(), buf.size(), nullptr,
+                        nullptr, app->materialInstances);
+            }
+            if (mesh.renderable) {
+                auto ei = tcm.getInstance(mesh.renderable);
+                tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
+                                             tcm.getWorldTransform(ei));
+                scene->addEntity(mesh.renderable);
+                app->meshes.push_back(mesh);
+            }
+        }
+        if (app->meshes.empty()) {
+            MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA,
+                    MONKEY_SUZANNE_SIZE, nullptr, nullptr, app->materialInstances);
             if (mesh.renderable) {
                 auto ei = tcm.getInstance(mesh.renderable);
                 tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
@@ -337,23 +382,25 @@ int main(int argc, char* argv[]) {
     SampleConfig config;
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_NORMAL_MAP tests normal mapping and clearcoat normal mapping.",
-        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
+        .positionalArgsDescription = { "[mesh files (.obj, .fbx)]" },
+        .requiredPositionalArgCount = 0,
         .parameters = createAppParameters(),
     };
 
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
     for (const auto& fname : config.positionalArgs) {
         utils::Path filename(fname.c_str_safe());
-        if (!filename.exists()) {
+        if (!loader->exists(filename)) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
     }
 
     config.title = "Normal Mapping";
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
 
     return 0;
