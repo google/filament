@@ -65,7 +65,6 @@ static void recordCallback(void* user, AsyncCallStatus const status) {
 
 TEST_F(BackendTest, BasicAsyncFlow) {
     SKIP_IF(Backend::VULKAN, "Vulkan does not support asynchronous resource uploading");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 #if defined(FILAMENT_IOS) && !defined(FILAMENT_IOS_SIMULATOR)
     // A-series devices rasterize this scene differently from every other environment (measured
     // 2793888331 on an A10X), so there is no single hash this can be compared against.
@@ -97,6 +96,12 @@ TEST_F(BackendTest, BasicAsyncFlow) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
+            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
+            // real app does this every frame via the Renderer, but this low-level test bypasses
+            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
+            // need this, but calling it is harmless for them too.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -232,9 +237,9 @@ TEST_F(BackendTest, BasicAsyncFlow) {
 
 TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
     // The Vulkan backend does implement asynchronous uploading, but BackendTest only enables
-    // asynchronous mode for Metal and OpenGL (BackendTest.cpp), so there is no job queue here.
+    // asynchronous mode for Metal, OpenGL and WebGPU (BackendTest.cpp), so there is no job queues
+    // here.
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -246,6 +251,12 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // Backends whose async jobs are time-sliced on the driver thread (e.g. Vulkan and
+            // WebGPU's AmortizationWorker) only make progress when something calls tick(); a
+            // real app does this every frame via the Renderer, but this low-level test bypasses
+            // that loop entirely. Backends with a dedicated worker thread (OpenGL, Metal) don't
+            // need this, but calling it is harmless for them too.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
