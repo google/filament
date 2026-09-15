@@ -68,11 +68,6 @@ public:
     [[nodiscard]] Attachment const& getDepthAttachmentInfo() const { return mDepthAttachment; }
     [[nodiscard]] Attachment const& getStencilAttachmentInfo() const { return mStencilAttachment; }
 
-    [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
-            TargetBufferFlags buffer);
-    [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
-            TargetBufferFlags buffer, bool isTransient);
-
     [[nodiscard]] TargetBufferFlags getTargetFlags() const { return mTargetFlags; }
     void setTargetFlags( TargetBufferFlags value) { mTargetFlags = value; }
 

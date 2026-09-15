@@ -66,6 +66,10 @@ BufferObject::Builder& BufferObject::Builder::name(utils::StaticString const& na
     return BuilderNameMixin::name(name);
 }
 
+BufferObject::Builder& BufferObject::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 BufferObject* BufferObject::Builder::build(Engine& engine) {
     return downcast(engine).createBufferObject(*this);
 }
@@ -88,6 +92,11 @@ void FBufferObject::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
             << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+            << "buffer data cannot be null";
+    FILAMENT_CHECK_PRECONDITION(byteOffset + buffer.size <= mByteCount)
+            << "buffer overflow (offset=" << byteOffset
+            << ", size=" << buffer.size << ", capacity=" << mByteCount << ")";
 
     engine.getDriverApi().updateBufferObject(mHandle, std::move(buffer), byteOffset);
 }

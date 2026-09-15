@@ -51,7 +51,7 @@
 
 #include <imgui.h>
 
-#include "common/SampleConfig.h"
+#include <samples/SampleConfig.h>
 #include "generated/resources/resources.h"
 
 using namespace filament;
@@ -407,7 +407,8 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
     return 0;
 }

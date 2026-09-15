@@ -355,12 +355,12 @@ constexpr VkFormat EXT_VK_FORMATS[] = {
    VK_FORMAT_R16G16_S10_5_NV,
 };
 
-using UniformBufferBitmask = utils::bitset64;
-using SamplerBitmask = utils::bitset64;
+using UniformBufferBitmask = utils::bitset128;
+using SamplerBitmask = utils::bitset128;
 
 // We only have at most one input attachment, so this bitmask exists only to make the code more
 // general.
-using InputAttachmentBitmask = utils::bitset64;
+using InputAttachmentBitmask = utils::bitset128;
 
 constexpr uint8_t MAX_DESCRIPTOR_SET_BITMASK_BITS =
         std::max(std::max(sizeof(UniformBufferBitmask), sizeof(SamplerBitmask)),

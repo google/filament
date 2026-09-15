@@ -40,7 +40,7 @@ struct DynamicSpecConstKey {
 
     static constexpr type_t DYNAMIC_LIGHTING = 0x1;
     static constexpr type_t EXTRA_DIRECTIONAL_LIGHTS = 0x2;
-
+    static constexpr type_t DIRECTIONAL_LIGHTING = 0x4;
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
@@ -78,12 +78,21 @@ struct DynamicSpecConstKey {
         key = (key & ~EXTRA_DIRECTIONAL_LIGHTS) | (v ? EXTRA_DIRECTIONAL_LIGHTS : type_t(0));
     }
 
+    constexpr bool hasDirectionalLighting() const noexcept {
+        return key & DIRECTIONAL_LIGHTING;
+    }
+
+    constexpr void setDirectionalLighting(bool v) noexcept {
+        key = (key & ~DIRECTIONAL_LIGHTING) | (v ? DIRECTIONAL_LIGHTING : type_t(0));
+    }
+
     static constexpr DynamicSpecConstKey filterUserVariant(
             DynamicSpecConstKey key, UserVariantFilterMask filterMask) noexcept {
         if (filterMask & uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING)) {
             key.setDynamicLighting(false);
         }
         if (filterMask & uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING)) {
+            key.setDirectionalLighting(false);
             key.setExtraDirectionalLights(false);
         }
         return key;
@@ -95,20 +104,29 @@ struct DynamicSpecConstKey {
                !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
     }
 
-    static constexpr bool canSupportExtraDirectionalLights(Variant const variant,
+    static constexpr bool canSupportDirectionalLighting(Variant const variant,
         MaterialDomain const materialDomain, bool const isLit) noexcept {
         // the directional-lighting bit is only meaningful on standard variants
         return materialDomain == MaterialDomain::SURFACE && isLit &&
-               !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant) &&
-               variant.hasDirectionalLighting();
+               !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
     }
 
-    static constexpr bool isValidProgramSpecKey(Variant const variant, DynamicSpecConstKey const specKey,
-            MaterialDomain const materialDomain, bool const isLit) noexcept {
+    static constexpr bool canSupportExtraDirectionalLights(Variant const variant,
+        MaterialDomain const materialDomain, bool const isLit) noexcept {
+        return canSupportDirectionalLighting(variant, materialDomain, isLit);
+    }
+
+    static constexpr bool isValidProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey const specKey, MaterialDomain const materialDomain,
+            bool const isLit) noexcept {
         return (!specKey.hasDynamicLighting() ||
                        canSupportDynamicLighting(variant, materialDomain, isLit)) &&
                (!specKey.hasExtraDirectionalLights() ||
-                       canSupportExtraDirectionalLights(variant, materialDomain, isLit));
+                       (specKey.hasDirectionalLighting() &&
+                               canSupportExtraDirectionalLights(
+                                       variant, materialDomain, isLit))) &&
+               (!specKey.hasDirectionalLighting() ||
+                       canSupportDirectionalLighting(variant, materialDomain, isLit));
     }
 
     static constexpr DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
@@ -116,7 +134,11 @@ struct DynamicSpecConstKey {
         if (!canSupportDynamicLighting(variant, materialDomain, isLit)) {
             specKey.setDynamicLighting(false);
         }
-        if (!canSupportExtraDirectionalLights(variant, materialDomain, isLit)) {
+        if (!canSupportDirectionalLighting(variant, materialDomain, isLit)) {
+            specKey.setDirectionalLighting(false);
+        }
+        if (!specKey.hasDirectionalLighting() ||
+                !canSupportExtraDirectionalLights(variant, materialDomain, isLit)) {
             specKey.setExtraDirectionalLights(false);
         }
         return specKey;

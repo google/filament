@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVERBASE_H
 #define TNT_FILAMENT_DRIVER_DRIVERBASE_H
 
+#include "JobQueue.h"
+
 #include <private/backend/Dispatcher.h>
 #include <private/backend/Driver.h>
 
@@ -288,6 +290,29 @@ public:
         AsyncCallback mCallback;
         void* mUser;
     };
+
+    /**
+     * Runs an asynchronous call that is all CPU work here, on the backend thread, rather than on a
+     * job, and reports its completion through the queue.
+     *
+     * Note that the `cancel` call at the beginning claims the id that the `...AsyncS()` half
+     * reserved. This fails if the user thread already canceled it, in which case it early returns
+     * and `fn` doesn't run. And if the `cancel` call succeeds, regular cancellation afterwards
+     * has no effect thus it ensures `fn` to run. The completion is pushed as a job of its own, so
+     * that it is still reported in the order the asynchronous calls were issued.
+     */
+    template<typename Fn>
+    void runAsyncCallNow(JobQueue* jobQueue, AsyncCallId const jobId, CallbackHandler* handler,
+            AsyncCallback const callback, void* user, Fn&& fn) {
+        AsyncCompletion completion(this, handler, callback, user);
+        if (!jobQueue->cancel(jobId)) {
+            return;
+        }
+        fn();
+        jobQueue->push([completion = std::move(completion)]() mutable {
+            completion.schedule(AsyncCallStatus::COMPLETED);
+        });
+    }
 
     /**
      * Waits for a predicate to become true or until a timeout is reached.

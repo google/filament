@@ -350,6 +350,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     if (isDepthVariant) {
         out << "const bool RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = false;\n";
         out << "const bool RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = false;\n";
     } else {
         bool const litVariants = material.isLit || material.hasShadowMultiplier;
         generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
@@ -360,6 +361,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                 CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
                         RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS,
                 false);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
+                        RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING,
+                litVariants);
     }
 
     out << '\n';
@@ -1141,11 +1146,7 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
 
         out << SHADERS_SURFACE_AMBIENT_OCCLUSION_FS_DATA;
         out << SHADERS_SURFACE_LIGHT_INDIRECT_FS_DATA;
-
-        if (variant.hasDirectionalLighting()) {
-            out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
-        }
-
+        out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
         out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
         out << SHADERS_SURFACE_SHADING_LIT_FS_DATA;
     }
