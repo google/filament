@@ -1,0 +1,289 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/00_basic.h"
+  },
+  "includes": {
+    "user": [],
+    "system": []
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "Foo",
+      "qualified_name": "Foo",
+      "location": {
+        "file": "tools/apigen/tests/java/00_basic.h",
+        "line": 6
+      },
+      "doc": {
+        "brief": "A simple class to test the generator.",
+        "details": "Details about the class.",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "Foo",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "trivialMethod",
+          "qualified_name": "trivialMethod()",
+          "location": {
+            "file": "tools/apigen/tests/java/00_basic.h",
+            "line": 13
+          },
+          "doc": {
+            "brief": "A simple method.",
+            "details": "Details about the trivialMethod.",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "constMethod",
+          "qualified_name": "constMethod()",
+          "location": {
+            "file": "tools/apigen/tests/java/00_basic.h",
+            "line": 20
+          },
+          "doc": {
+            "brief": "A simple const method.",
+            "details": "Details about the constMethod.",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "methodWithParams",
+          "qualified_name": "methodWithParams(float, float)",
+          "location": {
+            "file": "tools/apigen/tests/java/00_basic.h",
+            "line": 31
+          },
+          "doc": {
+            "brief": "A method with parameters.",
+            "details": "Details about the methodWithParams.",
+            "params": {
+              "x": "The x parameter.",
+              "y": "The y parameter."
+            },
+            "returns": "",
+            "meta": {
+              "see": [
+                "methodWithReturnValueAndParams"
+              ]
+            }
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "x",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "y",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "methodWithReturnValue",
+          "qualified_name": "methodWithReturnValue()",
+          "location": {
+            "file": "tools/apigen/tests/java/00_basic.h",
+            "line": 41
+          },
+          "doc": {
+            "brief": "A method with a return value.",
+            "details": "Details about the methodWithReturnValue.",
+            "params": {},
+            "returns": "The return value.",
+            "meta": {
+              "see": [
+                "methodWithReturnValueAndParams"
+              ]
+            }
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "float",
+            "qualified_name": "float",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "methodWithReturnValueAndParams",
+          "qualified_name": "methodWithReturnValueAndParams(float, float)",
+          "location": {
+            "file": "tools/apigen/tests/java/00_basic.h",
+            "line": 54
+          },
+          "doc": {
+            "brief": "A method with a return value and parameters.",
+            "details": "Details about the methodWithReturnValueAndParams.",
+            "params": {
+              "x": "The x parameter.",
+              "y": "The y parameter."
+            },
+            "returns": "The return value.",
+            "meta": {
+              "see": [
+                "methodWithReturnValue",
+                "methodWithParams"
+              ]
+            }
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "float",
+            "qualified_name": "float",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "x",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "y",
+              "type": {
+                "cpp_name": "float",
+                "qualified_name": "float",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": []
+    }
+  ],
+  "functions": []
+}

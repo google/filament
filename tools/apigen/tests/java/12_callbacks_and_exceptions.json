@@ -1,0 +1,342 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/12_callbacks_and_exceptions.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<utils/Entity.h>",
+      "<utils/Invocable.h>",
+      "<utils/compiler.h>",
+      "<stdint.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "CallbacksAndExceptionsTest",
+      "qualified_name": "CallbacksAndExceptionsTest",
+      "location": {
+        "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+        "line": 6
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "CallbacksAndExceptionsTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "forEach",
+          "qualified_name": "forEach(utils::Invocable<void (utils::Entity)> &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+            "line": 9
+          },
+          "doc": {
+            "brief": "// 1. void return, noexcept",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "functor",
+              "type": {
+                "cpp_name": "utils::Invocable<void (utils::Entity)> &&",
+                "qualified_name": "utils::Invocable<void (utils::Entity)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "forEachThrowing",
+          "qualified_name": "forEachThrowing(utils::Invocable<void (utils::Entity)> &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+            "line": 12
+          },
+          "doc": {
+            "brief": "// 2. void return, non-noexcept (throwing)",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "functor",
+              "type": {
+                "cpp_name": "utils::Invocable<void (utils::Entity)> &&",
+                "qualified_name": "utils::Invocable<void (utils::Entity)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "findFirst",
+          "qualified_name": "findFirst(utils::Invocable<bool (utils::Entity)> &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+            "line": 15
+          },
+          "doc": {
+            "brief": "// 3. bool return, noexcept",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "predicate",
+              "type": {
+                "cpp_name": "utils::Invocable<bool (utils::Entity)> &&",
+                "qualified_name": "utils::Invocable<bool (utils::Entity)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "findFirstThrowing",
+          "qualified_name": "findFirstThrowing(utils::Invocable<bool (utils::Entity)> &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+            "line": 18
+          },
+          "doc": {
+            "brief": "// 4. bool return, non-noexcept (throwing)",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "predicate",
+              "type": {
+                "cpp_name": "utils::Invocable<bool (utils::Entity)> &&",
+                "qualified_name": "utils::Invocable<bool (utils::Entity)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "processPair",
+          "qualified_name": "processPair(utils::Invocable<void (int32_t, float)> &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+            "line": 21
+          },
+          "doc": {
+            "brief": "// 5. Multi-param callback, noexcept",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "utils::Invocable<void (int32_t, float)> &&",
+                "qualified_name": "utils::Invocable<void (int, float)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "processPairThrowing",
+          "qualified_name": "processPairThrowing(utils::Invocable<void (int32_t, float)> &&)",
+          "location": {
+            "file": "tools/apigen/tests/java/12_callbacks_and_exceptions.h",
+            "line": 24
+          },
+          "doc": {
+            "brief": "// 6. Multi-param callback, non-noexcept (throwing)",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "callback",
+              "type": {
+                "cpp_name": "utils::Invocable<void (int32_t, float)> &&",
+                "qualified_name": "utils::Invocable<void (int, float)>&&",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": true,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": []
+    }
+  ],
+  "functions": []
+}

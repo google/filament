@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <android/native_window_jni.h>
+#include <jni.h>
 
 extern "C" {
 
