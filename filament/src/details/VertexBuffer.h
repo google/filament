@@ -107,6 +107,11 @@ private:
     VertexBufferHandle mHandle;
     backend::AttributeArray mAttributes;
     std::array<BufferObjectHandle, backend::MAX_VERTEX_BUFFER_COUNT> mBufferObjects;
+    // Byte capacity of each slot's buffer object, as computed from the declared attributes at
+    // construction time. Only populated for slots this VertexBuffer allocated itself, i.e. when
+    // mBufferObjectsEnabled is false (or for the skinning slots in advanced skinning mode);
+    // client-supplied buffer objects are validated by FBufferObject::setBuffer() instead.
+    std::array<uint32_t, backend::MAX_VERTEX_BUFFER_COUNT> mBufferSizes = {};
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
