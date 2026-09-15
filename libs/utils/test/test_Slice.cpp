@@ -176,7 +176,7 @@ TEST(SliceTest, NullEmptySlice) {
     EXPECT_EQ(s.data(), nullptr);
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
 TEST(SliceTest, NullNonEmptySliceAssert) {
     EXPECT_DEATH({
         Slice<int> s(static_cast<int*>(nullptr), size_t(10));
