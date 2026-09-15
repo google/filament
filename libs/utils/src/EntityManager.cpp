@@ -42,12 +42,12 @@ EntityManager& EntityManager::get() noexcept {
     return *instance;
 }
 
-void EntityManager::create(size_t const n, Entity* entities) {
-    static_cast<EntityManagerImpl *>(this)->create(n, entities);
+void EntityManager::create(Slice<Entity> entities) {
+    static_cast<EntityManagerImpl *>(this)->create(entities.size(), entities.data());
 }
 
-void EntityManager::destroy(size_t const n, Entity* entities) noexcept {
-    static_cast<EntityManagerImpl *>(this)->destroy(n, entities);
+void EntityManager::destroy(Slice<const Entity> entities) noexcept {
+    static_cast<EntityManagerImpl *>(this)->destroy(entities.size(), entities.data());
 }
 
 void EntityManager::registerListener(Listener* l) noexcept {
