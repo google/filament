@@ -151,8 +151,8 @@ void HtmlDisplayManager::terminate() {
     }
 }
 
-WindowHandle HtmlDisplayManager::createWindow(const char* title, uint32_t w,
-        uint32_t h, bool resizable, bool headless) {
+WindowHandle HtmlDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
+        bool resizable) {
     LockGuard<Mutex> lock(mMutex);
     WindowHandle handle =
             (WindowHandle)(uintptr_t) (mWindows.size() + 1);

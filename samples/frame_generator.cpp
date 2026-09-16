@@ -508,6 +508,8 @@ int main(int const argc, char* argv[]) {
     };
 
     SampleConfig config;
+    config.title = "Frame Generator";
+    config.headless = true;
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
     auto loader = samples::getAssetLoader(config);
@@ -520,8 +522,6 @@ int main(int const argc, char* argv[]) {
         }
     }
 
-    config.title = "Frame Generator";
-    config.headless = true;
     auto fApp = createSampleApp(config, dm.get(), loader.get());
     fApp->run();
 

@@ -27,6 +27,7 @@ set(PUBLIC_HDRS
         include/filamentapp/Grid.h
         include/filamentapp/FilamentApp.h
         include/filamentapp/FilamentApp2.h
+        include/filamentapp/HeadlessDisplayManager.h
         include/filamentapp/IBL.h
         include/filamentapp/IcoSphere.h
         include/filamentapp/MeshAssimp.h
@@ -41,6 +42,7 @@ set(SRCS
         src/Grid.cpp
         src/FilamentApp.cpp
         src/FilamentApp2.cpp
+        src/display_managers/HeadlessDisplayManager.cpp
         src/IBL.cpp
         src/IcoSphere.cpp
         src/MeshAssimp.cpp

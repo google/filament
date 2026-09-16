@@ -154,10 +154,6 @@ public:
             mResizeable = resizeable;
             return *this;
         }
-        Builder& headless(bool headless) {
-            mHeadless = headless;
-            return *this;
-        }
         Builder& stereoscopicEyeCount(int stereoscopicEyeCount) {
             mStereoscopicEyeCount = stereoscopicEyeCount;
             return *this;
@@ -358,7 +354,6 @@ public:
         filament::math::float3 mCameraHomeEye = { 0.0f, 0.0f, 1.0f };
         filament::math::float3 mCameraHomeTarget = { 0.0f, 0.0f, -4.0f };
         bool mResizeable = true;
-        bool mHeadless = false;
         int mStereoscopicEyeCount = 2;
         uint8_t mSamples = 1;
         utils::CString mVulkanGPUHint;
@@ -557,6 +552,7 @@ private:
     uint8_t mDirectionalShadowFrustumEnabled = 0x2;
     uint8_t mCameraFrustumEnabled = 0x2;
 
+    // Never null: Builder::build() rejects a missing display manager.
     filament::app::DisplayManager* const mDisplayManager;
     std::unique_ptr<filament::app::AssetLoader> mDefaultAssetLoader;
     filament::app::AssetLoader* const mAssetLoader;
