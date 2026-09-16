@@ -16,6 +16,7 @@
 
 #include <backend/platforms/PlatformOSMesa.h>
 
+#include <utils/debug.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/ThreadUtils.h>
@@ -115,6 +116,18 @@ private:
 
 }// anonymous namespace
 
+void PlatformOSMesa::bindDummyBuffer() noexcept {
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+    assert_invariant(api);
+    assert_invariant(mDummyBuffer);
+
+    auto result = api->fOSMesaMakeCurrent(mContext, (BackingType*) mDummyBuffer.get(),
+            BACKING_GL_TYPE, 1, 1);
+    FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE) << "OSMesaMakeCurrent failed for dummy buffer!";
+
+    mCurrentSwapChain = nullptr;
+}
+
 Driver* PlatformOSMesa::createDriver(void* sharedGLContext,
         const DriverConfig& driverConfig) {
 
@@ -132,11 +145,14 @@ Driver* PlatformOSMesa::createDriver(void* sharedGLContext,
 
     mContext = api->fOSMesaCreateContextAttribs(attribs, (OSMesaContext) sharedGLContext);
 
+    // OSMesa retains the raw pointer given to OSMesaMakeCurrent and may write to it at any point
+    // (e.g. from glFinish()), so the bound buffer must outlive the binding. We keep a 1x1 buffer
+    // owned by the platform to act as a parking spot whenever no swapchain is current.
+    mDummyBuffer = std::make_unique<uint8_t[]>(1 * 1 * 4 * sizeof(BackingType));
+
     // We need to do a no-op makecurrent here so that the context will be in a correct state before
     // any GL calls.
-    auto chain = createSwapChain(1, 1, 0);
-    makeCurrent(ContextType::UNPROTECTED, chain, nullptr);
-    destroySwapChain(chain);
+    bindDummyBuffer();
 
     int result = bluegl::bind();
     FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
@@ -240,6 +256,14 @@ Platform::SwapChain* PlatformOSMesa::createSwapChain(uint32_t width, uint32_t he
 
 void PlatformOSMesa::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     OSMesaSwapchain* impl = (OSMesaSwapchain*) swapChain;
+
+    // OSMesa holds onto the raw pointer of the currently bound buffer and will write to it on the
+    // next flush (e.g. the glFinish() issued while the driver terminates). Park the context on the
+    // dummy buffer before releasing this swapchain's storage, otherwise we corrupt the heap.
+    if (mCurrentSwapChain == swapChain) {
+        bindDummyBuffer();
+    }
+
     delete impl;
 }
 
@@ -251,6 +275,8 @@ bool PlatformOSMesa::makeCurrent(ContextType type, SwapChain* drawSwapChain,
     auto result = api->fOSMesaMakeCurrent(mContext, (BackingType*) impl->buffer.get(),
             BACKING_GL_TYPE, impl->width, impl->height);
     FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE) << "OSMesaMakeCurrent failed!";
+
+    mCurrentSwapChain = drawSwapChain;
 
     return true;
 }
