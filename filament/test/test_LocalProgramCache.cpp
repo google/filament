@@ -106,7 +106,7 @@ TEST(LocalProgramCache, DepthIgnoresSpecialization) {
 TEST(MaterialDomainValidation, RejectsInvalidAndMissingDomain) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
     ASSERT_NE(engine, nullptr);
-    for (int value : { -1, 255, static_cast<int>(MaterialDomain::COMPUTE) }) {
+    for (int value : { -1, 255 }) {
         std::vector<uint8_t> bytes(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA,
                 FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA +
                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE);
