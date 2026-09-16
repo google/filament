@@ -239,11 +239,129 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 #endif
 
 #if defined(__clang__)
+/**
+ * @def UTILS_NONNULL
+ * Clang pointer nullability attribute indicating that a pointer or reference cannot be null.
+ *
+ * APIGen consumes this attribute to synthesize `@NonNull` annotations on generated target
+ * language parameters and method return types.
+ *
+ * @note Enforces compile-time diagnostics under Clang when null pointers are passed.
+ */
 #define UTILS_NONNULL _Nonnull
+
+/**
+ * @def UTILS_NULLABLE
+ * Clang pointer nullability attribute indicating that a pointer or reference may be null.
+ *
+ * APIGen consumes this attribute to synthesize `@Nullable` annotations on generated target
+ * language parameters and method return types.
+ */
 #define UTILS_NULLABLE _Nullable
+
+/**
+ * @def UTILS_NOAPIGEN
+ * Directs APIGen to exclude the annotated C++ entity from language binding generation.
+ *
+ * May be applied to classes, structs, member functions, constructors, member fields,
+ * type aliases, enums, and enum constants.
+ *
+ * @invariant The annotated entity produces no target language declarations, JNI bridge
+ *            functions, or runtime wrappers.
+ *
+ * @note Used for internal utility methods, platform-specific helpers, entities with complex
+ *       C++ constructs (e.g. unsupported template metaprogramming), or symbols backed by
+ *       dedicated handwritten bindings.
+ */
+#define UTILS_NOAPIGEN [[clang::annotate("filament:apigen:skip")]]
+
+/**
+ * @def UTILS_APIGEN_RETAINED
+ * Marks an instance getter method whose returned object is retained in a target language field.
+ *
+ * Applied to getters returning a parent or peer handle (e.g. `MaterialInstance::getMaterial()`,
+ * `Renderer::getEngine()`, or `SwapChain::getNativeWindow()`).
+ *
+ * @pre The referenced object is supplied during construction or factory creation of the receiver.
+ * @invariant The generated target language class caches the referenced object in a private final
+ *            field initialized during construction.
+ * @invariant The getter is served directly from the cached field without bridging across JNI,
+ *            preventing temporary wrapper allocation and safeguarding against premature
+ *            garbage collection of the native parent/peer object while the child handle remains
+ *            reachable.
+ */
+#define UTILS_APIGEN_RETAINED [[clang::annotate("filament:apigen:retained")]]
+
+/**
+ * @def UTILS_APIGEN_FLAGS
+ * Designates an enumeration whose entries represent combinable bitwise flags (bitmask).
+ *
+ * Applied to `enum` or `enum class` declarations where values may be combined with
+ * bitwise OR (`|`).
+ *
+ * @invariant Target language bindings generate methods accepting and returning
+ *            `@IntRange(from = 0) int` rather than the type-safe enum class itself, enabling
+ *            bitwise operations.
+ * @invariant APIGen synthesizes public static final integer constants for all enumerated flag
+ *            values.
+ */
+#define UTILS_APIGEN_FLAGS [[clang::annotate("filament:apigen:flags")]]
+
+/**
+ * @def UTILS_APIGEN_ALTERNATE_NAME(name)
+ * Overrides the emitted method identifier in target language bindings and JNI bridges.
+ *
+ * Applied to C++ member functions and static methods.
+ *
+ * @param name The alternate identifier to use in target language bindings.
+ *
+ * @invariant APIGen emits target language methods and JNI bridge symbols named @p name while
+ *            dispatching directly to the original C++ member in native code.
+ * @invariant Resolves naming collisions with target language reserved keywords (e.g. renaming
+ *            `package` to `payload` or `import` to `importTexture`).
+ * @invariant Disambiguates C++ overloads that collapse into identical signatures in target
+ *            languages (e.g. `setBones(..., Bone*)` -> `setBonesAsQuaternions` vs
+ *            `setBones(..., mat4f*)` -> `setBonesAsMatrices`).
+ */
+#define UTILS_APIGEN_ALTERNATE_NAME(name) [[clang::annotate("filament:apigen:alternate_name:" #name)]]
+
+/**
+ * @def UTILS_APIGEN_TAGGED_ARRAY
+ * Identifies Slice parameters in template setters that collapse into a tagged array family.
+ *
+ * Applied to Slice arguments in SFINAE-constrained template methods (e.g.
+ * `MaterialInstance::setParameter<T>()` and `Material::setDefaultParameter<T>()`).
+ *
+ * @pre Applied to a `utils::Slice` parameter.
+ * @invariant Instructs APIGen to collapse multiple template specializations (`float`,
+ *            `int32_t`, `math::float4`, `math::mat4f`, etc.) into a unified typed array
+ *            method family taking an element type tag or enum in target languages.
+ * @invariant Consolidates JNI bridge functions, dispatching dynamically by element tag rather
+ *            than generating redundant native entry points for each template specialization.
+ */
+#define UTILS_APIGEN_TAGGED_ARRAY [[clang::annotate("filament:apigen:tagged_array")]]
+
+/**
+ * @def UTILS_APIGEN_USED_BY_NATIVE
+ * Marks a C++ class whose generated target class is accessed via native reflection.
+ *
+ * Applied to class and struct declarations whose target language counterpart (e.g. Java class)
+ * is looked up via JNI reflection by native libraries (e.g. `gltfio`'s `AssetLoader.cpp`).
+ *
+ * @invariant Instructs APIGen to emit `@UsedByNative` on the generated Java class.
+ * @invariant Guarantees that code shrinking, tree-shaking, and obfuscation tools (e.g. ProGuard,
+ *            R8) preserve the class, methods, and field names in release builds.
+ */
+#define UTILS_APIGEN_USED_BY_NATIVE [[clang::annotate("filament:apigen:used_by_native")]]
 #else
 #define UTILS_NONNULL
 #define UTILS_NULLABLE
+#define UTILS_NOAPIGEN
+#define UTILS_APIGEN_RETAINED
+#define UTILS_APIGEN_FLAGS
+#define UTILS_APIGEN_ALTERNATE_NAME(name)
+#define UTILS_APIGEN_TAGGED_ARRAY
+#define UTILS_APIGEN_USED_BY_NATIVE
 #endif
 
 #if defined(__clang__) && !defined(SWIG)
