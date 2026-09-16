@@ -18,6 +18,7 @@
 #define TNT_UTILS_SLICE_H
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Hash.h>
 
 #include <algorithm>
@@ -70,8 +71,13 @@ public:
     static constexpr size_type extent = dynamic_extent;
 
     Slice() = default;
-    Slice(iterator const begin, iterator const end) noexcept : mBegin(begin), mEnd(end) {}
-    Slice(pointer begin, size_type count) noexcept : mBegin(begin), mEnd(begin + count) {}
+    Slice(iterator const begin, iterator const end) noexcept : mBegin(begin), mEnd(end) {
+        assert_invariant(begin <= end);
+        assert_invariant(begin != nullptr || end == nullptr);
+    }
+    Slice(pointer begin, size_type count) noexcept : mBegin(begin), mEnd(begin + count) {
+        assert_invariant(count == 0 || begin != nullptr);
+    }
 
     template<size_t N>
     Slice(element_type (&arr)[N]) noexcept : mBegin(arr), mEnd(arr + N) {}
@@ -110,11 +116,14 @@ public:
     }
 
     void set(pointer begin, size_type count) noexcept {
+        assert_invariant(count == 0 || begin != nullptr);
         mBegin = begin;
         mEnd = begin + count;
     }
 
     void set(iterator begin, iterator end) noexcept {
+        assert_invariant(begin <= end);
+        assert_invariant(begin != nullptr || end == nullptr);
         mBegin = begin;
         mEnd = end;
     }

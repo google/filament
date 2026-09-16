@@ -71,6 +71,11 @@ public:
     // is where the driver can execute user callbacks.
     virtual void purge() noexcept = 0;
 
+    // Same as purge(), but keeps going until the queue stays empty, so callbacks scheduled by the
+    // callbacks being dispatched are executed too. Meant for teardown, where there is no later
+    // purge() to pick up the stragglers.
+    virtual void purgeAll() noexcept = 0;
+
     // Called from the engine thread (render-thread) to execute the `callback` via the `handler` if
     // it is available. Otherwise, if `handler` is null, the `callback` is executed on the main
     // thread via `purge()`.
