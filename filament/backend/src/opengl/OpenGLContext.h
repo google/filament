@@ -296,6 +296,9 @@ public:
         // Some Mali drivers also have problems with this (b/445721121)
         bool disable_framebuffer_fetch_extension;
 
+        // Some drivers have issues with GL_EXT_sRGB on ES2.0
+        bool disable_es2_srgb_ext;
+
     } bugs = {};
 
     struct Procs {
@@ -390,6 +393,9 @@ private:
             {   bugs.disable_framebuffer_fetch_extension,
                     "disable_framebuffer_fetch_extension",
                     ""},
+            {   bugs.disable_es2_srgb_ext,
+                    "disable_es2_srgb_ext",
+                    ""},
     }};
 
     // this is chosen to minimize code size
@@ -420,7 +426,7 @@ private:
     static void initProcs(Procs* procs,
             Extensions const& exts, GLint major, GLint minor) noexcept;
 
-    static void initWorkarounds(Bugs const& bugs, Extensions* ext);
+    static void initWorkarounds(Bugs const& bugs, Extensions* ext, FeatureLevel const featureLevel);
 
     static FeatureLevel resolveFeatureLevel(GLint major, GLint minor,
             Extensions const& exts,
