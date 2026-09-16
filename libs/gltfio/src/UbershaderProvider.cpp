@@ -301,7 +301,7 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         if (config->hasVolume) {
             mi->setParameter("volumeThicknessUvMatrix", identity);
             mi->setParameter("volumeThicknessIndex",
-                    getUvIndex(config->transmissionUV, config->hasVolumeThicknessTexture));
+                    getUvIndex(config->volumeThicknessUV, config->hasVolumeThicknessTexture));
         }
         if (config->hasTransmission) {
             mi->setParameter("transmissionUvMatrix", identity);

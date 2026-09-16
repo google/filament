@@ -16,6 +16,8 @@
 
 #include <gltfio/MaterialProvider.h>
 
+#include <utils/Log.h>
+
 #include <string>
 
 namespace filament::gltfio {
@@ -73,96 +75,86 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
     const int MAX_INDEX = 2;
     UvMap retval {};
     int index = 1;
-    if (key->hasBaseColorTexture) {
-        retval[key->baseColorUV] = (UvSet) index++;
-    }
-    if (key->hasMetallicRoughnessTexture && retval[key->metallicRoughnessUV] == UNUSED) {
-        retval[key->metallicRoughnessUV] = (UvSet) index++;
-    }
-    if (key->hasNormalTexture && retval[key->normalUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasNormalTexture = false;
-        } else {
-            retval[key->normalUV] = (UvSet) index++;
+
+    auto constrainTexture = [&retval, &index](
+            uint8_t uv, bool hasTexture, const char* name) -> bool {
+        if (uv >= UvMapSize) {
+            if (hasTexture) {
+                utils::slog.e << "Texture coordinate index " << int(uv) << " for " << name
+                        << " exceeds maximum supported index (" << (UvMapSize - 1) << ")."
+                        << utils::io::endl;
+            }
+            return false;
         }
-    }
-    if (key->hasOcclusionTexture && retval[key->aoUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasOcclusionTexture = false;
-        } else {
-            retval[key->aoUV] = (UvSet) index++;
+        if (hasTexture && retval[uv] == UNUSED) {
+            if (index > MAX_INDEX) {
+                return false;
+            }
+            retval[uv] = (UvSet) index++;
         }
-    }
-    if (key->hasEmissiveTexture && retval[key->emissiveUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasEmissiveTexture = false;
-        } else {
-            retval[key->emissiveUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasTransmissionTexture && retval[key->transmissionUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasTransmissionTexture = false;
-        } else {
-            retval[key->transmissionUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasClearCoatTexture && retval[key->clearCoatUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasClearCoatTexture = false;
-        } else {
-            retval[key->clearCoatUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasClearCoatRoughnessTexture && retval[key->clearCoatRoughnessUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasClearCoatRoughnessTexture = false;
-        } else {
-            retval[key->clearCoatRoughnessUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasClearCoatNormalTexture && retval[key->clearCoatNormalUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasClearCoatNormalTexture = false;
-        } else {
-            retval[key->clearCoatNormalUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasSheenColorTexture && retval[key->sheenColorUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSheenColorTexture = false;
-        } else {
-            retval[key->sheenColorUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasSheenRoughnessTexture && retval[key->sheenRoughnessUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSheenRoughnessTexture = false;
-        } else {
-            retval[key->sheenRoughnessUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasVolumeThicknessTexture && retval[key->volumeThicknessUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasVolumeThicknessTexture = false;
-        } else {
-            retval[key->volumeThicknessUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasSpecularTexture && retval[key->specularTextureUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSpecularTexture = false;
-        } else {
-            retval[key->specularTextureUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasSpecularColorTexture && retval[key->specularColorTextureUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasSpecularColorTexture = false;
-        } else {
-            retval[key->specularColorTextureUV] = (UvSet) index++;
-        }
-    }
+        return hasTexture;
+    };
+
+    auto clampUv = [](uint8_t uv) -> uint8_t {
+        return uv < UvMapSize ? uv : 0;
+    };
+
+    key->hasBaseColorTexture = constrainTexture(
+            key->baseColorUV, key->hasBaseColorTexture, "baseColorTexture");
+    key->baseColorUV = clampUv(key->baseColorUV);
+
+    key->hasMetallicRoughnessTexture = constrainTexture(key->metallicRoughnessUV,
+            key->hasMetallicRoughnessTexture,
+            key->useSpecularGlossiness ? "specularGlossinessTexture" : "metallicRoughnessTexture");
+    key->metallicRoughnessUV = clampUv(key->metallicRoughnessUV);
+
+    key->hasNormalTexture = constrainTexture(
+            key->normalUV, key->hasNormalTexture, "normalTexture");
+    key->normalUV = clampUv(key->normalUV);
+
+    key->hasOcclusionTexture = constrainTexture(
+            key->aoUV, key->hasOcclusionTexture, "occlusionTexture");
+    key->aoUV = clampUv(key->aoUV);
+
+    key->hasEmissiveTexture = constrainTexture(
+            key->emissiveUV, key->hasEmissiveTexture, "emissiveTexture");
+    key->emissiveUV = clampUv(key->emissiveUV);
+
+    key->hasTransmissionTexture = constrainTexture(
+            key->transmissionUV, key->hasTransmissionTexture, "transmissionTexture");
+    key->transmissionUV = clampUv(key->transmissionUV);
+
+    key->hasClearCoatTexture = constrainTexture(
+            key->clearCoatUV, key->hasClearCoatTexture, "clearCoatTexture");
+    key->clearCoatUV = clampUv(key->clearCoatUV);
+
+    key->hasClearCoatRoughnessTexture = constrainTexture(key->clearCoatRoughnessUV,
+            key->hasClearCoatRoughnessTexture, "clearCoatRoughnessTexture");
+    key->clearCoatRoughnessUV = clampUv(key->clearCoatRoughnessUV);
+
+    key->hasClearCoatNormalTexture = constrainTexture(
+            key->clearCoatNormalUV, key->hasClearCoatNormalTexture, "clearCoatNormalTexture");
+    key->clearCoatNormalUV = clampUv(key->clearCoatNormalUV);
+
+    key->hasSheenColorTexture = constrainTexture(
+            key->sheenColorUV, key->hasSheenColorTexture, "sheenColorTexture");
+    key->sheenColorUV = clampUv(key->sheenColorUV);
+
+    key->hasSheenRoughnessTexture = constrainTexture(
+            key->sheenRoughnessUV, key->hasSheenRoughnessTexture, "sheenRoughnessTexture");
+    key->sheenRoughnessUV = clampUv(key->sheenRoughnessUV);
+
+    key->hasVolumeThicknessTexture = constrainTexture(
+            key->volumeThicknessUV, key->hasVolumeThicknessTexture, "volumeThicknessTexture");
+    key->volumeThicknessUV = clampUv(key->volumeThicknessUV);
+
+    key->hasSpecularTexture = constrainTexture(
+            key->specularTextureUV, key->hasSpecularTexture, "specularTexture");
+    key->specularTextureUV = clampUv(key->specularTextureUV);
+
+    key->hasSpecularColorTexture = constrainTexture(
+            key->specularColorTextureUV, key->hasSpecularColorTexture, "specularColorTexture");
+    key->specularColorTextureUV = clampUv(key->specularColorTextureUV);
 
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
