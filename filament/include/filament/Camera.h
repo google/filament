@@ -22,6 +22,7 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
+#include <utils/Slice.h>
 
 #include <math/mat4.h>
 #include <math/mathfwd.h>
@@ -305,8 +306,14 @@ public:
      * @see setCustomProjection
      * @see Engine::Config::stereoscopicEyeCount
      */
-    void setCustomEyeProjection(math::mat4 const* UTILS_NONNULL projection, size_t count,
+    void setCustomEyeProjection(utils::Slice<const math::mat4> projection,
             math::mat4 const& projectionForCulling, double near, double far);
+
+    UTILS_NOAPIGEN
+    inline void setCustomEyeProjection(math::mat4 const* UTILS_NONNULL projection, size_t count,
+            math::mat4 const& projectionForCulling, double near, double far) {
+        setCustomEyeProjection({ projection, count }, projectionForCulling, near, far);
+    }
 
     /** Sets an additional matrix that scales the projection matrix.
      *
