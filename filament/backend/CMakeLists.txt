@@ -630,6 +630,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Handles.cpp
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
+            test/test_DescriptorSet.cpp
             test/test_Template.cpp
             test/test_ThreadPriorityOverride.cpp
             test/test_AsyncUploads.cpp

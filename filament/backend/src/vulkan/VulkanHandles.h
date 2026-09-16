@@ -44,13 +44,10 @@ namespace {
 // Counts the total number of descriptors for both vertex and fragment stages.
 template<typename Bitmask>
 inline uint8_t collapsedCount(Bitmask const& mask) {
-    static_assert(sizeof(mask) <= 64);
-    constexpr uint64_t VERTEX_MASK = (1ULL << fvkutils::getFragmentStageShift<Bitmask>()) - 1ULL;
-    constexpr uint64_t FRAGMENT_MASK = (VERTEX_MASK << fvkutils::getFragmentStageShift<Bitmask>());
-    uint64_t val = mask.getValue();
-    val = ((val & VERTEX_MASK) >> fvkutils::getVertexStageShift<Bitmask>()) |
-          ((val & FRAGMENT_MASK) >> fvkutils::getFragmentStageShift<Bitmask>());
-    return (uint8_t) Bitmask(val).count();
+    Bitmask collapsed;
+    size_t const shift = fvkutils::getFragmentStageShift<Bitmask>();
+    mask.forEachSetBit([&](size_t index) { collapsed.set(index % shift); });
+    return (uint8_t) collapsed.count();
 }
 
 } // anonymous namespace
@@ -61,20 +58,20 @@ struct VulkanBufferObject;
 
 struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Resource {
     static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT = 4;
-    static constexpr uint8_t MAX_BINDINGS = 25;
+    static constexpr uint8_t MAX_BINDINGS = filament::backend::MAX_DESCRIPTOR_COUNT;
 
     using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     // The bitmask representation of a set layout.
     struct Bitmask {
-        fvkutils::UniformBufferBitmask ubo;         // 8 bytes
-        fvkutils::UniformBufferBitmask dynamicUbo;  // 8 bytes
-        fvkutils::SamplerBitmask sampler;           // 8 bytes
-        fvkutils::InputAttachmentBitmask inputAttachment; // 8 bytes
+        fvkutils::UniformBufferBitmask ubo;               // 16 bytes
+        fvkutils::UniformBufferBitmask dynamicUbo;        // 16 bytes
+        fvkutils::SamplerBitmask sampler;                 // 16 bytes
+        fvkutils::InputAttachmentBitmask inputAttachment; // 16 bytes
 
         // This is a subset of the sampler field.
-        fvkutils::SamplerBitmask externalSampler; // 8 bytes
+        fvkutils::SamplerBitmask externalSampler; // 16 bytes
 
         bool operator==(Bitmask const& right) const {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
@@ -84,7 +81,7 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
 
         static Bitmask fromLayoutDescription(DescriptorSetLayout const& layout);
     };
-    static_assert(sizeof(Bitmask) == 40);
+    static_assert(sizeof(Bitmask) == 80);
 
     // This is a convenience struct to quickly check layout compatibility in terms of descriptor set
     // pools.

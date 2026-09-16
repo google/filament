@@ -71,6 +71,10 @@ IndexBuffer::Builder& IndexBuffer::Builder::name(utils::StaticString const& name
     return BuilderNameMixin::name(name);
 }
 
+IndexBuffer::Builder& IndexBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* handler,
         AsyncCompletionCallback callback, void* user) noexcept {
     mImpl->mAsynchronous = true;
@@ -153,6 +157,10 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
             << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+            << "buffer data cannot be null";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "IndexBuffer creation failed or is not complete";
 
     engine.getDriverApi().updateIndexBuffer(mHandle, std::move(buffer), byteOffset);
 }
@@ -163,6 +171,8 @@ backend::AsyncCallId FIndexBuffer::setBufferAsync(FEngine& engine, BufferDescrip
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
             << "byteOffset must be a multiple of 4";
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer != nullptr)
+            << "buffer data cannot be null";
 
     using IndexBufferCallbackAdapter = CallbackAdapter<IndexBuffer>;
     auto* const cbWrapper = IndexBufferCallbackAdapter::make(std::move(callback), this, user);

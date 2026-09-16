@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/monkey.h"
 #include "generated/resources/resources.h"
@@ -36,6 +35,8 @@
 #include <utils/EntityManager.h>
 #include <utils/getopt.h>
 
+#include <samples/SampleConfig.h>
+
 #include <iostream>
 
 using namespace filament;
@@ -55,14 +56,13 @@ struct App {
     mat4f transform;
 };
 
-const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 } // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     if (config.iblDirectory.empty()) {
-        config.iblDirectory =
-                utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
+        config.iblDirectory = utils::CString(IBL_FOLDER);
     }
     auto app = std::make_shared<App>();
     app->config = config;
@@ -132,12 +132,13 @@ samples::SampleParameters createAppParameters() { return {}; }
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "hellopbr";
-    config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
+    config.iblDirectory = utils::CString(IBL_FOLDER);
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
 
     return 0;

@@ -86,6 +86,9 @@ public:
                 bool enable_staging_buffer_bypass = false;
                 // A client requires that swapchain be acquired in makeCurrent() (b/476144715).
                 bool enable_acquire_swapchain_in_make_current = false;
+                // Allow the usage of dynamic state when creating pipelines. This will reduce
+                // the pipeline count and compilation related hitching.
+                bool enable_pipeline_dynamic_state = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;
