@@ -1,0 +1,594 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/15_strings_and_primitives.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<string_view>",
+      "<chrono>",
+      "<optional>",
+      "<utils/CString.h>",
+      "<utils/StaticString.h>",
+      "<utils/ImmutableCString.h>",
+      "<utils/tribool.h>",
+      "<utils/bitset.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "StringsAndPrimitivesTest",
+      "qualified_name": "StringsAndPrimitivesTest",
+      "location": {
+        "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+        "line": 10
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "StringsAndPrimitivesTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "hasParameter",
+          "qualified_name": "hasParameter(std::string_view)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 13
+          },
+          "doc": {
+            "brief": "// 1. Strings",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "bool",
+            "qualified_name": "bool",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "name",
+              "type": {
+                "cpp_name": "std::string_view",
+                "qualified_name": "std::basic_string_view<char>",
+                "category": "string",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setName",
+          "qualified_name": "setName(const utils::CString &)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 14
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "name",
+              "type": {
+                "cpp_name": "const utils::CString &",
+                "qualified_name": "utils::CString&",
+                "category": "string",
+                "is_const": true,
+                "is_pointer": false,
+                "is_reference": true,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setStaticName",
+          "qualified_name": "setStaticName(utils::StaticString)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 15
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "name",
+              "type": {
+                "cpp_name": "utils::StaticString",
+                "qualified_name": "utils::StaticString",
+                "category": "string",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getName",
+          "qualified_name": "getName()",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 16
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "utils::ImmutableCString",
+            "qualified_name": "utils::ImmutableCString",
+            "category": "string",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getTag",
+          "qualified_name": "getTag()",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 17
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "const char *",
+            "qualified_name": "const char*",
+            "category": "string",
+            "is_const": true,
+            "is_pointer": true,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setLatency",
+          "qualified_name": "setLatency(std::chrono::nanoseconds)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 20
+          },
+          "doc": {
+            "brief": "// 2. Chrono",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "latency",
+              "type": {
+                "cpp_name": "std::chrono::nanoseconds",
+                "qualified_name": "std::chrono::duration<long long, std::ratio>",
+                "category": "chrono",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getPresentationTime",
+          "qualified_name": "getPresentationTime()",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 21
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "std::chrono::steady_clock::time_point",
+            "qualified_name": "std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<long long, std::ratio>>",
+            "category": "chrono",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setTriMode",
+          "qualified_name": "setTriMode(utils::tribool)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 24
+          },
+          "doc": {
+            "brief": "// 3. Tribool and Optional",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "mode",
+              "type": {
+                "cpp_name": "utils::tribool",
+                "qualified_name": "utils::tribool",
+                "category": "tribool",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getTriMode",
+          "qualified_name": "getTriMode()",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 25
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "utils::tribool",
+            "qualified_name": "utils::tribool",
+            "category": "tribool",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setOptionalFlag",
+          "qualified_name": "setOptionalFlag(std::optional<bool>)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 26
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "flag",
+              "type": {
+                "cpp_name": "std::optional<bool>",
+                "qualified_name": "std::optional<bool>",
+                "category": "optional",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getOptionalFlag",
+          "qualified_name": "getOptionalFlag()",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 27
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "std::optional<bool>",
+            "qualified_name": "std::optional<bool>",
+            "category": "optional",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setFlags",
+          "qualified_name": "setFlags(utils::bitset<uint32_t>)",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 30
+          },
+          "doc": {
+            "brief": "// 4. Bitset",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "flags",
+              "type": {
+                "cpp_name": "utils::bitset<uint32_t>",
+                "qualified_name": "utils::bitset<uint32_t>",
+                "category": "object",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getFlags",
+          "qualified_name": "getFlags()",
+          "location": {
+            "file": "tools/apigen/tests/java/15_strings_and_primitives.h",
+            "line": 31
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "utils::bitset<uint32_t>",
+            "qualified_name": "utils::bitset<uint32_t>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": false,
+          "is_const": true,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "is_aggregate": false
+    }
+  ],
+  "functions": []
+}

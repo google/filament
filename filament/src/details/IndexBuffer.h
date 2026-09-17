@@ -30,6 +30,9 @@
 
 #include <atomic>
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace filament {
 
 class FEngine;
@@ -49,6 +52,10 @@ public:
     }
 
     size_t getIndexCount() const noexcept { return mIndexCount; }
+
+    // Total capacity of the underlying buffer, in bytes. This is the upper bound that
+    // setBuffer()/setBufferAsync() validate their write range against.
+    size_t getByteCount() const noexcept { return size_t(mIndexCount) * mElementSize; }
 
     void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
@@ -74,6 +81,9 @@ private:
     friend class IndexBuffer;
     backend::Handle<backend::HwIndexBuffer> mHandle;
     uint32_t mIndexCount;
+    // Size in bytes of a single index (2 for USHORT, 4 for UINT). Set in the constructor
+    // once the index type has been validated.
+    uint8_t mElementSize = 0;
 
     // Where the creation process is. This is especially useful for asynchronous creation; it only
     // ever moves out of CREATING once, to one of the two terminal states.
