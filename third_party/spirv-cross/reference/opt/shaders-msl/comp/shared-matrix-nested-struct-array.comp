@@ -1346,7 +1346,7 @@ kernel void main0(device block& _424 [[buffer(0)]])
     bool _409;
     if (_400)
     {
-        _409 = all(bool3(false) == bool3(s1.c[1].mA[0]));
+        _409 = all(not(bool3(s1.c[1].mA[0])));
     }
     else
     {
@@ -1355,7 +1355,7 @@ kernel void main0(device block& _424 [[buffer(0)]])
     bool _418;
     if (_409)
     {
-        _418 = all(bool3(false) == bool3(s1.c[1].mA[1]));
+        _418 = all(not(bool3(s1.c[1].mA[1])));
     }
     else
     {

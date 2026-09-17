@@ -75,7 +75,6 @@ kernel void main0(main0_in in [[stage_in]], uint gl_InvocationID [[thread_index_
     threadgroup_barrier(mem_flags::mem_threadgroup);
     if (gl_InvocationID >= 4)
         return;
-    int _27 = gl_InvocationID ^ 1;
-    gl_out[gl_InvocationID].vOutputs = ((gl_in[gl_InvocationID].vInputs_a_1 + gl_in[gl_InvocationID].vInputs_b_1) + gl_in[gl_InvocationID].vInputs_c) + gl_in[_27].vInputs_c;
+    gl_out[gl_InvocationID].vOutputs = ((gl_in[gl_InvocationID].vInputs_a_1 + gl_in[gl_InvocationID].vInputs_b_1) + gl_in[gl_InvocationID].vInputs_c) + gl_in[gl_InvocationID ^ 1].vInputs_c;
 }
 

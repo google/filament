@@ -59,20 +59,26 @@ void CFG::build_immediate_dominators()
 	for (auto i = post_order.size(); i; i--)
 	{
 		uint32_t block = post_order[i - 1];
-		auto &pred = preceding_edges[block];
-		if (pred.empty()) // This is for the entry block, but we've already set up the dominators.
-			continue;
 
-		for (auto &edge : pred)
+		const auto resolve_preds = [&](const SmallVector<uint32_t> &pred)
 		{
-			if (immediate_dominators[block])
+			if (pred.empty()) // This is for the entry block, but we've already set up the dominators.
+				return;
+
+			for (auto &edge : pred)
 			{
-				assert(immediate_dominators[edge]);
-				immediate_dominators[block] = find_common_dominator(immediate_dominators[block], edge);
+				if (immediate_dominators[block])
+				{
+					assert(immediate_dominators[edge]);
+					immediate_dominators[block] = find_common_dominator(immediate_dominators[block], edge);
+				}
+				else
+					immediate_dominators[block] = edge;
 			}
-			else
-				immediate_dominators[block] = edge;
-		}
+		};
+
+		resolve_preds(preceding_edges[block]);
+		resolve_preds(virtual_dominance_preceding_edges[block]);
 	}
 }
 
@@ -193,6 +199,13 @@ void CFG::post_order_visit_resolve(uint32_t block_id)
 	if (block.merge == SPIRBlock::MergeLoop && !is_back_edge(block.merge_block))
 		add_branch(block_id, block.merge_block);
 
+	// Similar case as do/while loops, but expressed in a different form.
+	// if (true) { foo = 1; } else { return/unreachable/kill/blah; } access(foo);
+	// Only consider this branch when computing dominance to avoid breaking other analysis like
+	// parameter preservation.
+	if (block.merge == SPIRBlock::MergeSelection && !is_back_edge(block.next_block))
+		add_virtual_dominance_branch(block_id, block.next_block);
+
 	// First visit our branch targets.
 	switch (block.terminator)
 	{
@@ -289,16 +302,24 @@ void CFG::build_post_order_visit_order()
 	post_order_visit_entry(block);
 }
 
+static void add_unique(SmallVector <uint32_t> &l, uint32_t value)
+{
+	auto itr = find(begin(l), end(l), value);
+	if (itr == end(l))
+		l.push_back(value);
+}
+
 void CFG::add_branch(uint32_t from, uint32_t to)
 {
 	assert(from && to);
-	const auto add_unique = [](SmallVector<uint32_t> &l, uint32_t value) {
-		auto itr = find(begin(l), end(l), value);
-		if (itr == end(l))
-			l.push_back(value);
-	};
 	add_unique(preceding_edges[to], from);
 	add_unique(succeeding_edges[from], to);
+}
+
+void CFG::add_virtual_dominance_branch(uint32_t from, uint32_t to)
+{
+	assert(from && to);
+	add_unique(virtual_dominance_preceding_edges[to], from);
 }
 
 uint32_t CFG::find_loop_dominator(uint32_t block_id) const

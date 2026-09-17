@@ -1,0 +1,19 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer comp2 : register(u1, space0);
+RWByteAddressBuffer comp : register(u0, space0);
+
+void comp_main()
+{
+    uint spdot32 = uint(dot4add_i8packed(comp2.Load<uint>(0), comp2.Load<uint>(4), 0));
+    int spdoti32 = dot4add_i8packed(comp2.Load<uint>(0), comp2.Load<uint>(4), 0);
+    uint updot32 = dot4add_u8packed(comp2.Load<uint>(0), comp2.Load<uint>(4), 0);
+    uint udotaddsat_pack = dot4add_u8packed(comp2.Load<uint>(0), comp2.Load<uint>(4), updot32 /* WARN: HLSL will not saturate */);
+    uint sdotaddsat_pack = uint(dot4add_i8packed(comp2.Load<uint>(0), comp2.Load<uint>(4), updot32 /* WARN: HLSL will not saturate */));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

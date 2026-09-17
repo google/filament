@@ -1,7 +1,33 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
+
+template <typename T>
+static inline depth2d<T> spvDepthCast(texture2d<T> t)
+{
+    return reinterpret_cast<thread const depth2d<T> &>(t);
+}
+
+template <typename T>
+static inline depth2d_array<T> spvDepthCast(texture2d_array<T> t)
+{
+    return reinterpret_cast<thread const depth2d_array<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube<T> spvDepthCast(texturecube<T> t)
+{
+    return reinterpret_cast<thread const depthcube<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube_array<T> spvDepthCast(texturecube_array<T> t)
+{
+    return reinterpret_cast<thread const depthcube_array<T> &>(t);
+}
 
 struct main0_out
 {
@@ -15,13 +41,13 @@ struct main0_in
     float2 vClip2 [[user(locn2)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uShadow2D [[texture(0)]], texture1d<float> uSampler1D [[texture(1)]], texture2d<float> uSampler2D [[texture(2)]], texture3d<float> uSampler3D [[texture(3)]], sampler uShadow2DSmplr [[sampler(0)]], sampler uSampler1DSmplr [[sampler(1)]], sampler uSampler2DSmplr [[sampler(2)]], sampler uSampler3DSmplr [[sampler(3)]])
+fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uShadow2D [[texture(0)]], texture1d<float> uSampler1D [[texture(1)]], texture2d<float> uSampler2D [[texture(2)]], texture3d<float> uSampler3D [[texture(3)]], sampler uShadow2DSmplr [[sampler(0)]], sampler uSampler1DSmplr [[sampler(1)]], sampler uSampler2DSmplr [[sampler(2)]], sampler uSampler3DSmplr [[sampler(3)]])
 {
     main0_out out = {};
     float4 _17 = in.vClip4;
     float4 _20 = _17;
     _20.z = _17.w;
-    out.FragColor = uShadow2D.sample_compare(uShadow2DSmplr, _20.xy / _20.z, _17.z / _20.z);
+    out.FragColor = spvDepthCast(uShadow2D).sample_compare(uShadow2DSmplr, _20.xy / _20.z, _17.z / _20.z);
     out.FragColor = uSampler1D.sample(uSampler1DSmplr, in.vClip2.x / in.vClip2.y).x;
     out.FragColor = uSampler2D.sample(uSampler2DSmplr, in.vClip3.xy / in.vClip3.z).x;
     out.FragColor = uSampler3D.sample(uSampler3DSmplr, in.vClip4.xyz / in.vClip4.w).x;

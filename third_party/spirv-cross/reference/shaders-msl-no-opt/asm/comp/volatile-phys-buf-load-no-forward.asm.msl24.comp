@@ -1,0 +1,19 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Registers
+{
+    ulong addr;
+    ulong addr2;
+};
+
+kernel void main0(constant Registers& registers [[buffer(0)]])
+{
+    device int* _21 = reinterpret_cast<device int*>(registers.addr2);
+    int _22 = *(reinterpret_cast<device int*>(registers.addr));
+    *_21 = _22;
+    *(reinterpret_cast<device int*>(reinterpret_cast<ulong>(_21) + 4ul)) = _22;
+}
+
