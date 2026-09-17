@@ -26,5 +26,5 @@ main
 
 | | |
 |---|---|
-| context | a Context to used to retrieve teh DisplayManager |
+| context | a Context to used to retrieve the DisplayManager |
 | handler | a Handler used to run callbacks accessing filament |
