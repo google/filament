@@ -1,7 +1,33 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
+
+template <typename T>
+static inline depth2d<T> spvDepthCast(texture2d<T> t)
+{
+    return reinterpret_cast<thread const depth2d<T> &>(t);
+}
+
+template <typename T>
+static inline depth2d_array<T> spvDepthCast(texture2d_array<T> t)
+{
+    return reinterpret_cast<thread const depth2d_array<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube<T> spvDepthCast(texturecube<T> t)
+{
+    return reinterpret_cast<thread const depthcube<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube_array<T> spvDepthCast(texturecube_array<T> t)
+{
+    return reinterpret_cast<thread const depthcube_array<T> &>(t);
+}
 
 struct type_View
 {
@@ -196,7 +222,7 @@ struct main0_out
     float4 out_var_SV_Target0 [[color(0)]];
 };
 
-fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_Globals& _Globals [[buffer(1)]], texture2d<float> SceneTexturesStruct_SceneDepthTexture [[texture(0)]], texture2d<float> SceneTexturesStruct_GBufferATexture [[texture(1)]], texture2d<float> SceneTexturesStruct_GBufferBTexture [[texture(2)]], texture2d<float> SceneTexturesStruct_GBufferDTexture [[texture(3)]], depthcube<float> ShadowDepthCubeTexture [[texture(4)]], texture2d<float> SSProfilesTexture [[texture(5)]], sampler SceneTexturesStruct_SceneDepthTextureSampler [[sampler(0)]], sampler SceneTexturesStruct_GBufferATextureSampler [[sampler(1)]], sampler SceneTexturesStruct_GBufferBTextureSampler [[sampler(2)]], sampler SceneTexturesStruct_GBufferDTextureSampler [[sampler(3)]], sampler ShadowDepthTextureSampler [[sampler(4)]], sampler ShadowDepthCubeTextureSampler [[sampler(5)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_Globals& _Globals [[buffer(1)]], texture2d<float> SceneTexturesStruct_SceneDepthTexture [[texture(0)]], texture2d<float> SceneTexturesStruct_GBufferATexture [[texture(1)]], texture2d<float> SceneTexturesStruct_GBufferBTexture [[texture(2)]], texture2d<float> SceneTexturesStruct_GBufferDTexture [[texture(3)]], texturecube<float> ShadowDepthCubeTexture [[texture(4)]], texture2d<float> SSProfilesTexture [[texture(5)]], sampler SceneTexturesStruct_SceneDepthTextureSampler [[sampler(0)]], sampler SceneTexturesStruct_GBufferATextureSampler [[sampler(1)]], sampler SceneTexturesStruct_GBufferBTextureSampler [[sampler(2)]], sampler SceneTexturesStruct_GBufferDTextureSampler [[sampler(3)]], sampler ShadowDepthTextureSampler [[sampler(4)]], sampler ShadowDepthCubeTextureSampler [[sampler(5)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     float2 _114 = gl_FragCoord.xy * View.View_BufferSizeAndInvSize.zw;
@@ -236,7 +262,7 @@ fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_G
         }
         float4 _196 = _Globals.ShadowViewProjectionMatrices[_189] * float4(_147.xyz, 1.0);
         float _198 = _196.w;
-        _207 = ShadowDepthCubeTexture.sample_compare(ShadowDepthCubeTextureSampler, (_152 / float3(_158)), (_196.z / _198) + ((-_Globals.PointLightDepthBiasAndProjParameters.x) / _198), level(0.0));
+        _207 = spvDepthCast(ShadowDepthCubeTexture).sample_compare(ShadowDepthCubeTextureSampler, (_152 / float3(_158)), (_196.z / _198) + ((-_Globals.PointLightDepthBiasAndProjParameters.x) / _198), level(0.0));
     }
     else
     {

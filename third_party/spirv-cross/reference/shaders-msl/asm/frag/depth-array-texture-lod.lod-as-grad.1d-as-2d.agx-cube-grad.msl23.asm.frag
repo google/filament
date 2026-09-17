@@ -25,6 +25,30 @@ static inline gradientcube spvGradientCube(float3 P, float3 dPdx, float3 dPdy)
     return gradientcube(xMajor ? d.xxy : d.xyx, xMajor ? d.zzw : d.zwz);
 }
 
+template <typename T>
+static inline depth2d<T> spvDepthCast(texture2d<T> t)
+{
+    return reinterpret_cast<thread const depth2d<T> &>(t);
+}
+
+template <typename T>
+static inline depth2d_array<T> spvDepthCast(texture2d_array<T> t)
+{
+    return reinterpret_cast<thread const depth2d_array<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube<T> spvDepthCast(texturecube<T> t)
+{
+    return reinterpret_cast<thread const depthcube<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube_array<T> spvDepthCast(texturecube_array<T> t)
+{
+    return reinterpret_cast<thread const depthcube_array<T> &>(t);
+}
+
 struct buf0
 {
     float4 u_scale;
@@ -46,10 +70,10 @@ struct main0_in
     float2 v_drefLodBias [[user(locn1)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], depthcube_array<float> u_sampler [[texture(0)]], sampler u_samplerSmplr [[sampler(0)]])
+fragment main0_out main0(main0_in in [[stage_in]], texturecube_array<float> u_sampler [[texture(0)]], sampler u_samplerSmplr [[sampler(0)]])
 {
     main0_out out = {};
-    out.o_color = float4(u_sampler.sample_compare(u_samplerSmplr, in.v_texCoord.xyz, uint(rint(in.v_texCoord.w)), in.v_drefLodBias.x, spvGradientCube(in.v_texCoord.xyz, exp2(in.v_drefLodBias.y - 0.5) / float3(u_sampler.get_width()), exp2(in.v_drefLodBias.y - 0.5) / float3(u_sampler.get_width()))), 0.0, 0.0, 1.0);
+    out.o_color = float4(spvDepthCast(u_sampler).sample_compare(u_samplerSmplr, in.v_texCoord.xyz, uint(rint(in.v_texCoord.w)), in.v_drefLodBias.x, spvGradientCube(in.v_texCoord.xyz, exp2(in.v_drefLodBias.y - 0.5) / float3(u_sampler.get_width()), exp2(in.v_drefLodBias.y - 0.5) / float3(u_sampler.get_width()))), 0.0, 0.0, 1.0);
     return out;
 }
 

@@ -17,8 +17,8 @@ void main()
     int _27[2];
     tensorReadARM(t, uint[](1u, 2u, 3u, 4u), _27);
     int two[2] = _27;
-    int _37;
-    tensorReadARM(t, uint[](1u, 2u, 3u, 4u), _37);
-    _32.out_data[1] = _37;
+    int _35;
+    tensorReadARM(t, uint[](1u, 2u, 3u, 4u), _35);
+    _32.out_data[1] = _35;
 }
 

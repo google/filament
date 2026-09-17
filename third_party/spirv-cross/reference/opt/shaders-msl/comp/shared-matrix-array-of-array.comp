@@ -1267,7 +1267,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _305;
     if (_296)
     {
-        _305 = true == bool(s2.b[0][0][0]);
+        _305 = bool(s2.b[0][0][0]);
     }
     else
     {
@@ -1276,7 +1276,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _314;
     if (_305)
     {
-        _314 = false == bool(s2.b[0][0][1]);
+        _314 = !bool(s2.b[0][0][1]);
     }
     else
     {
@@ -1285,7 +1285,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _323;
     if (_314)
     {
-        _323 = false == bool(s2.b[0][0][2]);
+        _323 = !bool(s2.b[0][0][2]);
     }
     else
     {
@@ -1294,7 +1294,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _332;
     if (_323)
     {
-        _332 = true == bool(s2.b[1][0][0]);
+        _332 = bool(s2.b[1][0][0]);
     }
     else
     {
@@ -1303,7 +1303,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _341;
     if (_332)
     {
-        _341 = false == bool(s2.b[1][0][1]);
+        _341 = !bool(s2.b[1][0][1]);
     }
     else
     {
@@ -1312,7 +1312,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _350;
     if (_341)
     {
-        _350 = true == bool(s2.b[1][0][2]);
+        _350 = bool(s2.b[1][0][2]);
     }
     else
     {
@@ -1321,7 +1321,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _359;
     if (_350)
     {
-        _359 = false == bool(s2.b[2][0][0]);
+        _359 = !bool(s2.b[2][0][0]);
     }
     else
     {
@@ -1330,7 +1330,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _368;
     if (_359)
     {
-        _368 = true == bool(s2.b[2][0][1]);
+        _368 = bool(s2.b[2][0][1]);
     }
     else
     {
@@ -1339,7 +1339,7 @@ kernel void main0(device block& _383 [[buffer(0)]])
     bool _377;
     if (_368)
     {
-        _377 = true == bool(s2.b[2][0][2]);
+        _377 = bool(s2.b[2][0][2]);
     }
     else
     {

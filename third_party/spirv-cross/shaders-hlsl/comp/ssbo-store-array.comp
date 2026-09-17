@@ -12,7 +12,7 @@ layout(set = 0, binding = 0, std430) buffer B0
 
 void main()
 {
-    Data d1;
+    Data d1 = Data( uint[3](1, 2, 3) );
     d[0].arr = d1.arr;
 }
 

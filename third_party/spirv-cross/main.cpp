@@ -677,6 +677,8 @@ struct CLIArguments
 	bool msl_manual_helper_invocation_updates = true;
 	bool msl_check_discarded_frag_stores = false;
 	bool msl_force_fragment_with_side_effects_execution = false;
+	bool msl_emulate_reversed_depth_viewport = false;
+	bool msl_emulate_depth_clip_enable = false;
 	bool msl_sample_dref_lod_array_as_grad = false;
 	bool msl_runtime_array_rich_descriptor = false;
 	bool msl_replace_recursive_inputs = false;
@@ -694,6 +696,8 @@ struct CLIArguments
 	uint32_t glsl_ovr_multiview_view_count = 0;
 	SmallVector<pair<uint32_t, uint32_t>> glsl_ext_framebuffer_fetch;
 	bool glsl_ext_framebuffer_fetch_noncoherent = false;
+	uint32_t glsl_descriptor_heap_set = UINT32_MAX;
+	uint32_t glsl_descriptor_heap_binding = UINT32_MAX;
 	bool vulkan_glsl_disable_ext_samplerless_texture_functions = false;
 	bool emit_line_directives = false;
 	bool enable_storage_image_qualifier_deduction = true;
@@ -821,6 +825,7 @@ static void print_help_glsl()
 	                "\t\tPrimary use case is supporting external samplers in ESSL for video rendering on Android where you could remap a texture to a YUV one.\n"
 	                "\t[--glsl-force-flattened-io-blocks]:\n\t\tAlways flatten I/O blocks and structs.\n"
 	                "\t[--glsl-ovr-multiview-view-count count]:\n\t\tIn GL_OVR_multiview2, specify layout(num_views).\n"
+	                "\t[--glsl-descriptor-heap-set-binding desc_set binding]:\n\t\tInstead of layout(descriptor_heap), emit layout(set = desc_set, binding = binding) instead for compatibility with mapping API.\n"
 	);
 	// clang-format on
 }
@@ -978,6 +983,8 @@ static void print_help_msl()
 	                "\t\t\t4. Fragment is always discarded in fragment execution.\n"
 	                "\t\tHowever, Vulkan expects fragment shader to be executed since it cannot be discarded until the discard\n"
 	                "\t\tpresent in the fragment execution, which would also execute the operations with side effects.\n"
+	                "\t[--msl-emulate-reversed-depth-viewport]:\n\t\tEmulate reversed-depth viewports by inverting clip-space Z.\n"
+	                "\t[--msl-emulate-depth-clip-enable]:\n\t\tEmulate Vulkan depth clip and clamp combinations unsupported by Metal.\n"
 	                "\t[--msl-sample-dref-lod-array-as-grad]:\n\t\tUse a gradient instead of a level argument.\n"
 	                "\t\tSome Metal devices have a bug where the level() argument to\n"
 	                "\t\tdepth2d_array<T>::sample_compare() in a fragment shader is biased by some\n"
@@ -1044,17 +1051,17 @@ static void print_help_obscure()
 	// clang-format on
 }
 
-static void print_help()
+static void print_help_all()
 {
 	print_version();
 
 	// clang-format off
-	fprintf(stderr, "Usage: spirv-cross <...>\n"
+	fprintf(stderr, "Usage: spirv-cross [SPIR-V file] [options]\n"
 	                "\nBasic:\n"
 	                "\t[SPIR-V file] (- is stdin)\n"
 	                "\t[--output <output path>]: If not provided, prints output to stdout.\n"
 	                "\t[--dump-resources]:\n\t\tPrints a basic reflection of the SPIR-V module along with other output.\n"
-	                "\t[--help]:\n\t\tPrints this help message.\n"
+	                "\t[--help]:\n\t\tPrints a summary help message.\n"
 	);
 	// clang-format on
 
@@ -1064,6 +1071,33 @@ static void print_help()
 	print_help_msl();
 	print_help_hlsl();
 	print_help_obscure();
+}
+
+static void print_help()
+{
+	print_version();
+
+	// clang-format off
+	fprintf(stderr, "Usage: spirv-cross [SPIR-V file] [options]\n"
+	                "\nBasic:\n"
+	                "\t[SPIR-V file] (- is stdin)\n"
+	                "\t[--output <output path>]: If not provided, prints output to stdout.\n"
+	                "\t[--help]:\n\t\tPrints this summary help message.\n"
+	                "\t[--help-all]:\n\t\tPrints all available help options.\n"
+	);
+	// clang-format on
+
+	print_help_backend();
+	print_help_common();
+
+	// clang-format off
+	fprintf(stderr, "\nHelp Categories:\n"
+	                "\t[--help-glsl]\n"
+	                "\t[--help-msl]\n"
+	                "\t[--help-hlsl]\n"
+	                "\t[--help-obscure]\n"
+	);
+	// clang-format on
 }
 
 static bool remap_generic(Compiler &compiler, const SmallVector<Resource> &resources, const Remap &remap)
@@ -1268,6 +1302,8 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 		msl_opts.manual_helper_invocation_updates = args.msl_manual_helper_invocation_updates;
 		msl_opts.check_discarded_frag_stores = args.msl_check_discarded_frag_stores;
 		msl_opts.force_fragment_with_side_effects_execution = args.msl_force_fragment_with_side_effects_execution;
+		msl_opts.emulate_reversed_depth_viewport = args.msl_emulate_reversed_depth_viewport;
+		msl_opts.emulate_depth_clip_enable = args.msl_emulate_depth_clip_enable;
 		msl_opts.sample_dref_lod_array_as_grad = args.msl_sample_dref_lod_array_as_grad;
 		msl_opts.ios_support_base_vertex_instance = true;
 		msl_opts.runtime_array_rich_descriptor = args.msl_runtime_array_rich_descriptor;
@@ -1430,6 +1466,10 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 	opts.relax_nan_checks = args.relax_nan_checks;
 	opts.force_recompile_max_debug_iterations = args.force_recompile_max_debug_iterations;
 	compiler->set_common_options(opts);
+
+	// This is enough for Vulkan mapping API.
+	if (args.glsl_descriptor_heap_set != UINT32_MAX)
+		compiler->remap_descriptor_heap(ResourceTypeUnknown, args.glsl_descriptor_heap_set, args.glsl_descriptor_heap_binding);
 
 	for (auto &fetch : args.glsl_ext_framebuffer_fetch)
 		compiler->remap_ext_framebuffer_fetch(fetch.first, fetch.second, !args.glsl_ext_framebuffer_fetch_noncoherent);
@@ -1610,6 +1650,34 @@ static int main_inner(int argc, char *argv[])
 		print_help();
 		parser.end();
 	});
+	cbs.add("--help-all", [](CLIParser &parser) {
+		print_help_all();
+		parser.end();
+	});
+	cbs.add("--help-backend", [](CLIParser &parser) {
+		print_help_backend();
+		parser.end();
+	});
+	cbs.add("--help-common", [](CLIParser &parser) {
+		print_help_common();
+		parser.end();
+	});
+	cbs.add("--help-glsl", [](CLIParser &parser) {
+		print_help_glsl();
+		parser.end();
+	});
+	cbs.add("--help-msl", [](CLIParser &parser) {
+		print_help_msl();
+		parser.end();
+	});
+	cbs.add("--help-hlsl", [](CLIParser &parser) {
+		print_help_hlsl();
+		parser.end();
+	});
+	cbs.add("--help-obscure", [](CLIParser &parser) {
+		print_help_obscure();
+		parser.end();
+	});
 	cbs.add("--revision", [](CLIParser &parser) {
 		print_version();
 		parser.end();
@@ -1648,6 +1716,11 @@ static int main_inner(int argc, char *argv[])
 	});
 	cbs.add("--glsl-ext-framebuffer-fetch-noncoherent", [&args](CLIParser &) {
 		args.glsl_ext_framebuffer_fetch_noncoherent = true;
+	});
+	cbs.add("--glsl-descriptor-heap-set-binding", [&args](CLIParser &parser)
+	{
+		args.glsl_descriptor_heap_set = parser.next_uint();
+		args.glsl_descriptor_heap_binding = parser.next_uint();
 	});
 	cbs.add("--vulkan-glsl-disable-ext-samplerless-texture-functions",
 	        [&args](CLIParser &) { args.vulkan_glsl_disable_ext_samplerless_texture_functions = true; });
@@ -1834,6 +1907,8 @@ static int main_inner(int argc, char *argv[])
 	        [&args](CLIParser &) { args.msl_manual_helper_invocation_updates = false; });
 	cbs.add("--msl-check-discarded-frag-stores", [&args](CLIParser &) { args.msl_check_discarded_frag_stores = true; });
 	cbs.add("--msl-force-frag-with-side-effects-execution", [&args](CLIParser &) { args.msl_force_fragment_with_side_effects_execution = true; });
+	cbs.add("--msl-emulate-reversed-depth-viewport", [&args](CLIParser &) { args.msl_emulate_reversed_depth_viewport = true; });
+	cbs.add("--msl-emulate-depth-clip-enable", [&args](CLIParser &) { args.msl_emulate_depth_clip_enable = true; });
 	cbs.add("--msl-sample-dref-lod-array-as-grad",
 	        [&args](CLIParser &) { args.msl_sample_dref_lod_array_as_grad = true; });
 	cbs.add("--msl-no-readwrite-texture-fences", [&args](CLIParser &) { args.msl_readwrite_texture_fences = false; });

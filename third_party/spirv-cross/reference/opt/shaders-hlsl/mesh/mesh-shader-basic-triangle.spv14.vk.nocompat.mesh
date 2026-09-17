@@ -49,8 +49,6 @@ struct gl_MeshPerPrimitiveEXT
     bool gl_CullPrimitiveEXT : SV_CullPrimitive;
 };
 
-groupshared float shared_float[16];
-
 void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], out gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint3 gl_PrimitiveTriangleIndicesEXT[22])
 {
     SetMeshOutputCounts(24u, 22u);

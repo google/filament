@@ -69,10 +69,8 @@ std::ostream& MetalArgumentBuffer::Builder::TextureArgument::write(std::ostream&
         case filament::backend::SamplerFormat::INT:
         case filament::backend::SamplerFormat::UINT:
         case filament::backend::SamplerFormat::FLOAT:
-            os << "texture";
-            break;
         case filament::backend::SamplerFormat::SHADOW:
-            os << "depth";
+            os << "texture";
             break;
     }
 

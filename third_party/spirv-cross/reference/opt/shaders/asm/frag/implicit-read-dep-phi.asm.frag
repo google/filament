@@ -16,7 +16,8 @@ void main()
     for (;;)
     {
         FragColor = _45;
-        if (_57 < 4)
+        bool _22 = _57 < 4;
+        if (_22)
         {
             if (v0[_57] > 0.0)
             {
