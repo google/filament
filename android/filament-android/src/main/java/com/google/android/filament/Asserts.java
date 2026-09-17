@@ -137,6 +137,21 @@ final class Asserts {
         }
     }
 
+    @NonNull @Size(min = 3)
+    static double[] assertDouble3(@Nullable double[] out) {
+        if (out == null) out = new double[3];
+        else if (out.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+        return out;
+    }
+
+    static void assertDouble3In(@NonNull double[] in) {
+        if (in.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+    }
+
     @NonNull @Size(min = 2)
     static double[] assertDouble2(@Nullable double[] out) {
         if (out == null) out = new double[2];
@@ -144,5 +159,140 @@ final class Asserts {
             throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
         }
         return out;
+    }
+
+    @NonNull @Size(min = 2)
+    static short[] assertShort2(@Nullable short[] out) {
+        if (out == null) out = new short[2];
+        else if (out.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+        return out;
+    }
+
+    static void assertShort2In(@NonNull short[] in) {
+        if (in.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+    }
+
+    @NonNull @Size(min = 3)
+    static short[] assertShort3(@Nullable short[] out) {
+        if (out == null) out = new short[3];
+        else if (out.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+        return out;
+    }
+
+    static void assertShort3In(@NonNull short[] in) {
+        if (in.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+    }
+
+    @NonNull @Size(min = 4)
+    static short[] assertShort4(@Nullable short[] out) {
+        if (out == null) out = new short[4];
+        else if (out.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+        return out;
+    }
+
+    static void assertShort4In(@NonNull short[] in) {
+        if (in.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+    }
+
+    @NonNull @Size(min = 2)
+    static int[] assertInt2(@Nullable int[] out) {
+        if (out == null) out = new int[2];
+        else if (out.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+        return out;
+    }
+
+    static void assertInt2In(@NonNull int[] in) {
+        if (in.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+    }
+
+    @NonNull @Size(min = 3)
+    static int[] assertInt3(@Nullable int[] out) {
+        if (out == null) out = new int[3];
+        else if (out.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+        return out;
+    }
+
+    static void assertInt3In(@NonNull int[] in) {
+        if (in.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+    }
+
+    @NonNull @Size(min = 4)
+    static int[] assertInt4(@Nullable int[] out) {
+        if (out == null) out = new int[4];
+        else if (out.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+        return out;
+    }
+
+    static void assertInt4In(@NonNull int[] in) {
+        if (in.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+    }
+
+    @NonNull @Size(min = 2)
+    static byte[] assertByte2(@Nullable byte[] out) {
+        if (out == null) out = new byte[2];
+        else if (out.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+        return out;
+    }
+
+    static void assertByte2In(@NonNull byte[] in) {
+        if (in.length < 2) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 2");
+        }
+    }
+
+    @NonNull @Size(min = 3)
+    static byte[] assertByte3(@Nullable byte[] out) {
+        if (out == null) out = new byte[3];
+        else if (out.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+        return out;
+    }
+
+    static void assertByte3In(@NonNull byte[] in) {
+        if (in.length < 3) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 3");
+        }
+    }
+
+    @NonNull @Size(min = 4)
+    static byte[] assertByte4(@Nullable byte[] out) {
+        if (out == null) out = new byte[4];
+        else if (out.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
+        return out;
+    }
+
+    static void assertByte4In(@NonNull byte[] in) {
+        if (in.length < 4) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 4");
+        }
     }
 }
