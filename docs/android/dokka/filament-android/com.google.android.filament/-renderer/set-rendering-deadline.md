@@ -3,9 +3,11 @@
 # setRenderingDeadline
 
 [main]\
-open fun [setRenderingDeadline](set-rendering-deadline.md)(monotonicClockNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
+open fun [setRenderingDeadline](set-rendering-deadline.md)(monotonic_clock_ns: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
-Set the deadline timestamp on the steady clock by which CPU and GPU rendering must complete for the buffer to meet its target display latching window. This must be called before [endFrame](end-frame.md).
+Set the deadline time point on the steady clock by which CPU and GPU rendering must complete for the buffer to meet its target display latching window. 
+
+This must be called before endFrame().
 
 #### Parameters
 
@@ -13,4 +15,4 @@ main
 
 | | |
 |---|---|
-| monotonicClockNanos | The deadline timestamp on the steady clock in nanoseconds. |
+| monotonic_clock_ns | the deadline timestamp in nanoseconds on the steady clock. |

@@ -5,4 +5,6 @@
 [main]\
 [INCR_CLAMP](index.md)
 
-Increments the current value. Clamps to the maximum representable unsigned value.
+Increments the current value. 
+
+Clamps to the maximum representable unsigned value.

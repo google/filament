@@ -9,7 +9,7 @@ Size of the index buffer in elements.
 
 #### Return
 
-this `Builder` object for chaining calls
+A reference to this Builder for chaining calls.
 
 #### Parameters
 
@@ -17,4 +17,4 @@ main
 
 | | |
 |---|---|
-| indexCount | number of indices the `IndexBuffer` can hold |
+| indexCount | Number of indices the IndexBuffer can hold. |

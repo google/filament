@@ -5,7 +5,9 @@
 [main]\
 open fun [priority](priority.md)(priority: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Skybox.Builder](index.md)
 
-Set the rendering priority of the Skybox. By default, it is set to the lowest priority (7) such that the Skybox is always rendered after the opaque objects, to reduce overdraw when depth culling is enabled.
+Set the rendering priority of the Skybox. 
+
+By default, it is set to the lowest priority (7) such that the Skybox is always rendered after the opaque objects, to reduce overdraw when depth culling is enabled.
 
 #### Return
 
@@ -17,7 +19,7 @@ main
 
 | | |
 |---|---|
-| priority | clamped to the range [0..7], defaults to 4; 7 is lowest priority (rendered last). |
+| priority | clamped to the range [0..7], defaults to 7; 7 is lowest priority (rendered last). |
 
 #### See also
 

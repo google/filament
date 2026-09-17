@@ -5,9 +5,9 @@
 [main]\
 open fun [depth](depth.md)(depth: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
-Specifies the texture's number of layers. Values greater than 1 create a 3D texture. 
+Specifies the depth in texels of the texture. 
 
-This `Texture` instance must use [SAMPLER_2D_ARRAY](../-sampler/-s-a-m-p-l-e-r_2-d_-a-r-r-a-y/index.md) or it has no effect.
+Doesn't need to be a power-of-two. The depth controls the number of layers in a 2D array texture. Values greater than 1 effectively create a 3D texture.
 
 #### Return
 
@@ -19,4 +19,4 @@ main
 
 | | |
 |---|---|
-| depth | texture number of layers. Default is 1. |
+| depth | Depth of the texture in texels (default: 1). |

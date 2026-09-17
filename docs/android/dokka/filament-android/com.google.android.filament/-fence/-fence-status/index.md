@@ -5,17 +5,21 @@
 [main]\
 enum [FenceStatus](index.md)
 
+Error codes for Fence::wait()
+
 ## Entries
 
 | | |
 |---|---|
-| [ERROR](-e-r-r-o-r/index.md) | [main]<br>[ERROR](-e-r-r-o-r/index.md) |
-| [CONDITION_SATISFIED](-c-o-n-d-i-t-i-o-n_-s-a-t-i-s-f-i-e-d/index.md) | [main]<br>[CONDITION_SATISFIED](-c-o-n-d-i-t-i-o-n_-s-a-t-i-s-f-i-e-d/index.md) |
-| [TIMEOUT_EXPIRED](-t-i-m-e-o-u-t_-e-x-p-i-r-e-d/index.md) | [main]<br>[TIMEOUT_EXPIRED](-t-i-m-e-o-u-t_-e-x-p-i-r-e-d/index.md) |
+| [ERROR](-e-r-r-o-r/index.md) | [main]<br>[ERROR](-e-r-r-o-r/index.md)<br>An error occurred. |
+| [CONDITION_SATISFIED](-c-o-n-d-i-t-i-o-n_-s-a-t-i-s-f-i-e-d/index.md) | [main]<br>[CONDITION_SATISFIED](-c-o-n-d-i-t-i-o-n_-s-a-t-i-s-f-i-e-d/index.md)<br>The Fence condition is satisfied. |
+| [TIMEOUT_EXPIRED](-t-i-m-e-o-u-t_-e-x-p-i-r-e-d/index.md) | [main]<br>[TIMEOUT_EXPIRED](-t-i-m-e-o-u-t_-e-x-p-i-r-e-d/index.md)<br>wait()'s timeout expired. |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
+| [from](from.md) | [main]<br>open fun [from](from.md)(value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Fence.FenceStatus](index.md) |
+| [toFilamentNative](to-filament-native.md) | [main]<br>open fun [toFilamentNative](to-filament-native.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
 | [valueOf](value-of.md) | [main]<br>open fun [valueOf](value-of.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Fence.FenceStatus](index.md)<br>Returns the enum constant of this type with the specified name. The string must match exactly an identifier used to declare an enum constant in this type. (Extraneous whitespace characters are not permitted.) |
 | [values](values.md) | [main]<br>open fun [values](values.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Fence.FenceStatus](index.md)&gt;<br>Returns an array containing the constants of this enum type, in the order they're declared. This method may be used to iterate over the constants. |

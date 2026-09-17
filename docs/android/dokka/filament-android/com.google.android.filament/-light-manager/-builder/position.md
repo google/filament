@@ -3,11 +3,22 @@
 # position
 
 [main]\
-open fun [position](position.md)(x: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), y: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), z: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
+open fun [position](position.md)(positionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Sets the initial position of the light in world space. 
 
-**note:** The Light's position is ignored for directional lights ([DIRECTIONAL](../-type/-d-i-r-e-c-t-i-o-n-a-l/index.md) or [SUN](../-type/-s-u-n/index.md)) 
+The Light's position is ignored for directional lights (Type.DIRECTIONAL or Type.SUN)
+
+#### Return
+
+This Builder, for chaining calls.
+
+[main]\
+open fun [position](position.md)(position: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [LightManager.Builder](index.md)
+
+Sets the initial position of the light in world space. 
+
+The Light's position is ignored for directional lights (Type.DIRECTIONAL or Type.SUN)
 
 #### Return
 
@@ -19,6 +30,4 @@ main
 
 | | |
 |---|---|
-| x | Light's position x coordinate in world space. The default is 0. |
-| y | Light's position y coordinate in world space. The default is 0. |
-| z | Light's position z coordinate in world space. The default is 0. |
+| position | Light's position in world space. The default is at the origin. |

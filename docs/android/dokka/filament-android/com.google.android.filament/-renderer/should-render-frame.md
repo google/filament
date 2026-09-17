@@ -5,14 +5,18 @@
 [main]\
 open fun [shouldRenderFrame](should-render-frame.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Returns true if the current frame should be rendered. This is a convenience method that returns the same value as [beginFrame](begin-frame.md).
+Returns true if the current frame should be rendered. 
+
+This is a convenience method that returns the same value as beginFrame().
+
+This method will return false once a backend exception has been delivered to the main thread.
 
 #### Return
 
-`false` the current frame should be skipped`true` the current frame can be rendered
+*false* the current frame should be skipped, or an unrecoverable backend exception has occurred. *true* the current frame can be rendered
 
 #### See also
 
 | |
 |---|
-| [beginFrame](begin-frame.md) |
+| beginFrame |

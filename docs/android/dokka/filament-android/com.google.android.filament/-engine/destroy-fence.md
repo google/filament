@@ -4,13 +4,3 @@
 
 [main]\
 open fun [destroyFence](destroy-fence.md)(fence: [Fence](../-fence/index.md))
-
-Destroys a [Fence](../-fence/index.md) and frees all its associated resources.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| fence | the [Fence](../-fence/index.md) to destroy |

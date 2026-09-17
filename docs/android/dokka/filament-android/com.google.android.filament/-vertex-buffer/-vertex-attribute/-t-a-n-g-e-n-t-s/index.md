@@ -4,3 +4,5 @@
 
 [main]\
 [TANGENTS](index.md)
+
+tangent, bitangent and normal, encoded as a quaternion (float4)

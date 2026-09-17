@@ -5,4 +5,4 @@
 [main]\
 [UINT](index.md)
 
-unsigned int, 32-bit
+unsigned int (32-bit)

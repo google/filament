@@ -3,9 +3,11 @@
 # payload
 
 [main]\
-open fun [payload](payload.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), size: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Material.Builder](index.md)
+open fun [payload](payload.md)(payload: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), size: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Material.Builder](index.md)
 
-Specifies the material data. The material data is a binary blob produced by libfilamat or by matc.
+Specifies the material data. 
+
+The material data is a binary blob produced by libfilamat or by matc.
 
 #### Parameters
 
@@ -13,5 +15,7 @@ main
 
 | | |
 |---|---|
-| buffer | buffer containing material data |
-| size | size of the material data in bytes |
+| payload | Buffer of the material data, must stay valid until build() is called. |
+
+[main]\
+open fun [payload](payload.md)(payload: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [Material.Builder](index.md)

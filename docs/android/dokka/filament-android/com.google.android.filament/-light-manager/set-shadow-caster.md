@@ -7,7 +7,7 @@ open fun [setShadowCaster](set-shadow-caster.md)(i: [Int](https://kotlinlang.org
 
 Whether this Light casts shadows (disabled by default) 
 
-**warning:**[POINT](-type/-p-o-i-n-t/index.md) cannot cast shadows. 
+- Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
 
 #### Parameters
 

@@ -5,10 +5,4 @@
 [main]\
 open fun [getRefractionMode](get-refraction-mode.md)(): [Material.RefractionMode](-refraction-mode/index.md)
 
-Returns the refraction mode of this material.
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/blendingandtransparency:refraction&quot;&gt; | Blending and transparency: refraction |
+Returns the refraction mode used by this material.

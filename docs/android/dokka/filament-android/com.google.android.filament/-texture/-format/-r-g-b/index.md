@@ -4,3 +4,5 @@
 
 [main]\
 [RGB](index.md)
+
+Three Red, Green and Blue channels, float

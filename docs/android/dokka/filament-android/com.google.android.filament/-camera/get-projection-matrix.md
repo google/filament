@@ -5,11 +5,13 @@
 [main]\
 open fun [getProjectionMatrix](get-projection-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
-Retrieves the camera's projection matrix. The projection matrix used for rendering always has its far plane set to infinity. This is why it may differ from the matrix set through setProjection() or setLensProjection().
+Returns the projection matrix used for rendering. 
+
+The projection matrix used for rendering always has its far plane set to infinity. This is why it may differ from the matrix set through setProjection() or setLensProjection().
 
 #### Return
 
-A 16-float array containing the camera's projection as a column-major matrix.
+The projection matrix used for rendering
 
 #### Parameters
 
@@ -17,4 +19,43 @@ main
 
 | | |
 |---|---|
-| out | A 16-float array where the projection matrix will be stored, or null in which case a new array is allocated. |
+| out | optional array to store the result, or null to allocate a new one |
+
+#### See also
+
+| |
+|---|
+| setProjection |
+| [setLensProjection](set-lens-projection.md) |
+| setCustomProjection |
+| [getCullingProjectionMatrix](get-culling-projection-matrix.md) |
+| [setCustomEyeProjection](set-custom-eye-projection.md) |
+
+[main]\
+open fun [getProjectionMatrix](get-projection-matrix.md)(eyeId: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
+
+Returns the projection matrix used for rendering. 
+
+The projection matrix used for rendering always has its far plane set to infinity. This is why it may differ from the matrix set through setProjection() or setLensProjection().
+
+#### Return
+
+The projection matrix used for rendering
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| eyeId | the index of the eye to return the projection matrix for, must be <config.stereoscopicEyeCount |
+
+#### See also
+
+| |
+|---|
+| setProjection |
+| [setLensProjection](set-lens-projection.md) |
+| setCustomProjection |
+| [getCullingProjectionMatrix](get-culling-projection-matrix.md) |
+| [setCustomEyeProjection](set-custom-eye-projection.md) |

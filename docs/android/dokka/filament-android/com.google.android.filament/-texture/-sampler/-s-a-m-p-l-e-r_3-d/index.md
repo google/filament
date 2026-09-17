@@ -5,4 +5,4 @@
 [main]\
 [SAMPLER_3D](index.md)
 
-3D sampler
+3D texture
