@@ -2,12 +2,7 @@
 
 # SUBSURFACE
 
+[main]\
 [SUBSURFACE](index.md)
 
-Subsurface lighting model
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialmodels/subsurfacemodel&quot;&gt; | Subsurface model |
+subsurface lighting model

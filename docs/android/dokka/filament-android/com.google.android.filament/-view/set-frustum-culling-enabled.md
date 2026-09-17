@@ -3,14 +3,6 @@
 # setFrustumCullingEnabled
 
 [main]\
-open fun [setFrustumCullingEnabled](set-frustum-culling-enabled.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setFrustumCullingEnabled](set-frustum-culling-enabled.md)(culling: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-Enables or disables frustum culling. Enabled by default.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| enabled | true enables frustum culling, false disables it. |
+debugging: allows to entirely disable frustum culling. (culling enabled by default).

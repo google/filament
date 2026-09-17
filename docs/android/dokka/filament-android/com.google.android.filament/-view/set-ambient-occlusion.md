@@ -3,15 +3,13 @@
 # setAmbientOcclusion
 
 [main]\
-open fun [~~setAmbientOcclusion~~](set-ambient-occlusion.md)(ao: [View.AmbientOcclusion](-ambient-occlusion/index.md))
-
----
-
-### Deprecated
-
----
+open fun [setAmbientOcclusion](set-ambient-occlusion.md)(ambientOcclusion: [View.AmbientOcclusion](-ambient-occlusion/index.md))
 
 Activates or deactivates ambient occlusion.
+
+#### Deprecated
+
+use setAmbientOcclusionOptions() instead
 
 #### Parameters
 
@@ -19,7 +17,7 @@ main
 
 | | |
 |---|---|
-| ao | Type of ambient occlusion to use. |
+| ambientOcclusion | Type of ambient occlusion to use. |
 
 #### See also
 

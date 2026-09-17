@@ -7,7 +7,7 @@ open fun [compile](compile.md)(priority: [Material.CompilerPriorityQueue](../-ma
 
 Asynchronously ensures that a subset of this MaterialInstance's variants are compiled. 
 
-This function behaves identically to [compile](../-material/compile.md), but takes into account the specific constants overridden by setConstant.
+This function behaves identically to Material::compile(), but takes into account the specific constants overridden by setConstant().
 
 #### Parameters
 
@@ -15,9 +15,9 @@ main
 
 | | |
 |---|---|
-| priority | Priority of the compile command. |
+| priority | Which priority queue to use, LOW or HIGH. |
 | variants | Variants to include to the compile command. |
-| handler | An [Executor](https://developer.android.com/reference/kotlin/java/util/concurrent/Executor.html). On Android this can also be a Handler. |
+| handler | Handler to dispatch the callback or nullptr for the default handler |
 | callback | callback called on the main thread when the compilation is done on by backend. |
 
 #### See also

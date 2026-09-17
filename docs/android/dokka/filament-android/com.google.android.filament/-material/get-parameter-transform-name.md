@@ -5,7 +5,13 @@
 [main]\
 open fun [getParameterTransformName](get-parameter-transform-name.md)(samplerName: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [String](https://developer.android.com/reference/kotlin/java/lang/String.html)
 
-Returns the name of the transform parameter associated with the given sampler parameter. In the case the parameter doesn't have a transform name field, it will return an empty string.
+Gets the name of the transform field associated for the given sampler parameter. 
+
+In the case where the parameter does not have a transform name field, it will return nullptr.
+
+#### Return
+
+If exists, the transform name value otherwise returns a nullptr.
 
 #### Parameters
 
@@ -14,9 +20,3 @@ main
 | | |
 |---|---|
 | samplerName | the name of the sampler parameter to query. |
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters&quot;&gt; | General: parameters |

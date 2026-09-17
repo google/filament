@@ -3,9 +3,9 @@
 # setChannel
 
 [main]\
-open fun [setChannel](set-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setChannel](set-channel.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Changes the channel of a renderable
+Changes the channel a renderable is associated to.
 
 #### See also
 

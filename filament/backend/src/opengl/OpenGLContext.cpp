@@ -560,9 +560,8 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     bugs->allow_read_only_ancillary_feedback_loop = true;
 #endif
 
-#ifndef __EMSCRIPTEN__
-    // ES 2.0 support for sRGB is buggy on most mobile devices, and so we disable it outside of wasm
-    // builds.
+#if defined(__ANDROID__)
+    // ES 2.0 support for sRGB is buggy on most mobile devices, and so we disable it for Android.
     bugs->disable_es2_srgb_ext = true;
 #endif
 }

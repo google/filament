@@ -3,6 +3,12 @@
 # getPrimitiveCount
 
 [main]\
-open fun [getPrimitiveCount](get-primitive-count.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getPrimitiveCount](get-primitive-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Gets the immutable number of primitives in the given renderable.
+
+#### See also
+
+| |
+|---|
+| [RenderableManager.Builder](-builder/-builder.md) |

@@ -1,0 +1,7 @@
+static const uint _15[4] = { 10u, 20u, 30u, 40u };
+
+uint lookup(uint i)
+{
+    return _15[i];
+}
+

@@ -5,4 +5,4 @@
 [main]\
 [SCREEN](index.md)
 
-Material brightens what's behind it.
+material brightens what's behind it

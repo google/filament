@@ -5,11 +5,13 @@
 [main]\
 open fun [fastMath](fast-math.md)(fastMath: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [ColorGrading.Builder](index.md)
 
-Enables or disables SIMD fast math optimizations during LUT generation.
+Hints whether the engine is permitted to use fast mathematical approximations (such as SIMD polynomial transcendentals) during LUT generation when eligible. 
+
+Setting fastMath to false forces exact C++ scalar libm calculations. The default is true.
 
 #### Return
 
-This Builder, for chaining calls
+This Builder, for chaining calls.
 
 #### Parameters
 
@@ -17,4 +19,4 @@ main
 
 | | |
 |---|---|
-| fastMath | true to enable fast math (default), false to use standard scalar math. |
+| fastMath | true to allow fast mathematical approximations, false otherwise. |

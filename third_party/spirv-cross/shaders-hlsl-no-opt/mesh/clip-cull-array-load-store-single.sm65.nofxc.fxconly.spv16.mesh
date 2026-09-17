@@ -7,9 +7,9 @@ out gl_MeshPerVertexEXT
 	float gl_ClipDistance[1];
 } gl_MeshVerticesEXT[];
 
-void write_clip_distance(inout float v[1])
+void write_clip_distance(out float v[1])
 {
-	v[0] += 1.0;
+	v[0] = 1.0;
 }
 
 void main()

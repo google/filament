@@ -3,14 +3,6 @@
 # setDepthFunc
 
 [main]\
-open fun [setDepthFunc](set-depth-func.md)(func: [TextureSampler.CompareFunction](../-texture-sampler/-compare-function/index.md))
+open fun [setDepthFunc](set-depth-func.md)(depthFunc: [TextureSampler.CompareFunc](../-texture-sampler/-compare-func/index.md))
 
-Sets the depth comparison function (default is GE).
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| func | the depth comparison function |
+Overrides the default depth function state that was set on the material.

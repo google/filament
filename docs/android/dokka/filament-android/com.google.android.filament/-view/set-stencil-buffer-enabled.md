@@ -7,13 +7,13 @@ open fun [setStencilBufferEnabled](set-stencil-buffer-enabled.md)(enabled: [Bool
 
 Enables use of the stencil buffer. 
 
- The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the color pass. 
+The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the color pass.
 
- Each fragment's stencil value is set during rasterization by specifying stencil operations on a [Material](../-material/index.md). The stencil buffer can be used as a mask for later rendering by setting a [Material](../-material/index.md)'s stencil comparison function and reference value. Fragments that don't pass the stencil test are then discarded. 
+Each fragment's stencil value is set during rasterization by specifying stencil operations on a Material. The stencil buffer can be used as a mask for later rendering by setting a Material's stencil comparison function and reference value. Fragments that don't pass the stencil test are then discarded.
 
- If post-processing is disabled, then the SwapChain must have the CONFIG_HAS_STENCIL_BUFFER flag set in order to use the stencil buffer. 
+If post-processing is disabled, then the SwapChain must have the CONFIG_HAS_STENCIL_BUFFER flag set in order to use the stencil buffer.
 
- A renderable's priority (see [setPriority](../-renderable-manager/set-priority.md)) is useful to control the order in which primitives are drawn. 
+A renderable's priority (see RenderableManager::setPriority) is useful to control the order in which primitives are drawn.
 
 #### Parameters
 

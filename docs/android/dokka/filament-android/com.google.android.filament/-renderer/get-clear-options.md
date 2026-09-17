@@ -5,8 +5,8 @@
 [main]\
 open fun [getClearOptions](get-clear-options.md)(): [Renderer.ClearOptions](-clear-options/index.md)
 
-Returns the ClearOptions object set in [setClearOptions](set-clear-options.md) or a new instance otherwise.
+Returns the ClearOptions currently set.
 
 #### Return
 
-a ClearOptions instance
+A reference to a ClearOptions structure.

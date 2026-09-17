@@ -28,6 +28,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
@@ -358,9 +359,18 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         scene->addEntity(app->light);
     };
 
+    auto preRender = [app](filament::Engine*, filament::View*, filament::Scene*,
+                             filament::Renderer* renderer) {
+        // This sample has no skybox, so without an IBL nothing would write the
+        // background and the swapchain contents would be undefined.
+        renderer->setClearOptions(
+                { .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f }, .clear = !app->filamentApp->getIBL() });
+    };
+
     auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
+                        .preRender(preRender)
                         .imgui(nullptr)
                         .build();
     app->filamentApp = fApp.get();

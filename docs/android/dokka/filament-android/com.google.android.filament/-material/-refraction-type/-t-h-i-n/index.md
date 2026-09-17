@@ -4,3 +4,5 @@
 
 [main]\
 [THIN](index.md)
+
+refraction through thin objects (e.g. window)

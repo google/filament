@@ -15,4 +15,4 @@ main
 
 | | |
 |---|---|
-| width | initial width of the incoming stream. Whether this value is used is stream dependent. On Android, it must be set when using stream |
+| width | initial width of the incoming stream. Whether this value is used is stream dependent. On Android, it must be set when using Builder::stream. |

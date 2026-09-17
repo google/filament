@@ -92,7 +92,7 @@ public class DisplayHelper {
      * where callbacks can execute filament code. Use this method if filament is executing
      * on another thread.
      *
-     * @param context a {@link Context} to used to retrieve teh {@link DisplayManager}
+     * @param context a {@link Context} to used to retrieve the {@link DisplayManager}
      * @param handler a {@link Handler} used to run callbacks accessing filament
      */
     public DisplayHelper(@NonNull Context context, @NonNull Handler handler) {

@@ -3,6 +3,6 @@
 # SKINNING
 
 [main]\
-open var [SKINNING](-s-k-i-n-n-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+val [SKINNING](-s-k-i-n-n-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 8
 
 Skinning
