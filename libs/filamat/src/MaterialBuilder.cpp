@@ -663,6 +663,9 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
+            FILAMENT_CHECK_PRECONDITION(binding < filament::backend::MAX_DESCRIPTOR_COUNT)
+                    << "Exceeded maximum number of descriptor bindings ("
+                    << filament::backend::MAX_DESCRIPTOR_COUNT << ").";
             ShaderStageFlags const stages = param.stages.value_or(defaultShaderStages);
             sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
                     param.format, param.precision, param.filterable, param.multisample,

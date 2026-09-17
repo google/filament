@@ -42,10 +42,11 @@ function start_render_() {
     # -f forces regeneration of cmake build files
     # -X points to the mesa directory, which contains the compiled gl and vk drivers.
     GLTF_VIEWER_PATH="$(pwd)/out/cmake-debug/samples/gltf_viewer"
-    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${GLTF_VIEWER_PATH} ]]; then
-        echo "Skipping build of gltf_viewer"
+    HELLOTRIANGLE_PATH="$(pwd)/out/cmake-debug/samples/hellotriangle"
+    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${GLTF_VIEWER_PATH} ]] && [[ -f ${HELLOTRIANGLE_PATH} ]]; then
+        echo "Skipping build of gltf_viewer and filament-samples"
     else
-        CXX=`which clang++` CC=`which clang` ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer
+        CXX=`which clang++` CC=`which clang` ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer filament-samples
     fi
 }
 
@@ -61,9 +62,15 @@ function end_render_() {
 #  - Build gltf_viewer
 #  - Run a test
 
+TEST_CONFIG="${RENDERDIFF_TEST_DIR}/tests/presubmit.json"
+
 for i in "$@"
 do
 case $i in
+    --test=*)
+    TEST_CONFIG="${i#*=}"
+    shift # past argument=value
+    ;;
     --test_filter=*)
     TEST_FILTER="${i#*=}"
     shift # past argument=value
@@ -91,7 +98,7 @@ for backend in opengl vulkan webgpu; do
             --executable="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
             --platform=desktop \
             --backend=$backend \
-            --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" \
+            --test="${TEST_CONFIG}" \
             --output_dir="${RENDER_OUTPUT_DIR}" \
             ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
             ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || exit 1

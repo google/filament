@@ -130,12 +130,21 @@ constexpr float CAMERA_EXPOSURE_APERTURE = 2.8f;
 constexpr float CAMERA_EXPOSURE_SHUTTER_SPEED = 1.0f / 125.0f;
 constexpr float CAMERA_EXPOSURE_SENSITIVITY = 400.0f;
 
+// Initial camera placement, passed to FilamentApp2::Builder::cameraHome(). The emitters orbit the
+// origin on Lissajous curves with radii of up to EMITTER_{X,Y}_RADIUS_MAX, so the camera is pulled
+// back far enough along +Z to keep the whole swarm, and the ground plane below it, inside the
+// frustum. Note that calling Camera::lookAt() from setup() would not work here: the main camera is
+// driven by the camera manipulator and is overwritten from it at the top of every frame.
+constexpr float3 CAMERA_POSITION = { 0.0f, 0.0f, 45.0f };
+constexpr float3 CAMERA_TARGET = { 0.0f, 0.0f, 0.0f };
+
 // UI properties
 constexpr float GRAVITY_STRENGTH_MAX = 2.0f;
 constexpr float FIREWORKS_DELAY_MIN = 0.1f;
 constexpr float FIREWORKS_DELAY_MAX = 10.0f;
 constexpr int EMITTER_COUNT_MIN = 1;
 constexpr int EMITTER_COUNT_MAX = 100;
+constexpr int EMITTER_COUNT_DEFAULT = 32;
 
 // ------------------------------------------------------------------------------------------------
 // App Data Structures
@@ -187,7 +196,7 @@ struct App {
     enum class EmitterMode { CONTINUOUS, FIREWORKS };
 
     struct UiState {
-        int emitterCount = 32;
+        int emitterCount = EMITTER_COUNT_DEFAULT;
         bool particlesFrozen = false;
         bool freezeEmitters = false;
         EmitterMode emitterMode = EmitterMode::FIREWORKS;
@@ -520,9 +529,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
-    if (config.getInt("emitters", 0) > 0) {
-        app->ui.emitterCount = config.getInt("emitters");
-    }
+    app->ui.emitterCount = config.getInt("emitters", EMITTER_COUNT_DEFAULT);
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
         app->scene = scene;
@@ -608,6 +615,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 
     auto fApp = samples::getBuilder(config, dm, loader)
+                        .cameraHome(CAMERA_POSITION, CAMERA_TARGET)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(imgui)
@@ -620,7 +628,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 samples::SampleParameters createAppParameters() {
     return {
-        samples::Parameter::makeInt("emitters", 'E', "Number of particle emitters", 1, 1),
+        samples::Parameter::makeInt("emitters", 'E', "Number of particle emitters",
+                EMITTER_COUNT_DEFAULT, EMITTER_COUNT_MIN, EMITTER_COUNT_MAX),
     };
 }
 
@@ -633,7 +642,8 @@ int main(int argc, char** argv) {
     };
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
     return 0;
 }

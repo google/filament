@@ -813,7 +813,24 @@ void WebGPUDriver::destroyFence(Handle<HwFence> fenceHandle) {
 }
 
 void WebGPUDriver::fenceCancel(FenceHandle fh) {
-    // it's okay to implement cancel as a no-op, because not all API support truly canceling.
+    // Even though this is a synchronous call, the fence handle must be (and stay) valid
+    assert_invariant(fh);
+    const auto fence = handleCast<WebGPUFence>(fh);
+    assert_invariant(fence);
+
+    // This cannot be a no-op the way it is for backends that can simply abandon a waiter.
+    //
+    // A WebGPU fence is only ever satisfied from the OnSubmittedWorkDone callback, and Dawn only
+    // delivers that callback while something pumps Instance::ProcessEvents() -- for us that is
+    // exclusively WebGPUQueueManager::finish(), which runs on the driver thread.
+    //
+    // Signaling ERROR here matches OpenGLDriver::fenceCancel and is handled by callers as "fence
+    // wait unsupported / unavailable", which is the correct interpretation of a cancelled fence.
+    if (auto const state = fence->getState()) {
+        state->setStatus(FenceStatus::ERROR);
+    }
+    // If no submission state has been attached yet there is nothing to signal: the state is
+    // attached by createFenceR on the driver thread, which is ordered before any cancel.
 }
 
 FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {

@@ -111,6 +111,23 @@ void createMsaaSidecarTextures(const uint8_t renderTargetSampleCount,
     return { .r = c[0], .g = c[1], .b = c[2], .a = c[3] };
 }
 
+wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
+        const TargetBufferFlags bufferToOperateOn, bool const isTransient) {
+    if (isTransient || any(params.flags.clear & bufferToOperateOn) ||
+            any(params.flags.discardStart & bufferToOperateOn)) {
+        return wgpu::LoadOp::Clear;
+    }
+    return wgpu::LoadOp::Load;
+}
+
+wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
+        const TargetBufferFlags bufferToOperateOn, bool const isTransient) {
+    if (isTransient || any(params.flags.discardEnd & bufferToOperateOn)) {
+        return wgpu::StoreOp::Discard;
+    }
+    return wgpu::StoreOp::Store;
+}
+
 }  // namespace
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
@@ -163,25 +180,6 @@ WebGPURenderTarget::WebGPURenderTarget()
       mSamples{ 1 },
       mLayerCount{ 1 } {}
 
-wgpu::LoadOp WebGPURenderTarget::getLoadOperation(RenderPassParams const& params,
-        const TargetBufferFlags bufferToOperateOn) {
-    if (any(params.flags.clear & bufferToOperateOn)) {
-        return wgpu::LoadOp::Clear;
-    }
-    if (any(params.flags.discardStart & bufferToOperateOn)) {
-        return wgpu::LoadOp::Clear;
-    }
-    return wgpu::LoadOp::Load;
-}
-
-wgpu::StoreOp WebGPURenderTarget::getStoreOperation(RenderPassParams const& params,
-        const TargetBufferFlags bufferToOperateOn, bool const isTransient) {
-    if (isTransient || any(params.flags.discardEnd & bufferToOperateOn)) {
-        return wgpu::StoreOp::Discard;
-    }
-    return wgpu::StoreOp::Store;
-}
-
 void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& outDescriptor,
         RenderPassParams const& params, wgpu::TextureView const& defaultColorTextureView,
         wgpu::TextureView const& defaultDepthStencilTextureView,
@@ -230,26 +228,25 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
     const wgpu::Color clearColor = toWgpuClearColor(params.clearColor);
     if (mDefaultRenderTarget) {
         assert_invariant(defaultColorTextureView);
+        constexpr bool isTransient = false;
+
         mColorAttachmentDesc.push_back({
             .view = defaultColorTextureView,
             .resolveTarget = nullptr,
-            .loadOp = WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0),
-            .storeOp =
-                    WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0, false),
+            .loadOp = getLoadOperation(params, TargetBufferFlags::COLOR0, isTransient),
+            .storeOp = getStoreOperation(params, TargetBufferFlags::COLOR0, isTransient),
             .clearValue = clearColor,
         });
     } else {
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
             if (customColorTextureViews[i]) {
+                bool const isTransient = any(mTransientAttachments & getTargetBufferFlagsAt(i));
                 const wgpu::TextureView msaaSidecar{ customColorMsaaSidecarTextureViews[i] };
                 mColorAttachmentDesc.push_back({
                     .view = msaaSidecar ? msaaSidecar : customColorTextureViews[i],
                     .resolveTarget = msaaSidecar ? customColorTextureViews[i] : nullptr,
-                    .loadOp =
-                            WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
-                    .storeOp =
-                            WebGPURenderTarget::getStoreOperation(params, getTargetBufferFlagsAt(i),
-                                    any(mTransientAttachments & getTargetBufferFlagsAt(i))),
+                    .loadOp = getLoadOperation(params, getTargetBufferFlagsAt(i), isTransient),
+                    .storeOp = getStoreOperation(params, getTargetBufferFlagsAt(i), isTransient),
                     .clearValue = clearColor,
                 });
             }
@@ -277,14 +274,15 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             mDepthStencilAttachmentDesc.view = depthStencilViewToUse;
 
             if (hasDepth) {
+                bool const isTransient = any(mTransientAttachments & TargetBufferFlags::DEPTH);
                 mDepthStencilAttachmentDesc.depthLoadOp =
-                        depthReadOnly ? wgpu::LoadOp::Undefined
-                                      : getLoadOperation(params, TargetBufferFlags::DEPTH);
+                        depthReadOnly
+                                ? wgpu::LoadOp::Undefined
+                                : getLoadOperation(params, TargetBufferFlags::DEPTH, isTransient);
                 mDepthStencilAttachmentDesc.depthStoreOp =
                         depthReadOnly
                                 ? wgpu::StoreOp::Undefined
-                                : getStoreOperation(params, TargetBufferFlags::DEPTH,
-                                          any(mTransientAttachments & TargetBufferFlags::DEPTH));
+                                : getStoreOperation(params, TargetBufferFlags::DEPTH, isTransient);
                 mDepthStencilAttachmentDesc.depthClearValue = static_cast<float>(params.clearDepth);
                 mDepthStencilAttachmentDesc.depthReadOnly = depthReadOnly;
             } else {
@@ -294,11 +292,11 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             }
 
             if (hasStencil) {
+                bool const isTransient = any(mTransientAttachments & TargetBufferFlags::STENCIL);
                 mDepthStencilAttachmentDesc.stencilLoadOp =
-                        getLoadOperation(params, TargetBufferFlags::STENCIL);
+                        getLoadOperation(params, TargetBufferFlags::STENCIL, isTransient);
                 mDepthStencilAttachmentDesc.stencilStoreOp =
-                        getStoreOperation(params, TargetBufferFlags::STENCIL,
-                                any(mTransientAttachments & TargetBufferFlags::STENCIL));
+                        getStoreOperation(params, TargetBufferFlags::STENCIL, isTransient);
                 mDepthStencilAttachmentDesc.stencilClearValue = params.clearStencil;
                 mDepthStencilAttachmentDesc.stencilReadOnly =
                         (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;

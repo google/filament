@@ -228,9 +228,9 @@ private:
     void setSkybox(FSkybox* skybox) noexcept;
     void setIndirectLight(FIndirectLight* ibl) noexcept { mIndirectLight = ibl; }
     void addEntity(utils::Entity entity);
-    void addEntities(const utils::Entity* entities, size_t count);
+    void addEntities(utils::Slice<const utils::Entity> entities);
     void remove(utils::Entity entity);
-    void removeEntities(const utils::Entity* entities, size_t count);
+    void removeEntities(utils::Slice<const utils::Entity> entities);
     void removeAllEntities() noexcept;
     size_t getEntityCount() const noexcept { return mEntities.size(); }
     size_t getRenderableCount() const noexcept;

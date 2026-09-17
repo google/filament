@@ -105,9 +105,11 @@ private fun loadCubemap(texture: Texture,
     // Android to not premultiply the RGB channels by the alpha channel
     val opts = BitmapFactory.Options().apply { inPremultiplied = false }
 
+    val width = texture.getWidth(level)
+    val height = texture.getHeight(level)
+
     // R11G11B10F is always 4 bytes per pixel
-    val faceSize = texture.getWidth(level) * texture.getHeight(level) * 4
-    val offsets = IntArray(6) { it * faceSize }
+    val faceSize = width * height * 4
     // Allocate enough memory for all the cubemap faces
     val storage = ByteBuffer.allocateDirect(faceSize * 6)
 
@@ -127,7 +129,7 @@ private fun loadCubemap(texture: Texture,
 
     val buffer = Texture.PixelBufferDescriptor(storage,
             Texture.Format.RGB, Texture.Type.UINT_10F_11F_11F_REV)
-    texture.setImage(engine, level, buffer, offsets)
+    texture.setImage(engine, level, 0, 0, 0, width, height, 6, buffer)
 
     return true
 }

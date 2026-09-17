@@ -75,6 +75,8 @@ struct PbrMap {
     Texture* texture;
 };
 
+static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+
 struct App {
     std::vector<Path> filenames;
     std::map<utils::CString, MaterialInstance*> materialInstances;
@@ -109,6 +111,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     utils::CString matDir = config.getString("material-dir");
     if (!matDir.empty()) {
         app->pbrConfig.materialDir = matDir;
+    } else {
+        app->pbrConfig.materialDir = "assets/models/monkey";
     }
     if (config.getBool("clear-coat")) {
         app->pbrConfig.clearCoat = true;
@@ -121,12 +125,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         app->filenames.push_back(utils::Path(filename.c_str()));
     }
 
-    auto loadTexture = [](Engine* engine, const utils::Path& path, Texture** map,
+    auto loadTexture = [loader](Engine* engine, const utils::Path& path, Texture** map,
                                bool sRGB = true) -> bool {
         if (!path.isEmpty()) {
-            if (path.exists()) {
-                int w, h, n;
-                unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
+            auto buf = loader->load(path);
+            if (!buf.empty()) {
+                int w = 0, h = 0, n = 0;
+                unsigned char* data =
+                        stbi_load_from_memory(buf.data(), (int) buf.size(), &w, &h, &n, 3);
                 if (data != nullptr) {
                     *map = Texture::Builder()
                                    .width(uint32_t(w))
@@ -171,7 +177,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     std::cout << "The texture " << map.suffix << " does not exist" << std::endl;
                 }
             }
-            if (map.texture != nullptr) hasUV = true;
+            if (map.texture != nullptr) {
+                hasUV = true;
+            }
         }
 
         bool const hasBaseColorMap = app->maps[MAP_COLOR].texture != nullptr;
@@ -300,6 +308,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         MaterialBuilder builder;
         builder.name("DefaultMaterial")
                 .targetApi(MaterialBuilder::TargetApi::ALL)
+                .platform(MaterialBuilder::Platform::ALL)
 #ifndef NDEBUG
                 .optimization(MaterialBuilderBase::Optimization::NONE)
                 .generateDebugInfo(true)
@@ -322,16 +331,18 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         Package const pkg = builder.build(engine->getJobSystem());
 
         app->material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
-        app->materialInstances["DefaultMaterial"] = app->material->createInstance();
+        if (app->material) {
+            app->materialInstances["DefaultMaterial"] = app->material->createInstance();
 
-        TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
-        sampler.setAnisotropy(8.0f);
+            TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+                    TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+            sampler.setAnisotropy(8.0f);
 
-        for (auto& map: app->maps) {
-            if (map.texture != nullptr) {
-                app->materialInstances["DefaultMaterial"]->setParameter(map.parameterName,
-                        map.texture, sampler);
+            for (auto& map: app->maps) {
+                if (map.texture != nullptr) {
+                    app->materialInstances["DefaultMaterial"]->setParameter(map.parameterName,
+                            map.texture, sampler);
+                }
             }
         }
 
@@ -339,10 +350,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialInstances, true);
         }
-        if (app->filenames.empty()) {
-            app->meshSet->addFromFile(FilamentApp2::getRootAssetsPath() +
-                                              "assets/models/material_sphere/material_sphere.obj",
-                    app->materialInstances, true);
+        if (app->meshSet->getRenderables().empty()) {
+            app->meshSet->addFromFile(MODEL_FILE, app->materialInstances, true);
         }
 
         auto& rcm = engine->getRenderableManager();
@@ -369,18 +378,29 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
+        app->meshSet.reset();
         for (auto& item: app->materialInstances) {
             auto materialInstance = item.second;
-            engine->destroy(materialInstance);
+            if (materialInstance) {
+                engine->destroy(materialInstance);
+            }
         }
-        app->meshSet.reset(nullptr);
-        engine->destroy(app->material);
-        for (const auto& map: app->maps) {
-            engine->destroy(map.texture);
+        app->materialInstances.clear();
+        if (app->material) {
+            engine->destroy(app->material);
+            app->material = nullptr;
         }
-        EntityManager& em = EntityManager::get();
-        engine->destroy(app->light);
-        em.destroy(app->light);
+        for (auto& map: app->maps) {
+            if (map.texture) {
+                engine->destroy(map.texture);
+                map.texture = nullptr;
+            }
+        }
+        if (app->light) {
+            engine->destroy(app->light);
+            EntityManager::get().destroy(app->light);
+            app->light = Entity{};
+        }
     };
 
     auto preRender = [app](filament::Engine*, filament::View*, filament::Scene*,
@@ -414,27 +434,26 @@ int main(int argc, char* argv[]) {
     SampleConfig config;
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_FULL_PBR demonstrates physically based rendering in Filament.",
-        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
+        .positionalArgsDescription = { "[mesh files (.obj, .fbx)]" },
+        .requiredPositionalArgCount = 0,
         .parameters = createAppParameters(),
     };
 
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
+    auto loader = samples::getAssetLoader(config);
 
     for (const auto& fname : config.positionalArgs) {
         utils::Path const filename(fname.c_str_safe());
-        if (!filename.exists()) {
+        if (!loader->exists(filename)) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
     }
 
     config.title = "PBR";
-
-    auto loader = new filament::app::DesktopAssetLoader();
-    auto app = createSampleApp(config, dm.get(), loader);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
-    delete loader;
 
     return 0;
 }

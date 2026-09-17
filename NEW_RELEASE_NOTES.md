@@ -7,4 +7,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 - build: Keep exceptions enabled for separately built host tools when `build.sh -E` disables exceptions for the target build.
-- backend: add Metal support for external image handles
+- vulkan: report depth and stencil render-target format support correctly
