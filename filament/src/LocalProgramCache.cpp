@@ -23,6 +23,11 @@
 
 #include <backend/DriverApiForward.h>
 
+#include <utils/Panic.h>
+
+#include <cstdlib>
+#include <limits>
+
 namespace filament {
 
 using namespace backend;
@@ -55,6 +60,35 @@ LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) 
     return *this;
 }
 
+uint32_t LocalProgramCache::getCacheSize(MaterialDomain const materialDomain) {
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            return 1u << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+        case MaterialDomain::POST_PROCESS:
+            return 1u << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+        case MaterialDomain::COMPUTE:
+            return 1u;
+    }
+    return 1u;
+}
+
+LocalProgramCache::CacheKey LocalProgramCache::mapCacheEntryKey(Variant const variant,
+        DynamicSpecConstKey specKey, std::size_t const cacheSize) {
+    // Decouple depth variants from the dynamic specialization space
+    if (Variant::isValidDepthVariant(variant)) {
+        specKey = DynamicSpecConstKey{ 0 };
+    }
+    constexpr CacheKey SPEC_KEY_MASK = (CacheKey{ 1 } << DYNAMIC_SPEC_CONST_KEY_BITS) - 1u;
+    CacheKey const key = (CacheKey{ variant.key } << DYNAMIC_SPEC_CONST_KEY_BITS) |
+                         (CacheKey{ specKey.key } & SPEC_KEY_MASK);
+    FILAMENT_CHECK_POSTCONDITION(key < cacheSize)
+            << "Program cache index out of bounds: variant="
+            << static_cast<uint32_t>(variant.key)
+            << ", specKey=" << static_cast<uint32_t>(specKey.key)
+            << ", index=" << key << ", size=" << cacheSize;
+    return key;
+}
+
 void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& material,
         utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                 specializationConstants) {
@@ -68,19 +102,8 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
             engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
                     std::move(specializationConstants));
 
-    size_t cachedProgramsSize;
-    switch (material.getMaterialDomain()) {
-        case filament::MaterialDomain::SURFACE:
-            cachedProgramsSize = 1 << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
-            break;
-        case filament::MaterialDomain::POST_PROCESS:
-            cachedProgramsSize = 1 << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
-            break;
-        case filament::MaterialDomain::COMPUTE:
-            cachedProgramsSize = 1;
-            break;
-    }
-    mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(cachedProgramsSize);
+    mCachedPrograms =
+            FixedCapacityVector<Handle<HwProgram>>(getCacheSize(material.getMaterialDomain()));
 
     material.getDefinition().acquirePrograms(engine, mCachedPrograms.as_slice(),
             material.getMaterialParser(), mSpecializationConstants, material.isDefaultMaterial());
@@ -99,7 +122,7 @@ void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial
                     programs.getSpecializationConstants());
 
     mCachedPrograms =
-            FixedCapacityVector<Handle<HwProgram>>(material.getPrograms().mCachedPrograms.size());
+            FixedCapacityVector<Handle<HwProgram>>(getCacheSize(material.getMaterialDomain()));
 }
 
 Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
@@ -109,12 +132,14 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
     FEngine& engine = mMaterial->getEngine();
 
     Handle<HwProgram> result;
-    CacheKey mappedKey = mapCacheEntryKey(variant, specKey);
+    CacheKey const mappedKey = mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
     if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         assert_invariant(defaultMaterial);
         LocalProgramCache const& defaultPrograms = defaultMaterial->getPrograms();
-        result = defaultPrograms.mCachedPrograms[mappedKey];
+        CacheKey const defaultMappedKey =
+                mapCacheEntryKey(variant, specKey, defaultPrograms.mCachedPrograms.size());
+        result = defaultPrograms.mCachedPrograms[defaultMappedKey];
         if (!result) {
             result = defaultPrograms.prepareProgram(driver, variant, specKey, priorityQueue);
         }
