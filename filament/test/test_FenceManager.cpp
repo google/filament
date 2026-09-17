@@ -16,16 +16,16 @@
 
 #include "MockDriver.h"
 
+#include "details/UboManager.h"
+
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/CommandStream.h>
+#include <private/backend/Driver.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "details/UboManager.h"
-#include "private/backend/CommandBufferQueue.h"
-
-#include "private/backend/CommandStream.h"
-#include "private/backend/Driver.h"
-
-#include <unordered_set>
+#include <cstddef>
 
 namespace {
 
@@ -35,13 +35,13 @@ using namespace backend;
 using ::testing::_;
 using ::testing::Return;
 
-static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE = 1 * 1024 * 1024;
-static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND_BUFFERS_SIZE;
-
 class FenceManagerTest : public ::testing::Test {
 protected:
+    static constexpr size_t MIN_COMMAND_BUFFERS_SIZE = 1 * 1024 * 1024;
+    static constexpr size_t COMMAND_BUFFERS_SIZE = 3 * MIN_COMMAND_BUFFERS_SIZE;
+
     FenceManagerTest()
-            : mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE,
+            : mCommandBufferQueue(MIN_COMMAND_BUFFERS_SIZE, COMMAND_BUFFERS_SIZE,
                       /*mPaused=*/false),
               mCommandStream(mMockDriver, mCommandBufferQueue.getCircularBuffer()),
               mDriverApi(mCommandStream) {}
@@ -53,108 +53,77 @@ protected:
     UboManager::FenceManager mFenceManager;
 };
 
-TEST_F(FenceManagerTest, TrackEmptySet) {
-    mFenceManager.track(mDriverApi, {});
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 1); // No fence allocation
-}
-
-TEST_F(FenceManagerTest, TrackNonEmptySet) {
-    mFenceManager.track(mDriverApi, { 1, 2, 3 });
+TEST_F(FenceManagerTest, TrackFrame) {
+    mFenceManager.track(mDriverApi);
     EXPECT_EQ(mMockDriver.nextFakeHandle, 2);
+    EXPECT_EQ(mFenceManager.getSubmittedSerial(), 1);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 0);
 }
 
 TEST_F(FenceManagerTest, ReclaimWithNoFences) {
-    std::vector<UboManager::FenceManager::AllocationId> reclaimedIds;
-    mFenceManager.reclaimCompletedResources(mDriverApi,
-            [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.push_back(id); });
-
-    EXPECT_TRUE(reclaimedIds.empty());
+    EXPECT_CALL(mMockDriver, getFenceStatus(_)).Times(0);
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 0);
 }
 
 TEST_F(FenceManagerTest, ReclaimWhenFenceNotSignaled) {
-    mFenceManager.track(mDriverApi, { 10 });
-
+    mFenceManager.track(mDriverApi);
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
             .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
-
-    std::unordered_set<UboManager::FenceManager::AllocationId> reclaimedIds;
-    mFenceManager.reclaimCompletedResources(mDriverApi,
-            [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.insert(id); });
-
-    EXPECT_TRUE(reclaimedIds.empty());
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 0);
 }
 
 TEST_F(FenceManagerTest, ReclaimWhenFenceSignaled) {
-    mFenceManager.track(mDriverApi, { 10, 20 });
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 2);
-
+    mFenceManager.track(mDriverApi);
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
             .WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 1);
 
-    std::unordered_set<UboManager::FenceManager::AllocationId> reclaimedIds;
-    mFenceManager.reclaimCompletedResources(mDriverApi,
-            [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.insert(id); });
-
-    // Verify that the correct IDs were reclaimed.
-    ASSERT_EQ(reclaimedIds.size(), 2);
-    EXPECT_TRUE(reclaimedIds.contains(10));
-    EXPECT_TRUE(reclaimedIds.contains(20));
-
-    // Verify that the fence is no longer tracked by calling reclaim again.
-    reclaimedIds.clear();
-    EXPECT_CALL(mMockDriver, getFenceStatus(_)).Times(0); // No fences left to check.
-    mFenceManager.reclaimCompletedResources(mDriverApi,
-            [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.insert(id); });
-    EXPECT_TRUE(reclaimedIds.empty());
+    EXPECT_CALL(mMockDriver, getFenceStatus(_)).Times(0);
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 1);
 }
 
 TEST_F(FenceManagerTest, ReclaimMultipleFencesPartial) {
-    // Frame 1
-    mFenceManager.track(mDriverApi, { 1 });
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 2);
-
-    // Frame 2
-    mFenceManager.track(mDriverApi, { 2 });
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 3);
-
-    // Frame 3
-    mFenceManager.track(mDriverApi, { 3 });
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 4);
-
-    // Now, reclaim. Assume fence 1 and 2 are done, but 3 is not.
-    // The implementation iterates from newest to oldest.
+    mFenceManager.track(mDriverApi);
+    mFenceManager.track(mDriverApi);
+    mFenceManager.track(mDriverApi);
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(3)))
             .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
     EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(2)))
             .WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
-    EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
+    // A newer completed fence covers older submissions without querying them.
+    EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1))).Times(0);
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 2);
+    EXPECT_EQ(mFenceManager.getSubmittedSerial(), 3);
+
+    EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(3)))
             .WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 3);
+}
 
-    std::vector<UboManager::FenceManager::AllocationId> reclaimedIds;
-    mFenceManager.reclaimCompletedResources(mDriverApi,
-            [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.push_back(id); });
-
-    // Verify that resources from the first two frames were reclaimed.
-    ASSERT_EQ(reclaimedIds.size(), 2);
-    EXPECT_EQ(reclaimedIds[0], 1);
-    EXPECT_EQ(reclaimedIds[1], 2);
+TEST_F(FenceManagerTest, ErrorDoesNotCompleteFrame) {
+    mFenceManager.track(mDriverApi);
+    EXPECT_CALL(mMockDriver, getFenceStatus(Handle<HwFence>(1)))
+            .WillOnce(Return(FenceStatus::ERROR));
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 0);
 }
 
 TEST_F(FenceManagerTest, Reset) {
-    mFenceManager.track(mDriverApi, { 10 });
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 2);
-
-    mFenceManager.track(mDriverApi, { 20 });
-    EXPECT_EQ(mMockDriver.nextFakeHandle, 3);
-
+    mFenceManager.track(mDriverApi);
+    mFenceManager.track(mDriverApi);
     mFenceManager.reset(mDriverApi);
-
-    // After reset, reclaiming should do nothing.
-    std::vector<UboManager::FenceManager::AllocationId> reclaimedIds;
     EXPECT_CALL(mMockDriver, getFenceStatus(_)).Times(0);
-    mFenceManager.reclaimCompletedResources(mDriverApi,
-            [&reclaimedIds](BufferAllocator::AllocationId id) { reclaimedIds.push_back(id); });
-    EXPECT_TRUE(reclaimedIds.empty());
+    mFenceManager.reclaimCompletedResources(mDriverApi);
+    EXPECT_EQ(mFenceManager.getCompletedSerial(), 0);
+    EXPECT_EQ(mFenceManager.getSubmittedSerial(), 0);
+    mFenceManager.track(mDriverApi);
+    EXPECT_EQ(mFenceManager.getSubmittedSerial(), 1);
 }
 
-} // namespace anonymous
+} // anonymous namespace

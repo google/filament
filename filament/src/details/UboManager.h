@@ -24,7 +24,7 @@
 #include <backend/DriverApiForward.h>
 #include <backend/Handle.h>
 
-#include <functional>
+#include <cstdint>
 #include <vector>
 
 class UboManagerTest;
@@ -42,19 +42,12 @@ class FMaterialInstance;
 // undefined behavior.
 class UboManager {
 public:
-    // This utility tracks resources that are in-use by the GPU across multiple frames.
-    // It uses backend fences to determine when the GPU has finished with a set of resources,
-    // allowing them to be safely reclaimed or reused.
-    //
-    // The typical usage is to `track()` a set of resources at the end of a frame and
-    // call `reclaimCompletedResources()` at the beginning of a future frame to free up
-    // resources from completed GPU work.
+    // Tracks completion of submitted frames without storing per-frame allocation lists.
     //
     // This class is designed for single-threaded access.
     class FenceManager {
     public:
-        using AllocationId = BufferAllocator::AllocationId;
-        using AllocationIdContainer = utils::FixedCapacityVector<AllocationId>;
+        using Serial = uint64_t;
 
         FenceManager() = default;
         ~FenceManager() = default;
@@ -62,26 +55,27 @@ public:
         FenceManager(FenceManager const&) = delete;
         FenceManager(FenceManager&&) = delete;
 
+        // Creates a fence after the current frame's UBO reads.
+        void track(backend::DriverApi& driver);
 
-        // Creates a new fence to track a set of allocation IDs for the current frame.
-        // This marks the beginning of GPU's usage of these resources.
-        void track(backend::DriverApi& driver, AllocationIdContainer&& allocationIds);
+        // Advance the completed serial and destroy fences covered by that completion.
+        void reclaimCompletedResources(backend::DriverApi& driver);
 
-
-        // Checks all tracked fences and invokes a callback for resources associated with
-        // completed fences. This should be called once per frame.
-        void reclaimCompletedResources(backend::DriverApi& driver,
-                std::function<void(AllocationId)> const& onReclaimed);
+        [[nodiscard]] Serial getSubmittedSerial() const noexcept { return mSubmittedSerial; }
+        [[nodiscard]] Serial getCompletedSerial() const noexcept { return mCompletedSerial; }
 
         // Destroys all tracked fences and clears the tracking list.
         // This is used for cleanup during termination or major reallocations.
         void reset(backend::DriverApi& driver);
 
     private:
-        // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
-        using FenceAndAllocations =
-                std::pair<backend::Handle<backend::HwFence>, AllocationIdContainer>;
-        std::vector<FenceAndAllocations> mFenceAllocationList;
+        struct FrameFence {
+            backend::Handle<backend::HwFence> fence;
+            Serial serial;
+        };
+        std::vector<FrameFence> mFences;
+        Serial mSubmittedSerial = 0;
+        Serial mCompletedSerial = 0;
     };
 
     explicit UboManager(backend::DriverApi& driver,
@@ -103,9 +97,7 @@ public:
     // Unmap the buffer here
     void finishBeginFrame(backend::DriverApi& driver);
 
-    // Create a fence and associate it with a set of allocation ids.
-    // The gpuUseCount of these allocations will be incremented, and they will be decremented
-    // After the corresponding frame has been done.
+    // Fence the current frame without visiting its material instances.
     void endFrame(backend::DriverApi& driver);
 
     void terminate(backend::DriverApi& driver);
@@ -146,6 +138,9 @@ private:
 
     void allocateAllInstances();
 
+    // Keep the allocator's ownership until the last submitted frame has completed.
+    void deferRetirement(BufferAllocator::AllocationId id);
+
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
 
     BufferAllocator::allocation_size_t calculateRequiredSize();
@@ -158,6 +153,13 @@ private:
 
     FenceManager mFenceManager;
     BufferAllocator mAllocator;
+    struct RetiredAllocation {
+        BufferAllocator::AllocationId id;
+        FenceManager::Serial serial;
+    };
+    // Appended in submission order; only retired allocations need GPU lifetime tracking.
+    std::vector<RetiredAllocation> mRetiredAllocations;
+    // Instances destroyed during a frame must wait for that frame's endFrame fence.
     std::vector<BufferAllocator::AllocationId> mFreedAllocations;
 };
 
