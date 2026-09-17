@@ -3,6 +3,24 @@
 # getInstanceCount
 
 [main]\
-open fun [getInstanceCount](get-instance-count.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getInstanceCount](get-instance-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Gets the immutable number of instances in the given renderable.
+Returns the number of instances for this renderable.
+
+#### Return
+
+The number of instances.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | Instance of the component obtained from getInstance(). |
+
+#### See also
+
+| |
+|---|
+| com.google.android.filament.RenderableManager.Builder |

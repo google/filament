@@ -5,11 +5,9 @@
 [main]\
 open fun [shadowSamplingQuality](shadow-sampling-quality.md)(quality: [Material.Builder.ShadowSamplingQuality](-shadow-sampling-quality/index.md)): [Material.Builder](index.md)
 
-Set the quality of shadow sampling. This is only taken into account if this material is lit and in the surface domain.
+Set the quality of shadow sampling. 
 
-#### Return
-
-Reference to this Builder for chaining calls.
+This is only taken into account if this material is lit and in the surface domain.
 
 #### Parameters
 

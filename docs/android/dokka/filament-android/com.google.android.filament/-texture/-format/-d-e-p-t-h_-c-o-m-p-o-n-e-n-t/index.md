@@ -4,3 +4,5 @@
 
 [main]\
 [DEPTH_COMPONENT](index.md)
+
+Depth, 16-bit or 24-bits usually

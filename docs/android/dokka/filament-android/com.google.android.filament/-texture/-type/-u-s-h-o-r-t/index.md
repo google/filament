@@ -5,4 +5,4 @@
 [main]\
 [USHORT](index.md)
 
-unsigned short, 16-bits
+unsigned short (16-bit)

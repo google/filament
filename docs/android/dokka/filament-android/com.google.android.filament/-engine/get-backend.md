@@ -5,6 +5,4 @@
 [main]\
 open fun [getBackend](get-backend.md)(): [Engine.Backend](-backend/index.md)
 
-#### Return
-
-the backend used by this `Engine`
+Returns the resolved backend.

@@ -3,10 +3,6 @@
 # SSAO
 
 [main]\
-[~~SSAO~~](index.md)
+[SSAO](index.md)
 
----
-
-### Deprecated
-
----
+Basic, sampling SSAO

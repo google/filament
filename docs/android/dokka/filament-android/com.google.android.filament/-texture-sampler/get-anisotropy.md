@@ -5,12 +5,4 @@
 [main]\
 open fun [getAnisotropy](get-anisotropy.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-#### Return
-
-the anisotropy value
-
-#### See also
-
-| |
-|---|
-| [setAnisotropy](set-anisotropy.md) |
+returns the anisotropy value

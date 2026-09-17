@@ -5,4 +5,4 @@
 [main]\
 [FRONT_AND_BACK](index.md)
 
-Front and back culling. Geometry is not visible.
+Front and Back, geometry is not visible

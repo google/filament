@@ -4,5 +4,3 @@
 
 [main]\
 [HARD](index.md)
-
-2x2 PCF

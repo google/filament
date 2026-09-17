@@ -5,4 +5,14 @@
 [main]\
 open fun [setName](set-name.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html))
 
-Sets the View's name. Only useful for debugging.
+Sets the View's name. 
+
+Only useful for debugging.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| name | Pointer to the View's name. The string is copied. |

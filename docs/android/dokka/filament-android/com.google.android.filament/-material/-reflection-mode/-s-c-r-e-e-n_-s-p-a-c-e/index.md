@@ -4,3 +4,5 @@
 
 [main]\
 [SCREEN_SPACE](index.md)
+
+reflections sample from the scene's IBL only

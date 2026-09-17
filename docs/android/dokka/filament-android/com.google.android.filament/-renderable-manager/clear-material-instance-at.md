@@ -3,6 +3,15 @@
 # clearMaterialInstanceAt
 
 [main]\
-open fun [clearMaterialInstanceAt](clear-material-instance-at.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [clearMaterialInstanceAt](clear-material-instance-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Clears the material instance for the given primitive.
+Clear the MaterialInstance for the given primitive.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| instance | Renderable's instance |
+| primitiveIndex | Primitive index |

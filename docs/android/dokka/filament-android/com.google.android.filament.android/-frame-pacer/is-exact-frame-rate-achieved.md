@@ -9,4 +9,4 @@ Returns whether the selected pacing frame rate is achieved exactly by the displa
 
 #### Return
 
-true if the selected rate is an exact integer fraction of the host display platform's refresh rate, false if non-integer ratio pacing is active (such as 45 FPS on 60Hz).
+true if the selected rate is an exact integer fraction of the host display platform's refresh rate, false if non-integer ratio pacing is active.

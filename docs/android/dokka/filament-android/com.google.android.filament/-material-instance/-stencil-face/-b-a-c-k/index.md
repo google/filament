@@ -4,3 +4,5 @@
 
 [main]\
 [BACK](index.md)
+
+Update stencil state for back-facing polygons.

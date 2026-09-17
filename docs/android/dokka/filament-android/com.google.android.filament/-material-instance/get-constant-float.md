@@ -5,16 +5,4 @@
 [main]\
 open fun [getConstantFloat](get-constant-float.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Gets the value of a specialization constant by name.
-
-#### Return
-
-The value of the constant.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | The name of the constant as defined in the material. |
+inline helper to provide the name as a null-terminated C string

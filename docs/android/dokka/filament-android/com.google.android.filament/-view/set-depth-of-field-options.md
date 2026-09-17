@@ -5,7 +5,9 @@
 [main]\
 open fun [setDepthOfFieldOptions](set-depth-of-field-options.md)(options: [View.DepthOfFieldOptions](-depth-of-field-options/index.md))
 
-Sets Depth of Field options.
+Enables or disables Depth of Field. 
+
+Disabled by default.
 
 #### Parameters
 
@@ -13,10 +15,4 @@ main
 
 | | |
 |---|---|
-| options | Options for depth of field effect. |
-
-#### See also
-
-| |
-|---|
-| [getDepthOfFieldOptions](get-depth-of-field-options.md) |
+| options | options |

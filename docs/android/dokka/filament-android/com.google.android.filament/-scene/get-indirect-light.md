@@ -5,12 +5,14 @@
 [main]\
 open fun [getIndirectLight](get-indirect-light.md)(): [IndirectLight](../-indirect-light/index.md)
 
+Get the IndirectLight or nullptr if none is set.
+
 #### Return
 
-the [IndirectLight](../-indirect-light/index.md) or `null` if none is set
+the the IndirectLight or nullptr if none is set
 
 #### See also
 
 | |
 |---|
-| [setIndirectLight(IndirectLight)](set-indirect-light.md) |
+| [setIndirectLight](set-indirect-light.md) |

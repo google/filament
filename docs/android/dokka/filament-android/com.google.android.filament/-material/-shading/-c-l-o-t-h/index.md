@@ -2,12 +2,7 @@
 
 # CLOTH
 
+[main]\
 [CLOTH](index.md)
 
-Cloth lighting model
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialmodels/clothmodel&quot;&gt; | Cloth model |
+cloth lighting model

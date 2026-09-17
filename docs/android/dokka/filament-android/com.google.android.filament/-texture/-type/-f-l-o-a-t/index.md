@@ -5,4 +5,4 @@
 [main]\
 [FLOAT](index.md)
 
-float, 32-bit float, with 24 bits mantissa
+float (32-bits float)
