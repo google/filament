@@ -131,6 +131,97 @@ static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncoded
 })";
 }
 
+
+// ---------------------------------------------------------------------------
+// Skinned-mesh GLB builder, used to exercise computeBoundingBoxSkinned().
+//
+// `jointCount`     -> number of joints declared by the skin (sizes
+//                     instanceSkin.joints and assetSkin.inverseBindMatrices)
+// `positionCount`  -> number of POSITION elements (the loop bound)
+// `skinAttrCount`  -> number of JOINTS_0 / WEIGHTS_0 elements
+// `jointIndexValue`-> the value stored in every JOINTS_0 component
+// ---------------------------------------------------------------------------
+static std::vector<uint8_t> makeSkinnedGlb(size_t jointCount, size_t positionCount,
+        size_t skinAttrCount, uint16_t jointIndexValue) {
+    std::vector<uint8_t> bin;
+    auto pushFloat = [&bin](float f) {
+        uint8_t tmp[4];
+        memcpy(tmp, &f, 4);
+        bin.insert(bin.end(), tmp, tmp + 4);
+    };
+    auto pushU16 = [&bin](uint16_t v) {
+        bin.push_back(uint8_t(v & 0xff));
+        bin.push_back(uint8_t(v >> 8));
+    };
+
+    const size_t posOffset = 0;
+    for (size_t i = 0; i < positionCount; i++) {
+        pushFloat(float(i)); pushFloat(0.0f); pushFloat(0.0f);
+    }
+    const size_t jointsOffset = bin.size();
+    for (size_t i = 0; i < skinAttrCount; i++) {
+        pushU16(jointIndexValue); pushU16(0); pushU16(0); pushU16(0);
+    }
+    while (bin.size() % 4) bin.push_back(0);
+    const size_t weightsOffset = bin.size();
+    for (size_t i = 0; i < skinAttrCount; i++) {
+        pushFloat(1.0f); pushFloat(0.0f); pushFloat(0.0f); pushFloat(0.0f);
+    }
+    const size_t ibmOffset = bin.size();
+    for (size_t j = 0; j < jointCount; j++) {
+        for (int k = 0; k < 16; k++) pushFloat((k % 5) == 0 ? 1.0f : 0.0f);
+    }
+
+    std::string joints;
+    std::string nodes = R"({"mesh":0,"skin":0})";
+    for (size_t j = 0; j < jointCount; j++) {
+        joints += (j ? "," : "");
+        joints += std::to_string(j + 1);
+        nodes += ",{}";
+    }
+
+    std::string json = std::string(R"({
+  "asset": {"version": "2.0"},
+  "scene": 0,
+  "scenes": [{"nodes": [0]}],
+  "nodes": [)") + nodes + R"(],
+  "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "JOINTS_0": 1, "WEIGHTS_0": 2}}]}],
+  "skins": [{"joints": [)" + joints + R"(], "inverseBindMatrices": 3}],
+  "accessors": [
+    {"bufferView":0,"componentType":5126,"count":)" + std::to_string(positionCount) + R"(,"type":"VEC3","min":[0,0,0],"max":[1,0,0]},
+    {"bufferView":1,"componentType":5123,"count":)" + std::to_string(skinAttrCount) + R"(,"type":"VEC4"},
+    {"bufferView":2,"componentType":5126,"count":)" + std::to_string(skinAttrCount) + R"(,"type":"VEC4"},
+    {"bufferView":3,"componentType":5126,"count":)" + std::to_string(jointCount) + R"(,"type":"MAT4"}
+  ],
+  "bufferViews": [
+    {"buffer":0,"byteOffset":)" + std::to_string(posOffset)     + R"(,"byteLength":)" + std::to_string(jointsOffset - posOffset) + R"(},
+    {"buffer":0,"byteOffset":)" + std::to_string(jointsOffset)  + R"(,"byteLength":)" + std::to_string(weightsOffset - jointsOffset) + R"(},
+    {"buffer":0,"byteOffset":)" + std::to_string(weightsOffset) + R"(,"byteLength":)" + std::to_string(ibmOffset - weightsOffset) + R"(},
+    {"buffer":0,"byteOffset":)" + std::to_string(ibmOffset)     + R"(,"byteLength":)" + std::to_string(bin.size() - ibmOffset) + R"(}
+  ],
+  "buffers": [{"byteLength": )" + std::to_string(bin.size()) + R"(}]
+})";
+
+    while ((json.size() % 4u) != 0u) json.push_back(' ');
+    while ((bin.size() % 4u) != 0u) bin.push_back(0);
+
+    const uint32_t jsonSize = uint32_t(json.size());
+    const uint32_t binSize = uint32_t(bin.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), bin.begin(), bin.end());
+    return glb;
+}
+
 static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride,
         const char* mode = "ATTRIBUTES", const char* filter = "NONE") {
     static constexpr size_t kEncodedVertexCount = 256;
@@ -422,6 +513,42 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
     EXPECT_TRUE(mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder == nullptr);
     EXPECT_EQ(mEngine->getTextureCount(), 3);
 #endif
+}
+
+
+TEST_F(glTFIOTest, SkinnedBoundsOutOfRangeJointIndex) {
+    // Skin declares 2 joints; every JOINTS_0 component is 60000.
+    const std::vector<uint8_t> glb = makeSkinnedGlb(2, 8, 8, 3);  // just past the 2-entry array
+
+    AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
+    ASSERT_NE(assetLoader, nullptr);
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({mEngine, ".", false});
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+    asset->getInstance()->recomputeBoundingBoxes();
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, SkinnedBoundsMismatchedAccessorCounts) {
+    // 64 POSITION elements but a single JOINTS_0 / WEIGHTS_0 element.
+    const std::vector<uint8_t> glb = makeSkinnedGlb(2, 64, 1, 0);
+
+    AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
+    ASSERT_NE(assetLoader, nullptr);
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({mEngine, ".", false});
+    if (resourceLoader.loadResources(asset)) {
+        asset->getInstance()->recomputeBoundingBoxes();
+    }
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
 }
 
 TEST_F(glTFIOTest, MeshoptAllocationFailureRejectsGracefully) {
