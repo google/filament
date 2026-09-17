@@ -217,10 +217,23 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
         const Skin& instanceSkin = mSkins[prim.skinIndex];
         const FFilamentAsset::Skin& assetSkin = mOwner->mSkins[prim.skinIndex];
-        for (size_t i = 0, n = verts.size(); i < n; i++) {
+
+        // JOINTS_0 values are vertex *data*, so they are controlled by the glTF
+        // and are not validated by cgltf, which only checks buffer/accessor
+        // structure. Likewise the three attributes may declare different
+        // element counts: the spec requires them to agree, a hostile asset need
+        // not comply. Bound both before indexing.
+        const size_t jointCount = std::min(
+                instanceSkin.joints.size(), assetSkin.inverseBindMatrices.size());
+        const size_t vertexCount = std::min({verts.size(), joints.size(), weights.size()});
+
+        for (size_t i = 0; i < vertexCount; i++) {
             mat4f tmp = mat4f(0.0f);
             for (size_t j = 0; j < 4; j++) {
                 size_t jointIndex = joints[i][j];
+                if (UTILS_UNLIKELY(jointIndex >= jointCount)) {
+                    continue;
+                }
                 Entity jointEntity = instanceSkin.joints[jointIndex];
                 mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
                 mat4f inverseBindMatrix = assetSkin.inverseBindMatrices[jointIndex];
