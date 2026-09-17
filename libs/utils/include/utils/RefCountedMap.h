@@ -174,7 +174,7 @@ public:
         if (--it.value().referenceCount == 0) {
             if (it.value().value != NullValue{}()) {
                 if (mLruCache.capacity() > 0) {
-                    mLruCache.put(key, std::move(it.value().value), hash, [&releaser](T&& v) {
+                    mLruCache.put(it.key(), std::move(it.value().value), hash, [&releaser](T&& v) {
                         releaser(deref(v));
                     });
                 } else {
@@ -200,7 +200,7 @@ public:
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         if (--it.value().referenceCount == 0) {
             if (mLruCache.capacity() > 0) {
-                mLruCache.put(key, std::move(it.value().value), hash, [](T&&){});
+                mLruCache.put(it.key(), std::move(it.value().value), hash, [](T&&){});
             }
             // TODO: change to erase_fast
             mMap.erase(it);
@@ -281,9 +281,10 @@ private:
     tsl::robin_map<Key, Entry, Hash> mMap;
     utils::LruCache<Key, T, Hash> mLruCache;
 
-    TValue& insert(Key key, T value) {
+    template<typename K>
+    TValue& insert(K&& key, T value) {
         // TODO: how to use computed hash here?
-        auto it = mMap.insert({ std::move(key), Entry{ 1, std::move(value) } });
+        auto it = mMap.insert({ std::forward<K>(key), Entry{ 1, std::move(value) } });
         return deref(it.first.value().value);
     }
 };

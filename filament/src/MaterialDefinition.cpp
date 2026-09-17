@@ -48,6 +48,19 @@ using namespace utils;
 
 namespace {
 
+MaterialCache::ProgramCacheEntry makeProgramCacheEntry(FEngine& engine,
+        ProgramSpecialization const& specialization, Handle<HwProgram> program) {
+    MaterialCache::ProgramCacheEntry entry{
+        program,
+        engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
+                specialization.specializationConstants),
+    };
+    // The pool interns by content, so the reference we just took must be on the very slice the key
+    // points at. Were it a different one, keeping it alive wouldn't keep the key valid.
+    assert_invariant(entry.constants.get().data() == specialization.specializationConstants.data());
+    return entry;
+}
+
 template<bool useCache>
 void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
         MaterialDefinition const& definition, MaterialParser const& parser,
@@ -73,11 +86,12 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                 if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
                             isStereoSupported))) {
                     specialization.specKey = specKey;
-                    Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
-                    if (program) {
+                    MaterialCache::ProgramCacheEntry const* entry =
+                            globalProgramCache.acquire(specialization);
+                    if (entry) {
                         LocalProgramCache::CacheKey mappedKey =
                                 LocalProgramCache::mapCacheEntryKey(variant, specKey);
-                        programCache[mappedKey] = *program;
+                        programCache[mappedKey] = entry->program;
                     }
                 }
             }
@@ -96,13 +110,14 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                 LocalProgramCache::CacheKey mappedKey =
                         LocalProgramCache::mapCacheEntryKey(variant, specKey);
                 if constexpr (useCache) {
-                    Handle<HwProgram> const* program = globalProgramCache.acquire(specialization,
-                            [&engine, &definition, &parser, &specialization]() {
-                                return definition.compileProgram(engine, parser, specialization,
-                                        CompilerPriorityQueue::HIGH);
+                    MaterialCache::ProgramCacheEntry const* entry = globalProgramCache.acquire(
+                            specialization, [&engine, &definition, &parser, &specialization]() {
+                                return makeProgramCacheEntry(engine, specialization,
+                                        definition.compileProgram(engine, parser, specialization,
+                                                CompilerPriorityQueue::HIGH));
                             });
-                    if (program) {
-                        programCache[mappedKey] = *program;
+                    if (entry) {
+                        programCache[mappedKey] = entry->program;
                     }
                 } else {
                     programCache[mappedKey] = definition.compileProgram(engine, parser,
@@ -118,11 +133,12 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                         isStereoSupported))) {
                 specialization.variant = variant;
                 specialization.specKey = specKey;
-                Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
-                if (program) {
+                MaterialCache::ProgramCacheEntry const* entry =
+                        globalProgramCache.acquire(specialization);
+                if (entry) {
                     LocalProgramCache::CacheKey mappedKey =
                             LocalProgramCache::mapCacheEntryKey(variant, specKey);
-                    programCache[mappedKey] = *program;
+                    programCache[mappedKey] = entry->program;
                 }
             }
         }
@@ -154,9 +170,10 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                 if constexpr (useCache) {
                     specialization.variant = variant;
                     specialization.specKey = specKey;
-                    globalProgramCache.release(specialization, [&engine](Handle<HwProgram> p) {
-                        engine.getDriverApi().destroyProgram(p);
-                    });
+                    globalProgramCache.release(specialization,
+                            [&engine](MaterialCache::ProgramCacheEntry& entry) {
+                                engine.getDriverApi().destroyProgram(entry.program);
+                            });
                 } else if (program) {
                     engine.getDriverApi().destroyProgram(program);
                 }
@@ -179,9 +196,10 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
             if constexpr (useCache) {
                 specialization.variant = variant;
                 specialization.specKey = specKey;
-                globalProgramCache.release(specialization, [&engine](Handle<HwProgram> p) {
-                    engine.getDriverApi().destroyProgram(p);
-                });
+                globalProgramCache.release(specialization,
+                        [&engine](MaterialCache::ProgramCacheEntry& entry) {
+                            engine.getDriverApi().destroyProgram(entry.program);
+                        });
             } else if (destroySharedVariants && program) {
                 engine.getDriverApi().destroyProgram(program);
             }
@@ -889,12 +907,14 @@ Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi&
         return {};
     }
     if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
-        Handle<HwProgram>* program = engine.getMaterialCache().getProgramCache().get(specialization,
-                [this, &engine, &parser, &specialization, priorityQueue]() {
-                    return compileProgram(engine, parser, specialization, priorityQueue);
-                });
-        assert_invariant(*program);
-        return *program;
+        MaterialCache::ProgramCacheEntry* entry =
+                engine.getMaterialCache().getProgramCache().get(specialization,
+                        [this, &engine, &parser, &specialization, priorityQueue]() {
+                            return makeProgramCacheEntry(engine, specialization,
+                                    compileProgram(engine, parser, specialization, priorityQueue));
+                        });
+        assert_invariant(entry->program);
+        return entry->program;
     } else {
         return compileProgram(engine, parser, specialization, priorityQueue);
     }

@@ -27,6 +27,8 @@
 #include <backend/Handle.h>
 #include <backend/Program.h>
 
+#include <utils/InternPool.h>
+
 #include <utility>
 
 namespace filament {
@@ -44,6 +46,8 @@ class LocalProgramCache {
 public:
     using Programs = utils::Slice<const backend::Handle<backend::HwProgram>>;
     using SpecializationConstants = utils::Slice<const backend::Program::SpecializationConstant>;
+    using SpecializationConstantsRef =
+           utils::InternPool<backend::Program::SpecializationConstant>::Ref;
     using CacheKey = uint32_t;
 
     LocalProgramCache() = default;
@@ -99,7 +103,7 @@ public:
     }
 
     SpecializationConstants getSpecializationConstants() const noexcept {
-        return mSpecializationConstants;
+        return mSpecializationConstants.get();
     }
 
     Programs getPrograms() const noexcept { return mCachedPrograms.as_slice(); }
@@ -156,7 +160,7 @@ private:
 
     FMaterial const* mMaterial = nullptr;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
-    SpecializationConstants mSpecializationConstants;
+    SpecializationConstantsRef mSpecializationConstants;
 };
 
 } // namespace filament

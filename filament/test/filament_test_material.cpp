@@ -602,3 +602,62 @@ TEST(Material, MaterialCacheThirdBuildTriggersUAFAndCorruption) {
 
     Engine::destroy(engine);
 }
+
+TEST(Material, ProgramCacheLruEvictUAF) {
+    Engine::Config config;
+    config.programCacheCapacity = 1;
+
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .config(&config)
+                             .feature("engine.enable_program_cache", true)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode1(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    )");
+    filamat::MaterialBuilder builder1;
+    builder1.init();
+    builder1.name("Material1");
+    builder1.material(shaderCode1.c_str());
+    builder1.constant("myFloat", filamat::MaterialBuilder::ConstantType::FLOAT, 1.0f);
+    filamat::Package pkg1 = builder1.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg1.isValid());
+
+    std::string shaderCode2(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(0.0, 1.0, 0.0, 1.0);
+        }
+    )");
+    filamat::MaterialBuilder builder2;
+    builder2.init();
+    builder2.name("MaterialB");
+    builder2.material(shaderCode2.c_str());
+    builder2.constant("myInt", filamat::MaterialBuilder::ConstantType::INT, 42);
+    filamat::Package pkg2 = builder2.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg2.isValid());
+
+    // 1. Build, prepare program, and destroy Material A: populates LRU cache with compiled program
+    // and releases LocalProgramCache's InternPool ref.
+    Material* mat1 = Material::Builder().package(pkg1.getData(), pkg1.getSize()).build(*engine);
+    ASSERT_NE(mat1, nullptr);
+    downcast(mat1)->getPrograms().prepareProgram(downcast(*engine).getDriverApi(), Variant{ 0 },
+            DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+    engine->destroy(mat1);
+
+    // 2. Build, prepare program, and destroy Material B: exceeds LRU capacity (1), evicting
+    // Material A's program from LRU. Eviction hashes Material A's key. Without pinning, this
+    // triggers a heap-use-after-free in Slice::hash().
+    Material* mat2 = Material::Builder().package(pkg2.getData(), pkg2.getSize()).build(*engine);
+    ASSERT_NE(mat2, nullptr);
+    downcast(mat2)->getPrograms().prepareProgram(downcast(*engine).getDriverApi(), Variant{ 0 },
+            DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+    engine->destroy(mat2);
+
+    Engine::destroy(engine);
+}

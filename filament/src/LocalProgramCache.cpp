@@ -31,12 +31,7 @@ using namespace utils;
 LocalProgramCache::LocalProgramCache(LocalProgramCache const& other)
         : mMaterial(other.mMaterial),
           mCachedPrograms(other.mCachedPrograms.size()),
-          mSpecializationConstants((other.mMaterial != nullptr)
-                                           ? other.mMaterial->getEngine()
-                                                     .getMaterialCache()
-                                                     .getSpecializationConstantsInternPool()
-                                                     .acquire(other.mSpecializationConstants)
-                                           : SpecializationConstants()) {}
+          mSpecializationConstants(other.mSpecializationConstants.clone()) {}
 
 LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) {
     assert_invariant(mMaterial == nullptr);
@@ -44,12 +39,9 @@ LocalProgramCache& LocalProgramCache::operator=(LocalProgramCache const& other) 
     assert_invariant(mSpecializationConstants.empty());
 
     mMaterial = other.mMaterial;
+    mSpecializationConstants = other.mSpecializationConstants.clone();
     if (mMaterial != nullptr) {
         mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(other.mCachedPrograms.size());
-        mSpecializationConstants = other.mMaterial->getEngine()
-                .getMaterialCache()
-                .getSpecializationConstantsInternPool()
-                .acquire(other.mSpecializationConstants);
     }
 
     return *this;
@@ -83,7 +75,8 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
     mCachedPrograms = FixedCapacityVector<Handle<HwProgram>>(cachedProgramsSize);
 
     material.getDefinition().acquirePrograms(engine, mCachedPrograms.as_slice(),
-            material.getMaterialParser(), mSpecializationConstants, material.isDefaultMaterial());
+            material.getMaterialParser(), mSpecializationConstants.get(),
+            material.isDefaultMaterial());
 }
 
 void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial const& material) {
@@ -139,7 +132,7 @@ ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant varian
         .materialCrc32 = mMaterial->getMaterialParser().getCrc32(),
         .variant = variant,
         .specKey = specKey,
-        .specializationConstants = mSpecializationConstants,
+        .specializationConstants = mSpecializationConstants.get(),
     };
 }
 
@@ -147,18 +140,16 @@ void LocalProgramCache::terminate(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
-            mMaterial->getMaterialParser(), mSpecializationConstants,
+            mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
     engine.getMaterialCache().releaseMaterial(engine, mMaterial->getDefinition());
-    engine.getMaterialCache().getSpecializationConstantsInternPool().release(
-            mSpecializationConstants);
 }
 
 void LocalProgramCache::clear(FEngine& engine) {
     assert_invariant(mMaterial != nullptr);
 
     mMaterial->getDefinition().releasePrograms(engine, mCachedPrograms.as_slice(),
-            mMaterial->getMaterialParser(), mSpecializationConstants,
+            mMaterial->getMaterialParser(), mSpecializationConstants.get(),
             mMaterial->isDefaultMaterial());
 }
 
@@ -181,7 +172,7 @@ Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noe
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(uint32_t id) const noexcept {
-    return mSpecializationConstants[id];
+    return mSpecializationConstants.get()[id];
 }
 
 Program::SpecializationConstant LocalProgramCache::getConstantImpl(
@@ -201,7 +192,7 @@ void LocalProgramCache::setConstants(
     assert_invariant(mMaterial != nullptr);
 
     auto newSpecializationConstants =
-            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
+            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants.get());
 
     bool hasChanged = false;
     for (const auto& [id, value] : constants) {
@@ -222,7 +213,7 @@ void LocalProgramCache::setConstants(
     assert_invariant(mMaterial != nullptr);
 
     auto newSpecializationConstants =
-            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants);
+            FixedCapacityVector<Program::SpecializationConstant>(mSpecializationConstants.get());
 
     bool hasChanged = false;
     for (const auto& [name, value] : constants) {
@@ -260,13 +251,12 @@ void LocalProgramCache::setConstantsImpl(
 
     // Release old resources...
     definition.releasePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, isDefaultMaterial);
-    internPool.release(mSpecializationConstants);
+            mSpecializationConstants.get(), isDefaultMaterial);
 
     // Then acquire new ones.
     mSpecializationConstants = internPool.acquire(std::move(constants));
     definition.acquirePrograms(engine, mCachedPrograms.as_slice(), materialParser,
-            mSpecializationConstants, isDefaultMaterial);
+            mSpecializationConstants.get(), isDefaultMaterial);
 }
 
 template int32_t LocalProgramCache::getConstant<int32_t>(uint32_t id) const noexcept;
