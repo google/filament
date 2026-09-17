@@ -3,6 +3,6 @@
 # VSM
 
 [main]\
-open var [VSM](-v-s-m.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+val [VSM](-v-s-m.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 32
 
 Variance shadow maps

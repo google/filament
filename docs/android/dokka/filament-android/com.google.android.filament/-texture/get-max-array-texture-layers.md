@@ -7,12 +7,4 @@ open fun [getMaxArrayTextureLayers](get-max-array-texture-layers.md)(engine: [En
 
 #### Return
 
-The maximum number of layers supported by texture arrays. At least 256.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| engine | [Engine](../-engine/index.md) |
+the maximum number of layers supported by texture arrays. At least 256.

@@ -5,7 +5,9 @@
 [main]\
 open fun [getRenderTarget](get-render-target.md)(): [RenderTarget](../-render-target/index.md)
 
-Gets the offscreen render target associated with this view. Returns null if the render target is the swap chain (which is default).
+Gets the offscreen render target associated with this view. 
+
+Returns nullptr if the render target is the swap chain (which is default).
 
 #### See also
 

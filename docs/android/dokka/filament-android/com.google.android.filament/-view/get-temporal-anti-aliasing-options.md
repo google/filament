@@ -5,8 +5,8 @@
 [main]\
 open fun [getTemporalAntiAliasingOptions](get-temporal-anti-aliasing-options.md)(): [View.TemporalAntiAliasingOptions](-temporal-anti-aliasing-options/index.md)
 
-Returns temporal anti-aliasing options.
+Returns temporal antialiasing options.
 
 #### Return
 
-temporal anti-aliasing options
+temporal antialiasing options

@@ -5,8 +5,8 @@
 [main]\
 open fun [getMultiSampleAntiAliasingOptions](get-multi-sample-anti-aliasing-options.md)(): [View.MultiSampleAntiAliasingOptions](-multi-sample-anti-aliasing-options/index.md)
 
-Returns multi-sample anti-aliasing options.
+Returns multi-sample antialiasing options.
 
 #### Return
 
-multi-sample anti-aliasing options
+multi-sample antialiasing options

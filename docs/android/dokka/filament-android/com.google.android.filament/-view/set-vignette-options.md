@@ -5,7 +5,9 @@
 [main]\
 open fun [setVignetteOptions](set-vignette-options.md)(options: [View.VignetteOptions](-vignette-options/index.md))
 
-Sets vignette options.
+Enables or disables the vignetted effect in the post-processing stage. 
+
+Disabled by default.
 
 #### Parameters
 
@@ -13,10 +15,4 @@ main
 
 | | |
 |---|---|
-| options | Options for vignetting. |
-
-#### See also
-
-| |
-|---|
-| [getVignetteOptions](get-vignette-options.md) |
+| options | options |

@@ -5,10 +5,16 @@
 [main]\
 open fun [getCamera](get-camera.md)(): [Camera](../-camera/index.md)
 
-Gets this View's associated Camera, or null if none has been assigned.
+Returns the Camera currently associated with this View. 
+
+Undefined behavior if hasCamera() is false.
+
+#### Return
+
+A reference to the Camera associated to this View if hasCamera() is true.
 
 #### See also
 
 | |
 |---|
-| [setCamera](set-camera.md) |
+| [hasCamera](has-camera.md) |

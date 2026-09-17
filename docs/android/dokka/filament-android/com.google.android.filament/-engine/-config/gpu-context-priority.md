@@ -5,4 +5,6 @@
 [main]\
 open var [gpuContextPriority](gpu-context-priority.md): [Engine.GpuContextPriority](../-gpu-context-priority/index.md)
 
-GPU context priority level. Controls GPU work scheduling and preemption.
+GPU context priority level. 
+
+Controls GPU work scheduling and preemption.

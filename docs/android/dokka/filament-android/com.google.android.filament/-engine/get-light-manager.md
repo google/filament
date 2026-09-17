@@ -7,4 +7,4 @@ open fun [getLightManager](get-light-manager.md)(): [LightManager](../-light-man
 
 #### Return
 
-the [LightManager](../-light-manager/index.md) used by this [Engine](index.md)
+LightManager reference

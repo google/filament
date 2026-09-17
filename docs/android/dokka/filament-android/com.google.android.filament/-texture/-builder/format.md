@@ -5,9 +5,9 @@
 [main]\
 open fun [format](format.md)(format: [Texture.InternalFormat](../-internal-format/index.md)): [Texture.Builder](index.md)
 
-Specifies the texture's internal format. 
+Specifies the *internal* format of this texture. 
 
-The internal format specifies how texels are stored (which may be different from how they're specified in setImage). [InternalFormat](../-internal-format/index.md) specifies both the color components and the data type used.
+The internal format specifies how texels are stored (which may be different from how they're specified in setImage()). InternalFormat specifies both the color components and the data type used.
 
 #### Return
 
@@ -19,4 +19,11 @@ main
 
 | | |
 |---|---|
-| format | texture's [internal format](../-internal-format/index.md). |
+| format | Format of the texture's texel. |
+
+#### See also
+
+| |
+|---|
+| [Texture.InternalFormat](../-internal-format/index.md) |
+| setImage |

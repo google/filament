@@ -5,4 +5,6 @@
 [main]\
 [NEAREST_MIPMAP_NEAREST](index.md)
 
-Mip-mapping is activated. But no filtering occurs.
+Mip-mapping is activated. 
+
+But no filtering occurs.

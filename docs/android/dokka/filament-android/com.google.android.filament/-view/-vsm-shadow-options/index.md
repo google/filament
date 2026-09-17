@@ -4,13 +4,15 @@
 
 open class [VsmShadowOptions](index.md)
 
-View-level options for VSM Shadowing.
+View-level options for VSM Shadowing. 
+
+**Warning:** This API is still experimental and subject to change.
 
 #### See also
 
-| | |
-|---|---|
-| [setVsmShadowOptions](../set-vsm-shadow-options.md) | **Warning:** This API is still experimental and subject to change. |
+| |
+|---|
+| [setVsmShadowOptions](../set-vsm-shadow-options.md) |
 
 ## Constructors
 

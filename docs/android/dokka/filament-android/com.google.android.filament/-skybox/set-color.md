@@ -3,14 +3,7 @@
 # setColor
 
 [main]\
-open fun [setColor](set-color.md)(r: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), g: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), b: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), a: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
-
-Mutates the `Skybox`'s constant color. Ignored if an environment is set.
-
-[main]\
-open fun [setColor](set-color.md)(color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
-
-Mutates the `Skybox`'s constant color. Ignored if an environment is set.
+open fun [setColor](set-color.md)(colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorw: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 #### Parameters
 
@@ -18,4 +11,18 @@ main
 
 | | |
 |---|---|
-| color | an array of 4 floats |
+| colorx | (x component) |
+| colory | (y component) |
+| colorz | (z component) |
+| colorw | (w component) |
+
+[main]\
+open fun [setColor](set-color.md)(color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+
+#### Parameters
+
+main
+
+| |
+|---|
+| color |

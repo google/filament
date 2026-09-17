@@ -5,4 +5,6 @@
 [main]\
 open var [minHorizonAngleRad](min-horizon-angle-rad.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-min angle in radian to consider. No effect when aoType set to GTAO.
+min angle in radian to consider. 
+
+No effect when aoType set to GTAO.

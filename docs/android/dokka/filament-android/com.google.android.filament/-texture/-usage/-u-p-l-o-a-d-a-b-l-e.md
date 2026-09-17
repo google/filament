@@ -5,4 +5,4 @@
 [main]\
 val [UPLOADABLE](-u-p-l-o-a-d-a-b-l-e.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 8
 
-The texture content can be set with setImage
+Data can be uploaded into this texture (default)

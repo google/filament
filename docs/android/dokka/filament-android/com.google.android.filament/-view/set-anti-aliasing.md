@@ -5,9 +5,11 @@
 [main]\
 open fun [setAntiAliasing](set-anti-aliasing.md)(type: [View.AntiAliasing](-anti-aliasing/index.md))
 
-Enables or disables anti-aliasing in the post-processing stage. Enabled by default. 
+Enables or disables antialiasing in the post-processing stage. 
 
- For MSAA anti-aliasing, see [setSampleCount](set-sample-count.md). 
+Enabled by default. MSAA can be enabled in addition, see setSampleCount().
+
+For MSAA antialiasing, see setSamplerCount().
 
 #### Parameters
 
@@ -15,4 +17,10 @@ main
 
 | | |
 |---|---|
-| type | FXAA for enabling, NONE for disabling anti-aliasing. |
+| type | FXAA for enabling, NONE for disabling antialiasing. |
+
+#### See also
+
+| |
+|---|
+| setSampleCount |

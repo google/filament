@@ -5,4 +5,4 @@
 [main]\
 [OPAQUE](index.md)
 
-Material is opaque.
+material is opaque
