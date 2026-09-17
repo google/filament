@@ -70,6 +70,7 @@ if (FILAMENT_BUILD_TESTING)
                 test_EngineShutdown.cpp
                 test_FenceManager.cpp
                 test_FramePacer.cpp
+                test_LocalProgramCache.cpp
                 test_UboManager.cpp
                 test_VertexBuffer.cpp
                 filament_test_exposure.cpp
