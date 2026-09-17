@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include <filameshio/MeshReader.h>
 #include <filameshio/filamesh.h>
+#include <filameshio/MeshReader.h>
 
 #include <filament/Box.h>
 #include <filament/Engine.h>
@@ -26,16 +26,16 @@
 #include <filament/RenderableManager.h>
 #include <filament/VertexBuffer.h>
 
-#include <meshoptimizer.h>
-
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
 #include <utils/Path.h>
 
+#include <meshoptimizer.h>
+
+#include <limits>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <limits>
 
 #include <fcntl.h>
 #if !defined(WIN32)
@@ -231,6 +231,17 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
     if (header.version != VERSION) {
         utils::slog.e << "Unsupported filamesh version: " << header.version << utils::io::endl;
+        return {};
+    }
+
+    if (header.indexType != UI32 && header.indexType != UI16) {
+        utils::slog.e << "Invalid index type: " << header.indexType << utils::io::endl;
+        return {};
+    }
+
+    // Triangles mode requires index count to be divisible by 3.
+    if ((header.flags & COMPRESSION) && header.indexCount % 3 != 0) {
+        utils::slog.e << "Compressed index count must be divisible by 3." << utils::io::endl;
         return {};
     }
 

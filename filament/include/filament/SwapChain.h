@@ -39,9 +39,9 @@ class Engine;
  * native object, it is given to filament as a `void *`, which must be of the proper type
  * for each platform filament is running on.
  *
- * \code
+ * ```
  * SwapChain* swapChain = engine->createSwapChain(nativeWindow);
- * \endcode
+ * ```
  *
  * When Engine::create() is used without specifying a Platform, the `nativeWindow`
  * parameter above must be of type:
@@ -248,7 +248,7 @@ public:
      * With Metal, this flag should only be used when rendering a single View into a SwapChain. This
      * flag is not supported when rendering multiple Filament Views into this SwapChain.
      *
-     * @see isMSAASwapChainSupported(4)
+     * @see isMSAASwapChainSupported
      */
     static constexpr uint64_t CONFIG_MSAA_4_SAMPLES = backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
 
@@ -303,6 +303,7 @@ public:
             ChangeFrameRateStrategy strategy =
                     ChangeFrameRateStrategy::ONLY_IF_SEAMLESS) noexcept;
 
+    UTILS_APIGEN_RETAINED
     void* UTILS_NULLABLE getNativeWindow() const noexcept;
 
     /**

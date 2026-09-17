@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <jni.h>
+#include <private/backend/VirtualMachineEnv.h>
 
-#include "private/backend/VirtualMachineEnv.h"
+#include <jni.h>
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;

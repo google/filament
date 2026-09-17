@@ -50,6 +50,15 @@ using namespace filament::math;
 
 namespace filament::backend {
 
+namespace {
+
+// Debug-only ceiling on purgeAll()'s drain rounds. Legitimate chains are a couple of hops deep
+// (e.g., countdownCallback -> user callback), so anything close to this is a callback rescheduling
+// itself.
+UTILS_UNUSED_IN_RELEASE constexpr size_t MAX_PURGE_ROUNDS = 256;
+
+} // anonymous namespace
+
 DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
     : mDriverConfig(driverConfig) {
     if constexpr (UTILS_HAS_THREADING) {
@@ -120,13 +129,35 @@ void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, Callback
     }
 }
 
-void DriverBase::purge() noexcept {
+bool DriverBase::dispatchQueuedCallbacks() noexcept {
     decltype(mCallbacks) callbacks;
-    UniqueLock lock(mPurgeLock);
-    std::swap(callbacks, mCallbacks);
-    lock.unlock(); // don't remove this, it ensures callbacks are called without lock held
+    {
+        LockGuard const lock(mPurgeLock);
+        if (mCallbacks.empty()) {
+            return false;
+        }
+        std::swap(callbacks, mCallbacks);
+    }
+    // the scope above matters: it ensures callbacks are called without the lock held
     for (auto& item : callbacks) {
         item.second(item.first);
+    }
+    return true;
+}
+
+void DriverBase::purge() noexcept {
+    dispatchQueuedCallbacks();
+}
+
+void DriverBase::purgeAll() noexcept {
+    // Unlike purge(), this keeps going until the queue stays empty, because a callback is allowed
+    // to schedule another one: with no ServiceThread, CountdownCallbackHandler::countdownCallback
+    // lands here and schedules the user callback from inside this loop.
+    UTILS_UNUSED_IN_RELEASE size_t rounds = 0;
+    while (dispatchQueuedCallbacks()) {
+        // A callback that reschedules itself unconditionally would spin here forever.
+        // Assert failure here indicates a bug.
+        assert_invariant(++rounds < MAX_PURGE_ROUNDS);
     }
 }
 
