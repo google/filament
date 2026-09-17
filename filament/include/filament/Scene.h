@@ -22,13 +22,11 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
+#include <utils/Entity.h>
 #include <utils/Invocable.h>
+#include <utils/Slice.h>
 
 #include <stddef.h>
-
-namespace utils {
-    class Entity;
-} // namespace utils
 
 namespace filament {
 
@@ -117,10 +115,14 @@ public:
     /**
      * Adds a list of entities to the Scene.
      *
-     * @param entities Array containing entities to add to the scene.
-     * @param count Size of the entity array.
+     * @param entities Slice containing entities to add to the scene.
      */
-    void addEntities(const utils::Entity* UTILS_NONNULL entities, size_t count);
+    void addEntities(utils::Slice<const utils::Entity> entities);
+
+    UTILS_NOAPIGEN
+    inline void addEntities(const utils::Entity* UTILS_NONNULL entities, size_t count) {
+        addEntities({ entities, count });
+    }
 
     /**
      * Removes the Renderable from the Scene.
@@ -136,10 +138,14 @@ public:
      * This is equivalent to calling remove in a loop.
      * If any of the specified entities do not exist in the scene, they are skipped.
      *
-     * @param entities Array containing entities to remove from the scene.
-     * @param count Size of the entity array.
+     * @param entities Slice containing entities to remove from the scene.
      */
-    void removeEntities(const utils::Entity* UTILS_NONNULL entities, size_t count);
+    void removeEntities(utils::Slice<const utils::Entity> entities);
+
+    UTILS_NOAPIGEN
+    inline void removeEntities(const utils::Entity* UTILS_NONNULL entities, size_t count) {
+        removeEntities({ entities, count });
+    }
 
     /**
      * Remove all entities to the Scene.

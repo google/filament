@@ -69,6 +69,10 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::StaticString const
     return BuilderNameMixin::name(name);
 }
 
+SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createSkinningBuffer(*this);
 }

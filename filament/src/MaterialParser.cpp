@@ -703,6 +703,84 @@ bool ChunkSubpassInterfaceBlock::unflatten(Unflattener& unflattener,
     return true;
 }
 
+namespace {
+
+// The enum values below are read verbatim from the material file and must be validated before
+// being cast, otherwise the rest of the engine ends up switching over a value that matches no
+// case and silently doing nothing -- or worse, classifying it inconsistently (e.g.
+// DescriptorSetLayoutDescriptor::isSampler() is a range test, not a switch).
+//
+// These are deliberately written as exhaustive switches with *no* `default` label: -Wswitch is
+// an error in our clang builds, so adding an enumerator breaks the build here and forces an
+// explicit decision about whether the new value may appear in a material file. Do not
+// "simplify" them into a comparison against the last enumerator, and do not add a `default`.
+
+constexpr bool isValidUniformType(uint8_t const value) noexcept {
+    // note: casting an out-of-range value is well-defined, UniformType has a fixed underlying
+    // type, so the switch below simply matches no case.
+    switch (UniformType(value)) {
+        case UniformType::BOOL:
+        case UniformType::BOOL2:
+        case UniformType::BOOL3:
+        case UniformType::BOOL4:
+        case UniformType::FLOAT:
+        case UniformType::FLOAT2:
+        case UniformType::FLOAT3:
+        case UniformType::FLOAT4:
+        case UniformType::INT:
+        case UniformType::INT2:
+        case UniformType::INT3:
+        case UniformType::INT4:
+        case UniformType::UINT:
+        case UniformType::UINT2:
+        case UniformType::UINT3:
+        case UniformType::UINT4:
+        case UniformType::MAT3:
+        case UniformType::MAT4:
+        case UniformType::STRUCT:
+            return true;
+    }
+    return false;
+}
+
+constexpr bool isValidDescriptorType(uint8_t const value) noexcept {
+    switch (DescriptorType(value)) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_3D_UINT:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+        case DescriptorType::SAMPLER_EXTERNAL:
+        case DescriptorType::UNIFORM_BUFFER:
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+        case DescriptorType::INPUT_ATTACHMENT:
+            return true;
+    }
+    return false;
+}
+
+} // anonymous namespace
+
 bool ChunkBindingUniformInfo::unflatten(Unflattener& unflattener,
         MaterialParser::BindingUniformInfoContainer* bindingUniformInfo) {
     uint8_t bindingPointCount;
@@ -718,9 +796,11 @@ bool ChunkBindingUniformInfo::unflatten(Unflattener& unflattener,
         if (!unflattener.read(&index)) {
             return false;
         }
-        if (index >= MAX_DESCRIPTOR_COUNT) {
+        if (index >= Program::UNIFORM_BINDING_COUNT) {
+            // could be a malicious or broken binary
             return false;
         }
+
         CString uboName;
         if (!unflattener.read(&uboName)) {
             return false;
@@ -736,6 +816,10 @@ bool ChunkBindingUniformInfo::unflatten(Unflattener& unflattener,
             if (!unflattener.read(&name)) {
                 return false;
             }
+            // `offset` and `size` describe a range inside a uniform buffer whose size is not
+            // known here (it depends on the binding point and, for the per-material block, on
+            // the engine's layout). They are therefore validated against the actual buffer in
+            // OpenGLProgram::updateUniforms(), which is the only consumer.
             uint16_t offset;
             if (!unflattener.read(&offset)) {
                 return false;
@@ -746,6 +830,10 @@ bool ChunkBindingUniformInfo::unflatten(Unflattener& unflattener,
             }
             uint8_t type;
             if (!unflattener.read(&type)) {
+                return false;
+            }
+            if (!isValidUniformType(type)) {
+                // could be a malicious or broken binary
                 return false;
             }
             uniforms.push_back({ name, offset, size, UniformType(type) });
@@ -804,11 +892,18 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
         if (!unflattener.read(&type)) {
             return false;
         }
+        if (!isValidDescriptorType(type)) {
+            // could be a malicious or broken binary
+            return false;
+        }
         uint8_t binding;
         if (!unflattener.read(&binding)) {
             return false;
         }
         if (binding >= MAX_DESCRIPTOR_COUNT) {
+            // could be a malicious or broken binary. `binding` is used to index fixed-size
+            // per-set arrays and 64-bit bitsets in the backends (e.g. BindingMap) as well as
+            // in DescriptorSetLayout, so it must be in range.
             return false;
         }
         descriptors.push_back({
@@ -836,6 +931,10 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
         if (!unflattener.read(&type)) {
             return false;
         }
+        if (!isValidDescriptorType(type)) {
+            // could be a malicious or broken binary
+            return false;
+        }
         uint8_t stageFlags;
         if (!unflattener.read(&stageFlags)) {
             return false;
@@ -845,6 +944,9 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
             return false;
         }
         if (binding >= MAX_DESCRIPTOR_COUNT) {
+            // could be a malicious or broken binary. `binding` is used to index fixed-size
+            // per-set arrays and 64-bit bitsets (e.g. DescriptorSetLayout::mSamplers), so it
+            // must be in range.
             return false;
         }
         uint8_t flags;

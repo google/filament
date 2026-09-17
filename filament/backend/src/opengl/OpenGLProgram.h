@@ -86,8 +86,10 @@ public:
         return mBindingMap.getActiveDescriptors(set);
     }
 
-    // For ES2 only
-    void updateUniforms(uint32_t index, GLuint id, void const* buffer, uint16_t age, uint32_t offset) const noexcept;
+    // For ES2 only. `size` is the number of bytes readable at `buffer`, it is used to validate
+    // the (untrusted) offsets and sizes declared by the material.
+    void updateUniforms(uint32_t index, GLuint id, void const* buffer, uint32_t size,
+            uint16_t age, uint32_t offset) const noexcept;
     void setRec709ColorSpace(bool rec709) const noexcept;
 
     PushConstantBundle getPushConstants() {

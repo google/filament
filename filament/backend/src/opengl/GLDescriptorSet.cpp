@@ -280,6 +280,18 @@ void GLDescriptorSet::bind(
         activeDescriptorBindings &= dynamicBuffers;
     }
 
+    // The program's active descriptors and this set's layout come from two independent chunks
+    // of the material file (ChunkDescriptorBindingsInfo and ChunkDescriptorSetLayoutInfo) and
+    // are never cross-validated. A broken or malicious material can therefore declare a
+    // binding in the program that doesn't exist in this set, which would index `descriptors`
+    // out-of-bounds below and std::visit() a variant read out of bounds. Drop those bindings.
+    // `descriptors` holds maxDescriptorBinding + 1 entries, i.e. 1 to MAX_DESCRIPTOR_COUNT of
+    // them; the full-width case is special-cased because a 64-bit shift would be UB.
+    assert_invariant(descriptors.size() <= utils::bitset64::BIT_COUNT);
+    uint64_t const existingBindings = descriptors.size() >= utils::bitset64::BIT_COUNT
+            ? ~uint64_t(0) : (uint64_t(1) << descriptors.size()) - uint64_t(1);
+    activeDescriptorBindings &= utils::bitset64{ existingBindings };
+
     // loop only over the active indices for this program
     activeDescriptorBindings.forEachSetBit(
             [this,&gl, &handleAllocator, &p, set, offsets, &dynamicOffsetIndex]
@@ -311,7 +323,8 @@ void GLDescriptorSet::bind(
                     offset += offsets[dynamicOffsetIndex++];
                 }
                 if (arg.bo) {
-                    p.updateUniforms(bindingPoint, arg.bo->gl.id, arg.bo->gl.buffer, arg.bo->age, offset);
+                    p.updateUniforms(bindingPoint, arg.bo->gl.id, arg.bo->gl.buffer,
+                            arg.bo->byteCount, arg.bo->age, offset);
                 }
             } else if constexpr (std::is_same_v<T, Sampler>) {
                 GLuint const unit = p.getTextureUnit(set, binding);

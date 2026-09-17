@@ -6,5 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- backend: add Metal support for external image handles
 - build: add tvOS support (`appletvos`/`appletvsimulator`), Metal-only, via `./build.sh -p tvos`
+- vulkan: report depth and stencil render-target format support correctly

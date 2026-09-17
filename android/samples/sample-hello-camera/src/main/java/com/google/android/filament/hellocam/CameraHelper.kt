@@ -38,6 +38,7 @@ import android.os.Looper
 import androidx.annotation.RequiresApi
 
 import com.google.android.filament.*
+import com.google.android.filament.android.StreamHelper
 
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
@@ -102,9 +103,14 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
     fun pushExternalImageToFilament() {
         val stream = filamentStream
         if (stream != null) {
-            imageReader.acquireLatestImage()?.also {
-                stream.setAcquiredImage(it.hardwareBuffer, Handler(Looper.getMainLooper())) {
-                    it.close()
+            imageReader.acquireLatestImage()?.also { image ->
+                val buffer = image.hardwareBuffer
+                if (buffer != null) {
+                    StreamHelper.setAcquiredImage(stream, buffer, Handler(Looper.getMainLooper())) {
+                        image.close()
+                    }
+                } else {
+                    image.close()
                 }
             }
         }

@@ -21,6 +21,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
+#include <utils/compiler.h>
 
 #include <string_view>
 
@@ -296,7 +297,7 @@ enum class Property : uint8_t {
 
 using UserVariantFilterMask = uint32_t;
 
-enum class UserVariantFilterBit : UserVariantFilterMask {
+enum class UTILS_APIGEN_FLAGS UserVariantFilterBit : UserVariantFilterMask {
     DIRECTIONAL_LIGHTING = 0x01, //!< Directional lighting
 
     //!< \note Since dynamic lighting was migrated to specialization constants, filtering this bit
