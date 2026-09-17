@@ -286,7 +286,8 @@ static const uint32_t kBufferSizeBufferBinding = ~(2u);
 // will start at max(kArgumentBufferBinding) + 1.
 static const uint32_t kArgumentBufferBinding = ~(3u);
 
-static const uint32_t kMaxArgumentBuffers = 8;
+// Somewhat arbitrary. Can't be too large or it starts eating into builtin magic buffers, etc.
+static const uint32_t kMaxArgumentBuffers = 16;
 
 // Decompiles SPIR-V to Metal Shading Language
 class CompilerMSL : public CompilerGLSL
@@ -317,6 +318,9 @@ public:
 		uint32_t shader_input_buffer_index = 22;
 		uint32_t shader_index_buffer_index = 21;
 		uint32_t shader_patch_input_buffer_index = 20;
+        uint32_t draw_id_buffer_index = 19;
+		uint32_t reversed_depth_viewport_buffer_index = 18;
+		uint32_t depth_clip_state_buffer_index = 17;
 		uint32_t shader_input_wg_index = 0;
 		uint32_t device_index = 0;
 		uint32_t enable_frag_output_mask = 0xffffffff;
@@ -338,6 +342,8 @@ public:
 		bool view_index_from_device_index = false;
 		bool dispatch_base = false;
 		bool texture_1D_as_2D = false;
+		bool emulate_reversed_depth_viewport = false;
+		bool emulate_depth_clip_enable = false;
 
 		// Enable use of Metal argument buffers.
 		// MSL 2.0 must also be enabled.
@@ -611,6 +617,14 @@ public:
 		return !buffers_requiring_array_length.empty();
 	}
 
+	// Provide feedback to calling API to determine if the vertex shader writes
+	// to PointSize. This allows the API to avoid declaring a point size output
+	// when it is not needed.
+	bool get_writes_to_point_size() const
+	{
+		return writes_to_point_size;
+	}
+
 	bool buffer_requires_array_length(VariableID id) const
 	{
 		return buffers_requiring_array_length.count(id) != 0;
@@ -621,6 +635,17 @@ public:
 	bool needs_view_mask_buffer() const
 	{
 		return msl_options.multiview && !msl_options.view_index_from_device_index;
+	}
+
+	// Provide feedback to calling API to allow it to pass depth clip
+	// emulation state.
+	bool needs_depth_clip_state_buffer() const
+	{
+		if (!msl_options.emulate_depth_clip_enable || !stage_out_var_id || capture_output_to_buffer)
+			return false;
+
+		return (is_vertex_like_shader() && !qual_pos_var_name.empty()) ||
+		       (get_execution_model() == ExecutionModelFragment && !qual_frag_depth_var_name.empty());
 	}
 
 	// Provide feedback to calling API to allow it to pass a buffer
@@ -886,9 +911,11 @@ protected:
 		SPVFuncImplVariableSizedDescriptor,
 		SPVFuncImplVariableDescriptorArray,
 		SPVFuncImplPaddedStd140,
+		SPVFuncImplPaddedArrayElement,
 		SPVFuncImplReduceAdd,
 		SPVFuncImplImageFence,
 		SPVFuncImplTextureCast,
+		SPVFuncImplDepthCast,
 		SPVFuncImplMulExtended,
 		SPVFuncImplSetMeshOutputsEXT,
 		SPVFuncImplAssume,
@@ -921,7 +948,6 @@ protected:
 	                             const std::string &qualifier = "");
 	void emit_struct_member(const SPIRType &type, uint32_t member_type_id, uint32_t index,
 	                        const std::string &qualifier = "", uint32_t base_offset = 0) override;
-	void emit_struct_padding_target(const SPIRType &type) override;
 	std::string type_to_glsl(const SPIRType &type, uint32_t id, bool member);
 	std::string type_to_glsl(const SPIRType &type, uint32_t id = 0) override;
 	void emit_block_hints(const SPIRBlock &block) override;
@@ -974,7 +1000,7 @@ protected:
 
 	bool is_patch_block(const SPIRType &type);
 	bool is_non_native_row_major_matrix(uint32_t id) override;
-	bool member_is_non_native_row_major_matrix(const SPIRType &type, uint32_t index) override;
+	bool member_is_non_native_row_major_matrix(const SPIRType &type, uint32_t index, bool is_layout_disabled = false) override;
 	std::string convert_row_major_matrix(std::string exp_str, const SPIRType &exp_type, uint32_t physical_type_id,
 	                                     bool is_packed, bool relaxed) override;
 
@@ -1096,15 +1122,15 @@ protected:
 
 	uint32_t get_physical_tess_level_array_size(BuiltIn builtin) const;
 
-	uint32_t get_physical_type_stride(const SPIRType &type) const override;
+	uint32_t get_physical_type_id_stride(TypeID type_id) const override;
 
 	// MSL packing rules. These compute the effective packing rules as observed by the MSL compiler in the MSL output.
 	// These values can change depending on various extended decorations which control packing rules.
 	// We need to make these rules match up with SPIR-V declared rules.
-	uint32_t get_declared_type_size_msl(const SPIRType &type, bool packed, bool row_major) const;
-	uint32_t get_declared_type_array_stride_msl(const SPIRType &type, bool packed, bool row_major) const;
-	uint32_t get_declared_type_matrix_stride_msl(const SPIRType &type, bool packed, bool row_major) const;
-	uint32_t get_declared_type_alignment_msl(const SPIRType &type, bool packed, bool row_major) const;
+	uint32_t get_declared_type_size_msl(TypeID type_id, const SPIRType *special_type, bool packed, bool row_major) const;
+	uint32_t get_declared_type_array_stride_msl(TypeID type_id, const SPIRType *special_type, bool packed, bool row_major) const;
+	uint32_t get_declared_type_matrix_stride_msl(TypeID type_id, const SPIRType *special_type, bool packed, bool row_major) const;
+	uint32_t get_declared_type_alignment_msl(TypeID type_id, const SPIRType *special_type, bool packed, bool row_major) const;
 
 	uint32_t get_declared_struct_member_size_msl(const SPIRType &struct_type, uint32_t index) const;
 	uint32_t get_declared_struct_member_array_stride_msl(const SPIRType &struct_type, uint32_t index) const;
@@ -1116,11 +1142,10 @@ protected:
 	uint32_t get_declared_input_matrix_stride_msl(const SPIRType &struct_type, uint32_t index) const;
 	uint32_t get_declared_input_alignment_msl(const SPIRType &struct_type, uint32_t index) const;
 
-	const SPIRType &get_physical_member_type(const SPIRType &struct_type, uint32_t index) const;
+	TypeID get_physical_member_type_id(const SPIRType &struct_type, uint32_t index) const;
 	SPIRType get_presumed_input_type(const SPIRType &struct_type, uint32_t index) const;
 
-	uint32_t get_declared_struct_size_msl(const SPIRType &struct_type, bool ignore_alignment = false,
-	                                      bool ignore_padding = false) const;
+	uint32_t get_declared_struct_size_msl(const SPIRType &struct_type) const;
 
 	std::string to_component_argument(uint32_t id);
 	void align_struct(SPIRType &ib_type, std::unordered_set<uint32_t> &aligned_structs);
@@ -1152,6 +1177,18 @@ protected:
 	bool emit_array_copy(const char *expr, uint32_t lhs_id, uint32_t rhs_id,
 	                     StorageClass lhs_storage, StorageClass rhs_storage) override;
 	void build_implicit_builtins();
+
+	// Emulates element-wise operations on simdgroup matrices, which Metal does not support natively.
+	std::string to_cooperative_matrix_component(uint32_t id, const std::string &index);
+	void emit_cooperative_matrix_unary_op(uint32_t result_type, uint32_t result_id, uint32_t op0, const char *op);
+	void emit_cooperative_matrix_binary_op(uint32_t result_type, uint32_t result_id, uint32_t op0, uint32_t op1,
+	                                       const char *op);
+	void emit_cooperative_matrix_unary_func_op(uint32_t result_type, uint32_t result_id, uint32_t op0, const char *op);
+	void emit_cooperative_matrix_select_op(uint32_t result_type, uint32_t result_id, uint32_t cond, uint32_t op0,
+	                                       uint32_t op1);
+	bool maybe_emit_cooperative_matrix_op(const Instruction &instruction);
+	void validate_cooperative_matrix_type(const SPIRType &type);
+	void validate_cooperative_matrix_types();
 	uint32_t build_constant_uint_array_pointer();
 	void emit_entry_point_declarations() override;
 	bool uses_explicit_early_fragment_test();
@@ -1181,6 +1218,7 @@ protected:
 	uint32_t swizzle_buffer_id = 0;
 	uint32_t buffer_size_buffer_id = 0;
 	uint32_t view_mask_buffer_id = 0;
+	uint32_t draw_index_buffer_id = 0;
 	uint32_t dynamic_offsets_buffer_id = 0;
 	uint32_t uint_type_id = 0;
 	uint32_t shared_uint_type_id = 0;
@@ -1287,6 +1325,9 @@ protected:
 	bool writes_to_depth = false;
 	bool writes_to_point_size = false;
 	std::string qual_pos_var_name;
+	std::string qual_viewport_idx_var_name;
+	std::string qual_frag_depth_var_name;
+	std::string depth_clip_viewport_idx_var_name;
 	std::string stage_in_var_name = "in";
 	std::string stage_out_var_name = "out";
 	std::string patch_stage_in_var_name = "patchIn";
@@ -1401,6 +1442,7 @@ protected:
 		bool needs_subgroup_size = false;
 		bool needs_sample_id = false;
 		bool needs_helper_invocation = false;
+		bool uses_cooperative_matrix = false;
 	};
 
 	// OpcodeHandler that scans for uses of sampled images

@@ -1,0 +1,35 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 30
+; Schema: 0
+               OpCapability Linkage
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpSource HLSL 630
+               OpName %lookup "lookup"
+               OpName %i "i"
+               OpName %table "table"
+               OpDecorate %lookup LinkageAttributes "lookup" Export
+       %uint = OpTypeInt 32 0
+    %uint_10 = OpConstant %uint 10
+    %uint_20 = OpConstant %uint 20
+    %uint_30 = OpConstant %uint 30
+    %uint_40 = OpConstant %uint 40
+     %uint_4 = OpConstant %uint 4
+%_arr_uint_uint_4 = OpTypeArray %uint %uint_4
+%_ptr_Private__arr_uint_uint_4 = OpTypePointer Private %_arr_uint_uint_4
+%_ptr_Private_uint = OpTypePointer Private %uint
+%_ptr_Function_uint = OpTypePointer Function %uint
+        %fn1 = OpTypeFunction %uint %_ptr_Function_uint
+%table_init = OpConstantComposite %_arr_uint_uint_4 %uint_10 %uint_20 %uint_30 %uint_40
+      %table = OpVariable %_ptr_Private__arr_uint_uint_4 Private %table_init
+
+     %lookup = OpFunction %uint None %fn1
+          %i = OpFunctionParameter %_ptr_Function_uint
+       %l_bb = OpLabel
+       %l_iv = OpLoad %uint %i
+       %l_ac = OpAccessChain %_ptr_Private_uint %table %l_iv
+       %l_v  = OpLoad %uint %l_ac
+               OpReturnValue %l_v
+               OpFunctionEnd

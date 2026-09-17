@@ -1,0 +1,28 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float wr;
+};
+
+struct UBO
+{
+    float rd;
+};
+
+struct spvDescriptorSetBuffer15
+{
+    device SSBO* m_9 [[id(0)]];
+    texture2d<float> Samp [[id(1)]];
+    sampler SampSmplr [[id(2)]];
+    constant UBO* m_28 [[id(3)]];
+};
+
+kernel void main0(constant spvDescriptorSetBuffer15& spvDescriptorSet15 [[buffer(15)]])
+{
+    (*spvDescriptorSet15.m_9).wr = spvDescriptorSet15.Samp.sample(spvDescriptorSet15.SampSmplr, float2(0.5), level(0.0)).x + (*spvDescriptorSet15.m_28).rd;
+}
+

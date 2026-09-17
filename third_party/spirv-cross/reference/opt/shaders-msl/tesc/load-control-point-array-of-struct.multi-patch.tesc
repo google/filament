@@ -67,7 +67,6 @@ kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], devic
     device main0_in* gl_in = &spvIn[min(gl_GlobalInvocationID.x / 4, spvIndirectParams[1] - 1) * spvIndirectParams[0]];
     uint gl_InvocationID = gl_GlobalInvocationID.x % 4;
     uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 4, spvIndirectParams[1] - 1);
-    int _27 = gl_InvocationID ^ 1;
-    gl_out[gl_InvocationID].vOutputs = ((gl_in[gl_InvocationID].vInputs.a[1] + gl_in[gl_InvocationID].vInputs.b[1]) + gl_in[gl_InvocationID].vInputs.c) + gl_in[_27].vInputs.c;
+    gl_out[gl_InvocationID].vOutputs = ((gl_in[gl_InvocationID].vInputs.a[1] + gl_in[gl_InvocationID].vInputs.b[1]) + gl_in[gl_InvocationID].vInputs.c) + gl_in[gl_InvocationID ^ 1].vInputs.c;
 }
 

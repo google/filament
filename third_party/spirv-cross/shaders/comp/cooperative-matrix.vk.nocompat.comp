@@ -17,13 +17,13 @@ layout(set = 0, binding = 0) buffer SSBO16
 	float16_t data[];
 } ssbo16;
 
-layout(constant_id = 0) const int Rows = 16;
-layout(constant_id = 1) const int Columns = 16;
+/*layout(constant_id = 0)*/ const int Rows = 16;
+/*layout(constant_id = 1)*/ const int Columns = 16;
 const int UseA = gl_MatrixUseA;
 const int UseB = gl_MatrixUseB;
 const int UseC = gl_MatrixUseAccumulator;
-layout(constant_id = 5) const int Layout = gl_CooperativeMatrixLayoutRowMajor;
-layout(constant_id = 6) const int Scope = gl_ScopeSubgroup;
+/*layout(constant_id = 5)*/ const int Layout = gl_CooperativeMatrixLayoutRowMajor;
+/*layout(constant_id = 6)*/ const int Scope = gl_ScopeSubgroup;
 
 coopmat<float, Scope, Rows, Columns, UseA> coopmat_square(coopmat<float, Scope, Rows, Columns, UseA> a)
 {

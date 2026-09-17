@@ -108,7 +108,7 @@ struct spvDescriptorSetBuffer4
 {
     const device B40* b40 [[id(0)]];
     // Overlapping binding: constant B41* b41 [[id(0)]];
-    // Overlapping binding: depth2d<float> t40 [[id(0)]];
+    // Overlapping binding: texture2d<float> t40 [[id(0)]];
     // Overlapping binding: texture2d<uint> t41 [[id(0)]];
     // Overlapping binding: texture2d<int> t42 [[id(0)]];
     // Overlapping binding: texture_buffer<uint, access::read_write> u4 [[id(0)]];
@@ -116,7 +116,7 @@ struct spvDescriptorSetBuffer4
 };
 
 static inline __attribute__((always_inline))
-void in_function(thread float4& r0, const device array<texture2d<float>, 8>& t00, const device array<sampler, 8>& s00, const device array<texture2d<uint>, 8>& t01, const device array<texture2d<int>, 8>& t02, const device array<texture_buffer<uint, access::read_write>, 8>& u0, thread float4& r1, const device B10* constant (&b10)[8], constant B11* constant (&b11)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u1, thread float4& r2, constant array<texture2d<float>, 8>& t20, constant array<sampler, 8>& s20, constant array<texture2d<uint>, 8>& t21, constant array<texture2d<int>, 8>& t22, const device B20* constant (&b20)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u2, constant B21* constant (&b21)[8], const spvDescriptorArray<const device B30*> b30, thread uint3& gl_WorkGroupID, thread float4& r3, const spvDescriptorArray<texture2d<float>> t30, const spvDescriptorArray<sampler> s30, const spvDescriptorArray<texture2d<uint>> t31, const spvDescriptorArray<texture2d<int>> t32, const spvDescriptorArray<constant B31*> b31, const spvDescriptorArray<texture_buffer<uint, access::read_write>> u3, thread float4& r4, depth2d<float> t40, sampler s40, texture2d<uint> t41, texture2d<int> t42, const device B40& b40, constant B41& b41, texture_buffer<uint, access::read_write> u4)
+void in_function(thread float4& r0, const device array<texture2d<float>, 8>& t00, const device array<sampler, 8>& s00, const device array<texture2d<uint>, 8>& t01, const device array<texture2d<int>, 8>& t02, const device array<texture_buffer<uint, access::read_write>, 8>& u0, thread float4& r1, const device B10* constant (&b10)[8], constant B11* constant (&b11)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u1, thread float4& r2, constant array<texture2d<float>, 8>& t20, constant array<sampler, 8>& s20, constant array<texture2d<uint>, 8>& t21, constant array<texture2d<int>, 8>& t22, const device B20* constant (&b20)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u2, constant B21* constant (&b21)[8], const spvDescriptorArray<const device B30*> b30, thread uint3& gl_WorkGroupID, thread float4& r3, const spvDescriptorArray<texture2d<float>> t30, const spvDescriptorArray<sampler> s30, const spvDescriptorArray<texture2d<uint>> t31, const spvDescriptorArray<texture2d<int>> t32, const spvDescriptorArray<constant B31*> b31, const spvDescriptorArray<texture_buffer<uint, access::read_write>> u3, thread float4& r4, texture2d<float> t40, sampler s40, texture2d<uint> t41, texture2d<int> t42, const device B40& b40, constant B41& b41, texture_buffer<uint, access::read_write> u4)
 {
     r0 = t00[0].sample(s00[3], float2(0.0), level(0.0));
     r0.x = as_type<float>(t01[1].read(uint2(int2(0)), 0).x);
@@ -177,7 +177,7 @@ kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buff
     constant auto &b11 = reinterpret_cast<constant B11* constant (&)[8]>(spvDescriptorSet3.b10);
     constant auto &u1 = reinterpret_cast<constant array<texture_buffer<uint, access::read_write>, 8> &>(spvDescriptorSet3.b10);
     constant auto &b41 = *reinterpret_cast<constant B41* constant &>(spvDescriptorSet4.b40);
-    constant auto &t40 = reinterpret_cast<constant depth2d<float> &>(spvDescriptorSet4.b40);
+    constant auto &t40 = reinterpret_cast<constant texture2d<float> &>(spvDescriptorSet4.b40);
     constant auto &t41 = reinterpret_cast<constant texture2d<uint> &>(spvDescriptorSet4.b40);
     constant auto &t42 = reinterpret_cast<constant texture2d<int> &>(spvDescriptorSet4.b40);
     constant auto &u4 = reinterpret_cast<constant texture_buffer<uint, access::read_write> &>(spvDescriptorSet4.b40);

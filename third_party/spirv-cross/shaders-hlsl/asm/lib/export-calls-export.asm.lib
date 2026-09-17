@@ -1,0 +1,59 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 50
+; Schema: 0
+               OpCapability Linkage
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpSource HLSL 630
+               OpName %add_one "add_one"
+               OpName %x "x"
+               OpName %add_two "add_two"
+               OpName %y "y"
+               OpName %add_three "add_three"
+               OpName %z "z"
+               OpDecorate %add_one LinkageAttributes "add_one" Export
+               OpDecorate %add_two LinkageAttributes "add_two" Export
+               OpDecorate %add_three LinkageAttributes "add_three" Export
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+%_ptr_Function_uint = OpTypePointer Function %uint
+        %fn1 = OpTypeFunction %uint %_ptr_Function_uint
+
+    %add_one = OpFunction %uint None %fn1
+          %x = OpFunctionParameter %_ptr_Function_uint
+       %o_bb = OpLabel
+       %o_xv = OpLoad %uint %x
+        %o_r = OpIAdd %uint %o_xv %uint_1
+               OpReturnValue %o_r
+               OpFunctionEnd
+
+; add_two calls add_one twice (already-emitted callee), and forward-references
+; add_three (callee declared *after* add_two in the module). Both exercise
+; the func.active short-circuit but in different directions.
+
+    %add_two = OpFunction %uint None %fn1
+          %y = OpFunctionParameter %_ptr_Function_uint
+       %t_bb = OpLabel
+     %t_arg1 = OpVariable %_ptr_Function_uint Function
+     %t_arg2 = OpVariable %_ptr_Function_uint Function
+     %t_arg3 = OpVariable %_ptr_Function_uint Function
+       %t_yv = OpLoad %uint %y
+               OpStore %t_arg1 %t_yv
+        %t_a = OpFunctionCall %uint %add_one %t_arg1
+               OpStore %t_arg2 %t_a
+        %t_b = OpFunctionCall %uint %add_one %t_arg2
+               OpStore %t_arg3 %t_b
+        %t_r = OpFunctionCall %uint %add_three %t_arg3
+               OpReturnValue %t_r
+               OpFunctionEnd
+
+  %add_three = OpFunction %uint None %fn1
+          %z = OpFunctionParameter %_ptr_Function_uint
+       %r_bb = OpLabel
+       %r_zv = OpLoad %uint %z
+        %r_r = OpIAdd %uint %r_zv %uint_3
+               OpReturnValue %r_r
+               OpFunctionEnd
