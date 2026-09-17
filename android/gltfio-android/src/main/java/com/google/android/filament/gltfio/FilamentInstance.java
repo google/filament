@@ -153,9 +153,8 @@ public class FilamentInstance {
         MaterialInstance[] result = new MaterialInstance[count];
         long[] natives = new long[count];
         nGetMaterialInstances(mNativeObject, natives);
-        Engine engine = mAsset.getEngine();
         for (int i = 0; i < count; i++) {
-            result[i] = new MaterialInstance(engine, natives[i]);
+            result[i] = MaterialInstance.wrap(natives[i]);
         }
         return result;
     }

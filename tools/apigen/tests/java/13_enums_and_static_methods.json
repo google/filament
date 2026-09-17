@@ -1,0 +1,460 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "/Users/mathias/sources/git/filament/tools/apigen/tests/java/13_enums_and_static_methods.h"
+  },
+  "includes": {
+    "user": [],
+    "system": [
+      "<math/mat4.h>",
+      "<stdint.h>"
+    ]
+  },
+  "enums": [],
+  "classes": [
+    {
+      "name": "EnumsAndStaticMethodsTest",
+      "qualified_name": "EnumsAndStaticMethodsTest",
+      "location": {
+        "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+        "line": 4
+      },
+      "doc": {
+        "brief": "",
+        "details": "",
+        "params": {},
+        "returns": "",
+        "meta": {}
+      },
+      "attributes": [],
+      "type": {
+        "cpp_name": "EnumsAndStaticMethodsTest",
+        "category": "object",
+        "is_const": false,
+        "is_pointer": false,
+        "is_reference": false,
+        "is_move_reference": false
+      },
+      "bases": [],
+      "methods": [
+        {
+          "name": "setAndGetMode",
+          "qualified_name": "setAndGetMode(Mode)",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 19
+          },
+          "doc": {
+            "brief": "// 1. Instance method taking and returning enum",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Mode",
+            "qualified_name": "EnumsAndStaticMethodsTest::Mode",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "Mode",
+                "qualified_name": "EnumsAndStaticMethodsTest::Mode",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "setModeThrowing",
+          "qualified_name": "setModeThrowing(Mode)",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 22
+          },
+          "doc": {
+            "brief": "// 2. Instance throwing method taking enum",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "Mode",
+                "qualified_name": "EnumsAndStaticMethodsTest::Mode",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "addNumbers",
+          "qualified_name": "addNumbers(int32_t, int32_t)",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 25
+          },
+          "doc": {
+            "brief": "// 3. Static method with primitive args and return",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "int32_t",
+            "qualified_name": "int32_t",
+            "category": "primitive",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "a",
+              "type": {
+                "cpp_name": "int32_t",
+                "qualified_name": "int32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "b",
+              "type": {
+                "cpp_name": "int32_t",
+                "qualified_name": "int32_t",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "executeStaticThrowing",
+          "qualified_name": "executeStaticThrowing(Mode)",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 28
+          },
+          "doc": {
+            "brief": "// 4. Static method throwing",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "void",
+            "qualified_name": "void",
+            "category": "void",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "Mode",
+                "qualified_name": "EnumsAndStaticMethodsTest::Mode",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "computeMatrix",
+          "qualified_name": "computeMatrix(Mode, double)",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 31
+          },
+          "doc": {
+            "brief": "// 5. Static method returning math type",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "filament::math::mat4",
+            "qualified_name": "filament::math::details::TMat44<double>",
+            "category": "object",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [
+            {
+              "name": "m",
+              "type": {
+                "cpp_name": "Mode",
+                "qualified_name": "EnumsAndStaticMethodsTest::Mode",
+                "category": "enum",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            },
+            {
+              "name": "scale",
+              "type": {
+                "cpp_name": "double",
+                "qualified_name": "double",
+                "category": "primitive",
+                "is_const": false,
+                "is_pointer": false,
+                "is_reference": false,
+                "is_move_reference": false,
+                "nullability": "unspecified"
+              },
+              "default_value": null,
+              "attributes": []
+            }
+          ],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        },
+        {
+          "name": "getGlobalStatus",
+          "qualified_name": "getGlobalStatus()",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 34
+          },
+          "doc": {
+            "brief": "// 6. Static method returning enum",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "return_type": {
+            "cpp_name": "Status",
+            "qualified_name": "EnumsAndStaticMethodsTest::Status",
+            "category": "enum",
+            "is_const": false,
+            "is_pointer": false,
+            "is_reference": false,
+            "is_move_reference": false,
+            "nullability": "unspecified"
+          },
+          "arguments": [],
+          "is_static": true,
+          "is_const": false,
+          "is_noexcept": true,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": [],
+      "enums": [
+        {
+          "name": "Mode",
+          "qualified_name": "EnumsAndStaticMethodsTest::Mode",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 6
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "int",
+          "entries": [
+            {
+              "name": "FIRST",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "SECOND",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "THIRD",
+              "value": 2,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        },
+        {
+          "name": "Status",
+          "qualified_name": "EnumsAndStaticMethodsTest::Status",
+          "location": {
+            "file": "tools/apigen/tests/java/13_enums_and_static_methods.h",
+            "line": 12
+          },
+          "doc": {
+            "brief": "",
+            "details": "",
+            "params": {},
+            "returns": "",
+            "meta": {}
+          },
+          "attributes": [],
+          "underlying_type": "uint32_t",
+          "entries": [
+            {
+              "name": "IDLE",
+              "value": 0,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "BUSY",
+              "value": 1,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            },
+            {
+              "name": "DONE",
+              "value": 2,
+              "doc": {
+                "brief": "",
+                "details": "",
+                "params": {},
+                "returns": "",
+                "meta": {}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "functions": []
+}

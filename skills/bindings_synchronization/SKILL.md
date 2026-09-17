@@ -17,12 +17,15 @@ You must check and update the language bindings if your changes touch any public
 - **New/Modified/Deleted Methods** on core classes (e.g., `View`, `Engine`, `Camera`, `LightManager`, `RenderableManager`).
 - **Options Structs** (e.g., `AmbientOcclusionOptions`, `BloomOptions`, `FogOptions`).
   > [!IMPORTANT]
-  > If you modify options structs defined in `filament/include/filament/Options.h`, **you must run the beamsplitter tool**. The tool parses `Options.h` and automatically updates Java bindings, JavaScript/TypeScript bindings, and C++ JSON serialization files.
-  > 
-  > Run it via:
-  > ```bash
-  > cd tools/beamsplitter && go run .
-  > ```
+  > If you modify options structs defined in `filament/include/filament/Options.h`:
+  > 1. **Run `apigen`** to regenerate `View.java` and `View.cpp` (which host the Java POJO options structs and JNI bridges):
+  >    ```bash
+  >    python3 tools/apigen/generate_android.py -j
+  >    ```
+  > 2. **Run `beamsplitter`** to update JavaScript/TypeScript bindings and C++ JSON settings serialization:
+  >    ```bash
+  >    cd tools/beamsplitter && go run .
+  >    ```
 - **Enums & Constants** (e.g., `BlendMode`, `QualityLevel`, `AntiAliasing` under `filament/include/filament/` or nested inside classes).
 
 ---
