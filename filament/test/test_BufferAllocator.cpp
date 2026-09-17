@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "../src/details/BufferAllocator.h"
-#include "utils/Panic.h"
+
+#include <utils/Panic.h>
+
+#include <gtest/gtest.h>
 
 #include <utility>
 #include <vector>
@@ -60,7 +61,6 @@ TEST_F(BufferAllocatorTest, SimpleAllocation) {
     EXPECT_EQ(id, 1);
     EXPECT_EQ(offset, 0);
     EXPECT_EQ(mAllocator.getAllocationOffset(id), offset);
-    EXPECT_FALSE(mAllocator.isLockedByGpu(id));
     EXPECT_EQ(mAllocator.getAllocationSize(id), 128);
 
     // Try to allocate again. The next allocation should start after the first one.
@@ -68,7 +68,6 @@ TEST_F(BufferAllocatorTest, SimpleAllocation) {
     EXPECT_EQ(id2, 3); // ID is (128 / 64) + 1 = 3
     EXPECT_EQ(offset2, 128);
     EXPECT_EQ(mAllocator.getAllocationOffset(id2), offset2);
-    EXPECT_FALSE(mAllocator.isLockedByGpu(id2));
     EXPECT_EQ(mAllocator.getAllocationSize(id2), 64);
 }
 
@@ -126,108 +125,15 @@ TEST_F(BufferAllocatorTest, AllocationLifecycle) {
     EXPECT_EQ(id, 1);
     EXPECT_EQ(mAllocator.getAllocationSize(id), 128);
 
-    // 2. Retire from CPU side
+    // 2. Retire
     mAllocator.retire(id);
 
-    // 3. The slot is not free yet because the GPU might still be using it.
-    // Let's simulate the GPU acquiring and releasing it.
-    mAllocator.acquireGpu(id);
-    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-    mAllocator.releaseGpu(id);
-    EXPECT_FALSE(mAllocator.isLockedByGpu(id));
-
-    // The first slot (128 bytes) should now be available again.
+    // 3. The first slot (128 bytes) should now be available again.
     // Let's try to allocate something that fits in it.
     auto [id3, offset3] = mAllocator.allocate(100); // Aligns to 128
     EXPECT_EQ(id3, 1); // It should reuse the first slot.
     EXPECT_EQ(offset3, 0);
     EXPECT_EQ(mAllocator.getAllocationSize(id3), 128);
-}
-
-TEST_F(BufferAllocatorTest, RetireThenReleaseGpu) {
-    // 1. Allocate a block and a dummy block next to it.
-    auto [id1, offset1] = mAllocator.allocate(128);
-    auto [id2, offset2] = mAllocator.allocate(128);
-    EXPECT_EQ(id1, 1);
-    EXPECT_EQ(id2, 3);
-    EXPECT_EQ(offset1, 0);
-    EXPECT_EQ(offset2, 128);
-
-    // 2. Retire the first block (CPU is done), then acquire it for the GPU.
-    mAllocator.retire(id1);
-    mAllocator.acquireGpu(id1); // gpuUseCount = 1
-
-    // 3. The slot is now free from CPU but locked by GPU.
-
-    // 4. Try to allocate the same space. It should fail, and the allocation should go
-    //    to the next available free space.
-    auto [id3, offset3] = mAllocator.allocate(64);
-    EXPECT_EQ(id3, 5);
-    EXPECT_EQ(offset3, 256); // It should be allocated after id2.
-
-    // 5. Now, release the GPU lock.
-    mAllocator.releaseGpu(id1); // gpuUseCount = 0
-
-    // 6. The original slot should now be available for allocation immediately.
-    auto [id4, offset4] = mAllocator.allocate(64);
-    EXPECT_EQ(id4, 1);
-    EXPECT_EQ(offset4, 0); // Success! It reuses the first slot.
-}
-
-TEST_F(BufferAllocatorTest, MultipleGpuAcquires) {
-    // 1. Allocate a block.
-    auto [id, offset] = mAllocator.allocate(128);
-    EXPECT_EQ(id, 1);
-    EXPECT_EQ(offset, 0);
-
-    // Block merging by allocating another slot
-    auto [blockerId, blockerOffset] = mAllocator.allocate(128);
-
-    // 2. Retire from CPU, then acquire multiple times for GPU (e.g., used in 3 command buffers).
-    mAllocator.retire(id);
-    mAllocator.acquireGpu(id); // gpuUseCount = 1
-    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-    mAllocator.acquireGpu(id); // gpuUseCount = 2
-    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-    mAllocator.acquireGpu(id); // gpuUseCount = 3
-    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-
-    // 3. Release GPU lock once. The slot should still be locked.
-    mAllocator.releaseGpu(id); // gpuUseCount = 2
-    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-
-    auto [failId1, failOffset1] = mAllocator.allocate(64);
-    EXPECT_NE(failOffset1, 0); // Should not be able to allocate at offset 0.
-    EXPECT_NE(failId1, 1);
-
-    // 4. Release GPU lock again. The slot should still be locked.
-    mAllocator.releaseGpu(id); // gpuUseCount = 1
-
-    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
-    auto [failId2, failOffset2] = mAllocator.allocate(64);
-    EXPECT_NE(failOffset2, 0); // Still cannot allocate at offset 0.
-    EXPECT_NE(failId2, 1);
-
-    // 5. Final release. The lock count is now 0.
-    mAllocator.releaseGpu(id); // gpuUseCount = 0
-    EXPECT_FALSE(mAllocator.isLockedByGpu(id));
-
-    // 6. Now it should be freed and available immediately.
-    auto [successId, successOffset] = mAllocator.allocate(64);
-    EXPECT_EQ(successOffset, 0);
-    EXPECT_EQ(successId, 1);
-}
-
-TEST_F(BufferAllocatorTest, GpuPanicOnUnderflow) {
-    // 1. Allocate a block and acquire it.
-    auto [id, _] = mAllocator.allocate(128);
-    mAllocator.acquireGpu(id);
-
-    // 2. Release it once, which is fine.
-    mAllocator.releaseGpu(id);
-
-    // 3. Releasing it again when the count is 0 should trigger a failed assertion.
-    EXPECT_DEATH(mAllocator.releaseGpu(id), "failed assertion");
 }
 
 TEST_F(BufferAllocatorTest, MergeFreeSlots) {
@@ -346,37 +252,10 @@ TEST_F(BufferAllocatorTest, ResetWithInvalidSize) {
     EXPECT_DEATH(mAllocator.reset(123), "failed assertion");
 }
 
-
-TEST_F(BufferAllocatorTest, ResetWithGpuLock) {
-    // 1. Allocate a block and acquire a GPU lock on it.
-    auto [id1, offset1] = mAllocator.allocate(128);
-    EXPECT_EQ(id1, 1);
-    mAllocator.acquireGpu(id1); // gpuUseCount = 1
-
-    // 2. Call reset. This should disregard the GPU lock and clear everything.
-    constexpr BufferAllocator::allocation_size_t NEW_TOTAL_SIZE = 4096;
-    mAllocator.reset(NEW_TOTAL_SIZE);
-
-    // 3. Verify the allocator is in a pristine state with the new size.
-    EXPECT_EQ(mAllocator.getTotalSize(), NEW_TOTAL_SIZE);
-
-    // 4. The strongest verification is to allocate the entire new size, which should
-    //    succeed, proving that the old GPU-locked block is gone.
-    auto [id2, offset2] = mAllocator.allocate(NEW_TOTAL_SIZE);
-    EXPECT_EQ(id2, 1);
-    EXPECT_EQ(offset2, 0);
-}
-
 TEST_F(BufferAllocatorTest, InvalidOperations) {
     // These operations on invalid IDs should not crash and should be handled gracefully.
     EXPECT_DEATH(mAllocator.retire(BufferAllocator::UNALLOCATED), "failed assertion");
     EXPECT_DEATH(mAllocator.retire(999), "failed assertion"); // Non-existent ID
-
-    EXPECT_DEATH(mAllocator.acquireGpu(BufferAllocator::UNALLOCATED), "failed assertion");
-    EXPECT_DEATH(mAllocator.acquireGpu(999), "failed assertion");
-
-    EXPECT_DEATH(mAllocator.releaseGpu(BufferAllocator::UNALLOCATED), "failed assertion");
-    EXPECT_DEATH(mAllocator.releaseGpu(999), "failed assertion");
 
     // Check that an invalid offset query panics in debug/testing builds.
     EXPECT_DEATH(auto result = mAllocator.getAllocationOffset(BufferAllocator::UNALLOCATED),
@@ -424,6 +303,15 @@ TEST_F(BufferAllocatorTest, AlignUp) {
     EXPECT_EQ(mAllocator.alignUp(234), 256);
     EXPECT_EQ(mAllocator.alignUp(255), 256);
     EXPECT_EQ(mAllocator.alignUp(999), 1024);
+}
+
+TEST_F(BufferAllocatorTest, AlignDown) {
+    EXPECT_EQ(mAllocator.alignDown(0), 0);
+    EXPECT_EQ(mAllocator.alignDown(63), 0);
+    EXPECT_EQ(mAllocator.alignDown(64), 64);
+    EXPECT_EQ(mAllocator.alignDown(100), 64);
+    EXPECT_EQ(mAllocator.alignDown(255), 192);
+    EXPECT_EQ(mAllocator.alignDown(1025), 1024);
 }
 
 TEST_F(BufferAllocatorTest, ValidId) {

@@ -46,10 +46,9 @@ public:
         allocation_size_t slotSize;           // 4 bytes
         bool isAllocated;                     // 1 byte
         char padding[3];                      // 3 bytes
-        uint32_t gpuUseCount;                 // 4 bytes
 
         [[nodiscard]] bool isFree() const noexcept {
-            return !isAllocated && gpuUseCount == 0;
+            return !isAllocated;
         }
     };
 
@@ -66,17 +65,9 @@ public:
     [[nodiscard]] std::pair<AllocationId, allocation_size_t> allocate(
             allocation_size_t size) noexcept;
 
-    // Call it when MaterialInstance gives up the ownership of the allocation.
+    // Call it when a slot is no longer in use by the MaterialInstance or GPU.
     // The slot is released and potential merging is performed immediately.
     void retire(AllocationId id);
-
-    // Increments the GPU read-lock.
-    void acquireGpu(AllocationId id);
-
-    // Decrements the GPU read-lock.
-    // If the count reaches zero and the slot is not allocated, it is released and merged
-    // immediately.
-    void releaseGpu(AllocationId id);
 
     // Resets the allocator to its initial state with a new total size.
     // All existing allocations are cleared.
@@ -88,13 +79,17 @@ public:
     // Query the allocation offset by AllocationId.
     [[nodiscard]] allocation_size_t getAllocationOffset(AllocationId id) const;
 
-    [[nodiscard]] bool isLockedByGpu(AllocationId id) const;
-
     [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
+
+    // Rounds `size` down to a multiple of the slot size.
+    [[nodiscard]] allocation_size_t alignDown(allocation_size_t size) const noexcept;
 
     [[nodiscard]] allocation_size_t getAllocationSize(AllocationId id) const;
 
     [[nodiscard]] static bool isValid(AllocationId id);
+
+    // Number of allocations that have not been retired yet.
+    [[nodiscard]] uint32_t getAllocationCount() const noexcept { return mAllocationCount; }
 
 private:
     [[nodiscard]] allocation_size_t slotIndexFromOffset(allocation_size_t offset) const noexcept;
@@ -117,6 +112,7 @@ private:
     const uint8_t mSlotSizeShift;
     utils::FixedCapacityVector<InternalSlotNode> mNodes;
     std::multimap</*slot size*/ allocation_size_t, InternalSlotNode*> mFreeList;
+    uint32_t mAllocationCount = 0;
 };
 
 } // namespace filament
