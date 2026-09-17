@@ -45,7 +45,8 @@ function print_help {
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
     echo "    -E"
-    echo "        Disable C++ exceptions."
+    echo "        Disable C++ exceptions for the target build."
+    echo "        Separately built host tools retain exceptions because some tools require them."
     echo "    -W"
     echo "        Include WebGPU support for the target platform. (NOT functional atm)."
     echo "    -s"
@@ -277,13 +278,14 @@ function build_tools_for_split_build {
         fi
     fi
 
+    # Host tools such as cmgen use exceptions even when the target runtime does not.
     cmake \
         -G "${BUILD_GENERATOR}" \
         -DFILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR=${PREBUILT_TOOLS_DIR} \
         -DCMAKE_BUILD_TYPE="${build_type_arg}" \
         ${WEBGPU_OPTION} \
         ${architectures} \
-        ${EXCEPTIONS_OPTION} \
+        -DFILAMENT_ENABLE_EXCEPTIONS=ON \
         ${MUTEX_DEBUG_OPTION} \
         ../..
 
