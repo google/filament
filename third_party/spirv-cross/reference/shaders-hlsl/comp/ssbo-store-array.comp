@@ -3,14 +3,17 @@ struct Data
     uint arr[3];
 };
 
-RWByteAddressBuffer _13 : register(u0);
+static const uint _14[3] = { 1u, 2u, 3u };
+static const Data _15 = { { 1u, 2u, 3u } };
+
+RWByteAddressBuffer _21 : register(u0);
 
 void comp_main()
 {
-    Data d1;
-    _13.Store(0, d1.arr[0]);
-    _13.Store(4, d1.arr[1]);
-    _13.Store(8, d1.arr[2]);
+    Data d1 = _15;
+    _21.Store(0, d1.arr[0]);
+    _21.Store(4, d1.arr[1]);
+    _21.Store(8, d1.arr[2]);
 }
 
 [numthreads(1, 1, 1)]

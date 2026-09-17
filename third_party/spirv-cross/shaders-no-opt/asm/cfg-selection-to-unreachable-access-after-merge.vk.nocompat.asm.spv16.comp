@@ -1,0 +1,119 @@
+	OpCapability Shader
+	OpCapability ImageBuffer
+	OpCapability Int8
+	OpCapability GroupNonUniformVote
+	OpMemoryModel Logical GLSL450
+	OpEntryPoint GLCompute %49 "main" %46 %48 %45
+	OpExecutionMode %49 LocalSize 4 1 1
+	OpSource Unknown 0
+	OpName %49 "main"
+	OpName %50 ".str"
+	OpName %51 ".str.2"
+	OpName %45 "value"
+	OpName %18 "spirv.SignedImage"
+	OpName %46 "__spirv_BuiltInGlobalInvocationId"
+	OpName %1 "entry"
+	OpName %2 "unreachable"
+	OpName %3 "new.header"
+	OpName %4 "entry.sw.bb.i_crit_edge1"
+	OpName %5 "entry.sw.bb.i_crit_edge"
+	OpName %6 "sw.default.i"
+	OpName %7 "new.header.new.exit"
+	OpName %8 "sw.bb.i"
+	OpName %48 "Out"
+	OpName %17 "spirv.VulkanBuffer"
+	OpName %9 "_Z4mainDv3_j.exit"
+	OpDecorate %45 DescriptorSet 0
+	OpDecorate %45 Binding 0
+	OpDecorate %46 BuiltIn GlobalInvocationId
+	OpDecorate %48 DescriptorSet 0
+	OpDecorate %48 Binding 1
+	OpDecorate %15 ArrayStride 4
+	OpMemberDecorate %16 0 Offset 0
+	OpDecorate %16 Block
+	%10 = OpTypeVoid
+	%11 = OpTypeFunction %10
+	%12 = OpTypeInt 32 0
+	%13 = OpTypePointer StorageBuffer %12
+	%14 = OpTypeBool
+	%15 = OpTypeRuntimeArray %12
+	%16 = OpTypeStruct %15
+	%17 = OpTypePointer StorageBuffer %16
+	%18 = OpTypeImage %12 Buffer 2 0 0 2 R32ui
+	%19 = OpTypeInt 8 0
+	%20 = OpConstant %12 4
+	%21 = OpTypeArray %19 %20
+	%22 = OpConstant %12 6
+	%23 = OpTypeArray %19 %22
+	%24 = OpTypePointer Function %21
+	%25 = OpTypePointer Function %23
+	%26 = OpConstant %12 0
+	%27 = OpConstant %12 1
+	%28 = OpConstant %12 3
+	%29 = OpTypePointer UniformConstant %18
+	%30 = OpTypeVector %12 4
+	%31 = OpTypeVector %12 3
+	%32 = OpTypePointer Input %31
+	%33 = OpConstantTrue %14
+	%34 = OpConstant %19 116
+	%35 = OpConstant %19 79
+	%36 = OpConstant %19 0
+	%37 = OpConstant %19 101
+	%38 = OpConstant %19 117
+	%39 = OpConstant %19 108
+	%40 = OpConstant %19 97
+	%41 = OpConstant %19 118
+	%42 = OpUndef %14
+	%43 = OpConstantComposite %23 %41 %40 %39 %38 %37 %36
+	%44 = OpConstantComposite %21 %35 %38 %34 %36
+	%45 = OpVariable %29 UniformConstant 
+	%46 = OpVariable %32 Input 
+	%47 = OpConstantFalse %14
+	%48 = OpVariable %17 StorageBuffer 
+	%49 = OpFunction %10 DontInline %11     ; -- Begin function main
+	%1 = OpLabel
+	%50 = OpVariable %25 Function %43
+	%51 = OpVariable %24 Function %44
+	%52 = OpLoad %31 %46 
+	%53 = OpCompositeExtract %12 %52 0
+	%54 = OpLoad %18 %45 
+	%55 = OpImageRead %30 %54 %53
+	%56 = OpCompositeExtract %12 %55 0
+	OpSelectionMerge %9 None
+	OpBranchConditional %33 %3 %2
+	%2 = OpLabel
+	OpUnreachable
+	%3 = OpLabel
+	OpSelectionMerge %7 None
+	OpSwitch %56 %6 0 %5 2 %4
+	%4 = OpLabel
+	OpBranch %7
+	%5 = OpLabel
+	OpBranch %7
+	%6 = OpLabel
+	%57 = OpGroupNonUniformAny %14 %28 %47
+	OpBranch %7
+	%7 = OpLabel
+	%58 = OpPhi %14 %57 %6 %42 %5 %42 %4
+	%59 = OpPhi %12 %27 %6 %26 %5 %26 %4
+	%60 = OpIEqual %14 %26 %59
+	OpBranchConditional %60 %8 %9
+	%8 = OpLabel
+	%61 = OpGroupNonUniformAny %14 %28 %47
+	OpBranch %9
+	%9 = OpLabel
+	%62 = OpPhi %14 %33 %8 %47 %7
+	%63 = OpPhi %14 %61 %8 %58 %7
+	%64 = OpCopyObject %17 %48
+	%65 = OpAccessChain %13 %64 %26 %53
+	%66 = OpSelect %12 %63 %27 %26
+	%67 = OpCopyObject %17 %48
+	OpStore %65 %66 Aligned 4
+	%68 = OpGroupNonUniformAny %14 %28 %62
+	%69 = OpSelect %12 %68 %27 %26
+	%70 = OpIAdd %12 %53 %20
+	%71 = OpAccessChain %13 %64 %26 %70
+	%72 = OpCopyObject %17 %48
+	OpStore %71 %69 Aligned 4
+	OpReturn
+	OpFunctionEnd

@@ -3,12 +3,6 @@
 # ACES
 
 [main]\
-[~~ACES~~](index.md)
+[ACES](index.md)
 
----
-
-### Deprecated
-
----
-
-ACES tone mapping.
+ACES tone mapping

@@ -4,13 +4,3 @@
 
 [main]\
 open fun [destroyStream](destroy-stream.md)(stream: [Stream](../-stream/index.md))
-
-Destroys a [Stream](../-stream/index.md) and frees all its associated resources.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| stream | the [Stream](../-stream/index.md) to destroy |

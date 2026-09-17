@@ -4,3 +4,5 @@
 
 [main]\
 [SOLID](index.md)
+
+refraction through solid objects (e.g. a sphere)

@@ -5,4 +5,4 @@
 [main]\
 [INT](index.md)
 
-signed int, 32-bit
+signed int (32-bit)

@@ -65,14 +65,17 @@ MetalArgumentBuffer* MetalArgumentBuffer::Builder::build() {
 }
 
 std::ostream& MetalArgumentBuffer::Builder::TextureArgument::write(std::ostream& os) const {
+    // SHADOW samplers are deliberately written as "texture", not "depth". SPIRV-Cross no longer
+    // types Dref-sampled resources as depthXd<T>, because the same resource may legally be sampled
+    // both with and without a depth comparison. It instead declares them as plain textureXd<T> and
+    // casts to the depth type at each sample_compare() call site via its spvDepthCast() helper.
+    // The types we emit here are spliced into that same MSL, so they must match.
     switch (format) {
         case filament::backend::SamplerFormat::INT:
         case filament::backend::SamplerFormat::UINT:
         case filament::backend::SamplerFormat::FLOAT:
-            os << "texture";
-            break;
         case filament::backend::SamplerFormat::SHADOW:
-            os << "depth";
+            os << "texture";
             break;
     }
 

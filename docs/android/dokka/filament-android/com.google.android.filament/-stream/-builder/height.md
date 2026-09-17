@@ -15,4 +15,4 @@ main
 
 | | |
 |---|---|
-| height | initial height of the incoming stream. Whether this value is used is stream dependent. On Android, it must be set when using stream |
+| height | initial height of the incoming stream. Whether this value is used is stream dependent. On Android, it must be set when using Builder::stream. |

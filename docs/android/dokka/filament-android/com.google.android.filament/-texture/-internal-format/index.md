@@ -2,24 +2,77 @@
 
 # InternalFormat
 
-[main]\
 enum [InternalFormat](index.md)
 
-Internal texel formats 
+Supported texel formats 
 
-These formats are used to specify a texture's internal storage format.
+These formats are typically used to specify a texture's internal storage format.
 
 # Enumerants syntax format
 
-`[components][size][type]``components` : List of stored components by this format `size` : Size in bit of each component `type` : Type this format is stored as 
+`[components][size][type]`
 
-# Special color formats
+`components` : List of stored components by this format. `size` : Size in bit of each component. `type` : Type this format is stored as.
 
- There are a few special color formats that don't follow the convention above: 
+| | |
+|---|---|
+|  |  |
+| R | Linear Red |
+| RG | Linear Red, Green |
+| RGB | Linear Red, Green, Blue |
+| RGBA | Linear Red, Green Blue, Alpha |
+| SRGB | sRGB encoded Red, Green, Blue |
+| DEPTH | Depth |
+| STENCIL | Stencil |
 
-# Compressed texture formats
+| | |
+|---|---|
+|  |  |
+| (none) | Unsigned Normalized Integer [0, 1] |
+| _SNORM | Signed Normalized Integer [-1, 1] |
+| UI | Unsigned Integer [0, 2size] |
+| I | Signed Integer [-2size-1, 2size-1-1] |
+| F | Floating-point |
 
- Many compressed texture formats are supported as well, which include (but are not limited to) the following list:
+## Special color formats
+
+There are a few special color formats that don't follow the convention above:
+
+| | |
+|---|---|
+|  |  |
+| RGB565 | 5-bits for R and B, 6-bits for G. |
+| RGB5_A1 | 5-bits for R, G and B, 1-bit for A. |
+| RGB10_A2 | 10-bits for R, G and B, 2-bits for A. |
+| RGB9_E5 | **Unsigned** floating point. 9-bits mantissa for RGB, 5-bits shared exponent |
+| R11F_G11F_B10F | **Unsigned** floating point. 6-bits mantissa, for R and G, 5-bits for B. 5-bits exponent. |
+| SRGB8_A8 | sRGB 8-bits with linear 8-bits alpha. |
+| DEPTH24_STENCIL8 | 24-bits unsigned normalized integer depth, 8-bits stencil. |
+| DEPTH32F_STENCIL8 | 32-bits floating-point depth, 8-bits stencil. |
+
+## Compressed texture formats
+
+Many compressed texture formats are supported as well, which include (but are not limited to) the following list:
+
+| | |
+|---|---|
+|  |  |
+| EAC_R11 | Compresses R11UI |
+| EAC_R11_SIGNED | Compresses R11I |
+| EAC_RG11 | Compresses RG11UI |
+| EAC_RG11_SIGNED | Compresses RG11I |
+| ETC2_RGB8 | Compresses RGB8 |
+| ETC2_SRGB8 | compresses SRGB8 |
+| ETC2_EAC_RGBA8 | Compresses RGBA8 |
+| ETC2_EAC_SRGBA8 | Compresses SRGB8_A8 |
+| ETC2_RGB8_A1 | Compresses RGB8 with 1-bit alpha |
+| ETC2_SRGB8_A1 | Compresses sRGB8 with 1-bit alpha |
+
+#### See also
+
+| |
+|---|
+| [Texture](../index.md) |
 
 ## Entries
 
@@ -139,5 +192,6 @@ These formats are used to specify a texture's internal storage format.
 
 | Name | Summary |
 |---|---|
+| [toFilamentNative](to-filament-native.md) | [main]<br>open fun [toFilamentNative](to-filament-native.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
 | [valueOf](value-of.md) | [main]<br>open fun [valueOf](value-of.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Texture.InternalFormat](index.md)<br>Returns the enum constant of this type with the specified name. The string must match exactly an identifier used to declare an enum constant in this type. (Extraneous whitespace characters are not permitted.) |
 | [values](values.md) | [main]<br>open fun [values](values.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Texture.InternalFormat](index.md)&gt;<br>Returns an array containing the constants of this enum type, in the order they're declared. This method may be used to iterate over the constants. |

@@ -5,4 +5,10 @@
 [main]\
 open fun [getName](get-name.md)(): [String](https://developer.android.com/reference/kotlin/java/lang/String.html)
 
-Returns the View's name.
+Returns the View's name
+
+#### Return
+
+a pointer owned by the View instance to the View's name.
+
+@attention Do *not* free the pointer or modify its content.

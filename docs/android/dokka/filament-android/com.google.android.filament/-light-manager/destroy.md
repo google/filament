@@ -3,14 +3,4 @@
 # destroy
 
 [main]\
-open fun [destroy](destroy.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
-
-Destroys this component from the given entity
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| entity | An Entity. |
+open fun [destroy](destroy.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

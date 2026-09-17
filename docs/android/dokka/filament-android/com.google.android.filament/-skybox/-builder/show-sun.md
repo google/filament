@@ -5,7 +5,9 @@
 [main]\
 open fun [showSun](show-sun.md)(show: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [Skybox.Builder](index.md)
 
-Indicates whether the sun should be rendered. The sun can only be rendered if there is at least one light of type [SUN](../../-light-manager/-type/-s-u-n/index.md) in the [Scene](../../-scene/index.md). The default value is `false`.
+Indicates whether the sun should be rendered. 
+
+The sun can only be rendered if there is at least one light of type SUN in the scene. The default value is false.
 
 #### Return
 
@@ -17,4 +19,4 @@ main
 
 | | |
 |---|---|
-| show | `true` if the sun should be rendered, `false` otherwise |
+| show | True if the sun should be rendered, false otherwise |

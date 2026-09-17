@@ -5,4 +5,4 @@
 [main]\
 [DEFAULT](index.md)
 
-The transparent object is drawn honoring the raster state.
+the transparent object is drawn honoring the raster state

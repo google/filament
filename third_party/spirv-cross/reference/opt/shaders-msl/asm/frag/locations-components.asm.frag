@@ -27,7 +27,7 @@ fragment main0_out main0(main0_in in [[stage_in]])
     v2.x = in.m_22;
     v2.y = as_type<float>(in.m_28);
     v2.z = as_type<float>(in.m_33);
-    out.o0.y = float(as_type<uint>(as_type<float>(as_type<int>(v2.y) + as_type<int>(v2.z))));
+    out.o0.y = float(uint(as_type<int>(v2.y) + as_type<int>(v2.z)));
     out.o0.x = v1.y + v2.x;
     out.o0 = float4(out.o0.x, out.o0.y, v1.z, v1.x);
     return out;

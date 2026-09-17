@@ -5,7 +5,9 @@
 [main]\
 open class [FogOptions](index.md)
 
-Options to control large-scale fog in the scene. Materials can enable the `linearFog` property, which uses a simplified, linear equation for fog calculation; in this mode, the heightFalloff is ignored as well as the mipmap selection in IBL or skyColor mode.
+Options to control large-scale fog in the scene. 
+
+Materials can enable the `linearFog` property, which uses a simplified, linear equation for fog calculation; in this mode, the heightFalloff is ignored as well as the mipmap selection in IBL or skyColor mode.
 
 ## Constructors
 

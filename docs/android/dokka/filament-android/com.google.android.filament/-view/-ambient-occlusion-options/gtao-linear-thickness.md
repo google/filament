@@ -5,4 +5,6 @@
 [main]\
 open var [gtaoLinearThickness](gtao-linear-thickness.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Ground Truth-base Ambient Occlusion (GTAO) options
+Increase thickness with distance to maintain detail on distant surfaces. 
+
+Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.

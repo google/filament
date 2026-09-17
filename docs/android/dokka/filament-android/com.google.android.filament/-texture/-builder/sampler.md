@@ -17,4 +17,10 @@ main
 
 | | |
 |---|---|
-| target | [Sampler](../-sampler/index.md) type |
+| target | Sampler type |
+
+#### See also
+
+| |
+|---|
+| [Texture.Sampler](../-sampler/index.md) |

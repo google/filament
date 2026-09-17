@@ -5,4 +5,4 @@
 [main]\
 [OBJECT](index.md)
 
-Vertices are in object space, default.
+vertices are in object space, default

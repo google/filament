@@ -366,12 +366,6 @@ struct main0_patchIn
 {
     main0_out out = {};
     spvUnsafeArray<float4, 1> out_var_TEXCOORD0 = {};
-    spvUnsafeArray<float4, 3> _117 = spvUnsafeArray<float4, 3>({ patchIn.gl_in[0].in_var_TEXCOORD10_centroid, patchIn.gl_in[1].in_var_TEXCOORD10_centroid, patchIn.gl_in[2].in_var_TEXCOORD10_centroid });
-    spvUnsafeArray<float4, 3> _118 = spvUnsafeArray<float4, 3>({ patchIn.gl_in[0].in_var_TEXCOORD11_centroid, patchIn.gl_in[1].in_var_TEXCOORD11_centroid, patchIn.gl_in[2].in_var_TEXCOORD11_centroid });
-    spvUnsafeArray<float4, 3> _119 = spvUnsafeArray<float4, 3>({ patchIn.gl_in[0].in_var_COLOR0, patchIn.gl_in[1].in_var_COLOR0, patchIn.gl_in[2].in_var_COLOR0 });
-    spvUnsafeArray<spvUnsafeArray<float4, 1>, 3> _120 = spvUnsafeArray<spvUnsafeArray<float4, 1>, 3>({ spvUnsafeArray<float4, 1>({ patchIn.gl_in[0].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ patchIn.gl_in[1].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ patchIn.gl_in[2].in_var_TEXCOORD0_0 }) });
-    spvUnsafeArray<spvUnsafeArray<float4, 3>, 3> _135 = spvUnsafeArray<spvUnsafeArray<float4, 3>, 3>({ spvUnsafeArray<float4, 3>({ patchIn.gl_in[0].in_var_PN_POSITION_0, patchIn.gl_in[0].in_var_PN_POSITION_1, patchIn.gl_in[0].in_var_PN_POSITION_2 }), spvUnsafeArray<float4, 3>({ patchIn.gl_in[1].in_var_PN_POSITION_0, patchIn.gl_in[1].in_var_PN_POSITION_1, patchIn.gl_in[1].in_var_PN_POSITION_2 }), spvUnsafeArray<float4, 3>({ patchIn.gl_in[2].in_var_PN_POSITION_0, patchIn.gl_in[2].in_var_PN_POSITION_1, patchIn.gl_in[2].in_var_PN_POSITION_2 }) });
-    spvUnsafeArray<float, 3> _136 = spvUnsafeArray<float, 3>({ patchIn.gl_in[0].in_var_PN_WorldDisplacementMultiplier, patchIn.gl_in[1].in_var_PN_WorldDisplacementMultiplier, patchIn.gl_in[2].in_var_PN_WorldDisplacementMultiplier });
     float _157 = gl_TessCoord.x * gl_TessCoord.x;
     float _158 = gl_TessCoord.y * gl_TessCoord.y;
     float _159 = gl_TessCoord.z * gl_TessCoord.z;
@@ -381,14 +375,14 @@ struct main0_patchIn
     float4 _177 = float4(_157 * 3.0);
     float4 _181 = float4(_158 * 3.0);
     float4 _188 = float4(_159 * 3.0);
-    float4 _202 = ((((((((((_135[0][0] * float4(_157)) * _165) + ((_135[1][0] * float4(_158)) * _169)) + ((_135[2][0] * float4(_159)) * _174)) + ((_135[0][1] * _177) * _169)) + ((_135[0][2] * _181) * _165)) + ((_135[1][1] * _181) * _174)) + ((_135[1][2] * _188) * _169)) + ((_135[2][1] * _188) * _165)) + ((_135[2][2] * _177) * _174)) + ((((patchIn.in_var_PN_POSITION9 * float4(6.0)) * _174) * _165) * _169);
-    float3 _226 = ((_117[0].xyz * float3(gl_TessCoord.x)) + (_117[1].xyz * float3(gl_TessCoord.y))).xyz + (_117[2].xyz * float3(gl_TessCoord.z));
-    float4 _229 = ((_118[0] * _165) + (_118[1] * _169)) + (_118[2] * _174);
-    float4 _231 = ((_119[0] * _165) + (_119[1] * _169)) + (_119[2] * _174);
-    float4 _233 = ((_120[0][0] * _165) + (_120[1][0] * _169)) + (_120[2][0] * _174);
+    float4 _202 = ((((((((((patchIn.gl_in[0u].in_var_PN_POSITION_0 * float4(_157)) * _165) + ((patchIn.gl_in[1u].in_var_PN_POSITION_0 * float4(_158)) * _169)) + ((patchIn.gl_in[2u].in_var_PN_POSITION_0 * float4(_159)) * _174)) + ((patchIn.gl_in[0u].in_var_PN_POSITION_1 * _177) * _169)) + ((patchIn.gl_in[0u].in_var_PN_POSITION_2 * _181) * _165)) + ((patchIn.gl_in[1u].in_var_PN_POSITION_1 * _181) * _174)) + ((patchIn.gl_in[1u].in_var_PN_POSITION_2 * _188) * _169)) + ((patchIn.gl_in[2u].in_var_PN_POSITION_1 * _188) * _165)) + ((patchIn.gl_in[2u].in_var_PN_POSITION_2 * _177) * _174)) + ((((patchIn.in_var_PN_POSITION9 * float4(6.0)) * _174) * _165) * _169);
+    float3 _226 = ((patchIn.gl_in[0u].in_var_TEXCOORD10_centroid.xyz * float3(gl_TessCoord.x)) + (patchIn.gl_in[1u].in_var_TEXCOORD10_centroid.xyz * float3(gl_TessCoord.y))).xyz + (patchIn.gl_in[2u].in_var_TEXCOORD10_centroid.xyz * float3(gl_TessCoord.z));
+    float4 _229 = ((patchIn.gl_in[0u].in_var_TEXCOORD11_centroid * _165) + (patchIn.gl_in[1u].in_var_TEXCOORD11_centroid * _169)) + (patchIn.gl_in[2u].in_var_TEXCOORD11_centroid * _174);
+    float4 _231 = ((patchIn.gl_in[0u].in_var_COLOR0 * _165) + (patchIn.gl_in[1u].in_var_COLOR0 * _169)) + (patchIn.gl_in[2u].in_var_COLOR0 * _174);
+    float4 _233 = ((patchIn.gl_in[0u].in_var_TEXCOORD0_0 * _165) + (patchIn.gl_in[1u].in_var_TEXCOORD0_0 * _169)) + (patchIn.gl_in[2u].in_var_TEXCOORD0_0 * _174);
     spvUnsafeArray<float4, 1> _234 = spvUnsafeArray<float4, 1>({ _233 });
     float3 _236 = _229.xyz;
-    float3 _264 = _202.xyz + (((float3((Material_Texture2D_3.sample(Material_Texture2D_3Sampler, (float2(View.View_GameTime * 0.20000000298023223876953125, View.View_GameTime * (-0.699999988079071044921875)) + (_233.zw * float2(1.0, 2.0))), level(-1.0)).x * 10.0) * (1.0 - _231.x)) * _236) * float3(0.5)) * float3(((_136[0] * gl_TessCoord.x) + (_136[1] * gl_TessCoord.y)) + (_136[2] * gl_TessCoord.z)));
+    float3 _264 = _202.xyz + (((float3((Material_Texture2D_3.sample(Material_Texture2D_3Sampler, (float2(View.View_GameTime * 0.20000000298023223876953125, View.View_GameTime * (-0.699999988079071044921875)) + (_233.zw * float2(1.0, 2.0))), level(-1.0)).x * 10.0) * (1.0 - _231.x)) * _236) * float3(0.5)) * float3(((patchIn.gl_in[0u].in_var_PN_WorldDisplacementMultiplier * gl_TessCoord.x) + (patchIn.gl_in[1u].in_var_PN_WorldDisplacementMultiplier * gl_TessCoord.y)) + (patchIn.gl_in[2u].in_var_PN_WorldDisplacementMultiplier * gl_TessCoord.z)));
     float4 _270 = ShadowDepthPass.ShadowDepthPass_ProjectionMatrix * float4(_264.x, _264.y, _264.z, _202.w);
     float4 _281;
     if ((ShadowDepthPass.ShadowDepthPass_bClampToNearPlane > 0.0) && (_270.z < 0.0))

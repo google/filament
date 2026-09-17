@@ -5,9 +5,7 @@
 [main]\
 open fun [getExpectedPresentationTimeNanos](get-expected-presentation-time-nanos.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
-Returns the target presentation timestamp computed during the most recent call to setupFrame(). 
-
-This timestamp is highly useful for client applications to calculate deterministic, judder-free physics and animation transformations.
+Backwards-compatibility alias for [getExpectedPresentationTime](get-expected-presentation-time.md).
 
 #### Return
 
