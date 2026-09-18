@@ -58,9 +58,26 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh continuous
+      - name: ccache statistics
+        if: ${{ !cancelled() }}
+        run: ccache --show-stats
+      # Postsubmit is the only writer of the shared compiler cache. Presubmit cannot take this
+      # role: a push to main carrying a verified commit skips every presubmit job, so the cache
+      # would almost never be refreshed. Restricted to main because caches written from the
+      # release and rc/** branches are scoped to those branches, so nothing else could read them.
+      - name: Save ccache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: filament-arm-linux
@@ -75,9 +92,24 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh continuous
+      - name: ccache statistics
+        if: ${{ !cancelled() }}
+        run: ccache --show-stats
+      # See the note on the linux job above: main only, to keep unreadable branch-scoped entries
+      # out of the repository's shared cache quota.
+      - name: Save ccache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: filament-mac
