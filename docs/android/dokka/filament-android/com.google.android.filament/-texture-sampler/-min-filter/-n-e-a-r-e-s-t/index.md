@@ -5,4 +5,6 @@
 [main]\
 [NEAREST](index.md)
 
-No filtering. Nearest neighbor is used.
+No filtering. 
+
+Nearest neighbor is used.

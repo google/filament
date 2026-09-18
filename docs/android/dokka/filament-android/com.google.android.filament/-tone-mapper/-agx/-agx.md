@@ -5,17 +5,4 @@
 [main]\
 constructor()
 
-Builds a new AgX tone mapper with no look applied.
-
-[main]\
-constructor(look: [ToneMapper.Agx.AgxLook](-agx-look/index.md))
-
-Builds a new AgX tone mapper.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| look | : an optional creative adjustment to contrast and saturation |
+constructor(look: [AgxToneMapper.AgxLook](../../-agx-tone-mapper/-agx-look/index.md))

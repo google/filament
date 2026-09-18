@@ -5,4 +5,6 @@
 [main]\
 [ACQUIRED](index.md)
 
-Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+.
+Synchronized, copy-free, and take a release callback. 
+
+Good for AR but requires API 26+.

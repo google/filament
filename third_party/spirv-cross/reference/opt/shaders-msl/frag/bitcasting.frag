@@ -17,10 +17,9 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> TextureBase [[texture(0)]], texture2d<float> TextureDetail [[texture(1)]], sampler TextureBaseSmplr [[sampler(0)]], sampler TextureDetailSmplr [[sampler(1)]])
 {
     main0_out out = {};
-    float4 _20 = TextureBase.sample(TextureBaseSmplr, in.VertGeom.xy);
-    float4 _31 = TextureDetail.sample(TextureDetailSmplr, in.VertGeom.xy, int2(3, 2));
-    out.FragColor0 = as_type<float4>(as_type<int4>(_20)) * as_type<float4>(as_type<int4>(_31));
-    out.FragColor1 = as_type<float4>(as_type<uint4>(_20)) * as_type<float4>(as_type<uint4>(_31));
+    float4 _46 = TextureBase.sample(TextureBaseSmplr, in.VertGeom.xy) * TextureDetail.sample(TextureDetailSmplr, in.VertGeom.xy, int2(3, 2));
+    out.FragColor0 = _46;
+    out.FragColor1 = _46;
     return out;
 }
 

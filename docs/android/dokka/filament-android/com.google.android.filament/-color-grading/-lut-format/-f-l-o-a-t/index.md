@@ -4,3 +4,5 @@
 
 [main]\
 [FLOAT](index.md)
+
+16 bits per component (10 bits mantissa precision)

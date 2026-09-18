@@ -3,6 +3,8 @@
 # screenSpaceContactShadows
 
 [main]\
-open fun [screenSpaceContactShadows](screen-space-contact-shadows.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
+open fun [screenSpaceContactShadows](screen-space-contact-shadows.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
 
-Controls if this renderable uses screen-space contact shadows. This is more expensive but can improve the quality of shadows, especially in large scenes. (off by default).
+Controls if this renderable uses screen-space contact shadows. 
+
+This is more expensive but can improve the quality of shadows, especially in large scenes. (off by default).

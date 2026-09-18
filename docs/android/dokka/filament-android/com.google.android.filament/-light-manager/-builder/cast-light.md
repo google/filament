@@ -3,11 +3,11 @@
 # castLight
 
 [main]\
-open fun [castLight](cast-light.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [LightManager.Builder](index.md)
+open fun [castLight](cast-light.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [LightManager.Builder](index.md)
 
 Whether this light casts light (enabled by default) 
 
- In some situations it can be useful to have a light in the scene that doesn't actually emit light, but does cast shadows. 
+In some situations it can be useful to have a light in the scene that doesn't actually emit light, but does cast shadows.
 
 #### Return
 
@@ -19,4 +19,4 @@ main
 
 | | |
 |---|---|
-| enabled | Enables or disables lighting from this Light. |
+| enable | Enables or disables lighting from this Light. |

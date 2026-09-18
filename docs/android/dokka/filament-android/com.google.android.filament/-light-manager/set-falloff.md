@@ -3,9 +3,9 @@
 # setFalloff
 
 [main]\
-open fun [setFalloff](set-falloff.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), falloff: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setFalloff](set-falloff.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), radius: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-Set the falloff distance for point lights and spotlights.
+Set the falloff distance for point lights and spot lights.
 
 #### Parameters
 
@@ -14,7 +14,7 @@ main
 | | |
 |---|---|
 | i | Instance of the component obtained from getInstance(). |
-| falloff | falloff distance in world units. Default is 1 meter. |
+| radius | falloff distance in world units. Default is 1 meter. |
 
 #### See also
 

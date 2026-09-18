@@ -5,7 +5,9 @@
 [main]\
 open fun [setFocusDistance](set-focus-distance.md)(distance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-Set the camera focus distance in world units
+Sets the camera focus distance. 
+
+This is used by the Depth-of-field PostProcessing effect.
 
 #### Parameters
 
@@ -13,4 +15,4 @@ main
 
 | | |
 |---|---|
-| distance | Distance from the camera to the focus plane in world units. Must be positive and larger than the camera's near clipping plane. |
+| distance | Distance from the camera to the plane of focus in world units. Must be positive and larger than the near clipping plane. |

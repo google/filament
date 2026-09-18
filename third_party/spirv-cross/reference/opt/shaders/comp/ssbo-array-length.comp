@@ -9,6 +9,6 @@ layout(binding = 1, std140) buffer SSBO
 
 void main()
 {
-    _11.size = uint(int(uint(_11.v.length())));
+    _11.size = uint(_11.v.length());
 }
 

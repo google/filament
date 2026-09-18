@@ -5,6 +5,4 @@
 [main]\
 open fun [getWrapModeT](get-wrap-mode-t.md)(): [TextureSampler.WrapMode](-wrap-mode/index.md)
 
-#### Return
-
-the wrapping mode in the t (vertical) direction
+returns the t-coordinate wrap mode (vertical)

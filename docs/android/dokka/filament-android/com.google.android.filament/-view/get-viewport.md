@@ -5,10 +5,8 @@
 [main]\
 open fun [getViewport](get-viewport.md)(): [Viewport](../-viewport/index.md)
 
-Returns the rectangular rendering area.
+Returns the rectangular region that gets rendered to.
 
-#### See also
+#### Return
 
-| |
-|---|
-| [setViewport](set-viewport.md) |
+A constant reference to View's viewport.

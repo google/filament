@@ -3,9 +3,30 @@
 # duplicate
 
 [main]\
+open fun [duplicate](duplicate.md)(other: [MaterialInstance](index.md)): [MaterialInstance](index.md)
+
+Creates a new MaterialInstance using another MaterialInstance as a template for initialization. 
+
+The new MaterialInstance is an instance of the same Material of the template instance and must be destroyed just like any other MaterialInstance.
+
+#### Return
+
+A new MaterialInstance
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| other | A MaterialInstance to use as a template for initializing a new instance |
+
+[main]\
 open fun [duplicate](duplicate.md)(other: [MaterialInstance](index.md), name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [MaterialInstance](index.md)
 
-Creates a new MaterialInstance using another MaterialInstance as a template for initialization. The new MaterialInstance is an instance of the same [Material](../-material/index.md) of the template instance and must be destroyed just like any other MaterialInstance.
+Creates a new MaterialInstance using another MaterialInstance as a template for initialization. 
+
+The new MaterialInstance is an instance of the same Material of the template instance and must be destroyed just like any other MaterialInstance.
 
 #### Return
 

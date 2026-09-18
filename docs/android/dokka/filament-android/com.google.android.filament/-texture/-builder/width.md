@@ -5,7 +5,9 @@
 [main]\
 open fun [width](width.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
-Specifies the width of the texture in texels.
+Specifies the width in texels of the texture. 
+
+Doesn't need to be a power-of-two.
 
 #### Return
 
@@ -17,4 +19,4 @@ main
 
 | | |
 |---|---|
-| width | texture width in texels, must be at least 1. Default is 1. |
+| width | Width of the texture in texels (default: 1). |

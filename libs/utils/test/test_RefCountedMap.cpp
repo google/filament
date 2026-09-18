@@ -262,37 +262,56 @@ TEST(RefCountedMapTest, SmartPointerType_PanicsIfGetsNullValue) {
 }
 #endif // GTEST_HAS_DEATH_TEST
 
+struct TaggedKey {
+    size_t id;
+    size_t tag;
+    mutable size_t* lastComparedTag = nullptr;
+    bool operator==(TaggedKey const& rhs) const {
+        if (lastComparedTag) *lastComparedTag = rhs.tag;
+        if (rhs.lastComparedTag) *rhs.lastComparedTag = tag;
+        return id == rhs.id;
+    }
+    struct Hash {
+        size_t operator()(TaggedKey const& k) const { return std::hash<size_t>{}(k.id); }
+    };
+};
+
 TEST(RefCountedMapTest, LruRecycling) {
-    RefCountedMap<KeyType, SmartPointerType> map("RefCountedMapTest", 1);
+    RefCountedMap<TaggedKey, SmartPointerType, TaggedKey::Hash> map("RefCountedMapTest", 1);
     bool factoryCalled = false;
     auto factory = [&]() {
         factoryCalled = true;
         return std::make_unique<size_t>(100);
     };
 
-    // 1. Acquire K1. Ref=1.
-    ValueType* v1 = map.acquire(1, factory);
+    // 1. Acquire K1 with stored key (tag = 100). Ref=1.
+    ValueType* v1 = map.acquire(TaggedKey{ 1, 100 }, factory);
     ASSERT_NE(v1, nullptr);
     EXPECT_EQ(*v1, 100);
     EXPECT_TRUE(factoryCalled);
 
-    // 2. Release K1. Ref=0. Should move to LRU.
-    map.release(1);
-    // map.empty() checks mMap. mMap should be empty.
+    // 2. Release K1 using a distinct lookup key (tag = 200). Ref=0. Moves entry to LRU.
+    map.release(TaggedKey{ 1, 200 });
     EXPECT_TRUE(map.empty());
 
-    // 3. Acquire K1 again. Should come from LRU.
+    // 3. Acquire K1 again using another distinct lookup key (tag = 300).
+    // Verifies that step 2 (release) stored the original key (tag = 100) into the LRU cache
+    // rather than the temporary lookup key (tag = 200).
+    size_t storedInLruTag = 0;
     factoryCalled = false;
-    ValueType* v2 = map.acquire(1, factory);
+    ValueType* v2 = map.acquire(TaggedKey{ 1, 300, &storedInLruTag }, factory);
     ASSERT_NE(v2, nullptr);
     EXPECT_EQ(*v2, 100);
-    // Factory should NOT be called.
     EXPECT_FALSE(factoryCalled);
-    // The underlying pointer (ValueType*) should be the same.
     EXPECT_EQ(v1, v2);
+    EXPECT_EQ(storedInLruTag, 100u);
 
-    // 4. Release K1.
-    map.release(1);
+    // 4. Release K1 using lookup key (tag = 400).
+    // Verifies that step 3 (acquire) re-inserted the stored key (tag = 100) from the LRU cache
+    // into mMap rather than the temporary lookup key (tag = 300).
+    size_t storedInMapTag = 0;
+    map.release(TaggedKey{ 1, 400, &storedInMapTag });
+    EXPECT_EQ(storedInMapTag, 100u);
 }
 
 TEST(RefCountedMapTest, ClearLruCache) {
@@ -306,7 +325,7 @@ TEST(RefCountedMapTest, ClearLruCache) {
     map.acquire(2, []{ return 20; });
     map.release(2, releaser);
 
-    // LRU size 2. Destoyed 0.
+    // LRU size 2. Destroyed 0.
     EXPECT_EQ(destroyed, 0);
 
     map.clearLruCache(releaser);

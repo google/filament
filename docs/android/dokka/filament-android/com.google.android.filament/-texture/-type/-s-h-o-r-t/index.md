@@ -5,4 +5,4 @@
 [main]\
 [SHORT](index.md)
 
-signed short, 16-bit
+signed short (16-bit)

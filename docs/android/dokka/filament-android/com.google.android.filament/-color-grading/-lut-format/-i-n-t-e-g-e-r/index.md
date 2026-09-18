@@ -4,3 +4,5 @@
 
 [main]\
 [INTEGER](index.md)
+
+10 bits per component

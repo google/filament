@@ -5,4 +5,6 @@
 [main]\
 open var [gtaoConstThickness](gtao-const-thickness.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Ground Truth-base Ambient Occlusion (GTAO) options
+constant thickness value of objects on the screen in world space. 
+
+Only take effect when useVisibilityBitmasks is set to true.
