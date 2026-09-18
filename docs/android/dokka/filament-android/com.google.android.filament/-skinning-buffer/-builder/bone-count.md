@@ -7,11 +7,11 @@ open fun [boneCount](bone-count.md)(boneCount: [Int](https://kotlinlang.org/api/
 
 Size of the skinning buffer in bones. 
 
-Due to limitation in the GLSL, the SkinningBuffer must always by a multiple of 256, this adjustment is done automatically, but can cause some memory overhead. This memory overhead can be mitigated by using the same [SkinningBuffer](../index.md) to store the bone information for multiple RenderPrimitives.
+Due to limitation in the GLSL, the SkinningBuffer must always by a multiple of 256, this adjustment is done automatically, but can cause some memory overhead. This memory overhead can be mitigated by using the same SkinningBuffer to store the bone information for multiple RenderPrimitives.
 
 #### Return
 
-this `Builder` object for chaining calls
+A reference to this Builder for chaining calls.
 
 #### Parameters
 

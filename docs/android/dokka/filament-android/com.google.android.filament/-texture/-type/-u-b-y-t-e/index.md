@@ -5,4 +5,4 @@
 [main]\
 [UBYTE](index.md)
 
-unsigned byte, 8-bit
+unsigned byte

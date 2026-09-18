@@ -5,4 +5,4 @@
 [main]\
 [SRGB](index.md)
 
-The color is defined in sRGB space.
+the color is defined in Rec.709-sRGB-D65 (sRGB) space

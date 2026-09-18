@@ -5,6 +5,4 @@
 [main]\
 open fun [getWrapModeR](get-wrap-mode-r.md)(): [TextureSampler.WrapMode](-wrap-mode/index.md)
 
-#### Return
-
-the wrapping mode in the r (depth) direction
+returns the r-coordinate wrap mode (depth)

@@ -9,4 +9,4 @@ Returns the dynamic resolution options associated with this view.
 
 #### Return
 
-value set by [setDynamicResolutionOptions](set-dynamic-resolution-options.md).
+value set by setDynamicResolutionOptions().

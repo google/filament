@@ -5,23 +5,31 @@
 [main]\
 open fun [morphing](morphing.md)(targetCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
-Controls if the renderable has legacy vertex morphing targets, zero by default. For legacy morphing, the attached [VertexBuffer](../../-vertex-buffer/index.md) must provide data in the appropriate [VertexBuffer.VertexAttribute](../../-vertex-buffer/-vertex-attribute/index.md) slots (`MORPH_POSITION_0` etc). Legacy morphing only supports up to 4 morph targets and will be deprecated in the future. Legacy morphing must be enabled on the material definition: either via the `legacyMorphing` material attribute or by calling ::useLegacyMorphing. 
+Controls if the renderable has legacy vertex morphing targets, zero by default. 
 
-See also [setMorphWeights](../set-morph-weights.md), which can be called on a per-frame basis to advance the animation.
+This is required to enable GPU morphing.
+
+For legacy morphing, the attached VertexBuffer must provide data in the appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc). Legacy morphing only supports up to 4 morph targets and will be deprecated in the future. Legacy morphing must be enabled on the material definition: either via the legacyMorphing material attribute or by calling filamat::MaterialBuilder::useLegacyMorphing().
+
+See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis to advance the animation.
 
 [main]\
 open fun [morphing](morphing.md)(morphTargetBuffer: [MorphTargetBuffer](../../-morph-target-buffer/index.md)): [RenderableManager.Builder](index.md)
 
 Controls if the renderable has vertex morphing targets, zero by default. 
 
-For standard morphing, A [MorphTargetBuffer](../../-morph-target-buffer/index.md) must be provided. Standard morphing supports up to `CONFIG_MAX_MORPH_TARGET_COUNT` morph targets.
+This is required to enable GPU morphing.
 
-See also [setMorphWeights](../set-morph-weights.md), which can be called on a per-frame basis to advance the animation.
+Filament supports two morphing modes: standard (default) and legacy.
+
+For standard morphing, A MorphTargetBuffer must be provided. Standard morphing supports up to \c CONFIG_MAX_MORPH_TARGET_COUNT morph targets.
+
+See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis to advance the animation.
 
 [main]\
 open fun [morphing](morphing.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
-Specifies the morph target buffer for a primitive. The morph target buffer must have an associated renderable and geometry. Two conditions must be met: 1. The number of morph targets in the buffer must equal the renderable's morph target count. 2. The vertex count of each morph target must equal the geometry's vertex count.
+Specifies the the range of the MorphTargetBuffer to use with this primitive.
 
 #### Parameters
 

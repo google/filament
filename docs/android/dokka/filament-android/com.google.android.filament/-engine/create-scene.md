@@ -5,14 +5,8 @@
 [main]\
 open fun [createScene](create-scene.md)(): [Scene](../-scene/index.md)
 
-Creates a [Scene](../-scene/index.md).
+Creates a Scene.
 
 #### Return
 
-a newly created [Scene](../-scene/index.md)
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | can be thrown if the [Scene](../-scene/index.md) couldn't be created |
+A pointer to the newly created Scene.

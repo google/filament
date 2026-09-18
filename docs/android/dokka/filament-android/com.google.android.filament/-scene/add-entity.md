@@ -5,7 +5,7 @@
 [main]\
 open fun [addEntity](add-entity.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Adds an [Entity](../-entity/index.md) to the `Scene`.
+Adds an Entity to the Scene.
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| entity | the entity is ignored if it doesn't have a [RenderableManager](../-renderable-manager/index.md) component or [LightManager](../-light-manager/index.md) component.A given [Entity](../-entity/index.md) object can only be added once to a `Scene`. |
+| entity | The entity is ignored for rendering purposes if it doesn't have a Renderable or Light component.<br>\attention A given Entity object can only be added once to a Scene. |

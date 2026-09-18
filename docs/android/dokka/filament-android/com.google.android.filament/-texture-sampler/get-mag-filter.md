@@ -5,6 +5,4 @@
 [main]\
 open fun [getMagFilter](get-mag-filter.md)(): [TextureSampler.MagFilter](-mag-filter/index.md)
 
-#### Return
-
-the magnification filter
+returns the magnification filter value

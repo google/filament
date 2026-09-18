@@ -7,4 +7,4 @@ open fun [getTexture](get-texture.md)(): [Texture](../-texture/index.md)
 
 #### Return
 
-the associated texture, or null if it does not exist
+the associated texture

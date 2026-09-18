@@ -3,9 +3,11 @@
 # sunAngularRadius
 
 [main]\
-open fun [sunAngularRadius](sun-angular-radius.md)(angularRadius: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
+open fun [sunAngularRadius](sun-angular-radius.md)(angularRadiusDeg: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
-Defines the angular radius of the sun, in degrees, between 0.25° and 20.0° The Sun as seen from Earth has an angular size of 0.526° to 0.545°
+Defines the angular radius of the sun, in degrees, between 0.25° and 20.0° 
+
+The Sun as seen from Earth has an angular size of 0.526° to 0.545°
 
 #### Return
 
@@ -17,4 +19,4 @@ main
 
 | | |
 |---|---|
-| angularRadius | sun's radius in degree. Default is 0.545°. |
+| angularRadiusDeg | sun's radius in degree. Default is 0.545°. |

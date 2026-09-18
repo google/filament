@@ -3,16 +3,4 @@
 # vsyncOffsetNanos
 
 [main]\
-open var [~~vsyncOffsetNanos~~](vsync-offset-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
----
-
-### Deprecated
-
----
-
-Offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns On Android you can use getAppVsyncOffsetNanos.
-
-#### Deprecated
-
-this value is ignored
+open var [vsyncOffsetNanos](vsync-offset-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

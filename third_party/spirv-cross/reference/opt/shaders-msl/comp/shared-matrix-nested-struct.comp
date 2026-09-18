@@ -1216,7 +1216,7 @@ kernel void main0(device block& _612 [[buffer(0)]])
     bool _480;
     if (_471)
     {
-        _480 = all(bool2(true) == bool2(s2.a.mA.mB.mA));
+        _480 = all(bool2(s2.a.mA.mB.mA));
     }
     else
     {
@@ -1270,7 +1270,7 @@ kernel void main0(device block& _612 [[buffer(0)]])
     bool _534;
     if (_525)
     {
-        _534 = false == bool(s2.c.mA.mA.mB);
+        _534 = !bool(s2.c.mA.mA.mB);
     }
     else
     {
@@ -1402,7 +1402,7 @@ kernel void main0(device block& _612 [[buffer(0)]])
     bool _579;
     if (_570)
     {
-        _579 = all(bool3(false) == bool3(s2.d.mB.mA.mB));
+        _579 = all(not(bool3(s2.d.mB.mA.mB)));
     }
     else
     {

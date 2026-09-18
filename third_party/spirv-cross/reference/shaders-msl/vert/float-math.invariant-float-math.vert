@@ -80,13 +80,14 @@ template<typename T, int Cols, int Rows>
 template<typename T, int LCols, int LRows, int RCols, int RRows>
 [[clang::optnone]] matrix<T, RCols, LRows> spvFMulMatrixMatrix(matrix<T, LCols, LRows> l, matrix<T, RCols, RRows> r)
 {
+    static_assert(LCols == RRows, "column-row configuration mismatch");
     matrix<T, RCols, LRows> res;
     for (uint i = 0; i < RCols; i++)
     {
-        vec<T, RCols> tmp(0);
+        vec<T, LRows> tmp(0);
         for (uint j = 0; j < LCols; j++)
         {
-            tmp = fma(vec<T, RCols>(r[i][j]), l[j], tmp);
+            tmp = fma(vec<T, LRows>(r[i][j]), l[j], tmp);
         }
         res[i] = tmp;
     }

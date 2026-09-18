@@ -3,290 +3,26 @@
 # setParameter
 
 [main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-Sets the value of a bool parameter.
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-#### Parameters
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
-main
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the material parameter |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
-
-Sets the value of a float parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the material parameter |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
-
-Sets the value of an int parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the material parameter |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), y: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
-
-Sets the value of a bool2 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), y: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
-
-Sets the value of a float2 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), y: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
-
-Sets the value of an int2 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), y: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), z: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
-
-Sets the value of a bool3 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-| z | the value of the third component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), y: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), z: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
-
-Sets the value of a float3 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-| z | the value of the third component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), y: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), z: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
-
-Sets the value of a int3 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-| z | the value of the third component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), y: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), z: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), w: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
-
-Sets the value of a bool4 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-| z | the value of the third component |
-| w | the value of the fourth component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), y: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), z: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), w: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
-
-Sets the value of a float4 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-| z | the value of the third component |
-| w | the value of the fourth component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), x: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), y: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), z: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), w: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
-
-Sets the value of a int4 parameter.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material parameter |
-| x | the value of the first component |
-| y | the value of the second component |
-| z | the value of the third component |
-| w | the value of the fourth component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
 open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), texture: [Texture](../-texture/index.md), sampler: [TextureSampler](../-texture-sampler/index.md))
 
-Sets a texture and sampler parameter on this material's default instance. 
-
- Note: Depth textures can't be sampled with a linear filter unless the comparison mode is set to COMPARE_TO_TEXTURE. 
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | The name of the material texture parameter |
-| texture | The texture to set as parameter |
-| sampler | The sampler to be used with this texture |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
+inline helper to provide the name as a null-terminated C string
 
 [main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.BooleanElement](-boolean-element/index.md), v: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuey: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Set a bool parameter array by name.
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuey: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+
+inline helper to provide the name as a null-terminated C string
 
 #### Parameters
 
@@ -294,22 +30,82 @@ main
 
 | | |
 |---|---|
-| name | name of the parameter array as defined by this Material |
+| valuex | (x component) |
+| valuey | (y component) |
+
+[main]\
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuey: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuez: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuey: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuez: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+
+inline helper to provide the name as a null-terminated C string
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| valuex | (x component) |
+| valuey | (y component) |
+| valuez | (z component) |
+
+[main]\
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuey: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuez: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuew: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuew: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuey: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuez: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuew: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+
+inline helper to provide the name as a null-terminated C string
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| valuex | (x component) |
+| valuey | (y component) |
+| valuez | (z component) |
+| valuew | (w component) |
+
+[main]\
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.FloatElement](-float-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.IntElement](-int-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.BooleanElement](-boolean-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+Set a uniform array by name
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| name | Name of the parameter array as defined by Material. |
 | type | the number of components for each individual parameter |
-| v | array of values to set to the named parameter array |
-| offset | the number of elements in `v` to skip |
-| count | the number of elements in the parameter array to set <br>For example, to set a parameter array of 4 bool4s: <br>```kotlin<br>    boolean[] a = new boolean[4 * 4];     instance.setParameter("param", MaterialInstance.BooleanElement.BOOL4, a, 0, 4);<br>``` |
+| values | Array of values to set to the named parameter array. |
+| offset | the number of elements in `values` to skip |
 
-#### Throws
+#### See also
 
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
+| |
+|---|
+| [Material](../-material/has-parameter.md) |
 
 [main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.IntElement](-int-element/index.md), v: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.FloatElement](-float-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Set an int parameter array by name.
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.IntElement](-int-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.BooleanElement](-boolean-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+Set a uniform array by name
 
 #### Parameters
 
@@ -317,22 +113,20 @@ main
 
 | | |
 |---|---|
-| name | name of the parameter array as defined by this Material |
+| name | Name of the parameter array as defined by Material. |
 | type | the number of components for each individual parameter |
-| v | array of values to set to the named parameter array |
-| offset | the number of elements in `v` to skip |
-| count | the number of elements in the parameter array to set <br>For example, to set a parameter array of 4 int4s: <br>```kotlin<br>    int[] a = new int[4 * 4];     instance.setParameter("param", MaterialInstance.IntElement.INT4, a, 0, 4);<br>``` |
+| values | Array of values to set to the named parameter array. |
 
-#### Throws
+#### See also
 
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
+| |
+|---|
+| [Material](../-material/has-parameter.md) |
 
 [main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [MaterialInstance.FloatElement](-float-element/index.md), v: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-Set a float parameter array by name.
+inline helper to provide the name as a null-terminated C string
 
 #### Parameters
 
@@ -340,22 +134,31 @@ main
 
 | | |
 |---|---|
-| name | name of the parameter array as defined by this Material |
-| type | the number of components for each individual parameter |
-| v | array of values to set to the named parameter array |
-| offset | the number of elements in `v` to skip |
-| count | the number of elements in the parameter array to set <br>For example, to set a parameter array of 4 float4s: <br>```kotlin<br>    float[] a = new float[4 * 4];     material.setDefaultParameter("param", MaterialInstance.FloatElement.FLOAT4, a, 0, 4);<br>``` |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
+| colorx | (x component) |
+| colory | (y component) |
+| colorz | (z component) |
 
 [main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), r: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), g: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), b: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
-Sets the color of the given parameter on this material's default instance.
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+
+inline helper to provide the name as a null-terminated C string
+
+#### Parameters
+
+main
+
+| |
+|---|
+| name |
+| type |
+| color |
+
+[main]\
+open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorw: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+
+inline helper to provide the name as a null-terminated C string
 
 #### Parameters
 
@@ -363,38 +166,7 @@ main
 
 | | |
 |---|---|
-| name | the name of the material color parameter |
-| type | whether the color is specified in the linear or sRGB space |
-| r | red component |
-| g | green component |
-| b | blue component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
-
-[main]\
-open fun [setParameter](set-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), r: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), g: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), b: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), a: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
-
-Sets the color of the given parameter on this material's default instance.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| name | the name of the material color parameter |
-| type | whether the color is specified in the linear or sRGB space |
-| r | red component |
-| g | green component |
-| b | blue component |
-| a | alpha component |
-
-#### Throws
-
-| | |
-|---|---|
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if name doesn't exist or no-op if exceptions are disabled. |
+| colorx | (x component) |
+| colory | (y component) |
+| colorz | (z component) |
+| colorw | (w component) |

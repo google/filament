@@ -5,4 +5,4 @@
 [main]\
 [FLAT](index.md)
 
-Flat interpolation
+flat interpolation

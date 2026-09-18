@@ -5,14 +5,8 @@
 [main]\
 open fun [getVignetteOptions](get-vignette-options.md)(): [View.VignetteOptions](-vignette-options/index.md)
 
-Gets the vignette options
+Queries the vignette options.
 
 #### Return
 
-vignetting options currently set.
-
-#### See also
-
-| |
-|---|
-| [setVignetteOptions](set-vignette-options.md) |
+the current vignette options for this view.

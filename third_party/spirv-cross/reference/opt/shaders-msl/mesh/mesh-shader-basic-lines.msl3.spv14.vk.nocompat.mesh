@@ -159,7 +159,6 @@ void _4(threadgroup spvUnsafeArray<uint2, 22>& gl_PrimitiveLineIndicesEXT, threa
     threadgroup spvUnsafeArray<BlockOut, 24> outputs;
     threadgroup spvUnsafeArray<float4, 22> vPrim;
     threadgroup spvUnsafeArray<BlockOutPrim, 22> prim_outputs;
-    threadgroup spvUnsafeArray<float, 16> shared_float;
     if (gl_LocalInvocationIndex == 0) spvMeshSizes.y = 0u;
     _4(gl_PrimitiveLineIndicesEXT, gl_LocalInvocationIndex, gl_MeshPrimitivesEXT, gl_GlobalInvocationID, gl_MeshVerticesEXT, vOut, outputs, vPrim, gl_WorkGroupID, prim_outputs, payload, spvMeshSizes);
     threadgroup_barrier(mem_flags::mem_threadgroup);

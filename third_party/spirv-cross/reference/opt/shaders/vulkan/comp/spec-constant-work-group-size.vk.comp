@@ -12,13 +12,13 @@ const uint _21 = (uint(a) + 0u);
 #ifndef SPIRV_CROSS_CONSTANT_ID_10
 #define SPIRV_CROSS_CONSTANT_ID_10 1u
 #endif
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_10, local_size_y = 20, local_size_z = 1) in;
+
 const uint _27 = gl_WorkGroupSize.x;
 const uint _28 = (_21 + _27);
 const uint _29 = gl_WorkGroupSize.y;
 const uint _30 = (_28 + _29);
 const int _32 = (1 - a);
-
-layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_10, local_size_y = 20, local_size_z = 1) in;
 
 layout(binding = 0, std430) writeonly buffer SSBO
 {

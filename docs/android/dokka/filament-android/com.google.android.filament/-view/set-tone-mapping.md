@@ -11,16 +11,6 @@ open fun [~~setToneMapping~~](set-tone-mapping.md)(type: [View.ToneMapping](-ton
 
 ---
 
-Enables or disables tone-mapping in the post-processing stage. Enabled by default.
-
 #### Deprecated
 
 Use [setColorGrading](set-color-grading.md)
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| type | Tone-mapping function. |

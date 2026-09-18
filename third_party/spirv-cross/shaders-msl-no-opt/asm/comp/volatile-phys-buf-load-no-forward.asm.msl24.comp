@@ -1,0 +1,60 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+               OpCapability Int64
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_KHR_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %Registers "Registers"
+               OpMemberName %Registers 0 "addr"
+               OpMemberName %Registers 1 "addr2"
+               OpName %registers "registers"
+               OpMemberDecorate %Registers 0 Offset 0
+               OpMemberDecorate %Registers 1 Offset 8
+               OpDecorate %Registers Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %ulong = OpTypeInt 64 0
+  %Registers = OpTypeStruct %ulong %ulong
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+  %registers = OpVariable %_ptr_PushConstant_Registers PushConstant
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+    %ulong_4 = OpConstant %ulong 4
+%_ptr_PushConstant_ulong = OpTypePointer PushConstant %ulong
+%_ptr_PhysicalStorageBuffer_int = OpTypePointer PhysicalStorageBuffer %int
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+
+         %pc0 = OpAccessChain %_ptr_PushConstant_ulong %registers %int_0
+       %addr0 = OpLoad %ulong %pc0
+       %src_p = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_int %addr0
+
+         %pc1 = OpAccessChain %_ptr_PushConstant_ulong %registers %int_1
+       %addr1 = OpLoad %ulong %pc1
+       %dst_p = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_int %addr1
+
+               ; Volatile load from src — must NOT be forwarded
+          %ld = OpLoad %int %src_p Volatile|Aligned 4
+
+               ; Store the loaded value into dst (first use)
+               OpStore %dst_p %ld Aligned 4
+
+               ; Compute dst + 1 element via integer arithmetic
+     %dst_u64 = OpConvertPtrToU %ulong %dst_p
+   %dst_plus4 = OpIAdd %ulong %dst_u64 %ulong_4
+      %dst_p2 = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_int %dst_plus4
+
+               ; Store the same loaded value again (second use)
+               OpStore %dst_p2 %ld Aligned 4
+
+               OpReturn
+               OpFunctionEnd

@@ -27,7 +27,8 @@ layout(push_constant, std430) uniform _6_14
 
 void main()
 {
-    uintPointer _4 = uintPointerPointer(_14._m0).value;
+    uintPointer _24 = uintPointerPointer(_14._m0).value;
+    uintPointer _4 = _24;
     _4.value = 20u;
 }
 

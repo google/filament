@@ -9,7 +9,7 @@ Type of the index buffer, 16-bit or 32-bit.
 
 #### Return
 
-this `Builder` object for chaining calls
+A reference to this Builder for chaining calls.
 
 #### Parameters
 
@@ -17,4 +17,4 @@ main
 
 | | |
 |---|---|
-| indexType | type of indices stored in the `IndexBuffer` |
+| indexType | Type of indices stored in the IndexBuffer. |
