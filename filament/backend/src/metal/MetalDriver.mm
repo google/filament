@@ -411,7 +411,6 @@ void MetalDriver::updateDescriptorSetBuffer(
     auto* bo = handle_cast<MetalBufferObject>(boh);
     id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
     descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
-
     auto const& bindings = descriptorSet->layout->getBindings();
     auto found = std::find_if(bindings.begin(), bindings.end(),
             [binding](const auto& b) { return b.binding == binding; });
