@@ -5,14 +5,10 @@
 [main]\
 open fun [createRenderer](create-renderer.md)(): [Renderer](../-renderer/index.md)
 
-Creates a [Renderer](../-renderer/index.md).
+Creates a renderer associated to this engine. 
+
+A Renderer is intended to map to a *window* on screen.
 
 #### Return
 
-a newly created [Renderer](../-renderer/index.md)
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | can be thrown if the [Renderer](../-renderer/index.md) couldn't be created |
+A pointer to the newly created Renderer.

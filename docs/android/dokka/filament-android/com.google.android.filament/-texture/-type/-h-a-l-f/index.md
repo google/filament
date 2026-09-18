@@ -5,4 +5,4 @@
 [main]\
 [HALF](index.md)
 
-half-float, 16-bit float with 10 bits mantissa
+half-float (16-bit float)

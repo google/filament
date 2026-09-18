@@ -19,8 +19,8 @@ struct cb5_struct
 
 kernel void main0(constant cb5_struct& cb0_5 [[buffer(0)]], texture2d<uint, access::write> u0 [[texture(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
 {
-    uint _41 = as_type<uint>(as_type<float>(int(gl_LocalInvocationID.x) << 4)) >> 2u;
-    uint4 _50 = as_type<uint4>(cb0_5._m0[uint(as_type<int>(as_type<float>(int(gl_LocalInvocationID.x)))) + 1u]);
+    uint _41 = uint(int(gl_LocalInvocationID.x) << 4) >> 2u;
+    uint4 _50 = as_type<uint4>(cb0_5._m0[uint(int(gl_LocalInvocationID.x)) + 1u]);
     u0.write(_50.xxxx, spvTexelBufferCoord(_41));
     u0.write(_50.yyyy, spvTexelBufferCoord((_41 + 1u)));
     u0.write(_50.zzzz, spvTexelBufferCoord((_41 + 2u)));

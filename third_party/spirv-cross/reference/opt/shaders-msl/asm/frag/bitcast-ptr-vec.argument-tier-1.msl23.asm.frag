@@ -37,11 +37,14 @@ fragment main0_out main0(constant type_ConstantBuffer_PushConstants& g_PushConst
     spvDescriptorArray<texture2d<float>> g_Texture2DDescriptorHeap {spvDescriptorSet0Binding0};
 
     main0_out out = {};
-    int2 _55 = int2(gl_FragCoord.xy) - (*(reinterpret_cast<const device int2*>(g_PushConstants.SharedConstants + 16ul)));
+    uint _47 = *(reinterpret_cast<const device uint*>(g_PushConstants.SharedConstants + 12ul));
+    int2 _54 = *(reinterpret_cast<const device int2*>(g_PushConstants.SharedConstants + 16ul));
+    int2 _55 = int2(gl_FragCoord.xy) - _54;
     bool _66;
     if (!any(_55 < int2(0)))
     {
-        _66 = any(_55 >= (*(reinterpret_cast<const device int2*>(g_PushConstants.SharedConstants + 24ul))));
+        int2 _63 = *(reinterpret_cast<const device int2*>(g_PushConstants.SharedConstants + 24ul));
+        _66 = any(_55 >= _63);
     }
     else
     {
@@ -54,7 +57,7 @@ fragment main0_out main0(constant type_ConstantBuffer_PushConstants& g_PushConst
     }
     else
     {
-        _77 = g_Texture2DDescriptorHeap[*(reinterpret_cast<const device uint*>(g_PushConstants.SharedConstants + 12ul))].read(uint2(int3(select(_55, int2(0), bool2(_66)), 0).xy), 0);
+        _77 = g_Texture2DDescriptorHeap[_47].read(uint2(int3(select(_55, int2(0), bool2(_66)), 0).xy), 0);
     }
     float3 _81 = powr(_77.xyz, *(reinterpret_cast<const device float3*>(g_PushConstants.SharedConstants)));
     out.out_var_SV_Target = float4(_81.x, _81.y, _81.z, _77.w);

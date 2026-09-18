@@ -5,4 +5,4 @@
 [main]\
 [VIEW](index.md)
 
-Vertices are in view space.
+vertices are in view space

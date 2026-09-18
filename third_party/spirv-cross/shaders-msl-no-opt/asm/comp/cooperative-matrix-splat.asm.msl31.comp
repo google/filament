@@ -1,0 +1,38 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+    %uint_64 = OpConstant %uint 64
+    %float_0 = OpConstant %float 0
+  %arr_float = OpTypeArray %float %uint_64
+%ptr_wg_arr = OpTypePointer Workgroup %arr_float
+    %wg_data = OpVariable %ptr_wg_arr Workgroup
+%ptr_wg_float = OpTypePointer Workgroup %float
+; float32 accumulator cooperative matrix type
+%coopmat_f32 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+; Splat scalar 0.0 into all elements via OpCompositeConstruct
+    %splat_0 = OpCompositeConstruct %coopmat_f32 %float_0
+; Store the splatted matrix to workgroup memory
+          %p = OpAccessChain %ptr_wg_float %wg_data %uint_0
+               OpCooperativeMatrixStoreKHR %p %splat_0 %uint_0 %uint_8
+               OpReturn
+               OpFunctionEnd

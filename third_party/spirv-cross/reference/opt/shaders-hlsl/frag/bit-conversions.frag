@@ -13,7 +13,7 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    FragColor = float4(1.0f, 0.0f, asfloat(asint(value.x)), 1.0f);
+    FragColor = float4(1.0f, 0.0f, value.x, 1.0f);
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

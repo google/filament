@@ -1,0 +1,52 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 50
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability BFloat16TypeKHR
+               OpCapability BFloat16CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_bfloat16"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "data"
+               OpName %ssbo "ssbo"
+               OpDecorate %arr_bf16 ArrayStride 2
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %SSBO Block
+               OpDecorate %ssbo DescriptorSet 0
+               OpDecorate %ssbo Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+     %bfloat = OpTypeFloat 16 BFloat16KHR
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+   %arr_bf16 = OpTypeRuntimeArray %bfloat
+       %SSBO = OpTypeStruct %arr_bf16
+%ptr_ssbo_SSBO = OpTypePointer StorageBuffer %SSBO
+       %ssbo = OpVariable %ptr_ssbo_SSBO StorageBuffer
+%ptr_ssbo_bf16 = OpTypePointer StorageBuffer %bfloat
+%coopmat_bf16_A = OpTypeCooperativeMatrixKHR %bfloat %uint_3 %uint_8 %uint_8 %uint_0
+%coopmat_bf16_B = OpTypeCooperativeMatrixKHR %bfloat %uint_3 %uint_8 %uint_8 %uint_1
+%coopmat_bf16_acc = OpTypeCooperativeMatrixKHR %bfloat %uint_3 %uint_8 %uint_8 %uint_2
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %p0 = OpAccessChain %ptr_ssbo_bf16 %ssbo %uint_0 %uint_0
+       %bf_A = OpCooperativeMatrixLoadKHR %coopmat_bf16_A %p0 %uint_0 %uint_8
+       %bf_B = OpCooperativeMatrixLoadKHR %coopmat_bf16_B %p0 %uint_0 %uint_8
+       %bf_C = OpCooperativeMatrixLoadKHR %coopmat_bf16_acc %p0 %uint_0 %uint_8
+       %bf_D = OpCooperativeMatrixMulAddKHR %coopmat_bf16_acc %bf_A %bf_B %bf_C
+               OpCooperativeMatrixStoreKHR %p0 %bf_D %uint_0 %uint_8
+               OpReturn
+               OpFunctionEnd

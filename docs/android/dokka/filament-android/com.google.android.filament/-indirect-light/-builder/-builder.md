@@ -4,5 +4,3 @@
 
 [main]\
 constructor()
-
-Use `Builder` to construct an `IndirectLight` object instance.

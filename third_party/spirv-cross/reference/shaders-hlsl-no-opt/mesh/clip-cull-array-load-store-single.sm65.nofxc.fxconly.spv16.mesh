@@ -15,14 +15,14 @@ struct gl_MeshPerPrimitiveEXT
 
 void write_clip_distance(inout float v[1])
 {
-    v[0] += 1.0f;
+    v[0] = 1.0f;
 }
 
 void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[3])
 {
     SetMeshOutputCounts(3u, 1u);
     gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0f;
-    float param[1] = gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance;
+    float param[1];
     write_clip_distance(param);
     gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance = param;
 }

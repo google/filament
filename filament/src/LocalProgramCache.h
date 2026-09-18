@@ -22,12 +22,23 @@
 
 #include <private/filament/Variant.h>
 
+#include <filament/MaterialEnums.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/Program.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/Slice.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
+#include <string_view>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 namespace filament {
 
@@ -51,15 +62,8 @@ public:
 
     LocalProgramCache& operator=(LocalProgramCache const& other);
 
-    static CacheKey mapCacheEntryKey(Variant const variant,
-            DynamicSpecConstKey specKey) noexcept {
-        // Decouple depth variants from the dynamic specialization space
-        if (Variant::isValidDepthVariant(variant)) {
-            specKey = DynamicSpecConstKey{0};
-        }
-        return (variant.key << DYNAMIC_SPEC_CONST_KEY_BITS) |
-               (specKey.key & ((1 << DYNAMIC_SPEC_CONST_KEY_BITS) - 1));
-    }
+    static CacheKey mapCacheEntryKey(Variant variant,
+            DynamicSpecConstKey specKey, std::size_t cacheSize);
 
     // Initialize for use in a Material.
     void initializeForMaterial(FEngine& engine, FMaterial const& material,
@@ -78,7 +82,8 @@ public:
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
             Variant const variant, DynamicSpecConstKey const specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        CacheKey const mappedKey = mapCacheEntryKey(variant, specKey);
+        CacheKey const mappedKey =
+                mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         if (UTILS_LIKELY(program)) {
             return program;
@@ -92,7 +97,8 @@ public:
     backend::Handle<backend::HwProgram> getProgram(Variant variant,
             DynamicSpecConstKey const specKey) const noexcept {
         variant = filterVariantForGetProgram(variant);
-        CacheKey const mappedKey = mapCacheEntryKey(variant, specKey);
+        CacheKey const mappedKey =
+                mapCacheEntryKey(variant, specKey, mCachedPrograms.size());
         backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         assert_invariant(program);
         return program;
@@ -136,6 +142,8 @@ public:
     // Set constants list directly.
     void setConstants(utils::FixedCapacityVector<backend::Program::SpecializationConstant>
                     constants) noexcept;
+
+    static uint32_t getCacheSize(MaterialDomain materialDomain);
 
 private:
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,

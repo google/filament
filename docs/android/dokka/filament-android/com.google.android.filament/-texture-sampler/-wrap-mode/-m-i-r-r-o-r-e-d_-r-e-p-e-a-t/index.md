@@ -5,4 +5,6 @@
 [main]\
 [MIRRORED_REPEAT](index.md)
 
+mirrored-repeat. 
+
 The texture infinitely repeats and mirrors in the wrap direction.

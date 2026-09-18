@@ -4,5 +4,3 @@
 
 [main]\
 [LOW](index.md)
-
-3x3 gaussian filter

@@ -3345,6 +3345,8 @@ void OpenGLDriver::updateIndexBuffer(
 void OpenGLDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
         BufferDescriptor&& p, uint32_t const byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
+    promoteToAsync(handle_cast<GLIndexBuffer*>(ibh));
+
     getJobQueue()->push([this, ibh, p=std::move(p), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateIndexBufferAsyncR")
@@ -3398,6 +3400,8 @@ void OpenGLDriver::updateBufferObject(
 void OpenGLDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
         BufferDescriptor&& bd, uint32_t const byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
+    promoteToAsync(handle_cast<GLBufferObject*>(boh));
+
     getJobQueue()->push([this, boh, bd=std::move(bd), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateBufferObjectAsyncR")
@@ -3501,6 +3505,8 @@ void OpenGLDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& data, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
+    promoteToAsync(handle_cast<GLTexture*>(th));
+
     getJobQueue()->push([this, th, level, xoffset, yoffset, zoffset, width, height, depth,
             data=std::move(data),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {

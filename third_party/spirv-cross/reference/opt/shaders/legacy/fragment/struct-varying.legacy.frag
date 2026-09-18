@@ -13,6 +13,6 @@ varying highp vec2 vin_b;
 
 void main()
 {
-    gl_FragData[0] = ((((Inputs(vin_a, vin_b).a + Inputs(vin_a, vin_b).b.xxyy) + Inputs(vin_a, vin_b).a) + Inputs(vin_a, vin_b).b.yyxx) + vin_a) + vin_b.xxyy;
+    gl_FragData[0] = ((((vin_a + vin_b.xxyy) + vin_a) + vin_b.yyxx) + vin_a) + vin_b.xxyy;
 }
 

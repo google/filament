@@ -4,3 +4,5 @@
 
 [main]\
 open fun [getReflectionsTexture](get-reflections-texture.md)(): [Texture](../-texture/index.md)
+
+Returns the associated reflection map, or null if it does not exist.

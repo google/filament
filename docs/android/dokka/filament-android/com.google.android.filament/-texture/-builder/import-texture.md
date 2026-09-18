@@ -7,9 +7,23 @@ open fun [importTexture](import-texture.md)(id: [Long](https://kotlinlang.org/ap
 
 Specify a native texture to import as a Filament texture. 
 
- The texture id is backend-specific: 
+The texture id is backend-specific:
 
 - OpenGL: GLuint texture ID
+- Metal: idWith Metal, the id
+
+```kotlin
+
+ id <MTLTexture> metalTexture = ...
+ filamentTexture->import((intptr_t) CFBridgingRetain(metalTexture));
+ // free to release metalTexture
+
+ // after using texture:
+ engine->destroy(filamentTexture);   // metalTexture is released
+
+```
+
+This method should be used as a last resort. This API is subject to change or removal.
 
 #### Return
 

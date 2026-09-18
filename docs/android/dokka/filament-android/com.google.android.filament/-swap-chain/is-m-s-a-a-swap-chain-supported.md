@@ -5,7 +5,9 @@
 [main]\
 open fun [isMSAASwapChainSupported](is-m-s-a-a-swap-chain-supported.md)(engine: [Engine](../-engine/index.md), samples: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Return whether createSwapChain supports the CONFIG_MSAA_*_SAMPLES flag. The default implementation returns false.
+Return whether createSwapChain supports the CONFIG_MSAA_*_SAMPLES flag. 
+
+The default implementation returns false.
 
 #### Return
 
@@ -17,11 +19,5 @@ main
 
 | | |
 |---|---|
-| engine | A reference to the filament Engine |
+| engine | A pointer to the filament Engine |
 | samples | The number of samples |
-
-#### See also
-
-| | |
-|---|---|
-| com.google.android.filament.SwapChainFlags | *_SAMPLES |

@@ -1,0 +1,39 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 60
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+    %uint_64 = OpConstant %uint 64
+  %arr_float = OpTypeArray %float %uint_64
+%ptr_wg_arr_float = OpTypePointer Workgroup %arr_float
+    %wg_data = OpVariable %ptr_wg_arr_float Workgroup
+%ptr_wg_float = OpTypePointer Workgroup %float
+%coopmat_a = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+; Row-major load/store from workgroup memory.
+         %p0 = OpAccessChain %ptr_wg_float %wg_data %uint_0
+    %mat_row = OpCooperativeMatrixLoadKHR %coopmat_a %p0 %uint_0 %uint_8
+               OpCooperativeMatrixStoreKHR %p0 %mat_row %uint_0 %uint_8
+; Column-major load/store from workgroup memory.
+    %mat_col = OpCooperativeMatrixLoadKHR %coopmat_a %p0 %uint_1 %uint_8
+               OpCooperativeMatrixStoreKHR %p0 %mat_col %uint_1 %uint_8
+               OpReturn
+               OpFunctionEnd

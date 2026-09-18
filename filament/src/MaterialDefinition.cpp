@@ -75,8 +75,8 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                     specialization.specKey = specKey;
                     Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
                     if (program) {
-                        LocalProgramCache::CacheKey mappedKey =
-                                LocalProgramCache::mapCacheEntryKey(variant, specKey);
+                        LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(
+                                variant, specKey, programCache.size());
                         programCache[mappedKey] = *program;
                     }
                 }
@@ -93,8 +93,8 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                         isStereoSupported))) {
                 specialization.variant = variant;
                 specialization.specKey = specKey;
-                LocalProgramCache::CacheKey mappedKey =
-                        LocalProgramCache::mapCacheEntryKey(variant, specKey);
+                LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
+                        specKey, programCache.size());
                 if constexpr (useCache) {
                     Handle<HwProgram> const* program = globalProgramCache.acquire(specialization,
                             [&engine, &definition, &parser, &specialization]() {
@@ -120,8 +120,8 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                 specialization.specKey = specKey;
                 Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
                 if (program) {
-                    LocalProgramCache::CacheKey mappedKey =
-                            LocalProgramCache::mapCacheEntryKey(variant, specKey);
+                    LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(
+                            variant, specKey, programCache.size());
                     programCache[mappedKey] = *program;
                 }
             }
@@ -148,8 +148,8 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                 definition.materialDomain, definition.isVariantLit)) {
             if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
                         isStereoSupported))) {
-                LocalProgramCache::CacheKey mappedKey =
-                        LocalProgramCache::mapCacheEntryKey(variant, specKey);
+                LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant,
+                        specKey, programCache.size());
                 Handle<HwProgram>& program = programCache[mappedKey];
                 if constexpr (useCache) {
                     specialization.variant = variant;
@@ -174,7 +174,7 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
         if (UTILS_LIKELY(
                     definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
             LocalProgramCache::CacheKey mappedKey =
-                    LocalProgramCache::mapCacheEntryKey(variant, specKey);
+                    LocalProgramCache::mapCacheEntryKey(variant, specKey, programCache.size());
             Handle<HwProgram>& program = programCache[mappedKey];
             if constexpr (useCache) {
                 specialization.variant = variant;
@@ -236,6 +236,21 @@ std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const b
 
 std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         std::unique_ptr<MaterialParser> parser) {
+    MaterialDomain materialDomain{};
+    if (!parser->getMaterialDomain(&materialDomain)) {
+        LOG(ERROR) << "Material package is missing its material domain.";
+        return nullptr;
+    }
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+        case MaterialDomain::POST_PROCESS:
+        case MaterialDomain::COMPUTE:
+            break;
+        default:
+            LOG(ERROR) << "Invalid material domain: " << static_cast<uint32_t>(materialDomain);
+            return nullptr;
+    }
+
     // Try checking CRC32 value for the package and skip if it's unavailable.
     if (downcast(engine).features.material.check_crc32_after_loading) {
         uint32_t parsedCrc32 = 0;
@@ -272,9 +287,7 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
 
     // Print a warning if the material's stereo type doesn't align with the engine's
     // setting.
-    MaterialDomain materialDomain;
     UserVariantFilterMask variantFilterMask;
-    parser->getMaterialDomain(&materialDomain);
     parser->getMaterialVariantFilterMask(&variantFilterMask);
     bool const hasStereoVariants =
             !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::STE));

@@ -7,12 +7,12 @@ open fun [setCamera](set-camera.md)(camera: [Camera](../-camera/index.md))
 
 Sets this View's Camera. 
 
- This method associates the specified Camera with this View. A Camera can be associated with several View instances. To remove an existing association, simply pass null. 
+There is no reference-counting. Make sure to dissociate a Camera from all Views before destroying it.
 
- The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure to remove it from all associated Views. If the camera isn't set, Renderer::render() will result in a no-op. 
+#### Parameters
 
-#### See also
+main
 
-| |
-|---|
-| [getCamera](get-camera.md) |
+| | |
+|---|---|
+| camera | Associate the specified Camera to this View. A Camera can be associated to several View instances. `camera` can be nullptr to dissociate the currently set Camera from this View. The View doesn't take ownership of the Camera pointer (which acts as a reference). If the camera isn't set, Renderer::render() will result in a no-op. |
