@@ -31,6 +31,21 @@
 
 using namespace filament;
 
+namespace {
+
+std::vector<std::unique_ptr<char[]>> churnHeapForMaterialParser() {
+    std::vector<std::unique_ptr<char[]>> churn;
+    churn.reserve(128);
+    for (int i = 0; i < 128; ++i) {
+        auto buf = std::make_unique<char[]>(296);
+        std::memset(buf.get(), 0xAA, 296);
+        churn.push_back(std::move(buf));
+    }
+    return churn;
+}
+
+} // anonymous namespace
+
 TEST(MaterialTransformName, QuerySamplerWithTransform) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
     ASSERT_NE(engine, nullptr);
@@ -510,5 +525,139 @@ TEST(Material, CompileUnlitMaterialShadowMultiplierWithShadowReceiverEnabled) {
 
     engine->destroy(view);
     engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, MaterialCacheDestroyTriggersUAF) {
+    Engine::Config config;
+    config.materialCacheCapacity = 4;
+
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).config(&config).build();
+    ASSERT_NE(engine, nullptr);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialCacheLruHitPathA");
+    builder.shading(Shading::UNLIT);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    // Step 1: Initial Build (Factory Path) -> mDefinitions stores {key1{&Parser_1} -> Def_1}
+    Material* mat1 = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat1, nullptr);
+
+    // Step 2: Destroy -> Refcount drops to 0, Def_1 moves to LRU cache with key1{&Parser_1}
+    engine->destroy(mat1);
+
+    // Step 3: Rebuild with identical bytes -> LRU cache hits, pops Def_1.
+    Material* mat2 = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat2, nullptr);
+
+    auto churn = churnHeapForMaterialParser();
+
+    // Step 4 (Path A): Destroy mat2 directly.
+    // Calls mDefinitions.release(key_r{&Parser_1}), triggering mMap.find(key_r) which compares
+    // *Parser_1 == *dangling_Parser_2 (Heap UAF read / FILAMENT_CHECK_PRECONDITION abort).
+    engine->destroy(mat2);
+
+    Engine::destroy(engine);
+}
+
+TEST(Material, MaterialCacheThirdBuildTriggersUAFAndCorruption) {
+    Engine::Config config;
+    config.materialCacheCapacity = 4;
+
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).config(&config).build();
+    ASSERT_NE(engine, nullptr);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialCacheLruHitPathB");
+    builder.shading(Shading::UNLIT);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    // Step 1: Initial Build (Factory Path)
+    Material* mat1 = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat1, nullptr);
+
+    // Step 2: Destroy (LRU Population)
+    engine->destroy(mat1);
+
+    // Step 3: Rebuild (LRU Hit)
+    Material* mat2 = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat2, nullptr);
+
+    auto churn = churnHeapForMaterialParser();
+
+    // Step 4 (Path B): Build a third material from the same package bytes.
+    // mDefinitions.acquire calls mMap.find(key3{&Parser_3}), comparing *Parser_3 ==
+    // *dangling_Parser_2.
+    Material* mat3 = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat3, nullptr);
+    EXPECT_EQ(&downcast(mat2)->getDefinition(), &downcast(mat3)->getDefinition());
+
+    engine->destroy(mat2);
+    engine->destroy(mat3);
+
+    Engine::destroy(engine);
+}
+
+TEST(Material, ProgramCacheLruEvictUAF) {
+    Engine::Config config;
+    config.programCacheCapacity = 1;
+
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .config(&config)
+                             .feature("engine.enable_program_cache", true)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode1(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    )");
+    filamat::MaterialBuilder builder1;
+    builder1.init();
+    builder1.name("Material1");
+    builder1.material(shaderCode1.c_str());
+    builder1.constant("myFloat", filamat::MaterialBuilder::ConstantType::FLOAT, 1.0f);
+    filamat::Package pkg1 = builder1.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg1.isValid());
+
+    std::string shaderCode2(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(0.0, 1.0, 0.0, 1.0);
+        }
+    )");
+    filamat::MaterialBuilder builder2;
+    builder2.init();
+    builder2.name("MaterialB");
+    builder2.material(shaderCode2.c_str());
+    builder2.constant("myInt", filamat::MaterialBuilder::ConstantType::INT, 42);
+    filamat::Package pkg2 = builder2.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg2.isValid());
+
+    // 1. Build, prepare program, and destroy Material A: populates LRU cache with compiled program
+    // and releases LocalProgramCache's InternPool ref.
+    Material* mat1 = Material::Builder().package(pkg1.getData(), pkg1.getSize()).build(*engine);
+    ASSERT_NE(mat1, nullptr);
+    downcast(mat1)->getPrograms().prepareProgram(downcast(*engine).getDriverApi(), Variant{ 0 },
+            DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+    engine->destroy(mat1);
+
+    // 2. Build, prepare program, and destroy Material B: exceeds LRU capacity (1), evicting
+    // Material A's program from LRU. Eviction hashes Material A's key. Without pinning, this
+    // triggers a heap-use-after-free in Slice::hash().
+    Material* mat2 = Material::Builder().package(pkg2.getData(), pkg2.getSize()).build(*engine);
+    ASSERT_NE(mat2, nullptr);
+    downcast(mat2)->getPrograms().prepareProgram(downcast(*engine).getDriverApi(), Variant{ 0 },
+            DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+    engine->destroy(mat2);
+
     Engine::destroy(engine);
 }
