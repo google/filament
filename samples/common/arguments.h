@@ -46,6 +46,22 @@ std::unique_ptr<filament::app::AssetLoader> getAssetLoader(const SampleConfig& c
 std::unique_ptr<filament::app::AssetWriter> getAssetWriter(const SampleConfig& config);
 #endif
 
+/**
+ * Runs `app` to completion and returns a process exit code.
+ *
+ * Takes ownership of everything the app borrows, because whether the app outlives this call is a
+ * platform decision. Where the frame loop blocks, all of them are destroyed here. Where frames come
+ * from an external source such as requestAnimationFrame, FilamentApp2::run() returns as soon as the
+ * loop is registered and they are released instead.
+ *
+ * Pass `assetWriter` if one was given to the builder. FilamentApp2 holds a raw pointer to it and
+ * writes through it from a screenshot's readPixels callback, which can land after main() returns.
+ */
+int runApp(std::unique_ptr<FilamentApp2> app,
+        std::unique_ptr<filament::app::DisplayManager> displayManager,
+        std::unique_ptr<filament::app::AssetLoader> assetLoader,
+        std::unique_ptr<filament::app::AssetWriter> assetWriter = nullptr);
+
 SampleParameters getCommonParameters();
 
 struct CommandLineSpecification {

@@ -362,11 +362,10 @@ bool HtmlDisplayManager::WebSocketHandler::handleData(CivetServer* server,
             std::memcpy(&event.mouseButton.y, &data[6], sizeof(event.mouseButton.y));
             mDisplayManager->mMouseX = event.mouseButton.x;
             mDisplayManager->mMouseY = event.mouseButton.y;
-            if (type == EVENT_MOUSE_BUTTON_DOWN) {
-                mDisplayManager->mMouseButtons |= (1 << (event.mouseButton.button - 1));
-            } else {
-                mDisplayManager->mMouseButtons &= ~(1 << (event.mouseButton.button - 1));
-            }
+            // The button index arrives from the remote client, so it is not known to be one this
+            // mask can represent; appSetMouseButton() ignores the ones that are not.
+            appSetMouseButton(mDisplayManager->mMouseButtons, event.mouseButton.button,
+                    type == EVENT_MOUSE_BUTTON_DOWN);
             break;
         case EVENT_MOUSE_MOVE:
             if (data_len < 9) return true;

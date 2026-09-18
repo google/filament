@@ -213,15 +213,19 @@ void WebGPUDriver::finish(int /* dummy */) {
     mQueueManager.finish();
     mPipelineState = {};
 
+#if !defined(__EMSCRIPTEN__)
     // We use polling to advance webgpu's callback counter until all the read backs have been
     // processed. Note that blocking with mReadPixelMapsCounter.waitForAllToFinish will only
     // deadlock since we could not advance the counter.
     while (!mReadPixelMapsCounter.isIdle()) {
-#if !defined(__EMSCRIPTEN__)
         mAdapter.GetInstance().ProcessEvents();
-#endif
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+#else
+    // Under Emscripten, readPixels callbacks are delivered from the browser's event loop (see
+    // FILAMENT_WEBGPU_MAP_ASYNC_CALLBACK_MODE), which cannot run until we return. Waiting here
+    // would never finish, so pending readbacks complete after control returns to the browser.
+#endif
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1773,6 +1777,7 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
         uint32_t width;
         uint32_t height;
         WebGPUDriver *driver;
+        std::weak_ptr<bool> driverLifetime;
     };
     auto userData = std::make_unique<UserData>(UserData{
             .pixelBufferDescriptor = std::move(pixelBufferDescriptor),
@@ -1782,6 +1787,7 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
             .width = width,
             .height = actualHeight,
             .driver = this,
+            .driverLifetime = mLifetimeToken,
     });
 
     mReadPixelMapsCounter.startTask();
@@ -1789,9 +1795,17 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
     // pending to be submitted.
     mQueueManager.flush();
     userData->buffer.MapAsync(
-            wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowProcessEvents,
+            wgpu::MapMode::Read, 0, bufferSize, FILAMENT_WEBGPU_MAP_ASYNC_CALLBACK_MODE,
             [](wgpu::MapAsyncStatus status, wgpu::StringView message, UserData* userdata) {
                 std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
+                if (UTILS_UNLIKELY(data->driverLifetime.expired())) {
+                    // The driver was destroyed before the readback completed, which can only
+                    // happen under Emscripten. Its callback handler may be gone as well, so we
+                    // clear the release callback rather than risk invoking client code that has
+                    // already been torn down. The client's buffer is leaked.
+                    data->pixelBufferDescriptor.setCallback(nullptr);
+                    return;
+                }
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
                     const char* src{ static_cast<const char*>(
                             data->buffer.GetConstMappedRange(0, data->buffer.GetSize())) };
