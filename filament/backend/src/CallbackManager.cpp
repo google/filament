@@ -18,6 +18,7 @@
 
 #include "DriverBase.h"
 
+#include <utils/debug.h>
 #include <utils/Mutex.h>
 
 namespace filament::backend {
@@ -31,41 +32,42 @@ CallbackManager::~CallbackManager() noexcept = default;
 void CallbackManager::terminate() noexcept {
     utils::LockGuard const lock(mLock);
     for (auto&& item: mCallbacks) {
-        if (item.func) {
+        if (item.callback) {
             mDriver.scheduleCallback(
-                    item.handler, item.user, item.func);
+                    item.callback.handler, item.callback.user, item.callback.func);
+            item.callback = {};
         }
     }
 }
 
 CallbackManager::Handle CallbackManager::get() const noexcept {
-    Container::const_iterator const curr = getCurrent();
-    curr->count.fetch_add(1);
-    return curr;
+    utils::LockGuard const lock(mLock);
+    return createCondition();
 }
 
 void CallbackManager::put(Handle& curr) noexcept {
-    if (curr->count.fetch_sub(1) == 1) {
-        if (curr->func) {
-            mDriver.scheduleCallback(
-                    curr->handler, curr->user, curr->func);
-            destroySlot(curr);
-        }
+    CallbackInfo callback;
+    {
+        utils::LockGuard const lock(mLock);
+        callback = decrementAndCheck(curr);
+    }
+    if (callback) {
+        mDriver.scheduleCallback(callback.handler, callback.user, callback.func);
     }
     curr = {};
 }
 
 void CallbackManager::setCallback(
-        CallbackHandler* handler, CallbackHandler::Callback func, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback const func, void* user) {
     assert_invariant(func);
-    Container::iterator const curr = allocateNewSlot();
-    curr->handler = handler;
-    curr->func = func;
-    curr->user = user;
-    if (curr->count == 0) {
-        mDriver.scheduleCallback(
-                curr->handler, curr->user, curr->func);
-        destroySlot(curr);
+    CallbackInfo const callback{ handler, func, user };
+    bool shouldSchedule = false;
+    {
+        utils::LockGuard const lock(mLock);
+        shouldSchedule = setSlotCallback(callback);
+    }
+    if (shouldSchedule) {
+        mDriver.scheduleCallback(callback.handler, callback.user, callback.func);
     }
 }
 
