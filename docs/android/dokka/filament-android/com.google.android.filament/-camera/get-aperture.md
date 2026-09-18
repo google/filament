@@ -5,8 +5,4 @@
 [main]\
 open fun [getAperture](get-aperture.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Gets the aperture in f-stops
-
-#### Return
-
-Aperture in f-stops
+returns this camera's aperture in f-stops

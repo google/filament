@@ -196,7 +196,7 @@ TEST(ArgBufferFixup, TextureTypes) {
             "texturecube<float> textureC [[id(2)]];\n"
             "texture2d<float> textureD [[id(3)]];\n"
             "texture3d<float> textureE [[id(4)]];\n"
-            "depthcube_array<float> textureF [[id(5)]];\n"
+            "texturecube_array<float> textureF [[id(5)]];\n"
             "}";
 
     EXPECT_EQ(argBuffer->getMsl(), expected);

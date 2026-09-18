@@ -4,3 +4,5 @@
 
 [main]\
 [R_INTEGER](index.md)
+
+One Red channel, integer

@@ -68,7 +68,7 @@ kernel void main0(device inputData& _12 [[buffer(0)]], device outputData& _87 [[
     uint4 gl_SubgroupLtMask = uint4(extract_bits(0xFFFFFFFF, 0, min(gl_SubgroupInvocationID, 32u)), extract_bits(0xFFFFFFFF, 0, (uint)max((int)gl_SubgroupInvocationID - 32, 0)), uint2(0));
     bool _31 = _12.inputDataArray[gl_LocalInvocationID.x] > 0.0;
     uint4 _52 = spvSubgroupBallot(_31);
-    uint4 _66 = uint4(int4(popcount(uint4(as_type<uint2>(as_type<ulong>(uint2(gl_SubgroupLtMask.xy))), 0u, 0u) & uint4(as_type<uint2>(as_type<ulong>(uint2(_52.xy))), 0u, 0u))));
+    uint4 _66 = uint4(int4(popcount(uint4(gl_SubgroupLtMask.xy, 0u, 0u) & uint4(_52.xy, 0u, 0u))));
     if (_31)
     {
         _87.outputDataArray[_66.x + _66.y] = _12.inputDataArray[gl_LocalInvocationID.x];

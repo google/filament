@@ -5,8 +5,10 @@
 [main]\
 open fun [getVisibleLayers](get-visible-layers.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the visible layers.
+Get the visible layers.
 
-#### Return
+#### See also
 
-a bitmask specifying which layer is visible.
+| |
+|---|
+| [View](set-visible-layers.md) |

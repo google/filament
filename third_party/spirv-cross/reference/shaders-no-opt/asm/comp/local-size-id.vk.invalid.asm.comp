@@ -14,10 +14,10 @@ const int _13 = SPIRV_CROSS_CONSTANT_ID_2;
 #ifndef SPIRV_CROSS_CONSTANT_ID_4
 #define SPIRV_CROSS_CONSTANT_ID_4 14
 #endif
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_3, local_size_y = SPIRV_CROSS_CONSTANT_ID_4, local_size_z = 2) in;
+
 const uint _37 = (uint(int(gl_WorkGroupSize.x)) + 3u);
 const uvec3 _38 = uvec3(_37, int(gl_WorkGroupSize.y), 2u);
-
-layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_3, local_size_y = SPIRV_CROSS_CONSTANT_ID_4, local_size_z = 2) in;
 
 layout(binding = 0, std430) buffer SSBO
 {

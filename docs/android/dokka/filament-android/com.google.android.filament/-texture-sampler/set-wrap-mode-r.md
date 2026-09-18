@@ -3,9 +3,9 @@
 # setWrapModeR
 
 [main]\
-open fun [setWrapModeR](set-wrap-mode-r.md)(mode: [TextureSampler.WrapMode](-wrap-mode/index.md))
+open fun [setWrapModeR](set-wrap-mode-r.md)(v: [TextureSampler.WrapMode](-wrap-mode/index.md))
 
-Sets the wrapping mode in the r (depth) direction.
+Sets the wrap mode for the r (depth, for 3D textures) texture coordinate
 
 #### Parameters
 
@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| mode | wrapping mode |
+| v | wrap mode |

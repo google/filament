@@ -3,18 +3,6 @@
 # getRotation
 
 [main]\
-open fun [getRotation](get-rotation.md)(rotation: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
+open fun [getRotation](get-rotation.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Returns the rigid-body transformation applied to the IBL.
-
-#### Return
-
-the `rotation` paramter if it was provided, or a newly allocated float array containing the rigid-body transformation applied to the IBL
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| rotation | an array of 9 floats to receive the rigid-body transformation applied to the IBL or `null` |

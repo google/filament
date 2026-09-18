@@ -5,7 +5,7 @@
 [main]\
 open fun [getTexture](get-texture.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Texture](../-texture/index.md)
 
-Gets the texture set on the given attachment point.
+Gets the texture set on the given attachment point
 
 #### Return
 

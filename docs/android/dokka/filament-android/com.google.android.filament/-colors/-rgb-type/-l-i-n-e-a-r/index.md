@@ -5,4 +5,4 @@
 [main]\
 [LINEAR](index.md)
 
-The color is defined in linear space.
+the color is defined in Rec.709-Linear-D65 (&quot;linear sRGB&quot;) space

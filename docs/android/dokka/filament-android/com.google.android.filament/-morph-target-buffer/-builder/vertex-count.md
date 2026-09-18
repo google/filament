@@ -9,7 +9,7 @@ Size of the morph targets in vertex counts.
 
 #### Return
 
-this `Builder` object for chaining calls
+A reference to this Builder for chaining calls.
 
 #### Parameters
 

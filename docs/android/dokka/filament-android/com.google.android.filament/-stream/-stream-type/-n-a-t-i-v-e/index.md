@@ -5,4 +5,6 @@
 [main]\
 [NATIVE](index.md)
 
-Not synchronized but copy-free. Good for video.
+Not synchronized but copy-free. 
+
+Good for video.

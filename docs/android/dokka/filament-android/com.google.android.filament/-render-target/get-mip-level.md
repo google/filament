@@ -5,7 +5,7 @@
 [main]\
 open fun [getMipLevel](get-mip-level.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the mipmap level set on the given attachment point.
+Returns the mipmap level set on the given attachment point
 
 #### Return
 

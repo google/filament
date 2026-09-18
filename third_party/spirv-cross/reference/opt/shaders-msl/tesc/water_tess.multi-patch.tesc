@@ -46,7 +46,7 @@ kernel void main0(constant UBO& _41 [[buffer(0)]], uint3 gl_GlobalInvocationID [
     {
         _526 = _516;
     }
-    if (!(!_526))
+    if (_526)
     {
         spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[0] = half(-1.0);
         spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[1] = half(-1.0);

@@ -3,14 +3,14 @@
 # remove
 
 [main]\
-open fun [~~remove~~](remove.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [remove](remove.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
----
+Removes the Renderable from the Scene.
 
-### Deprecated
+#### Parameters
 
----
+main
 
-#### Deprecated
-
-See [removeEntity](remove-entity.md)
+| | |
+|---|---|
+| entity | The Entity to remove from the Scene. If the specified `entity` doesn't exist, this call is ignored. |

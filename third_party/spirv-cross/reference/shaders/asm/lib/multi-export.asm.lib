@@ -1,0 +1,21 @@
+#ifdef SPIRV_CROSS_LIBRARY_HEADER
+#version 450
+#endif
+
+uint add_one(uint x)
+{
+    return x + 1u;
+}
+
+uint helper_add(uint a, uint b)
+{
+    return a + b;
+}
+
+uint add_two(uint y)
+{
+    uint _22 = y;
+    uint _23 = 2u;
+    return helper_add(_22, _23);
+}
+

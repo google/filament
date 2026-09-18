@@ -1,0 +1,41 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 80
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability Float16
+               OpCapability Int8
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+         %u8 = OpTypeInt 8 0
+       %half = OpTypeFloat 16
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+    %uint_16 = OpConstant %uint 16
+    %uint_128 = OpConstant %uint 128
+     %arr_u8 = OpTypeArray %u8 %uint_128
+%ptr_wg_arr_u8 = OpTypePointer Workgroup %arr_u8
+    %wg_data = OpVariable %ptr_wg_arr_u8 Workgroup
+%ptr_wg_u8 = OpTypePointer Workgroup %u8
+%coopmat_half = OpTypeCooperativeMatrixKHR %half %uint_3 %uint_8 %uint_8 %uint_0
+   %u8_zero = OpConstant %u8 0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+; Use uint8_t backing storage. MSL backend must cast pointer and convert stride from bytes to elements.
+       %p_u8 = OpAccessChain %ptr_wg_u8 %wg_data %uint_0
+               OpStore %p_u8 %u8_zero
+        %mat = OpCooperativeMatrixLoadKHR %coopmat_half %p_u8 %uint_0 %uint_16
+               OpCooperativeMatrixStoreKHR %p_u8 %mat %uint_0 %uint_16
+               OpReturn
+               OpFunctionEnd

@@ -3,6 +3,4 @@
 # interval
 
 [main]\
-open var [interval](interval.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
-
-Desired frame interval in unit of 1 / DisplayInfo.refreshRate.
+open var [interval](interval.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

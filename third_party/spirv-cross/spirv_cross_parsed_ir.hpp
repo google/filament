@@ -110,6 +110,13 @@ public:
 	std::unordered_map<FunctionID, SPIREntryPoint> entry_points;
 	FunctionID default_entry_point = 0;
 
+	// A "library" module has no OpEntryPoint and instead exports symbols via
+	// OpDecorate ... LinkageAttributes ... Export. These vectors keep track
+	// of all these exports and specifically the function exports.
+	bool is_library_module = false;
+	SmallVector<uint32_t> library_exports;
+	SmallVector<FunctionID> library_exported_functions;
+
 	struct Source
 	{
 		SourceLanguage lang = SourceLanguageUnknown;

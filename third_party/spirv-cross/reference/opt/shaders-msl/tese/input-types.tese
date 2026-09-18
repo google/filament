@@ -65,12 +65,10 @@ struct main0_patchIn
     out.gl_Position += patchIn.vColors;
     out.gl_Position += vFoo.a;
     out.gl_Position += vFoo.b;
-    Foo _204 = Foo{ patchIn.gl_in[0].vFoos_a, patchIn.gl_in[0].vFoos_b };
-    out.gl_Position += _204.a;
-    out.gl_Position += _204.b;
-    Foo _218 = Foo{ patchIn.gl_in[1].vFoos_a, patchIn.gl_in[1].vFoos_b };
-    out.gl_Position += _218.a;
-    out.gl_Position += _218.b;
+    out.gl_Position += patchIn.gl_in[0].vFoos_a;
+    out.gl_Position += patchIn.gl_in[0].vFoos_b;
+    out.gl_Position += patchIn.gl_in[1].vFoos_a;
+    out.gl_Position += patchIn.gl_in[1].vFoos_b;
     return out;
 }
 

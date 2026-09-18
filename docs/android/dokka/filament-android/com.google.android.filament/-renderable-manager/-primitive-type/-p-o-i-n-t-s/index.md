@@ -4,3 +4,5 @@
 
 [main]\
 [POINTS](index.md)
+
+points

@@ -4,3 +4,11 @@
 
 [main]\
 open fun [getMaxEntityCount](get-max-entity-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+
+Retrieves the maximum theoretical upper bound of entities that can exist concurrently. 
+
+Factored around reserved index slots and 2^GENERATION_SHIFT limits.
+
+#### Return
+
+The maximum available 32-bit Entity identity limit.

@@ -4,5 +4,3 @@
 
 [main]\
 open var [frameScheduleTime](frame-schedule-time.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
-Frame scheduling callback entry time since epoch [ns].

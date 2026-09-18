@@ -1,13 +1,17 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
 
+template <typename T, int stride>
+struct spvPaddedArrayElement { T data; char padding[stride - sizeof(T)]; };
+
 struct S0
 {
     float2 a[1];
     float b;
-    char _m0_final_padding[4];
 };
 
 struct S1
@@ -20,7 +24,6 @@ struct S2
 {
     float3 a[1];
     float b;
-    char _m0_final_padding[12];
 };
 
 struct S3
@@ -45,7 +48,6 @@ struct Content
     S3 m3;
     float m4;
     S4 m3s[8];
-    char _m0_final_padding[8];
 };
 
 struct SSBO1
@@ -69,7 +71,6 @@ struct S0_1
     float2 a[1];
     char _m1_pad[8];
     float b;
-    char _m0_final_padding[12];
 };
 
 struct S1_1
@@ -82,7 +83,6 @@ struct S2_1
 {
     float3 a[1];
     float b;
-    char _m0_final_padding[12];
 };
 
 struct S3_1
@@ -94,21 +94,21 @@ struct S3_1
 struct S4_1
 {
     float2 c;
-    char _m0_final_padding[8];
 };
 
 struct Content_1
 {
-    S0_1 m0s[1];
+    spvPaddedArrayElement<S0_1, 32> m0s[1];
     S1_1 m1s[1];
     S2_1 m2s[1];
     S0_1 m0;
+    char _m4_pad[8];
     S1_1 m1;
     S2_1 m2;
     S3_1 m3;
     float m4;
     char _m8_pad[8];
-    S4_1 m3s[8];
+    spvPaddedArrayElement<S4_1, 16> m3s[8];
 };
 
 struct SSBO0
@@ -124,8 +124,8 @@ constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 kernel void main0(device SSBO1& ssbo_430 [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]])
 {
     Content_1 _60 = ssbo_140.content;
-    ssbo_430.content.m0s[0].a[0] = _60.m0s[0].a[0];
-    ssbo_430.content.m0s[0].b = _60.m0s[0].b;
+    ssbo_430.content.m0s[0].a[0] = _60.m0s[0].data.a[0];
+    ssbo_430.content.m0s[0].b = _60.m0s[0].data.b;
     ssbo_430.content.m1s[0].a = float3(_60.m1s[0].a);
     ssbo_430.content.m1s[0].b = _60.m1s[0].b;
     ssbo_430.content.m2s[0].a[0] = _60.m2s[0].a[0];
@@ -139,14 +139,14 @@ kernel void main0(device SSBO1& ssbo_430 [[buffer(0)]], device SSBO0& ssbo_140 [
     ssbo_430.content.m3.a = _60.m3.a;
     ssbo_430.content.m3.b = _60.m3.b;
     ssbo_430.content.m4 = _60.m4;
-    ssbo_430.content.m3s[0].c = _60.m3s[0].c;
-    ssbo_430.content.m3s[1].c = _60.m3s[1].c;
-    ssbo_430.content.m3s[2].c = _60.m3s[2].c;
-    ssbo_430.content.m3s[3].c = _60.m3s[3].c;
-    ssbo_430.content.m3s[4].c = _60.m3s[4].c;
-    ssbo_430.content.m3s[5].c = _60.m3s[5].c;
-    ssbo_430.content.m3s[6].c = _60.m3s[6].c;
-    ssbo_430.content.m3s[7].c = _60.m3s[7].c;
+    ssbo_430.content.m3s[0].c = _60.m3s[0].data.c;
+    ssbo_430.content.m3s[1].c = _60.m3s[1].data.c;
+    ssbo_430.content.m3s[2].c = _60.m3s[2].data.c;
+    ssbo_430.content.m3s[3].c = _60.m3s[3].data.c;
+    ssbo_430.content.m3s[4].c = _60.m3s[4].data.c;
+    ssbo_430.content.m3s[5].c = _60.m3s[5].data.c;
+    ssbo_430.content.m3s[6].c = _60.m3s[6].data.c;
+    ssbo_430.content.m3s[7].c = _60.m3s[7].data.c;
     ssbo_430.content.m1.a = ssbo_430.content.m3.a * ssbo_430.m6[1][1];
 }
 

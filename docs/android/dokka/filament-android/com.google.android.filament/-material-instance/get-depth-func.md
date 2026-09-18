@@ -3,6 +3,6 @@
 # getDepthFunc
 
 [main]\
-open fun [getDepthFunc](get-depth-func.md)(): [TextureSampler.CompareFunction](../-texture-sampler/-compare-function/index.md)
+open fun [getDepthFunc](get-depth-func.md)(): [TextureSampler.CompareFunc](../-texture-sampler/-compare-func/index.md)
 
-Returns the depth comparison function.
+Returns the depth function state.

@@ -53,8 +53,23 @@ public:
     using SpecializationConstantInternPool =
             utils::InternPool<backend::Program::SpecializationConstant>;
 
-    using ProgramCache =
-            utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>>;
+    // ProgramSpecialization keys hold a Slice into mSpecializationConstantsInternPool.
+    // Storing the owning Ref in the cache value keeps that slice valid while the entry
+    // resides in the active map or LRU cache, until final eviction.
+    struct ProgramCacheEntry {
+        bool operator==(ProgramCacheEntry const& rhs) const noexcept {
+            return program == rhs.program;
+        }
+
+        bool operator!=(ProgramCacheEntry const& rhs) const noexcept {
+            return !(*this == rhs);
+        }
+
+        backend::Handle<backend::HwProgram> program;
+        SpecializationConstantInternPool::Ref constants;
+    };
+
+    using ProgramCache = utils::RefCountedMap<ProgramSpecialization, ProgramCacheEntry>;
 
     MaterialCache(uint32_t materialCapacity, uint32_t programCapacity);
     ~MaterialCache();
@@ -88,9 +103,9 @@ private:
     utils::RefCountedMap<MaterialKey, std::unique_ptr<MaterialDefinition>, MaterialKey::Hash>
             mDefinitions;
 
-    utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>> mPrograms;
-
     utils::InternPool<backend::Program::SpecializationConstant> mSpecializationConstantsInternPool;
+
+    ProgramCache mPrograms;
 };
 
 } // namespace filament

@@ -1,0 +1,56 @@
+{
+  "classes": [
+    {
+      "name": "MarkdownTest",
+      "location": { "file": "tests/MarkdownTest.h", "line": 1 },
+      "doc": {
+        "brief": "Class to test **CommonMark** conversion.",
+        "details": "This class tests various markdown features.\n\n### Features\n- Tables\n- Lists\n- Code Blocks\n\nSee `utils::Entity` for more info.",
+        "params": {},
+        "meta": {
+          "see": [
+            "MarkdownTest.methodWithTable",
+            "MarkdownTest.methodWithCode"
+          ]
+        }
+      },
+      "methods": [
+        {
+          "name": "methodWithTable",
+          "return_type": { "cpp_name": "void" },
+          "arguments": [],
+          "doc": {
+            "brief": "Method with a table.",
+            "details": "Here is a table:\n\n| Type | Efficiency |\n| :--- | :--- |\n| Incandescent | 2.2% |\n| Halogen | 7.0% |\n| LED | 8.7% |\n",
+             "params": {},
+             "meta": {
+                "see": ["MarkdownTest.methodWithCode"]
+             }
+          }
+        },
+        {
+          "name": "methodWithCode",
+           "return_type": { "cpp_name": "void" },
+           "arguments": [],
+           "doc": {
+             "brief": "Method with code blocks.",
+             "details": "Inline: `int x = 0;`\n\nBlock:\n```cpp\nint x = 0;\nfloat y = 1.0f;\n```\n",
+             "params": {},
+             "meta": {}
+           }
+        },
+        {
+            "name": "methodWithList",
+            "return_type": { "cpp_name": "void" },
+            "arguments": [],
+            "doc": {
+                "brief": "Method with lists.",
+                "details": "Unordered:\n- Item 1\n- Item 2\n  - Subitem A\n\nOrdered:\n1. First\n2. Second",
+                "params": {},
+                "meta": {}
+            }
+        }
+      ]
+    }
+  ]
+}

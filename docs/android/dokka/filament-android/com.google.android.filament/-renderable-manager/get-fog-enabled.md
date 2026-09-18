@@ -3,7 +3,7 @@
 # getFogEnabled
 
 [main]\
-open fun [getFogEnabled](get-fog-enabled.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [getFogEnabled](get-fog-enabled.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether large-scale fog is enabled for this renderable.
 
@@ -15,4 +15,4 @@ True if fog is enabled for this renderable.
 
 | |
 |---|
-| [RenderableManager.Builder](-builder/fog.md) |
+| com.google.android.filament.RenderableManager.Builder |

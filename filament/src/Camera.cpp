@@ -70,9 +70,9 @@ void Camera::setEyeModelMatrix(uint8_t const eyeId, mat4 const& model) {
     downcast(this)->setEyeModelMatrix(eyeId, model);
 }
 
-void Camera::setCustomEyeProjection(mat4 const* projection, size_t const count,
+void Camera::setCustomEyeProjection(utils::Slice<const mat4> projection,
         mat4 const& projectionForCulling, double const near, double const far) {
-    downcast(this)->setCustomEyeProjection(projection, count, projectionForCulling, near, far);
+    downcast(this)->setCustomEyeProjection(projection, projectionForCulling, near, far);
 }
 
 void Camera::setProjection(Projection const projection, double const left, double const right, double const bottom,

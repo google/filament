@@ -5,7 +5,7 @@
 [main]\
 open fun [setCompareMode](set-compare-mode.md)(mode: [TextureSampler.CompareMode](-compare-mode/index.md))
 
-Sets the comparison mode.
+Sets the compare mode and function.
 
 #### Parameters
 
@@ -13,4 +13,18 @@ main
 
 | | |
 |---|---|
-| mode | comparison mode |
+| mode | Compare mode |
+
+[main]\
+open fun [setCompareMode](set-compare-mode.md)(mode: [TextureSampler.CompareMode](-compare-mode/index.md), func: [TextureSampler.CompareFunc](-compare-func/index.md))
+
+Sets the compare mode and function.
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| mode | Compare mode |
+| func | Compare function |

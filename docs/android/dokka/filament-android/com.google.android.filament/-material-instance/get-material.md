@@ -7,4 +7,4 @@ open fun [getMaterial](get-material.md)(): [Material](../-material/index.md)
 
 #### Return
 
-the [Material](../-material/index.md) associated with this instance
+the Material associated with this instance

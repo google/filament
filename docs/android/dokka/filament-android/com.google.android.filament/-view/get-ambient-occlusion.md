@@ -3,19 +3,17 @@
 # getAmbientOcclusion
 
 [main]\
-open fun [~~getAmbientOcclusion~~](get-ambient-occlusion.md)(): [View.AmbientOcclusion](-ambient-occlusion/index.md)
-
----
-
-### Deprecated
-
----
+open fun [getAmbientOcclusion](get-ambient-occlusion.md)(): [View.AmbientOcclusion](-ambient-occlusion/index.md)
 
 Queries the type of ambient occlusion active for this View.
 
 #### Return
 
 ambient occlusion type.
+
+#### Deprecated
+
+use getAmbientOcclusionOptions() instead
 
 #### See also
 

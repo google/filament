@@ -1158,7 +1158,7 @@ enum class TextureFormat : uint16_t {
 TextureType getTextureType(TextureFormat format) noexcept;
 
 //! Bitmask describing the intended Texture Usage
-enum class TextureUsage : uint16_t {
+enum class UTILS_APIGEN_FLAGS TextureUsage : uint16_t {
     NONE                = 0x0000,
     COLOR_ATTACHMENT    = 0x0001,            //!< Texture can be used as a color attachment
     DEPTH_ATTACHMENT    = 0x0002,            //!< Texture can be used as a depth attachment

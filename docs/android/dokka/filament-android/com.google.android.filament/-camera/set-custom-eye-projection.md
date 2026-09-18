@@ -3,9 +3,11 @@
 # setCustomEyeProjection
 
 [main]\
-open fun [setCustomEyeProjection](set-custom-eye-projection.md)(inProjection: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), inProjectionForCulling: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
+open fun [setCustomEyeProjection](set-custom-eye-projection.md)(projection: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, projectionForCulling: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
-Sets a custom projection matrix for each eye.
+Sets a custom projection matrix for each eye. 
+
+The projectionForCulling, near, and far parameters establish a &quot;culling frustum&quot; which must encompass anything any eye can see. All projection matrices must be set simultaneously. The number of stereoscopic eyes is controlled by the stereoscopicEyeCount setting inside of Engine::Config.
 
 #### Parameters
 
@@ -13,8 +15,14 @@ main
 
 | | |
 |---|---|
-| inProjection | An array of projection matrices, one for each eye. Must have at least 16 * count elements. |
-| count | Number of eyes to set. |
-| inProjectionForCulling | Custom projection matrix for culling, must encompass all eyes. |
-| near | Distance to the near plane. |
-| far | Distance to the far plane. |
+| projection | an array of projection matrices, only the first config.stereoscopicEyeCount are read |
+| projectionForCulling | custom projection matrix for culling, must encompass both eyes |
+| near | distance in world units from the camera to the culling near plane. `near`>0. |
+| far | distance in world units from the camera to the culling far plane. `far`>`near`. |
+
+#### See also
+
+| |
+|---|
+| setCustomProjection |
+| [Engine.Config](../-engine/-config/stereoscopic-eye-count.md) |
