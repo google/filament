@@ -2760,7 +2760,9 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     using namespace std::chrono;
     auto const now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
-    if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+    if (timeout != FENCE_WAIT_FOR_EVER &&
+        timeout <= (uint64_t)nanoseconds::max().count() &&
+        now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
         until = now + nanoseconds(timeout);
     }
 
