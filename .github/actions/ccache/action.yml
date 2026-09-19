@@ -1,0 +1,108 @@
+name: 'ccache'
+description: >
+  Configures ccache for a build job and restores the shared compiler cache.
+
+  The top-level CMakeLists.txt enables ccache automatically whenever it is found on PATH (see the
+  "Support for ccache" block), so nothing in the build scripts needs to change; this action only
+  has to set the environment up and populate the cache directory.
+
+  This action never *saves*. Saving is done explicitly by the postsubmit workflow, and only from
+  main, for two reasons:
+    - Cache poisoning. GitHub scopes caches by branch: a pull request can only write entries
+      scoped to its own ref, and can read entries from its base branch and the default branch.
+      Restricting writes to postsubmit-on-main means an untrusted pull request cannot inject an
+      object file that a later main-branch build would consume.
+    - Budget. A repository gets 10 GB of Actions cache in total, shared with the mesa, emsdk,
+      Vulkan SDK and glTF asset caches, and GitHub evicts least-recently-used entries once that
+      is exceeded. Saving on every pull-request run would write a fresh multi-hundred-megabyte
+      entry per push and evict those prerequisites; saving only on main bounds writes to roughly
+      one per submitted change. Saves from release/rc branches are skipped as well: those entries
+      are scoped to their own branch, so no pull request against main could ever read them.
+
+inputs:
+  config:
+    description: >
+      Identifies the build configuration this cache belongs to, e.g. "desktop". ccache keys on the
+      full compiler command line, so configurations built with different flags share no entries
+      and should not share a cache.
+
+      Jobs that build several configurations share one value when they have a configuration in
+      common: test-code-correctness builds an asan/ubsan debug tree plus a plain release tree, and
+      passes "desktop" because the release half matches what postsubmit writes. Its asan objects
+      can never hit, since no writer compiles with -fsanitize; that is expected, and the reason
+      its ccache statistics show a lower hit rate than the other desktop jobs.
+    required: true
+  max-size:
+    description: >
+      Upper bound on the on-disk cache. Ideally this comfortably exceeds the total of every
+      configuration a single job builds, otherwise ccache evicts entries that were just restored
+      while the build is still running. It is bounded from above by the repository's 10 GB Actions
+      cache quota: the writer runs on two platforms, so each increment here costs twice as much of
+      the budget shared with the mesa, emsdk, Vulkan SDK and glTF asset caches.
+
+      The postsubmit writer builds both debug and release, which may not fit in the default. Check
+      the "Cache size" line of the ccache statistics step: if it sits pinned at the ceiling, this
+      needs raising (and the quota re-checked) or the debug configuration needs its own key.
+    required: false
+    default: '2G'
+
+outputs:
+  cache-path:
+    description: 'Directory holding the cache, for a matching actions/cache/save step.'
+    value: ${{ steps.config.outputs.path }}
+  cache-key:
+    description: 'Key this job restored under, for a matching actions/cache/save step.'
+    value: ${{ steps.config.outputs.key }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure ccache
+      id: config
+      shell: bash
+      run: |
+        set -e
+
+        CACHE_PATH="${HOME}/.ccache"
+        CACHE_KEY="ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config }}"
+
+        {
+          echo "path=${CACHE_PATH}"
+          # The commit is appended so that every save writes a new immutable entry; jobs find the
+          # most recent one through the restore-keys prefix below.
+          echo "key=${CACHE_KEY}-${{ github.sha }}"
+          echo "restore-key=${CACHE_KEY}-"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo "CCACHE_DIR=${CACHE_PATH}"
+          echo "CCACHE_MAXSIZE=${{ inputs.max-size }}"
+          # ccache identifies the compiler by mtime and size by default, both of which change
+          # whenever the runner image is rebuilt even when the compiler itself is identical.
+          # Hashing the binary keeps the cache valid across image updates.
+          echo "CCACHE_COMPILERCHECK=content"
+        } >> "$GITHUB_ENV"
+        # Deliberately not setting CCACHE_BASEDIR. The workspace path is fixed on hosted runners
+        # and CMake already emits relative source paths, so it would rewrite nothing; meanwhile
+        # build/launch-c.in hard-codes file_macro sloppiness, so with a basedir in play a hit
+        # could hand back an object whose __FILE__ strings came from a different directory.
+
+    - name: Restore ccache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.config.outputs.path }}
+        key: ${{ steps.config.outputs.key }}
+        restore-keys: ${{ steps.config.outputs.restore-key }}
+
+    - name: Reset ccache statistics
+      shell: bash
+      # Zeroes the counters only; cached objects are untouched. Without this the summary printed
+      # at the end of the job would include the hit counts accumulated by whichever build
+      # populated the cache.
+      run: |
+        if ! command -v ccache > /dev/null; then
+          echo "::error::ccache is not on PATH. This action must run after the platform prereq" \
+               "action (linux-prereq / mac-prereq), which installs it."
+          exit 1
+        fi
+        ccache --zero-stats
