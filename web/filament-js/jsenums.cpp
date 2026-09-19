@@ -27,6 +27,7 @@
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
+#include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
 #include <filament/RenderTarget.h>
 #include <filament/Texture.h>
@@ -499,5 +500,55 @@ enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
     enum_<filament::viewer::AutomationEngine::Options::ExportFormat>("AutomationEngine$ExportFormat")
         .value("TIFF", filament::viewer::AutomationEngine::Options::ExportFormat::TIFF)
         .value("PPM", filament::viewer::AutomationEngine::Options::ExportFormat::PPM);
+
+    // Material introspection return types (Material::getShading, getBlendingMode, etc.)
+    enum_<filament::Shading>("Shading")
+        .value("UNLIT", filament::Shading::UNLIT)
+        .value("LIT", filament::Shading::LIT)
+        .value("SUBSURFACE", filament::Shading::SUBSURFACE)
+        .value("CLOTH", filament::Shading::CLOTH)
+        .value("SPECULAR_GLOSSINESS", filament::Shading::SPECULAR_GLOSSINESS);
+
+    enum_<filament::Interpolation>("Interpolation")
+        .value("SMOOTH", filament::Interpolation::SMOOTH)
+        .value("FLAT", filament::Interpolation::FLAT);
+
+    enum_<filament::BlendingMode>("BlendingMode")
+        .value("OPAQUE", filament::BlendingMode::OPAQUE)
+        .value("TRANSPARENT", filament::BlendingMode::TRANSPARENT)
+        .value("ADD", filament::BlendingMode::ADD)
+        .value("MASKED", filament::BlendingMode::MASKED)
+        .value("FADE", filament::BlendingMode::FADE)
+        .value("MULTIPLY", filament::BlendingMode::MULTIPLY)
+        .value("SCREEN", filament::BlendingMode::SCREEN)
+        .value("CUSTOM", filament::BlendingMode::CUSTOM);
+
+    enum_<filament::VertexDomain>("VertexDomain")
+        .value("OBJECT", filament::VertexDomain::OBJECT)
+        .value("WORLD", filament::VertexDomain::WORLD)
+        .value("VIEW", filament::VertexDomain::VIEW)
+        .value("DEVICE", filament::VertexDomain::DEVICE);
+
+    enum_<filament::RefractionMode>("RefractionMode")
+        .value("NONE", filament::RefractionMode::NONE)
+        .value("CUBEMAP", filament::RefractionMode::CUBEMAP)
+        .value("SCREEN_SPACE", filament::RefractionMode::SCREEN_SPACE);
+
+    enum_<filament::RefractionType>("RefractionType")
+        .value("SOLID", filament::RefractionType::SOLID)
+        .value("THIN", filament::RefractionType::THIN);
+
+    enum_<filament::ReflectionMode>("ReflectionMode")
+        .value("DEFAULT", filament::ReflectionMode::DEFAULT)
+        .value("SCREEN_SPACE", filament::ReflectionMode::SCREEN_SPACE);
+
+    // Texture::Builder::swizzle; isTextureSwizzleSupported was already bound without it.
+    enum_<backend::TextureSwizzle>("Texture$Swizzle")
+        .value("SUBSTITUTE_ZERO", backend::TextureSwizzle::SUBSTITUTE_ZERO)
+        .value("SUBSTITUTE_ONE", backend::TextureSwizzle::SUBSTITUTE_ONE)
+        .value("CHANNEL_0", backend::TextureSwizzle::CHANNEL_0)
+        .value("CHANNEL_1", backend::TextureSwizzle::CHANNEL_1)
+        .value("CHANNEL_2", backend::TextureSwizzle::CHANNEL_2)
+        .value("CHANNEL_3", backend::TextureSwizzle::CHANNEL_3);
 
 }
