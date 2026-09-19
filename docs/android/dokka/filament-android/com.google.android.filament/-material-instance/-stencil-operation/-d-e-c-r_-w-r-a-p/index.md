@@ -5,4 +5,6 @@
 [main]\
 [DECR_WRAP](index.md)
 
-Decrements the current value. Wraps value to the maximum representable unsigned value when decrementing a value of zero.
+Decrements the current value. 
+
+Wraps value to the maximum representable unsigned value when decrementing a value of zero.

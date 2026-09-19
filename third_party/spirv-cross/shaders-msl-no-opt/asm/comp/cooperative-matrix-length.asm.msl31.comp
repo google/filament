@@ -1,0 +1,42 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "data"
+               OpName %ssbo "ssbo"
+               OpDecorate %arr_uint ArrayStride 4
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %SSBO Block
+               OpDecorate %ssbo DescriptorSet 0
+               OpDecorate %ssbo Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+   %arr_uint = OpTypeRuntimeArray %uint
+       %SSBO = OpTypeStruct %arr_uint
+%ptr_ssbo_SSBO = OpTypePointer StorageBuffer %SSBO
+       %ssbo = OpVariable %ptr_ssbo_SSBO StorageBuffer
+%ptr_ssbo_uint = OpTypePointer StorageBuffer %uint
+ %coopmat_a = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %len = OpCooperativeMatrixLengthKHR %uint %coopmat_a
+          %p = OpAccessChain %ptr_ssbo_uint %ssbo %uint_0 %uint_0
+               OpStore %p %len
+               OpReturn
+               OpFunctionEnd

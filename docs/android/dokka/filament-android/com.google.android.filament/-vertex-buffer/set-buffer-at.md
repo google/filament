@@ -5,7 +5,9 @@
 [main]\
 open fun [setBufferAt](set-buffer-at.md)(engine: [Engine](../-engine/index.md), bufferIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html))
 
-Asynchronously copy-initializes the specified buffer from the given buffer data.
+copy-initializes the specified buffer from the given buffer data. 
+
+Do not use this if you called enableBufferObjects() on the Builder.
 
 #### Parameters
 
@@ -13,14 +15,16 @@ main
 
 | | |
 |---|---|
-| engine | reference to the [Engine](../-engine/index.md) to associate this `VertexBuffer` with |
-| bufferIndex | index of the buffer to initialize. Must be between 0 and bufferCount() - 1. |
-| buffer | a CPU-side [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html) representing the data used to initialize the `VertexBuffer` at index `bufferIndex`. `buffer` should contain raw, untyped data that will be copied as-is into the buffer. |
+| engine | Reference to the filament::Engine to associate this VertexBuffer with. |
+| bufferIndex | Index of the buffer to initialize. Must be between 0 and Builder::bufferCount() - 1. |
+| buffer | A BufferDescriptor representing the data used to initialize the buffer at index `bufferIndex`. BufferDescriptor points to raw, untyped data that will be copied as-is into the buffer. |
 
 [main]\
 open fun [setBufferAt](set-buffer-at.md)(engine: [Engine](../-engine/index.md), bufferIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), destOffsetInBytes: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Asynchronously copy-initializes a region of the specified buffer from the given buffer data.
+copy-initializes the specified buffer from the given buffer data. 
+
+Do not use this if you called enableBufferObjects() on the Builder.
 
 #### Parameters
 
@@ -28,15 +32,18 @@ main
 
 | | |
 |---|---|
-| engine | reference to the [Engine](../-engine/index.md) to associate this `VertexBuffer` with |
-| bufferIndex | index of the buffer to initialize. Must be between 0 and bufferCount() - 1. |
-| buffer | a CPU-side [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html) representing the data used to initialize the `VertexBuffer` at index `bufferIndex`. `buffer` should contain raw, untyped data that will be copied as-is into the buffer. |
-| destOffsetInBytes | offset in *bytes* into the buffer at index `bufferIndex` of this vertex buffer set. |
+| engine | Reference to the filament::Engine to associate this VertexBuffer with. |
+| bufferIndex | Index of the buffer to initialize. Must be between 0 and Builder::bufferCount() - 1. |
+| buffer | A BufferDescriptor representing the data used to initialize the buffer at index `bufferIndex`. BufferDescriptor points to raw, untyped data that will be copied as-is into the buffer. |
+| destOffsetInBytes | Offset in *bytes* into the buffer at index `bufferIndex` of this vertex buffer set. Must be multiple of 4. |
+| count | number of bytes to copy |
 
 [main]\
 open fun [setBufferAt](set-buffer-at.md)(engine: [Engine](../-engine/index.md), bufferIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), destOffsetInBytes: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
 
-Asynchronously copy-initializes a region of the specified buffer from the given buffer data.
+copy-initializes the specified buffer from the given buffer data. 
+
+Do not use this if you called enableBufferObjects() on the Builder.
 
 #### Parameters
 
@@ -44,9 +51,10 @@ main
 
 | | |
 |---|---|
-| engine | reference to the [Engine](../-engine/index.md) to associate this `VertexBuffer` with |
-| bufferIndex | index of the buffer to initialize. Must be between 0 and bufferCount() - 1. |
-| buffer | a CPU-side [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html) representing the data used to initialize the `VertexBuffer` at index `bufferIndex`. `buffer` should contain raw, untyped data that will be copied as-is into the buffer. |
-| destOffsetInBytes | offset in *bytes* into the buffer at index `bufferIndex` of this vertex buffer set. |
-| handler | an [Executor](https://developer.android.com/reference/kotlin/java/util/concurrent/Executor.html). On Android this can also be a Handler. |
-| callback | a callback executed by `handler` when `buffer`is no longer needed. |
+| engine | Reference to the filament::Engine to associate this VertexBuffer with. |
+| bufferIndex | Index of the buffer to initialize. Must be between 0 and Builder::bufferCount() - 1. |
+| buffer | A BufferDescriptor representing the data used to initialize the buffer at index `bufferIndex`. BufferDescriptor points to raw, untyped data that will be copied as-is into the buffer. |
+| destOffsetInBytes | Offset in *bytes* into the buffer at index `bufferIndex` of this vertex buffer set. Must be multiple of 4. |
+| count | number of bytes to copy |
+| handler | handler to dispatch the callback or null for the default handler |
+| callback | runnable called upon completion of the operation |

@@ -5,10 +5,6 @@
 [main]\
 open fun [isFrontFaceWindingInverted](is-front-face-winding-inverted.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Returns true if post-processing is enabled.
+Returns true if the winding order of front faces is inverted. 
 
-#### See also
-
-| |
-|---|
-| [setPostProcessingEnabled](set-post-processing-enabled.md) |
+See setFrontFaceWindingInverted() for more information.

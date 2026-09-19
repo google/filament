@@ -5,4 +5,6 @@
 [main]\
 open var [gtaoUseVisibilityBitmasks](gtao-use-visibility-bitmasks.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
-Ground Truth-base Ambient Occlusion (GTAO) options
+Enables or disables visibility bitmasks mode. 
+
+Notes that bent normal doesn't work under this mode. Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.

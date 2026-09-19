@@ -4,7 +4,3 @@
 
 [main]\
 open var [stepCount](step-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
-
-Number of ray-marching steps for screen-space contact shadows (8 by default). 
-
-**CAUTION:** this parameter is ignored for all lights except the directional/sunlight, all other lights use the same value set for the directional/sunlight.

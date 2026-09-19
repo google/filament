@@ -5,6 +5,4 @@
 [main]\
 open fun [getCompareMode](get-compare-mode.md)(): [TextureSampler.CompareMode](-compare-mode/index.md)
 
-#### Return
-
-the comparison mode
+returns the compare mode

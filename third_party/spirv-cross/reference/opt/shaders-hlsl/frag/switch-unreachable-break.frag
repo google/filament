@@ -6,12 +6,6 @@ cbuffer UBO : register(b0)
 
 
 static float4 FragColor;
-static float4 vInput;
-
-struct SPIRV_Cross_Input
-{
-    float4 vInput : TEXCOORD0;
-};
 
 struct SPIRV_Cross_Output
 {
@@ -46,9 +40,8 @@ void frag_main()
     FragColor = float4(_45.x ? 10.0f.xxxx.x : 20.0f.xxxx.x, _45.y ? 10.0f.xxxx.y : 20.0f.xxxx.y, _45.z ? 10.0f.xxxx.z : 20.0f.xxxx.z, _45.w ? 10.0f.xxxx.w : 20.0f.xxxx.w);
 }
 
-SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
+SPIRV_Cross_Output main()
 {
-    vInput = stage_input.vInput;
     frag_main();
     SPIRV_Cross_Output stage_output;
     stage_output.FragColor = FragColor;

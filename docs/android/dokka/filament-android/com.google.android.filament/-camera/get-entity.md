@@ -5,8 +5,4 @@
 [main]\
 open fun [getEntity](get-entity.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Gets the entity representing this Camera
-
-#### Return
-
-the entity this Camera component is attached to
+Returns the entity representing this camera

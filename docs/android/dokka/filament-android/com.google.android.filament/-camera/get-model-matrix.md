@@ -3,35 +3,19 @@
 # getModelMatrix
 
 [main]\
-open fun [getModelMatrix](get-model-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
-
-Retrieves the camera's model matrix. The model matrix encodes the camera position and orientation, or pose.
-
-#### Return
-
-A 16-float array containing the camera's pose as a column-major matrix.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| out | A 16-float array where the model matrix will be stored, or null in which case a new array is allocated. |
-
-[main]\
 open fun [getModelMatrix](get-model-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
-Retrieves the camera's model matrix. The model matrix encodes the camera position and orientation, or pose.
+Returns the camera's model matrix 
+
+Helper method to return the camera's entity transform component. It has the same effect as calling:
+
+```kotlin
+
+ engine.getTransformManager().getWorldTransform(
+         engine.getTransformManager().getInstance(camera->getEntity()));
+
+```
 
 #### Return
 
-A 16-double array containing the camera's pose as a column-major matrix.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| out | A 16-double array where the model matrix will be stored, or null in which case a new array is allocated. |
+The camera's pose in world space as a rigid transform. Parent transforms, if any, are taken into account.

@@ -5,11 +5,11 @@
 [main]\
 open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [Texture](../index.md)
 
-Creates a new `Texture` instance.
+Creates the Texture object and returns a pointer to it.
 
 #### Return
 
-A newly created `Texture`
+pointer to the newly created object.
 
 #### Parameters
 
@@ -17,11 +17,4 @@ main
 
 | | |
 |---|---|
-| engine | The [Engine](../../-engine/index.md) to associate this `Texture` with. |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | if a parameter to a builder function was invalid. A mode detailed message about the error is output in the system log. |
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if a runtime error occurred, such as running out of memory or other resources. |
+| engine | Reference to the filament::Engine to associate this Texture with. |

@@ -3,9 +3,9 @@
 # getFace
 
 [main]\
-open fun [getFace](get-face.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Texture.CubemapFace](../-texture/-cubemap-face/index.md)
+open fun [getFace](get-face.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [RenderTarget.CubemapFace](-cubemap-face/index.md)
 
-Returns the face of a cubemap set on the given attachment point.
+Returns the face of a cubemap set on the given attachment point
 
 #### Return
 

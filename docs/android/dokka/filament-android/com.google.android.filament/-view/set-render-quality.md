@@ -5,7 +5,9 @@
 [main]\
 open fun [setRenderQuality](set-render-quality.md)(renderQuality: [View.RenderQuality](-render-quality/index.md))
 
-Sets the rendering quality for this view (e.g. color precision).
+Sets the rendering quality for this view. 
+
+Refer to RenderQuality for more information about the different settings available.
 
 #### Parameters
 

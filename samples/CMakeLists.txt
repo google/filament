@@ -99,10 +99,10 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
 endif()
 
 # CMake fails to invoke ar on Windows unless there is at least one C/C++ file in the library.
-set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
-add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
+set(SAMPLE_DUMMY_SRC "${RESOURCE_DIR}/dummy_sample.c")
+add_custom_command(OUTPUT ${SAMPLE_DUMMY_SRC} COMMAND echo "//" > ${SAMPLE_DUMMY_SRC})
 
-add_library(sample-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+add_library(sample-resources ${SAMPLE_DUMMY_SRC} ${RESGEN_SOURCE})
 set_target_properties(sample-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
@@ -189,14 +189,20 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set(SUZANNE_DUMMY_SRC "${RESOURCE_DIR}/dummy_suzanne.c")
+add_custom_command(OUTPUT ${SUZANNE_DUMMY_SRC} COMMAND echo "//" > ${SUZANNE_DUMMY_SRC})
+
+add_library(suzanne-resources ${SUZANNE_DUMMY_SRC} ${RESGEN_SOURCE})
 set_target_properties(suzanne-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
 # Resources for gltf_viewer and gltf_instances
 # ==================================================================================================
 
-add_library(gltf-demo-resources ${DUMMY_SRC})
+set(GLTF_DEMO_DUMMY_SRC "${RESOURCE_DIR}/dummy_gltf_demo.c")
+add_custom_command(OUTPUT ${GLTF_DEMO_DUMMY_SRC} COMMAND echo "//" > ${GLTF_DEMO_DUMMY_SRC})
+
+add_library(gltf-demo-resources ${GLTF_DEMO_DUMMY_SRC})
 set_target_properties(gltf-demo-resources PROPERTIES FOLDER Samples/Resources)
 
 set(GLTF_DEMO_RESOURCES

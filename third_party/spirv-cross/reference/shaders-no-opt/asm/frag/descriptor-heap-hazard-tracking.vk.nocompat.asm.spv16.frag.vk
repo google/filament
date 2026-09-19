@@ -1,0 +1,26 @@
+#version 460
+#extension GL_EXT_descriptor_heap : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_shader_image_load_formatted : require
+
+layout(location = 0) out float FragColor;
+layout(descriptor_heap, std430) readonly buffer SSBONoWrite
+{
+    vec4 data[];
+} spvSSBONoWrite_9ResourceHeap[];
+
+layout(descriptor_heap, std430) coherent buffer SSBOCoherent
+{
+    vec4 data[];
+} spvSSBOCoherent_10ResourceHeap[];
+
+
+void main()
+{
+    spvSSBOCoherent_10ResourceHeap[2].data[0].z = 0.0;
+    FragColor = spvSSBONoWrite_9ResourceHeap[2].data[2].z;
+    float _34 = spvSSBOCoherent_10ResourceHeap[2].data[0].z;
+    spvSSBOCoherent_10ResourceHeap[2].data[0].z = 0.0;
+    FragColor = _34;
+}
+

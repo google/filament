@@ -1,0 +1,16 @@
+#version 450
+
+#extension GL_EXT_shared_memory_block : require
+
+shared SharedMemoryBlockA {
+    layout (offset = 0) uint a;
+};
+
+shared SharedMemoryBlockB {
+    layout (offset = 4) uint b;
+};
+
+void main() {
+    a = 6;
+    b = 7;
+}

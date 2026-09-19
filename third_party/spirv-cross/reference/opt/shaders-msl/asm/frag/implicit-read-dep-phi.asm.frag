@@ -25,7 +25,8 @@ fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uImage [[tex
     for (;;)
     {
         out.FragColor = _45;
-        if (_57 < 4)
+        bool _22 = _57 < 4;
+        if (_22)
         {
             if (in.v0[_57] > 0.0)
             {

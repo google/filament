@@ -4,3 +4,5 @@
 
 [main]\
 [RG](index.md)
+
+Two Red and Green channels, float

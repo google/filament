@@ -7,5 +7,5 @@ out gl_PerVertex
 
 void main()
 {
-    gl_Position = vec4(gl_BaseVertex, gl_BaseInstance, 0, 1);
+    gl_Position = vec4(gl_BaseVertex, gl_BaseInstance, gl_DrawID, 1);
 }

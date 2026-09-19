@@ -13,4 +13,4 @@ main
 
 | | |
 |---|---|
-| count | the number of primitives that will be supplied to the builder Note that builders typically do not have a long lifetime since clients should discard them after calling [build](build.md). For a usage example, see [RenderableManager](../index.md). |
+| count | the number of primitives that will be supplied to the builder<br>Note that builders typically do not have a long lifetime since clients should discard them after calling build(). For a usage example, see RenderableManager. |

@@ -5,4 +5,4 @@
 [main]\
 [BACK](index.md)
 
-Back face culling. Only front faces are visible.
+Back face culling, only front faces are visible

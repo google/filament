@@ -1,0 +1,77 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 60
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+               OpName %SSBO32 "SSBO32"
+               OpMemberName %SSBO32 0 "data"
+               OpName %ssbo32 "ssbo32"
+               OpName %SSBO16 "SSBO16"
+               OpMemberName %SSBO16 0 "data"
+               OpName %ssbo16 "ssbo16"
+               OpDecorate %arr_float ArrayStride 4
+               OpMemberDecorate %SSBO32 0 Offset 0
+               OpDecorate %SSBO32 Block
+               OpDecorate %ssbo32 DescriptorSet 0
+               OpDecorate %ssbo32 Binding 0
+               OpDecorate %arr_half ArrayStride 2
+               OpMemberDecorate %SSBO16 0 Offset 0
+               OpDecorate %SSBO16 Block
+               OpDecorate %ssbo16 DescriptorSet 0
+               OpDecorate %ssbo16 Binding 1
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %half = OpTypeFloat 16
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+  %arr_float = OpTypeRuntimeArray %float
+     %SSBO32 = OpTypeStruct %arr_float
+%ptr_ssbo_SSBO32 = OpTypePointer StorageBuffer %SSBO32
+     %ssbo32 = OpVariable %ptr_ssbo_SSBO32 StorageBuffer
+   %arr_half = OpTypeRuntimeArray %half
+     %SSBO16 = OpTypeStruct %arr_half
+%ptr_ssbo_SSBO16 = OpTypePointer StorageBuffer %SSBO16
+     %ssbo16 = OpVariable %ptr_ssbo_SSBO16 StorageBuffer
+%ptr_ssbo_float = OpTypePointer StorageBuffer %float
+%ptr_ssbo_half = OpTypePointer StorageBuffer %half
+; float32 cooperative matrix types
+%coopmat_f32_A = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+%coopmat_f32_B = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_1
+%coopmat_f32_acc = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_2
+; half cooperative matrix types
+%coopmat_f16_A = OpTypeCooperativeMatrixKHR %half %uint_3 %uint_8 %uint_8 %uint_0
+%coopmat_f16_B = OpTypeCooperativeMatrixKHR %half %uint_3 %uint_8 %uint_8 %uint_1
+%coopmat_f16_acc = OpTypeCooperativeMatrixKHR %half %uint_3 %uint_8 %uint_8 %uint_2
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+; float32 muladd: D = A * B + C
+      %p_f32 = OpAccessChain %ptr_ssbo_float %ssbo32 %uint_0 %uint_0
+       %f_A = OpCooperativeMatrixLoadKHR %coopmat_f32_A %p_f32 %uint_0 %uint_8
+       %f_B = OpCooperativeMatrixLoadKHR %coopmat_f32_B %p_f32 %uint_0 %uint_8
+       %f_C = OpCooperativeMatrixLoadKHR %coopmat_f32_acc %p_f32 %uint_0 %uint_8
+       %f_D = OpCooperativeMatrixMulAddKHR %coopmat_f32_acc %f_A %f_B %f_C
+               OpCooperativeMatrixStoreKHR %p_f32 %f_D %uint_0 %uint_8
+; half muladd: D = A * B + C
+      %p_f16 = OpAccessChain %ptr_ssbo_half %ssbo16 %uint_0 %uint_0
+       %h_A = OpCooperativeMatrixLoadKHR %coopmat_f16_A %p_f16 %uint_0 %uint_8
+       %h_B = OpCooperativeMatrixLoadKHR %coopmat_f16_B %p_f16 %uint_0 %uint_8
+       %h_C = OpCooperativeMatrixLoadKHR %coopmat_f16_acc %p_f16 %uint_0 %uint_8
+       %h_D = OpCooperativeMatrixMulAddKHR %coopmat_f16_acc %h_A %h_B %h_C
+               OpCooperativeMatrixStoreKHR %p_f16 %h_D %uint_0 %uint_8
+               OpReturn
+               OpFunctionEnd
