@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+#include <filament/Engine.h>
+#include <filament/View.h>
 #include <filamentapp/DisplayManager.h>
 #include <filamentapp/FilamentApp.h>
-#include <filament/View.h>
-#include <filament/Engine.h>
 #include <filamentapp/FilamentApp2.h>
+#include <filamentapp/HeadlessDisplayManager.h>
 
 #if defined(FILAMENTAPP_HAS_WEB_UI)
 #include "filamentapp/HtmlDisplayManager.h"
@@ -28,6 +29,7 @@
 #include "filamentapp/SDLDisplayManager.h"
 #endif // defined(FILAMENTAPP_HAS_SDL)
 
+#include <utils/Log.h>
 #include <utils/Panic.h>
 
 FilamentApp& FilamentApp::get() {
@@ -44,43 +46,59 @@ void FilamentApp::run(const Config& config, SetupCallback setup, CleanupCallback
         PostRenderCallback postRender, size_t width, size_t height) {
 
     if (!mDisplayManager) {
-        if (config.displayManager == Config::DisplayManager::SDL) {
-#ifdef FILAMENTAPP_HAS_SDL
-            mDisplayManager = std::make_unique<filament::app::SDLDisplayManager>(config.backend);
-#endif
-        }
+        // Config::headless is deprecated, and is honored here by choosing a display manager that
+        // reports isHeadless(). WEB is considered first because HtmlDisplayManager is headless in
+        // its own right and is the more specific request of the two.
         if (config.displayManager == Config::DisplayManager::WEB) {
 #if defined(FILAMENTAPP_HAS_WEB_UI)
             mDisplayManager = std::make_unique<filament::app::HtmlDisplayManager>();
 #endif
+        } else if (!config.headless && config.displayManager == Config::DisplayManager::SDL) {
+#ifdef FILAMENTAPP_HAS_SDL
+            mDisplayManager = std::make_unique<filament::app::SDLDisplayManager>(config.backend);
+#endif
+        }
+
+        if (!mDisplayManager) {
+            // This is reached either because headless was requested or because the requested
+            // display manager is unavailable in this build. A display manager is mandatory, since
+            // FilamentApp2::Builder::build() fails its precondition without one, so headless serves
+            // both cases: it keeps a deprecated Config::headless request working, and it turns an
+            // unavailable manager into an offscreen run rather than an abort.
+            if (!config.headless) {
+                utils::slog.w << "FilamentApp: requested display manager is unavailable, "
+                                 "falling back to headless."
+                              << utils::io::endl;
+            }
+            mDisplayManager = std::make_unique<filament::app::HeadlessDisplayManager>();
         }
     }
 
     mImpl = FilamentApp2::Builder()
-            .title(mWindowTitle.empty() ? config.title : mWindowTitle)
-            .backend(config.backend)
-            .size(width, height)
-            .setup(setup)
-            .cleanup(cleanup)
-            .imgui(imgui)
-            .preRender(preRender)
-            .postRender(postRender)
-            .animation(mAnimation)
-            .resize(mResize)
-            .dropHandler(mDropHandler)
-            .iblDirectory(config.iblDirectory)
-            .dirt(config.dirt)
-            .splitView(config.splitView)
-            .featureLevel(config.featureLevel)
-            .cameraMode(config.cameraMode)
-            .resizeable(config.resizeable)
-            .headless(config.headless)
-            .stereoscopicEyeCount(config.stereoscopicEyeCount)
-            .vulkanGPUHint(config.vulkanGPUHint)
-            .forcedWebGPUBackend(static_cast<FilamentApp2::WebGPUBackend>(config.forcedWebGPUBackend))
-            .displayManager(mDisplayManager.get())
-            .asynchronousMode(config.asynchronousMode)
-            .build();
+                    .title(mWindowTitle.empty() ? config.title : mWindowTitle)
+                    .backend(config.backend)
+                    .size(width, height)
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui(imgui)
+                    .preRender(preRender)
+                    .postRender(postRender)
+                    .animation(mAnimation)
+                    .resize(mResize)
+                    .dropHandler(mDropHandler)
+                    .iblDirectory(config.iblDirectory)
+                    .dirt(config.dirt)
+                    .splitView(config.splitView)
+                    .featureLevel(config.featureLevel)
+                    .cameraMode(config.cameraMode)
+                    .resizeable(config.resizeable)
+                    .stereoscopicEyeCount(config.stereoscopicEyeCount)
+                    .vulkanGPUHint(config.vulkanGPUHint)
+                    .forcedWebGPUBackend(
+                            static_cast<FilamentApp2::WebGPUBackend>(config.forcedWebGPUBackend))
+                    .displayManager(mDisplayManager.get())
+                    .asynchronousMode(config.asynchronousMode)
+                    .build();
 
     if (mSidebarWidth != 0) mImpl->setSidebarWidth(mSidebarWidth);
     if (mCameraFocalLength != 0.0f) mImpl->setCameraFocalLength(mCameraFocalLength);

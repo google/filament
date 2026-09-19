@@ -22,8 +22,10 @@
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
+#include <thread>
 #include <vector>
 
 namespace filament::app {
@@ -46,11 +48,10 @@ public:
      * @param w The width of the window.
      * @param h The height of the window.
      * @param resizable Whether the window is resizable.
-     * @param headless Whether the window should be created in headless mode.
      * @return A handle to the created window.
      */
     virtual WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
-            bool resizable, bool headless) = 0;
+            bool resizable) = 0;
 
     /**
      * Destroys a window.
@@ -109,7 +110,11 @@ public:
      * @param y Pointer to store the y coordinate.
      * @return Bitmask of pressed buttons.
      */
-    virtual uint32_t getMouseState(int* x, int* y) const { return 0; }
+    virtual uint32_t getMouseState(int* x, int* y) const {
+        if (x) *x = 0;
+        if (y) *y = 0;
+        return 0;
+    }
 
     /**
      * Returns whether the specified window has input focus.
@@ -131,6 +136,48 @@ public:
      */
     virtual void onFrameFinished(WindowHandle window, filament::Engine* engine,
             filament::Renderer* renderer) {}
+
+    /**
+     * Renders a single frame on behalf of runFrameLoop(). Returns true once the application has
+     * finished, after which it must not be invoked again.
+     */
+    using FrameFn = std::function<bool()>;
+
+    /**
+     * Drives frames until `frame` returns true. Called exactly once per run.
+     *
+     * The frame loop belongs to the display manager because the frame source does, and the two
+     * forms that source takes cannot be reconciled behind a narrower hook. When the application
+     * owns the thread, this is a blocking loop, and what it blocks on is the manager's concern:
+     * the default implementation sleeps, pacing to roughly 60Hz so that an interactive application
+     * does not consume a core between frames, whereas another may block on vsync, on a remote
+     * client acknowledging the previous frame, or on nothing at all. When the frame source belongs
+     * to the platform instead, as with a browser's requestAnimationFrame or Android's
+     * Choreographer, there is no loop to run: such an implementation registers `frame` with that
+     * source and returns immediately.
+     *
+     * Teardown is not the implementation's responsibility. `frame` calls FilamentApp2::shutdown()
+     * before it reports completion, so nothing remains to be done once this returns, and an
+     * implementation that returns early must not treat its own return as the end of the run.
+     */
+    virtual void runFrameLoop(FrameFn frame) {
+        while (!frame()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+    }
+
+    /**
+     * Returns whether this display manager renders offscreen, without an OS window.
+     *
+     * This governs surface handling only. A headless manager receives an offscreen swap chain
+     * sized from getWindowSize() rather than one created from getNativeWindow(), and its window
+     * size is taken as its drawable size, without DPI scaling. Frame delivery and pacing are
+     * independent of this property and belong to runFrameLoop().
+     *
+     * An implementation that returns true must return nullptr from getNativeWindow(). The converse
+     * does not hold: a windowed manager may also report nullptr before its surface exists.
+     */
+    virtual bool isHeadless() const { return false; }
 };
 
 } // namespace filament::app
