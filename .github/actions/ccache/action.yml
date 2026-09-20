@@ -22,29 +22,28 @@ description: >
 inputs:
   config:
     description: >
-      Identifies the build configuration this cache belongs to, e.g. "desktop". ccache keys on the
-      full compiler command line, so configurations built with different flags share no entries
-      and should not share a cache.
+      Identifies the build configuration this cache belongs to. The key also carries the runner OS
+      and architecture, so "desktop" on Linux and "desktop" on macOS are already separate caches.
 
-      Jobs that build several configurations share one value when they have a configuration in
-      common: test-code-correctness builds an asan/ubsan debug tree plus a plain release tree, and
-      passes "desktop" because the release half matches what postsubmit writes. Its asan objects
-      can never hit, since no writer compiles with -fsanitize; that is expected, and the reason
-      its ccache statistics show a lower hit rate than the other desktop jobs.
+      On Linux there is one cache per configuration, because the postsubmit warmer compiles the
+      configurations in parallel and a GitHub cache entry is written by exactly one job. Splitting
+      them also means a reader downloads only the slice it needs. A job that compiles two
+      configurations restores twice; see test-code-correctness in the presubmit workflow. Each
+      restore adds its budget to the ceiling, so a job is never capped below what it restored.
+
+      Every value needs a writer in postsubmit that compiles the same configuration, otherwise
+      readers restore an entry that cannot hit:
+
+        - desktop-release: the ccache-arm-linux warmer. Read by build-linux, and by the release
+          half of test-code-correctness.
+        - desktop-asan-debug: the ccache-arm-linux warmer. Read by the debug half of
+          test-code-correctness.
+        - desktop-backend-test: the ccache-arm-linux warmer. Read by test-backend.
+        - desktop (macOS only): the build-mac job, whose "continuous" build covers what presubmit
+          mac compiles. macOS is not split because build-mac is already a single writer.
+        - ios: the postsubmit build-ios job. Its "continuous" build compiles the device release
+          objects presubmit needs, plus the debug and simulator ones it does not.
     required: true
-  max-size:
-    description: >
-      Upper bound on the on-disk cache. Ideally this comfortably exceeds the total of every
-      configuration a single job builds, otherwise ccache evicts entries that were just restored
-      while the build is still running. It is bounded from above by the repository's 10 GB Actions
-      cache quota: the writer runs on two platforms, so each increment here costs twice as much of
-      the budget shared with the mesa, emsdk, Vulkan SDK and glTF asset caches.
-
-      The postsubmit writer builds both debug and release, which may not fit in the default. Check
-      the "Cache size" line of the ccache statistics step: if it sits pinned at the ceiling, this
-      needs raising (and the quota re-checked) or the debug configuration needs its own key.
-    required: false
-    default: '2G'
 
 outputs:
   cache-path:
@@ -66,6 +65,30 @@ runs:
         CACHE_PATH="${HOME}/.ccache"
         CACHE_KEY="ccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config }}"
 
+        # A property of the cache rather than of the job, so that every job touching an entry
+        # agrees on its ceiling. Budgets are in MiB so a job restoring several caches can add them
+        # up.
+        #
+        # These are guesses. The only measurements are 380 MiB for all three Linux configurations
+        # back when they shared one entry, which predates asan being cached at all, and 563 MiB for
+        # macOS desktop; iOS is unmeasured and compiles debug, release and simulator, so it gets
+        # more room. Correct them from `gh cache list` and from the eviction warning ccache-stats
+        # prints. Headroom is tight: the 10 GB quota is shared with the mesa, emsdk, Vulkan SDK and
+        # glTF caches, and re-earning an evicted mesa entry costs 30 to 60 minutes of paid runner
+        # time.
+        case "${{ inputs.config }}" in
+          ios)     CONFIG_BUDGET_MIB=2048 ;;
+          desktop) CONFIG_BUDGET_MIB=2048 ;;
+          *)       CONFIG_BUDGET_MIB=1024 ;;
+        esac
+
+        # Each restore raises the ceiling by its own budget. A job capped at one configuration's
+        # worth while holding two would evict what it had just downloaded: ccache evicts oldest
+        # first by mtime, and restored objects carry the archive's mtime. The running total lives
+        # in the environment because a composite action cannot count its own invocations; the name
+        # avoids the CCACHE_ prefix so ccache does not read it as a setting.
+        TOTAL_BUDGET_MIB=$(( ${FILAMENT_CCACHE_BUDGET_MIB:-0} + CONFIG_BUDGET_MIB ))
+
         {
           echo "path=${CACHE_PATH}"
           # The commit is appended so that every save writes a new immutable entry; jobs find the
@@ -76,7 +99,9 @@ runs:
 
         {
           echo "CCACHE_DIR=${CACHE_PATH}"
-          echo "CCACHE_MAXSIZE=${{ inputs.max-size }}"
+          # Mi, not M: ccache reads a bare M or G as a decimal multiplier.
+          echo "CCACHE_MAXSIZE=${TOTAL_BUDGET_MIB}Mi"
+          echo "FILAMENT_CCACHE_BUDGET_MIB=${TOTAL_BUDGET_MIB}"
           # ccache identifies the compiler by mtime and size by default, both of which change
           # whenever the runner image is rebuilt even when the compiler itself is identical.
           # Hashing the binary keeps the cache valid across image updates.
