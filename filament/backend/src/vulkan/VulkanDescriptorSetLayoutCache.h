@@ -58,8 +58,9 @@ private:
         VulkanDescriptorSetLayout::Bitmask bitmask = {};
         // number of immutable samplers can be arbitrary; so we hash them into 64-bit.
         uint64_t immutableSamplerHash = 0;
+        uint64_t padding = 0;
     };
-    static_assert(sizeof(LayoutKey) == 48);
+    static_assert(sizeof(LayoutKey) == 96);
 
     using LayoutKeyHashFn = utils::hash::MurmurHashFn<LayoutKey>;
     struct LayoutKeyEqual {

@@ -602,6 +602,10 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
+        if (fieldBinding >= MAX_DESCRIPTOR_COUNT) {
+            return false;
+        }
+
         if (!unflattener.read(&fieldType)) {
             return false;
         }
@@ -685,6 +689,10 @@ bool ChunkSubpassInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
+        if (subpass->binding >= MAX_DESCRIPTOR_COUNT) {
+            return false;
+        }
+
         subpass->type = SubpassType (subpassType);
         subpass->format = Format (subpassFormat);
         subpass->precision = Precision (subpassPrecision);
@@ -701,10 +709,16 @@ bool ChunkBindingUniformInfo::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&bindingPointCount)) {
         return false;
     }
+    if (bindingPointCount > MAX_DESCRIPTOR_COUNT) {
+        return false;
+    }
     bindingUniformInfo->reserve(bindingPointCount);
     for (size_t i = 0; i < bindingPointCount; i++) {
         uint8_t index;
         if (!unflattener.read(&index)) {
+            return false;
+        }
+        if (index >= MAX_DESCRIPTOR_COUNT) {
             return false;
         }
         CString uboName;
@@ -775,6 +789,9 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&descriptorCount)) {
         return false;
     }
+    if (descriptorCount > MAX_DESCRIPTOR_COUNT) {
+        return false;
+    }
 
     auto& descriptors = (*container)[+DescriptorSetBindingPoints::PER_MATERIAL];
     descriptors.reserve(descriptorCount);
@@ -789,6 +806,9 @@ bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
         }
         uint8_t binding;
         if (!unflattener.read(&binding)) {
+            return false;
+        }
+        if (binding >= MAX_DESCRIPTOR_COUNT) {
             return false;
         }
         descriptors.push_back({
@@ -806,6 +826,9 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
     if (!unflattener.read(&descriptorCount)) {
         return false;
     }
+    if (descriptorCount > MAX_DESCRIPTOR_COUNT) {
+        return false;
+    }
     auto& descriptors = container->descriptors;
     descriptors.reserve(descriptorCount);
     for (size_t i = 0; i < descriptorCount; i++) {
@@ -819,6 +842,9 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
         }
         uint8_t binding;
         if (!unflattener.read(&binding)) {
+            return false;
+        }
+        if (binding >= MAX_DESCRIPTOR_COUNT) {
             return false;
         }
         uint8_t flags;

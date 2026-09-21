@@ -388,10 +388,10 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     }
     float _207 = floor(_206);
     float _220 = _121.x;
-    float3 _235 = select(select(select(select(select(float3(0.03125, _121.yy), float3(0.0625, _220, _121.y), bool3(_207 < 5.0)), float3(0.125, in_var_ATTRIBUTE1[1].w, _220), bool3(_207 < 4.0)), float3(0.25, in_var_ATTRIBUTE1[1].zw), bool3(_207 < 3.0)), float3(0.5, in_var_ATTRIBUTE1[1].yz), bool3(_207 < 2.0)), float3(1.0, in_var_ATTRIBUTE1[1].xy), bool3(_207 < 1.0));
+    float3 _235 = select(select(select(select(select(float3(0.03125, _121.yy), float3(0.0625, _220, _121.y), bool3(_207 < 5.0)), float3(0.125, in_var_ATTRIBUTE1[1u].w, _220), bool3(_207 < 4.0)), float3(0.25, in_var_ATTRIBUTE1[1u].zw), bool3(_207 < 3.0)), float3(0.5, in_var_ATTRIBUTE1[1u].yz), bool3(_207 < 2.0)), float3(1.0, in_var_ATTRIBUTE1[1u].xy), bool3(_207 < 1.0));
     float _236 = _235.x;
-    float _245 = (((in_var_ATTRIBUTE1[0].x * 65280.0) + (in_var_ATTRIBUTE1[0].y * 255.0)) - 32768.0) * 0.0078125;
-    float _252 = (((in_var_ATTRIBUTE1[0].z * 65280.0) + (in_var_ATTRIBUTE1[0].w * 255.0)) - 32768.0) * 0.0078125;
+    float _245 = (((in_var_ATTRIBUTE1[0u].x * 65280.0) + (in_var_ATTRIBUTE1[0u].y * 255.0)) - 32768.0) * 0.0078125;
+    float _252 = (((in_var_ATTRIBUTE1[0u].z * 65280.0) + (in_var_ATTRIBUTE1[0u].w * 255.0)) - 32768.0) * 0.0078125;
     float2 _257 = floor(_122 * float2(_236));
     float2 _271 = float2((LandscapeParameters.LandscapeParameters_SubsectionSizeVertsLayerUVPan.x * _236) - 1.0, fast::max((LandscapeParameters.LandscapeParameters_SubsectionSizeVertsLayerUVPan.x * 0.5) * _236, 2.0) - 1.0) * float2(LandscapeParameters.LandscapeParameters_SubsectionSizeVertsLayerUVPan.y);
     float3 _287 = mix(float3(_257 / float2(_271.x), mix(_245, _252, _235.y)), float3(floor(_257 * float2(0.5)) / float2(_271.y), mix(_245, _252, _235.z)), float3(_206 - _207));

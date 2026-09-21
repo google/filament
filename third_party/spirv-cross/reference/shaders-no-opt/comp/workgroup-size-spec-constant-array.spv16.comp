@@ -3,6 +3,8 @@
 #ifndef SPIRV_CROSS_CONSTANT_ID_0
 #define SPIRV_CROSS_CONSTANT_ID_0 1u
 #endif
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = 1, local_size_z = 1) in;
+
 #ifndef SPIRV_CROSS_CONSTANT_ID_1
 #define SPIRV_CROSS_CONSTANT_ID_1 2
 #endif
@@ -18,8 +20,6 @@ const uint _27 = (_22 * _26);
 const uint _31 = (uint(A) + 0u);
 const uint _32 = _25.x;
 const uint _33 = (_31 * _32);
-
-layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = 1, local_size_z = 1) in;
 
 layout(binding = 0, std430) buffer SSBO
 {

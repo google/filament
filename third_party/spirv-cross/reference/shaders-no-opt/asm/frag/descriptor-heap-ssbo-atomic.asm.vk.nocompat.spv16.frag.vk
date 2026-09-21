@@ -1,0 +1,24 @@
+#version 460
+#extension GL_EXT_descriptor_heap : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_shader_image_load_formatted : require
+
+layout(descriptor_heap, std430) buffer SSBOAtomic
+{
+    uint data;
+    uint data2;
+} spvSSBOAtomic_32ResourceHeap[];
+
+layout(descriptor_heap, std430) buffer SSBOAtomic_1
+{
+    uint data;
+    uint data2;
+} spvSSBOAtomic_35ResourceHeap[];
+
+void main()
+{
+    int desc_index = int(gl_FragCoord.x);
+    uint _34 = atomicAdd(spvSSBOAtomic_32ResourceHeap[desc_index].data2, 1u);
+    uint _37 = atomicAdd(spvSSBOAtomic_35ResourceHeap[desc_index].data2, 1u);
+}
+

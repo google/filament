@@ -1,0 +1,18 @@
+static uint _16;
+
+RWByteAddressBuffer _4 : register(u0);
+
+void comp_main()
+{
+    uint _19 = 0u;
+    for (uint _22 = 0u; _22 < 10u; _19++, _22++)
+    {
+        _4.Store(0, _19);
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

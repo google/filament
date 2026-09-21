@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 55
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %half = OpTypeFloat 16
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+    %uint_64 = OpConstant %uint 64
+  %arr_float = OpTypeArray %float %uint_64
+   %arr_half = OpTypeArray %half %uint_64
+%ptr_wg_arr_f = OpTypePointer Workgroup %arr_float
+%ptr_wg_arr_h = OpTypePointer Workgroup %arr_half
+  %wg_data_f = OpVariable %ptr_wg_arr_f Workgroup
+  %wg_data_h = OpVariable %ptr_wg_arr_h Workgroup
+%ptr_wg_float = OpTypePointer Workgroup %float
+ %ptr_wg_half = OpTypePointer Workgroup %half
+; float32 accumulator cooperative matrix type
+%coopmat_f32 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+; float16 accumulator cooperative matrix type
+%coopmat_f16 = OpTypeCooperativeMatrixKHR %half %uint_3 %uint_8 %uint_8 %uint_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+; Load a float16 matrix from workgroup memory
+     %p_half = OpAccessChain %ptr_wg_half %wg_data_h %uint_0
+      %m_f16 = OpCooperativeMatrixLoadKHR %coopmat_f16 %p_half %uint_0 %uint_8
+; FConvert: half → float32
+      %m_f32 = OpFConvert %coopmat_f32 %m_f16
+; Store float32 result to workgroup memory
+    %p_float = OpAccessChain %ptr_wg_float %wg_data_f %uint_0
+               OpCooperativeMatrixStoreKHR %p_float %m_f32 %uint_0 %uint_8
+               OpReturn
+               OpFunctionEnd

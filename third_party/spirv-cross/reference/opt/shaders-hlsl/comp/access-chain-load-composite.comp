@@ -22,83 +22,114 @@ RWByteAddressBuffer _31 : register(u0);
 
 void comp_main()
 {
-    Foo _36;
-    _36.a = asfloat(uint2x2(_31.Load(0), _31.Load(8), _31.Load(4), _31.Load(12)));
-    _36.b = asfloat(_31.Load2(16));
-    [unroll]
-    for (int _4ident = 0; _4ident < 5; _4ident++)
-    {
-        [unroll]
-        for (int _5ident = 0; _5ident < 2; _5ident++)
-        {
-            [unroll]
-            for (int _6ident = 0; _6ident < 4; _6ident++)
-            {
-                _36.c[_4ident].d[_5ident][_6ident] = asfloat(_31.Load(_6ident * 4 + _5ident * 16 + _4ident * 40 + 24));
-            }
-        }
-        [unroll]
-        for (int _7ident = 0; _7ident < 2; _7ident++)
-        {
-            _36.c[_4ident].baz[_7ident].c = asfloat(_31.Load(_7ident * 4 + _4ident * 40 + 56));
-        }
-    }
-    float2x2 _234 = float2x2(_36.a[0] + 1.0f.xx, _36.a[1] + 1.0f.xx);
+    float2x2 _662 = asfloat(uint2x2(_31.Load(0), _31.Load(8), _31.Load(4), _31.Load(12)));
+    float2 _664 = asfloat(_31.Load2(16));
+    float _674 = asfloat(_31.Load(24));
+    float _676 = asfloat(_31.Load(28));
+    float _678 = asfloat(_31.Load(32));
+    float _681 = asfloat(_31.Load(36));
+    float _685 = asfloat(_31.Load(40));
+    float _687 = asfloat(_31.Load(44));
+    float _689 = asfloat(_31.Load(48));
+    float _691 = asfloat(_31.Load(52));
+    float _697 = asfloat(_31.Load(56));
+    float _701 = asfloat(_31.Load(60));
+    float _709 = asfloat(_31.Load(64));
+    float _711 = asfloat(_31.Load(68));
+    float _713 = asfloat(_31.Load(72));
+    float _715 = asfloat(_31.Load(76));
+    float _719 = asfloat(_31.Load(80));
+    float _721 = asfloat(_31.Load(84));
+    float _723 = asfloat(_31.Load(88));
+    float _725 = asfloat(_31.Load(92));
+    float _731 = asfloat(_31.Load(96));
+    float _735 = asfloat(_31.Load(100));
+    float _743 = asfloat(_31.Load(104));
+    float _745 = asfloat(_31.Load(108));
+    float _747 = asfloat(_31.Load(112));
+    float _749 = asfloat(_31.Load(116));
+    float _753 = asfloat(_31.Load(120));
+    float _755 = asfloat(_31.Load(124));
+    float _757 = asfloat(_31.Load(128));
+    float _759 = asfloat(_31.Load(132));
+    float _765 = asfloat(_31.Load(136));
+    float _769 = asfloat(_31.Load(140));
+    float _777 = asfloat(_31.Load(144));
+    float _779 = asfloat(_31.Load(148));
+    float _781 = asfloat(_31.Load(152));
+    float _783 = asfloat(_31.Load(156));
+    float _787 = asfloat(_31.Load(160));
+    float _789 = asfloat(_31.Load(164));
+    float _791 = asfloat(_31.Load(168));
+    float _793 = asfloat(_31.Load(172));
+    float _799 = asfloat(_31.Load(176));
+    float _803 = asfloat(_31.Load(180));
+    float _811 = asfloat(_31.Load(184));
+    float _813 = asfloat(_31.Load(188));
+    float _815 = asfloat(_31.Load(192));
+    float _817 = asfloat(_31.Load(196));
+    float _821 = asfloat(_31.Load(200));
+    float _823 = asfloat(_31.Load(204));
+    float _825 = asfloat(_31.Load(208));
+    float _827 = asfloat(_31.Load(212));
+    float _833 = asfloat(_31.Load(216));
+    float _837 = asfloat(_31.Load(220));
+    float2x2 _234 = float2x2(_662[0] + 1.0f.xx, _662[1] + 1.0f.xx);
     _31.Store(224, asuint(_234[0].x));
     _31.Store(228, asuint(_234[1].x));
     _31.Store(232, asuint(_234[0].y));
     _31.Store(236, asuint(_234[1].y));
-    _31.Store2(240, asuint(_36.b + 2.0f.xx));
-    _31.Store(248, asuint(_36.c[0].d[0][0]));
-    _31.Store(252, asuint(_36.c[0].d[0][1]));
-    _31.Store(256, asuint(_36.c[0].d[0][2]));
-    _31.Store(260, asuint(_36.c[0].d[0][3]));
-    _31.Store(264, asuint(_36.c[0].d[1][0]));
-    _31.Store(268, asuint(_36.c[0].d[1][1]));
-    _31.Store(272, asuint(_36.c[0].d[1][2]));
-    _31.Store(276, asuint(_36.c[0].d[1][3]));
-    _31.Store(280, asuint(_36.c[0].baz[0].c));
-    _31.Store(284, asuint(_36.c[0].baz[1].c));
-    _31.Store(288, asuint(_36.c[1].d[0][0]));
-    _31.Store(292, asuint(_36.c[1].d[0][1]));
-    _31.Store(296, asuint(_36.c[1].d[0][2]));
-    _31.Store(300, asuint(_36.c[1].d[0][3]));
-    _31.Store(304, asuint(_36.c[1].d[1][0]));
-    _31.Store(308, asuint(_36.c[1].d[1][1]));
-    _31.Store(312, asuint(_36.c[1].d[1][2]));
-    _31.Store(316, asuint(_36.c[1].d[1][3]));
-    _31.Store(320, asuint(_36.c[1].baz[0].c));
-    _31.Store(324, asuint(_36.c[1].baz[1].c));
-    _31.Store(328, asuint(_36.c[2].d[0][0]));
-    _31.Store(332, asuint(_36.c[2].d[0][1]));
-    _31.Store(336, asuint(_36.c[2].d[0][2]));
-    _31.Store(340, asuint(_36.c[2].d[0][3]));
-    _31.Store(344, asuint(_36.c[2].d[1][0]));
-    _31.Store(348, asuint(_36.c[2].d[1][1]));
-    _31.Store(352, asuint(_36.c[2].d[1][2]));
-    _31.Store(356, asuint(_36.c[2].d[1][3]));
-    _31.Store(360, asuint(_36.c[2].baz[0].c));
-    _31.Store(364, asuint(_36.c[2].baz[1].c));
-    _31.Store(368, asuint(_36.c[3].d[0][0]));
-    _31.Store(372, asuint(_36.c[3].d[0][1]));
-    _31.Store(376, asuint(_36.c[3].d[0][2]));
-    _31.Store(380, asuint(_36.c[3].d[0][3]));
-    _31.Store(384, asuint(_36.c[3].d[1][0]));
-    _31.Store(388, asuint(_36.c[3].d[1][1] + 5.0f));
-    _31.Store(392, asuint(_36.c[3].d[1][2]));
-    _31.Store(396, asuint(_36.c[3].d[1][3]));
-    _31.Store(400, asuint(_36.c[3].baz[0].c));
-    _31.Store(404, asuint(_36.c[3].baz[1].c));
-    _31.Store(408, asuint(_36.c[4].d[0][0]));
-    _31.Store(412, asuint(_36.c[4].d[0][1]));
-    _31.Store(416, asuint(_36.c[4].d[0][2]));
-    _31.Store(420, asuint(_36.c[4].d[0][3]));
-    _31.Store(424, asuint(_36.c[4].d[1][0]));
-    _31.Store(428, asuint(_36.c[4].d[1][1]));
-    _31.Store(432, asuint(_36.c[4].d[1][2]));
-    _31.Store(436, asuint(_36.c[4].d[1][3]));
-    _31.Store(440, asuint(_36.c[4].baz[0].c));
-    _31.Store(444, asuint(_36.c[4].baz[1].c));
+    _31.Store2(240, asuint(_664 + 2.0f.xx));
+    _31.Store(248, asuint(_674));
+    _31.Store(252, asuint(_676));
+    _31.Store(256, asuint(_678));
+    _31.Store(260, asuint(_681));
+    _31.Store(264, asuint(_685));
+    _31.Store(268, asuint(_687));
+    _31.Store(272, asuint(_689));
+    _31.Store(276, asuint(_691));
+    _31.Store(280, asuint(_697));
+    _31.Store(284, asuint(_701));
+    _31.Store(288, asuint(_709));
+    _31.Store(292, asuint(_711));
+    _31.Store(296, asuint(_713));
+    _31.Store(300, asuint(_715));
+    _31.Store(304, asuint(_719));
+    _31.Store(308, asuint(_721));
+    _31.Store(312, asuint(_723));
+    _31.Store(316, asuint(_725));
+    _31.Store(320, asuint(_731));
+    _31.Store(324, asuint(_735));
+    _31.Store(328, asuint(_743));
+    _31.Store(332, asuint(_745));
+    _31.Store(336, asuint(_747));
+    _31.Store(340, asuint(_749));
+    _31.Store(344, asuint(_753));
+    _31.Store(348, asuint(_755));
+    _31.Store(352, asuint(_757));
+    _31.Store(356, asuint(_759));
+    _31.Store(360, asuint(_765));
+    _31.Store(364, asuint(_769));
+    _31.Store(368, asuint(_777));
+    _31.Store(372, asuint(_779));
+    _31.Store(376, asuint(_781));
+    _31.Store(380, asuint(_783));
+    _31.Store(384, asuint(_787));
+    _31.Store(388, asuint(_789 + 5.0f));
+    _31.Store(392, asuint(_791));
+    _31.Store(396, asuint(_793));
+    _31.Store(400, asuint(_799));
+    _31.Store(404, asuint(_803));
+    _31.Store(408, asuint(_811));
+    _31.Store(412, asuint(_813));
+    _31.Store(416, asuint(_815));
+    _31.Store(420, asuint(_817));
+    _31.Store(424, asuint(_821));
+    _31.Store(428, asuint(_823));
+    _31.Store(432, asuint(_825));
+    _31.Store(436, asuint(_827));
+    _31.Store(440, asuint(_833));
+    _31.Store(444, asuint(_837));
 }
 
 [numthreads(1, 1, 1)]

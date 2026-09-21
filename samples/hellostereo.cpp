@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include "generated/resources/monkey.h"
 #include "generated/resources/resources.h"
@@ -43,6 +42,8 @@
 
 #include <utils/EntityManager.h>
 #include <utils/getopt.h>
+
+#include <samples/SampleConfig.h>
 
 #include <iostream>
 #include <vector>
@@ -335,8 +336,8 @@ int main(int argc, char** argv) {
     };
     samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
     return 0;
 }

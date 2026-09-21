@@ -1,0 +1,55 @@
+; Tests an OpPhi at a loop header where one incoming value is OpUndef
+; (the other is the loop back-edge). This pattern is produced by
+; --merge-return + --inline-entry-points-exhaustive when an inlined function
+; with an early `return` inside a loop is folded back. Reading the variable
+; on the first iteration would be undefined; we materialize the OpUndef
+; incoming as a zero so HLSL/FXC do not reject the generated code with X4555/X4000.
+;
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 1
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %ssbo DescriptorSet 0
+               OpDecorate %ssbo Binding 0
+       %void = OpTypeVoid
+   %fn_type  = OpTypeFunction %void
+       %bool = OpTypeBool
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+    %uint_10 = OpConstant %uint 10
+       %SSBO = OpTypeStruct %uint
+   %ptr_SSBO = OpTypePointer Uniform %SSBO
+   %ptr_uint = OpTypePointer Uniform %uint
+       %ssbo = OpVariable %ptr_SSBO Uniform
+       %int  = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+ %undef_uint = OpUndef %uint
+       %main = OpFunction %void None %fn_type
+      %entry = OpLabel
+                                 OpBranch %header
+     %header = OpLabel
+        %phi = OpPhi %uint %undef_uint %entry %back %continue
+          %i = OpPhi %uint %uint_0     %entry %inext %continue
+       %cond = OpULessThan %bool %i %uint_10
+                                 OpLoopMerge %merge %continue None
+                                 OpBranchConditional %cond %body %merge
+       %body = OpLabel
+        %dst = OpAccessChain %ptr_uint %ssbo %int_0
+                                 OpStore %dst %phi
+                                 OpBranch %continue
+   %continue = OpLabel
+       %back = OpIAdd %uint %phi %uint_1
+      %inext = OpIAdd %uint %i   %uint_1
+                                 OpBranch %header
+      %merge = OpLabel
+                                 OpReturn
+                                 OpFunctionEnd

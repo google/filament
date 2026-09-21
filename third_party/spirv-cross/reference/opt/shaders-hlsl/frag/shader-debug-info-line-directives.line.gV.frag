@@ -15,8 +15,8 @@ void frag_main()
 {
 #line 137 "test.frag"
 #line 106 "test.frag"
-    bool _288 = iv.x < 0.0f;
-    if (_288)
+    bool _298 = iv.x < 0.0f;
+    if (_298)
     {
 #line 107 "test.frag"
         ov.x = 50.0f;
@@ -27,10 +27,10 @@ void frag_main()
         ov.x = 60.0f;
     }
 #line 114 "test.frag"
-    for (int _519 = 0; _519 < 4; _519++)
+    for (int _529 = 0; _529 < 4; _529++)
     {
 #line 106 "test.frag"
-        if (_288)
+        if (_298)
         {
 #line 107 "test.frag"
             ov.x = 50.0f;
@@ -53,10 +53,10 @@ void frag_main()
         }
     }
 #line 126 "test.frag"
-    for (int _523 = 0; _523 < 4; _523++)
+    for (int _533 = 0; _533 < 4; _533++)
     {
 #line 106 "test.frag"
-        if (_288)
+        if (_298)
         {
 #line 107 "test.frag"
             ov.x = 50.0f;
@@ -67,10 +67,10 @@ void frag_main()
             ov.x = 60.0f;
         }
 #line 114 "test.frag"
-        for (int _527 = 0; _527 < 4; _527++)
+        for (int _537 = 0; _537 < 4; _537++)
         {
 #line 106 "test.frag"
-            if (_288)
+            if (_298)
             {
 #line 107 "test.frag"
                 ov.x = 50.0f;

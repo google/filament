@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
@@ -30,6 +29,8 @@
 
 #include <utils/EntityManager.h>
 #include <utils/getopt.h>
+
+#include <samples/SampleConfig.h>
 
 #include <iostream>
 
@@ -120,8 +121,8 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
 
     return 0;

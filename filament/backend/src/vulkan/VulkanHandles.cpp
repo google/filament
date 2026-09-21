@@ -74,6 +74,9 @@ void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeight) {
 template<typename Bitmask>
 inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t binding,
         Bitmask& mask) {
+    if (UTILS_UNLIKELY(binding >= fvkutils::getFragmentStageShift<Bitmask>())) {
+        return;
+    }
     if ((bool) (stage & ShaderStageFlags::VERTEX)) {
         mask.set(binding + fvkutils::getVertexStageShift<Bitmask>());
     }

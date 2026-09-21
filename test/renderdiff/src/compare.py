@@ -65,11 +65,18 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
   def test_name(p):
     return p.replace('.tif', '')
 
-  all_files = glob.glob(os.path.join(base_dir, "./**/*.tif"), recursive=True)
-  all_files = [os.path.abspath(f) for f in all_files \
-               if not test_filter or fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
-  test_dirs = set(os.path.abspath(os.path.dirname(f)).replace(os.path.abspath(base_dir) + '/', '') \
-                  for f in all_files)
+  golden_files = glob.glob(os.path.join(base_dir, "./**/*.tif"), recursive=True)
+  comp_files = glob.glob(os.path.join(comparison_dir, "./**/*.tif"), recursive=True)
+
+  if test_filter:
+    golden_files = [f for f in golden_files if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
+    comp_files = [f for f in comp_files if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
+
+  all_files = [os.path.abspath(f) for f in golden_files]
+  test_dirs = set(
+      [os.path.relpath(os.path.dirname(f), base_dir) for f in golden_files] +
+      [os.path.relpath(os.path.dirname(f), comparison_dir) for f in comp_files]
+  )
   all_results = []
 
   # Parse test configuration if provided
@@ -142,8 +149,7 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
                           if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
 
     for base_file in comparison_files:
-      src_fname = os.path.abspath(base_file)
-      test_case = base_file.replace(f'{comp_test_dir}/', '')
+      test_case = os.path.relpath(base_file, comp_test_dir)
       if test_case not in seen_test_cases:
         results.append({
           'name': test_case,

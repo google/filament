@@ -1,0 +1,11 @@
+#ifdef SPIRV_CROSS_LIBRARY_HEADER
+#version 450
+#endif
+
+const uint _15[4] = uint[](10u, 20u, 30u, 40u);
+
+uint lookup(uint i)
+{
+    return _15[i];
+}
+

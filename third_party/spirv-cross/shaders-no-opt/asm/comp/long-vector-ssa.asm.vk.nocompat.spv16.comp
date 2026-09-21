@@ -1,0 +1,75 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpCapability LongVectorEXT
+               OpExtension "SPV_EXT_long_vector"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %s430
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_long_vector"
+               OpName %main "main"
+               OpName %v5 "v5"
+               OpName %SSBO430 "SSBO430"
+               OpMemberName %SSBO430 0 "v5"
+               OpName %s430 "s430"
+               OpDecorate %SSBO430 Block
+               OpMemberDecorate %SSBO430 0 Offset 0
+               OpDecorate %s430 Binding 0
+               OpDecorate %s430 DescriptorSet 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v5float = OpTypeVector %float 5
+%_ptr_Function_v5float = OpTypePointer Function %v5float
+    %SSBO430 = OpTypeStruct %v5float
+%_ptr_StorageBuffer_SSBO430 = OpTypePointer StorageBuffer %SSBO430
+       %s430 = OpVariable %_ptr_StorageBuffer_SSBO430 StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+	  %null = OpConstantNull %v5float
+	  %float_2 = OpConstant %float 2.0
+%_ptr_StorageBuffer_v5float = OpTypePointer StorageBuffer %v5float
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+         %23 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %v5 = OpVariable %_ptr_Function_v5float Function
+         %16 = OpAccessChain %_ptr_StorageBuffer_v5float %s430 %int_0
+         %17 = OpLoad %v5float %16
+               OpStore %v5 %17
+         %18 = OpLoad %v5float %v5
+		 %mul = OpFMul %v5float %18 %18
+
+		 ; Test various SSA-based vector things.
+		 %shuf0 = OpVectorShuffle %v5float %18 %mul 0 5 9 4 3
+		 %shuf1 = OpVectorShuffle %v5float %18 %mul 0 1 2 3 4
+		 %shuf2 = OpVectorShuffle %v5float %18 %null 0 5 2 6 4
+		 %inst0 = OpCompositeInsert %v5float %float_2 %mul 0
+		 %inst1 = OpCompositeInsert %v5float %float_2 %inst0 4
+		 %ext0 = OpCompositeExtract %float %18 0 
+		 %ext1 = OpCompositeExtract %float %18 4
+
+		 ; Try extracting from null constant long-vector. Edge cases!
+		 %extadd = OpFAdd %float %ext0 %ext1
+		 %extnull = OpCompositeExtract %float %null 2
+		 %extadd2 = OpFAdd %float %extadd %extnull
+
+		 %inst2 = OpCompositeInsert %v5float %extadd2 %inst0 3
+
+
+		 ; VectorInsertDynamic/ExtractDynamic impl go via common access chain, so leave it as-is.
+
+         %19 = OpAccessChain %_ptr_StorageBuffer_v5float %s430 %int_0
+               OpStore %19 %shuf0
+               OpStore %19 %shuf1
+               OpStore %19 %shuf2
+               OpStore %19 %inst2
+               OpReturn
+               OpFunctionEnd

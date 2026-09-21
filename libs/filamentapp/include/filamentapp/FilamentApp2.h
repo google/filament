@@ -176,6 +176,7 @@ public:
             mFixedTimeStep = fixedTimeStep;
             return *this;
         }
+
         /**
          * Sets a custom AssetLoader for the application.
          *
@@ -424,15 +425,6 @@ public:
     FilamentApp2& operator=(const FilamentApp2& rhs) = delete;
     FilamentApp2& operator=(FilamentApp2&& rhs) = delete;
 
-    /**
-     * Returns the path to the Filament root for loading assets. This is determined from the
-     * executable folder, which allows users to launch samples from any folder.
-     *
-     * This takes into account multi-configuration CMake generators, like Visual Studio or Xcode,
-     * that have different executable paths compared to single-configuration generators, like Ninja.
-     */
-    static const utils::Path& getRootAssetsPath();
-
 private:
     using CameraManipulator = filament::camutils::Manipulator<float>;
 
@@ -607,8 +599,7 @@ private:
     uint32_t mWarmupFrames = MAX_WARMUP_FRAMES;
     float const mFixedTimeStep = 0.0f;
     uint32_t mCurrentFrame = 0;
-    double mVirtualTime = 0.0;
-    double mLastVirtualTime = 0.0;
+    double mLastDisplayManagerTime = 0.0;
 
     std::unique_ptr<Cube> mCameraCube;
     std::unique_ptr<Grid> mCameraGrid;

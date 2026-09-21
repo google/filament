@@ -16,7 +16,7 @@ void main()
     v2.x = _22;
     v2.y = uintBitsToFloat(_28);
     v2.z = uintBitsToFloat(_33);
-    o0.y = float(floatBitsToUint(intBitsToFloat(floatBitsToInt(v2.y) + floatBitsToInt(v2.z))));
+    o0.y = float(uint(floatBitsToInt(v2.y) + floatBitsToInt(v2.z)));
     o0.x = v1.y + v2.x;
     o0 = vec4(o0.x, o0.y, v1.z, v1.x);
 }

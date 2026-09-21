@@ -296,7 +296,7 @@ void FilamentApp2::init() {
 
     if (mImguiCallback) {
         mAppGui = std::make_unique<FilamentAppGui>(mEngine, mUiView->getView(),
-                getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
+                mAssetLoader->resolve("assets/fonts/Roboto-Medium.ttf"));
     }
 
     mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth,
@@ -458,23 +458,28 @@ bool FilamentApp2::doFrame() {
             mEngine->execute();
         }
 
-        float timeStep = 0.0f;
-        if (mFixedTimeStep > 0.0f) {
-            mVirtualTime += (double) mFixedTimeStep;
-            timeStep = mFixedTimeStep;
-        } else {
-            mVirtualTime = mDisplayManager ? mDisplayManager->getTime() : 0.0;
-            if (mLastVirtualTime == mVirtualTime) {
-                timeStep = 1.0f / 60.0f;
-            } else {
-                timeStep = mVirtualTime - mLastVirtualTime;
+        float timeStep = 1.0f / 60.0f;
+        double currentTime = 0.0;
+
+        // If we're in an instrumented mode (e.g. for testing), then the timestamp used in animation
+        // is not "real" time but virtualized. The following accounts for that.
+        bool const isFixedTime = mFixedTimeStep > 0.0f;
+        if (!isFixedTime) {
+            if (mDisplayManager) {
+                currentTime = mDisplayManager->getTime();
+                if (mLastDisplayManagerTime > 0.0) {
+                    timeStep = float(currentTime - mLastDisplayManagerTime);
+                }
+                mLastDisplayManagerTime = currentTime;
             }
-            mLastVirtualTime = mVirtualTime;
+        } else {
+            currentTime = double(mCurrentFrame + 1) * double(mFixedTimeStep);
+            timeStep = mFixedTimeStep;
         }
 
         // Allow the app to animate the scene if desired.
         if (mAnimation) {
-            mAnimation(mEngine, mMainView->getView(), mVirtualTime);
+            mAnimation(mEngine, mMainView->getView(), currentTime);
         }
 
         // Loop over fresh events twice: first stash them and let ImGui process them, then allow
@@ -783,18 +788,6 @@ void FilamentApp2::shutdown() {
     }
 
     mInitialized = false;
-}
-
-// RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
-// generators, like Visual Studio or Xcode.
-#ifndef RELATIVE_ASSET_PATH
-#define RELATIVE_ASSET_PATH "."
-#endif
-
-const utils::Path& FilamentApp2::getRootAssetsPath() {
-    static const utils::Path root =
-            utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
-    return root;
 }
 
 void FilamentApp2::loadIBL(std::string_view path) {
