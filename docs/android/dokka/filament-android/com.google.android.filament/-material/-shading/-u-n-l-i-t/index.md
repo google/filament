@@ -2,12 +2,7 @@
 
 # UNLIT
 
+[main]\
 [UNLIT](index.md)
 
-No lighting applied, emissive possible
-
-#### See also
-
-| | |
-|---|---|
-| &lt;a href=&quot;https://google.github.io/filament/Materials.html#materialmodels/unlitmodel&quot;&gt; | Unlit model |
+no lighting applied, emissive possible

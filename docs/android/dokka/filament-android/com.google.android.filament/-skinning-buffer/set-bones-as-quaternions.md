@@ -3,9 +3,9 @@
 # setBonesAsQuaternions
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), quaternions: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-Updates the bone transforms in the range [offset, offset + boneCount).
+Updates the bone transforms in the range [offset, offset + count).
 
 #### Parameters
 
@@ -13,7 +13,120 @@ main
 
 | | |
 |---|---|
-| engine | [Engine](../-engine/index.md) instance |
-| quaternions | A [FloatBuffer](https://developer.android.com/reference/kotlin/java/nio/FloatBuffer.html) containing boneCount transforms. Each transform consists of 8 float. float 0 to 3 encode a unit quaternion `w+ix+jy+kz` stored as `x,y,z,w`. float 4 to 7 encode a translation stored as `x,y,z,1`. |
-| boneCount | Number of bones to set |
-| offset | Index of the first bone to set |
+| engine | Reference to the filament::Engine to associate this SkinningBuffer with. |
+| transforms | buffer of Bone transforms |
+| count | number of elements (structured element count) in `transforms` |
+| offset | offset in elements (not bytes) in the SkinningBuffer |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-skinning-buffer.md) |
+
+[main]\
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+Updates the bone transforms in the range [0, count).
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| engine | Reference to the filament::Engine to associate this SkinningBuffer with. |
+| transforms | buffer of Bone transforms |
+| count | number of elements (structured element count) in `transforms` |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-skinning-buffer.md) |
+
+[main]\
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, arrayOffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+Updates the bone transforms in the range [offset, offset + count).
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| engine | Reference to the filament::Engine to associate this SkinningBuffer with. |
+| transforms | array of Bone transforms |
+| arrayOffset | offset in elements (structured element count) in `transforms` to skip |
+| count | number of elements (structured element count) in `transforms` |
+| offset | offset in elements (not bytes) in the SkinningBuffer |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-skinning-buffer.md) |
+
+[main]\
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+Updates the bone transforms in the range [offset, offset + count).
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| engine | Reference to the filament::Engine to associate this SkinningBuffer with. |
+| transforms | array of Bone transforms |
+| count | number of elements (structured element count) in `transforms` |
+| offset | offset in elements (not bytes) in the SkinningBuffer |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-skinning-buffer.md) |
+
+[main]\
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+
+Updates the bone transforms in the range [0, count).
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| engine | Reference to the filament::Engine to associate this SkinningBuffer with. |
+| transforms | array of Bone transforms |
+| count | number of elements (structured element count) in `transforms` |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-skinning-buffer.md) |
+
+[main]\
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(engine: [Engine](../-engine/index.md), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+
+Updates the bone transforms in the range [0, transforms.length / 8).
+
+#### Parameters
+
+main
+
+| | |
+|---|---|
+| engine | Reference to the filament::Engine to associate this SkinningBuffer with. |
+| transforms | array of Bone transforms |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-skinning-buffer.md) |

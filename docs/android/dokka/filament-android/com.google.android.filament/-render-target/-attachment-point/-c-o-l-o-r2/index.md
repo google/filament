@@ -4,3 +4,5 @@
 
 [main]\
 [COLOR2](index.md)
+
+identifies the 3rd color attachment

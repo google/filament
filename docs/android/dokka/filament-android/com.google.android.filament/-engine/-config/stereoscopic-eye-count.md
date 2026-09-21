@@ -4,12 +4,3 @@
 
 [main]\
 open var [stereoscopicEyeCount](stereoscopic-eye-count.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
-The number of eyes to render when stereoscopic rendering is enabled. Supported values are between 1 and Engine#getMaxStereoscopicEyes() (inclusive).
-
-#### See also
-
-| |
-|---|
-| [View](../../-view/set-stereoscopic-options.md) |
-| [Engine](../get-max-stereoscopic-eyes.md) |

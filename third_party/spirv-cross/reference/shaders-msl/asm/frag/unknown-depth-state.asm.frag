@@ -5,6 +5,30 @@
 
 using namespace metal;
 
+template <typename T>
+static inline depth2d<T> spvDepthCast(texture2d<T> t)
+{
+    return reinterpret_cast<thread const depth2d<T> &>(t);
+}
+
+template <typename T>
+static inline depth2d_array<T> spvDepthCast(texture2d_array<T> t)
+{
+    return reinterpret_cast<thread const depth2d_array<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube<T> spvDepthCast(texturecube<T> t)
+{
+    return reinterpret_cast<thread const depthcube<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube_array<T> spvDepthCast(texturecube_array<T> t)
+{
+    return reinterpret_cast<thread const depthcube_array<T> &>(t);
+}
+
 struct main0_out
 {
     float FragColor [[color(0)]];
@@ -16,18 +40,18 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-float sample_combined(thread float3& vUV, depth2d<float> uShadow, sampler uShadowSmplr)
+float sample_combined(thread float3& vUV, texture2d<float> uShadow, sampler uShadowSmplr)
 {
-    return uShadow.sample_compare(uShadowSmplr, vUV.xy, vUV.z);
+    return spvDepthCast(uShadow).sample_compare(uShadowSmplr, vUV.xy, vUV.z);
 }
 
 static inline __attribute__((always_inline))
-float sample_separate(thread float3& vUV, depth2d<float> uTexture, sampler uSampler)
+float sample_separate(thread float3& vUV, texture2d<float> uTexture, sampler uSampler)
 {
-    return uTexture.sample_compare(uSampler, vUV.xy, vUV.z);
+    return spvDepthCast(uTexture).sample_compare(uSampler, vUV.xy, vUV.z);
 }
 
-fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uShadow [[texture(0)]], depth2d<float> uTexture [[texture(1)]], sampler uShadowSmplr [[sampler(0)]], sampler uSampler [[sampler(1)]])
+fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uShadow [[texture(0)]], texture2d<float> uTexture [[texture(1)]], sampler uShadowSmplr [[sampler(0)]], sampler uSampler [[sampler(1)]])
 {
     main0_out out = {};
     out.FragColor = sample_combined(in.vUV, uShadow, uShadowSmplr) + sample_separate(in.vUV, uTexture, uSampler);

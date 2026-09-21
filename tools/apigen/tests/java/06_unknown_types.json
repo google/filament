@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "generator_version": "1.0.0",
+    "source_file": "tests/java/06_unknown_types.h"
+  },
+  "classes": [
+    {
+      "name": "UnknownTypeTest",
+      "qualified_name": "UnknownTypeTest",
+      "location": { "file": "tests/java/06_unknown_types.h", "line": 1 },
+      "doc": { "brief": "", "details": "", "params": {}, "returns": "", "meta": {} },
+      "attributes": [],
+      "type": { "cpp_name": "UnknownTypeTest", "category": "object", "is_const": false, "is_pointer": false, "is_reference": false, "is_move_reference": false },
+      "bases": [],
+      "methods": [
+        {
+          "name": "methodWithUnknown",
+          "qualified_name": "methodWithUnknown(UnknownType*)",
+          "location": { "file": "tests/java/06_unknown_types.h", "line": 5 },
+          "doc": { "brief": "Method with an unknown type.", "details": "", "params": {}, "returns": "", "meta": {} },
+          "attributes": [],
+          "return_type": { "cpp_name": "void", "category": "void", "is_const": false, "is_pointer": false, "is_reference": false, "is_move_reference": false },
+          "arguments": [
+            {
+              "name": "ptr",
+              "type": { "cpp_name": "UnknownType*", "category": "object", "is_const": false, "is_pointer": true, "is_reference": false, "is_move_reference": false },
+              "default_value": null
+            }
+          ],
+          "is_static": false,
+          "is_const": false,
+          "template_parameters": [],
+          "constraint": null,
+          "specializations": []
+        }
+      ],
+      "fields": [],
+      "aliases": []
+    }
+  ],
+  "functions": [],
+  "includes": { "user": [], "system": [] },
+  "enums": []
+}

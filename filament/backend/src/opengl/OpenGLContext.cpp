@@ -99,8 +99,6 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     initBugs(&bugs, ext, major, minor,
             vendor, renderer, version, shader);
 
-    initWorkarounds(bugs, &ext);
-
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,  &gets.max_combined_texture_image_units);
@@ -110,6 +108,8 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,          &gets.max_array_texture_layers);
 
     mFeatureLevel = resolveFeatureLevel(major, minor, ext, gets, bugs);
+
+    initWorkarounds(bugs, &ext, mFeatureLevel);
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
     mShaderModel = ShaderModel::MOBILE;
@@ -546,6 +546,18 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         bugs->disable_depth_precache_for_default_material = true;
     }
 
+#if defined(__EMSCRIPTEN__)
+    // Seen on
+    // [WebGL]
+    // [ANGLE's Metal backend]
+    // ANGLE's Metal backend can incur significant overhead when a large UBO is accessed through
+    // many different ranges, especially when uniform layout conversion is required. This
+    // regression has only been observed with the Metal backend so far, but since the underlying
+    // ANGLE backend cannot be reliably identified at runtime on WebGL, apply the workaround to
+    // all WASM builds.
+    bugs->disable_material_instance_uniform_batching = true;
+#endif
+
 #ifdef BACKEND_OPENGL_VERSION_GLES
 #   ifndef FILAMENT_IOS // FILAMENT_IOS is guaranteed to have ES3.x
     if (UTILS_UNLIKELY(major == 2)) {
@@ -559,11 +571,20 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     // feedback loops are allowed on GL desktop as long as writes are disabled
     bugs->allow_read_only_ancillary_feedback_loop = true;
 #endif
+
+#if defined(__ANDROID__)
+    // ES 2.0 support for sRGB is buggy on most mobile devices, and so we disable it for Android.
+    bugs->disable_es2_srgb_ext = true;
+#endif
 }
 
-void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext) {
+void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext,
+        FeatureLevel const featureLevel) {
     if (bugs.disable_framebuffer_fetch_extension) {
         ext->EXT_shader_framebuffer_fetch = false;
+    }
+    if (featureLevel == FeatureLevel::FEATURE_LEVEL_0 && bugs.disable_es2_srgb_ext) {
+        ext->EXT_texture_sRGB = false;
     }
 }
 

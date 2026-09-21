@@ -83,6 +83,30 @@ inline spvGatherCompareReturn<Tex, Tp...> spvGatherCompareConstOffsets(const thr
     return spvGatherCompareReturn<Tex, Tp...>(rslts[0].w, rslts[1].w, rslts[2].w, rslts[3].w);
 }
 
+template <typename T>
+static inline depth2d<T> spvDepthCast(texture2d<T> t)
+{
+    return reinterpret_cast<thread const depth2d<T> &>(t);
+}
+
+template <typename T>
+static inline depth2d_array<T> spvDepthCast(texture2d_array<T> t)
+{
+    return reinterpret_cast<thread const depth2d_array<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube<T> spvDepthCast(texturecube<T> t)
+{
+    return reinterpret_cast<thread const depthcube<T> &>(t);
+}
+
+template <typename T>
+static inline depthcube_array<T> spvDepthCast(texturecube_array<T> t)
+{
+    return reinterpret_cast<thread const depthcube_array<T> &>(t);
+}
+
 constant spvUnsafeArray<int2, 4> _38 = spvUnsafeArray<int2, 4>({ int2(-8, 3), int2(-4, 7), int2(0, 3), int2(3, 0) });
 
 struct main0_out
@@ -96,10 +120,10 @@ struct main0_in
     float2 compare_value [[user(locn1)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> tex [[texture(0)]], sampler texSmplr [[sampler(0)]])
+fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> tex [[texture(0)]], sampler texSmplr [[sampler(0)]])
 {
     main0_out out = {};
-    out.FragColor = spvGatherCompareConstOffsets(tex, texSmplr, _38, in.coord, in.compare_value.x);
+    out.FragColor = spvGatherCompareConstOffsets(spvDepthCast(tex), texSmplr, _38, in.coord, in.compare_value.x);
     return out;
 }
 

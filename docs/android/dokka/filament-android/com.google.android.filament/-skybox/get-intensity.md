@@ -5,4 +5,4 @@
 [main]\
 open fun [getIntensity](get-intensity.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Returns the `Skybox`'s intensity in *lux*, or *lumen/m^2*.
+Returns the skybox's intensity in lux, or lumen/m^2.

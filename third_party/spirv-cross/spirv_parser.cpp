@@ -151,8 +151,29 @@ void Parser::parse()
 		SPIRV_CROSS_THROW("Function was not terminated.");
 	if (current_block)
 		SPIRV_CROSS_THROW("Block was not terminated.");
+
+	// Now that all definitions are bound to a kind, we can filter the library
+	// exports and populate the exported functions.
+	for (uint32_t id : ir.library_exports)
+	{
+		if (ir.ids[id].get_type() == TypeFunction)
+			ir.library_exported_functions.push_back(id);
+	}
+
 	if (ir.default_entry_point == 0)
-		SPIRV_CROSS_THROW("There is no entry point in the SPIR-V module.");
+	{
+		if (ir.library_exported_functions.empty())
+			SPIRV_CROSS_THROW("There is no entry point in the SPIR-V module.");
+
+		// No OpEntryPoint, but the module exports functions. Treat as a library
+		// module: designate the first exported function as the default entry
+		// point so analyses keyed on default_entry_point can run.
+		ir.is_library_module = true;
+		ir.default_entry_point = ir.library_exported_functions.front();
+		auto &name = ir.get_name(ir.default_entry_point);
+		ir.entry_points.insert(std::make_pair(ir.default_entry_point,
+		                                      SPIREntryPoint(ir.default_entry_point, ExecutionModelGLCompute, name)));
+	}
 }
 
 const uint32_t *Parser::stream(const Instruction &instr) const
@@ -317,7 +338,7 @@ void Parser::parse(const Instruction &instruction)
 			spirv_ext = SPIRExtension::SPV_AMD_gcn_shader;
 		else if (ext == "NonSemantic.DebugPrintf")
 			spirv_ext = SPIRExtension::NonSemanticDebugPrintf;
-		else if (ext == "NonSemantic.Shader.DebugInfo.100")
+		else if (ext.find("NonSemantic.Shader.DebugInfo.") == 0)
 			spirv_ext = SPIRExtension::NonSemanticShaderDebugInfo;
 		else if (ext.find("NonSemantic.") == 0)
 			spirv_ext = SPIRExtension::NonSemanticGeneric;
@@ -604,6 +625,19 @@ void Parser::parse(const Instruction &instruction)
 		else
 			ir.set_decoration(id, decoration);
 
+		// Track exported functions so we can compile library modules that have no OpEntryPoint.
+		// LinkageAttributes layout: literal-string (variable words) followed by LinkageType.
+		if (decoration == DecorationLinkageAttributes && length >= 4 &&
+		    static_cast<LinkageType>(ops[length - 1]) == LinkageTypeExport)
+		{
+			ir.library_exports.push_back(id);
+
+			// If OpName was stripped (e.g. by spirv-opt --strip-debug), fall back
+			// to the linkage name so the emitted function keeps its export name.
+			if (ir.get_name(id).empty())
+				ir.set_name(id, extract_string(ir.spirv, instruction.offset + 2));
+		}
+
 		break;
 	}
 
@@ -616,6 +650,7 @@ void Parser::parse(const Instruction &instruction)
 	}
 
 	case OpMemberDecorate:
+	case OpMemberDecorateIdEXT:
 	{
 		uint32_t id = ops[0];
 		uint32_t member = ops[1];
@@ -859,6 +894,7 @@ void Parser::parse(const Instruction &instruction)
 		break;
 	}
 
+	case OpTypeUntypedPointerKHR:
 	case OpTypePointer:
 	{
 		uint32_t id = ops[0];
@@ -866,7 +902,7 @@ void Parser::parse(const Instruction &instruction)
 		// Very rarely, we might receive a FunctionPrototype here.
 		// We won't be able to compile it, but we shouldn't crash when parsing.
 		// We should be able to reflect.
-		auto *base = maybe_get<SPIRType>(ops[2]);
+		auto *base = op == OpTypePointer ? maybe_get<SPIRType>(ops[2]) : nullptr;
 		auto &ptrbase = set<SPIRType>(id, op);
 
 		if (base)
@@ -885,7 +921,10 @@ void Parser::parse(const Instruction &instruction)
 		if (base && base->forward_pointer)
 			forward_pointer_fixups.push_back({ id, ops[2] });
 
-		ptrbase.parent_type = ops[2];
+		if (op == OpTypePointer)
+			ptrbase.parent_type = ops[2];
+		else
+			ptrbase.basetype = SPIRType::Void;
 
 		// Do NOT set ptrbase.self!
 		break;
@@ -1005,6 +1044,27 @@ void Parser::parse(const Instruction &instruction)
 		break;
 	}
 
+	case OpUntypedVariableKHR:
+	{
+		uint32_t type = ops[0];
+		uint32_t id = ops[1];
+		auto storage = static_cast<StorageClass>(ops[2]);
+		uint32_t data_type = length >= 4 ? ops[3] : 0;
+		uint32_t initializer = length >= 5 ? ops[4] : 0;
+
+		if (storage == StorageClassFunction)
+		{
+			if (!current_function)
+				SPIRV_CROSS_THROW("No function currently in scope");
+			current_function->add_local_variable(id);
+		}
+
+		auto &v = set<SPIRVariable>(id, type, storage, initializer);
+		v.untyped = true;
+		v.untyped_alloca_type = data_type;
+		break;
+	}
+
 	// OpPhi
 	// OpPhi is a fairly magical opcode.
 	// It selects temporary variables based on which parent block we *came from*.
@@ -1086,20 +1146,17 @@ void Parser::parse(const Instruction &instruction)
 		uint32_t type = ops[0];
 
 		auto &ctype = get<SPIRType>(type);
+		uint32_t elements = length - 2;
 
 		// We can have constants which are structs and arrays.
 		// In this case, our SPIRConstant will be a list of other SPIRConstant ids which we
 		// can refer to.
-		if (ctype.basetype == SPIRType::Struct || !ctype.array.empty())
+		if (ctype.basetype == SPIRType::Struct || !ctype.array.empty() || elements > 4)
 		{
 			set<SPIRConstant>(id, type, ops + 2, length - 2, op == OpSpecConstantComposite);
 		}
 		else
 		{
-			uint32_t elements = length - 2;
-			if (elements > 4)
-				SPIRV_CROSS_THROW("OpConstantComposite only supports 1, 2, 3 and 4 elements.");
-
 			SPIRConstant remapped_constant_ops[4];
 			const SPIRConstant *c[4];
 			for (uint32_t i = 0; i < elements; i++)
@@ -1132,6 +1189,24 @@ void Parser::parse(const Instruction &instruction)
 			}
 			set<SPIRConstant>(id, type, c, elements, op == OpSpecConstantComposite);
 		}
+		break;
+	}
+
+	case OpConstantSizeOfEXT:
+	{
+		uint32_t id = ops[1];
+		uint32_t type = ops[0];
+		auto &c = set<SPIRConstant>(id, type);
+		c.size_of_type = ops[2];
+		break;
+	}
+
+	case OpTypeBufferEXT:
+	{
+		uint32_t type = ops[0];
+		auto &t = set<SPIRType>(type, OpTypeBufferEXT);
+		t.basetype = SPIRType::DescriptorHeapBuffer;
+		t.ext.descriptor_heap_buffer.storage = static_cast<StorageClass>(ops[1]);
 		break;
 	}
 

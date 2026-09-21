@@ -4,5 +4,3 @@
 
 [main]\
 open var [endFrame](end-frame.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
-Renderer.endFrame() time since epoch [ns].

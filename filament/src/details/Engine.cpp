@@ -514,13 +514,17 @@ void FEngine::init() {
 
     if (UTILS_UNLIKELY(getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
         // UBO batching is not supported in feature level 0
-        if (features.material.enable_material_instance_uniform_batching) {
+        bool uboBatching = features.material.enable_material_instance_uniform_batching &&
+                           !driverApi.isWorkaroundNeeded(
+                                   Workaround::DISABLE_MATERIAL_INSTANCE_UNIFORM_BATCHING);
+        if (uboBatching) {
             // Ubo size of each material instance is at least 16 bytes.
             constexpr BufferAllocator::allocation_size_t minSlotSize = 16;
             auto const uboOffsetAlignment = static_cast<BufferAllocator::allocation_size_t>(
                     driverApi.getUniformBufferOffsetAlignment());
             BufferAllocator::allocation_size_t slotSize = std::max(minSlotSize, uboOffsetAlignment);
-            mUboManager = new UboManager(getDriverApi(), slotSize, mConfig.sharedUboInitialSizeInBytes);
+            mUboManager =
+                    new UboManager(getDriverApi(), slotSize, mConfig.sharedUboInitialSizeInBytes);
         }
 
         mDefaultColorGrading = downcast(mColorGradingBuilder.build(*this));
@@ -734,9 +738,10 @@ void FEngine::shutdown() {
         assert_invariant(mDeferredAsyncObjectDestruction.empty());
     }
 
-    // Finally, call user callbacks that might have been scheduled.
+    // Finally, call user callbacks that might have been scheduled. This is the last chance to run
+    // them, so it has to drain the ones that schedule other callbacks.
     // These callbacks CANNOT call driver APIs.
-    getDriver().purge();
+    getDriver().purgeAll();
 
     // and destroy the CommandStream
     std::destroy_at(std::launder(reinterpret_cast<DriverApi*>(&mDriverApiStorage)));

@@ -16,7 +16,7 @@ permissions:
 jobs:
   cocoapods-deploy:
     name: cocoapods-deploy
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Check out iOS/CocoaPods directory
         uses: Bhacaz/checkout-files@49fc3050859046bf4f4873678d46099985640e89

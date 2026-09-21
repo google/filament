@@ -69,6 +69,10 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::StaticString const
     return BuilderNameMixin::name(name);
 }
 
+SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::ImmutableCString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createSkinningBuffer(*this);
 }
@@ -113,6 +117,12 @@ void FSkinningBuffer::setBones(FEngine& engine,
             << "SkinningBuffer (size=" << (unsigned)mBoneCount
             << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
             << ")";
+    FILAMENT_CHECK_PRECONDITION(count == 0 || transforms != nullptr)
+            << "transforms cannot be null";
+
+    if (count == 0) {
+        return;
+    }
 
     setBones(engine, mHandle, transforms, count, offset);
 }
@@ -123,6 +133,12 @@ void FSkinningBuffer::setBones(FEngine& engine,
             << "SkinningBuffer (size=" << (unsigned)mBoneCount
             << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
             << ")";
+    FILAMENT_CHECK_PRECONDITION(count == 0 || transforms != nullptr)
+            << "transforms cannot be null";
+
+    if (count == 0) {
+        return;
+    }
 
     setBones(engine, mHandle, transforms, count, offset);
 }
@@ -136,6 +152,13 @@ static uint32_t packHalf2x16(half2 v) noexcept {
 
 void FSkinningBuffer::setBones(FEngine& engine, Handle<HwBufferObject> handle,
         RenderableManager::Bone const* transforms, size_t const boneCount, size_t const offset) noexcept {
+    FILAMENT_CHECK_PRECONDITION(boneCount == 0 || transforms != nullptr)
+            << "transforms cannot be null";
+
+    if (boneCount == 0) {
+        return;
+    }
+
     auto& driverApi = engine.getDriverApi();
     auto* UTILS_RESTRICT out = driverApi.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
@@ -165,6 +188,13 @@ PerRenderableBoneUib::BoneData FSkinningBuffer::makeBone(mat4f transform) noexce
 
 void FSkinningBuffer::setBones(FEngine& engine, Handle<HwBufferObject> handle,
         mat4f const* transforms, size_t const boneCount, size_t const offset) noexcept {
+    FILAMENT_CHECK_PRECONDITION(boneCount == 0 || transforms != nullptr)
+            << "transforms cannot be null";
+
+    if (boneCount == 0) {
+        return;
+    }
+
     auto& driverApi = engine.getDriverApi();
     auto* UTILS_RESTRICT out = driverApi.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
     for (size_t i = 0, c = boneCount; i < c; ++i) {

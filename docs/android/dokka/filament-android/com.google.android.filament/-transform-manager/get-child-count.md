@@ -5,7 +5,7 @@
 [main]\
 open fun [getChildCount](get-child-count.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the number of children of an [EntityInstance](../-entity-instance/index.md).
+Returns the number of children of a transform component.
 
 #### Return
 
@@ -17,4 +17,4 @@ main
 
 | | |
 |---|---|
-| i | the [EntityInstance](../-entity-instance/index.md) of the transform component to query. |
+| i | The instance of the transform component to query. |

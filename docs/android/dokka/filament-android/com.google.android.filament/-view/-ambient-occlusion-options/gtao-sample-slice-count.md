@@ -5,4 +5,6 @@
 [main]\
 open var [gtaoSampleSliceCount](gtao-sample-slice-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Ground Truth-base Ambient Occlusion (GTAO) options
+# of slices.
+
+Higher value makes less noise.

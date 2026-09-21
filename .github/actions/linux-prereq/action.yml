@@ -18,6 +18,8 @@ runs:
         sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
         sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
         sudo apt-get install ninja-build
+        # The top-level CMakeLists.txt turns ccache on automatically when it is on PATH.
+        sudo apt-get install ccache
 
         # Download and extract the correct CMake binary based on runner architecture
         # We pin the CMake version to avoid sudden breakage due to runner updates.

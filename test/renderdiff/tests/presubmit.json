@@ -53,6 +53,14 @@
             "gltf_test": {
                 "models": ["lucy"]
             }
+        },
+        {
+            "name": "base_sample",
+            "sample_test": {
+                "warmup_frames": 10,
+                "fixed_timestep": 0.0166667,
+                "args": ["--window-size", "512x512"]
+            }
         }
     ],
     "tests": [
@@ -151,6 +159,244 @@
                 "rendering": {
                     "view.screenSpaceReflections.enabled": true
                 }
+            }
+        },
+        {
+            "name": "HelloTriangle",
+            "description": "Triangle primitive sample test",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hellotriangle"
+            }
+        },
+        {
+            "name": "HelloPBR",
+            "description": "Standard PBR pipeline sample test",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hellopbr"
+            }
+        },
+        {
+            "name": "Suzanne",
+            "description": "Filamesh model with standard material sample test",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "suzanne"
+            }
+        },
+        {
+            "name": "Shadowtest",
+            "description": "Directional shadow map cast onto a ground shadow plane",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "shadowtest"
+            }
+        },
+        {
+            "name": "RenderTarget",
+            "description": "Offscreen RenderTarget rendered then sampled as a texture",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "rendertarget"
+            }
+        },
+        {
+            "name": "Lightbulb",
+            "description": "SSAO, bloom and screen space contact shadows",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "lightbulb"
+            }
+        },
+        {
+            "name": "Cloth",
+            "description": "Cloth shading model built with a runtime compiled material",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "sample_cloth"
+            }
+        },
+        {
+            "name": "SkinningTest",
+            "description": "More than four bones per vertex combined with morph targets",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "skinningtest"
+            }
+        },
+        {
+            "name": "SkinningBuffer",
+            "description": "SkinningBuffer shared between two renderables",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "helloskinningbuffer"
+            }
+        },
+        {
+            "name": "Morphing",
+            "description": "Morph target buffer blended with per-renderable morph weights",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hellomorphing"
+            }
+        },
+        {
+            "name": "UvMorphing",
+            "description": "Morph target that animates UV coordinates on a textured mesh",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hellouvmorphing"
+            }
+        },
+        {
+            "name": "HelloSkinning",
+            "description": "Vertex skinning with four bone transforms per vertex",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "helloskinning"
+            }
+        },
+        {
+            "name": "FullPbr",
+            "description": "Full PBR material set lit by an IBL with a skybox",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "sample_full_pbr"
+            }
+        },
+        {
+            "name": "NormalMap",
+            "description": "Tangent space normal mapping on a lit sphere",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "sample_normal_map"
+            }
+        },
+        {
+            "name": "DepthTesting",
+            "description": "Non-default depth comparison function via MaterialInstance::setDepthFunc",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "depthtesting",
+                // The ImGui panel is a fixed pixel size, so it covers ~60% of a default-sized
+                // frame. Render larger so the actual scene dominates the golden.
+                "args": ["--window-size=1024x1024"]
+            }
+        },
+        {
+            "name": "SkinningBufferMoreBones",
+            "description": "SkinningBuffer with nine bones per vertex out of a 256 bone buffer",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "helloskinningbuffer_morebones"
+            }
+        },
+        {
+            "name": "MaterialSandbox",
+            "description": "Runtime material parameter sandbox",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "material_sandbox",
+                // The sphere sits at the center of the frame, which the fixed-pixel-size ImGui
+                // panel completely covers at the default size; render larger to expose it. The IBL
+                // replaces the otherwise black clear with a skybox and lights the sphere.
+                "args": ["--window-size=1024x1024", "--ibl=assets/ibl/lightroom_14b"]
+            }
+        },
+        {
+            "name": "HybridInstancing",
+            "description": "Mixed static and GPU instancing in a particle system",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "hybrid_instancing",
+                // Emitters burst on a stagger spread over the 3s fireworks delay, so the default
+                // 10 frames only catches the first couple of bursts. By frame 60 the particle
+                // count has reached steady state. Render larger so the 0.05-unit particles are
+                // more than a pixel across.
+                "warmup_frames": 60,
+                "args": ["--window-size=1024x1024"]
+            }
+        },
+        // The tests below are included primarily as bit-rot guards rather than for their visual
+        // signal: a sample test fails if the executable exits non-zero or writes no image, so
+        // these catch a sample that stops building, stops running headless, or starts crashing.
+        // Their images are dominated by ImGui chrome or are close to a flat color, but all of
+        // them are byte-deterministic across runs on all three backends.
+        {
+            "name": "ImageViewer",
+            "description": "Image decode to texture, defaulting to textures/Moss_01",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "image_viewer"
+            }
+        },
+        {
+            "name": "StrobeColor",
+            "description": "Per-frame clear color driven by frame time (liveness guard)",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "strobecolor"
+            }
+        },
+        {
+            // NOTE: this currently renders a flat blue frame. The setViewport() call in the
+            // sample's setup() is overwritten by configureCamerasForWindow(), so the split views
+            // never appear. Kept as a liveness guard; the golden will need regenerating when that
+            // is fixed.
+            "name": "ViewTest",
+            "description": "Multiple views sharing a scene (liveness guard)",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "viewtest"
+            }
+        },
+        {
+            "name": "TexturedQuad",
+            "description": "Texture upload and sampling on an orthographic quad",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "texturedquad"
+            }
+        },
+        {
+            "name": "VertexBufferLayout",
+            "description": "Non-interleaved vertex attributes backed by a single VBO",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "vbotest"
+            }
+        },
+        {
+            "name": "DynamicGeometry",
+            "description": "Per-frame vertex buffer updates with renderable rebuilds",
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "animation"
+            }
+        },
+        {
+            // TODO: add "desktop-webgpu" to the two Procedural* tests below.
+            // Attribute-less vertex buffers (VertexBuffer with bufferCount(0),
+            // geometry derived from getVertexIndex()) currently render a blank
+            // frame on WebGPU: the sample exits 0 in under 1.5s but the
+            // screenshot is a single uniform color. Until that is fixed these
+            // two tests are restricted to OpenGL and Vulkan.
+            "name": "ProceduralEffect",
+            "description": "Attribute-less vertex buffer driving a procedural fragment shader",
+            "renderers": ["desktop-opengl", "desktop-vulkan"],
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "procedural_effect"
+            }
+        },
+        {
+            "name": "ProceduralTextureQuad",
+            "description": "Attribute-less vertex buffer with texture sampling",
+            "renderers": ["desktop-opengl", "desktop-vulkan"],
+            "apply_presets": ["base_sample"],
+            "sample_test": {
+                "executable": "procedural_texture_quad"
             }
         }
     ]

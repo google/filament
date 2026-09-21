@@ -5,7 +5,7 @@
 [main]\
 open fun [intensity](intensity.md)(envIntensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [IndirectLight.Builder](index.md)
 
-Environment intensity (optional). 
+(optional) Environment intensity. 
 
 Because the environment is encoded usually relative to some reference, the range can be adjusted with this method.
 
@@ -19,4 +19,4 @@ main
 
 | | |
 |---|---|
-| envIntensity | Scale factor applied to the environment and irradiance such that the result is in *lux*, or *lumen/m^2* (default = 30000) |
+| envIntensity | Scale factor applied to the environment and irradiance such that the result is in lux, or lumen/m^2 (default = 30000) |

@@ -179,7 +179,3 @@ bool FilamentApp::isDirectionalShadowFrustumEnabled() const noexcept {
 bool FilamentApp::isFroxelGridEnabled() const noexcept {
     return mImpl ? mImpl->isFroxelGridEnabled() : false;
 }
-
-const utils::Path& FilamentApp::getRootAssetsPath() {
-    return FilamentApp2::getRootAssetsPath();
-}

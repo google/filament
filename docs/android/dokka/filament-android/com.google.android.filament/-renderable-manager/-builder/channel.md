@@ -5,11 +5,9 @@
 [main]\
 open fun [channel](channel.md)(channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
-Set the channel this renderable is associated to. There can be 8 channels. 
+Set the channel this renderable is associated to. 
 
-All renderables in a given channel are rendered together, regardless of anything else. They are sorted as usual within a channel.
-
-Channels work similarly to priorities, except that they enforce the strongest ordering.
+There can be 8 channels. All renderables in a given channel are rendered together, regardless of anything else. They are sorted as usual within a channel. Channels work similarly to priorities, except that they enforce the strongest ordering.
 
 Channels 0 and 1 may not have render primitives using a material with `refractionType` set to `screenspace`.
 
@@ -29,5 +27,5 @@ main
 
 | |
 |---|
-| com.google.android.filament.RenderableManager.Builder |
-| [RenderableManager](../index.md) | ::setBlendOrderAt() |
+| [RenderableManager.Builder](priority.md) |
+| [RenderableManager](../get-channel.md) |

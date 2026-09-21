@@ -159,22 +159,10 @@ void destroy_window(Window& w, Engine* engine) {
     SDL_DestroyWindow(w.sdl_window);
 }
 
-IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine) {
-    utils::Path iblPath(iblDirectory);
-
-    if (!iblPath.exists()) {
-        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
-        return nullptr;
-    }
-
-    if (!iblPath.isDirectory()) {
-        std::cerr << "The specified IBL path is not a directory: " << iblPath << std::endl;
-        return nullptr;
-    }
-
-    IBL* ibl = new IBL(*engine);
-    if (!ibl->loadFromDirectory(iblPath)) {
-        std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine, filament::app::AssetLoader* loader) {
+    IBL* ibl = new IBL(*engine, loader);
+    if (!ibl->loadFromDirectory(iblDirectory)) {
+        std::cerr << "Could not load the specified IBL: " << iblDirectory << std::endl;
         delete ibl;
         return nullptr;
     }
@@ -195,9 +183,8 @@ void animation_new_frame(Window& w, double dt) {
     w.needsDraw = true;
 }
 
-void setup_static_scene(Window& w, Engine* engine) {
-    auto iblDir = FilamentApp2::getRootAssetsPath() + kIBLFolder;
-    w.ibl = load_IBL(iblDir, engine);
+void setup_static_scene(Window& w, Engine* engine, filament::app::AssetLoader* loader) {
+    w.ibl = load_IBL(kIBLFolder, engine, loader);
     if (w.ibl) {
         w.ibl->getIndirectLight()->setIntensity(10000);
         w.scene->setIndirectLight(w.ibl->getIndirectLight());
@@ -228,9 +215,8 @@ void setup_static_scene(Window& w, Engine* engine) {
     w.needsDraw = true;
 }
 
-void setup_animating_scene(Window& w, Engine* engine) {
-    auto iblDir = FilamentApp2::getRootAssetsPath() + kIBLFolder;
-    w.ibl = load_IBL(iblDir, engine);
+void setup_animating_scene(Window& w, Engine* engine, filament::app::AssetLoader* loader) {
+    w.ibl = load_IBL(kIBLFolder, engine, loader);
     if (w.ibl) {
         w.ibl->getIndirectLight()->setIntensity(10000);
         w.scene->setIndirectLight(w.ibl->getIndirectLight());
@@ -296,8 +282,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     for (auto& w: windows) {
         setup_window(w, engine);
     }
-    setup_animating_scene(windows[0], engine);
-    setup_static_scene(windows[1], engine);
+    setup_animating_scene(windows[0], engine, loader);
+    setup_static_scene(windows[1], engine, loader);
 
     // ---- event loop ----
     size_t nClosed = 0;
@@ -389,7 +375,8 @@ int main(int argc, char* argv[]) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto fApp = createSampleApp(config, dm.get(), loader.get());
     if (fApp) {
         fApp->run();
     }

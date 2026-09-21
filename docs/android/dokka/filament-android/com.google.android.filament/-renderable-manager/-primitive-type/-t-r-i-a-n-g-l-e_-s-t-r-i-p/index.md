@@ -4,3 +4,5 @@
 
 [main]\
 [TRIANGLE_STRIP](index.md)
+
+triangle strip

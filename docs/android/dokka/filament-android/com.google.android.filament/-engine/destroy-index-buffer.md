@@ -4,13 +4,3 @@
 
 [main]\
 open fun [destroyIndexBuffer](destroy-index-buffer.md)(indexBuffer: [IndexBuffer](../-index-buffer/index.md))
-
-Destroys a [IndexBuffer](../-index-buffer/index.md) and frees all its associated resources.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| indexBuffer | the [IndexBuffer](../-index-buffer/index.md) to destroy |

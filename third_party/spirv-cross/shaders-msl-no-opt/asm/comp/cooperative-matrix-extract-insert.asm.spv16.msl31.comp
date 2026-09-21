@@ -1,0 +1,49 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 55
+; Schema: 0
+               OpCapability Shader
+               OpCapability CooperativeMatrixKHR
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main" %wg_data
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+    %uint_64 = OpConstant %uint 64
+    %float_1 = OpConstant %float 1
+  %arr_float = OpTypeArray %float %uint_64
+%ptr_wg_arr = OpTypePointer Workgroup %arr_float
+    %wg_data = OpVariable %ptr_wg_arr Workgroup
+%ptr_wg_float = OpTypePointer Workgroup %float
+; float32 cooperative matrix type
+%coopmat_f32 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %p = OpAccessChain %ptr_wg_float %wg_data %uint_0
+; Load a matrix
+        %mat = OpCooperativeMatrixLoadKHR %coopmat_f32 %p %uint_0 %uint_8
+; Extract the first component this invocation holds (index 0)
+     %elem_0 = OpCompositeExtract %float %mat 0
+; Extract the second component this invocation holds (index 1)
+     %elem_1 = OpCompositeExtract %float %mat 1
+; Insert 1.0 into component 0 of the matrix
+    %mat_ins = OpCompositeInsert %coopmat_f32 %float_1 %mat 0
+; Store the modified matrix
+               OpCooperativeMatrixStoreKHR %p %mat_ins %uint_0 %uint_8
+; Store the extracted scalars to workgroup memory so they are not optimized away
+    %p_elem0 = OpAccessChain %ptr_wg_float %wg_data %uint_0
+               OpStore %p_elem0 %elem_0
+    %p_elem1 = OpAccessChain %ptr_wg_float %wg_data %uint_0
+               OpStore %p_elem1 %elem_1
+               OpReturn
+               OpFunctionEnd

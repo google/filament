@@ -11,7 +11,7 @@ void comp_main()
 {
     uint _24;
     u0_counter.InterlockedAdd(0, -1, _24);
-    u0[asint(asfloat(_24))] = uint(int(gl_GlobalInvocationID.x)).x;
+    u0[int(_24)] = uint(int(gl_GlobalInvocationID.x)).x;
 }
 
 [numthreads(4, 1, 1)]

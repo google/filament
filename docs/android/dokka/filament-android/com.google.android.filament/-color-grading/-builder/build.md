@@ -5,11 +5,11 @@
 [main]\
 open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [ColorGrading](../index.md)
 
-Creates the IndirectLight object and returns a pointer to it.
+Creates the ColorGrading object and returns a pointer to it.
 
 #### Return
 
-A newly created `IndirectLight`
+pointer to the newly created object.
 
 #### Parameters
 
@@ -17,10 +17,4 @@ main
 
 | | |
 |---|---|
-| engine | The [Engine](../../-engine/index.md) to associate this `IndirectLight` with. |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | if a parameter to a builder function was invalid. |
+| engine | Reference to the filament::Engine to associate this ColorGrading with. |

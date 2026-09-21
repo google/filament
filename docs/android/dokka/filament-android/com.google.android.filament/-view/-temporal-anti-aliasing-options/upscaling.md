@@ -5,4 +5,6 @@
 [main]\
 open var [upscaling](upscaling.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
-Upscaling factor. Disables Dynamic Resolution. [BETA]
+Upscaling factor. 
+
+Disables Dynamic Resolution. [BETA]

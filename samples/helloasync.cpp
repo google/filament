@@ -82,6 +82,7 @@ struct App {
     Skybox* skybox = nullptr;
     Camera* cam = nullptr;
     Material* mat = nullptr;
+    filament::app::AssetLoader* loader = nullptr;
 
 
     // --------------------------------------------------------------------------------------------
@@ -186,16 +187,13 @@ struct App {
         }
 
         utils::Invocable<void()> command = [this]() {
-            Path const path =
-                    FilamentApp2::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
-            if (!path.exists()) {
-                std::cerr << "The texture " << path.c_str() << " does not exist" << std::endl;
-                exit(1);
+            auto buf = loader->load("textures/Moss_01/Moss_01_Color.png");
+            if (!buf.empty()) {
+                imageData.reset(stbi_load_from_memory(buf.data(), (int) buf.size(), &imageWidth,
+                        &imageHeight, &imageChannels, 4));
             }
-            imageData.reset(stbi_load(path.c_str(), &imageWidth, &imageHeight,
-                    &imageChannels, 4));
             if (!imageData) {
-                std::cerr << "The texture " << path.c_str() << " could not be loaded" << std::endl;
+                std::cerr << "The texture could not be loaded" << std::endl;
                 exit(1);
             }
         };
@@ -394,6 +392,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
+    app->loader = loader;
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
         app->engine = engine;
@@ -431,17 +430,17 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             app->objectData[i].baseTransform = t * s;
         }
 
+        app->createMaterial();
+
         if (engine->isAsynchronousModeEnabled()) {
             // Build a pipeline for asynchronous operations.
             // Every completion callback receives an AsyncCallStatus. CANCELED means the operation
             // never ran, so the resource it was meant to populate is not usable: the chain has to
             // stop there instead of moving on to a stage that would read an empty resource.
             app->onLoadImageComplete = [app](void* user, AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
-                // Load this once as it's universal across all objects
-                app->createMaterial();
                 // Initiate loading multiple renderables at the same time.
                 app->startLoadingOneRenderable();
                 app->startLoadingOneRenderable();
@@ -450,13 +449,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 app->startLoadingOneRenderable();
             };
             app->onCreateTextureComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
                 app->updateTexture(user, app->onTextureUpdateComplete);
             };
             app->onTextureUpdateComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
                 app->createMaterialInstance(user);
@@ -464,28 +463,28 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             };
             app->onCreateVertexBufferComplete = [app](VertexBuffer* vb, void* user,
                                                         AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
                 app->updateVertexBuffer(user, app->onVertexBufferUpdateComplete);
             };
             app->onVertexBufferUpdateComplete = [app](VertexBuffer* vb, void* user,
                                                         AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
                 app->vertexBufferReady(user);
             };
             app->onCreateIndexBufferComplete = [app](IndexBuffer* ib, void* user,
                                                        AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
                 app->updateIndexBuffer(user, app->onIndexBufferUpdateComplete);
             };
             app->onIndexBufferUpdateComplete = [app](IndexBuffer* ib, void* user,
                                                        AsyncCallStatus status) {
-                if (status == AsyncCallStatus::CANCELED) {
+                if (status == AsyncCallStatus::CANCELED || app->shuttingDown) {
                     return;
                 }
                 app->indexBufferReady(user);
@@ -494,9 +493,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             // Start the chain of asynchronous operations.
             app->loadImage(app->onLoadImageComplete);
         } else {
-            // Load an image and a material once as they are shared across all objects
+            // Load an image once as it is shared across all objects
             app->loadImage();
-            app->createMaterial();
             // Load renderables synchronously
             for (int i = 0; i < App::OBJECT_COUNT; ++i) {
                 void* data = &app->objectData[i];
@@ -580,7 +578,8 @@ int main(int argc, char** argv) {
     samples::handleCommandLineArguments(argc, argv, &config,
             { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = samples::getAssetLoader(config);
+    auto app = createSampleApp(config, dm.get(), loader.get());
     app->run();
     return 0;
 }

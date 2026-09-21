@@ -30,6 +30,8 @@
 #include <utils/Entity.h>
 #include <utils/Path.h>
 
+#include <math/vec3.h>
+
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -132,6 +134,22 @@ public:
             mCameraMode = cameraMode;
             return *this;
         }
+        /**
+         * Sets the initial eye and target position of the main camera, i.e. the home position of
+         * the camera manipulator. Defaults to an eye of (0, 0, 1) looking at (0, 0, -4).
+         *
+         * Samples that need to frame a specific scene must use this rather than calling
+         * Camera::lookAt() from their setup callback: the main camera is driven by the camera
+         * manipulator and is overwritten from it at the top of every frame.
+         *
+         * This only affects the orbit and map camera modes; free flight always starts from
+         * flightStartPosition.
+         */
+        Builder& cameraHome(filament::math::float3 eye, filament::math::float3 target) {
+            mCameraHomeEye = eye;
+            mCameraHomeTarget = target;
+            return *this;
+        }
         Builder& resizeable(bool resizeable) {
             mResizeable = resizeable;
             return *this;
@@ -176,6 +194,7 @@ public:
             mFixedTimeStep = fixedTimeStep;
             return *this;
         }
+
         /**
          * Sets a custom AssetLoader for the application.
          *
@@ -334,6 +353,10 @@ public:
         filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
         filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
         filament::camutils::Mode mCameraMode = filament::camutils::Mode::ORBIT;
+        // These defaults match what the orbit manipulator resolves an unset home position to, so
+        // that samples which never call cameraHome() keep their existing framing.
+        filament::math::float3 mCameraHomeEye = { 0.0f, 0.0f, 1.0f };
+        filament::math::float3 mCameraHomeTarget = { 0.0f, 0.0f, -4.0f };
         bool mResizeable = true;
         bool mHeadless = false;
         int mStereoscopicEyeCount = 2;
@@ -423,15 +446,6 @@ public:
     FilamentApp2(FilamentApp2&& rhs) = delete;
     FilamentApp2& operator=(const FilamentApp2& rhs) = delete;
     FilamentApp2& operator=(FilamentApp2&& rhs) = delete;
-
-    /**
-     * Returns the path to the Filament root for loading assets. This is determined from the
-     * executable folder, which allows users to launch samples from any folder.
-     *
-     * This takes into account multi-configuration CMake generators, like Visual Studio or Xcode,
-     * that have different executable paths compared to single-configuration generators, like Ninja.
-     */
-    static const utils::Path& getRootAssetsPath();
 
 private:
     using CameraManipulator = filament::camutils::Manipulator<float>;
@@ -589,6 +603,8 @@ private:
     filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
     filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
     filament::camutils::Mode const mCameraMode;
+    filament::math::float3 const mCameraHomeEye;
+    filament::math::float3 const mCameraHomeTarget;
     bool const mResizeable = true;
     bool const mHeadless = false;
     int const mStereoscopicEyeCount = 2;
@@ -607,8 +623,7 @@ private:
     uint32_t mWarmupFrames = MAX_WARMUP_FRAMES;
     float const mFixedTimeStep = 0.0f;
     uint32_t mCurrentFrame = 0;
-    double mVirtualTime = 0.0;
-    double mLastVirtualTime = 0.0;
+    double mLastDisplayManagerTime = 0.0;
 
     std::unique_ptr<Cube> mCameraCube;
     std::unique_ptr<Grid> mCameraGrid;

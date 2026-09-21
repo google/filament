@@ -36,6 +36,7 @@ struct SampleConfig {
     uint32_t height = 640;
     utils::CString iblDirectory;
     utils::CString dirt;
+    utils::CString assetsPath;
     bool splitView = false;
     mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
     mutable filament::backend::FeatureLevel featureLevel =

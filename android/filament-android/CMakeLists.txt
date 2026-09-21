@@ -91,20 +91,36 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWIT
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
 add_library(filament-jni SHARED
+    src/main/cpp/ACESLegacyToneMapper.cpp
+    src/main/cpp/ACESToneMapper.cpp
+    src/main/cpp/AgxToneMapper.cpp
+    src/main/cpp/Box.cpp
     src/main/cpp/BufferObject.cpp
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
     src/main/cpp/ColorGrading.cpp
+    src/main/cpp/DisplayRangeToneMapper.cpp
     src/main/cpp/Engine.cpp
     src/main/cpp/EntityManager.cpp
+    src/main/cpp/Exposure.cpp
     src/main/cpp/Fence.cpp
+    src/main/cpp/FilamentHelper.cpp
+    src/main/cpp/FilmicToneMapper.cpp
+    src/main/cpp/FramePacer.cpp
+    src/main/cpp/Frustum.cpp
+    src/main/cpp/GT7ToneMapper.cpp
+    src/main/cpp/GenericToneMapper.cpp
     src/main/cpp/IndexBuffer.cpp
     src/main/cpp/IndirectLight.cpp
+    src/main/cpp/InstanceBuffer.cpp
     src/main/cpp/LightManager.cpp
+    src/main/cpp/LinearToneMapper.cpp
     src/main/cpp/Material.cpp
     src/main/cpp/MaterialInstance.cpp
     src/main/cpp/MathUtils.cpp
     src/main/cpp/MorphTargetBuffer.cpp
+    src/main/cpp/PBRNeutralToneMapper.cpp
+    src/main/cpp/PixelBufferDescriptor.cpp
     src/main/cpp/RenderableManager.cpp
     src/main/cpp/Renderer.cpp
     src/main/cpp/RenderTarget.cpp
@@ -112,16 +128,18 @@ add_library(filament-jni SHARED
     src/main/cpp/SkyBox.cpp
     src/main/cpp/SkinningBuffer.cpp
     src/main/cpp/Stream.cpp
+    src/main/cpp/StreamHelper.cpp
     src/main/cpp/SurfaceOrientation.cpp
     src/main/cpp/SwapChain.cpp
     src/main/cpp/Texture.cpp
+    src/main/cpp/TextureHelper.cpp
     src/main/cpp/TextureSampler.cpp
     src/main/cpp/ToneMapper.cpp
     src/main/cpp/TransformManager.cpp
     src/main/cpp/VertexBuffer.cpp
     src/main/cpp/View.cpp
+    src/main/cpp/Viewport.cpp
     # Android specific
-    src/main/cpp/FramePacerAndroidJni.cpp
     src/main/cpp/nativewindow/Android.cpp
     # Private utils
     src/main/cpp/Filament.cpp

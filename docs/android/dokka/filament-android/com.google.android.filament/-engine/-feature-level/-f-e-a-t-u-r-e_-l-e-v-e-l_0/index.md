@@ -5,4 +5,4 @@
 [main]\
 [FEATURE_LEVEL_0](index.md)
 
-Reserved, don't use
+OpenGL ES 2.0 features

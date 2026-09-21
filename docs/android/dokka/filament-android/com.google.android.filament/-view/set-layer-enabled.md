@@ -5,7 +5,7 @@
 [main]\
 open fun [setLayerEnabled](set-layer-enabled.md)(layer: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-Enables or disables a specific layer.
+Helper function to enable or disable a visibility layer.
 
 #### Parameters
 
@@ -13,5 +13,11 @@ main
 
 | | |
 |---|---|
-| layer | Index of the layer to enable or disable, must be between 0 and 7. |
-| enabled | True to enable the layer, false to disable it. |
+| layer | layer between 0 and 7 to enable or disable |
+| enabled | true to enable the layer, false to disable it |
+
+#### See also
+
+| |
+|---|
+| [RenderableManager](../-renderable-manager/set-layer-mask.md) |

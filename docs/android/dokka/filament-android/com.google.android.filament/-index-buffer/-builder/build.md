@@ -5,11 +5,13 @@
 [main]\
 open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [IndexBuffer](../index.md)
 
-Creates and returns the `IndexBuffer` object. After creation, the index buffer is uninitialized. Use setBuffer to initialized the `IndexBuffer`.
+Creates the IndexBuffer object and returns a pointer to it. 
+
+After creation, the index buffer is uninitialized. Use IndexBuffer::setBuffer() to initialize the IndexBuffer.
 
 #### Return
 
-the newly created `IndexBuffer` object
+pointer to the newly created object.
 
 #### Parameters
 
@@ -17,17 +19,10 @@ main
 
 | | |
 |---|---|
-| engine | reference to the [Engine](../../-engine/index.md) to associate this `IndexBuffer`with |
+| engine | Reference to the filament::Engine to associate this IndexBuffer with. |
 
 #### See also
 
 | |
 |---|
-| setBuffer |
-
-#### Throws
-
-| | |
-|---|---|
-| [IllegalStateException](https://developer.android.com/reference/kotlin/java/lang/IllegalStateException.html) | if the IndexBuffer could not be created |
-| [RuntimeException](https://developer.android.com/reference/kotlin/java/lang/RuntimeException.html) | if a runtime error occurred, such as running out of memory or other resources, or if a parameter to a builder function was invalid. |
+| com.google.android.filament.IndexBuffer |
