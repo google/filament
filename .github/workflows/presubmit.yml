@@ -59,9 +59,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh presubmit
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-desktop-linux:
     name: build-linux
@@ -75,12 +80,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-release
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh presubmit
       - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-windows:
     name: build-windows
@@ -151,9 +161,18 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Select Xcode 16.4
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      # Restore only; the postsubmit build-ios job is the writer. It selects the same Xcode, which
+      # matters because CCACHE_COMPILERCHECK hashes the compiler binary.
+      - uses: ./.github/actions/ccache
+        with:
+          config: ios
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+      # Not covered by the cache: build-samples.sh drives xcodebuild against the hand-written
+      # projects under ios/samples, which CMake never generates.
       - name: Build iOS samples
         run: |
           cd build/ios && ./build-samples.sh presubmit
@@ -304,6 +323,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
+      # This job compiles two configurations, so it restores both caches into the same ccache
+      # directory. The two archives hold disjoint objects, because ccache keys on the full
+      # compiler command line and an asan object never shares a hash with a release one; the only
+      # files they have in common are the statistics counters, which the action zeroes anyway.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-release
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-asan-debug
       - name: Get commit message
         id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
@@ -330,8 +359,13 @@ jobs:
         run: |
           # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
           ./build.sh -b -p desktop debug
-          # This will build and install the release build
-          ./build.sh -p desktop release && ninja -C out/cmake-release install
+          # This will build and install the release build. -y none skips the separate prebuilt
+          # tools pass, for the reasons documented in build/common/split-build.sh; this mirrors
+          # what that script derives for the release-only wrappers. The debug build above keeps
+          # the split build, which is what keeps matc out of asan.
+          ./build.sh -y none -p desktop release && ninja -C out/cmake-release install
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
       - name: Check - clang-tidy (exception escape)
         run: bash test/code-correctness/clang-tidy-proxy.sh
       - name: Check - public header inclusion
@@ -353,7 +387,16 @@ jobs:
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/get-mesa
       - uses: ./.github/actions/get-vulkan-sdk
+      # Deliberately after get-mesa: meson picks ccache up automatically when it is on PATH, so
+      # configuring CCACHE_DIR any earlier would let a Mesa rebuild (which only happens when the
+      # Mesa cache misses) spend this job's cache budget on Mesa objects that no other job wants.
+      # The asan objects this job needs come from the postsubmit ccache-arm-linux warmer.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-backend-test
       - name: Run backend tests
         shell: bash
         run: |
           bash test/backend/test.sh
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}

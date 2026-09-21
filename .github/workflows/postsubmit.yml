@@ -38,13 +38,34 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Select Xcode 16.4
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      # Writer for the iOS cache. This job runs on the free standard runner while the presubmit
+      # build-iOS it feeds runs on the paid xlarge one, so the warming costs nothing and the
+      # savings land where the minutes are billed. The "continuous" build below is a superset of
+      # what presubmit compiles: same device release objects, plus debug and simulator ones.
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: ios
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh continuous
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+      # Main only, to keep branch-scoped entries that nothing could read out of the repository's
+      # shared cache quota. The ccache action documents why.
+      - name: Save ccache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: filament-ios
           path: out/filament-release-ios.tgz
+      # Not covered by the cache above: build-samples.sh drives xcodebuild against the hand-written
+      # projects under ios/samples, which CMake never generates, so the ccache launcher that
+      # CMakeLists.txt installs does not apply to them.
       - name: Build iOS samples
         run: |
           cd build/ios && ./build-samples.sh continuous
@@ -58,9 +79,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
+      # Restore only. The ccache-arm-linux matrix below is the writer for Linux: it compiles
+      # exactly the configurations presubmit needs, whereas the "continuous" build here also
+      # produces a plain debug tree that no presubmit job compiles, which would spend most of the
+      # cache on objects nothing can reuse. Only the release half of this build can hit, which is
+      # why it restores the release variant.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-release
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh continuous
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: filament-arm-linux
@@ -75,13 +106,108 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh continuous
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+      # See the note on the linux job above: main only, to keep unreadable branch-scoped entries
+      # out of the repository's shared cache quota.
+      - name: Save ccache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: filament-mac
           path: out/filament-release-darwin.tgz
+
+  # Sole writer of the ARM Linux compiler caches. Every ARM Linux presubmit job restores what this
+  # job produces, so what it compiles is exactly the set of configurations those jobs compile:
+  #
+  #   desktop-release         build-linux, and the release half of test-code-correctness
+  #   desktop-asan-debug      the asan/ubsan debug half of test-code-correctness
+  #   desktop-backend-test    test-backend: asan/ubsan debug with webgpu and osmesa
+  #   (pending)               test-renderdiff, once it moves from macOS to arm-linux
+  #
+  # Presubmit cannot write the cache itself: a push to main carrying a verified commit skips every
+  # presubmit job, so the cache would almost never be refreshed. Restricted to main because caches
+  # written from release and rc/** are scoped to those branches, where nothing could read them.
+  #
+  # The free 4-vCPU ARM runner is deliberate. Paying for a 16-core runner would buy almost entirely
+  # idle capacity, because once the cache is warm each pass only compiles what changed since the
+  # last one. The cost is a slow first pass, which is why the save below runs even when the job is
+  # cancelled or times out: each attempt banks the objects it managed to compile.
+  #
+  # The variants run as a matrix rather than in sequence because warmer latency decides how fresh
+  # the cache is for the next pull request. Commits land on main every 83 minutes at the median
+  # and every 45 at the busy quartile, which a sequential pass over three variants cannot keep up
+  # with on 4 vCPUs. Running them in parallel costs nothing extra on free runners.
+  ccache-arm-linux:
+    name: ccache-arm-linux (${{ matrix.config }})
+    runs-on: 'ubuntu-24.04-arm'
+    timeout-minutes: 180
+    strategy:
+      # One broken configuration must still leave the others free to warm.
+      fail-fast: false
+      matrix:
+        include:
+          - config: desktop-release
+            mesa: false
+            build: cd build/linux && printf "y" | ./build.sh presubmit
+          - config: desktop-asan-debug
+            mesa: false
+            build: ./build.sh -b -p desktop debug
+          # --build-only stops before running the tests: this job wants the objects, and the tests
+          # already run in presubmit. Calling the same script the consumer calls is what keeps the
+          # cached objects flag-identical to what it will ask for.
+          - config: desktop-backend-test
+            mesa: true
+            build: bash test/backend/test.sh --build-only
+    # Per variant, so that a slow configuration does not hold back the others. Queue the next pass
+    # rather than running several at once, which would only duplicate work and multiply cache
+    # writes.
+    concurrency:
+      group: ccache-arm-linux-${{ matrix.config }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/linux-prereq
+      # Only the backend test build needs these, and each variant has to mirror its consumer's
+      # prerequisites exactly: a prerequisite that changes an include path or a define changes the
+      # compiler command line, which is what ccache hashes.
+      - uses: ./.github/actions/get-mesa
+        if: ${{ matrix.mesa }}
+      - uses: ./.github/actions/get-vulkan-sdk
+        if: ${{ matrix.mesa }}
+      # After get-mesa, for the reason documented on the presubmit test-backend job.
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: ${{ matrix.config }}
+      - name: Warm the cache
+        run: ${{ matrix.build }}
+      # always(), where readers settle for !cancelled(): a warmer that times out is cancelled, and
+      # that is the run whose cache size and disk headroom matter most.
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ always() }}
+        with:
+          show-disk-usage: 'true'
+      - name: Save ccache
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
 
   build-web:
     name: build-web

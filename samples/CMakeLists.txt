@@ -285,6 +285,7 @@ endfunction()
 
 if (NOT ANDROID)
     add_demo(animation)
+    add_demo(async_stream_bench)
     add_demo(depthtesting)
     add_demo(frame_generator)
     add_demo(gltf_viewer)
