@@ -953,11 +953,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 assert_invariant(params.shaderModel == ShaderModel::MOBILE);
                 assert_invariant(params.targetApi == TargetApi::OPENGL);
                 // skip all variants that can't be used with ESSL1
-                if (filament::Variant::isValidStandardVariant(v.variant)) {
-                    if (v.variant.hasDirectionalLighting()) {
-                        continue;
-                    }
-                }
                 if (filament::Variant::isShadowReceiverVariant(v.variant)) {
                     continue;
                 }

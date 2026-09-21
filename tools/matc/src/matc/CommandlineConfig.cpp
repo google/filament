@@ -148,9 +148,9 @@ static void usage(char* name) {
             "       Reflect the specified metadata as JSON: parameters\n\n"
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
-            "           directionalLighting, shadowReceiver, skinning, vsm, fog,\n"
+            "           shadowReceiver, skinning, vsm, fog,\n"
             "           ssr (screen-space reflections), stereo\n"
-            "       dynamicLighting is deprecated and ignored.\n"
+            "       directionalLighting is deprecated and ignored.\n"
             "       This variant filter is merged with the filter from the material, if any.\n\n"
             "   --workarounds, -W\n"
             "       Workarounds to apply: all or none. (default is none).\n\n"
@@ -218,10 +218,8 @@ static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
     UserVariantFilterMask variantFilter = 0;
     while (std::getline(ss, item, ',')) {
         if (item == "directionalLighting") {
-            variantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
-        } else if (item == "dynamicLighting") {
-            // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
-            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored."
+            // TODO: directionalLighting bit is removed 2026-09-21. Remove by 2026-12-31.
+            std::cerr << "Warning: directionalLighting variant filter is deprecated and ignored."
                     << std::endl;
         } else if (item == "shadowReceiver") {
             variantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);

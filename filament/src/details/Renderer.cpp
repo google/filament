@@ -1032,7 +1032,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
-    variant.setDirectionalLighting(false);
     variant.setFog(view.hasFog());
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
