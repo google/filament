@@ -988,6 +988,10 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
     }
     token->retrievedFromBlobCache = true;
     token->signal(); // notify that `token->gl.program` is ready to use
+    // The program is ready, so the callback handle must be submitted. The compilation path does
+    // this in `linkProgram`, which a cache hit skips. Must follow `signal()` so that a caller woken
+    // by the callback doesn't block in `wait()`.
+    token->trySubmittingCallback();
     return true;
 }
 
