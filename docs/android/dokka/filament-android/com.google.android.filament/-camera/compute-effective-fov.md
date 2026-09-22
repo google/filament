@@ -3,7 +3,7 @@
 # computeEffectiveFov
 
 [main]\
-open fun [computeEffectiveFov](compute-effective-fov.md)(fovInDegrees: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), focusDistance: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
+open fun [computeEffectiveFov](compute-effective-fov.md)(fovInDegrees: Double, focusDistance: Double): Double
 
 Helper to compute the effective field-of-view taking into account the focus distance
 

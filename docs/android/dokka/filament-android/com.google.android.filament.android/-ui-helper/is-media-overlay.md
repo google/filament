@@ -3,6 +3,6 @@
 # isMediaOverlay
 
 [main]\
-open fun [isMediaOverlay](is-media-overlay.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isMediaOverlay](is-media-overlay.md)(): Boolean
 
 Returns true if the SurfaceView used as a render target should be positioned above other surfaces but below the activity's surface. False by default.

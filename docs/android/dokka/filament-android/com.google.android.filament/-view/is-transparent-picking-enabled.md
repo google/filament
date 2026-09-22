@@ -3,7 +3,7 @@
 # isTransparentPickingEnabled
 
 [main]\
-open fun [isTransparentPickingEnabled](is-transparent-picking-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isTransparentPickingEnabled](is-transparent-picking-enabled.md)(): Boolean
 
 Returns true if transparent picking is enabled. 
 

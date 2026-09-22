@@ -3,6 +3,6 @@
 # getEntity
 
 [main]\
-open fun [getEntity](get-entity.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getEntity](get-entity.md)(): Int
 
 Returns the entity representing this camera

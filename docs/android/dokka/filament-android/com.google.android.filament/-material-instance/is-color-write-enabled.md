@@ -3,6 +3,6 @@
 # isColorWriteEnabled
 
 [main]\
-open fun [isColorWriteEnabled](is-color-write-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isColorWriteEnabled](is-color-write-enabled.md)(): Boolean
 
 Returns whether color write is enabled.

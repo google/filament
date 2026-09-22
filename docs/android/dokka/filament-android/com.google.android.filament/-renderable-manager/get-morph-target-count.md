@@ -3,7 +3,7 @@
 # getMorphTargetCount
 
 [main]\
-open fun [getMorphTargetCount](get-morph-target-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getMorphTargetCount](get-morph-target-count.md)(instance: Int): Int
 
 Gets the number of morphing in the given entity.
 

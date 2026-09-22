@@ -3,4 +3,4 @@
 # setClearColorW
 
 [main]\
-open fun [setClearColorW](set-clear-color-w.md)(clearColorW: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
+open fun [setClearColorW](set-clear-color-w.md)(clearColorW: Double)

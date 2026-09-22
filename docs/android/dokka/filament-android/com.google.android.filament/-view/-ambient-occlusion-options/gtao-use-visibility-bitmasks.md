@@ -3,7 +3,7 @@
 # gtaoUseVisibilityBitmasks
 
 [main]\
-open var [gtaoUseVisibilityBitmasks](gtao-use-visibility-bitmasks.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [gtaoUseVisibilityBitmasks](gtao-use-visibility-bitmasks.md): Boolean
 
 Enables or disables visibility bitmasks mode. 
 

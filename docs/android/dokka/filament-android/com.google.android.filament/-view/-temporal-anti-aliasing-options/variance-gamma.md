@@ -3,6 +3,6 @@
 # varianceGamma
 
 [main]\
-open var [varianceGamma](variance-gamma.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [varianceGamma](variance-gamma.md): Float
 
 High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25]

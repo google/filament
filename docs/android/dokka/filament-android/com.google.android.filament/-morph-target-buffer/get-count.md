@@ -3,7 +3,7 @@
 # getCount
 
 [main]\
-open fun [getCount](get-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getCount](get-count.md)(): Int
 
 Returns the target count of this MorphTargetBuffer.
 

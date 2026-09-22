@@ -3,7 +3,7 @@
 # enableMultipleDirectionalLights
 
 [main]\
-open var [enableMultipleDirectionalLights](enable-multiple-directional-lights.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [enableMultipleDirectionalLights](enable-multiple-directional-lights.md): Boolean
 
 Whether a scene can contain more than one directional light. 
 

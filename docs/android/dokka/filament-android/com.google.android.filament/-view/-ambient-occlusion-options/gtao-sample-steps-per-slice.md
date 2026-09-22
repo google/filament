@@ -3,7 +3,7 @@
 # gtaoSampleStepsPerSlice
 
 [main]\
-open var [gtaoSampleStepsPerSlice](gtao-sample-steps-per-slice.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open var [gtaoSampleStepsPerSlice](gtao-sample-steps-per-slice.md): Int
 
 # of steps the radius is divided into for integration.
 

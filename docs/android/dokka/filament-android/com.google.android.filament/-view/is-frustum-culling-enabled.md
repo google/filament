@@ -3,6 +3,6 @@
 # isFrustumCullingEnabled
 
 [main]\
-open fun [isFrustumCullingEnabled](is-frustum-culling-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isFrustumCullingEnabled](is-frustum-culling-enabled.md)(): Boolean
 
 debugging: returns whether frustum culling is enabled.

@@ -3,7 +3,7 @@
 # isCreationComplete
 
 [main]\
-open fun [isCreationComplete](is-creation-complete.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isCreationComplete](is-creation-complete.md)(): Boolean
 
 This non-blocking method checks if the resource has finished creation *successfully*. 
 

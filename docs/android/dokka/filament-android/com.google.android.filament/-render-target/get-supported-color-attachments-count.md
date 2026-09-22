@@ -3,7 +3,7 @@
 # getSupportedColorAttachmentsCount
 
 [main]\
-open fun [getSupportedColorAttachmentsCount](get-supported-color-attachments-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getSupportedColorAttachmentsCount](get-supported-color-attachments-count.md)(): Int
 
 Returns the number of color attachments usable by this instance of Engine. 
 

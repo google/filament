@@ -3,6 +3,6 @@
 # nativeResolution
 
 [main]\
-open var [nativeResolution](native-resolution.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [nativeResolution](native-resolution.md): Boolean
 
 perform DoF processing at native resolution

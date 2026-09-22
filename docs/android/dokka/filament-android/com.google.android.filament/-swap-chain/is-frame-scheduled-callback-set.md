@@ -3,7 +3,7 @@
 # isFrameScheduledCallbackSet
 
 [main]\
-open fun [isFrameScheduledCallbackSet](is-frame-scheduled-callback-set.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isFrameScheduledCallbackSet](is-frame-scheduled-callback-set.md)(): Boolean
 
 Returns whether this SwapChain currently has a FrameScheduledCallback set.
 

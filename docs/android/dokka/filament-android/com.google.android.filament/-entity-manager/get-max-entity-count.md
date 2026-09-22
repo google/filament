@@ -3,7 +3,7 @@
 # getMaxEntityCount
 
 [main]\
-open fun [getMaxEntityCount](get-max-entity-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getMaxEntityCount](get-max-entity-count.md)(): Int
 
 Retrieves the maximum theoretical upper bound of entities that can exist concurrently. 
 

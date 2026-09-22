@@ -3,7 +3,7 @@
 # getBoneCount
 
 [main]\
-open fun [getBoneCount](get-bone-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getBoneCount](get-bone-count.md)(): Int
 
 Returns the size of this SkinningBuffer in elements.
 

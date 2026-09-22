@@ -3,7 +3,7 @@
 # getIndex
 
 [main]\
-open fun [getIndex](get-index.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getIndex](get-index.md)(e: Int): Int
 
 Use carefully, several entities can have the same index.
 

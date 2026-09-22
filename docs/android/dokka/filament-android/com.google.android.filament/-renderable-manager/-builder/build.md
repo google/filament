@@ -3,7 +3,7 @@
 # build
 
 [main]\
-open fun [build](build.md)(engine: [Engine](../../-engine/index.md), entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [build](build.md)(engine: [Engine](../../-engine/index.md), entity: Int)
 
 Adds the Renderable component to an entity.
 

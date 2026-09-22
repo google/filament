@@ -3,4 +3,4 @@
 # setScreenSpaceContactShadows
 
 [main]\
-open fun [setScreenSpaceContactShadows](set-screen-space-contact-shadows.md)(screenSpaceContactShadows: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setScreenSpaceContactShadows](set-screen-space-contact-shadows.md)(screenSpaceContactShadows: Boolean)

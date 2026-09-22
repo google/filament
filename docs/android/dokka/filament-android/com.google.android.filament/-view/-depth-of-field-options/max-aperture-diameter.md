@@ -3,6 +3,6 @@
 # maxApertureDiameter
 
 [main]\
-open var [maxApertureDiameter](max-aperture-diameter.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [maxApertureDiameter](max-aperture-diameter.md): Float
 
 maximum aperture diameter in meters (zero to disable rotation)

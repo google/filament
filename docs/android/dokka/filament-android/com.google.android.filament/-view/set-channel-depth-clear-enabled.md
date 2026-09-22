@@ -3,7 +3,7 @@
 # setChannelDepthClearEnabled
 
 [main]\
-open fun [setChannelDepthClearEnabled](set-channel-depth-clear-enabled.md)(channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setChannelDepthClearEnabled](set-channel-depth-clear-enabled.md)(channel: Int, enabled: Boolean)
 
 Sets whether a channel must clear the depth buffer before all primitives are rendered. 
 

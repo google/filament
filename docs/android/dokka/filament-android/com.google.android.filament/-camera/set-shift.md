@@ -3,7 +3,7 @@
 # setShift
 
 [main]\
-open fun [setShift](set-shift.md)(shiftx: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), shifty: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
+open fun [setShift](set-shift.md)(shiftx: Double, shifty: Double)
 
 Sets an additional matrix that shifts the projection matrix. 
 
@@ -27,7 +27,7 @@ main
 | setCustomProjection |
 
 [main]\
-open fun [setShift](set-shift.md)(shift: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;)
+open fun [setShift](set-shift.md)(shift: Array&lt;Double&gt;)
 
 Sets an additional matrix that shifts the projection matrix. 
 

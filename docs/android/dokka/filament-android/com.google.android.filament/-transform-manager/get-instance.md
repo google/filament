@@ -3,7 +3,7 @@
 # getInstance
 
 [main]\
-open fun [getInstance](get-instance.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getInstance](get-instance.md)(e: Int): Int
 
 Gets an Instance representing the transform component associated with the given Entity. 
 

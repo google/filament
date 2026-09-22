@@ -3,6 +3,6 @@
 # ghostSpacing
 
 [main]\
-open var [ghostSpacing](ghost-spacing.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [ghostSpacing](ghost-spacing.md): Float
 
 spacing of the ghost in screen units [0, 1[

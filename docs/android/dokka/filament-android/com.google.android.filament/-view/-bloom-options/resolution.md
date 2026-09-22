@@ -3,6 +3,6 @@
 # resolution
 
 [main]\
-open var [resolution](resolution.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open var [resolution](resolution.md): Int
 
 resolution of vertical axis (2^levels to 2048)

@@ -3,7 +3,7 @@
 # hasTangents
 
 [main]\
-open fun [hasTangents](has-tangents.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [hasTangents](has-tangents.md)(): Boolean
 
 Returns true if this MorphTargetBuffer has a tangent buffer.
 

@@ -3,7 +3,7 @@
 # getFocalLength
 
 [main]\
-open fun [getFocalLength](get-focal-length.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
+open fun [getFocalLength](get-focal-length.md)(): Double
 
 Returns the focal length in meters [m] for a 35mm camera. 
 

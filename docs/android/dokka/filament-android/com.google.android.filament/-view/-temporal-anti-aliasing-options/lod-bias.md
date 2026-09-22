@@ -3,6 +3,6 @@
 # lodBias
 
 [main]\
-open var [lodBias](lod-bias.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [lodBias](lod-bias.md): Float
 
 texturing lod bias (typically -1 or -2)

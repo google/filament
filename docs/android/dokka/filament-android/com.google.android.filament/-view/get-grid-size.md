@@ -3,7 +3,7 @@
 # getGridSize
 
 [main]\
-open fun [getGridSize](get-grid-size.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
+open fun [getGridSize](get-grid-size.md)(): Double
 
 Returns the grid size used for grid-based world origin snapping.
 

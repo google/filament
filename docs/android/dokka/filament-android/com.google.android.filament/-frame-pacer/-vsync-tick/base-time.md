@@ -3,4 +3,4 @@
 # baseTime
 
 [main]\
-open var [baseTime](base-time.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open var [baseTime](base-time.md): Long

@@ -3,6 +3,6 @@
 # right
 
 [main]\
-open fun [right](right.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [right](right.md)(): Int
 
 get the right coordinate in window space of the viewport

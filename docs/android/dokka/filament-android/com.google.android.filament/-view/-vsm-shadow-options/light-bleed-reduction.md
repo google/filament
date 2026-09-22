@@ -3,6 +3,6 @@
 # lightBleedReduction
 
 [main]\
-open var [lightBleedReduction](light-bleed-reduction.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [lightBleedReduction](light-bleed-reduction.md): Float
 
 VSM light bleeding reduction amount, between 0 and 1.

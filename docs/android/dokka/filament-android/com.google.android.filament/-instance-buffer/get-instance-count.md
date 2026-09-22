@@ -3,6 +3,6 @@
 # getInstanceCount
 
 [main]\
-open fun [getInstanceCount](get-instance-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getInstanceCount](get-instance-count.md)(): Int
 
 Returns the instance count specified when building this InstanceBuffer.

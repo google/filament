@@ -3,7 +3,7 @@
 # highPrecision
 
 [main]\
-open var [highPrecision](high-precision.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [highPrecision](high-precision.md): Boolean
 
 Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 
 
