@@ -3,7 +3,7 @@
 # setCastShadows
 
 [main]\
-open fun [setCastShadows](set-cast-shadows.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setCastShadows](set-cast-shadows.md)(instance: Int, enable: Boolean)
 
 Changes whether or not the renderable casts shadows.
 

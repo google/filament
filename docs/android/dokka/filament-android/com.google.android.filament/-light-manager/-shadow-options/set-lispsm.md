@@ -3,4 +3,4 @@
 # setLispsm
 
 [main]\
-open fun [setLispsm](set-lispsm.md)(lispsm: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setLispsm](set-lispsm.md)(lispsm: Boolean)

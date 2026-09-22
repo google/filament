@@ -3,7 +3,7 @@
 # isEmpty
 
 [main]\
-open fun [isEmpty](is-empty.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isEmpty](is-empty.md)(): Boolean
 
 Whether the box is empty, i.e.: its extents are zero.
 

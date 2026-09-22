@@ -3,7 +3,7 @@
 # isStereoSupported
 
 [main]\
-open fun [isStereoSupported](is-stereo-supported.md)(stereoscopicType: [Engine.StereoscopicType](-stereoscopic-type/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isStereoSupported](is-stereo-supported.md)(stereoscopicType: [Engine.StereoscopicType](-stereoscopic-type/index.md)): Boolean
 
 Queries the device and platform for support of the given stereoscopic type.
 

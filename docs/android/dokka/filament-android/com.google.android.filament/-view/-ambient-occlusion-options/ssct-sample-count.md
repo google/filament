@@ -3,6 +3,6 @@
 # ssctSampleCount
 
 [main]\
-open var [ssctSampleCount](ssct-sample-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open var [ssctSampleCount](ssct-sample-count.md): Int
 
 tracing sample count, between 1 and 255

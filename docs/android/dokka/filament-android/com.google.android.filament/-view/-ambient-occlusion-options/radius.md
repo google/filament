@@ -3,6 +3,6 @@
 # radius
 
 [main]\
-open var [radius](radius.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [radius](radius.md): Float
 
 Ambient Occlusion radius in meters, between 0 and ~10.

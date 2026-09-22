@@ -3,4 +3,4 @@
 # getBlurWidth
 
 [main]\
-open fun [getBlurWidth](get-blur-width.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open fun [getBlurWidth](get-blur-width.md)(): Float

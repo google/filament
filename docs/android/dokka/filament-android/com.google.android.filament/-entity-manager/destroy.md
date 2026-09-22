@@ -3,7 +3,7 @@
 # destroy
 
 [main]\
-open fun [destroy](destroy.md)(entities: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;)
+open fun [destroy](destroy.md)(entities: Array&lt;Int&gt;)
 
 Globally and logically destroys a batch of Entities.
 
@@ -16,7 +16,7 @@ main
 | entities | Contiguous array of Entities to logically kill. |
 
 [main]\
-open fun [destroy](destroy.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [destroy](destroy.md)(e: Int)
 
 Globally and logically destroys a single Entity identity.
 

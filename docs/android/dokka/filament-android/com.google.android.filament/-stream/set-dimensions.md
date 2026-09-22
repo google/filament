@@ -3,7 +3,7 @@
 # setDimensions
 
 [main]\
-open fun [setDimensions](set-dimensions.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setDimensions](set-dimensions.md)(width: Int, height: Int)
 
 Updates the size of the incoming stream. 
 

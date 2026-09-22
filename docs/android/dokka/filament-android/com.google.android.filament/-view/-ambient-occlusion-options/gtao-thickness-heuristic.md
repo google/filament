@@ -3,7 +3,7 @@
 # gtaoThicknessHeuristic
 
 [main]\
-open var [gtaoThicknessHeuristic](gtao-thickness-heuristic.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [gtaoThicknessHeuristic](gtao-thickness-heuristic.md): Float
 
 thickness heuristic, should be closed to 0. 
 

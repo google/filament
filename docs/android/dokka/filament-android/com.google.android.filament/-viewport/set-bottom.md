@@ -3,4 +3,4 @@
 # setBottom
 
 [main]\
-open fun [setBottom](set-bottom.md)(bottom: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [setBottom](set-bottom.md)(bottom: Int)

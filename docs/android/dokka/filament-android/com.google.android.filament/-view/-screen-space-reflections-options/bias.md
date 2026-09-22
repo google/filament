@@ -3,6 +3,6 @@
 # bias
 
 [main]\
-open var [bias](bias.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [bias](bias.md): Float
 
 bias, in world units, to prevent self-intersections

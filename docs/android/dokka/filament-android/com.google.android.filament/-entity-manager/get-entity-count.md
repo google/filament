@@ -3,7 +3,7 @@
 # getEntityCount
 
 [main]\
-open fun [getEntityCount](get-entity-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getEntityCount](get-entity-count.md)(): Int
 
 Returns the total number of currently active/alive Entities.
 

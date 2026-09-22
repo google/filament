@@ -3,6 +3,6 @@
 # hasParameter
 
 [main]\
-open fun [hasParameter](has-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [hasParameter](has-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): Boolean
 
 Indicates whether a parameter of the given name exists on this material.

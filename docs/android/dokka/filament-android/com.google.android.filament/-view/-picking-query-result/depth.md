@@ -3,6 +3,6 @@
 # depth
 
 [main]\
-open var [depth](depth.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [depth](depth.md): Float
 
 RenderableManager Entity at the queried coordinates

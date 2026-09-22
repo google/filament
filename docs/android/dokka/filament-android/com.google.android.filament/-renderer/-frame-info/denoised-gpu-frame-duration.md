@@ -3,4 +3,4 @@
 # denoisedGpuFrameDuration
 
 [main]\
-open var [denoisedGpuFrameDuration](denoised-gpu-frame-duration.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open var [denoisedGpuFrameDuration](denoised-gpu-frame-duration.md): Long

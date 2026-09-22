@@ -3,6 +3,6 @@
 # lensFlare
 
 [main]\
-open var [lensFlare](lens-flare.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [lensFlare](lens-flare.md): Boolean
 
 enable screen-space lens flare

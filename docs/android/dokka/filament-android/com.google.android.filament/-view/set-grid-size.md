@@ -3,7 +3,7 @@
 # setGridSize
 
 [main]\
-open fun [setGridSize](set-grid-size.md)(size: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
+open fun [setGridSize](set-grid-size.md)(size: Double)
 
 Sets the grid size for grid-based world origin snapping. 
 

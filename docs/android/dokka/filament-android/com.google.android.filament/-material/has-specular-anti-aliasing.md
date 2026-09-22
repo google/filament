@@ -3,6 +3,6 @@
 # hasSpecularAntiAliasing
 
 [main]\
-open fun [hasSpecularAntiAliasing](has-specular-anti-aliasing.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [hasSpecularAntiAliasing](has-specular-anti-aliasing.md)(): Boolean
 
 Indicates whether this material has specular anti-aliasing enabled

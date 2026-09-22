@@ -3,6 +3,6 @@
 # ssctDepthBias
 
 [main]\
-open var [ssctDepthBias](ssct-depth-bias.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [ssctDepthBias](ssct-depth-bias.md): Float
 
 depth bias in world units (mitigate self shadowing)

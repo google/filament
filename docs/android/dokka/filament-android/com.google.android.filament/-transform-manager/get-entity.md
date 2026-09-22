@@ -3,7 +3,7 @@
 # getEntity
 
 [main]\
-open fun [getEntity](get-entity.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getEntity](get-entity.md)(i: Int): Int
 
 Retrieve the `Entity` of the component from its `Instance`.
 

@@ -3,7 +3,7 @@
 # getTimestamp
 
 [main]\
-open fun [getTimestamp](get-timestamp.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open fun [getTimestamp](get-timestamp.md)(): Long
 
 Returns the presentation time of the currently displayed frame in nanosecond. 
 

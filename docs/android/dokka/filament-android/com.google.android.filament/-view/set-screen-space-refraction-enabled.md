@@ -3,7 +3,7 @@
 # setScreenSpaceRefractionEnabled
 
 [main]\
-open fun [setScreenSpaceRefractionEnabled](set-screen-space-refraction-enabled.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setScreenSpaceRefractionEnabled](set-screen-space-refraction-enabled.md)(enabled: Boolean)
 
 Enables or disables screen space refraction. 
 

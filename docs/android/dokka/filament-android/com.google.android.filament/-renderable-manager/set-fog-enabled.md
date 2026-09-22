@@ -3,7 +3,7 @@
 # setFogEnabled
 
 [main]\
-open fun [setFogEnabled](set-fog-enabled.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
+open fun [setFogEnabled](set-fog-enabled.md)(instance: Int, enable: Boolean)
 
 Changes whether or not the large-scale fog is applied to this renderable
 

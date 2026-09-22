@@ -3,4 +3,4 @@
 # count
 
 [main]\
-open var [count](count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open var [count](count.md): Int

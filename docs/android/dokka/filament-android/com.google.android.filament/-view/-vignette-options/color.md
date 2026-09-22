@@ -3,6 +3,6 @@
 # color
 
 [main]\
-open var [color](color.md): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
+open var [color](color.md): Array&lt;Float&gt;
 
 color of the vignette effect, alpha is currently ignored

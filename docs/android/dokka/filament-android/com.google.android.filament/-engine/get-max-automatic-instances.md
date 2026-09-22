@@ -3,7 +3,7 @@
 # getMaxAutomaticInstances
 
 [main]\
-open fun [getMaxAutomaticInstances](get-max-automatic-instances.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getMaxAutomaticInstances](get-max-automatic-instances.md)(): Int
 
 Queries the maximum number of GPU instances that Filament creates when automatic instancing is enabled. 
 

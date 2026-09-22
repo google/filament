@@ -3,7 +3,7 @@
 # setIntensity
 
 [main]\
-open fun [setIntensity](set-intensity.md)(intensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setIntensity](set-intensity.md)(intensity: Float)
 
 Sets the environment's intensity. 
 

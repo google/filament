@@ -3,6 +3,6 @@
 # midPoint
 
 [main]\
-open var [midPoint](mid-point.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [midPoint](mid-point.md): Float
 
 high values restrict the vignette closer to the corners, between 0 and 1

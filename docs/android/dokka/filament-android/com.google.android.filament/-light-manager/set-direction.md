@@ -3,7 +3,7 @@
 # setDirection
 
 [main]\
-open fun [setDirection](set-direction.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), directionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setDirection](set-direction.md)(i: Int, directionx: Float, directiony: Float, directionz: Float)
 
 Dynamically updates the light's direction
 
@@ -25,7 +25,7 @@ main
 | com.google.android.filament.LightManager.Builder |
 
 [main]\
-open fun [setDirection](set-direction.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), direction: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
+open fun [setDirection](set-direction.md)(i: Int, direction: Array&lt;Float&gt;)
 
 Dynamically updates the light's direction
 

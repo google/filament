@@ -3,6 +3,6 @@
 # starburst
 
 [main]\
-open var [starburst](starburst.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [starburst](starburst.md): Boolean
 
 enable starburst effect on lens flare

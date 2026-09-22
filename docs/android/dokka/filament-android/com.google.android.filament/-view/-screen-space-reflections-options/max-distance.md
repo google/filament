@@ -3,6 +3,6 @@
 # maxDistance
 
 [main]\
-open var [maxDistance](max-distance.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [maxDistance](max-distance.md): Float
 
 maximum distance, in world units, to raycast

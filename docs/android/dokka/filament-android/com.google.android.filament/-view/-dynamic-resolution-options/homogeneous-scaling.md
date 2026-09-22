@@ -3,6 +3,6 @@
 # homogeneousScaling
 
 [main]\
-open var [homogeneousScaling](homogeneous-scaling.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [homogeneousScaling](homogeneous-scaling.md): Boolean
 
 set to true to force homogeneous scaling

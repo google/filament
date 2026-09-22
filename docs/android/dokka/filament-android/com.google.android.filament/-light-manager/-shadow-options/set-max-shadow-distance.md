@@ -3,4 +3,4 @@
 # setMaxShadowDistance
 
 [main]\
-open fun [setMaxShadowDistance](set-max-shadow-distance.md)(maxShadowDistance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setMaxShadowDistance](set-max-shadow-distance.md)(maxShadowDistance: Float)

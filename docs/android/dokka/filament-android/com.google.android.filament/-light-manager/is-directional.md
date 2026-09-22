@@ -3,7 +3,7 @@
 # isDirectional
 
 [main]\
-open fun [isDirectional](is-directional.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isDirectional](is-directional.md)(i: Int): Boolean
 
 Helper function that returns if a light is a directional light
 

@@ -3,7 +3,7 @@
 # programCacheCapacity
 
 [main]\
-open var [programCacheCapacity](program-cache-capacity.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open var [programCacheCapacity](program-cache-capacity.md): Long
 
 Capacity of the LRU cache for program specializations. 
 
