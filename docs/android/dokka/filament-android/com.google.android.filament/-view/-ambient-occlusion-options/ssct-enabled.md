@@ -3,6 +3,6 @@
 # ssctEnabled
 
 [main]\
-open var [ssctEnabled](ssct-enabled.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [ssctEnabled](ssct-enabled.md): Boolean
 
 enables or disables SSCT

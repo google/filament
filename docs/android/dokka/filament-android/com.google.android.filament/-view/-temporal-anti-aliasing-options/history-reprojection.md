@@ -3,6 +3,6 @@
 # historyReprojection
 
 [main]\
-open var [historyReprojection](history-reprojection.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [historyReprojection](history-reprojection.md): Boolean
 
 whether to apply history reprojection (debug option)

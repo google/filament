@@ -3,6 +3,6 @@
 # dirtStrength
 
 [main]\
-open var [dirtStrength](dirt-strength.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [dirtStrength](dirt-strength.md): Float
 
 strength of the dirt texture

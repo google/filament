@@ -3,7 +3,7 @@
 # getIntensity
 
 [main]\
-open fun [getIntensity](get-intensity.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open fun [getIntensity](get-intensity.md)(i: Int): Float
 
 returns the light's luminous intensity in candela. 
 

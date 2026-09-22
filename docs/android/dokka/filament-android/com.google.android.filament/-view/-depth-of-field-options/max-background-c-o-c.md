@@ -3,7 +3,7 @@
 # maxBackgroundCOC
 
 [main]\
-open var [maxBackgroundCOC](max-background-c-o-c.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open var [maxBackgroundCOC](max-background-c-o-c.md): Int
 
 maximum circle-of-confusion in pixels for the background, must be in [0, 32] range. 
 

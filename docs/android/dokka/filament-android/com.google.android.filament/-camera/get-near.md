@@ -3,6 +3,6 @@
 # getNear
 
 [main]\
-open fun [getNear](get-near.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
+open fun [getNear](get-near.md)(): Double
 
 Returns the frustum's near plane

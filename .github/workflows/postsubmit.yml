@@ -13,9 +13,11 @@ permissions:
 jobs:
   build-android:
     name: build-android
-    # We intentially use a larger runner here to enable larger disk space
-    # (standard linux runner will fail on disk space and faster build time).
-    runs-on: 'ubuntu-24.04-4core'
+    # This used to run on ubuntu-24.04-4core, a billed larger runner, for disk space. Measured on
+    # 2026-09-21 in run 35646616385: this exact build on the free standard runner never dropped
+    # below 46 GB free of 145 GB, and finished in 104 minutes against the larger runner's 142. The
+    # larger tier has the same 4 vCPUs, so it was buying neither space nor speed.
+    runs-on: 'ubuntu-24.04'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -131,7 +133,8 @@ jobs:
   # Sole writer of the ARM Linux compiler caches. Every ARM Linux presubmit job restores what this
   # job produces, so what it compiles is exactly the set of configurations those jobs compile:
   #
-  #   desktop-release         build-linux, and the release half of test-code-correctness
+  #   desktop-release         build-linux (WebGPU on, from build/linux/build.sh), and the release
+  #                           half of test-code-correctness
   #   desktop-asan-debug      the asan/ubsan debug half of test-code-correctness
   #   desktop-backend-test    test-backend: asan/ubsan debug with webgpu and osmesa
   #   (pending)               test-renderdiff, once it moves from macOS to arm-linux
@@ -209,6 +212,54 @@ jobs:
           path: ${{ steps.ccache.outputs.cache-path }}
           key: ${{ steps.ccache.outputs.cache-key }}
 
+  # Writer for the Android cache, read by the presubmit build-android job. Separate from the matrix
+  # above rather than another entry in it: the NDK ships only a linux-x86_64 toolchain
+  # (build/toolchain-aarch64-linux-android.cmake), the key carries runner.arch, and this one needs
+  # a JDK.
+  #
+  # The free standard runner is enough, measured on 2026-09-21 in run 35634761917: a cold pass took
+  # 42 minutes and ended with 82 GB free of 145 GB. That pass filled only 137 MiB, and hit 20% on
+  # an empty cache, because the build compiles the host tools twice with identical flags.
+  #
+  # The postsubmit build-android job is deliberately not the writer: it compiles debug and release
+  # across three ABIs, and the arm64-v8a release objects presubmit wants would be the first thing
+  # evicted.
+  ccache-android:
+    name: ccache-android
+    runs-on: 'ubuntu-24.04'
+    timeout-minutes: 180
+    concurrency:
+      group: ccache-android
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/linux-prereq
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: android-arm64-release
+      # The consumer's command, verbatim.
+      - name: Warm the cache
+        run: |
+          cd build/android && printf "y" | ./build.sh presubmit-with-archive arm64-v8a
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ always() }}
+        with:
+          show-disk-usage: 'true'
+      - name: Save ccache
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
+
   build-web:
     name: build-web
     runs-on: 'arm-ubuntu-24.04-16core'
@@ -219,9 +270,29 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/web-prereq
+      # Writer for the WASM cache, on the same paid runner label the presubmit reader uses, which
+      # is what keeps the workspace paths (and so the --use-port and compiler paths baked into the
+      # compile lines) identical between the two. A free ARM warmer was considered and rejected:
+      # this build configures four CMake trees, and a 4-vCPU runner would neither fit them in 14 GB
+      # nor finish a cold pass in reasonable time. See the presubmit reader for why the emsdk
+      # version is part of the key.
+      - uses: ./.github/actions/ccache
+        id: ccache
+        with:
+          config: web-emsdk-${{ env.GITHUB_EMSDK_VERSION }}
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh continuous
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+      # See the note on the linux job above: main only, to keep unreadable branch-scoped entries
+      # out of the repository's shared cache quota.
+      - name: Save ccache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.ccache.outputs.cache-path }}
+          key: ${{ steps.ccache.outputs.cache-key }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: filament-web

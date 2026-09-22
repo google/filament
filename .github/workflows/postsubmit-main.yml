@@ -98,7 +98,13 @@ jobs:
   # filament-assets
   update-sizeguard:
     name: update-sizeguard
-    runs-on: 'ubuntu-24.04-4core'
+    # Free standard runner, on the evidence gathered for postsubmit's build-android: that job's
+    # continuous build never dropped below 46 GB free of 145 GB and ran faster here than on
+    # ubuntu-24.04-4core, which has the same 4 vCPUs (run 35646616385, 2026-09-21). Not quite the
+    # same build though, so watch it: "release all" keeps four cross trees alive at once where the
+    # measured build kept three, and if this job runs out of space the size baseline presubmit
+    # compares against silently stops being refreshed.
+    runs-on: 'ubuntu-24.04'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

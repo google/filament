@@ -3,6 +3,6 @@
 # highlight
 
 [main]\
-open var [highlight](highlight.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [highlight](highlight.md): Float
 
 limit highlights to this value before bloom [10, +inf]

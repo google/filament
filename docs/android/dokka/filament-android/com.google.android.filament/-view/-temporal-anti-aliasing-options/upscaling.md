@@ -3,7 +3,7 @@
 # upscaling
 
 [main]\
-open var [upscaling](upscaling.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [upscaling](upscaling.md): Float
 
 Upscaling factor. 
 

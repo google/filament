@@ -3,7 +3,7 @@
 # destroy
 
 [main]\
-open fun [destroy](destroy.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [destroy](destroy.md)(e: Int)
 
 Destroys this component from the given entity, children are orphaned. 
 

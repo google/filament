@@ -3,6 +3,6 @@
 # haloThreshold
 
 [main]\
-open var [haloThreshold](halo-threshold.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [haloThreshold](halo-threshold.md): Float
 
 hdr threshold for the halo

@@ -3,7 +3,7 @@
 # getBufferObjectCount
 
 [main]\
-open fun [getBufferObjectCount](get-buffer-object-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getBufferObjectCount](get-buffer-object-count.md)(): Int
 
 Retrieve the count of each resource tracked by Engine. 
 

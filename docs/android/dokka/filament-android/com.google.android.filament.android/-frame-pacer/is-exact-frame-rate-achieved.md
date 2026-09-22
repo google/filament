@@ -3,7 +3,7 @@
 # isExactFrameRateAchieved
 
 [main]\
-open fun [isExactFrameRateAchieved](is-exact-frame-rate-achieved.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isExactFrameRateAchieved](is-exact-frame-rate-achieved.md)(): Boolean
 
 Returns whether the selected pacing frame rate is achieved exactly by the display hardware.
 

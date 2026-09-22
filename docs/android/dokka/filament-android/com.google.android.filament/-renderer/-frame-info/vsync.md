@@ -3,4 +3,4 @@
 # vsync
 
 [main]\
-open var [vsync](vsync.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open var [vsync](vsync.md): Long

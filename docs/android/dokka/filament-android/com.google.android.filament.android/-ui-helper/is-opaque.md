@@ -3,6 +3,6 @@
 # isOpaque
 
 [main]\
-open fun [isOpaque](is-opaque.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isOpaque](is-opaque.md)(): Boolean
 
 Returns true if the render target is opaque.

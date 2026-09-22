@@ -3,7 +3,7 @@
 # power
 
 [main]\
-open var [power](power.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [power](power.md): Float
 
 Controls ambient occlusion's contrast. 
 

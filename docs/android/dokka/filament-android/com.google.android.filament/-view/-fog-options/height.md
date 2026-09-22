@@ -3,7 +3,7 @@
 # height
 
 [main]\
-open var [height](height.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [height](height.md): Float
 
 Fog's floor in world units [m]. 
 

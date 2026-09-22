@@ -3,7 +3,7 @@
 # setSpecularAntiAliasingVariance
 
 [main]\
-open fun [setSpecularAntiAliasingVariance](set-specular-anti-aliasing-variance.md)(variance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
+open fun [setSpecularAntiAliasingVariance](set-specular-anti-aliasing-variance.md)(variance: Float)
 
 Sets the screen space variance of the filter kernel used when applying specular anti-aliasing. 
 

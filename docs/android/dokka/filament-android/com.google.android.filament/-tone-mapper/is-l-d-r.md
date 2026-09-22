@@ -3,7 +3,7 @@
 # isLDR
 
 [main]\
-open fun [isLDR](is-l-d-r.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isLDR](is-l-d-r.md)(): Boolean
 
 True if this tonemapper only works in low-dynamic-range. 
 

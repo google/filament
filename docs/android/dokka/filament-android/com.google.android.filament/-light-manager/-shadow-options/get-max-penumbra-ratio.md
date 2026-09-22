@@ -3,4 +3,4 @@
 # getMaxPenumbraRatio
 
 [main]\
-open fun [getMaxPenumbraRatio](get-max-penumbra-ratio.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open fun [getMaxPenumbraRatio](get-max-penumbra-ratio.md)(): Float

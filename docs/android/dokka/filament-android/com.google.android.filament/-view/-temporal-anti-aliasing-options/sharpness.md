@@ -3,6 +3,6 @@
 # sharpness
 
 [main]\
-open var [sharpness](sharpness.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [sharpness](sharpness.md): Float
 
 post-TAA sharpen, especially useful when upscaling is true.

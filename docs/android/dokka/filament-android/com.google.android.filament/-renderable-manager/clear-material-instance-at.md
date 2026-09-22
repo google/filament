@@ -3,7 +3,7 @@
 # clearMaterialInstanceAt
 
 [main]\
-open fun [clearMaterialInstanceAt](clear-material-instance-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [clearMaterialInstanceAt](clear-material-instance-at.md)(instance: Int, primitiveIndex: Int)
 
 Clear the MaterialInstance for the given primitive.
 

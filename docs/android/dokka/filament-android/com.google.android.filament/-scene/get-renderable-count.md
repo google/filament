@@ -3,7 +3,7 @@
 # getRenderableCount
 
 [main]\
-open fun [getRenderableCount](get-renderable-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getRenderableCount](get-renderable-count.md)(): Int
 
 Returns the number of active (alive) Renderable objects in the Scene.
 

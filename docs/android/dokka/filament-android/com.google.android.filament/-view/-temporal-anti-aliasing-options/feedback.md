@@ -3,6 +3,6 @@
 # feedback
 
 [main]\
-open var [feedback](feedback.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [feedback](feedback.md): Float
 
 history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).

@@ -3,7 +3,7 @@
 # Builder
 
 [main]\
-constructor(instanceCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+constructor(instanceCount: Int)
 
 #### Parameters
 

@@ -35,14 +35,24 @@ inputs:
       readers restore an entry that cannot hit:
 
         - desktop-release: the ccache-arm-linux warmer. Read by build-linux, and by the release
-          half of test-code-correctness.
+          half of test-code-correctness. WebGPU is on, because build/linux/build.sh passes -W;
+          both readers have to pass it too, since it reaches every compile line.
         - desktop-asan-debug: the ccache-arm-linux warmer. Read by the debug half of
           test-code-correctness.
         - desktop-backend-test: the ccache-arm-linux warmer. Read by test-backend.
+        - android-arm64-release: the ccache-android warmer, on x86_64 rather than ARM, because the
+          NDK only ships a linux-x86_64 toolchain. Read by build-android.
         - desktop (macOS only): the build-mac job, whose "continuous" build covers what presubmit
           mac compiles. macOS is not split because build-mac is already a single writer.
         - ios: the postsubmit build-ios job. Its "continuous" build compiles the device release
           objects presubmit needs, plus the debug and simulator ones it does not.
+        - web-emsdk-<version>: the postsubmit build-web job. The emsdk version from
+          build/common/versions is part of the name on purpose. CCACHE_COMPILERCHECK below cannot
+          see an emscripten upgrade, because em++ is a launcher stub that execs em++.py and whose
+          contents never change, so the key is what has to change instead: after a bump nothing
+          matches the restore prefix and the cache starts empty, rather than handing back objects
+          the previous toolchain produced. The step must therefore run after web-prereq, which is
+          what defines GITHUB_EMSDK_VERSION.
     required: true
 
 outputs:
@@ -69,13 +79,20 @@ runs:
         # agrees on its ceiling. Budgets are in MiB so a job restoring several caches can add them
         # up.
         #
-        # These are guesses. The only measurements are 380 MiB for all three Linux configurations
-        # back when they shared one entry, which predates asan being cached at all, and 563 MiB for
-        # macOS desktop; iOS is unmeasured and compiles debug, release and simulator, so it gets
-        # more room. Correct them from `gh cache list` and from the eviction warning ccache-stats
-        # prints. Headroom is tight: the 10 GB quota is shared with the mesa, emsdk, Vulkan SDK and
-        # glTF caches, and re-earning an evicted mesa entry costs 30 to 60 minutes of paid runner
-        # time.
+        # Sizes each entry reached once warm, from `gh cache list` on 2026-09-21:
+        #
+        #   desktop-release          77 MiB   before -W; expect several hundred with Dawn in it
+        #   desktop-asan-debug      482 MiB
+        #   desktop-backend-test    515 MiB
+        #   android-arm64-release   137 MiB   measured in the warmer's first pass, not yet saved
+        #   desktop (macOS)         564 MiB
+        #   ios                    1843 MiB   against its 2048 ceiling, so watch this one
+        #
+        # Correct these from `gh cache list` and from the eviction warning ccache-stats prints.
+        # Headroom is tight: the repository held 12.6 GB across 64 entries at that date, shared
+        # with the mesa (905 MiB), emsdk (498 MiB per architecture), Vulkan SDK, CodeQL and glTF
+        # asset caches, and GitHub evicts least-recently-used entries. Re-earning an evicted mesa
+        # entry costs 30 to 60 minutes of paid runner time.
         case "${{ inputs.config }}" in
           ios)     CONFIG_BUDGET_MIB=2048 ;;
           desktop) CONFIG_BUDGET_MIB=2048 ;;

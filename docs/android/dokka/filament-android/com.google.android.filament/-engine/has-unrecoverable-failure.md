@@ -3,7 +3,7 @@
 # hasUnrecoverableFailure
 
 [main]\
-open fun [hasUnrecoverableFailure](has-unrecoverable-failure.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [hasUnrecoverableFailure](has-unrecoverable-failure.md)(): Boolean
 
 Returns whether the engine has encountered an unrecoverable failure. 
 

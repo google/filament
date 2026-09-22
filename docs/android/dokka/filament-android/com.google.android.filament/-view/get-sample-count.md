@@ -3,7 +3,7 @@
 # getSampleCount
 
 [main]\
-open fun [getSampleCount](get-sample-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
+open fun [getSampleCount](get-sample-count.md)(): Int
 
 Returns the sample count set by setSampleCount(). 
 

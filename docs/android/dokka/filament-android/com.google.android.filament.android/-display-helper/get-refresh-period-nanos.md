@@ -3,7 +3,7 @@
 # getRefreshPeriodNanos
 
 [main]\
-open fun [getRefreshPeriodNanos](get-refresh-period-nanos.md)(display: Display): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open fun [getRefreshPeriodNanos](get-refresh-period-nanos.md)(display: Display): Long
 
 Returns a Display's refresh period in nanoseconds
 

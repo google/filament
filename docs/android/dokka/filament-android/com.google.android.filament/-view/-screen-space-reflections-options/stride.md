@@ -3,6 +3,6 @@
 # stride
 
 [main]\
-open var [stride](stride.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [stride](stride.md): Float
 
 stride, in texels, for samples along the ray.

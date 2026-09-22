@@ -3,7 +3,7 @@
 # getRenderingDeadlineNanos
 
 [main]\
-open fun [getRenderingDeadlineNanos](get-rendering-deadline-nanos.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open fun [getRenderingDeadlineNanos](get-rendering-deadline-nanos.md)(): Long
 
 Backwards-compatibility alias for [getRenderingDeadline](get-rendering-deadline.md).
 

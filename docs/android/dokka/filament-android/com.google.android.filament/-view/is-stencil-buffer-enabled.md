@@ -3,7 +3,7 @@
 # isStencilBufferEnabled
 
 [main]\
-open fun [isStencilBufferEnabled](is-stencil-buffer-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open fun [isStencilBufferEnabled](is-stencil-buffer-enabled.md)(): Boolean
 
 Returns true if the stencil buffer is enabled. 
 

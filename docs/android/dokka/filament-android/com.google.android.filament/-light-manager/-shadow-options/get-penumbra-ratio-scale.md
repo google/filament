@@ -3,4 +3,4 @@
 # getPenumbraRatioScale
 
 [main]\
-open fun [getPenumbraRatioScale](get-penumbra-ratio-scale.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open fun [getPenumbraRatioScale](get-penumbra-ratio-scale.md)(): Float

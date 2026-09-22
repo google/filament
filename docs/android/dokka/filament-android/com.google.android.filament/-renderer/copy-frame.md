@@ -18,7 +18,7 @@ main
 | srcViewport | The source rectangle to be copied. |
 
 [main]\
-open fun [copyFrame](copy-frame.md)(dstSwapChain: [SwapChain](../-swap-chain/index.md), dstViewport: [Viewport](../-viewport/index.md), srcViewport: [Viewport](../-viewport/index.md), flags: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
+open fun [copyFrame](copy-frame.md)(dstSwapChain: [SwapChain](../-swap-chain/index.md), dstViewport: [Viewport](../-viewport/index.md), srcViewport: [Viewport](../-viewport/index.md), flags: Int)
 
 Copy the currently rendered view to the indicated swap chain, using the indicated source and destination rectangle.
 

@@ -3,7 +3,7 @@
 # penumbraScale
 
 [main]\
-open var [penumbraScale](penumbra-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [penumbraScale](penumbra-scale.md): Float
 
 Sets a global scale factor applied to the final penumbra size of all PCSS shadows. 
 

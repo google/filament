@@ -3,7 +3,7 @@
 # jobSystemThreadCount
 
 [main]\
-open var [jobSystemThreadCount](job-system-thread-count.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
+open var [jobSystemThreadCount](job-system-thread-count.md): Long
 
 Number of threads to use in Engine's JobSystem. 
 

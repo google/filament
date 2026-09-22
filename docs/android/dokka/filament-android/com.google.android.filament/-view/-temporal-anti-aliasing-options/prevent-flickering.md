@@ -3,6 +3,6 @@
 # preventFlickering
 
 [main]\
-open var [preventFlickering](prevent-flickering.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
+open var [preventFlickering](prevent-flickering.md): Boolean
 
 adjust the feedback dynamically to reduce flickering

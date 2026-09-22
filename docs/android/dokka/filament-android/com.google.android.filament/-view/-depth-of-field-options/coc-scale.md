@@ -3,6 +3,6 @@
 # cocScale
 
 [main]\
-open var [cocScale](coc-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
+open var [cocScale](coc-scale.md): Float
 
 circle of confusion scale factor (amount of blur)
