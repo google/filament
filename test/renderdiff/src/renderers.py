@@ -15,6 +15,7 @@
 import abc
 import os
 import shlex
+import sys
 import concurrent.futures
 import fnmatch
 from dataclasses import dataclass, field
@@ -167,7 +168,13 @@ class DesktopRenderer(BaseRenderer):
 
     def get_env(self) -> dict:
         env = os.environ.copy()
-        if self.backend == 'vulkan':
+        # Under Linux, Dawn has no Metal or D3D backend to fall back on, so a webgpu render goes
+        # through Vulkan and needs the same software ICD the vulkan renderer uses; without it Dawn
+        # enumerates no adapters and every webgpu test aborts. macOS is deliberately left alone,
+        # because Dawn selects Metal there and that is the path macOS users actually run.
+        needs_vk_icd = self.backend == 'vulkan' or (
+                self.backend == 'webgpu' and sys.platform.startswith('linux'))
+        if needs_vk_icd:
             vk_icd = os.environ.get('FILAMENT_VK_ICD')
             if vk_icd and os.path.exists(vk_icd):
                 env.update({
