@@ -89,6 +89,10 @@ jobs:
       - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
+      # From the former build-wgsl-webgpu job. build/linux/build.sh passes -W, so the release tree
+      # already has the WebGPU backend and the WGSL code path in filamat.
+      - name: Test - WGSL material compiler
+        run: out/cmake-release/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
 
@@ -123,6 +127,12 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+      # Restore only; the postsubmit ccache-android job is the writer. It covers the two host tool
+      # passes and the aarch64 tree, but not the gradle externalNativeBuild modules, which
+      # configure their own CMakeLists and never see the launcher the root one installs.
+      - uses: ./.github/actions/ccache
+        with:
+          config: android-arm64-release
       - name: Run build script
         # Only build 1 64 bit target during presubmit to cut down build times during presubmit
         # Continuous builds will build everything
@@ -130,6 +140,8 @@ jobs:
           pushd .
           cd build/android && printf "y" | ./build.sh presubmit-with-archive arm64-v8a
           popd
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check artifact sizes
@@ -190,9 +202,24 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/web-prereq
+      # Restore only; the postsubmit build-web job is the writer. Its "continuous" build adds a
+      # debug WASM pass on top of what this job compiles and is otherwise flag-identical.
+      #
+      # After web-prereq, which is what puts GITHUB_EMSDK_VERSION in the environment, and which
+      # must also have placed emsdk at its fixed workspace path before anything hashes the
+      # compiler. The version belongs in the key because em++ is a launcher stub that execs
+      # em++.py: CCACHE_COMPILERCHECK=content hashes the stub, which does not change when
+      # emscripten does. Keying on the pinned version is what makes a bump of
+      # build/common/versions start from an empty cache rather than serve objects the previous
+      # toolchain produced.
+      - uses: ./.github/actions/ccache
+        with:
+          config: web-emsdk-${{ env.GITHUB_EMSDK_VERSION }}
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh presubmit
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   validate-docs:
     name: validate-docs
@@ -294,23 +321,6 @@ jobs:
               exit 1
           fi
 
-  build-wgsl-webgpu:
-    name: build-wgsl-webgpu
-    runs-on: 'arm-ubuntu-24.04-16core'
-    timeout-minutes: 45
-    needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: ./.github/actions/linux-prereq
-      - name: Run build script
-        run: ./build.sh -W debug test_filamat filament gltf_viewer
-      - name: Run test
-        run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
-
   test-code-correctness:
     name: test-code-correctness
     runs-on: 'arm-ubuntu-24.04-16core'
@@ -359,11 +369,10 @@ jobs:
         run: |
           # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
           ./build.sh -b -p desktop debug
-          # This will build and install the release build. -y none skips the separate prebuilt
-          # tools pass, for the reasons documented in build/common/split-build.sh; this mirrors
-          # what that script derives for the release-only wrappers. The debug build above keeps
-          # the split build, which is what keeps matc out of asan.
-          ./build.sh -y none -p desktop release && ninja -C out/cmake-release install
+          # This will build and install the release build. -W and -y none reproduce what
+          # build/linux/build.sh passes for a release-only build; they have to, because this build
+          # and build-linux share the desktop-release cache.
+          ./build.sh -W -y none -p desktop release && ninja -C out/cmake-release install
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
       - name: Check - clang-tidy (exception escape)
