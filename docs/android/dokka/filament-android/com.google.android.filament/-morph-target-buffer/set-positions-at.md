@@ -3,7 +3,7 @@
 # setPositionsAt
 
 [main]\
-open fun [setPositionsAt](set-positions-at.md)(engine: [Engine](../-engine/index.md), targetIndex: Int, positions: Array&lt;Float&gt;, count: Int)
+open fun [setPositionsAt](set-positions-at.md)(engine: [Engine](../-engine/index.md), targetIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), positions: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates positions for the given morph target. 
 
@@ -21,7 +21,7 @@ main
 | count | number of float3 vectors in positions |
 
 [main]\
-open fun [setPositionsAt](set-positions-at.md)(engine: [Engine](../-engine/index.md), targetIndex: Int, positions: Array&lt;Float&gt;, count: Int, offset: Int)
+open fun [setPositionsAt](set-positions-at.md)(engine: [Engine](../-engine/index.md), targetIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), positions: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates positions for the given morph target. 
 

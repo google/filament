@@ -3,4 +3,4 @@
 # constantBias
 
 [main]\
-open var [constantBias](constant-bias.md): Float
+open var [constantBias](constant-bias.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

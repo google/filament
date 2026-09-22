@@ -3,7 +3,7 @@
 # setGeometryAt
 
 [main]\
-open fun [setGeometryAt](set-geometry-at.md)(instance: Int, primitiveIndex: Int, type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md), indices: [IndexBuffer](../-index-buffer/index.md))
+open fun [setGeometryAt](set-geometry-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md), indices: [IndexBuffer](../-index-buffer/index.md))
 
 Changes the geometry for the given primitive.
 
@@ -26,7 +26,7 @@ main
 | com.google.android.filament.RenderableManager.Builder |
 
 [main]\
-open fun [setGeometryAt](set-geometry-at.md)(instance: Int, primitiveIndex: Int, type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md), indices: [IndexBuffer](../-index-buffer/index.md), offset: Int, count: Int)
+open fun [setGeometryAt](set-geometry-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md), indices: [IndexBuffer](../-index-buffer/index.md), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Changes the geometry for the given primitive.
 
@@ -51,7 +51,7 @@ main
 | com.google.android.filament.RenderableManager.Builder |
 
 [main]\
-open fun [setGeometryAt](set-geometry-at.md)(instance: Int, primitiveIndex: Int, type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md))
+open fun [setGeometryAt](set-geometry-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md))
 
 Changes the geometry for the given primitive. (non-indexed version)
 
@@ -73,7 +73,7 @@ main
 | com.google.android.filament.RenderableManager.Builder |
 
 [main]\
-open fun [setGeometryAt](set-geometry-at.md)(instance: Int, primitiveIndex: Int, type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md), offset: Int, count: Int)
+open fun [setGeometryAt](set-geometry-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](-primitive-type/index.md), vertices: [VertexBuffer](../-vertex-buffer/index.md), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Changes the geometry for the given primitive. (non-indexed version)
 

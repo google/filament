@@ -3,4 +3,4 @@
 # wrap
 
 [main]\
-open fun [wrap](wrap.md)(nativeObject: Long): [LightManager](index.md)
+open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [LightManager](index.md)

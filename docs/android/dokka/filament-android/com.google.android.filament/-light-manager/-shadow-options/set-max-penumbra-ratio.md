@@ -3,4 +3,4 @@
 # setMaxPenumbraRatio
 
 [main]\
-open fun [setMaxPenumbraRatio](set-max-penumbra-ratio.md)(maxPenumbraRatio: Float)
+open fun [setMaxPenumbraRatio](set-max-penumbra-ratio.md)(maxPenumbraRatio: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

@@ -3,4 +3,4 @@
 # getWidth
 
 [main]\
-open fun [getWidth](get-width.md)(): Int
+open fun [getWidth](get-width.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

@@ -3,7 +3,7 @@
 # isTextureSwizzleSupported
 
 [main]\
-open fun [isTextureSwizzleSupported](is-texture-swizzle-supported.md)(engine: [Engine](../-engine/index.md)): Boolean
+open fun [isTextureSwizzleSupported](is-texture-swizzle-supported.md)(engine: [Engine](../-engine/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

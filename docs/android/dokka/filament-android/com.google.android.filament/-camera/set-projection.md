@@ -3,7 +3,7 @@
 # setProjection
 
 [main]\
-open fun [setProjection](set-projection.md)(projection: [Camera.Projection](-projection/index.md), left: Double, right: Double, bottom: Double, top: Double, near: Double, far: Double)
+open fun [setProjection](set-projection.md)(projection: [Camera.Projection](-projection/index.md), left: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), right: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), bottom: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), top: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Sets the projection matrix from a frustum defined by six planes.
 
@@ -29,7 +29,7 @@ main
 | [Frustum](../-frustum/index.md) |
 
 [main]\
-open fun [setProjection](set-projection.md)(fovInDegrees: Double, aspect: Double, near: Double, far: Double)
+open fun [setProjection](set-projection.md)(fovInDegrees: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), aspect: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Utility to set the projection matrix from the field-of-view.
 
@@ -51,7 +51,7 @@ main
 | [Camera.Fov](-fov/index.md) |
 
 [main]\
-open fun [setProjection](set-projection.md)(fovInDegrees: Double, aspect: Double, near: Double, far: Double, direction: [Camera.Fov](-fov/index.md))
+open fun [setProjection](set-projection.md)(fovInDegrees: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), aspect: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), direction: [Camera.Fov](-fov/index.md))
 
 Utility to set the projection matrix from the field-of-view.
 

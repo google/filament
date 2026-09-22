@@ -3,7 +3,7 @@
 # isTextureFormatMipmappable
 
 [main]\
-open fun [isTextureFormatMipmappable](is-texture-format-mipmappable.md)(engine: [Engine](../-engine/index.md), format: [Texture.InternalFormat](-internal-format/index.md)): Boolean
+open fun [isTextureFormatMipmappable](is-texture-format-mipmappable.md)(engine: [Engine](../-engine/index.md), format: [Texture.InternalFormat](-internal-format/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

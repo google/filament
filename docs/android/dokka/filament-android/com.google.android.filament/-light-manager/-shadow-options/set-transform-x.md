@@ -3,4 +3,4 @@
 # setTransformX
 
 [main]\
-open fun [setTransformX](set-transform-x.md)(transformX: Float)
+open fun [setTransformX](set-transform-x.md)(transformX: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

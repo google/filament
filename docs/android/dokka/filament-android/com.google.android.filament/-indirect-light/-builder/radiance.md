@@ -3,7 +3,7 @@
 # radiance
 
 [main]\
-open fun [radiance](radiance.md)(bands: Int, sh: Array&lt;Float&gt;): [IndirectLight.Builder](index.md)
+open fun [radiance](radiance.md)(bands: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), sh: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [IndirectLight.Builder](index.md)
 
 Sets the irradiance from the radiance expressed as Spherical Harmonics. 
 

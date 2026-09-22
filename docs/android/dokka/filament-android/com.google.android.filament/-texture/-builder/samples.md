@@ -3,7 +3,7 @@
 # samples
 
 [main]\
-open fun [samples](samples.md)(samples: Int): [Texture.Builder](index.md)
+open fun [samples](samples.md)(samples: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
 Specifies the numbers of samples used for MSAA (Multisample Anti-Aliasing). 
 

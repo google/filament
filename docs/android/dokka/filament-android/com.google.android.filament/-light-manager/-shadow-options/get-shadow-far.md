@@ -3,4 +3,4 @@
 # getShadowFar
 
 [main]\
-open fun [getShadowFar](get-shadow-far.md)(): Float
+open fun [getShadowFar](get-shadow-far.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

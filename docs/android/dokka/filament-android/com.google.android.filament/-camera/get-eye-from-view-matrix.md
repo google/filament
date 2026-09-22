@@ -3,7 +3,7 @@
 # getEyeFromViewMatrix
 
 [main]\
-open fun [getEyeFromViewMatrix](get-eye-from-view-matrix.md)(out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getEyeFromViewMatrix](get-eye-from-view-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Returns the eye from view matrix for the specified eye.
 
@@ -20,7 +20,7 @@ main
 | out | optional array to store the result, or null to allocate a new one |
 
 [main]\
-open fun [getEyeFromViewMatrix](get-eye-from-view-matrix.md)(eyeId: Int, out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getEyeFromViewMatrix](get-eye-from-view-matrix.md)(eyeId: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Returns the eye from view matrix for the specified eye.
 

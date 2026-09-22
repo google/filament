@@ -3,7 +3,7 @@
 # setSunAngularRadius
 
 [main]\
-open fun [setSunAngularRadius](set-sun-angular-radius.md)(i: Int, angularRadius: Float)
+open fun [setSunAngularRadius](set-sun-angular-radius.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), angularRadius: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the angular radius of a Type.SUN light 
 

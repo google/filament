@@ -3,7 +3,7 @@
 # dimensions
 
 [main]\
-open fun [dimensions](dimensions.md)(dim: Int): [ColorGrading.Builder](index.md)
+open fun [dimensions](dimensions.md)(dim: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [ColorGrading.Builder](index.md)
 
 When color grading is implemented using a 3D LUT, this sets the dimension of the LUT. 
 

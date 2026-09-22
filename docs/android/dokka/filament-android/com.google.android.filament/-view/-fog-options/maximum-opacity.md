@@ -3,7 +3,7 @@
 # maximumOpacity
 
 [main]\
-open var [maximumOpacity](maximum-opacity.md): Float
+open var [maximumOpacity](maximum-opacity.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 fog's maximum opacity between 0 and 1. 
 

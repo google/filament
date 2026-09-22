@@ -3,7 +3,7 @@
 # isAutomaticInstancingEnabled
 
 [main]\
-open fun [isAutomaticInstancingEnabled](is-automatic-instancing-enabled.md)(): Boolean
+open fun [isAutomaticInstancingEnabled](is-automatic-instancing-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

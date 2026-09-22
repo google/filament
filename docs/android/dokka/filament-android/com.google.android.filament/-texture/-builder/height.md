@@ -3,7 +3,7 @@
 # height
 
 [main]\
-open fun [height](height.md)(height: Int): [Texture.Builder](index.md)
+open fun [height](height.md)(height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
 Specifies the height in texels of the texture. 
 

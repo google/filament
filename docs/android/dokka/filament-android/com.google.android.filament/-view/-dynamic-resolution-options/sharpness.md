@@ -3,6 +3,6 @@
 # sharpness
 
 [main]\
-open var [sharpness](sharpness.md): Float
+open var [sharpness](sharpness.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]

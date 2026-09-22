@@ -3,4 +3,4 @@
 # getTextureCount
 
 [main]\
-open fun [getTextureCount](get-texture-count.md)(): Int
+open fun [getTextureCount](get-texture-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

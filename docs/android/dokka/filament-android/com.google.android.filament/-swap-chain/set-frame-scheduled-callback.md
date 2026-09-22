@@ -3,7 +3,7 @@
 # setFrameScheduledCallback
 
 [main]\
-open fun [setFrameScheduledCallback](set-frame-scheduled-callback.md)(handler: Any, callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html), flags: Long)
+open fun [setFrameScheduledCallback](set-frame-scheduled-callback.md)(handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html), flags: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 FrameScheduledCallback is a callback function that notifies an application about the status of a frame after Filament has finished its processing. 
 
@@ -47,7 +47,7 @@ main
 | PresentCallable |
 
 [main]\
-open fun [setFrameScheduledCallback](set-frame-scheduled-callback.md)(handler: Any, callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
+open fun [setFrameScheduledCallback](set-frame-scheduled-callback.md)(handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
 
 FrameScheduledCallback is a callback function that notifies an application about the status of a frame after Filament has finished its processing. 
 

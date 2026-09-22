@@ -3,4 +3,4 @@
 # setHalfExtentZ
 
 [main]\
-open fun [setHalfExtentZ](set-half-extent-z.md)(halfExtentZ: Float)
+open fun [setHalfExtentZ](set-half-extent-z.md)(halfExtentZ: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

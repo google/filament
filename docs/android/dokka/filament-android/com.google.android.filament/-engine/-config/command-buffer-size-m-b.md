@@ -3,7 +3,7 @@
 # commandBufferSizeMB
 
 [main]\
-open var [commandBufferSizeMB](command-buffer-size-m-b.md): Long
+open var [commandBufferSizeMB](command-buffer-size-m-b.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Size in MiB of the low-level command buffer arena. 
 

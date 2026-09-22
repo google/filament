@@ -3,7 +3,7 @@
 # levels
 
 [main]\
-open fun [levels](levels.md)(levels: Int): [Texture.Builder](index.md)
+open fun [levels](levels.md)(levels: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
 Specifies the numbers of mip map levels. 
 

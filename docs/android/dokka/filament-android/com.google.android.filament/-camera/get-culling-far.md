@@ -3,6 +3,6 @@
 # getCullingFar
 
 [main]\
-open fun [getCullingFar](get-culling-far.md)(): Double
+open fun [getCullingFar](get-culling-far.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
 
 Returns the frustum's far plane used for culling

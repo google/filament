@@ -3,4 +3,4 @@
 # renderable
 
 [main]\
-open var [renderable](renderable.md): Int
+open var [renderable](renderable.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

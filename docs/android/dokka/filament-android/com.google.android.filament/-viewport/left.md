@@ -3,4 +3,4 @@
 # left
 
 [main]\
-open var [left](left.md): Int
+open var [left](left.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

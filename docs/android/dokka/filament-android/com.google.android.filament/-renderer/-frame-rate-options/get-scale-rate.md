@@ -3,4 +3,4 @@
 # getScaleRate
 
 [main]\
-open fun [getScaleRate](get-scale-rate.md)(): Float
+open fun [getScaleRate](get-scale-rate.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

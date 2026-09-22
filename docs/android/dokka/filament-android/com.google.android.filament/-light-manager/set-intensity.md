@@ -3,7 +3,7 @@
 # setIntensity
 
 [main]\
-open fun [setIntensity](set-intensity.md)(i: Int, intensity: Float)
+open fun [setIntensity](set-intensity.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), intensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the light's intensity. 
 
@@ -25,7 +25,7 @@ main
 | com.google.android.filament.LightManager.Builder |
 
 [main]\
-open fun [setIntensity](set-intensity.md)(i: Int, watts: Float, efficiency: Float)
+open fun [setIntensity](set-intensity.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), watts: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), efficiency: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the light's intensity. 
 

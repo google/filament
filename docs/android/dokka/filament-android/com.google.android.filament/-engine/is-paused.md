@@ -3,7 +3,7 @@
 # isPaused
 
 [main]\
-open fun [isPaused](is-paused.md)(): Boolean
+open fun [isPaused](is-paused.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Get paused state of rendering thread. 
 

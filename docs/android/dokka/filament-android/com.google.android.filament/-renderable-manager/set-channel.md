@@ -3,7 +3,7 @@
 # setChannel
 
 [main]\
-open fun [setChannel](set-channel.md)(instance: Int, channel: Int)
+open fun [setChannel](set-channel.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Changes the channel a renderable is associated to.
 

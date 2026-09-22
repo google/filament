@@ -3,7 +3,7 @@
 # morphing
 
 [main]\
-open fun [morphing](morphing.md)(targetCount: Int): [RenderableManager.Builder](index.md)
+open fun [morphing](morphing.md)(targetCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Controls if the renderable has legacy vertex morphing targets, zero by default. 
 
@@ -27,7 +27,7 @@ For standard morphing, A MorphTargetBuffer must be provided. Standard morphing s
 See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis to advance the animation.
 
 [main]\
-open fun [morphing](morphing.md)(level: Int, primitiveIndex: Int, offset: Int): [RenderableManager.Builder](index.md)
+open fun [morphing](morphing.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Specifies the the range of the MorphTargetBuffer to use with this primitive.
 

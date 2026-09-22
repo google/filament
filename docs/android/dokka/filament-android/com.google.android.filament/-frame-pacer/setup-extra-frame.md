@@ -3,7 +3,7 @@
 # setupExtraFrame
 
 [main]\
-open fun [setupExtraFrame](setup-extra-frame.md)(): Boolean
+open fun [setupExtraFrame](setup-extra-frame.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Advances the internal pacing pipeline to target an extra presentation frame in the future, without advancing the ideal cadence clock (mExpectedBaseTime). 
 

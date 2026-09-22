@@ -3,4 +3,4 @@
 # setBlurWidth
 
 [main]\
-open fun [setBlurWidth](set-blur-width.md)(blurWidth: Float)
+open fun [setBlurWidth](set-blur-width.md)(blurWidth: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

@@ -3,7 +3,7 @@
 # getMaxTextureSize
 
 [main]\
-open fun [getMaxTextureSize](get-max-texture-size.md)(engine: [Engine](../-engine/index.md), type: [Texture.Sampler](-sampler/index.md)): Int
+open fun [getMaxTextureSize](get-max-texture-size.md)(engine: [Engine](../-engine/index.md), type: [Texture.Sampler](-sampler/index.md)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 #### Return
 

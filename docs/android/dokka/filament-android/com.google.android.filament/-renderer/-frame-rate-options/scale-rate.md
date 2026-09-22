@@ -3,4 +3,4 @@
 # scaleRate
 
 [main]\
-open var [scaleRate](scale-rate.md): Float
+open var [scaleRate](scale-rate.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

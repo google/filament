@@ -3,7 +3,7 @@
 # getVertexCount
 
 [main]\
-open fun [getVertexCount](get-vertex-count.md)(): Int
+open fun [getVertexCount](get-vertex-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the vertex count of this MorphTargetBuffer.
 

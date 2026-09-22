@@ -3,4 +3,4 @@
 # getFrameScheduleTime
 
 [main]\
-open fun [getFrameScheduleTime](get-frame-schedule-time.md)(): Long
+open fun [getFrameScheduleTime](get-frame-schedule-time.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

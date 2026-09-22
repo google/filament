@@ -3,4 +3,4 @@
 # backendEndFrame
 
 [main]\
-open var [backendEndFrame](backend-end-frame.md): Long
+open var [backendEndFrame](backend-end-frame.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

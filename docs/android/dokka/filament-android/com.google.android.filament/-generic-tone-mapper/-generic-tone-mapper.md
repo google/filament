@@ -10,7 +10,7 @@ Builds a new generic tone mapper.
 The default values of the constructor parameters approximate an ACES tone mapping curve and the maximum input value is set to 10.0.
 
 [main]\
-constructor(contrast: Float)
+constructor(contrast: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Builds a new generic tone mapper. 
 
@@ -25,7 +25,7 @@ main
 | contrast | controls the contrast of the curve, must be >0.0, values in the range 0.5..2.0 are recommended. |
 
 [main]\
-constructor(contrast: Float, midGrayIn: Float)
+constructor(contrast: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midGrayIn: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Builds a new generic tone mapper. 
 
@@ -41,7 +41,7 @@ main
 | midGrayIn | sets the input middle gray, between 0.0 and 1.0. |
 
 [main]\
-constructor(contrast: Float, midGrayIn: Float, midGrayOut: Float)
+constructor(contrast: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midGrayIn: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midGrayOut: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Builds a new generic tone mapper. 
 
@@ -58,7 +58,7 @@ main
 | midGrayOut | sets the output middle gray, between 0.0 and 1.0. |
 
 [main]\
-constructor(contrast: Float, midGrayIn: Float, midGrayOut: Float, hdrMax: Float)
+constructor(contrast: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midGrayIn: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midGrayOut: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), hdrMax: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Builds a new generic tone mapper. 
 

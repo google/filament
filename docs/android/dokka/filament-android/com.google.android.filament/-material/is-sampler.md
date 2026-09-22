@@ -3,6 +3,6 @@
 # isSampler
 
 [main]\
-open fun [isSampler](is-sampler.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): Boolean
+open fun [isSampler](is-sampler.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Indicates whether an existing parameter is a sampler or not.

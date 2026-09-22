@@ -3,4 +3,4 @@
 # NativeSurface
 
 [main]\
-constructor(width: Int, height: Int)
+constructor(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

@@ -3,7 +3,7 @@
 # setScissor
 
 [main]\
-open fun [setScissor](set-scissor.md)(left: Int, bottom: Int, width: Int, height: Int)
+open fun [setScissor](set-scissor.md)(left: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bottom: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Set-up a custom scissor rectangle; by default it is disabled. 
 

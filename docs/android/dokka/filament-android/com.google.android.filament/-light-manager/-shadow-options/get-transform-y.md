@@ -3,4 +3,4 @@
 # getTransformY
 
 [main]\
-open fun [getTransformY](get-transform-y.md)(): Float
+open fun [getTransformY](get-transform-y.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

@@ -3,4 +3,4 @@
 # stride
 
 [main]\
-open var [stride](stride.md): Int
+open var [stride](stride.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

@@ -3,7 +3,7 @@
 # isScreenSpaceContactShadowsEnabled
 
 [main]\
-open fun [isScreenSpaceContactShadowsEnabled](is-screen-space-contact-shadows-enabled.md)(instance: Int): Boolean
+open fun [isScreenSpaceContactShadowsEnabled](is-screen-space-contact-shadows-enabled.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Checks if the renderable can use screen-space contact shadows.
 

@@ -3,7 +3,7 @@
 # channelMixer
 
 [main]\
-open fun [channelMixer](channel-mixer.md)(outRedx: Float, outRedy: Float, outRedz: Float, outGreenx: Float, outGreeny: Float, outGreenz: Float, outBluex: Float, outBluey: Float, outBluez: Float): [ColorGrading.Builder](index.md)
+open fun [channelMixer](channel-mixer.md)(outRedx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outRedy: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outRedz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outGreenx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outGreeny: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outGreenz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outBluex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outBluey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outBluez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 The channel mixer adjustment modifies each output color channel using the specified 
 
@@ -26,7 +26,7 @@ More complex mixes can be used to create more complex effects. For instance, her
 This Builder, for chaining calls
 
 [main]\
-open fun [channelMixer](channel-mixer.md)(outRed: Array&lt;Float&gt;, outGreen: Array&lt;Float&gt;, outBlue: Array&lt;Float&gt;): [ColorGrading.Builder](index.md)
+open fun [channelMixer](channel-mixer.md)(outRed: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, outGreen: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, outBlue: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [ColorGrading.Builder](index.md)
 
 The channel mixer adjustment modifies each output color channel using the specified 
 

@@ -3,4 +3,4 @@
 # lispsm
 
 [main]\
-open var [lispsm](lispsm.md): Boolean
+open var [lispsm](lispsm.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

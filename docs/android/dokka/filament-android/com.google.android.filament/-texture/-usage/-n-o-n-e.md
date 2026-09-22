@@ -3,4 +3,4 @@
 # NONE
 
 [main]\
-val [NONE](-n-o-n-e.md): Int = 0
+val [NONE](-n-o-n-e.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 0

@@ -3,7 +3,7 @@
 # resolution
 
 [main]\
-open var [resolution](resolution.md): Float
+open var [resolution](resolution.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 How each dimension of the AO buffer is scaled. 
 

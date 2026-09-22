@@ -3,7 +3,7 @@
 # setCustomEyeProjection
 
 [main]\
-open fun [setCustomEyeProjection](set-custom-eye-projection.md)(projection: Array&lt;Double&gt;, projectionForCulling: Array&lt;Double&gt;, near: Double, far: Double)
+open fun [setCustomEyeProjection](set-custom-eye-projection.md)(projection: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, projectionForCulling: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Sets a custom projection matrix for each eye. 
 

@@ -3,7 +3,7 @@
 # culling
 
 [main]\
-open fun [culling](culling.md)(enable: Boolean): [RenderableManager.Builder](index.md)
+open fun [culling](culling.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
 
 Controls frustum culling, true by default. 
 

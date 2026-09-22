@@ -3,7 +3,7 @@
 # setExternalImage
 
 [main]\
-open fun [setExternalImage](set-external-image.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md), texture: [Texture](../../com.google.android.filament/-texture/index.md), buffer: HardwareBuffer): Boolean
+open fun [setExternalImage](set-external-image.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md), texture: [Texture](../../com.google.android.filament/-texture/index.md), buffer: HardwareBuffer): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Specify the external image to associate with this Texture from an Android HardwareBuffer.
 

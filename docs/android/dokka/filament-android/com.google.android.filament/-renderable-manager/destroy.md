@@ -3,6 +3,6 @@
 # destroy
 
 [main]\
-open fun [destroy](destroy.md)(e: Int)
+open fun [destroy](destroy.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Destroys the renderable component in the given entity.

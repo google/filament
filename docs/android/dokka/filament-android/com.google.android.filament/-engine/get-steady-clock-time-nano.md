@@ -3,7 +3,7 @@
 # getSteadyClockTimeNano
 
 [main]\
-open fun [getSteadyClockTimeNano](get-steady-clock-time-nano.md)(): Long
+open fun [getSteadyClockTimeNano](get-steady-clock-time-nano.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Get the current time. 
 

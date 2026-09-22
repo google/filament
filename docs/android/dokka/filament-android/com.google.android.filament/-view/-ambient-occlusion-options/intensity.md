@@ -3,6 +3,6 @@
 # intensity
 
 [main]\
-open var [intensity](intensity.md): Float
+open var [intensity](intensity.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Strength of the Ambient Occlusion effect.

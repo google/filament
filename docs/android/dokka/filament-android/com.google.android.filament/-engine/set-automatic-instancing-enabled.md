@@ -3,7 +3,7 @@
 # setAutomaticInstancingEnabled
 
 [main]\
-open fun [setAutomaticInstancingEnabled](set-automatic-instancing-enabled.md)(enable: Boolean)
+open fun [setAutomaticInstancingEnabled](set-automatic-instancing-enabled.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Enables or disables automatic instancing of render primitives. 
 

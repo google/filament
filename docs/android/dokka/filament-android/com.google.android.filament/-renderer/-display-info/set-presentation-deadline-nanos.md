@@ -3,4 +3,4 @@
 # setPresentationDeadlineNanos
 
 [main]\
-open fun [setPresentationDeadlineNanos](set-presentation-deadline-nanos.md)(presentationDeadlineNanos: Long)
+open fun [setPresentationDeadlineNanos](set-presentation-deadline-nanos.md)(presentationDeadlineNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

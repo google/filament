@@ -3,4 +3,4 @@
 # wrap
 
 [main]\
-open fun [wrap](wrap.md)(nativeObject: Long): [RenderableManager](index.md)
+open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [RenderableManager](index.md)

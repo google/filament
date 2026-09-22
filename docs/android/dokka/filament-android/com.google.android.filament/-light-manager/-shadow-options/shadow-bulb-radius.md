@@ -3,4 +3,4 @@
 # shadowBulbRadius
 
 [main]\
-open var [shadowBulbRadius](shadow-bulb-radius.md): Float
+open var [shadowBulbRadius](shadow-bulb-radius.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

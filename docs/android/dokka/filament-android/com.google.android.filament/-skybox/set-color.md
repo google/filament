@@ -3,7 +3,7 @@
 # setColor
 
 [main]\
-open fun [setColor](set-color.md)(colorx: Float, colory: Float, colorz: Float, colorw: Float)
+open fun [setColor](set-color.md)(colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorw: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 #### Parameters
 
@@ -17,7 +17,7 @@ main
 | colorw | (w component) |
 
 [main]\
-open fun [setColor](set-color.md)(color: Array&lt;Float&gt;)
+open fun [setColor](set-color.md)(color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 #### Parameters
 

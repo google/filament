@@ -3,7 +3,7 @@
 # Builder
 
 [main]\
-constructor(count: Int)
+constructor(count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Creates a builder for renderable components.
 

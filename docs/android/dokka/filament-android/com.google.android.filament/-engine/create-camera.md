@@ -3,7 +3,7 @@
 # createCamera
 
 [main]\
-open fun [createCamera](create-camera.md)(entity: Int): [Camera](../-camera/index.md)
+open fun [createCamera](create-camera.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Camera](../-camera/index.md)
 
 Creates a Camera component.
 

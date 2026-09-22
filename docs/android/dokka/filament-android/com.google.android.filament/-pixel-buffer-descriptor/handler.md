@@ -3,4 +3,4 @@
 # handler
 
 [main]\
-open var [handler](handler.md): Any
+open var [handler](handler.md): [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html)

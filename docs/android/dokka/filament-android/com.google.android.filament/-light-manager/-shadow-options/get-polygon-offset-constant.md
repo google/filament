@@ -3,4 +3,4 @@
 # getPolygonOffsetConstant
 
 [main]\
-open fun [getPolygonOffsetConstant](get-polygon-offset-constant.md)(): Float
+open fun [getPolygonOffsetConstant](get-polygon-offset-constant.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

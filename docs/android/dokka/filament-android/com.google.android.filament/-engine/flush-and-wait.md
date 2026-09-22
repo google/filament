@@ -14,7 +14,7 @@ This is typically used right after destroying the `SwapChain`, in cases where a 
 If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
 
 [main]\
-open fun [flushAndWait](flush-and-wait.md)(timeout: Long): Boolean
+open fun [flushAndWait](flush-and-wait.md)(timeout: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until all commands to this point are executed. 
 

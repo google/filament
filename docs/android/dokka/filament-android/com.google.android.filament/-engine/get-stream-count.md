@@ -3,4 +3,4 @@
 # getStreamCount
 
 [main]\
-open fun [getStreamCount](get-stream-count.md)(): Int
+open fun [getStreamCount](get-stream-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

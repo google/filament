@@ -3,7 +3,7 @@
 # getLatestEpochID
 
 [main]\
-open fun [getLatestEpochID](get-latest-epoch-i-d.md)(): Long
+open fun [getLatestEpochID](get-latest-epoch-i-d.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Returns the current active (unsealed) epoch ID. Thread-safe.
 

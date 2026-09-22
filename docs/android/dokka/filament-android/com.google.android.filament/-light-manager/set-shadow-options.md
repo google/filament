@@ -3,7 +3,7 @@
 # setShadowOptions
 
 [main]\
-open fun [setShadowOptions](set-shadow-options.md)(i: Int, options: [LightManager.ShadowOptions](-shadow-options/index.md))
+open fun [setShadowOptions](set-shadow-options.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), options: [LightManager.ShadowOptions](-shadow-options/index.md))
 
 sets the shadow-map options for a given light
 

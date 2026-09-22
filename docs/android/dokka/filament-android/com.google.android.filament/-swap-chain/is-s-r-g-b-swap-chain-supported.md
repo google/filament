@@ -3,7 +3,7 @@
 # isSRGBSwapChainSupported
 
 [main]\
-open fun [isSRGBSwapChainSupported](is-s-r-g-b-swap-chain-supported.md)(engine: [Engine](../-engine/index.md)): Boolean
+open fun [isSRGBSwapChainSupported](is-s-r-g-b-swap-chain-supported.md)(engine: [Engine](../-engine/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Return whether createSwapChain supports the CONFIG_SRGB_COLORSPACE flag. 
 

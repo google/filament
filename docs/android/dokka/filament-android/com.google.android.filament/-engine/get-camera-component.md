@@ -3,7 +3,7 @@
 # getCameraComponent
 
 [main]\
-open fun [getCameraComponent](get-camera-component.md)(entity: Int): [Camera](../-camera/index.md)
+open fun [getCameraComponent](get-camera-component.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Camera](../-camera/index.md)
 
 Returns the Camera component of the given entity.
 

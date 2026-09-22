@@ -3,7 +3,7 @@
 # setProjection
 
 [main]\
-open fun [setProjection](set-projection.md)(pv: Array&lt;Float&gt;)
+open fun [setProjection](set-projection.md)(pv: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Sets the frustum from the given projection matrix
 

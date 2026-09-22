@@ -3,7 +3,7 @@
 # isFrameRateChangeSupported
 
 [main]\
-open fun [isFrameRateChangeSupported](is-frame-rate-change-supported.md)(): Boolean
+open fun [isFrameRateChangeSupported](is-frame-rate-change-supported.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Return whether this SwapChain supports the setFrameRate() API. 
 

@@ -3,6 +3,6 @@
 # backgroundRingCount
 
 [main]\
-open var [backgroundRingCount](background-ring-count.md): Int
+open var [backgroundRingCount](background-ring-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 number of kernel rings for background tiles

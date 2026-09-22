@@ -3,9 +3,9 @@
 # setStencilWriteMask
 
 [main]\
-open fun [setStencilWriteMask](set-stencil-write-mask.md)(writeMask: Int)
+open fun [setStencilWriteMask](set-stencil-write-mask.md)(writeMask: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setStencilWriteMask](set-stencil-write-mask.md)(writeMask: Int, face: [MaterialInstance.StencilFace](-stencil-face/index.md))
+open fun [setStencilWriteMask](set-stencil-write-mask.md)(writeMask: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), face: [MaterialInstance.StencilFace](-stencil-face/index.md))
 
 Sets the stencil write mask (default is 0xFF). 
 

@@ -3,4 +3,4 @@
 # getMaterialCount
 
 [main]\
-open fun [getMaterialCount](get-material-count.md)(): Int
+open fun [getMaterialCount](get-material-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

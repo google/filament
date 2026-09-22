@@ -19,4 +19,4 @@ A guard band can be enabled to avoid some artifacts towards the edge of the scre
 
 | Name | Summary |
 |---|---|
-| [enabled](enabled.md) | [main]<br>open var [enabled](enabled.md): Boolean |
+| [enabled](enabled.md) | [main]<br>open var [enabled](enabled.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html) |

@@ -3,4 +3,4 @@
 # setBackendEndFrame
 
 [main]\
-open fun [setBackendEndFrame](set-backend-end-frame.md)(backendEndFrame: Long)
+open fun [setBackendEndFrame](set-backend-end-frame.md)(backendEndFrame: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

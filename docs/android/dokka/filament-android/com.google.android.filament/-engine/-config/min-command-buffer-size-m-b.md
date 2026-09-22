@@ -3,7 +3,7 @@
 # minCommandBufferSizeMB
 
 [main]\
-open var [minCommandBufferSizeMB](min-command-buffer-size-m-b.md): Long
+open var [minCommandBufferSizeMB](min-command-buffer-size-m-b.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Minimum size in MiB of a low-level command buffer. 
 

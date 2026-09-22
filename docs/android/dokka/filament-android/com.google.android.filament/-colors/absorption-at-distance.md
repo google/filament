@@ -3,7 +3,7 @@
 # absorptionAtDistance
 
 [main]\
-open fun [absorptionAtDistance](absorption-at-distance.md)(color: Array&lt;Float&gt;, distance: Float, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [absorptionAtDistance](absorption-at-distance.md)(color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, distance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Computes the Beer-Lambert absorption coefficients from the specified transmittance color and distance. 
 
@@ -23,7 +23,7 @@ main
 | distance | the distance at which white light should become the specified color |
 
 [main]\
-open fun [absorptionAtDistance](absorption-at-distance.md)(colorx: Float, colory: Float, colorz: Float, distance: Float, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [absorptionAtDistance](absorption-at-distance.md)(colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), distance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Computes the Beer-Lambert absorption coefficients from the specified transmittance color and distance. 
 

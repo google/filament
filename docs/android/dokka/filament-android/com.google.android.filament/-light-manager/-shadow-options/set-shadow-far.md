@@ -3,4 +3,4 @@
 # setShadowFar
 
 [main]\
-open fun [setShadowFar](set-shadow-far.md)(shadowFar: Float)
+open fun [setShadowFar](set-shadow-far.md)(shadowFar: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

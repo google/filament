@@ -3,7 +3,7 @@
 # multiview
 
 [main]\
-open fun [multiview](multiview.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), layerCount: Int): [RenderTarget.Builder](index.md)
+open fun [multiview](multiview.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), layerCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderTarget.Builder](index.md)
 
 Sets the starting index of the 2d array textures for multiview at the given attachment point. 
 
@@ -23,7 +23,7 @@ main
 | layerCount | The number of layers used for multiview, starting from baseLayer. |
 
 [main]\
-open fun [multiview](multiview.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), layerCount: Int, baseLayer: Int): [RenderTarget.Builder](index.md)
+open fun [multiview](multiview.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), layerCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), baseLayer: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderTarget.Builder](index.md)
 
 Sets the starting index of the 2d array textures for multiview at the given attachment point. 
 

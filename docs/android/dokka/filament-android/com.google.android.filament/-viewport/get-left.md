@@ -3,4 +3,4 @@
 # getLeft
 
 [main]\
-open fun [getLeft](get-left.md)(): Int
+open fun [getLeft](get-left.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

@@ -3,6 +3,6 @@
 # bilateralThreshold
 
 [main]\
-open var [bilateralThreshold](bilateral-threshold.md): Float
+open var [bilateralThreshold](bilateral-threshold.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 depth distance that constitute an edge for filtering

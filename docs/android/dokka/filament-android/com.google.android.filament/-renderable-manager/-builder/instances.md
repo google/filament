@@ -3,7 +3,7 @@
 # instances
 
 [main]\
-open fun [instances](instances.md)(instanceCount: Int): [RenderableManager.Builder](index.md)
+open fun [instances](instances.md)(instanceCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Specifies the number of draw instances of this renderable. 
 
@@ -22,7 +22,7 @@ main
 | instanceCount | the number of instances silently clamped between 1 and 32767. |
 
 [main]\
-open fun [instances](instances.md)(instanceCount: Int, instanceBuffer: [InstanceBuffer](../../-instance-buffer/index.md)): [RenderableManager.Builder](index.md)
+open fun [instances](instances.md)(instanceCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), instanceBuffer: [InstanceBuffer](../../-instance-buffer/index.md)): [RenderableManager.Builder](index.md)
 
 Specifies the number of draw instances of this renderable and an \c InstanceBuffer containing their local transforms. 
 

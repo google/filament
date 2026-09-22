@@ -3,7 +3,7 @@
 # perFrameCommandsSizeMB
 
 [main]\
-open var [perFrameCommandsSizeMB](per-frame-commands-size-m-b.md): Long
+open var [perFrameCommandsSizeMB](per-frame-commands-size-m-b.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Size in MiB of the per-frame high level command buffer. 
 

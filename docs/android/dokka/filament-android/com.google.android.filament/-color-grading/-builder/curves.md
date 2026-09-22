@@ -3,7 +3,7 @@
 # curves
 
 [main]\
-open fun [curves](curves.md)(shadowGammax: Float, shadowGammay: Float, shadowGammaz: Float, midPointx: Float, midPointy: Float, midPointz: Float, highlightScalex: Float, highlightScaley: Float, highlightScalez: Float): [ColorGrading.Builder](index.md)
+open fun [curves](curves.md)(shadowGammax: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), shadowGammay: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), shadowGammaz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midPointx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midPointy: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), midPointz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), highlightScalex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), highlightScaley: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), highlightScalez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Applies a curve to each RGB channel of the image. 
 
@@ -18,7 +18,7 @@ Curves are applied in linear space.
 This Builder, for chaining calls
 
 [main]\
-open fun [curves](curves.md)(shadowGamma: Array&lt;Float&gt;, midPoint: Array&lt;Float&gt;, highlightScale: Array&lt;Float&gt;): [ColorGrading.Builder](index.md)
+open fun [curves](curves.md)(shadowGamma: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, midPoint: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, highlightScale: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [ColorGrading.Builder](index.md)
 
 Applies a curve to each RGB channel of the image. 
 

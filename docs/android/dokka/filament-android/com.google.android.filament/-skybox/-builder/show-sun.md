@@ -3,7 +3,7 @@
 # showSun
 
 [main]\
-open fun [showSun](show-sun.md)(show: Boolean): [Skybox.Builder](index.md)
+open fun [showSun](show-sun.md)(show: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [Skybox.Builder](index.md)
 
 Indicates whether the sun should be rendered. 
 

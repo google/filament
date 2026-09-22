@@ -3,7 +3,7 @@
 # setAcquiredImage
 
 [main]\
-open fun [setAcquiredImage](set-acquired-image.md)(stream: [Stream](../../com.google.android.filament/-stream/index.md), hwbuffer: HardwareBuffer, handler: Any, callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
+open fun [setAcquiredImage](set-acquired-image.md)(stream: [Stream](../../com.google.android.filament/-stream/index.md), hwbuffer: HardwareBuffer, handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
 
 Updates an ACQUIRED stream with a HardwareBuffer image.
 
@@ -19,7 +19,7 @@ main
 | callback | A callback invoked when the buffer is released by Filament. |
 
 [main]\
-open fun [setAcquiredImage](set-acquired-image.md)(stream: [Stream](../../com.google.android.filament/-stream/index.md), hwbuffer: HardwareBuffer, handler: Any, callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html), transform: Array&lt;Float&gt;)
+open fun [setAcquiredImage](set-acquired-image.md)(stream: [Stream](../../com.google.android.filament/-stream/index.md), hwbuffer: HardwareBuffer, handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html), transform: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Updates an ACQUIRED stream with a HardwareBuffer image and an optional 3x3 transform matrix.
 

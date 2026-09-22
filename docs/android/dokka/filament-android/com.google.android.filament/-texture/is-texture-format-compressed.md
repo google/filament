@@ -3,7 +3,7 @@
 # isTextureFormatCompressed
 
 [main]\
-open fun [isTextureFormatCompressed](is-texture-format-compressed.md)(format: [Texture.InternalFormat](-internal-format/index.md)): Boolean
+open fun [isTextureFormatCompressed](is-texture-format-compressed.md)(format: [Texture.InternalFormat](-internal-format/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

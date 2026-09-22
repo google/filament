@@ -3,4 +3,4 @@
 # setDeadline
 
 [main]\
-open fun [setDeadline](set-deadline.md)(deadline: Long)
+open fun [setDeadline](set-deadline.md)(deadline: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

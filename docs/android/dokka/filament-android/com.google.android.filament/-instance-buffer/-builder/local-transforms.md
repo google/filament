@@ -3,7 +3,7 @@
 # localTransforms
 
 [main]\
-open fun [localTransforms](local-transforms.md)(localTransforms: Array&lt;Float&gt;): [InstanceBuffer.Builder](index.md)
+open fun [localTransforms](local-transforms.md)(localTransforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [InstanceBuffer.Builder](index.md)
 
 Provide an initial local transform for each instance. Each local transform is relative to 
 

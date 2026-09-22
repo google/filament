@@ -23,26 +23,26 @@ headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime
 
 | | |
 |---|---|
-| [FrameRateOptions](-frame-rate-options.md) | [main]<br>constructor()constructor(headRoomRatio: Float, scaleRate: Float, history: Int, interval: Int) |
+| [FrameRateOptions](-frame-rate-options.md) | [main]<br>constructor()constructor(headRoomRatio: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), scaleRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), history: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), interval: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)) |
 
 ## Properties
 
 | Name | Summary |
 |---|---|
-| [headRoomRatio](head-room-ratio.md) | [main]<br>open var [headRoomRatio](head-room-ratio.md): Float |
-| [history](history.md) | [main]<br>open var [history](history.md): Int |
-| [interval](interval.md) | [main]<br>open var [interval](interval.md): Int |
-| [scaleRate](scale-rate.md) | [main]<br>open var [scaleRate](scale-rate.md): Float |
+| [headRoomRatio](head-room-ratio.md) | [main]<br>open var [headRoomRatio](head-room-ratio.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html) |
+| [history](history.md) | [main]<br>open var [history](history.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
+| [interval](interval.md) | [main]<br>open var [interval](interval.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
+| [scaleRate](scale-rate.md) | [main]<br>open var [scaleRate](scale-rate.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html) |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
-| [getHeadRoomRatio](get-head-room-ratio.md) | [main]<br>open fun [getHeadRoomRatio](get-head-room-ratio.md)(): Float |
-| [getHistory](get-history.md) | [main]<br>open fun [getHistory](get-history.md)(): Int |
-| [getInterval](get-interval.md) | [main]<br>open fun [getInterval](get-interval.md)(): Int |
-| [getScaleRate](get-scale-rate.md) | [main]<br>open fun [getScaleRate](get-scale-rate.md)(): Float |
-| [setHeadRoomRatio](set-head-room-ratio.md) | [main]<br>open fun [setHeadRoomRatio](set-head-room-ratio.md)(headRoomRatio: Float) |
-| [setHistory](set-history.md) | [main]<br>open fun [setHistory](set-history.md)(history: Int) |
-| [setInterval](set-interval.md) | [main]<br>open fun [setInterval](set-interval.md)(interval: Int) |
-| [setScaleRate](set-scale-rate.md) | [main]<br>open fun [setScaleRate](set-scale-rate.md)(scaleRate: Float) |
+| [getHeadRoomRatio](get-head-room-ratio.md) | [main]<br>open fun [getHeadRoomRatio](get-head-room-ratio.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html) |
+| [getHistory](get-history.md) | [main]<br>open fun [getHistory](get-history.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
+| [getInterval](get-interval.md) | [main]<br>open fun [getInterval](get-interval.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
+| [getScaleRate](get-scale-rate.md) | [main]<br>open fun [getScaleRate](get-scale-rate.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html) |
+| [setHeadRoomRatio](set-head-room-ratio.md) | [main]<br>open fun [setHeadRoomRatio](set-head-room-ratio.md)(headRoomRatio: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)) |
+| [setHistory](set-history.md) | [main]<br>open fun [setHistory](set-history.md)(history: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)) |
+| [setInterval](set-interval.md) | [main]<br>open fun [setInterval](set-interval.md)(interval: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)) |
+| [setScaleRate](set-scale-rate.md) | [main]<br>open fun [setScaleRate](set-scale-rate.md)(scaleRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)) |

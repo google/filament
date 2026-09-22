@@ -3,4 +3,4 @@
 # elvsm
 
 [main]\
-open var [elvsm](elvsm.md): Boolean
+open var [elvsm](elvsm.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

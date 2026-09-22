@@ -32,6 +32,6 @@ stream
 | Name | Summary |
 |---|---|
 | [build](build.md) | [main]<br>open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [Stream](../index.md)<br>Creates the Stream object and returns a pointer to it. |
-| [height](height.md) | [main]<br>open fun [height](height.md)(height: Int): [Stream.Builder](index.md) |
+| [height](height.md) | [main]<br>open fun [height](height.md)(height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Stream.Builder](index.md) |
 | [name](name.md) | [main]<br>open fun [name](name.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Stream.Builder](index.md)<br>Associate an optional name with this Stream for debugging purposes. |
-| [width](width.md) | [main]<br>open fun [width](width.md)(width: Int): [Stream.Builder](index.md) |
+| [width](width.md) | [main]<br>open fun [width](width.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Stream.Builder](index.md) |

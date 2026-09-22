@@ -3,4 +3,4 @@
 # getCenterY
 
 [main]\
-open fun [getCenterY](get-center-y.md)(): Float
+open fun [getCenterY](get-center-y.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

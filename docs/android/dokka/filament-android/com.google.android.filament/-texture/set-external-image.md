@@ -3,7 +3,7 @@
 # setExternalImage
 
 [main]\
-open fun [setExternalImage](set-external-image.md)(engine: [Engine](../-engine/index.md), image: Long)
+open fun [setExternalImage](set-external-image.md)(engine: [Engine](../-engine/index.md), image: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Specify the external image to associate with this Texture. Typically, the external 
 
@@ -33,7 +33,7 @@ main
 | PlatformCocoaTouchGL#createExternalImage |
 
 [main]\
-open fun [setExternalImage](set-external-image.md)(engine: [Engine](../-engine/index.md), image: Long, plane: Int)
+open fun [setExternalImage](set-external-image.md)(engine: [Engine](../-engine/index.md), image: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), plane: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Specify the external image and plane to associate with this Texture. Typically, the external 
 

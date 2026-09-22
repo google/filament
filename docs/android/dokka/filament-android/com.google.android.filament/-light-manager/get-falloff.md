@@ -3,7 +3,7 @@
 # getFalloff
 
 [main]\
-open fun [getFalloff](get-falloff.md)(i: Int): Float
+open fun [getFalloff](get-falloff.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 returns the falloff distance of this light.
 

@@ -3,7 +3,7 @@
 # customLut
 
 [main]\
-open fun [customLut](custom-lut.md)(data: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), dimension: Int): [ColorGrading.Builder](index.md)
+open fun [customLut](custom-lut.md)(data: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), dimension: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [ColorGrading.Builder](index.md)
 
 Specifies a custom 3D color grading LUT to map the final sRGB color. 
 

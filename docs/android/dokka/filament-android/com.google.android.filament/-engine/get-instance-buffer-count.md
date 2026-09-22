@@ -3,4 +3,4 @@
 # getInstanceBufferCount
 
 [main]\
-open fun [getInstanceBufferCount](get-instance-buffer-count.md)(): Int
+open fun [getInstanceBufferCount](get-instance-buffer-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

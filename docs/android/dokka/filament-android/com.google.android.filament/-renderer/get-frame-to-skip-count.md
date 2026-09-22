@@ -3,7 +3,7 @@
 # getFrameToSkipCount
 
 [main]\
-open fun [getFrameToSkipCount](get-frame-to-skip-count.md)(): Int
+open fun [getFrameToSkipCount](get-frame-to-skip-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Remainder count of frame to be skipped
 

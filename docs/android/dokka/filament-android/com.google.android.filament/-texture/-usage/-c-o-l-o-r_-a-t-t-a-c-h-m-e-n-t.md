@@ -3,6 +3,6 @@
 # COLOR_ATTACHMENT
 
 [main]\
-val [COLOR_ATTACHMENT](-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t.md): Int = 1
+val [COLOR_ATTACHMENT](-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 1
 
 Texture can be used as a color attachment

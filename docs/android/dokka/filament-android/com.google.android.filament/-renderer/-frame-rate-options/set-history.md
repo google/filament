@@ -3,4 +3,4 @@
 # setHistory
 
 [main]\
-open fun [setHistory](set-history.md)(history: Int)
+open fun [setHistory](set-history.md)(history: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

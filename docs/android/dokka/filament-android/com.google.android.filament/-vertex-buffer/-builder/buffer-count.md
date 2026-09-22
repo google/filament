@@ -3,7 +3,7 @@
 # bufferCount
 
 [main]\
-open fun [bufferCount](buffer-count.md)(bufferCount: Int): [VertexBuffer.Builder](index.md)
+open fun [bufferCount](buffer-count.md)(bufferCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [VertexBuffer.Builder](index.md)
 
 Defines how many buffers will be created in this vertex buffer set. 
 

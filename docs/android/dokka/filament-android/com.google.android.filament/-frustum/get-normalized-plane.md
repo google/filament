@@ -3,7 +3,7 @@
 # getNormalizedPlane
 
 [main]\
-open fun [getNormalizedPlane](get-normalized-plane.md)(plane: [Frustum.Plane](-plane/index.md), out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getNormalizedPlane](get-normalized-plane.md)(plane: [Frustum.Plane](-plane/index.md), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Returns the plane equation parameters with normalized normals
 

@@ -3,4 +3,4 @@
 # expectedPresentationTime
 
 [main]\
-open var [expectedPresentationTime](expected-presentation-time.md): Long
+open var [expectedPresentationTime](expected-presentation-time.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

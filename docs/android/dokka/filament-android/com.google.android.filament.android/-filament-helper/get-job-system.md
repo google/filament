@@ -3,7 +3,7 @@
 # getJobSystem
 
 [main]\
-open fun [getJobSystem](get-job-system.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md)): Long
+open fun [getJobSystem](get-job-system.md)(engine: [Engine](../../com.google.android.filament/-engine/index.md)): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Retrieves the native pointer to the JobSystem managed by the Engine.
 

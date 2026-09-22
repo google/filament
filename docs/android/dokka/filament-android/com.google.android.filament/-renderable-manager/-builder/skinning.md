@@ -3,7 +3,7 @@
 # skinning
 
 [main]\
-open fun [skinning](skinning.md)(skinningBuffer: [SkinningBuffer](../../-skinning-buffer/index.md), count: Int, offset: Int): [RenderableManager.Builder](index.md)
+open fun [skinning](skinning.md)(skinningBuffer: [SkinningBuffer](../../-skinning-buffer/index.md), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Enables GPU vertex skinning for up to 255 bones, 0 by default. 
 
@@ -24,7 +24,7 @@ main
 | offset | offset in the SkinningBuffer |
 
 [main]\
-open fun [skinning](skinning.md)(boneCount: Int, bones: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [RenderableManager.Builder](index.md)
+open fun [skinning](skinning.md)(boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bones: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [RenderableManager.Builder](index.md)
 
 #### Parameters
 
@@ -36,7 +36,7 @@ main
 | bones | buffer containing bones data |
 
 [main]\
-open fun [skinning](skinning.md)(bones: Array&lt;Float&gt;, offset: Int, boneCount: Int): [RenderableManager.Builder](index.md)
+open fun [skinning](skinning.md)(bones: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 #### Parameters
 
@@ -49,7 +49,7 @@ main
 | boneCount | number of elements (structured element count) in `bones` |
 
 [main]\
-open fun [skinning](skinning.md)(bones: Array&lt;Float&gt;, boneCount: Int): [RenderableManager.Builder](index.md)
+open fun [skinning](skinning.md)(bones: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 #### Parameters
 
@@ -61,7 +61,7 @@ main
 | boneCount | number of elements (structured element count) in `bones` |
 
 [main]\
-open fun [skinning](skinning.md)(bones: Array&lt;Float&gt;): [RenderableManager.Builder](index.md)
+open fun [skinning](skinning.md)(bones: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [RenderableManager.Builder](index.md)
 
 #### Parameters
 
@@ -72,4 +72,4 @@ main
 | bones | array containing bones data |
 
 [main]\
-open fun [skinning](skinning.md)(boneCount: Int): [RenderableManager.Builder](index.md)
+open fun [skinning](skinning.md)(boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)

@@ -3,7 +3,7 @@
 # setPresentationTime
 
 [main]\
-open fun [setPresentationTime](set-presentation-time.md)(monotonic_clock_ns: Long)
+open fun [setPresentationTime](set-presentation-time.md)(monotonic_clock_ns: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Set the time at which the frame must be presented to the display hardware. 
 

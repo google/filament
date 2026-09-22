@@ -3,6 +3,6 @@
 # ssctContactDistanceMax
 
 [main]\
-open var [ssctContactDistanceMax](ssct-contact-distance-max.md): Float
+open var [ssctContactDistanceMax](ssct-contact-distance-max.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 max distance for contact

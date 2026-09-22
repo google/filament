@@ -3,6 +3,6 @@
 # mipmapping
 
 [main]\
-open var [mipmapping](mipmapping.md): Boolean
+open var [mipmapping](mipmapping.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Whether to generate mipmaps for all VSM shadow maps.

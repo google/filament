@@ -3,4 +3,4 @@
 # gpuFrameComplete
 
 [main]\
-open var [gpuFrameComplete](gpu-frame-complete.md): Long
+open var [gpuFrameComplete](gpu-frame-complete.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

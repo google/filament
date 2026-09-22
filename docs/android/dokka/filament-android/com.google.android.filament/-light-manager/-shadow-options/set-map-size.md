@@ -3,4 +3,4 @@
 # setMapSize
 
 [main]\
-open fun [setMapSize](set-map-size.md)(mapSize: Int)
+open fun [setMapSize](set-map-size.md)(mapSize: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

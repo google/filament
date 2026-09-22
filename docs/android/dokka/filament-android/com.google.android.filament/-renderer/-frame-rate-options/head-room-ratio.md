@@ -3,4 +3,4 @@
 # headRoomRatio
 
 [main]\
-open var [headRoomRatio](head-room-ratio.md): Float
+open var [headRoomRatio](head-room-ratio.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

@@ -3,4 +3,4 @@
 # createSwapChainFromNativeSurface
 
 [main]\
-open fun [createSwapChainFromNativeSurface](create-swap-chain-from-native-surface.md)(surface: [NativeSurface](../-native-surface/index.md), flags: Long): [SwapChain](../-swap-chain/index.md)
+open fun [createSwapChainFromNativeSurface](create-swap-chain-from-native-surface.md)(surface: [NativeSurface](../-native-surface/index.md), flags: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [SwapChain](../-swap-chain/index.md)

@@ -3,6 +3,6 @@
 # getContrast
 
 [main]\
-open fun [getContrast](get-contrast.md)(): Float
+open fun [getContrast](get-contrast.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Returns the contrast of the curve as a strictly positive value.

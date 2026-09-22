@@ -3,4 +3,4 @@
 # setRefreshRate
 
 [main]\
-open fun [setRefreshRate](set-refresh-rate.md)(refreshRate: Float)
+open fun [setRefreshRate](set-refresh-rate.md)(refreshRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

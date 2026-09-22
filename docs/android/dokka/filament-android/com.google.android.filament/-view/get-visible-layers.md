@@ -3,7 +3,7 @@
 # getVisibleLayers
 
 [main]\
-open fun [getVisibleLayers](get-visible-layers.md)(): Int
+open fun [getVisibleLayers](get-visible-layers.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Get the visible layers.
 

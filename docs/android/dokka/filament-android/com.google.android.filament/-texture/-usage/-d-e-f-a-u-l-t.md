@@ -3,6 +3,6 @@
 # DEFAULT
 
 [main]\
-val [DEFAULT](-d-e-f-a-u-l-t.md): Int = 24
+val [DEFAULT](-d-e-f-a-u-l-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 24
 
 Default texture usage

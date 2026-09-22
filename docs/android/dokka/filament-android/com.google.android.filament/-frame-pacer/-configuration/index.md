@@ -11,20 +11,20 @@ Holds dynamic pacing targets and latency pipeline depth requirements.
 
 | | |
 |---|---|
-| [Configuration](-configuration.md) | [main]<br>constructor()constructor(targetFrameRate: Float, latency: Long) |
+| [Configuration](-configuration.md) | [main]<br>constructor()constructor(targetFrameRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), latency: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)) |
 
 ## Properties
 
 | Name | Summary |
 |---|---|
-| [latency](latency.md) | [main]<br>open var [latency](latency.md): Long |
-| [targetFrameRate](target-frame-rate.md) | [main]<br>open var [targetFrameRate](target-frame-rate.md): Float |
+| [latency](latency.md) | [main]<br>open var [latency](latency.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
+| [targetFrameRate](target-frame-rate.md) | [main]<br>open var [targetFrameRate](target-frame-rate.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html) |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
-| [getLatency](get-latency.md) | [main]<br>open fun [getLatency](get-latency.md)(): Long |
-| [getTargetFrameRate](get-target-frame-rate.md) | [main]<br>open fun [getTargetFrameRate](get-target-frame-rate.md)(): Float |
-| [setLatency](set-latency.md) | [main]<br>open fun [setLatency](set-latency.md)(latency: Long) |
-| [setTargetFrameRate](set-target-frame-rate.md) | [main]<br>open fun [setTargetFrameRate](set-target-frame-rate.md)(targetFrameRate: Float) |
+| [getLatency](get-latency.md) | [main]<br>open fun [getLatency](get-latency.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
+| [getTargetFrameRate](get-target-frame-rate.md) | [main]<br>open fun [getTargetFrameRate](get-target-frame-rate.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html) |
+| [setLatency](set-latency.md) | [main]<br>open fun [setLatency](set-latency.md)(latency: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)) |
+| [setTargetFrameRate](set-target-frame-rate.md) | [main]<br>open fun [setTargetFrameRate](set-target-frame-rate.md)(targetFrameRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)) |

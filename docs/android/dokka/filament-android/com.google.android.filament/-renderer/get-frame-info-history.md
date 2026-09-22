@@ -3,7 +3,7 @@
 # getFrameInfoHistory
 
 [main]\
-open fun [getFrameInfoHistory](get-frame-info-history.md)(outHistory: Array&lt;[Renderer.FrameInfo](-frame-info/index.md)&gt;): Int
+open fun [getFrameInfoHistory](get-frame-info-history.md)(outHistory: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Renderer.FrameInfo](-frame-info/index.md)&gt;): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Retrieve a history of frame timing information. 
 

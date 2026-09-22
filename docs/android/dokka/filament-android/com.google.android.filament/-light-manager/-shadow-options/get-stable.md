@@ -3,4 +3,4 @@
 # getStable
 
 [main]\
-open fun [getStable](get-stable.md)(): Boolean
+open fun [getStable](get-stable.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

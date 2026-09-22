@@ -3,7 +3,7 @@
 # spotLightCone
 
 [main]\
-open fun [spotLightCone](spot-light-cone.md)(inner: Float, outer: Float): [LightManager.Builder](index.md)
+open fun [spotLightCone](spot-light-cone.md)(inner: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outer: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Defines a spot light'st angular falloff attenuation. 
 

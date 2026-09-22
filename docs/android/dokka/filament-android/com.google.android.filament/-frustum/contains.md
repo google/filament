@@ -3,7 +3,7 @@
 # contains
 
 [main]\
-open fun [contains](contains.md)(px: Float, py: Float, pz: Float): Float
+open fun [contains](contains.md)(px: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), py: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), pz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Returns whether the frustum contains a given point.
 
@@ -22,7 +22,7 @@ main
 | pz | (z component) the point to test |
 
 [main]\
-open fun [contains](contains.md)(p: Array&lt;Float&gt;): Float
+open fun [contains](contains.md)(p: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Returns whether the frustum contains a given point.
 

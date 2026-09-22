@@ -3,7 +3,7 @@
 # enableCustomMorphing
 
 [main]\
-open fun [enableCustomMorphing](enable-custom-morphing.md)(enable: Boolean): [MorphTargetBuffer.Builder](index.md)
+open fun [enableCustomMorphing](enable-custom-morphing.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [MorphTargetBuffer.Builder](index.md)
 
 Enables the custom morphing pipeline. 
 

@@ -3,7 +3,7 @@
 # getByteCount
 
 [main]\
-open fun [getByteCount](get-byte-count.md)(): Int
+open fun [getByteCount](get-byte-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the size of this BufferObject in elements.
 

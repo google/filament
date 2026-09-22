@@ -3,4 +3,4 @@
 # latency
 
 [main]\
-open var [latency](latency.md): Long
+open var [latency](latency.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

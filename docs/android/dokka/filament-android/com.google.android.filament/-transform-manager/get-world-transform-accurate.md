@@ -3,7 +3,7 @@
 # getWorldTransformAccurate
 
 [main]\
-open fun [getWorldTransformAccurate](get-world-transform-accurate.md)(ci: Int, out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getWorldTransformAccurate](get-world-transform-accurate.md)(ci: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Return the world transform of a transform component.
 

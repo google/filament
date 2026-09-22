@@ -14,7 +14,7 @@ If enabled, `setPositionsAt` can be called to set the position data for each tar
 A reference to this Builder for chaining calls.
 
 [main]\
-open fun [withPositions](with-positions.md)(enable: Boolean): [MorphTargetBuffer.Builder](index.md)
+open fun [withPositions](with-positions.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [MorphTargetBuffer.Builder](index.md)
 
 Enables and allocates the built-in buffer for position morphing. 
 

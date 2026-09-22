@@ -3,4 +3,4 @@
 # getScreenSpaceContactShadows
 
 [main]\
-open fun [getScreenSpaceContactShadows](get-screen-space-contact-shadows.md)(): Boolean
+open fun [getScreenSpaceContactShadows](get-screen-space-contact-shadows.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

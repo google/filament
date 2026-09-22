@@ -3,9 +3,9 @@
 # setStencilReadMask
 
 [main]\
-open fun [setStencilReadMask](set-stencil-read-mask.md)(readMask: Int)
+open fun [setStencilReadMask](set-stencil-read-mask.md)(readMask: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setStencilReadMask](set-stencil-read-mask.md)(readMask: Int, face: [MaterialInstance.StencilFace](-stencil-face/index.md))
+open fun [setStencilReadMask](set-stencil-read-mask.md)(readMask: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), face: [MaterialInstance.StencilFace](-stencil-face/index.md))
 
 Sets the stencil read mask (default is 0xFF). 
 

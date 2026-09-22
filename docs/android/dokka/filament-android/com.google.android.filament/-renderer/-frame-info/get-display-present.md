@@ -3,4 +3,4 @@
 # getDisplayPresent
 
 [main]\
-open fun [getDisplayPresent](get-display-present.md)(): Long
+open fun [getDisplayPresent](get-display-present.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

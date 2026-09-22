@@ -3,4 +3,4 @@
 # setNormalBias
 
 [main]\
-open fun [setNormalBias](set-normal-bias.md)(normalBias: Float)
+open fun [setNormalBias](set-normal-bias.md)(normalBias: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

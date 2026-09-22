@@ -3,7 +3,7 @@
 # validatePixelFormatAndType
 
 [main]\
-open fun [validatePixelFormatAndType](validate-pixel-format-and-type.md)(internalFormat: [Texture.InternalFormat](-internal-format/index.md), format: [Texture.Format](-format/index.md), type: [Texture.Type](-type/index.md)): Boolean
+open fun [validatePixelFormatAndType](validate-pixel-format-and-type.md)(internalFormat: [Texture.InternalFormat](-internal-format/index.md), format: [Texture.Format](-format/index.md), type: [Texture.Type](-type/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

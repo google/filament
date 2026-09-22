@@ -3,7 +3,7 @@
 # sharedContext
 
 [main]\
-open fun [sharedContext](shared-context.md)(sharedContext: Any): [Engine.Builder](index.md)
+open fun [sharedContext](shared-context.md)(sharedContext: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html)): [Engine.Builder](index.md)
 
 Sets a sharedContext for the Engine.
 

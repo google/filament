@@ -3,4 +3,4 @@
 # getPenumbraScale
 
 [main]\
-open fun [getPenumbraScale](get-penumbra-scale.md)(): Float
+open fun [getPenumbraScale](get-penumbra-scale.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

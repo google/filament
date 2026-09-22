@@ -3,6 +3,6 @@
 # FOG
 
 [main]\
-val [FOG](-f-o-g.md): Int = 16
+val [FOG](-f-o-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 16
 
 Fog

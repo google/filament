@@ -3,7 +3,7 @@
 # destroyCameraComponent
 
 [main]\
-open fun [destroyCameraComponent](destroy-camera-component.md)(entity: Int)
+open fun [destroyCameraComponent](destroy-camera-component.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Destroys the Camera component associated with the given entity.
 

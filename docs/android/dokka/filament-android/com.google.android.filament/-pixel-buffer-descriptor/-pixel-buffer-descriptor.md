@@ -3,7 +3,7 @@
 # PixelBufferDescriptor
 
 [main]\
-constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), format: [Texture.Format](../-texture/-format/index.md), type: [Texture.Type](../-texture/-type/index.md), alignment: Int, left: Int, top: Int, stride: Int, handler: Any, callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
+constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), format: [Texture.Format](../-texture/-format/index.md), type: [Texture.Type](../-texture/-type/index.md), alignment: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), left: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), top: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), stride: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
 
 Creates a `PixelBufferDescriptor`.
 
@@ -29,17 +29,17 @@ constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/jav
 Creates a `PixelBufferDescriptor` with default alignment (1) and offsets (0), without callback.
 
 [main]\
-constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), format: [Texture.Format](../-texture/-format/index.md), type: [Texture.Type](../-texture/-type/index.md), alignment: Int)
+constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), format: [Texture.Format](../-texture/-format/index.md), type: [Texture.Type](../-texture/-type/index.md), alignment: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Creates a `PixelBufferDescriptor` with specified alignment and default offsets (0), without callback.
 
 [main]\
-constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), format: [Texture.Format](../-texture/-format/index.md), type: [Texture.Type](../-texture/-type/index.md), alignment: Int, left: Int, top: Int)
+constructor(storage: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), format: [Texture.Format](../-texture/-format/index.md), type: [Texture.Type](../-texture/-type/index.md), alignment: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), left: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), top: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Creates a `PixelBufferDescriptor` with specified alignment and left/top coordinates, without callback.
 
 [main]\
-constructor(storage: [ByteBuffer](https://developer.android.com/reference/kotlin/java/nio/ByteBuffer.html), format: [Texture.CompressedType](../-texture/-compressed-type/index.md), compressedSizeInBytes: Int)
+constructor(storage: [ByteBuffer](https://developer.android.com/reference/kotlin/java/nio/ByteBuffer.html), format: [Texture.CompressedType](../-texture/-compressed-type/index.md), compressedSizeInBytes: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Creates a `PixelBufferDescriptor` referencing compressed image data in main memory.
 

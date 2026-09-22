@@ -3,4 +3,4 @@
 # setDisplayPresent
 
 [main]\
-open fun [setDisplayPresent](set-display-present.md)(displayPresent: Long)
+open fun [setDisplayPresent](set-display-present.md)(displayPresent: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

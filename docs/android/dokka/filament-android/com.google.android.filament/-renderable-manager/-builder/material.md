@@ -3,7 +3,7 @@
 # material
 
 [main]\
-open fun [material](material.md)(index: Int, materialInstance: [MaterialInstance](../../-material-instance/index.md)): [RenderableManager.Builder](index.md)
+open fun [material](material.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), materialInstance: [MaterialInstance](../../-material-instance/index.md)): [RenderableManager.Builder](index.md)
 
 Binds a material instance to the specified primitive. 
 

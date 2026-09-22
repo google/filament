@@ -3,4 +3,4 @@
 # setCenterZ
 
 [main]\
-open fun [setCenterZ](set-center-z.md)(centerZ: Float)
+open fun [setCenterZ](set-center-z.md)(centerZ: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

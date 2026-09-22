@@ -3,7 +3,7 @@
 # cancelAsyncCall
 
 [main]\
-open fun [cancelAsyncCall](cancel-async-call.md)(id: Int): Boolean
+open fun [cancelAsyncCall](cancel-async-call.md)(id: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Cancel the pending asynchronous call pointed to by `id`, which is retrieved whenever you invoke a non-blocking version of method on an object, such as `Texture::setImageAsync` or `BufferObject::setBufferAsync`. 
 

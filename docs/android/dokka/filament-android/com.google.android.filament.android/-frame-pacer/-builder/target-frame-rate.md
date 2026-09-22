@@ -3,7 +3,7 @@
 # targetFrameRate
 
 [main]\
-open fun [targetFrameRate](target-frame-rate.md)(fps: Float): [FramePacer.Builder](index.md)
+open fun [targetFrameRate](target-frame-rate.md)(fps: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [FramePacer.Builder](index.md)
 
 Sets the desired frame rendering step in Hz.
 

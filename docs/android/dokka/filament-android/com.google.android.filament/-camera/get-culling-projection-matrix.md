@@ -3,7 +3,7 @@
 # getCullingProjectionMatrix
 
 [main]\
-open fun [getCullingProjectionMatrix](get-culling-projection-matrix.md)(out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getCullingProjectionMatrix](get-culling-projection-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Returns the projection matrix used for culling (far plane is finite).
 

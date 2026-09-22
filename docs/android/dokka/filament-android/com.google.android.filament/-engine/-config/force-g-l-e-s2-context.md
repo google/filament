@@ -3,4 +3,4 @@
 # forceGLES2Context
 
 [main]\
-open var [forceGLES2Context](force-g-l-e-s2-context.md): Boolean
+open var [forceGLES2Context](force-g-l-e-s2-context.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

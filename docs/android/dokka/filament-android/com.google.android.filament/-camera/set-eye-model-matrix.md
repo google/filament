@@ -3,7 +3,7 @@
 # setEyeModelMatrix
 
 [main]\
-open fun [setEyeModelMatrix](set-eye-model-matrix.md)(eyeId: Int, model: Array&lt;Double&gt;)
+open fun [setEyeModelMatrix](set-eye-model-matrix.md)(eyeId: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), model: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;)
 
 Set the position of an eye relative to this Camera (head). 
 

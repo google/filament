@@ -9,11 +9,11 @@ open class [Configuration](index.md)
 
 | | |
 |---|---|
-| [Configuration](-configuration.md) | [main]<br>constructor()constructor(targetFrameRate: Float, latencyNanos: Long) |
+| [Configuration](-configuration.md) | [main]<br>constructor()constructor(targetFrameRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)) |
 
 ## Properties
 
 | Name | Summary |
 |---|---|
-| [latencyNanos](latency-nanos.md) | [main]<br>open var [latencyNanos](latency-nanos.md): Long<br>Target latency duration in nanoseconds (defaults to 33.3ms). |
-| [targetFrameRate](target-frame-rate.md) | [main]<br>open var [targetFrameRate](target-frame-rate.md): Float<br>The application's desired frame rendering step in Hz. |
+| [latencyNanos](latency-nanos.md) | [main]<br>open var [latencyNanos](latency-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)<br>Target latency duration in nanoseconds (defaults to 33.3ms). |
+| [targetFrameRate](target-frame-rate.md) | [main]<br>open var [targetFrameRate](target-frame-rate.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)<br>The application's desired frame rendering step in Hz. |

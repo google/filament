@@ -3,6 +3,6 @@
 # GEN_MIPMAPPABLE
 
 [main]\
-val [GEN_MIPMAPPABLE](-g-e-n_-m-i-p-m-a-p-p-a-b-l-e.md): Int = 512
+val [GEN_MIPMAPPABLE](-g-e-n_-m-i-p-m-a-p-p-a-b-l-e.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 512
 
 Texture can be used with generateMipmaps()

@@ -3,4 +3,4 @@
 # interval
 
 [main]\
-open var [interval](interval.md): Int
+open var [interval](interval.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

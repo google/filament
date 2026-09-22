@@ -3,7 +3,7 @@
 # setVisibleLayers
 
 [main]\
-open fun [setVisibleLayers](set-visible-layers.md)(select: Int, values: Int)
+open fun [setVisibleLayers](set-visible-layers.md)(select: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), values: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Sets which layers are visible. 
 

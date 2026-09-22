@@ -3,4 +3,4 @@
 # from
 
 [main]\
-open fun [from](from.md)(value: Int): [Fence.FenceStatus](index.md)
+open fun [from](from.md)(value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Fence.FenceStatus](index.md)

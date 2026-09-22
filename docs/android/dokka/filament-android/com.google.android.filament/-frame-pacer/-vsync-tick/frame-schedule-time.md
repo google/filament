@@ -3,4 +3,4 @@
 # frameScheduleTime
 
 [main]\
-open var [frameScheduleTime](frame-schedule-time.md): Long
+open var [frameScheduleTime](frame-schedule-time.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

@@ -3,4 +3,4 @@
 # setLatency
 
 [main]\
-open fun [setLatency](set-latency.md)(latency: Long)
+open fun [setLatency](set-latency.md)(latency: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

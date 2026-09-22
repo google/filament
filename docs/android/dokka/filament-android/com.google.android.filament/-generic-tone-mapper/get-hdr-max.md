@@ -3,6 +3,6 @@
 # getHdrMax
 
 [main]\
-open fun [getHdrMax](get-hdr-max.md)(): Float
+open fun [getHdrMax](get-hdr-max.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Returns the maximum input value that will map to output white, as a value >= 1.0.

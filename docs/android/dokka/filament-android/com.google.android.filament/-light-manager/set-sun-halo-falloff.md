@@ -3,7 +3,7 @@
 # setSunHaloFalloff
 
 [main]\
-open fun [setSunHaloFalloff](set-sun-halo-falloff.md)(i: Int, haloFalloff: Float)
+open fun [setSunHaloFalloff](set-sun-halo-falloff.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), haloFalloff: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the halo falloff of a Type.SUN light. 
 

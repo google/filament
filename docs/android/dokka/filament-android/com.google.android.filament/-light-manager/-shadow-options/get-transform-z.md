@@ -3,4 +3,4 @@
 # getTransformZ
 
 [main]\
-open fun [getTransformZ](get-transform-z.md)(): Float
+open fun [getTransformZ](get-transform-z.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

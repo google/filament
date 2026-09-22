@@ -3,4 +3,4 @@
 # getNativeWindow
 
 [main]\
-open fun [getNativeWindow](get-native-window.md)(): Any
+open fun [getNativeWindow](get-native-window.md)(): [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html)

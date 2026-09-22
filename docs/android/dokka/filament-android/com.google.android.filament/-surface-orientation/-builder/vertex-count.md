@@ -3,4 +3,4 @@
 # vertexCount
 
 [main]\
-open fun [vertexCount](vertex-count.md)(vertexCount: Int): [SurfaceOrientation.Builder](index.md)
+open fun [vertexCount](vertex-count.md)(vertexCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [SurfaceOrientation.Builder](index.md)

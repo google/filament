@@ -3,6 +3,6 @@
 # ssctDepthSlopeBias
 
 [main]\
-open var [ssctDepthSlopeBias](ssct-depth-slope-bias.md): Float
+open var [ssctDepthSlopeBias](ssct-depth-slope-bias.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 depth slope bias (mitigate self shadowing)

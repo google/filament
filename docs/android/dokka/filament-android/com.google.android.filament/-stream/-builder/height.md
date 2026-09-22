@@ -3,7 +3,7 @@
 # height
 
 [main]\
-open fun [height](height.md)(height: Int): [Stream.Builder](index.md)
+open fun [height](height.md)(height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Stream.Builder](index.md)
 
 #### Return
 

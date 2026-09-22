@@ -3,7 +3,7 @@
 # beginFrame
 
 [main]\
-open fun [beginFrame](begin-frame.md)(swapChain: [SwapChain](../-swap-chain/index.md)): Boolean
+open fun [beginFrame](begin-frame.md)(swapChain: [SwapChain](../-swap-chain/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Set up a frame for this Renderer. 
 
@@ -40,7 +40,7 @@ main
 | [endFrame](end-frame.md) |
 
 [main]\
-open fun [beginFrame](begin-frame.md)(swapChain: [SwapChain](../-swap-chain/index.md), vsyncSteadyClockTimeNano: Long): Boolean
+open fun [beginFrame](begin-frame.md)(swapChain: [SwapChain](../-swap-chain/index.md), vsyncSteadyClockTimeNano: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Set up a frame for this Renderer. 
 

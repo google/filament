@@ -3,7 +3,7 @@
 # msaaSamples
 
 [main]\
-open var [msaaSamples](msaa-samples.md): Int
+open var [msaaSamples](msaa-samples.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 The number of MSAA samples to use when rendering VSM shadow maps. 
 

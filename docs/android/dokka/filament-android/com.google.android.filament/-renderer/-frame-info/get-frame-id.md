@@ -3,4 +3,4 @@
 # getFrameId
 
 [main]\
-open fun [getFrameId](get-frame-id.md)(): Int
+open fun [getFrameId](get-frame-id.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

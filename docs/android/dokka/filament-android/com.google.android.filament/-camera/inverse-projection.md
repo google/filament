@@ -3,7 +3,7 @@
 # inverseProjection
 
 [main]\
-open fun [inverseProjection](inverse-projection.md)(p: Array&lt;Double&gt;, out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [inverseProjection](inverse-projection.md)(p: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Returns the inverse of a projection matrix.
 
@@ -20,7 +20,7 @@ main
 | p | the projection matrix to inverse |
 
 [main]\
-open fun [inverseProjection](inverse-projection.md)(p: Array&lt;Float&gt;, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [inverseProjection](inverse-projection.md)(p: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Returns the inverse of a projection matrix.
 

@@ -3,6 +3,6 @@
 # ssctIntensity
 
 [main]\
-open var [ssctIntensity](ssct-intensity.md): Float
+open var [ssctIntensity](ssct-intensity.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 intensity

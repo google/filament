@@ -3,4 +3,4 @@
 # stereoscopicEyeCount
 
 [main]\
-open var [stereoscopicEyeCount](stereoscopic-eye-count.md): Long
+open var [stereoscopicEyeCount](stereoscopic-eye-count.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

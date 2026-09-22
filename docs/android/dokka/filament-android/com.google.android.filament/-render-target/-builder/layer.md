@@ -3,7 +3,7 @@
 # layer
 
 [main]\
-open fun [layer](layer.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), layer: Int): [RenderTarget.Builder](index.md)
+open fun [layer](layer.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), layer: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderTarget.Builder](index.md)
 
 Sets an index of a single layer for 2d array, cubemap array, and 3d textures at the given 
 

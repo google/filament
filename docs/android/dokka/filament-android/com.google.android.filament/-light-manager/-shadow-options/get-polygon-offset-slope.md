@@ -3,4 +3,4 @@
 # getPolygonOffsetSlope
 
 [main]\
-open fun [getPolygonOffsetSlope](get-polygon-offset-slope.md)(): Float
+open fun [getPolygonOffsetSlope](get-polygon-offset-slope.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

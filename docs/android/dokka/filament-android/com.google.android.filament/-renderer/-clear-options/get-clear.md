@@ -3,4 +3,4 @@
 # getClear
 
 [main]\
-open fun [getClear](get-clear.md)(): Boolean
+open fun [getClear](get-clear.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

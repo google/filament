@@ -3,7 +3,7 @@
 # setFrameCompletedCallback
 
 [main]\
-open fun [setFrameCompletedCallback](set-frame-completed-callback.md)(handler: Any, callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
+open fun [setFrameCompletedCallback](set-frame-completed-callback.md)(handler: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), callback: [Runnable](https://developer.android.com/reference/kotlin/java/lang/Runnable.html))
 
 FrameCompletedCallback is a callback function that notifies an application when a frame's contents have completed rendering on the GPU. 
 

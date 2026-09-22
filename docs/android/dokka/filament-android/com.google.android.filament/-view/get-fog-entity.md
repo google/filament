@@ -3,7 +3,7 @@
 # getFogEntity
 
 [main]\
-open fun [getFogEntity](get-fog-entity.md)(): Int
+open fun [getFogEntity](get-fog-entity.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Get an Entity representing the large scale fog object. 
 

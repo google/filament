@@ -3,7 +3,7 @@
 # computeEffectiveFocalLength
 
 [main]\
-open fun [computeEffectiveFocalLength](compute-effective-focal-length.md)(focalLength: Double, focusDistance: Double): Double
+open fun [computeEffectiveFocalLength](compute-effective-focal-length.md)(focalLength: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), focusDistance: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
 
 Helper to compute the effective focal length taking into account the focus distance
 

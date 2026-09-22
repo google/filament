@@ -3,7 +3,7 @@
 # setFocusDistance
 
 [main]\
-open fun [setFocusDistance](set-focus-distance.md)(distance: Float)
+open fun [setFocusDistance](set-focus-distance.md)(distance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets the camera focus distance. 
 

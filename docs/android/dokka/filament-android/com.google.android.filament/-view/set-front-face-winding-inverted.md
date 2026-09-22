@@ -3,7 +3,7 @@
 # setFrontFaceWindingInverted
 
 [main]\
-open fun [setFrontFaceWindingInverted](set-front-face-winding-inverted.md)(inverted: Boolean)
+open fun [setFrontFaceWindingInverted](set-front-face-winding-inverted.md)(inverted: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Inverts the winding order of front faces. 
 

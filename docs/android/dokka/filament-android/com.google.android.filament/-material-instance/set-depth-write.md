@@ -3,6 +3,6 @@
 # setDepthWrite
 
 [main]\
-open fun [setDepthWrite](set-depth-write.md)(enable: Boolean)
+open fun [setDepthWrite](set-depth-write.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Overrides the default depth-buffer write state that was set on the material.

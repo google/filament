@@ -3,4 +3,4 @@
 # deadline
 
 [main]\
-open var [deadline](deadline.md): Long
+open var [deadline](deadline.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

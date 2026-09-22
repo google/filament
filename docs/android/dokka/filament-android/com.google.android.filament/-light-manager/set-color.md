@@ -3,7 +3,7 @@
 # setColor
 
 [main]\
-open fun [setColor](set-color.md)(i: Int, colorx: Float, colory: Float, colorz: Float)
+open fun [setColor](set-color.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the light's hue as linear sRGB
 
@@ -26,7 +26,7 @@ main
 | [getInstance](get-instance.md) |
 
 [main]\
-open fun [setColor](set-color.md)(i: Int, color: Array&lt;Float&gt;)
+open fun [setColor](set-color.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Dynamically updates the light's hue as linear sRGB
 

@@ -3,6 +3,6 @@
 # fastGatherRingCount
 
 [main]\
-open var [fastGatherRingCount](fast-gather-ring-count.md): Int
+open var [fastGatherRingCount](fast-gather-ring-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 number of kernel rings for fast tiles

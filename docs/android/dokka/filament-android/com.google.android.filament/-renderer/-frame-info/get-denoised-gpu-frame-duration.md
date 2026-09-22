@@ -3,4 +3,4 @@
 # getDenoisedGpuFrameDuration
 
 [main]\
-open fun [getDenoisedGpuFrameDuration](get-denoised-gpu-frame-duration.md)(): Long
+open fun [getDenoisedGpuFrameDuration](get-denoised-gpu-frame-duration.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

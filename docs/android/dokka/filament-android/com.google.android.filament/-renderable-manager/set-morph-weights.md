@@ -3,7 +3,7 @@
 # setMorphWeights
 
 [main]\
-open fun [setMorphWeights](set-morph-weights.md)(instance: Int, weights: Array&lt;Float&gt;)
+open fun [setMorphWeights](set-morph-weights.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), weights: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Updates the vertex morphing weights on a renderable, all zeroes by default. 
 
@@ -19,7 +19,7 @@ main
 | weights | Morph target weights to be updated. |
 
 [main]\
-open fun [setMorphWeights](set-morph-weights.md)(instance: Int, weights: Array&lt;Float&gt;, offset: Int)
+open fun [setMorphWeights](set-morph-weights.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), weights: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates the vertex morphing weights on a renderable, all zeroes by default. 
 

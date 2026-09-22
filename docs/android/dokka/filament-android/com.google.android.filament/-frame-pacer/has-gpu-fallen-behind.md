@@ -3,7 +3,7 @@
 # hasGpuFallenBehind
 
 [main]\
-open fun [hasGpuFallenBehind](has-gpu-fallen-behind.md)(renderer: [Renderer](../-renderer/index.md)): Boolean
+open fun [hasGpuFallenBehind](has-gpu-fallen-behind.md)(renderer: [Renderer](../-renderer/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Checks if the GPU rendering pipeline has fallen behind the CPU submission rate. 
 

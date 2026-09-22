@@ -34,8 +34,8 @@ Constructs an immutable surface orientation helper. At a minimum, clients must s
 | [normals](normals.md) | [main]<br>open fun [normals](normals.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [SurfaceOrientation.Builder](index.md) |
 | [positions](positions.md) | [main]<br>open fun [positions](positions.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [SurfaceOrientation.Builder](index.md) |
 | [tangents](tangents.md) | [main]<br>open fun [tangents](tangents.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [SurfaceOrientation.Builder](index.md) |
-| [triangleCount](triangle-count.md) | [main]<br>open fun [triangleCount](triangle-count.md)(triangleCount: Int): [SurfaceOrientation.Builder](index.md) |
+| [triangleCount](triangle-count.md) | [main]<br>open fun [triangleCount](triangle-count.md)(triangleCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [SurfaceOrientation.Builder](index.md) |
 | [triangles_uint16](triangles_uint16.md) | [main]<br>open fun [triangles_uint16](triangles_uint16.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [SurfaceOrientation.Builder](index.md) |
 | [triangles_uint32](triangles_uint32.md) | [main]<br>open fun [triangles_uint32](triangles_uint32.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [SurfaceOrientation.Builder](index.md) |
 | [uvs](uvs.md) | [main]<br>open fun [uvs](uvs.md)(buffer: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [SurfaceOrientation.Builder](index.md) |
-| [vertexCount](vertex-count.md) | [main]<br>open fun [vertexCount](vertex-count.md)(vertexCount: Int): [SurfaceOrientation.Builder](index.md) |
+| [vertexCount](vertex-count.md) | [main]<br>open fun [vertexCount](vertex-count.md)(vertexCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [SurfaceOrientation.Builder](index.md) |

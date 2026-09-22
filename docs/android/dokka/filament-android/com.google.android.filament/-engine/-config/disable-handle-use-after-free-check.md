@@ -3,4 +3,4 @@
 # disableHandleUseAfterFreeCheck
 
 [main]\
-open var [disableHandleUseAfterFreeCheck](disable-handle-use-after-free-check.md): Boolean
+open var [disableHandleUseAfterFreeCheck](disable-handle-use-after-free-check.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

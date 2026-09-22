@@ -3,4 +3,4 @@
 # getTimelines
 
 [main]\
-open fun [getTimelines](get-timelines.md)(): Array&lt;[FramePacer.HardwareTimeline](../-hardware-timeline/index.md)&gt;
+open fun [getTimelines](get-timelines.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[FramePacer.HardwareTimeline](../-hardware-timeline/index.md)&gt;

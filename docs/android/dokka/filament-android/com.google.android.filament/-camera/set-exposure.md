@@ -3,7 +3,7 @@
 # setExposure
 
 [main]\
-open fun [setExposure](set-exposure.md)(aperture: Float, shutterSpeed: Float, sensitivity: Float)
+open fun [setExposure](set-exposure.md)(aperture: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), shutterSpeed: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), sensitivity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets this camera's exposure (default is f/16, 1/125s, 100 ISO) 
 
@@ -29,7 +29,7 @@ main
 | [Exposure](../-exposure/index.md) |
 
 [main]\
-open fun [setExposure](set-exposure.md)(exposure: Float)
+open fun [setExposure](set-exposure.md)(exposure: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets this camera's exposure directly. Calling this method will set the aperture 
 

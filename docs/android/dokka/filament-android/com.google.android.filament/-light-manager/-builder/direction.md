@@ -3,7 +3,7 @@
 # direction
 
 [main]\
-open fun [direction](direction.md)(directionx: Float, directiony: Float, directionz: Float): [LightManager.Builder](index.md)
+open fun [direction](direction.md)(directionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Sets the initial direction of a light in world space. 
 
@@ -14,7 +14,7 @@ The Light's direction is ignored for Type.POINT lights.
 This Builder, for chaining calls.
 
 [main]\
-open fun [direction](direction.md)(direction: Array&lt;Float&gt;): [LightManager.Builder](index.md)
+open fun [direction](direction.md)(direction: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [LightManager.Builder](index.md)
 
 Sets the initial direction of a light in world space. 
 

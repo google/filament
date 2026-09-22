@@ -3,6 +3,6 @@
 # SAMPLEABLE
 
 [main]\
-val [SAMPLEABLE](-s-a-m-p-l-e-a-b-l-e.md): Int = 16
+val [SAMPLEABLE](-s-a-m-p-l-e-a-b-l-e.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 16
 
 Texture can be sampled (default)

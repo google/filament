@@ -3,7 +3,7 @@
 # getLayerMask
 
 [main]\
-open fun [getLayerMask](get-layer-mask.md)(): Int
+open fun [getLayerMask](get-layer-mask.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 #### Return
 

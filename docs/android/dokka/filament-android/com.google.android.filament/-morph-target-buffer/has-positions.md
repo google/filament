@@ -3,7 +3,7 @@
 # hasPositions
 
 [main]\
-open fun [hasPositions](has-positions.md)(): Boolean
+open fun [hasPositions](has-positions.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns true if this MorphTargetBuffer has a position buffer.
 

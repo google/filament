@@ -11,4 +11,4 @@ interface [ForEachCallback](index.md)
 
 | Name | Summary |
 |---|---|
-| [accept](accept.md) | [main]<br>abstract fun [accept](accept.md)(entity: Int) |
+| [accept](accept.md) | [main]<br>abstract fun [accept](accept.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)) |

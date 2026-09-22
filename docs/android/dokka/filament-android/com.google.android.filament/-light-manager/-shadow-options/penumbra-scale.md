@@ -3,4 +3,4 @@
 # penumbraScale
 
 [main]\
-open var [penumbraScale](penumbra-scale.md): Float
+open var [penumbraScale](penumbra-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

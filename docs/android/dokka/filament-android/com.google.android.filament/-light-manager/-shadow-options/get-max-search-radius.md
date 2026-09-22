@@ -3,4 +3,4 @@
 # getMaxSearchRadius
 
 [main]\
-open fun [getMaxSearchRadius](get-max-search-radius.md)(): Float
+open fun [getMaxSearchRadius](get-max-search-radius.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

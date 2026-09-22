@@ -3,7 +3,7 @@
 # getNormalizedPlanes
 
 [main]\
-open fun [getNormalizedPlanes](get-normalized-planes.md)(out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getNormalizedPlanes](get-normalized-planes.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Returns a copy of all six frustum planes in left, right, bottom, top, far, near order
 
@@ -16,4 +16,4 @@ main
 | out | pre-allocated array to receive the data, or null. |
 
 [main]\
-open fun [getNormalizedPlanes](get-normalized-planes.md)(): Array&lt;Float&gt;
+open fun [getNormalizedPlanes](get-normalized-planes.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;

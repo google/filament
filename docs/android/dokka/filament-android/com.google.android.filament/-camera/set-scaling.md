@@ -3,7 +3,7 @@
 # setScaling
 
 [main]\
-open fun [setScaling](set-scaling.md)(scalingx: Double, scalingy: Double)
+open fun [setScaling](set-scaling.md)(scalingx: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), scalingy: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Sets an additional matrix that scales the projection matrix. 
 
@@ -35,7 +35,7 @@ main
 | setCustomProjection |
 
 [main]\
-open fun [setScaling](set-scaling.md)(scaling: Array&lt;Double&gt;)
+open fun [setScaling](set-scaling.md)(scaling: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;)
 
 Sets an additional matrix that scales the projection matrix. 
 

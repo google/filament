@@ -3,7 +3,7 @@
 # skinningAsMatrices
 
 [main]\
-open fun [skinningAsMatrices](skinning-as-matrices.md)(boneCount: Int, transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [RenderableManager.Builder](index.md)
+open fun [skinningAsMatrices](skinning-as-matrices.md)(boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html)): [RenderableManager.Builder](index.md)
 
 Enables GPU vertex skinning for up to 255 bones, 0 by default. 
 
@@ -23,7 +23,7 @@ main
 | transforms | the initial set of transforms (one for each bone) |
 
 [main]\
-open fun [skinningAsMatrices](skinning-as-matrices.md)(transforms: Array&lt;Float&gt;, offset: Int, boneCount: Int): [RenderableManager.Builder](index.md)
+open fun [skinningAsMatrices](skinning-as-matrices.md)(transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Enables GPU vertex skinning for up to 255 bones, 0 by default. 
 
@@ -44,7 +44,7 @@ main
 | boneCount | number of elements (structured element count) in `transforms` |
 
 [main]\
-open fun [skinningAsMatrices](skinning-as-matrices.md)(transforms: Array&lt;Float&gt;, boneCount: Int): [RenderableManager.Builder](index.md)
+open fun [skinningAsMatrices](skinning-as-matrices.md)(transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Enables GPU vertex skinning for up to 255 bones, 0 by default. 
 
@@ -64,7 +64,7 @@ main
 | boneCount | number of elements (structured element count) in `transforms` |
 
 [main]\
-open fun [skinningAsMatrices](skinning-as-matrices.md)(transforms: Array&lt;Float&gt;): [RenderableManager.Builder](index.md)
+open fun [skinningAsMatrices](skinning-as-matrices.md)(transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [RenderableManager.Builder](index.md)
 
 Enables GPU vertex skinning for up to 255 bones, 0 by default. 
 

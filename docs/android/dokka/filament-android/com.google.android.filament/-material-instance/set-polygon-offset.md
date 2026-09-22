@@ -3,7 +3,7 @@
 # setPolygonOffset
 
 [main]\
-open fun [setPolygonOffset](set-polygon-offset.md)(scale: Float, constant: Float)
+open fun [setPolygonOffset](set-polygon-offset.md)(scale: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), constant: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets a polygon offset that will be applied to all renderables drawn with this material instance. 
 

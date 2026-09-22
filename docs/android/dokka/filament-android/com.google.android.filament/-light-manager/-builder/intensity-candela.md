@@ -3,7 +3,7 @@
 # intensityCandela
 
 [main]\
-open fun [intensityCandela](intensity-candela.md)(intensity: Float): [LightManager.Builder](index.md)
+open fun [intensityCandela](intensity-candela.md)(intensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Sets the initial intensity of a spot or point light in candela. 
 

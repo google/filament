@@ -3,7 +3,7 @@
 # setMaterialInstanceAt
 
 [main]\
-open fun [setMaterialInstanceAt](set-material-instance-at.md)(instance: Int, primitiveIndex: Int, materialInstance: [MaterialInstance](../-material-instance/index.md))
+open fun [setMaterialInstanceAt](set-material-instance-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), materialInstance: [MaterialInstance](../-material-instance/index.md))
 
 Changes the material instance binding for the given primitive. 
 

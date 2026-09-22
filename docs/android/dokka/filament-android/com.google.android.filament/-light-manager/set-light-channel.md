@@ -3,7 +3,7 @@
 # setLightChannel
 
 [main]\
-open fun [setLightChannel](set-light-channel.md)(i: Int, channel: Int)
+open fun [setLightChannel](set-light-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Enables or disables a light channel. 
 
@@ -18,7 +18,7 @@ main
 | channel | light channel to enable or disable, between 0 and 7. |
 
 [main]\
-open fun [setLightChannel](set-light-channel.md)(i: Int, channel: Int, enable: Boolean)
+open fun [setLightChannel](set-light-channel.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Enables or disables a light channel. 
 

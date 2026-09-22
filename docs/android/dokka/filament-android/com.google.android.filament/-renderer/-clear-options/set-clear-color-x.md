@@ -3,4 +3,4 @@
 # setClearColorX
 
 [main]\
-open fun [setClearColorX](set-clear-color-x.md)(clearColorX: Double)
+open fun [setClearColorX](set-clear-color-x.md)(clearColorX: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))

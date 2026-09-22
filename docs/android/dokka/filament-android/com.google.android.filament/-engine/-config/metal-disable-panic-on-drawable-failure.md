@@ -3,7 +3,7 @@
 # metalDisablePanicOnDrawableFailure
 
 [main]\
-open var [metalDisablePanicOnDrawableFailure](metal-disable-panic-on-drawable-failure.md): Boolean
+open var [metalDisablePanicOnDrawableFailure](metal-disable-panic-on-drawable-failure.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 The action to take if a Drawable cannot be acquired. 
 

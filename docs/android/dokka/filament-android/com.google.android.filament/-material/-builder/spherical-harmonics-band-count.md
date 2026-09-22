@@ -3,7 +3,7 @@
 # sphericalHarmonicsBandCount
 
 [main]\
-open fun [sphericalHarmonicsBandCount](spherical-harmonics-band-count.md)(shBandCount: Int): [Material.Builder](index.md)
+open fun [sphericalHarmonicsBandCount](spherical-harmonics-band-count.md)(shBandCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Material.Builder](index.md)
 
 Sets the quality of the indirect lights computations. 
 

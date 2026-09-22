@@ -3,6 +3,6 @@
 # customResolve
 
 [main]\
-open var [customResolve](custom-resolve.md): Boolean
+open var [customResolve](custom-resolve.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 custom resolve improves quality for HDR scenes, but may impact performance.

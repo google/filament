@@ -17,4 +17,4 @@ Options for stereoscopic (multi-eye) rendering.
 
 | Name | Summary |
 |---|---|
-| [enabled](enabled.md) | [main]<br>open var [enabled](enabled.md): Boolean |
+| [enabled](enabled.md) | [main]<br>open var [enabled](enabled.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html) |

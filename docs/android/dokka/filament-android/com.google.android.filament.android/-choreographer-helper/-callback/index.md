@@ -11,4 +11,4 @@ Callback interface for receiving frame synchronization events in Composition Mod
 
 | Name | Summary |
 |---|---|
-| [onFrame](on-frame.md) | [main]<br>abstract fun [onFrame](on-frame.md)(frameTimeNanos: Long)<br>Called when a new frame should be rendered.<br>[main]<br>open fun [onFrame](on-frame.md)(frameTimeNanos: Long, frameData: Any)<br>Called when a new frame should be rendered, providing optional payload telemetry. |
+| [onFrame](on-frame.md) | [main]<br>abstract fun [onFrame](on-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))<br>Called when a new frame should be rendered.<br>[main]<br>open fun [onFrame](on-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), frameData: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html))<br>Called when a new frame should be rendered, providing optional payload telemetry. |

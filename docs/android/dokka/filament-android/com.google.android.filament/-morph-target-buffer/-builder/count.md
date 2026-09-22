@@ -3,7 +3,7 @@
 # count
 
 [main]\
-open fun [count](count.md)(count: Int): [MorphTargetBuffer.Builder](index.md)
+open fun [count](count.md)(count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [MorphTargetBuffer.Builder](index.md)
 
 Size of the morph targets in targets.
 

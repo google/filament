@@ -3,4 +3,4 @@
 # setTransformW
 
 [main]\
-open fun [setTransformW](set-transform-w.md)(transformW: Float)
+open fun [setTransformW](set-transform-w.md)(transformW: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

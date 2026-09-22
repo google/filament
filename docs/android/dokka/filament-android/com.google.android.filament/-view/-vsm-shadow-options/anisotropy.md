@@ -3,7 +3,7 @@
 # anisotropy
 
 [main]\
-open var [anisotropy](anisotropy.md): Int
+open var [anisotropy](anisotropy.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Sets the number of anisotropic samples to use when sampling a VSM shadow map. 
 

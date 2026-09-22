@@ -3,7 +3,7 @@
 # density
 
 [main]\
-open var [density](density.md): Float
+open var [density](density.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Extinction factor in [1/m] at an altitude 'height'. 
 

@@ -3,4 +3,4 @@
 # history
 
 [main]\
-open var [history](history.md): Int
+open var [history](history.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

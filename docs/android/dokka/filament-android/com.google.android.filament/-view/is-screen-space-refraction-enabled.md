@@ -3,7 +3,7 @@
 # isScreenSpaceRefractionEnabled
 
 [main]\
-open fun [isScreenSpaceRefractionEnabled](is-screen-space-refraction-enabled.md)(): Boolean
+open fun [isScreenSpaceRefractionEnabled](is-screen-space-refraction-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

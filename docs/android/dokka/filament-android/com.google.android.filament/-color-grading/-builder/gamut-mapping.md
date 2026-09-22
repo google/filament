@@ -3,7 +3,7 @@
 # gamutMapping
 
 [main]\
-open fun [gamutMapping](gamut-mapping.md)(gamutMapping: Boolean): [ColorGrading.Builder](index.md)
+open fun [gamutMapping](gamut-mapping.md)(gamutMapping: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [ColorGrading.Builder](index.md)
 
 Enables or disables gamut mapping to the destination color space's gamut. 
 

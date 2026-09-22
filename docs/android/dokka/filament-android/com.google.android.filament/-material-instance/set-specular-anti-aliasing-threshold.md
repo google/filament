@@ -3,7 +3,7 @@
 # setSpecularAntiAliasingThreshold
 
 [main]\
-open fun [setSpecularAntiAliasingThreshold](set-specular-anti-aliasing-threshold.md)(threshold: Float)
+open fun [setSpecularAntiAliasingThreshold](set-specular-anti-aliasing-threshold.md)(threshold: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets the clamping threshold used to suppress estimation errors when applying specular anti-aliasing. 
 

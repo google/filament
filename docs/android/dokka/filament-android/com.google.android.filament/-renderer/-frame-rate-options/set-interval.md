@@ -3,4 +3,4 @@
 # setInterval
 
 [main]\
-open fun [setInterval](set-interval.md)(interval: Int)
+open fun [setInterval](set-interval.md)(interval: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

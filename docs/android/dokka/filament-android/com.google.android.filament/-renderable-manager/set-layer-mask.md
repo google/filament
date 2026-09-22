@@ -3,7 +3,7 @@
 # setLayerMask
 
 [main]\
-open fun [setLayerMask](set-layer-mask.md)(instance: Int, select: Int, values: Int)
+open fun [setLayerMask](set-layer-mask.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), select: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), values: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Changes the visibility bits.
 

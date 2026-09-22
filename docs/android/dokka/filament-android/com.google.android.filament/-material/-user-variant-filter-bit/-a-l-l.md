@@ -3,4 +3,4 @@
 # ALL
 
 [main]\
-val [ALL](-a-l-l.md): Int = 255
+val [ALL](-a-l-l.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 255

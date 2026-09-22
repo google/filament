@@ -3,7 +3,7 @@
 # CONFIG_APPLE_CVPIXELBUFFER
 
 [main]\
-val [CONFIG_APPLE_CVPIXELBUFFER](-c-o-n-f-i-g_-a-p-p-l-e_-c-v-p-i-x-e-l-b-u-f-f-e-r.md): Long = 8
+val [CONFIG_APPLE_CVPIXELBUFFER](-c-o-n-f-i-g_-a-p-p-l-e_-c-v-p-i-x-e-l-b-u-f-f-e-r.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = 8
 
 Indicates that the native window is a CVPixelBufferRef. 
 

@@ -3,7 +3,7 @@
 # luminanceScaling
 
 [main]\
-open fun [luminanceScaling](luminance-scaling.md)(luminanceScaling: Boolean): [ColorGrading.Builder](index.md)
+open fun [luminanceScaling](luminance-scaling.md)(luminanceScaling: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [ColorGrading.Builder](index.md)
 
 Enables or disables the luminance scaling component (LICH) from the exposure value invariant luminance system (EVILS). 
 

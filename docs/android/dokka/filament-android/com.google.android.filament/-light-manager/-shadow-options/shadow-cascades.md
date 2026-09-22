@@ -3,4 +3,4 @@
 # shadowCascades
 
 [main]\
-open var [shadowCascades](shadow-cascades.md): Int
+open var [shadowCascades](shadow-cascades.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

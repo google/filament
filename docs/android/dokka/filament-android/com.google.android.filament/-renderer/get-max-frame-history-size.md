@@ -3,7 +3,7 @@
 # getMaxFrameHistorySize
 
 [main]\
-open fun [getMaxFrameHistorySize](get-max-frame-history-size.md)(): Int
+open fun [getMaxFrameHistorySize](get-max-frame-history-size.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 #### Return
 

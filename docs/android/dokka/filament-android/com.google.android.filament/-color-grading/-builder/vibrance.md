@@ -3,7 +3,7 @@
 # vibrance
 
 [main]\
-open fun [vibrance](vibrance.md)(vibrance: Float): [ColorGrading.Builder](index.md)
+open fun [vibrance](vibrance.md)(vibrance: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Adjusts the saturation of the image based on the input color's saturation level. 
 

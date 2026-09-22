@@ -3,11 +3,11 @@
 # setupFrame
 
 [main]\
-open fun [setupFrame](setup-frame.md)(frameTimeNanos: Long, vsyncPeriodNanos: Long, hardwareTimelines: Array&lt;Long&gt;, timelineCount: Int): [FramePacer.FrameStatus](-frame-status/index.md)
+open fun [setupFrame](setup-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), vsyncPeriodNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), hardwareTimelines: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)&gt;, timelineCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [FramePacer.FrameStatus](-frame-status/index.md)
 
-open fun [setupFrame](setup-frame.md)(frameTimeNanos: Long, vsyncPeriodNanos: Long): [FramePacer.FrameStatus](-frame-status/index.md)
+open fun [setupFrame](setup-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), vsyncPeriodNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.FrameStatus](-frame-status/index.md)
 
-open fun [setupFrame](setup-frame.md)(frameTimeNanos: Long): [FramePacer.FrameStatus](-frame-status/index.md)
+open fun [setupFrame](setup-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.FrameStatus](-frame-status/index.md)
 
 [main]\
 open fun [setupFrame](setup-frame.md)(tick: [FramePacer.VsyncTick](-vsync-tick/index.md)): [FramePacer.FrameStatus](-frame-status/index.md)

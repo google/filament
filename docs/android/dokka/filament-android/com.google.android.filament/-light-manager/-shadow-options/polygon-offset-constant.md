@@ -3,4 +3,4 @@
 # polygonOffsetConstant
 
 [main]\
-open var [polygonOffsetConstant](polygon-offset-constant.md): Float
+open var [polygonOffsetConstant](polygon-offset-constant.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

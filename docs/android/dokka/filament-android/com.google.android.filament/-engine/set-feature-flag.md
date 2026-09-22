@@ -3,7 +3,7 @@
 # setFeatureFlag
 
 [main]\
-open fun [setFeatureFlag](set-feature-flag.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: Boolean): Boolean
+open fun [setFeatureFlag](set-feature-flag.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Set the value of a non-constant feature flag.
 

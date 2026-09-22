@@ -3,4 +3,4 @@
 # setScaleRate
 
 [main]\
-open fun [setScaleRate](set-scale-rate.md)(scaleRate: Float)
+open fun [setScaleRate](set-scale-rate.md)(scaleRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

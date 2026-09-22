@@ -3,6 +3,6 @@
 # getConstantInt
 
 [main]\
-open fun [getConstantInt](get-constant-int.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): Int
+open fun [getConstantInt](get-constant-int.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 inline helper to provide the name as a null-terminated C string

@@ -3,7 +3,7 @@
 # priority
 
 [main]\
-open fun [priority](priority.md)(priority: Int): [Skybox.Builder](index.md)
+open fun [priority](priority.md)(priority: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Skybox.Builder](index.md)
 
 Set the rendering priority of the Skybox. 
 

@@ -3,7 +3,7 @@
 # removeEntities
 
 [main]\
-open fun [removeEntities](remove-entities.md)(entities: Array&lt;Int&gt;)
+open fun [removeEntities](remove-entities.md)(entities: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;)
 
 Removes a list of entities to the Scene. 
 

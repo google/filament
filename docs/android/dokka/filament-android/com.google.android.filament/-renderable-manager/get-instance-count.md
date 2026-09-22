@@ -3,7 +3,7 @@
 # getInstanceCount
 
 [main]\
-open fun [getInstanceCount](get-instance-count.md)(instance: Int): Int
+open fun [getInstanceCount](get-instance-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the number of instances for this renderable.
 

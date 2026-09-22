@@ -3,6 +3,6 @@
 # PROTECTED
 
 [main]\
-val [PROTECTED](-p-r-o-t-e-c-t-e-d.md): Int = 256
+val [PROTECTED](-p-r-o-t-e-c-t-e-d.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 256
 
 Texture can be used for protected content

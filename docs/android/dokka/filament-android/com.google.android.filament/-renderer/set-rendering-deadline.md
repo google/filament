@@ -3,7 +3,7 @@
 # setRenderingDeadline
 
 [main]\
-open fun [setRenderingDeadline](set-rendering-deadline.md)(monotonic_clock_ns: Long)
+open fun [setRenderingDeadline](set-rendering-deadline.md)(monotonic_clock_ns: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Set the deadline time point on the steady clock by which CPU and GPU rendering must complete for the buffer to meet its target display latching window. 
 

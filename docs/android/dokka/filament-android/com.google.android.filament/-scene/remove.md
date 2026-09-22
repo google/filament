@@ -3,7 +3,7 @@
 # remove
 
 [main]\
-open fun [remove](remove.md)(entity: Int)
+open fun [remove](remove.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Removes the Renderable from the Scene.
 

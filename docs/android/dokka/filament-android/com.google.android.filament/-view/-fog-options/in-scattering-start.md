@@ -3,7 +3,7 @@
 # inScatteringStart
 
 [main]\
-open var [inScatteringStart](in-scattering-start.md): Float
+open var [inScatteringStart](in-scattering-start.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Distance in world units [m] from the camera where the Sun in-scattering starts. 
 

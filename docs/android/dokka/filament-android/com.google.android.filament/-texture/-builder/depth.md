@@ -3,7 +3,7 @@
 # depth
 
 [main]\
-open fun [depth](depth.md)(depth: Int): [Texture.Builder](index.md)
+open fun [depth](depth.md)(depth: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
 Specifies the depth in texels of the texture. 
 

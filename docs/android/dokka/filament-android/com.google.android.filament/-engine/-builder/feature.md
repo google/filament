@@ -3,7 +3,7 @@
 # feature
 
 [main]\
-open fun [feature](feature.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: Boolean): [Engine.Builder](index.md)
+open fun [feature](feature.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [Engine.Builder](index.md)
 
 Set a feature flag value. This is the only way to set constant feature flags.
 

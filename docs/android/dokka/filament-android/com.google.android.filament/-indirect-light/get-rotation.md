@@ -3,6 +3,6 @@
 # getRotation
 
 [main]\
-open fun [getRotation](get-rotation.md)(out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getRotation](get-rotation.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Returns the rigid-body transformation applied to the IBL.

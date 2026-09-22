@@ -3,7 +3,7 @@
 # width
 
 [main]\
-open fun [width](width.md)(width: Int): [Texture.Builder](index.md)
+open fun [width](width.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
 Specifies the width in texels of the texture. 
 

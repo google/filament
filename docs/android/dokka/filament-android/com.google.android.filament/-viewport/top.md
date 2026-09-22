@@ -3,6 +3,6 @@
 # top
 
 [main]\
-open fun [top](top.md)(): Int
+open fun [top](top.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 get the top coordinate in window space of the viewport

@@ -3,6 +3,6 @@
 # getAnisotropy
 
 [main]\
-open fun [getAnisotropy](get-anisotropy.md)(): Float
+open fun [getAnisotropy](get-anisotropy.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 returns the anisotropy value

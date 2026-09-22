@@ -3,4 +3,4 @@
 # compressedSizeInBytes
 
 [main]\
-open var [compressedSizeInBytes](compressed-size-in-bytes.md): Int
+open var [compressedSizeInBytes](compressed-size-in-bytes.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

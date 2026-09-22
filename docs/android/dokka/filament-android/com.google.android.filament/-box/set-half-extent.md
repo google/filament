@@ -3,6 +3,6 @@
 # setHalfExtent
 
 [main]\
-open fun [setHalfExtent](set-half-extent.md)(halfExtentX: Float, halfExtentY: Float, halfExtentZ: Float)
+open fun [setHalfExtent](set-half-extent.md)(halfExtentX: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), halfExtentY: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), halfExtentZ: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-open fun [setHalfExtent](set-half-extent.md)(halfExtent: Array&lt;Float&gt;)
+open fun [setHalfExtent](set-half-extent.md)(halfExtent: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)

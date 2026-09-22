@@ -3,4 +3,4 @@
 # setClearStencil
 
 [main]\
-open fun [setClearStencil](set-clear-stencil.md)(clearStencil: Int)
+open fun [setClearStencil](set-clear-stencil.md)(clearStencil: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

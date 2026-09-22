@@ -3,7 +3,7 @@
 # gtaoConstThickness
 
 [main]\
-open var [gtaoConstThickness](gtao-const-thickness.md): Float
+open var [gtaoConstThickness](gtao-const-thickness.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 constant thickness value of objects on the screen in world space. 
 

@@ -3,4 +3,4 @@
 # getInterval
 
 [main]\
-open fun [getInterval](get-interval.md)(): Int
+open fun [getInterval](get-interval.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

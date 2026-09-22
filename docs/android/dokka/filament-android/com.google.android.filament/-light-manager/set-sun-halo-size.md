@@ -3,7 +3,7 @@
 # setSunHaloSize
 
 [main]\
-open fun [setSunHaloSize](set-sun-halo-size.md)(i: Int, haloSize: Float)
+open fun [setSunHaloSize](set-sun-halo-size.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), haloSize: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the halo radius of a Type.SUN light. 
 

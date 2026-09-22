@@ -3,4 +3,4 @@
 # setShadowCascades
 
 [main]\
-open fun [setShadowCascades](set-shadow-cascades.md)(shadowCascades: Int)
+open fun [setShadowCascades](set-shadow-cascades.md)(shadowCascades: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

@@ -3,7 +3,7 @@
 # slopeOffsetPower
 
 [main]\
-open fun [slopeOffsetPower](slope-offset-power.md)(slopex: Float, slopey: Float, slopez: Float, offsetx: Float, offsety: Float, offsetz: Float, powerx: Float, powery: Float, powerz: Float): [ColorGrading.Builder](index.md)
+open fun [slopeOffsetPower](slope-offset-power.md)(slopex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), slopey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), slopez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), offsetx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), offsety: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), offsetz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), powerx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), powery: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), powerz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Applies a slope, offset, and power, as defined by the ASC CDL (American Society of Cinematographers Color Decision List) to the image. 
 
@@ -22,7 +22,7 @@ Slope/offset/power adjustments are performed in log space.
 This Builder, for chaining calls
 
 [main]\
-open fun [slopeOffsetPower](slope-offset-power.md)(slope: Array&lt;Float&gt;, offset: Array&lt;Float&gt;, power: Array&lt;Float&gt;): [ColorGrading.Builder](index.md)
+open fun [slopeOffsetPower](slope-offset-power.md)(slope: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, power: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [ColorGrading.Builder](index.md)
 
 Applies a slope, offset, and power, as defined by the ASC CDL (American Society of Cinematographers Color Decision List) to the image. 
 

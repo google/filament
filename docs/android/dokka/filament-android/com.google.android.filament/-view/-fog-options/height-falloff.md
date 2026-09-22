@@ -3,7 +3,7 @@
 # heightFalloff
 
 [main]\
-open var [heightFalloff](height-falloff.md): Float
+open var [heightFalloff](height-falloff.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 How fast the fog dissipates with the altitude. heightFalloff has a unit of [1/m]. 
 

@@ -3,4 +3,4 @@
 # setTransformY
 
 [main]\
-open fun [setTransformY](set-transform-y.md)(transformY: Float)
+open fun [setTransformY](set-transform-y.md)(transformY: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

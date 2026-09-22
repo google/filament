@@ -3,7 +3,7 @@
 # intensity
 
 [main]\
-open fun [intensity](intensity.md)(envIntensity: Float): [IndirectLight.Builder](index.md)
+open fun [intensity](intensity.md)(envIntensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [IndirectLight.Builder](index.md)
 
 (optional) Environment intensity. 
 

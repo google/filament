@@ -3,7 +3,7 @@
 # exposure
 
 [main]\
-open fun [exposure](exposure.md)(exposure: Float): [ColorGrading.Builder](index.md)
+open fun [exposure](exposure.md)(exposure: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Adjusts the exposure of this image. 
 

@@ -3,4 +3,4 @@
 # getDiscard
 
 [main]\
-open fun [getDiscard](get-discard.md)(): Boolean
+open fun [getDiscard](get-discard.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

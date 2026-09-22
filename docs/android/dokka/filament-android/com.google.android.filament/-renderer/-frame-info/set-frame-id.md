@@ -3,4 +3,4 @@
 # setFrameId
 
 [main]\
-open fun [setFrameId](set-frame-id.md)(frameId: Int)
+open fun [setFrameId](set-frame-id.md)(frameId: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

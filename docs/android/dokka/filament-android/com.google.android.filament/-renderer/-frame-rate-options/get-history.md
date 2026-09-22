@@ -3,4 +3,4 @@
 # getHistory
 
 [main]\
-open fun [getHistory](get-history.md)(): Int
+open fun [getHistory](get-history.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

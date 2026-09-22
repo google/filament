@@ -3,7 +3,7 @@
 # boneCount
 
 [main]\
-open fun [boneCount](bone-count.md)(boneCount: Int): [SkinningBuffer.Builder](index.md)
+open fun [boneCount](bone-count.md)(boneCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [SkinningBuffer.Builder](index.md)
 
 Size of the skinning buffer in bones. 
 

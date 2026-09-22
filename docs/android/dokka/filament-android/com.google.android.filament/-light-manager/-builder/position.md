@@ -3,7 +3,7 @@
 # position
 
 [main]\
-open fun [position](position.md)(positionx: Float, positiony: Float, positionz: Float): [LightManager.Builder](index.md)
+open fun [position](position.md)(positionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Sets the initial position of the light in world space. 
 
@@ -14,7 +14,7 @@ The Light's position is ignored for directional lights (Type.DIRECTIONAL or Type
 This Builder, for chaining calls.
 
 [main]\
-open fun [position](position.md)(position: Array&lt;Float&gt;): [LightManager.Builder](index.md)
+open fun [position](position.md)(position: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [LightManager.Builder](index.md)
 
 Sets the initial position of the light in world space. 
 

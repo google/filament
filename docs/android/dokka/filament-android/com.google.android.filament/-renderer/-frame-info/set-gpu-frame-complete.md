@@ -3,4 +3,4 @@
 # setGpuFrameComplete
 
 [main]\
-open fun [setGpuFrameComplete](set-gpu-frame-complete.md)(gpuFrameComplete: Long)
+open fun [setGpuFrameComplete](set-gpu-frame-complete.md)(gpuFrameComplete: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
