@@ -797,6 +797,8 @@ public:
             bool doFrameCapture = false;
             bool disable_buffer_padding = false;
             bool disable_subpasses = false;
+            // See Renderer::setPresentationTime()
+            bool disable_set_presentation_time = false;
         } renderer;
         struct {
             bool debug_froxel_visualization = false;
