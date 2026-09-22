@@ -474,11 +474,26 @@ public:
     }
 
     /**
+     * Whether this platform can honor setPresentationTime().
+     *
+     * The default implementation returns true when the `VK_GOOGLE_display_timing` device
+     * extension is enabled, which is what the swapchain implementation provided by Filament uses
+     * to schedule the presentation. A platform that overrides setPresentationTime() to schedule
+     * the presentation by other means must also override this method.
+     *
+     * @return true if setPresentationTime() is honored by this platform, false otherwise.
+     * @see setPresentationTime()
+     */
+    virtual bool isPresentationTimeSupported() const noexcept;
+
+    /**
      * On certain platforms, it is possible to set the time that the committed buffers should be
      * presented at. This affects all of the commited buffers across all swapchains provided to the
-     * backend. Set to 0 if this behavior is not desired.
+     * backend. Set to 0 if this behavior is not desired. This is only honored if
+     * isPresentationTimeSupported() returns true.
      *
      * @param intended present time
+     * @see isPresentationTimeSupported()
      */
     virtual void setPresentationTime(int64_t presentTime) noexcept;
 
