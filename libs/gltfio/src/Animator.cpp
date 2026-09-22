@@ -562,15 +562,21 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
             assert(sampler->values.size() % sampler->inputCount == 0);
             const int valuesPerKeyframe = (int)(sampler->values.size() / sampler->inputCount);
 
+            // A mesh may declare more morph targets than the engine supports. AssetLoader caps the
+            // renderable at MAX_MORPH_TARGETS, but the sampler keeps the declared count, and
+            // setMorphWeights() asserts that same cap. Drop the excess weights here so that such an
+            // asset animates its first MAX_MORPH_TARGETS targets instead of panicking.
+            // Note that valuesPerKeyframe stays the sampler's stride even when the count is capped.
             if (sampler->interpolation == Sampler::CUBIC) {
                 assert(valuesPerKeyframe % 3 == 0);
                 const int numMorphTargets = valuesPerKeyframe / 3;
                 const float* const inTangents = samplerValues;
                 const float* const splineVerts = samplerValues + numMorphTargets;
                 const float* const outTangents = samplerValues + numMorphTargets * 2;
+                const int count = std::min(numMorphTargets, (int) MAX_MORPH_TARGETS);
 
-                weights.resize(numMorphTargets);
-                for (int comp = 0; comp < numMorphTargets; ++comp) {
+                weights.resize(count);
+                for (int comp = 0; comp < count; ++comp) {
                     float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
                     float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
                     float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
@@ -578,8 +584,10 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                     weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
                 }
             } else {
-                weights.resize(valuesPerKeyframe);
-                for (int comp = 0; comp < valuesPerKeyframe; ++comp) {
+                const int count = std::min(valuesPerKeyframe, (int) MAX_MORPH_TARGETS);
+
+                weights.resize(count);
+                for (int comp = 0; comp < count; ++comp) {
                     float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
                     float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
                     weights[comp] = (1 - t) * previous + t * current;
