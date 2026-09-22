@@ -25,6 +25,11 @@ VENV_DIR="$(pwd)/venv"
 GLTF_DIR="$(pwd)/gltf/Models"
 BUILD_COMMON_DIR="$(pwd)/build/common"
 
+# diffimg is built by generate.sh, into the same debug tree as the renderers. It used to come from
+# a release build, which meant configuring a second CMake tree for one small tool; comparing the
+# whole suite takes single-digit seconds, so an unoptimized binary costs nothing measurable.
+DIFFIMG_PATH="$(pwd)/out/cmake-debug/tools/diffimg/diffimg"
+
 os_name=$(uname -s)
 arch_name=$(uname -m)
 if [[ "$os_name" == "Linux" ]]; then

@@ -40,6 +40,11 @@ inputs:
         - desktop-asan-debug: the ccache-arm-linux warmer. Read by the debug half of
           test-code-correctness.
         - desktop-backend-test: the ccache-arm-linux warmer. Read by test-backend.
+        - desktop-renderdiff: the ccache-arm-linux warmer. Read by test-renderdiff, and by the
+          golden generation jobs, which have to compile what presubmit compiles. Debug with WebGPU
+          and OSMesa, no sanitizers. It cannot share with desktop-release or desktop-backend-test
+          even though the three overlap heavily: -X (OSMesa) and -b (sanitizers) both reach every
+          compile line through add_definitions, so no object is common to any two of them.
         - android-arm64-release: the ccache-android warmer, on x86_64 rather than ARM, because the
           NDK only ships a linux-x86_64 toolchain. Read by build-android.
         - desktop (macOS only): the build-mac job, whose "continuous" build covers what presubmit
@@ -84,6 +89,7 @@ runs:
         #   desktop-release          77 MiB   before -W; expect several hundred with Dawn in it
         #   desktop-asan-debug      482 MiB
         #   desktop-backend-test    515 MiB
+        #   desktop-renderdiff        ?       new; sized below from the two debug caches above
         #   android-arm64-release   137 MiB   measured in the warmer's first pass, not yet saved
         #   desktop (macOS)         564 MiB
         #   ios                    1843 MiB   against its 2048 ceiling, so watch this one
@@ -96,6 +102,11 @@ runs:
         case "${{ inputs.config }}" in
           ios)     CONFIG_BUDGET_MIB=2048 ;;
           desktop) CONFIG_BUDGET_MIB=2048 ;;
+          # A debug tree like desktop-asan-debug, plus every sample binary and Dawn. Starting high
+          # on the first pass is the cheaper mistake: an undersized cache evicts silently, and the
+          # only symptom is a hit rate that looks disappointing rather than broken. Lower it once
+          # `gh cache list` shows what it actually settles at.
+          desktop-renderdiff) CONFIG_BUDGET_MIB=2048 ;;
           *)       CONFIG_BUDGET_MIB=1024 ;;
         esac
 

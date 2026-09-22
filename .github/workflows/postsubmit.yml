@@ -130,6 +130,45 @@ jobs:
           name: filament-mac
           path: out/filament-release-darwin.tgz
 
+  # macOS coverage for renderdiff. Presubmit renders on ARM Linux and compares against goldens
+  # generated there, and a golden path records only the platform and the backend, not the host, so
+  # there is no second golden set for macOS to compare against. This job exists so that the macOS
+  # renderdiff path does not rot unnoticed between the rare times someone runs it by hand.
+  #
+  # It therefore does not compare. What it still catches is everything that fails outright: a
+  # sample that stops building, stops running headless, crashes, or produces no image. render.py
+  # already exits non-zero for all of those, so a failure here is a real one and turns the run red.
+  # What it cannot catch is a macOS-only visual regression, which is the price of a single golden
+  # set.
+  #
+  # Free standard runner, and deliberately without a compiler cache. The minutes cost nothing here,
+  # whereas a second multi-gigabyte cache entry would push on a repository quota that is already
+  # over budget, most likely evicting the Mesa cache that this very job depends on.
+  test-renderdiff-mac:
+    name: test-renderdiff-mac
+    runs-on: 'macos-15'
+    timeout-minutes: 120
+    # One at a time per branch. A burst of commits should leave the newest one running rather than
+    # queue several hour-long jobs onto the free macOS pool that build-mac and build-ios share.
+    concurrency:
+      group: test-renderdiff-mac-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/renderdiff
+        with:
+          compare: 'false'
+      - name: Upload renderdiff output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: postsubmit-renderdiff-mac
+          path: ./out/renderdiff
+          retention-days: 100
+
   # Sole writer of the ARM Linux compiler caches. Every ARM Linux presubmit job restores what this
   # job produces, so what it compiles is exactly the set of configurations those jobs compile:
   #
@@ -137,7 +176,8 @@ jobs:
   #                           half of test-code-correctness
   #   desktop-asan-debug      the asan/ubsan debug half of test-code-correctness
   #   desktop-backend-test    test-backend: asan/ubsan debug with webgpu and osmesa
-  #   (pending)               test-renderdiff, once it moves from macOS to arm-linux
+  #   desktop-renderdiff      test-renderdiff: debug with webgpu and osmesa, no sanitizers, plus
+  #                           every sample binary. Also read by the golden generation jobs.
   #
   # Presubmit cannot write the cache itself: a push to main carrying a verified commit skips every
   # presubmit job, so the cache would almost never be refreshed. Restricted to main because caches
@@ -173,6 +213,11 @@ jobs:
           - config: desktop-backend-test
             mesa: true
             build: bash test/backend/test.sh --build-only
+          # Same reasoning, and the same flag, for the renderdiff build: --build-only compiles the
+          # renderers, the samples and diffimg, then stops before rendering.
+          - config: desktop-renderdiff
+            mesa: true
+            build: bash test/renderdiff/generate.sh --build-only
     # Per variant, so that a slow configuration does not hold back the others. Queue the next pass
     # rather than running several at once, which would only duplicate work and multiply cache
     # writes.

@@ -169,6 +169,63 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
     all_results += results
   return all_results
 
+def _failure_stats(result):
+  """Pulls the two numbers worth quoting out of a diffimg result, as strings."""
+  stats = result.get('stats') or {}
+  max_diff = stats.get('maxDiffFound')
+  failing_pixels = stats.get('failingPixelCount')
+  return (
+    'n/a' if max_diff is None else f'{max_diff}',
+    'n/a' if failing_pixels is None else f'{failing_pixels}',
+  )
+
+def _report_to_github(results, failed):
+  """Reports failures to the GitHub Actions UI, in addition to the log.
+
+  By the time this runs, the job's log holds several thousand lines of build and render output, so
+  the failure list at the end of it is not somewhere a reviewer will look unprompted. An annotation
+  per failure puts the test name on the run page and in the Checks view, and the summary table
+  makes the whole list readable without opening the log at all.
+
+  This is a no-op outside of Actions, where neither variable is set.
+  """
+  if os.environ.get('GITHUB_ACTIONS') != 'true':
+    return
+
+  for k in failed:
+    max_diff, failing_pixels = _failure_stats(k)
+    # An annotation is a single line: a literal newline would end it, so anything multi-line has to
+    # be encoded. Only the summary is worth spelling out here; the log has the rest.
+    print(f"::error title=renderdiff: {k['name']}::{k['result']} "
+          f"(max diff {max_diff}, failing pixels {failing_pixels})")
+
+  summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+  if not summary_path:
+    return
+
+  lines = [
+    '## Renderdiff',
+    '',
+    f'Compared {len(results) - len(failed)} / {len(results)} images successfully.',
+    '',
+  ]
+  if failed:
+    lines += [
+      '| Test | Result | Max diff | Failing pixels |',
+      '| --- | --- | ---: | ---: |',
+    ]
+    for k in failed:
+      max_diff, failing_pixels = _failure_stats(k)
+      lines.append(f"| `{k['name']}` | {k['result']} | {max_diff} | {failing_pixels} |")
+    lines += [
+      '',
+      'Rendered images, goldens and diffs are attached to this run as an artifact.',
+    ]
+  lines.append('')
+
+  with open(summary_path, 'a') as f:
+    f.write('\n'.join(lines))
+
 if __name__ == '__main__':
   parser = ArgParseImpl()
   parser.add_argument('--src', help='Directory of the base of the diff.', required=True)
@@ -218,5 +275,8 @@ if __name__ == '__main__':
     for detail in failed_details:
       pstr += '\n' + detail
     important_print(pstr)
+
+  _report_to_github(results, failed)
+
   if len(failed) > 0:
     exit(1)

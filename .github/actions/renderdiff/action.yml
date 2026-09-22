@@ -1,0 +1,97 @@
+name: 'Renderdiff'
+description: >
+  Builds the renderdiff binaries, renders the test suite, and optionally compares the result against
+  the goldens in filament-assets.
+
+  This is everything the renderdiff jobs have in common, which is everything except the runner and
+  what they do with the output. Three jobs call it: test-renderdiff in presubmit, which compares;
+  test-renderdiff-mac in postsubmit, which renders on macOS without comparing, because the goldens
+  are ARM Linux pixels; and the golden generation jobs, which push what they render.
+
+inputs:
+  compare:
+    description: >
+      Download the goldens and compare the renders against them. The step fails when any image
+      differs beyond its configured tolerance, when a golden has no render, or when a render has no
+      golden.
+    required: false
+    default: 'false'
+  golden-branch:
+    description: 'Branch of filament-assets to compare against. Only read when compare is true.'
+    required: false
+    default: 'main'
+  test-config:
+    description: 'Test suite to render.'
+    required: false
+    default: 'test/renderdiff/tests/presubmit.json'
+  ccache-config:
+    description: >
+      Compiler cache configuration to restore, or empty to build without one. See the ccache action
+      for what each value means and which job writes it.
+    required: false
+    default: ''
+
+# Note that this action does not upload its output. Each caller does that itself, with
+# `if: ${{ !cancelled() }}`, so that the images are still collected when the comparison fails,
+# which is exactly when they are wanted. That condition is only unambiguously supported on a
+# workflow step, not on a step inside a composite action.
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/mac-prereq
+      if: runner.os == 'macOS'
+    - uses: ./.github/actions/linux-prereq
+      if: runner.os == 'Linux'
+    - uses: ./.github/actions/get-gltf-assets
+    - uses: ./.github/actions/get-mesa
+    - uses: ./.github/actions/get-vulkan-sdk
+    # After get-mesa, which is what puts Homebrew's clang on PATH: the build has to use Apple's
+    # clang, and the last writer to GITHUB_ENV wins.
+    - name: macOS toolchain
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        # Dawn needs clang-17 or newer. 16.4 is what the other macOS jobs select, and keeping every
+        # macOS job on one Xcode is what lets them agree on a compiler at all.
+        sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+        echo "CC=/usr/bin/clang" >> $GITHUB_ENV
+        echo "CXX=/usr/bin/clang++" >> $GITHUB_ENV
+        echo "/usr/local/bin" >> $GITHUB_PATH
+        echo "/usr/bin" >> $GITHUB_PATH
+    # Deliberately after get-mesa, for the reason documented on the presubmit test-backend job:
+    # meson picks ccache up automatically when it is on PATH, and a Mesa rebuild would otherwise
+    # spend this job's cache budget on objects no other job wants.
+    - uses: ./.github/actions/ccache
+      if: inputs.ccache-config != ''
+      with:
+        config: ${{ inputs.ccache-config }}
+    # generate.sh builds the renderers, the samples and diffimg, then renders every backend. It
+    # exits non-zero if any render fails, which is the whole of the signal on a runner that does
+    # not compare: a sample that stops building, stops running headless, crashes, or writes no
+    # image all land here.
+    - name: Render
+      shell: bash
+      run: bash test/renderdiff/generate.sh --test="${{ inputs.test-config }}"
+    - uses: ./.github/actions/ccache-stats
+      if: ${{ !cancelled() && inputs.ccache-config != '' }}
+    # compare.py exits non-zero when anything fails, and reports which test failed as a GitHub
+    # annotation and in the run summary, so this step needs no result plumbing of its own.
+    - name: Compare against goldens
+      if: ${{ inputs.compare == 'true' }}
+      shell: bash
+      run: |
+        TEST_DIR=test/renderdiff
+        source ${TEST_DIR}/src/preamble.sh
+        set -eu
+
+        python3 ${TEST_DIR}/src/golden_manager.py \
+                --branch="${{ inputs.golden-branch }}" \
+                --output=${GOLDEN_OUTPUT_DIR}
+
+        python3 ${TEST_DIR}/src/compare.py \
+            --src=${GOLDEN_OUTPUT_DIR} \
+            --dest=${RENDER_OUTPUT_DIR} \
+            --out=${DIFF_OUTPUT_DIR} \
+            --diffimg="${DIFFIMG_PATH}" \
+            --test="${{ inputs.test-config }}"
