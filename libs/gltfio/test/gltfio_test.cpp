@@ -859,7 +859,31 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     ASSERT_NE(instance, nullptr);
     EXPECT_EQ(instance->getSkinCount(), 1u);
     EXPECT_EQ(instance->getJointCountAt(0), 2u);
-    EXPECT_THROW((void) instance->getInverseBindMatricesAt(0), utils::PreconditionPanic);
+
+    // The accessor declares one matrix for a two-joint skin and its buffer view
+    // stops at 64 bytes, so the bind matrices cannot be copied. createSkins()
+    // keeps the skin's entry and leaves the matrices as identity rather than
+    // dropping it: dropping it would leave asset->mSkins shorter than
+    // instance->mSkins, which importSkins() always sizes with the glTF skin
+    // count, and the three consumers that pair the two lists by index would
+    // then run off the shorter one.
+    //
+    // What this test is really about is that nothing past the buffer view is
+    // read, so assert that directly on the returned matrices instead of
+    // inferring it from the skin having been dropped.
+    math::mat4f const* bindMatrices = nullptr;
+    EXPECT_NO_THROW(bindMatrices = instance->getInverseBindMatricesAt(0));
+    ASSERT_NE(bindMatrices, nullptr);
+    for (size_t i = 0; i < 2; i++) {
+        EXPECT_EQ(bindMatrices[i], math::mat4f()) << "bind matrix " << i << " is not identity";
+        for (size_t col = 0; col < 4; col++) {
+            for (size_t row = 0; row < 4; row++) {
+                // 1337..1352 are the values written past the buffer view.
+                EXPECT_LT(bindMatrices[i][col][row], 1337.0f)
+                        << "bind matrix " << i << " carries data from beyond the buffer view";
+            }
+        }
+    }
 
     assetLoader->destroyAsset(asset);
     delete resourceLoader;

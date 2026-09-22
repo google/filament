@@ -34,6 +34,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
@@ -612,11 +613,16 @@ void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
 }
 
 void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
+    // The two skin lists are built separately and are expected to agree, but
+    // that is not something this loop can assume at runtime.
     assert_invariant(instance->mSkins.size() == asset->mSkins.size());
     size_t skinIndex = 0;
     for (const auto& skin : instance->mSkins) {
+        if (UTILS_UNLIKELY(skinIndex >= asset->mSkins.size())) {
+            break;
+        }
         const auto& assetSkin = asset->mSkins[skinIndex++];
-        size_t njoints = skin.joints.size();
+        size_t njoints = std::min(skin.joints.size(), assetSkin.inverseBindMatrices.size());
         boneMatrices.resize(njoints);
         for (Entity entity : skin.targets) {
             auto renderable = renderableManager->getInstance(entity);

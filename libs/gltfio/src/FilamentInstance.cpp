@@ -57,7 +57,9 @@ size_t FFilamentInstance::getSkinCount() const noexcept {
 }
 
 const char* FFilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
-    if (mSkins.size() <= skinIndex) {
+    // The name lives in the owner's skin list, so bound the index by that list
+    // rather than by this instance's.
+    if (mOwner->mSkins.size() <= skinIndex) {
         return nullptr;
     }
     return mOwner->mSkins[skinIndex].name.c_str();
@@ -213,14 +215,27 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         }
 
         Aabb aabb;
+        if (UTILS_UNLIKELY((size_t) prim.skinIndex >= mSkins.size() ||
+                    (size_t) prim.skinIndex >= mOwner->mSkins.size())) {
+            return aabb;
+        }
         TransformManager::Instance transformable = tm.getInstance(prim.node);
         const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
         const Skin& instanceSkin = mSkins[prim.skinIndex];
         const FFilamentAsset::Skin& assetSkin = mOwner->mSkins[prim.skinIndex];
+        // A primitive bound to a skin need not carry JOINTS_0/WEIGHTS_0, and the
+        // joint indices it does carry are not bounded by anything upstream.
+        if (UTILS_UNLIKELY(joints.size() < verts.size() || weights.size() < verts.size())) {
+            return aabb;
+        }
         for (size_t i = 0, n = verts.size(); i < n; i++) {
             mat4f tmp = mat4f(0.0f);
             for (size_t j = 0; j < 4; j++) {
                 size_t jointIndex = joints[i][j];
+                if (UTILS_UNLIKELY(jointIndex >= instanceSkin.joints.size() ||
+                            jointIndex >= assetSkin.inverseBindMatrices.size())) {
+                    continue;
+                }
                 Entity jointEntity = instanceSkin.joints[jointIndex];
                 mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
                 mat4f inverseBindMatrix = assetSkin.inverseBindMatrices[jointIndex];
