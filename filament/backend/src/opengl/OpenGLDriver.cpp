@@ -4544,6 +4544,11 @@ void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain>,
     DEBUG_MARKER()
 }
 
+bool OpenGLDriver::isPresentationTimeSupported() {
+    // this is a synchronous call
+    return mPlatform.isPresentationTimeSupported();
+}
+
 void OpenGLDriver::setPresentationTime(int64_t const monotonic_clock_ns) {
     DEBUG_MARKER()
     mPlatform.setPresentationTime(monotonic_clock_ns);

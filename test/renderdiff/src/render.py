@@ -32,7 +32,10 @@ if __name__ == "__main__":
   parser.add_argument('--executable', help='Path to the executable (e.g. gltf_viewer)', required=True)
   parser.add_argument('--output_dir', help='Output Directory', required=True)
   parser.add_argument('--test_filter', help='Filter for the tests to run')
-  parser.add_argument('--num_threads', help='Number of threads to use for rendering', type=int)
+  parser.add_argument('--num_threads',
+                      help='Number of renders to run concurrently. Each render uses every core it '
+                           'can, so the default is a small fraction of the core count.',
+                      type=int)
 
   args, _ = parser.parse_known_args(sys.argv[1:])
   test = test_config.parse_from_path(args.test)
