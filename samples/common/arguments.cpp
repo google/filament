@@ -19,6 +19,7 @@
 #ifndef __ANDROID__
 #include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/DesktopAssetWriter.h>
+#include <filamentapp/HeadlessDisplayManager.h>
 #include <filamentapp/HtmlDisplayManager.h>
 #include <filamentapp/SDLDisplayManager.h>
 #endif
@@ -240,7 +241,6 @@ FilamentApp2::Builder getBuilder(const SampleConfig& config, filament::app::Disp
                            .featureLevel(config.featureLevel)
                            .cameraMode(config.cameraMode)
                            .resizeable(config.resizeable)
-                           .headless(config.headless)
                            .stereoscopicEyeCount(config.stereoscopicEyeCount)
                            .vulkanGPUHint(config.vulkanGPUHint)
                            .forcedWebGPUBackend(config.forcedWebGPUBackend)
@@ -265,6 +265,9 @@ std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleCon
 #ifndef __ANDROID__
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();
+    }
+    if (config.headless) {
+        return std::make_unique<filament::app::HeadlessDisplayManager>();
     }
     return std::make_unique<filament::app::SDLDisplayManager>(config.backend);
 #else

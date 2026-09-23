@@ -53,6 +53,7 @@
 #include <backend/platforms/VulkanPlatform.h>
 #endif
 
+#include <utils/debug.h>
 #include <utils/EntityManager.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -69,7 +70,6 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include <thread>
 #include <vector>
 
 #include <stdint.h>
@@ -102,7 +102,7 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mCameraHomeEye(builder.mCameraHomeEye),
           mCameraHomeTarget(builder.mCameraHomeTarget),
           mResizeable(builder.mResizeable),
-          mHeadless(builder.mHeadless),
+          mHeadless(builder.mDisplayManager->isHeadless()),
           mStereoscopicEyeCount(builder.mStereoscopicEyeCount),
           mVulkanGPUHint(builder.mVulkanGPUHint),
           mForcedWebGPUBackend(builder.mForcedWebGPUBackend),
@@ -312,7 +312,7 @@ void FilamentApp2::init() {
     }
 
     mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth,
-            mInitialWindowHeight, mResizeable, mHeadless);
+            mInitialWindowHeight, mResizeable);
 
     onSurfaceCreated();
     onSurfaceChanged((int) mInitialWindowWidth, (int) mInitialWindowHeight);
@@ -323,29 +323,27 @@ void FilamentApp2::init() {
 void FilamentApp2::run() {
     init();
 
-    while (!doFrame()) {
-        // Paces the loop to roughly display refresh rate so an interactive app doesn't spin a
-        // core doing nothing between frames. Headless has no display to pace to and, unlike an
-        // interactive session, nothing waiting on wall-clock time -- only on doFrame() actually
-        // finishing -- so the sleep there is pure dead time, paid on every single iteration for
-        // the life of the run. Batch tools that render many thousands of frames (e.g.
-        // samples/taa_harness.cpp) are dominated by it: skipping it here cut one measured
-        // headless workload from ~115s to ~35s with no change in output.
-        if (!mHeadless) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-    }
-
-    shutdown();
+    // The frame loop belongs to the display manager, because only it knows whether this thread
+    // owns the frame source, as a desktop event loop does, or is instead called by it, as under a
+    // browser's requestAnimationFrame.
+    //
+    // Deliberately, no shutdown() call follows: doFrame() performs it before reporting completion,
+    // and runFrameLoop() may return while the app is still running, so tearing down here would
+    // destroy the engine after the first frame under a non-blocking display manager.
+    mDisplayManager->runFrameLoop([this] { return doFrame(); });
 }
 
 void FilamentApp2::onSurfaceCreated() {
-    void* nativeWindow = mDisplayManager ? mDisplayManager->getNativeWindow(mWindow) : nullptr;
+    void* nativeWindow = mDisplayManager->getNativeWindow(mWindow);
 
     if (mSwapChain) {
         mEngine->destroy(mSwapChain);
         mSwapChain = nullptr;
     }
+
+    // A headless display manager never has a native window. The implication holds in one direction
+    // only: a windowed manager may also report nullptr, before its surface exists.
+    assert_invariant(!mHeadless || nativeWindow == nullptr);
 
     if (mHeadless) {
         mSwapChain = mEngine->createSwapChain((uint32_t) mWidth, (uint32_t) mHeight);
@@ -363,7 +361,7 @@ void FilamentApp2::onSurfaceChanged(int width, int height) {
     mWidth = width;
     mHeight = height;
 
-    if (mDisplayManager && mWindow) {
+    if (mWindow) {
         mDisplayManager->onWindowResized(mWindow);
     }
 
@@ -477,13 +475,11 @@ bool FilamentApp2::doFrame() {
         // is not "real" time but virtualized. The following accounts for that.
         bool const isFixedTime = mFixedTimeStep > 0.0f;
         if (!isFixedTime) {
-            if (mDisplayManager) {
-                currentTime = mDisplayManager->getTime();
-                if (mLastDisplayManagerTime > 0.0) {
-                    timeStep = float(currentTime - mLastDisplayManagerTime);
-                }
-                mLastDisplayManagerTime = currentTime;
+            currentTime = mDisplayManager->getTime();
+            if (mLastDisplayManagerTime > 0.0) {
+                timeStep = float(currentTime - mLastDisplayManagerTime);
             }
+            mLastDisplayManagerTime = currentTime;
         } else {
             currentTime = double(mCurrentFrame + 1) * double(mFixedTimeStep);
             timeStep = mFixedTimeStep;
@@ -498,9 +494,7 @@ bool FilamentApp2::doFrame() {
         // the app to process the stashed events. This is done because ImGui might wish to block
         // certain events from the app (e.g., when dragging the mouse over an obscuring window).
         std::vector<filament::app::AppEvent> events;
-        if (mDisplayManager) {
-            mDisplayManager->pollEvents(events);
-        }
+        mDisplayManager->pollEvents(events);
 
         if (mAppGui) {
             mAppGui->processAppEvents(events);
@@ -701,9 +695,7 @@ bool FilamentApp2::doFrame() {
                 mRenderer->render(view->getView());
             }
 
-            if (mDisplayManager) {
-                mDisplayManager->onFrameFinished(mWindow, mEngine, mRenderer);
-            }
+            mDisplayManager->onFrameFinished(mWindow, mEngine, mRenderer);
 
             if (mPostRender) {
                 mPostRender(mEngine, mViews[0]->getView(), mScene, mRenderer);
@@ -769,7 +761,7 @@ void FilamentApp2::shutdown() {
         }
     }
 
-    if (mDisplayManager && mWindow) {
+    if (mWindow) {
         mDisplayManager->destroyWindow(mWindow);
         mWindow = nullptr;
     }
@@ -969,7 +961,7 @@ void FilamentApp2::keyUp(AppKey key) {
 }
 
 void FilamentApp2::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const {
-    if (!mDisplayManager || !mWindow) {
+    if (!mWindow) {
         return;
     }
     uint32_t dw = 0, dh = 0, ww = 0, wh = 0;
@@ -982,7 +974,7 @@ void FilamentApp2::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const {
 }
 
 void FilamentApp2::resize(WindowCameraParams const& cameraParams) {
-    if (mDisplayManager && mWindow) {
+    if (mWindow) {
         mDisplayManager->onWindowResized(mWindow);
     }
     configureCamerasForWindow(cameraParams);
@@ -994,7 +986,7 @@ void FilamentApp2::configureCamerasForWindow(WindowCameraParams const& cameraPar
 
     // If the app is not headless, query the window for its physical & virtual sizes.
     if (!mHeadless) {
-        if (mDisplayManager && mWindow) {
+        if (mWindow) {
             uint32_t width = 0, height = 0;
             mDisplayManager->getDrawableSize(mWindow, &width, &height);
             mWidth = (size_t) width;
@@ -1008,7 +1000,7 @@ void FilamentApp2::configureCamerasForWindow(WindowCameraParams const& cameraPar
             }
         }
     } else {
-        if (mDisplayManager && mWindow) {
+        if (mWindow) {
             uint32_t width = 0, height = 0;
             mDisplayManager->getWindowSize(mWindow, &width, &height);
             if (width != mWidth || height != mHeight) {
