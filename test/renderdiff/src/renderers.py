@@ -15,12 +15,27 @@
 import abc
 import os
 import shlex
+import signal
 import sys
 import concurrent.futures
 import fnmatch
 from dataclasses import dataclass, field
 from utils import execute, mkdir_p, mv_f, important_print
 from results import RESULT_OK, RESULT_FAILED
+
+
+def describe_exit_code(code: int) -> str:
+    """Describes a process exit code, naming the signal when the process was killed by one.
+
+    Only a crash leaves a core behind for report_crashes.sh to turn into a backtrace.
+    """
+    if code >= 0:
+        return str(code)
+    try:
+        name = signal.Signals(-code).name
+    except ValueError:
+        name = 'unknown signal'
+    return f'{code} (killed by {name}; look for a backtrace in out/renderdiff/crashes)'
 
 @dataclass
 class RenderTestCase(abc.ABC):
@@ -95,7 +110,8 @@ class GltfRenderTestCase(RenderTestCase):
             important_print(f'{out_name} rendering succeeded. output=\n{output}')
         else:
             result = RESULT_FAILED
-            important_print(f'{out_name} rendering failed with error={out_code} output=\n{output}')
+            important_print(f'{out_name} rendering failed with '
+                            f'error={describe_exit_code(out_code)} output=\n{output}')
 
         return out_code, result
 
@@ -138,9 +154,31 @@ class SampleRenderTestCase(RenderTestCase):
             important_print(f'{out_name} rendering succeeded. output=\n{output}')
         else:
             result = RESULT_FAILED
-            important_print(f'{out_name} rendering failed with error={out_code} output=\n{output}')
+            important_print(f'{out_name} rendering failed with '
+                            f'error={describe_exit_code(out_code)} output=\n{output}')
 
         return out_code, result
+
+
+# A render is a separate process that helps itself to the whole machine: the software drivers size
+# their worker pools from the CPU count, and the samples run their own job system on top. What
+# needs bounding is therefore how many renders are in flight, not the threads within one.
+#
+# ThreadPoolExecutor's default width, min(32, cpu_count + 4), meant twenty concurrent renders on
+# the 16-core runner. Running a few at a time costs little wall time and keeps the machine out of
+# the scheduling regime where a latent race is most likely to be lost. This is exposure reduction
+# rather than a fix: load cannot break an invariant inside a driver process, only change how often
+# it is observed.
+_CPUS_PER_RENDER = 4
+_MIN_CONCURRENT_RENDERS = 2
+_MAX_CONCURRENT_RENDERS = 4
+
+
+def default_concurrent_renders() -> int:
+    """Number of renders to run at once when the caller does not ask for a specific count."""
+    cpu_count = os.cpu_count() or 1
+    return max(_MIN_CONCURRENT_RENDERS,
+               min(_MAX_CONCURRENT_RENDERS, cpu_count // _CPUS_PER_RENDER))
 
 
 class BaseRenderer(abc.ABC):
@@ -163,7 +201,9 @@ class BaseRenderer(abc.ABC):
 class DesktopRenderer(BaseRenderer):
     def __init__(self, platform: str, backend: str, executable: str, num_threads: int = None, test_filter: str = None):
         super().__init__(platform, backend, executable)
-        self.num_threads = num_threads
+        # num_threads is named for the pool it configures, but what it bounds is the number of
+        # renders running at once.
+        self.concurrent_renders = num_threads if num_threads else default_concurrent_renders()
         self.test_filter = test_filter
 
     def get_env(self) -> dict:
@@ -229,7 +269,9 @@ class DesktopRenderer(BaseRenderer):
         mkdir_p(named_output_dir)
 
         results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+        print(f'Rendering {self.platform}-{self.backend} with up to '
+              f'{self.concurrent_renders} concurrent renders')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.concurrent_renders) as executor:
             futures = []
             for test in test_config.tests:
                 renderer_spec = f"{self.platform}-{self.backend}"

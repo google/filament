@@ -25,6 +25,17 @@ VENV_DIR="$(pwd)/venv"
 GLTF_DIR="$(pwd)/gltf/Models"
 BUILD_COMMON_DIR="$(pwd)/build/common"
 
+# Backtraces of renders that died on a signal, written by report_crashes.sh. Under out/renderdiff
+# because every caller already uploads that directory.
+CRASH_OUTPUT_DIR="$(pwd)/out/renderdiff/crashes"
+
+# Cores stay out of out/renderdiff: they are hundreds of megabytes, and only the backtrace
+# extracted from them is worth uploading.
+CORE_DUMP_DIR="${CORE_DUMP_DIR:-/tmp/renderdiff-cores}"
+
+# Lets crash collection tell this run's cores from whatever was already on the machine.
+RENDER_START_MARKER="${CORE_DUMP_DIR}/render-start"
+
 # diffimg is built by generate.sh, into the same debug tree as the renderers. It used to come from
 # a release build, which meant configuring a second CMake tree for one small tool; comparing the
 # whole suite takes single-digit seconds, so an unoptimized binary costs nothing measurable.
@@ -49,7 +60,8 @@ else
 fi
 
 function start_() {
-    mkdir -p ${RENDER_OUTPUT_DIR} ${DIFF_OUTPUT_DIR} ${GOLDEN_OUTPUT_DIR}
+    mkdir -p ${RENDER_OUTPUT_DIR} ${DIFF_OUTPUT_DIR} ${GOLDEN_OUTPUT_DIR} ${CRASH_OUTPUT_DIR}
+    mkdir -p ${CORE_DUMP_DIR}
     if [[ "$GITHUB_WORKFLOW" ]]; then
         set -ex
     fi

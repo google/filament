@@ -32,9 +32,10 @@ inputs:
     default: ''
 
 # Note that this action does not upload its output. Each caller does that itself, with
-# `if: ${{ !cancelled() }}`, so that the images are still collected when the comparison fails,
-# which is exactly when they are wanted. That condition is only unambiguously supported on a
-# workflow step, not on a step inside a composite action.
+# `if: ${{ !cancelled() }}`, so that the images are still collected when the render or the
+# comparison fails, which is exactly when they are wanted. The steps below use the same condition
+# where they have to survive an earlier failure, because a composite action otherwise stops at its
+# first failing step.
 
 runs:
   using: "composite"
@@ -66,6 +67,23 @@ runs:
       if: inputs.ccache-config != ''
       with:
         config: ${{ inputs.ccache-config }}
+    # generate.sh raises the core limit and extracts the backtrace. The two things it cannot do are
+    # done here, because they need root or the network: Ubuntu pipes cores to apport, which throws
+    # them away, and gdb is not installed. Neither failure stops the job, since a lost backtrace
+    # costs a diagnostic, not a test result.
+    - name: Prepare crash capture
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo mkdir -p /tmp/renderdiff-cores
+        sudo chmod 1777 /tmp/renderdiff-cores
+        sudo sysctl -w kernel.core_pattern='/tmp/renderdiff-cores/core.%E.%p.%t' \
+            || echo "Could not set kernel.core_pattern; cores may be discarded by apport."
+        if ! command -v gdb > /dev/null 2>&1; then
+          sudo apt-get update -qq || true
+          sudo apt-get install -y gdb \
+              || echo "Could not install gdb; a core would be collected but not readable."
+        fi
     # generate.sh builds the renderers, the samples and diffimg, then renders every backend. It
     # exits non-zero if any render fails, which is the whole of the signal on a runner that does
     # not compare: a sample that stops building, stops running headless, crashes, or writes no
@@ -75,15 +93,30 @@ runs:
       run: bash test/renderdiff/generate.sh --test="${{ inputs.test-config }}"
     - uses: ./.github/actions/ccache-stats
       if: ${{ !cancelled() && inputs.ccache-config != '' }}
+    # Runs even when the render failed, deliberately: a single crashed sample used to skip this
+    # step, leaving the artifact with renders alone and no comparison for the images that did
+    # render. The render's own failure has already made the job red, and compare.py reports a
+    # sample that produced no image as a missing render, so nothing is papered over. This relies
+    # on generate.sh rendering every backend before it reports the failure; were it to stop at the
+    # first one, the missing renders here would be mostly tests that were never attempted.
+    #
     # compare.py exits non-zero when anything fails, and reports which test failed as a GitHub
     # annotation and in the run summary, so this step needs no result plumbing of its own.
     - name: Compare against goldens
-      if: ${{ inputs.compare == 'true' }}
+      if: ${{ !cancelled() && inputs.compare == 'true' }}
       shell: bash
       run: |
         TEST_DIR=test/renderdiff
         source ${TEST_DIR}/src/preamble.sh
         set -eu
+
+        # Nothing rendered at all means the failure was earlier, in the build or the prerequisites.
+        # Comparing then buries that failure under one annotation per golden.
+        if [ ! -d "${RENDER_OUTPUT_DIR}" ] \
+           || [ -z "$(find ${RENDER_OUTPUT_DIR} -name '*.tif' -print -quit 2> /dev/null)" ]; then
+            echo "No images were rendered, so there is nothing to compare."
+            exit 0
+        fi
 
         python3 ${TEST_DIR}/src/golden_manager.py \
                 --branch="${{ inputs.golden-branch }}" \
