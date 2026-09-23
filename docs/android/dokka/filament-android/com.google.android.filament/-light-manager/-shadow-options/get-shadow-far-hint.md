@@ -3,4 +3,4 @@
 # getShadowFarHint
 
 [main]\
-open fun [getShadowFarHint](get-shadow-far-hint.md)(): Float
+open fun [getShadowFarHint](get-shadow-far-hint.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

@@ -3,7 +3,7 @@
 # attribute
 
 [main]\
-open fun [attribute](attribute.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), bufferIndex: Int, attributeType: [VertexBuffer.AttributeType](../-attribute-type/index.md)): [VertexBuffer.Builder](index.md)
+open fun [attribute](attribute.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), bufferIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), attributeType: [VertexBuffer.AttributeType](../-attribute-type/index.md)): [VertexBuffer.Builder](index.md)
 
 Sets up an attribute for this vertex buffer set. 
 
@@ -36,7 +36,7 @@ main
 | [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md) |
 
 [main]\
-open fun [attribute](attribute.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), bufferIndex: Int, attributeType: [VertexBuffer.AttributeType](../-attribute-type/index.md), byteOffset: Int): [VertexBuffer.Builder](index.md)
+open fun [attribute](attribute.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), bufferIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), attributeType: [VertexBuffer.AttributeType](../-attribute-type/index.md), byteOffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [VertexBuffer.Builder](index.md)
 
 Sets up an attribute for this vertex buffer set. 
 
@@ -70,7 +70,7 @@ main
 | [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md) |
 
 [main]\
-open fun [attribute](attribute.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), bufferIndex: Int, attributeType: [VertexBuffer.AttributeType](../-attribute-type/index.md), byteOffset: Int, byteStride: Int): [VertexBuffer.Builder](index.md)
+open fun [attribute](attribute.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), bufferIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), attributeType: [VertexBuffer.AttributeType](../-attribute-type/index.md), byteOffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), byteStride: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [VertexBuffer.Builder](index.md)
 
 Sets up an attribute for this vertex buffer set. 
 

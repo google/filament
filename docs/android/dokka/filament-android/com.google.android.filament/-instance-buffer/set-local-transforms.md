@@ -3,7 +3,7 @@
 # setLocalTransforms
 
 [main]\
-open fun [setLocalTransforms](set-local-transforms.md)(localTransforms: Array&lt;Float&gt;, count: Int)
+open fun [setLocalTransforms](set-local-transforms.md)(localTransforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Sets the local transform for each instance. 
 
@@ -19,7 +19,7 @@ main
 | count | the number of local transforms |
 
 [main]\
-open fun [setLocalTransforms](set-local-transforms.md)(localTransforms: Array&lt;Float&gt;, count: Int, offset: Int)
+open fun [setLocalTransforms](set-local-transforms.md)(localTransforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Sets the local transform for each instance. 
 

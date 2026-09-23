@@ -3,7 +3,7 @@
 # getDirectionEstimate
 
 [main]\
-open fun [getDirectionEstimate](get-direction-estimate.md)(sh: Array&lt;Float&gt;, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getDirectionEstimate](get-direction-estimate.md)(sh: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Helper to estimate the direction of the dominant light in the environment represented by spherical harmonics. 
 
@@ -33,7 +33,7 @@ main
 | getColorEstimate |
 
 [main]\
-open fun [getDirectionEstimate](get-direction-estimate.md)(out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getDirectionEstimate](get-direction-estimate.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Helper to estimate the direction of the dominant light in the environment represented by spherical harmonics. 
 

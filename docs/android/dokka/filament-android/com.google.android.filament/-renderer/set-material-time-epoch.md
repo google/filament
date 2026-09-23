@@ -3,7 +3,7 @@
 # setMaterialTimeEpoch
 
 [main]\
-open fun [setMaterialTimeEpoch](set-material-time-epoch.md)(monotonic_clock_ns: Long)
+open fun [setMaterialTimeEpoch](set-material-time-epoch.md)(monotonic_clock_ns: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Sets the material time epoch to the specified steady clock timestamp in nanoseconds, i.e. resets the material time to zero relative to that time. 
 

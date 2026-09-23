@@ -3,4 +3,4 @@
 # getBackendBeginFrame
 
 [main]\
-open fun [getBackendBeginFrame](get-backend-begin-frame.md)(): Long
+open fun [getBackendBeginFrame](get-backend-begin-frame.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

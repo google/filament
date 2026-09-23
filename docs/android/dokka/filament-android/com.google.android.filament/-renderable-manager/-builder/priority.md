@@ -3,7 +3,7 @@
 # priority
 
 [main]\
-open fun [priority](priority.md)(priority: Int): [RenderableManager.Builder](index.md)
+open fun [priority](priority.md)(priority: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Provides coarse-grained control over draw order. 
 

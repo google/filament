@@ -3,7 +3,7 @@
 # getSunHaloFalloff
 
 [main]\
-open fun [getSunHaloFalloff](get-sun-halo-falloff.md)(i: Int): Float
+open fun [getSunHaloFalloff](get-sun-halo-falloff.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 returns the halo falloff of a Type.SUN light as a dimensionless value.
 

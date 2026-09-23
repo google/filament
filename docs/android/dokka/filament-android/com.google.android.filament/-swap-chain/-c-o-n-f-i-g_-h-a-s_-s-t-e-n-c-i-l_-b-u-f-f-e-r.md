@@ -3,7 +3,7 @@
 # CONFIG_HAS_STENCIL_BUFFER
 
 [main]\
-val [CONFIG_HAS_STENCIL_BUFFER](-c-o-n-f-i-g_-h-a-s_-s-t-e-n-c-i-l_-b-u-f-f-e-r.md): Long = 32
+val [CONFIG_HAS_STENCIL_BUFFER](-c-o-n-f-i-g_-h-a-s_-s-t-e-n-c-i-l_-b-u-f-f-e-r.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = 32
 
 Indicates that this SwapChain should allocate a stencil buffer in addition to a depth buffer. 
 

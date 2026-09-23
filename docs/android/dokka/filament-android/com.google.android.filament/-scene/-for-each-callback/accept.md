@@ -3,4 +3,4 @@
 # accept
 
 [main]\
-abstract fun [accept](accept.md)(entity: Int)
+abstract fun [accept](accept.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

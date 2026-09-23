@@ -3,7 +3,7 @@
 # color
 
 [main]\
-open var [color](color.md): Array&lt;Float&gt;
+open var [color](color.md): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Fog's color is used for ambient light in-scattering, a good value is to use the average of the ambient light, possibly tinted towards blue for outdoors environments. 
 

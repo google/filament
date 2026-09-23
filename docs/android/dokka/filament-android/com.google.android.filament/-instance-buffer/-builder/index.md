@@ -9,12 +9,12 @@ open class [Builder](index.md)
 
 | | |
 |---|---|
-| [Builder](-builder.md) | [main]<br>constructor(instanceCount: Int) |
+| [Builder](-builder.md) | [main]<br>constructor(instanceCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)) |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
 | [build](build.md) | [main]<br>open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [InstanceBuffer](../index.md)<br>Creates the InstanceBuffer object and returns a pointer to it. |
-| [localTransforms](local-transforms.md) | [main]<br>open fun [localTransforms](local-transforms.md)(localTransforms: Array&lt;Float&gt;): [InstanceBuffer.Builder](index.md)<br>Provide an initial local transform for each instance. |
+| [localTransforms](local-transforms.md) | [main]<br>open fun [localTransforms](local-transforms.md)(localTransforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [InstanceBuffer.Builder](index.md)<br>Provide an initial local transform for each instance. |
 | [name](name.md) | [main]<br>open fun [name](name.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [InstanceBuffer.Builder](index.md)<br>Associate an optional name with this InstanceBuffer for debugging purposes. |

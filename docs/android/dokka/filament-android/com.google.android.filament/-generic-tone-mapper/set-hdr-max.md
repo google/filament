@@ -3,7 +3,7 @@
 # setHdrMax
 
 [main]\
-open fun [setHdrMax](set-hdr-max.md)(hdrMax: Float)
+open fun [setHdrMax](set-hdr-max.md)(hdrMax: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Defines the maximum input value that will be mapped to output white. 
 

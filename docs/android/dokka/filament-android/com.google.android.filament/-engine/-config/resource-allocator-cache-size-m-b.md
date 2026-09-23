@@ -3,4 +3,4 @@
 # resourceAllocatorCacheSizeMB
 
 [main]\
-open var [resourceAllocatorCacheSizeMB](resource-allocator-cache-size-m-b.md): Long
+open var [resourceAllocatorCacheSizeMB](resource-allocator-cache-size-m-b.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

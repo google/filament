@@ -3,7 +3,7 @@
 # setGlobalBlendOrderEnabledAt
 
 [main]\
-open fun [setGlobalBlendOrderEnabledAt](set-global-blend-order-enabled-at.md)(instance: Int, primitiveIndex: Int, enabled: Boolean)
+open fun [setGlobalBlendOrderEnabledAt](set-global-blend-order-enabled-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Changes whether the blend order is global or local to this Renderable (by default).
 

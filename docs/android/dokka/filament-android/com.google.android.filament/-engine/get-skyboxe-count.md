@@ -3,4 +3,4 @@
 # getSkyboxeCount
 
 [main]\
-open fun [getSkyboxeCount](get-skyboxe-count.md)(): Int
+open fun [getSkyboxeCount](get-skyboxe-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

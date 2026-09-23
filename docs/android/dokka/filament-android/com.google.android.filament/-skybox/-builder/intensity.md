@@ -3,7 +3,7 @@
 # intensity
 
 [main]\
-open fun [intensity](intensity.md)(envIntensity: Float): [Skybox.Builder](index.md)
+open fun [intensity](intensity.md)(envIntensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [Skybox.Builder](index.md)
 
 Skybox intensity when no IndirectLight is set on the Scene. 
 

@@ -3,7 +3,7 @@
 # saturation
 
 [main]\
-open fun [saturation](saturation.md)(saturation: Float): [ColorGrading.Builder](index.md)
+open fun [saturation](saturation.md)(saturation: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Adjusts the saturation of the image. 
 

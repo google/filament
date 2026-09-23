@@ -3,9 +3,9 @@
 # setStencilReferenceValue
 
 [main]\
-open fun [setStencilReferenceValue](set-stencil-reference-value.md)(value: Int)
+open fun [setStencilReferenceValue](set-stencil-reference-value.md)(value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setStencilReferenceValue](set-stencil-reference-value.md)(value: Int, face: [MaterialInstance.StencilFace](-stencil-face/index.md))
+open fun [setStencilReferenceValue](set-stencil-reference-value.md)(value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), face: [MaterialInstance.StencilFace](-stencil-face/index.md))
 
 Sets the stencil reference value (default is 0). 
 

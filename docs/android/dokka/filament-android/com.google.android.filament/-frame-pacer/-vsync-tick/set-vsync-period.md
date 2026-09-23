@@ -3,4 +3,4 @@
 # setVsyncPeriod
 
 [main]\
-open fun [setVsyncPeriod](set-vsync-period.md)(vsyncPeriod: Long)
+open fun [setVsyncPeriod](set-vsync-period.md)(vsyncPeriod: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

@@ -3,4 +3,4 @@
 # setExpectedPresentLatency
 
 [main]\
-open fun [setExpectedPresentLatency](set-expected-present-latency.md)(expectedPresentLatency: Long)
+open fun [setExpectedPresentLatency](set-expected-present-latency.md)(expectedPresentLatency: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

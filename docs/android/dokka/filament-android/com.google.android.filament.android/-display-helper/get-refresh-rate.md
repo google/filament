@@ -3,7 +3,7 @@
 # getRefreshRate
 
 [main]\
-open fun [getRefreshRate](get-refresh-rate.md)(display: Display): Float
+open fun [getRefreshRate](get-refresh-rate.md)(display: Display): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 #### Return
 

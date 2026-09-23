@@ -3,7 +3,7 @@
 # importTexture
 
 [main]\
-open fun [importTexture](import-texture.md)(id: Long): [Texture.Builder](index.md)
+open fun [importTexture](import-texture.md)(id: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Texture.Builder](index.md)
 
 Specify a native texture to import as a Filament texture. 
 

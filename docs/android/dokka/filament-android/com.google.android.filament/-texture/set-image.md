@@ -3,7 +3,7 @@
 # setImage
 
 [main]\
-open fun [setImage](set-image.md)(engine: [Engine](../-engine/index.md), level: Int, xoffset: Int, yoffset: Int, zoffset: Int, width: Int, height: Int, depth: Int, buffer: [Texture.PixelBufferDescriptor](-pixel-buffer-descriptor/index.md))
+open fun [setImage](set-image.md)(engine: [Engine](../-engine/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), xoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), yoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), zoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), depth: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), buffer: [Texture.PixelBufferDescriptor](-pixel-buffer-descriptor/index.md))
 
 Updates a sub-image of a 3D texture or 2D texture array for a level. 
 
@@ -32,9 +32,9 @@ main
 | [Texture.Builder](-builder/sampler.md) |
 
 [main]\
-open fun [setImage](set-image.md)(engine: [Engine](../-engine/index.md), level: Int, buffer: [Texture.PixelBufferDescriptor](-pixel-buffer-descriptor/index.md))
+open fun [setImage](set-image.md)(engine: [Engine](../-engine/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), buffer: [Texture.PixelBufferDescriptor](-pixel-buffer-descriptor/index.md))
 
-open fun [setImage](set-image.md)(engine: [Engine](../-engine/index.md), level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int, buffer: [Texture.PixelBufferDescriptor](-pixel-buffer-descriptor/index.md))
+open fun [setImage](set-image.md)(engine: [Engine](../-engine/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), xoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), yoffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), buffer: [Texture.PixelBufferDescriptor](-pixel-buffer-descriptor/index.md))
 
 inline helper to update a 2D texture
 

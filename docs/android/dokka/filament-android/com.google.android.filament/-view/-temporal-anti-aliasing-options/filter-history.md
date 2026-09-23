@@ -3,6 +3,6 @@
 # filterHistory
 
 [main]\
-open var [filterHistory](filter-history.md): Boolean
+open var [filterHistory](filter-history.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 whether to filter the history buffer

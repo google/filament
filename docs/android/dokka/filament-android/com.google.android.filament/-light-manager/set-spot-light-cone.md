@@ -3,7 +3,7 @@
 # setSpotLightCone
 
 [main]\
-open fun [setSpotLightCone](set-spot-light-cone.md)(i: Int, inner: Float, outer: Float)
+open fun [setSpotLightCone](set-spot-light-cone.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), inner: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), outer: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates a spot light's cone as angles
 

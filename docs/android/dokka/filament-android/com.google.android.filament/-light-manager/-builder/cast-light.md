@@ -3,7 +3,7 @@
 # castLight
 
 [main]\
-open fun [castLight](cast-light.md)(enable: Boolean): [LightManager.Builder](index.md)
+open fun [castLight](cast-light.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [LightManager.Builder](index.md)
 
 Whether this light casts light (enabled by default) 
 

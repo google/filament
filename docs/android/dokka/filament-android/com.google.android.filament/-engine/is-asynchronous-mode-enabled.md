@@ -3,7 +3,7 @@
 # isAsynchronousModeEnabled
 
 [main]\
-open fun [isAsynchronousModeEnabled](is-asynchronous-mode-enabled.md)(): Boolean
+open fun [isAsynchronousModeEnabled](is-asynchronous-mode-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Checks if the engine is set up for asynchronous operation. 
 

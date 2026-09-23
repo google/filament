@@ -43,10 +43,10 @@ Currently only Texture based sky boxes are supported.
 
 | Name | Summary |
 |---|---|
-| [getIntensity](get-intensity.md) | [main]<br>open fun [getIntensity](get-intensity.md)(): Float<br>Returns the skybox's intensity in lux, or lumen/m^2. |
-| [getLayerMask](get-layer-mask.md) | [main]<br>open fun [getLayerMask](get-layer-mask.md)(): Int |
-| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): Long |
+| [getIntensity](get-intensity.md) | [main]<br>open fun [getIntensity](get-intensity.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)<br>Returns the skybox's intensity in lux, or lumen/m^2. |
+| [getLayerMask](get-layer-mask.md) | [main]<br>open fun [getLayerMask](get-layer-mask.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
+| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
 | [getTexture](get-texture.md) | [main]<br>open fun [getTexture](get-texture.md)(): [Texture](../-texture/index.md) |
-| [setColor](set-color.md) | [main]<br>open fun [setColor](set-color.md)(color: Array&lt;Float&gt;)<br>open fun [setColor](set-color.md)(colorx: Float, colory: Float, colorz: Float, colorw: Float) |
-| [setLayerMask](set-layer-mask.md) | [main]<br>open fun [setLayerMask](set-layer-mask.md)(select: Int, values: Int)<br>Sets bits in a visibility mask. |
-| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: Long): [Skybox](index.md) |
+| [setColor](set-color.md) | [main]<br>open fun [setColor](set-color.md)(color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)<br>open fun [setColor](set-color.md)(colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorw: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)) |
+| [setLayerMask](set-layer-mask.md) | [main]<br>open fun [setLayerMask](set-layer-mask.md)(select: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), values: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))<br>Sets bits in a visibility mask. |
+| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Skybox](index.md) |

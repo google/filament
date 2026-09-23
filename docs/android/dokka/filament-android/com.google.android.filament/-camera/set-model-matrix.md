@@ -3,7 +3,7 @@
 # setModelMatrix
 
 [main]\
-open fun [setModelMatrix](set-model-matrix.md)(modelMatrix: Array&lt;Double&gt;)
+open fun [setModelMatrix](set-model-matrix.md)(modelMatrix: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;)
 
 Sets the camera's model matrix. 
 
@@ -29,4 +29,4 @@ main
 | modelMatrix | The camera position and orientation provided as a rigid transform matrix. |
 
 [main]\
-open fun [setModelMatrix](set-model-matrix.md)(modelMatrix: Array&lt;Float&gt;)
+open fun [setModelMatrix](set-model-matrix.md)(modelMatrix: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)

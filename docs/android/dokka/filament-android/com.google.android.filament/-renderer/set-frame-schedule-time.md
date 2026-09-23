@@ -3,7 +3,7 @@
 # setFrameScheduleTime
 
 [main]\
-open fun [setFrameScheduleTime](set-frame-schedule-time.md)(time: Long)
+open fun [setFrameScheduleTime](set-frame-schedule-time.md)(time: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Sets the physical clock time when the frame scheduling callback was entered. 
 

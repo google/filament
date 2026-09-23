@@ -3,4 +3,4 @@
 # setIsSubpass
 
 [main]\
-open fun [setIsSubpass](set-is-subpass.md)(isSubpass: Boolean)
+open fun [setIsSubpass](set-is-subpass.md)(isSubpass: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))

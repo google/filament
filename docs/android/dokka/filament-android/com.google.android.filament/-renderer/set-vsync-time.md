@@ -3,7 +3,7 @@
 # setVsyncTime
 
 [main]\
-open fun [setVsyncTime](set-vsync-time.md)(steadyClockTimeNano: Long)
+open fun [setVsyncTime](set-vsync-time.md)(steadyClockTimeNano: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 The use of this method is optional. 
 

@@ -3,7 +3,7 @@
 # setDynamicLightingOptions
 
 [main]\
-open fun [setDynamicLightingOptions](set-dynamic-lighting-options.md)(zLightNear: Float, zLightFar: Float)
+open fun [setDynamicLightingOptions](set-dynamic-lighting-options.md)(zLightNear: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), zLightFar: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets options relative to dynamic lighting for this view.
 

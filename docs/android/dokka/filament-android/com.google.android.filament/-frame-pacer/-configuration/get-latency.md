@@ -3,4 +3,4 @@
 # getLatency
 
 [main]\
-open fun [getLatency](get-latency.md)(): Long
+open fun [getLatency](get-latency.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

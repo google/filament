@@ -3,6 +3,6 @@
 # minScale
 
 [main]\
-open var [minScale](min-scale.md): Float
+open var [minScale](min-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 minimum scale factors in x and y

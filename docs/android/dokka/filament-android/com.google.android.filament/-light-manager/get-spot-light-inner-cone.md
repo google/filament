@@ -3,7 +3,7 @@
 # getSpotLightInnerCone
 
 [main]\
-open fun [getSpotLightInnerCone](get-spot-light-inner-cone.md)(i: Int): Float
+open fun [getSpotLightInnerCone](get-spot-light-inner-cone.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 returns the inner cone angle in *radians* between 0 and pi/2. 
 

@@ -3,7 +3,7 @@
 # setAxisAlignedBoundingBox
 
 [main]\
-open fun [setAxisAlignedBoundingBox](set-axis-aligned-bounding-box.md)(instance: Int, aabb: [Box](../-box/index.md))
+open fun [setAxisAlignedBoundingBox](set-axis-aligned-bounding-box.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), aabb: [Box](../-box/index.md))
 
 Changes the bounding box used for frustum culling. 
 

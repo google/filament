@@ -3,4 +3,4 @@
 # setDenoisedGpuFrameDuration
 
 [main]\
-open fun [setDenoisedGpuFrameDuration](set-denoised-gpu-frame-duration.md)(denoisedGpuFrameDuration: Long)
+open fun [setDenoisedGpuFrameDuration](set-denoised-gpu-frame-duration.md)(denoisedGpuFrameDuration: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

@@ -3,13 +3,13 @@
 # setDefaultParameter
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: Float)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: Array&lt;Float&gt;)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: Boolean)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), value: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Sets the value of the given parameter on this material's default instance.
 
@@ -29,11 +29,11 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Int, valuey: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuey: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Float, valuey: Float)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Boolean, valuey: Boolean)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuey: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Sets the value of the given parameter on this material's default instance.
 
@@ -54,11 +54,11 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Int, valuey: Int, valuez: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuey: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuez: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Float, valuey: Float, valuez: Float)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Boolean, valuey: Boolean, valuez: Boolean)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuey: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuez: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Sets the value of the given parameter on this material's default instance.
 
@@ -80,11 +80,11 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Int, valuey: Int, valuez: Int, valuew: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuey: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuez: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuew: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Float, valuey: Float, valuez: Float, valuew: Float)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuew: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: Boolean, valuey: Boolean, valuez: Boolean, valuew: Boolean)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), valuex: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuey: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuez: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html), valuew: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Sets the value of the given parameter on this material's default instance.
 
@@ -107,11 +107,11 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.FloatElement](-float-element/index.md), values: Array&lt;Float&gt;, offset: Int, count: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.FloatElement](-float-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.IntElement](-int-element/index.md), values: Array&lt;Int&gt;, offset: Int, count: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.IntElement](-int-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.BooleanElement](-boolean-element/index.md), values: Array&lt;Boolean&gt;, offset: Int, count: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.BooleanElement](-boolean-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)&gt;, offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Sets the value of the given parameter array on this material's default instance.
 
@@ -133,11 +133,11 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.FloatElement](-float-element/index.md), values: Array&lt;Float&gt;, count: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.FloatElement](-float-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.IntElement](-int-element/index.md), values: Array&lt;Int&gt;, count: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.IntElement](-int-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.BooleanElement](-boolean-element/index.md), values: Array&lt;Boolean&gt;, count: Int)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Material.BooleanElement](-boolean-element/index.md), values: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Sets the value of the given parameter array on this material's default instance.
 
@@ -179,7 +179,7 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), colorx: Float, colory: Float, colorz: Float)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets the color of the given parameter on this material's default instance.
 
@@ -202,7 +202,7 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), color: Array&lt;Float&gt;)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbType](../-colors/-rgb-type/index.md), color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Sets the color of the given parameter on this material's default instance.
 
@@ -223,7 +223,7 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), colorx: Float, colory: Float, colorz: Float, colorw: Float)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), colorx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colory: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), colorw: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Sets the color of the given parameter on this material's default instance.
 
@@ -247,7 +247,7 @@ main
 | [getDefaultInstance](get-default-instance.md) |
 
 [main]\
-open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), color: Array&lt;Float&gt;)
+open fun [setDefaultParameter](set-default-parameter.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html), type: [Colors.RgbaType](../-colors/-rgba-type/index.md), color: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Sets the color of the given parameter on this material's default instance.
 

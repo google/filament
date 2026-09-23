@@ -3,7 +3,7 @@
 # setShadowCaster
 
 [main]\
-open fun [setShadowCaster](set-shadow-caster.md)(i: Int, shadowCaster: Boolean)
+open fun [setShadowCaster](set-shadow-caster.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), shadowCaster: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Whether this Light casts shadows (disabled by default) 
 

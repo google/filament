@@ -3,4 +3,4 @@
 # from
 
 [main]\
-open fun [from](from.md)(value: Int): [MaterialInstance.StencilFace](index.md)
+open fun [from](from.md)(value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [MaterialInstance.StencilFace](index.md)

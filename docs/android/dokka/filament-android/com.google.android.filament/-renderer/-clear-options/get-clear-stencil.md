@@ -3,4 +3,4 @@
 # getClearStencil
 
 [main]\
-open fun [getClearStencil](get-clear-stencil.md)(): Int
+open fun [getClearStencil](get-clear-stencil.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

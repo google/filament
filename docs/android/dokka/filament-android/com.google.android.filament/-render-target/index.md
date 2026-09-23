@@ -30,17 +30,17 @@ Clients are responsible for the lifetime of all associated Texture attachments.
 
 | Name | Summary |
 |---|---|
-| [MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-a-x_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md) | [main]<br>val [MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-a-x_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md): Int = 8<br>Maximum number of color attachment supported |
-| [MIN_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-i-n_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md) | [main]<br>val [MIN_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-i-n_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md): Int = 4<br>Minimum number of color attachment supported |
+| [MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-a-x_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md) | [main]<br>val [MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-a-x_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 8<br>Maximum number of color attachment supported |
+| [MIN_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-i-n_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md) | [main]<br>val [MIN_SUPPORTED_COLOR_ATTACHMENTS_COUNT](-m-i-n_-s-u-p-p-o-r-t-e-d_-c-o-l-o-r_-a-t-t-a-c-h-m-e-n-t-s_-c-o-u-n-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 4<br>Minimum number of color attachment supported |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
 | [getFace](get-face.md) | [main]<br>open fun [getFace](get-face.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [RenderTarget.CubemapFace](-cubemap-face/index.md)<br>Returns the face of a cubemap set on the given attachment point |
-| [getLayer](get-layer.md) | [main]<br>open fun [getLayer](get-layer.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): Int<br>Returns the texture-layer set on the given attachment point |
-| [getMipLevel](get-mip-level.md) | [main]<br>open fun [getMipLevel](get-mip-level.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): Int<br>Returns the mipmap level set on the given attachment point |
-| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): Long |
-| [getSupportedColorAttachmentsCount](get-supported-color-attachments-count.md) | [main]<br>open fun [getSupportedColorAttachmentsCount](get-supported-color-attachments-count.md)(): Int<br>Returns the number of color attachments usable by this instance of Engine. |
+| [getLayer](get-layer.md) | [main]<br>open fun [getLayer](get-layer.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Returns the texture-layer set on the given attachment point |
+| [getMipLevel](get-mip-level.md) | [main]<br>open fun [getMipLevel](get-mip-level.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Returns the mipmap level set on the given attachment point |
+| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
+| [getSupportedColorAttachmentsCount](get-supported-color-attachments-count.md) | [main]<br>open fun [getSupportedColorAttachmentsCount](get-supported-color-attachments-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Returns the number of color attachments usable by this instance of Engine. |
 | [getTexture](get-texture.md) | [main]<br>open fun [getTexture](get-texture.md)(attachment: [RenderTarget.AttachmentPoint](-attachment-point/index.md)): [Texture](../-texture/index.md)<br>Gets the texture set on the given attachment point |
-| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: Long): [RenderTarget](index.md) |
+| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [RenderTarget](index.md) |

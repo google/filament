@@ -3,4 +3,4 @@
 # getBottom
 
 [main]\
-open fun [getBottom](get-bottom.md)(): Int
+open fun [getBottom](get-bottom.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

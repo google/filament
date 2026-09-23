@@ -3,7 +3,7 @@
 # width
 
 [main]\
-open fun [width](width.md)(width: Int): [Stream.Builder](index.md)
+open fun [width](width.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Stream.Builder](index.md)
 
 #### Return
 

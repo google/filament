@@ -3,6 +3,6 @@
 # chromaticAberration
 
 [main]\
-open var [chromaticAberration](chromatic-aberration.md): Float
+open var [chromaticAberration](chromatic-aberration.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 amount of chromatic aberration

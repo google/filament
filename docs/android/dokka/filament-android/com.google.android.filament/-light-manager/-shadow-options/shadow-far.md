@@ -3,4 +3,4 @@
 # shadowFar
 
 [main]\
-open var [shadowFar](shadow-far.md): Float
+open var [shadowFar](shadow-far.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

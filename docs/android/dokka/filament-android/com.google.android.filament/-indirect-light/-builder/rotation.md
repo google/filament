@@ -3,7 +3,7 @@
 # rotation
 
 [main]\
-open fun [rotation](rotation.md)(rotation: Array&lt;Float&gt;): [IndirectLight.Builder](index.md)
+open fun [rotation](rotation.md)(rotation: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [IndirectLight.Builder](index.md)
 
 Specifies the rigid-body transformation to apply to the IBL.
 

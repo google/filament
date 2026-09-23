@@ -3,6 +3,6 @@
 # PENDING
 
 [main]\
-val [PENDING](-p-e-n-d-i-n-g.md): Long = -2
+val [PENDING](-p-e-n-d-i-n-g.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = -2
 
 value not yet available

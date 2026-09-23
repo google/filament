@@ -3,7 +3,7 @@
 # getFogEnabled
 
 [main]\
-open fun [getFogEnabled](get-fog-enabled.md)(instance: Int): Boolean
+open fun [getFogEnabled](get-fog-enabled.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether large-scale fog is enabled for this renderable.
 

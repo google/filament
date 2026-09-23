@@ -3,4 +3,4 @@
 # vsyncPeriod
 
 [main]\
-open var [vsyncPeriod](vsync-period.md): Long
+open var [vsyncPeriod](vsync-period.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

@@ -3,4 +3,4 @@
 # setDiscard
 
 [main]\
-open fun [setDiscard](set-discard.md)(discard: Boolean)
+open fun [setDiscard](set-discard.md)(discard: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))

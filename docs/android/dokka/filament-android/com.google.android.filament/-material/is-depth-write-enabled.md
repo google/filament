@@ -3,6 +3,6 @@
 # isDepthWriteEnabled
 
 [main]\
-open fun [isDepthWriteEnabled](is-depth-write-enabled.md)(): Boolean
+open fun [isDepthWriteEnabled](is-depth-write-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Indicates whether instances of this material will, by default, write to the depth buffer.

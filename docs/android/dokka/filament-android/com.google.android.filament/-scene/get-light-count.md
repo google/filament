@@ -3,7 +3,7 @@
 # getLightCount
 
 [main]\
-open fun [getLightCount](get-light-count.md)(): Int
+open fun [getLightCount](get-light-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the number of active (alive) Light objects in the Scene.
 

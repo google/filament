@@ -3,7 +3,7 @@
 # sunAngularRadius
 
 [main]\
-open fun [sunAngularRadius](sun-angular-radius.md)(angularRadiusDeg: Float): [LightManager.Builder](index.md)
+open fun [sunAngularRadius](sun-angular-radius.md)(angularRadiusDeg: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Defines the angular radius of the sun, in degrees, between 0.25° and 20.0° 
 

@@ -3,4 +3,4 @@
 # setLeft
 
 [main]\
-open fun [setLeft](set-left.md)(left: Int)
+open fun [setLeft](set-left.md)(left: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

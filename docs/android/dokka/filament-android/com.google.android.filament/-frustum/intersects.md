@@ -3,7 +3,7 @@
 # intersects
 
 [main]\
-open fun [intersects](intersects.md)(box: [Box](../-box/index.md)): Boolean
+open fun [intersects](intersects.md)(box: [Box](../-box/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether a box intersects the frustum (i.e. is visible)
 
@@ -20,7 +20,7 @@ main
 | box | The box to test against the frustum |
 
 [main]\
-open fun [intersects](intersects.md)(spherex: Float, spherey: Float, spherez: Float, spherew: Float): Boolean
+open fun [intersects](intersects.md)(spherex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), spherey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), spherez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), spherew: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether a sphere intersects the frustum (i.e. is visible)
 
@@ -40,7 +40,7 @@ main
 | spherew | (w component) A sphere encoded as a center + radius. |
 
 [main]\
-open fun [intersects](intersects.md)(sphere: Array&lt;Float&gt;): Boolean
+open fun [intersects](intersects.md)(sphere: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether a sphere intersects the frustum (i.e. is visible)
 

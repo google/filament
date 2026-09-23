@@ -3,4 +3,4 @@
 # getColorGradingCount
 
 [main]\
-open fun [getColorGradingCount](get-color-grading-count.md)(): Int
+open fun [getColorGradingCount](get-color-grading-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

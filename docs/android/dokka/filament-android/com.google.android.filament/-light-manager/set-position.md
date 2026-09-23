@@ -3,7 +3,7 @@
 # setPosition
 
 [main]\
-open fun [setPosition](set-position.md)(i: Int, positionx: Float, positiony: Float, positionz: Float)
+open fun [setPosition](set-position.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), positionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), positionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Dynamically updates the light's position.
 
@@ -25,7 +25,7 @@ main
 | com.google.android.filament.LightManager.Builder |
 
 [main]\
-open fun [setPosition](set-position.md)(i: Int, position: Array&lt;Float&gt;)
+open fun [setPosition](set-position.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), position: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Dynamically updates the light's position.
 

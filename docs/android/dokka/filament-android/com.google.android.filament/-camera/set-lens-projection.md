@@ -3,7 +3,7 @@
 # setLensProjection
 
 [main]\
-open fun [setLensProjection](set-lens-projection.md)(focalLengthInMillimeters: Double, aspect: Double, near: Double, far: Double)
+open fun [setLensProjection](set-lens-projection.md)(focalLengthInMillimeters: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), aspect: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Utility to set the projection matrix from the focal length.
 

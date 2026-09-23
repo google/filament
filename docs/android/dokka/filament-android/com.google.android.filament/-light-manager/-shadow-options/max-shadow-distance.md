@@ -3,4 +3,4 @@
 # maxShadowDistance
 
 [main]\
-open var [maxShadowDistance](max-shadow-distance.md): Float
+open var [maxShadowDistance](max-shadow-distance.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

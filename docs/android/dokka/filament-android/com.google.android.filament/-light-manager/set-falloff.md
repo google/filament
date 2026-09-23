@@ -3,7 +3,7 @@
 # setFalloff
 
 [main]\
-open fun [setFalloff](set-falloff.md)(i: Int, radius: Float)
+open fun [setFalloff](set-falloff.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), radius: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Set the falloff distance for point lights and spot lights.
 

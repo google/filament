@@ -3,6 +3,6 @@
 # latencyNanos
 
 [main]\
-open var [latencyNanos](latency-nanos.md): Long
+open var [latencyNanos](latency-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Target latency duration in nanoseconds (defaults to 33.3ms).

@@ -3,7 +3,7 @@
 # setTangentsAt
 
 [main]\
-open fun [setTangentsAt](set-tangents-at.md)(engine: [Engine](../-engine/index.md), targetIndex: Int, tangents: Array&lt;Short&gt;, count: Int)
+open fun [setTangentsAt](set-tangents-at.md)(engine: [Engine](../-engine/index.md), targetIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), tangents: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Short](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-short/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates tangents for the given morph target. 
 
@@ -21,7 +21,7 @@ main
 | count | number of short4 quaternions in tangents |
 
 [main]\
-open fun [setTangentsAt](set-tangents-at.md)(engine: [Engine](../-engine/index.md), targetIndex: Int, tangents: Array&lt;Short&gt;, count: Int, offset: Int)
+open fun [setTangentsAt](set-tangents-at.md)(engine: [Engine](../-engine/index.md), targetIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), tangents: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Short](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-short/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates tangents for the given morph target. 
 

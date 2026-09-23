@@ -3,7 +3,7 @@
 # getRenderingDeadline
 
 [main]\
-open fun [getRenderingDeadline](get-rendering-deadline.md)(): Long
+open fun [getRenderingDeadline](get-rendering-deadline.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Returns the target rendering deadline timestamp computed during the most recent call to setupFrame().
 

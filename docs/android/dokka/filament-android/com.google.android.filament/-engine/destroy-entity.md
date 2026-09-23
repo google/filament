@@ -3,4 +3,4 @@
 # destroyEntity
 
 [main]\
-open fun [destroyEntity](destroy-entity.md)(entity: Int)
+open fun [destroyEntity](destroy-entity.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

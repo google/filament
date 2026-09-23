@@ -3,6 +3,6 @@
 # maxScale
 
 [main]\
-open var [maxScale](max-scale.md): Float
+open var [maxScale](max-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 maximum scale factors in x and y

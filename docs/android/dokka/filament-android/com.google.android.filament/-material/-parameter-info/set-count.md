@@ -3,4 +3,4 @@
 # setCount
 
 [main]\
-open fun [setCount](set-count.md)(count: Int)
+open fun [setCount](set-count.md)(count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

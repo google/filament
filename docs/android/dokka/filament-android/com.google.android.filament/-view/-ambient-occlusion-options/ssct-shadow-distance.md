@@ -3,6 +3,6 @@
 # ssctShadowDistance
 
 [main]\
-open var [ssctShadowDistance](ssct-shadow-distance.md): Float
+open var [ssctShadowDistance](ssct-shadow-distance.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 how far shadows can be cast

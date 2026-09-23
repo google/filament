@@ -3,10 +3,10 @@
 # createSwapChain
 
 [main]\
-open fun [createSwapChain](create-swap-chain.md)(surface: Any): [SwapChain](../-swap-chain/index.md)
+open fun [createSwapChain](create-swap-chain.md)(surface: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html)): [SwapChain](../-swap-chain/index.md)
 
-open fun [createSwapChain](create-swap-chain.md)(surface: Any, flags: Long): [SwapChain](../-swap-chain/index.md)
+open fun [createSwapChain](create-swap-chain.md)(surface: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html), flags: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [SwapChain](../-swap-chain/index.md)
 
-open fun [createSwapChain](create-swap-chain.md)(width: Int, height: Int, flags: Long): [SwapChain](../-swap-chain/index.md)
+open fun [createSwapChain](create-swap-chain.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), flags: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [SwapChain](../-swap-chain/index.md)
 
-open fun [createSwapChain](create-swap-chain.md)(width: Int, height: Int): [SwapChain](../-swap-chain/index.md)
+open fun [createSwapChain](create-swap-chain.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [SwapChain](../-swap-chain/index.md)

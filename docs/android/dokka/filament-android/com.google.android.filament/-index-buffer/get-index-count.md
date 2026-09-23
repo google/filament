@@ -3,7 +3,7 @@
 # getIndexCount
 
 [main]\
-open fun [getIndexCount](get-index-count.md)(): Int
+open fun [getIndexCount](get-index-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the size of this IndexBuffer in elements.
 

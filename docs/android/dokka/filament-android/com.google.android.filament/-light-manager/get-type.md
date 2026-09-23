@@ -3,4 +3,4 @@
 # getType
 
 [main]\
-open fun [getType](get-type.md)(i: Int): [LightManager.Type](-type/index.md)
+open fun [getType](get-type.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [LightManager.Type](-type/index.md)

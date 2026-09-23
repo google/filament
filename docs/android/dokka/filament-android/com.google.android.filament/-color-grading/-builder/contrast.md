@@ -3,7 +3,7 @@
 # contrast
 
 [main]\
-open fun [contrast](contrast.md)(contrast: Float): [ColorGrading.Builder](index.md)
+open fun [contrast](contrast.md)(contrast: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Adjusts the contrast of the image. 
 

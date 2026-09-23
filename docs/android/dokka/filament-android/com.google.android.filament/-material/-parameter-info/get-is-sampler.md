@@ -3,4 +3,4 @@
 # getIsSampler
 
 [main]\
-open fun [getIsSampler](get-is-sampler.md)(): Boolean
+open fun [getIsSampler](get-is-sampler.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

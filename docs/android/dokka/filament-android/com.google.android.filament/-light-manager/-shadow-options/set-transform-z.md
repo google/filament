@@ -3,4 +3,4 @@
 # setTransformZ
 
 [main]\
-open fun [setTransformZ](set-transform-z.md)(transformZ: Float)
+open fun [setTransformZ](set-transform-z.md)(transformZ: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

@@ -3,6 +3,6 @@
 # bentNormals
 
 [main]\
-open var [bentNormals](bent-normals.md): Boolean
+open var [bentNormals](bent-normals.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 enables bent normals computation from AO, and specular AO

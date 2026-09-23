@@ -3,7 +3,7 @@
 # getPriority
 
 [main]\
-open fun [getPriority](get-priority.md)(instance: Int): Int
+open fun [getPriority](get-priority.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Get the coarse-level draw ordering.
 

@@ -16,4 +16,4 @@ main
 | config | The new configuration targets to scale to on subsequent frames. |
 
 [main]\
-open fun [configure](configure.md)(targetFrameRate: Float, latencyNanos: Long)
+open fun [configure](configure.md)(targetFrameRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

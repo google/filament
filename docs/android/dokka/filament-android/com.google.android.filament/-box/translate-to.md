@@ -3,7 +3,7 @@
 # translateTo
 
 [main]\
-open fun [translateTo](translate-to.md)(trx: Float, try_: Float, trz: Float): [Box](index.md)
+open fun [translateTo](translate-to.md)(trx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), try_: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), trz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [Box](index.md)
 
 Translates the box *to* a given center position
 
@@ -22,7 +22,7 @@ main
 | trz | (z component) position to translate the box to |
 
 [main]\
-open fun [translateTo](translate-to.md)(tr: Array&lt;Float&gt;): [Box](index.md)
+open fun [translateTo](translate-to.md)(tr: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Box](index.md)
 
 Translates the box *to* a given center position
 

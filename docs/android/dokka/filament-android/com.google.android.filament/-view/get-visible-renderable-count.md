@@ -3,7 +3,7 @@
 # getVisibleRenderableCount
 
 [main]\
-open fun [getVisibleRenderableCount](get-visible-renderable-count.md)(): Int
+open fun [getVisibleRenderableCount](get-visible-renderable-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the most recent number of visible renderables for the current Scene as calculated the last time Renderer::render() was called with this View and Scene. 
 

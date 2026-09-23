@@ -3,4 +3,4 @@
 # setHeadRoomRatio
 
 [main]\
-open fun [setHeadRoomRatio](set-head-room-ratio.md)(headRoomRatio: Float)
+open fun [setHeadRoomRatio](set-head-room-ratio.md)(headRoomRatio: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

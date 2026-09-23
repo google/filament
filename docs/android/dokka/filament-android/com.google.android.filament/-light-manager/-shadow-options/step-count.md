@@ -3,4 +3,4 @@
 # stepCount
 
 [main]\
-open var [stepCount](step-count.md): Int
+open var [stepCount](step-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

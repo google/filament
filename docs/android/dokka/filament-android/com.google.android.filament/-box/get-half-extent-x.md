@@ -3,4 +3,4 @@
 # getHalfExtentX
 
 [main]\
-open fun [getHalfExtentX](get-half-extent-x.md)(): Float
+open fun [getHalfExtentX](get-half-extent-x.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

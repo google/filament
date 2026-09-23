@@ -22,7 +22,7 @@ use setMultiSampleAntiAliasingOptions instead
 | [setAntiAliasing](set-anti-aliasing.md) |
 
 [main]\
-open fun [setSampleCount](set-sample-count.md)(count: Int)
+open fun [setSampleCount](set-sample-count.md)(count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Sets how many samples are to be used for MSAA in the post-process stage. 
 

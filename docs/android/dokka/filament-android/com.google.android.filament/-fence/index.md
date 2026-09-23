@@ -18,14 +18,14 @@ Fence is used to synchronize the application main thread with filament's renderi
 
 | Name | Summary |
 |---|---|
-| [FENCE_WAIT_FOR_EVER](-f-e-n-c-e_-w-a-i-t_-f-o-r_-e-v-e-r.md) | [main]<br>val [FENCE_WAIT_FOR_EVER](-f-e-n-c-e_-w-a-i-t_-f-o-r_-e-v-e-r.md): Long = -1<br>Special `timeout` value to disable wait()'s timeout. |
-| [WAIT_FOR_EVER](-w-a-i-t_-f-o-r_-e-v-e-r.md) | [main]<br>val [WAIT_FOR_EVER](-w-a-i-t_-f-o-r_-e-v-e-r.md): Long = -1 |
+| [FENCE_WAIT_FOR_EVER](-f-e-n-c-e_-w-a-i-t_-f-o-r_-e-v-e-r.md) | [main]<br>val [FENCE_WAIT_FOR_EVER](-f-e-n-c-e_-w-a-i-t_-f-o-r_-e-v-e-r.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = -1<br>Special `timeout` value to disable wait()'s timeout. |
+| [WAIT_FOR_EVER](-w-a-i-t_-f-o-r_-e-v-e-r.md) | [main]<br>val [WAIT_FOR_EVER](-w-a-i-t_-f-o-r_-e-v-e-r.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = -1 |
 
 ## Functions
 
 | Name | Summary |
 |---|---|
-| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): Long |
-| [wait](wait.md) | [main]<br>open fun [wait](wait.md)(mode: [Fence.Mode](-mode/index.md)): [Fence.FenceStatus](-fence-status/index.md)<br>open fun [wait](wait.md)(mode: [Fence.Mode](-mode/index.md), timeout: Long): [Fence.FenceStatus](-fence-status/index.md)<br>Client-side wait on the Fence. |
+| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
+| [wait](wait.md) | [main]<br>open fun [wait](wait.md)(mode: [Fence.Mode](-mode/index.md)): [Fence.FenceStatus](-fence-status/index.md)<br>open fun [wait](wait.md)(mode: [Fence.Mode](-mode/index.md), timeout: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Fence.FenceStatus](-fence-status/index.md)<br>Client-side wait on the Fence. |
 | [waitAndDestroy](wait-and-destroy.md) | [main]<br>open fun [waitAndDestroy](wait-and-destroy.md)(fence: [Fence](index.md)): [Fence.FenceStatus](-fence-status/index.md)<br>open fun [waitAndDestroy](wait-and-destroy.md)(fence: [Fence](index.md), mode: [Fence.Mode](-mode/index.md)): [Fence.FenceStatus](-fence-status/index.md)<br>Client-side wait on a Fence and destroy the Fence. |
-| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: Long): [Fence](index.md) |
+| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Fence](index.md) |

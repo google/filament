@@ -3,7 +3,7 @@
 # getFeatureFlag
 
 [main]\
-open fun [getFeatureFlag](get-feature-flag.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): Boolean
+open fun [getFeatureFlag](get-feature-flag.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Retrieves the value of any feature flag.
 

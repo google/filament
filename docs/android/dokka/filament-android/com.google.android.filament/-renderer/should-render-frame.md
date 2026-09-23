@@ -3,7 +3,7 @@
 # shouldRenderFrame
 
 [main]\
-open fun [shouldRenderFrame](should-render-frame.md)(): Boolean
+open fun [shouldRenderFrame](should-render-frame.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns true if the current frame should be rendered. 
 

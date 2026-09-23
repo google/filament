@@ -3,7 +3,7 @@
 # addEntity
 
 [main]\
-open fun [addEntity](add-entity.md)(entity: Int)
+open fun [addEntity](add-entity.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Adds an Entity to the Scene.
 

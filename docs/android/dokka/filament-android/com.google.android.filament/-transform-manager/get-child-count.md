@@ -3,7 +3,7 @@
 # getChildCount
 
 [main]\
-open fun [getChildCount](get-child-count.md)(i: Int): Int
+open fun [getChildCount](get-child-count.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the number of children of a transform component.
 

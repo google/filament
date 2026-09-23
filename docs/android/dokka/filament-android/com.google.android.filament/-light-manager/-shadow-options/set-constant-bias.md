@@ -3,4 +3,4 @@
 # setConstantBias
 
 [main]\
-open fun [setConstantBias](set-constant-bias.md)(constantBias: Float)
+open fun [setConstantBias](set-constant-bias.md)(constantBias: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

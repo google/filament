@@ -3,7 +3,7 @@
 # geometry
 
 [main]\
-open fun [geometry](geometry.md)(index: Int, type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), indices: [IndexBuffer](../../-index-buffer/index.md), offset: Int, minIndex: Int, maxIndex: Int, count: Int): [RenderableManager.Builder](index.md)
+open fun [geometry](geometry.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), indices: [IndexBuffer](../../-index-buffer/index.md), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), minIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), maxIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Specifies the geometry data for a primitive. 
 
@@ -25,14 +25,14 @@ main
 | count | number of indices to read (for triangles, this should be a multiple of 3) |
 
 [main]\
-open fun [geometry](geometry.md)(index: Int, type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), indices: [IndexBuffer](../../-index-buffer/index.md), offset: Int, count: Int): [RenderableManager.Builder](index.md)
+open fun [geometry](geometry.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), indices: [IndexBuffer](../../-index-buffer/index.md), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
-open fun [geometry](geometry.md)(index: Int, type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), indices: [IndexBuffer](../../-index-buffer/index.md)): [RenderableManager.Builder](index.md)
+open fun [geometry](geometry.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), indices: [IndexBuffer](../../-index-buffer/index.md)): [RenderableManager.Builder](index.md)
 
-open fun [geometry](geometry.md)(index: Int, type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md)): [RenderableManager.Builder](index.md)
+open fun [geometry](geometry.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md)): [RenderableManager.Builder](index.md)
 
 [main]\
-open fun [geometry](geometry.md)(index: Int, type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), offset: Int, count: Int): [RenderableManager.Builder](index.md)
+open fun [geometry](geometry.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), type: [RenderableManager.PrimitiveType](../-primitive-type/index.md), vertices: [VertexBuffer](../../-vertex-buffer/index.md), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Specifies the geometry data for a primitive. (non-indexed version) 
 

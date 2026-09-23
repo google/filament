@@ -3,4 +3,4 @@
 # getVsyncOffsetNanos
 
 [main]\
-open fun [getVsyncOffsetNanos](get-vsync-offset-nanos.md)(): Long
+open fun [getVsyncOffsetNanos](get-vsync-offset-nanos.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

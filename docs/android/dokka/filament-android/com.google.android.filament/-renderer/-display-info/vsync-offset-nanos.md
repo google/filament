@@ -3,4 +3,4 @@
 # vsyncOffsetNanos
 
 [main]\
-open var [vsyncOffsetNanos](vsync-offset-nanos.md): Long
+open var [vsyncOffsetNanos](vsync-offset-nanos.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

@@ -3,4 +3,4 @@
 # clearStencil
 
 [main]\
-open var [clearStencil](clear-stencil.md): Int
+open var [clearStencil](clear-stencil.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

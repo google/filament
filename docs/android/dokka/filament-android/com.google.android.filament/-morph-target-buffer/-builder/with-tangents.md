@@ -14,7 +14,7 @@ If enabled, `setTangentsAt` can be called to set the tangent data for each targe
 A reference to this Builder for chaining calls.
 
 [main]\
-open fun [withTangents](with-tangents.md)(enable: Boolean): [MorphTargetBuffer.Builder](index.md)
+open fun [withTangents](with-tangents.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [MorphTargetBuffer.Builder](index.md)
 
 Enables and allocates the built-in buffer for tangent/normal morphing. 
 

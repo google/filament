@@ -3,7 +3,7 @@
 # getAppVsyncOffsetNanos
 
 [main]\
-open fun [getAppVsyncOffsetNanos](get-app-vsync-offset-nanos.md)(display: Display): Long
+open fun [getAppVsyncOffsetNanos](get-app-vsync-offset-nanos.md)(display: Display): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 #### Return
 

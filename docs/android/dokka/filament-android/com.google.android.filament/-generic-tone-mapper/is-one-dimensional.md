@@ -3,7 +3,7 @@
 # isOneDimensional
 
 [main]\
-open fun [isOneDimensional](is-one-dimensional.md)(): Boolean
+open fun [isOneDimensional](is-one-dimensional.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 If true, then this function holds that f(x) = vec3(f(x.r), f(x.g), f(x.b)) 
 

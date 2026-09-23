@@ -3,4 +3,4 @@
 # setClearColorY
 
 [main]\
-open fun [setClearColorY](set-clear-color-y.md)(clearColorY: Double)
+open fun [setClearColorY](set-clear-color-y.md)(clearColorY: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))

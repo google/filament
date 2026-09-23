@@ -3,7 +3,7 @@
 # castShadows
 
 [main]\
-open fun [castShadows](cast-shadows.md)(enable: Boolean): [LightManager.Builder](index.md)
+open fun [castShadows](cast-shadows.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [LightManager.Builder](index.md)
 
 Whether this Light casts shadows (disabled by default)
 

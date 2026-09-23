@@ -3,4 +3,4 @@
 # setStepCount
 
 [main]\
-open fun [setStepCount](set-step-count.md)(stepCount: Int)
+open fun [setStepCount](set-step-count.md)(stepCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

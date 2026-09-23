@@ -3,6 +3,6 @@
 # getHalfExtent
 
 [main]\
-open fun [getHalfExtent](get-half-extent.md)(out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getHalfExtent](get-half-extent.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
-open fun [getHalfExtent](get-half-extent.md)(): Array&lt;Float&gt;
+open fun [getHalfExtent](get-half-extent.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;

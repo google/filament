@@ -3,7 +3,7 @@
 # setMaskThreshold
 
 [main]\
-open fun [setMaskThreshold](set-mask-threshold.md)(threshold: Float)
+open fun [setMaskThreshold](set-mask-threshold.md)(threshold: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Overrides the minimum alpha value a fragment must have to not be discarded when the blend mode is MASKED. 
 

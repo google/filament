@@ -3,7 +3,7 @@
 # getLayerMask
 
 [main]\
-open fun [getLayerMask](get-layer-mask.md)(instance: Int): Int
+open fun [getLayerMask](get-layer-mask.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Get the visibility bits.
 

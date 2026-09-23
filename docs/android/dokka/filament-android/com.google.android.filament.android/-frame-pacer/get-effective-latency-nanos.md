@@ -3,7 +3,7 @@
 # getEffectiveLatencyNanos
 
 [main]\
-open fun [getEffectiveLatencyNanos](get-effective-latency-nanos.md)(): Long
+open fun [getEffectiveLatencyNanos](get-effective-latency-nanos.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Backwards-compatibility alias for [getEffectiveLatency](get-effective-latency.md).
 

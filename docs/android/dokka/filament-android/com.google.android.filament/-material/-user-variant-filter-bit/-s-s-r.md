@@ -3,6 +3,6 @@
 # SSR
 
 [main]\
-val [SSR](-s-s-r.md): Int = 64
+val [SSR](-s-s-r.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 64
 
 Screen-space reflections

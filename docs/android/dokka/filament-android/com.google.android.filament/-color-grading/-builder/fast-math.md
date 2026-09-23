@@ -3,7 +3,7 @@
 # fastMath
 
 [main]\
-open fun [fastMath](fast-math.md)(fastMath: Boolean): [ColorGrading.Builder](index.md)
+open fun [fastMath](fast-math.md)(fastMath: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [ColorGrading.Builder](index.md)
 
 Hints whether the engine is permitted to use fast mathematical approximations (such as SIMD polynomial transcendentals) during LUT generation when eligible. 
 

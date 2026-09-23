@@ -3,4 +3,4 @@
 # polygonOffsetSlope
 
 [main]\
-open var [polygonOffsetSlope](polygon-offset-slope.md): Float
+open var [polygonOffsetSlope](polygon-offset-slope.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

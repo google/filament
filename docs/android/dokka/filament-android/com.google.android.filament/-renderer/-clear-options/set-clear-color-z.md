@@ -3,4 +3,4 @@
 # setClearColorZ
 
 [main]\
-open fun [setClearColorZ](set-clear-color-z.md)(clearColorZ: Double)
+open fun [setClearColorZ](set-clear-color-z.md)(clearColorZ: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))

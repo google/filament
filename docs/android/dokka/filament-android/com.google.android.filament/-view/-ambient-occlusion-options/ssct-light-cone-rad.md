@@ -3,6 +3,6 @@
 # ssctLightConeRad
 
 [main]\
-open var [ssctLightConeRad](ssct-light-cone-rad.md): Float
+open var [ssctLightConeRad](ssct-light-cone-rad.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 full cone angle in radian, between 0 and pi/2

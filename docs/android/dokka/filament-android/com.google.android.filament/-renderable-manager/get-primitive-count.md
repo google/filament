@@ -3,7 +3,7 @@
 # getPrimitiveCount
 
 [main]\
-open fun [getPrimitiveCount](get-primitive-count.md)(instance: Int): Int
+open fun [getPrimitiveCount](get-primitive-count.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Gets the immutable number of primitives in the given renderable.
 

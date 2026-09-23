@@ -3,7 +3,7 @@
 # getProjectionMatrix
 
 [main]\
-open fun [getProjectionMatrix](get-projection-matrix.md)(out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getProjectionMatrix](get-projection-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Returns the projection matrix used for rendering. 
 
@@ -32,7 +32,7 @@ main
 | [setCustomEyeProjection](set-custom-eye-projection.md) |
 
 [main]\
-open fun [getProjectionMatrix](get-projection-matrix.md)(eyeId: Int, out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getProjectionMatrix](get-projection-matrix.md)(eyeId: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
 Returns the projection matrix used for rendering. 
 

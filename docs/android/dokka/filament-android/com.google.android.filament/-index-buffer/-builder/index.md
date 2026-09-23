@@ -23,5 +23,5 @@ open class [Builder](index.md)
 |---|---|
 | [bufferType](buffer-type.md) | [main]<br>open fun [bufferType](buffer-type.md)(indexType: [IndexBuffer.Builder.IndexType](-index-type/index.md)): [IndexBuffer.Builder](index.md)<br>Type of the index buffer, 16-bit or 32-bit. |
 | [build](build.md) | [main]<br>open fun [build](build.md)(engine: [Engine](../../-engine/index.md)): [IndexBuffer](../index.md)<br>Creates the IndexBuffer object and returns a pointer to it. |
-| [indexCount](index-count.md) | [main]<br>open fun [indexCount](index-count.md)(indexCount: Int): [IndexBuffer.Builder](index.md)<br>Size of the index buffer in elements. |
+| [indexCount](index-count.md) | [main]<br>open fun [indexCount](index-count.md)(indexCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [IndexBuffer.Builder](index.md)<br>Size of the index buffer in elements. |
 | [name](name.md) | [main]<br>open fun [name](name.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [IndexBuffer.Builder](index.md)<br>Associate an optional name with this IndexBuffer for debugging purposes. |

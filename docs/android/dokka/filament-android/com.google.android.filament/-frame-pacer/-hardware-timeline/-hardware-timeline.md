@@ -5,4 +5,4 @@
 [main]\
 constructor()
 
-constructor(expectedPresentationTime: Long, deadline: Long)
+constructor(expectedPresentationTime: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), deadline: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

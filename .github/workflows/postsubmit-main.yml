@@ -9,11 +9,24 @@ permissions:
   contents: read
 
 jobs:
-  # Update the renderdiff goldens in filament-assets. This will add or merge the new goldens from
-  # a branch on filament-assets.
-  update-renderdiff-goldens:
-    name: update-renderdiff-goldens
-    runs-on: 'macos-15'
+  # Updating the renderdiff goldens in filament-assets takes three jobs, because the two halves of
+  # the old single job want very different runners.
+  #
+  # The rendering half has to run on the same runner label presubmit compares on: a golden path
+  # records only the platform and the backend, so an image rendered on a different host is simply
+  # the wrong golden. That is a paid ARM runner, and it is only needed for RDIFF_ACCEPT_NEW_GOLDENS
+  # commits, which are rare.
+  #
+  # The merging half runs on every push to main and does nothing but a git merge in another
+  # repository. Fusing the two would mean paying for a 16-core ARM runner on every commit to run a
+  # git merge, so the gate below decides, on a free runner, which of the two actually has work.
+  renderdiff-goldens-config:
+    name: renderdiff-goldens-config
+    runs-on: 'ubuntu-24.04'
+    outputs:
+      accept: ${{ steps.check.outputs.accept }}
+      golden-branch: ${{ steps.check.outputs.branch }}
+      hash: ${{ steps.get_commit_msg.outputs.hash }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -21,51 +34,109 @@ jobs:
           persist-credentials: false
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - name: Check if accepting new goldens
-        id: check_accept
+      - name: Read the renderdiff commit message tags
+        id: check
         env:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
         run: |
           if echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py --mode=accept_new_goldens; then
             echo "accept=true" >> "$GITHUB_OUTPUT"
+            # Named here rather than in the job that pushes it, so that the job which merges it
+            # reads the same value from the same place.
+            echo "branch=accept-goldens-${COMMIT_HASH:0:8}" >> "$GITHUB_OUTPUT"
           else
             echo "accept=false" >> "$GITHUB_OUTPUT"
+            # RDIFF_BRANCH, or "main" when the commit message names no branch, in which case there
+            # is nothing to merge. Whitespace is stripped because the tag is parsed out of
+            # free-form prose and a git ref cannot contain any.
+            GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py | tr -d '[:space:]')
+            echo "branch=${GOLDEN_BRANCH}" >> "$GITHUB_OUTPUT"
           fi
         shell: bash
-      - name: Renderdiff Generate for new goldens
-        if: steps.check_accept.outputs.accept == 'true'
-        uses: ./.github/actions/renderdiff-generate
-      - name: Run update script
+
+  # Renders the suite and pushes the result to a branch of filament-assets, for commits that ask
+  # for it with RDIFF_ACCEPT_NEW_GOLDENS. The merge job below then folds that branch into main.
+  #
+  # Same runner label as the presubmit test-renderdiff job, deliberately. These are the images that
+  # job will compare against, and pinning both to one label removes the runner as a variable.
+  accept-renderdiff-goldens:
+    name: accept-renderdiff-goldens
+    runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 60
+    needs: [renderdiff-goldens-config]
+    if: needs.renderdiff-goldens-config.outputs.accept == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/renderdiff
+        with:
+          compare: 'false'
+          ccache-config: desktop-renderdiff
+      # Before the push, so that a failure there still leaves the images somewhere they can be
+      # recovered from and pushed by hand.
+      - name: Upload renderdiff output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: accept-renderdiff-goldens
+          path: ./out/renderdiff
+          retention-days: 100
+      - name: Push the new goldens to a branch
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
-          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
-          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
-          ACCEPT_OUTPUT: ${{ steps.check_accept.outputs.accept }}
+          COMMIT_HASH: ${{ needs.renderdiff-goldens-config.outputs.hash }}
+          GOLDEN_BRANCH: ${{ needs.renderdiff-goldens-config.outputs.golden-branch }}
         run: |
-          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py)
-
           git config --global user.email "filament.bot@gmail.com"
           git config --global user.name "Filament Bot"
           git config --global credential.helper cache
 
-          if [[ ${ACCEPT_OUTPUT} == "true" ]]; then
-              SHORT_HASH="${COMMIT_HASH:0:8}"
-              GOLDEN_BRANCH="accept-goldens-${SHORT_HASH}"
-              echo "Generating new goldens for branch ${GOLDEN_BRANCH}"
-              python3 test/renderdiff/src/update_golden.py \
-                  --branch=${GOLDEN_BRANCH} \
-                  --source=$(pwd)/out/renderdiff/renders \
-                  --commit-msg="Auto-update goldens from ${COMMIT_HASH}" \
-                  --push-to-remote \
-                  --golden-repo-token=${GH_TOKEN}
-          fi
+          echo "Generating new goldens for branch ${GOLDEN_BRANCH}"
+          python3 test/renderdiff/src/update_golden.py \
+              --branch=${GOLDEN_BRANCH} \
+              --source=$(pwd)/out/renderdiff/renders \
+              --commit-msg="Auto-update goldens from ${COMMIT_HASH}" \
+              --push-to-remote \
+              --golden-repo-token=${GH_TOKEN}
+        shell: bash
 
-          if [[ "${GOLDEN_BRANCH}" != "main" ]]; then
-              echo "branch==${GOLDEN_BRANCH}"
-              echo "hash==${COMMIT_HASH}"
-              python3 test/renderdiff/src/update_golden.py --branch=${GOLDEN_BRANCH} \
-                  --merge-to-main --filament-tag=${COMMIT_HASH} --golden-repo-token=${GH_TOKEN}
-          fi
+  # Merges a golden branch into the main branch of filament-assets. The branch is either one a
+  # contributor prepared and named with RDIFF_BRANCH, or the one the job above just pushed.
+  merge-renderdiff-goldens:
+    name: merge-renderdiff-goldens
+    runs-on: 'ubuntu-24.04'
+    needs: [renderdiff-goldens-config, accept-renderdiff-goldens]
+    # accept-renderdiff-goldens is skipped for the RDIFF_BRANCH path, which is the common case, and
+    # a skipped dependency must not skip this job. A failed one must, though: merging a branch the
+    # push half did not finish writing would publish half a golden set.
+    if: >
+      always() && !cancelled()
+      && needs.renderdiff-goldens-config.result == 'success'
+      && needs.accept-renderdiff-goldens.result != 'failure'
+      && needs.renderdiff-goldens-config.outputs.golden-branch != 'main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Merge the golden branch
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: ${{ needs.renderdiff-goldens-config.outputs.hash }}
+          GOLDEN_BRANCH: ${{ needs.renderdiff-goldens-config.outputs.golden-branch }}
+        run: |
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+
+          echo "branch==${GOLDEN_BRANCH}"
+          echo "hash==${COMMIT_HASH}"
+          python3 test/renderdiff/src/update_golden.py --branch=${GOLDEN_BRANCH} \
+              --merge-to-main --filament-tag=${COMMIT_HASH} --golden-repo-token=${GH_TOKEN}
+        shell: bash
 
   # Update the /docs (offiicla github-hosted Filament site) if necessary
   update-docs:

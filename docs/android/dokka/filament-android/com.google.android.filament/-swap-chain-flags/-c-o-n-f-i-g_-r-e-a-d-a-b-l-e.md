@@ -3,7 +3,7 @@
 # CONFIG_READABLE
 
 [main]\
-val [CONFIG_READABLE](-c-o-n-f-i-g_-r-e-a-d-a-b-l-e.md): Long = 2
+val [CONFIG_READABLE](-c-o-n-f-i-g_-r-e-a-d-a-b-l-e.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) = 2
 
 This flag indicates that the `SwapChain` may be used as a source surface for reading back render results. This config must be set when creating any `SwapChain` that will be used as the source for a blit operation.
 

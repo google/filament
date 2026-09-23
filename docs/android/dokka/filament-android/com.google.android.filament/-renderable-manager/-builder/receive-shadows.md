@@ -3,6 +3,6 @@
 # receiveShadows
 
 [main]\
-open fun [receiveShadows](receive-shadows.md)(enable: Boolean): [RenderableManager.Builder](index.md)
+open fun [receiveShadows](receive-shadows.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
 
 Controls if this renderable receives shadows, true by default.

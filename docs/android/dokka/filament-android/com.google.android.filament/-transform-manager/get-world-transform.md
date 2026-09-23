@@ -3,7 +3,7 @@
 # getWorldTransform
 
 [main]\
-open fun [getWorldTransform](get-world-transform.md)(ci: Int, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getWorldTransform](get-world-transform.md)(ci: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Return the world transform of a transform component.
 

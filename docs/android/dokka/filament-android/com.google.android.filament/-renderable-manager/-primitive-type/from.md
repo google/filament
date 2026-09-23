@@ -3,4 +3,4 @@
 # from
 
 [main]\
-open fun [from](from.md)(value: Int): [RenderableManager.PrimitiveType](index.md)
+open fun [from](from.md)(value: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.PrimitiveType](index.md)

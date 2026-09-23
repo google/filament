@@ -3,7 +3,7 @@
 # whiteBalance
 
 [main]\
-open fun [whiteBalance](white-balance.md)(temperature: Float, tint: Float): [ColorGrading.Builder](index.md)
+open fun [whiteBalance](white-balance.md)(temperature: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), tint: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Adjusts the while balance of the image. This can be used to remove color casts 
 

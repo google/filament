@@ -3,7 +3,7 @@
 # setPostProcessingEnabled
 
 [main]\
-open fun [setPostProcessingEnabled](set-post-processing-enabled.md)(enabled: Boolean)
+open fun [setPostProcessingEnabled](set-post-processing-enabled.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Enables or disables post-processing. Enabled by default. 
 

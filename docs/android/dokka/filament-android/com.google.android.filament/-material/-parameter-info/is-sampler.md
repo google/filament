@@ -3,4 +3,4 @@
 # isSampler
 
 [main]\
-open var [isSampler](is-sampler.md): Boolean
+open var [isSampler](is-sampler.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

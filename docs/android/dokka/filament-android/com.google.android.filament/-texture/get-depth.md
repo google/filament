@@ -3,7 +3,7 @@
 # getDepth
 
 [main]\
-open fun [getDepth](get-depth.md)(): Int
+open fun [getDepth](get-depth.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the depth of a 3D texture level
 
@@ -12,7 +12,7 @@ Returns the depth of a 3D texture level
 Depth in texel of the specified `level`, clamped to 1.
 
 [main]\
-open fun [getDepth](get-depth.md)(level: Int): Int
+open fun [getDepth](get-depth.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the depth of a 3D texture level
 

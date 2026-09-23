@@ -3,7 +3,7 @@
 # setAnisotropy
 
 [main]\
-open fun [setAnisotropy](set-anisotropy.md)(anisotropy: Float)
+open fun [setAnisotropy](set-anisotropy.md)(anisotropy: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 This controls anisotropic filtering.
 

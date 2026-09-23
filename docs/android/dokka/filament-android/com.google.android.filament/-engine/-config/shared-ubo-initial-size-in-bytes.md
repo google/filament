@@ -3,7 +3,7 @@
 # sharedUboInitialSizeInBytes
 
 [main]\
-open var [sharedUboInitialSizeInBytes](shared-ubo-initial-size-in-bytes.md): Long
+open var [sharedUboInitialSizeInBytes](shared-ubo-initial-size-in-bytes.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 The initial size in bytes of the shared uniform buffer used for material instance batching. 
 

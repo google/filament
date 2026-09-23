@@ -3,4 +3,4 @@
 # setDisplayPresentInterval
 
 [main]\
-open fun [setDisplayPresentInterval](set-display-present-interval.md)(displayPresentInterval: Long)
+open fun [setDisplayPresentInterval](set-display-present-interval.md)(displayPresentInterval: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

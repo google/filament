@@ -3,7 +3,7 @@
 # setBonesAsMatrices
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: Int, transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: Int, offset: Int)
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 #### Parameters
 
@@ -17,7 +17,7 @@ main
 | offset | offset in elements (structured element count) in the destination buffer or component |
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: Int, transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: Int)
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 #### Parameters
 
@@ -30,7 +30,7 @@ main
 | count | number of elements (structured element count) in `transforms` |
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: Int, transforms: Array&lt;Float&gt;, arrayOffset: Int, count: Int, offset: Int)
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, arrayOffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 #### Parameters
 
@@ -45,7 +45,7 @@ main
 | offset | offset in elements (structured element count) in the destination buffer or component |
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: Int, transforms: Array&lt;Float&gt;, count: Int, offset: Int)
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 #### Parameters
 
@@ -59,7 +59,7 @@ main
 | offset | offset in elements (structured element count) in the destination buffer or component |
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: Int, transforms: Array&lt;Float&gt;, count: Int)
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 #### Parameters
 
@@ -72,7 +72,7 @@ main
 | count | number of elements (structured element count) in `transforms` |
 
 [main]\
-open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: Int, transforms: Array&lt;Float&gt;)
+open fun [setBonesAsMatrices](set-bones-as-matrices.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 #### Parameters
 

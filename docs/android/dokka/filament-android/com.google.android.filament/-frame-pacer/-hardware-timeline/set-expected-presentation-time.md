@@ -3,4 +3,4 @@
 # setExpectedPresentationTime
 
 [main]\
-open fun [setExpectedPresentationTime](set-expected-presentation-time.md)(expectedPresentationTime: Long)
+open fun [setExpectedPresentationTime](set-expected-presentation-time.md)(expectedPresentationTime: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

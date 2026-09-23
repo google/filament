@@ -3,7 +3,7 @@
 # payload
 
 [main]\
-open fun [payload](payload.md)(payload: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), size: Int): [Material.Builder](index.md)
+open fun [payload](payload.md)(payload: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), size: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Material.Builder](index.md)
 
 Specifies the material data. 
 

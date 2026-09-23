@@ -3,7 +3,7 @@
 # minVarianceScale
 
 [main]\
-open var [~~minVarianceScale~~](min-variance-scale.md): Float
+open var [~~minVarianceScale~~](min-variance-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 ---
 

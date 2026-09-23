@@ -32,9 +32,9 @@ Note: Dynamic resolution is only supported on platforms where the time to render
 
 | Name | Summary |
 |---|---|
-| [enabled](enabled.md) | [main]<br>open var [enabled](enabled.md): Boolean<br>enable or disable dynamic resolution |
-| [homogeneousScaling](homogeneous-scaling.md) | [main]<br>open var [homogeneousScaling](homogeneous-scaling.md): Boolean<br>set to true to force homogeneous scaling |
-| [maxScale](max-scale.md) | [main]<br>open var [maxScale](max-scale.md): Float<br>maximum scale factors in x and y |
-| [minScale](min-scale.md) | [main]<br>open var [minScale](min-scale.md): Float<br>minimum scale factors in x and y |
+| [enabled](enabled.md) | [main]<br>open var [enabled](enabled.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)<br>enable or disable dynamic resolution |
+| [homogeneousScaling](homogeneous-scaling.md) | [main]<br>open var [homogeneousScaling](homogeneous-scaling.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)<br>set to true to force homogeneous scaling |
+| [maxScale](max-scale.md) | [main]<br>open var [maxScale](max-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)<br>maximum scale factors in x and y |
+| [minScale](min-scale.md) | [main]<br>open var [minScale](min-scale.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)<br>minimum scale factors in x and y |
 | [quality](quality.md) | [main]<br>open var [quality](quality.md): [View.QualityLevel](../-quality-level/index.md)<br>Upscaling quality <br>- LOW: bilinear filtered blit.         Fastest, poor quality - MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0 - HIGH: AMD FidelityFX FSR1 w/ mobile optimizations - ULTRA: AMD FidelityFX FSR1<br> FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. |
-| [sharpness](sharpness.md) | [main]<br>open var [sharpness](sharpness.md): Float<br>sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)] |
+| [sharpness](sharpness.md) | [main]<br>open var [sharpness](sharpness.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)<br>sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)] |

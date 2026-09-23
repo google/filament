@@ -3,4 +3,4 @@
 # NULL
 
 [main]\
-val [NULL](-n-u-l-l.md): Int = 0
+val [NULL](-n-u-l-l.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 0

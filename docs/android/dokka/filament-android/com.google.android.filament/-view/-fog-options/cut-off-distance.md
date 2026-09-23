@@ -3,7 +3,7 @@
 # cutOffDistance
 
 [main]\
-open var [cutOffDistance](cut-off-distance.md): Float
+open var [cutOffDistance](cut-off-distance.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Distance in world units [m] after which the fog calculation is disabled. 
 

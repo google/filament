@@ -3,6 +3,6 @@
 # ALL_ATTACHMENTS
 
 [main]\
-val [ALL_ATTACHMENTS](-a-l-l_-a-t-t-a-c-h-m-e-n-t-s.md): Int = 39
+val [ALL_ATTACHMENTS](-a-l-l_-a-t-t-a-c-h-m-e-n-t-s.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 39
 
 Mask of all attachments

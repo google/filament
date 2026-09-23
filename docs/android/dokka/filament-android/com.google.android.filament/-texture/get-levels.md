@@ -3,7 +3,7 @@
 # getLevels
 
 [main]\
-open fun [getLevels](get-levels.md)(): Int
+open fun [getLevels](get-levels.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the maximum number of levels this texture can have.
 

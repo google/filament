@@ -3,4 +3,4 @@
 # getVsyncPeriod
 
 [main]\
-open fun [getVsyncPeriod](get-vsync-period.md)(): Long
+open fun [getVsyncPeriod](get-vsync-period.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

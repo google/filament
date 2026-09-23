@@ -12,7 +12,7 @@ Controls if this renderable is affected by the large-scale fog.
 A reference to this Builder for chaining calls.
 
 [main]\
-open fun [fog](fog.md)(enabled: Boolean): [RenderableManager.Builder](index.md)
+open fun [fog](fog.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
 
 Controls if this renderable is affected by the large-scale fog.
 

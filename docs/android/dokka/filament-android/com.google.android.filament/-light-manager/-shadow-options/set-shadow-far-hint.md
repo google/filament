@@ -3,4 +3,4 @@
 # setShadowFarHint
 
 [main]\
-open fun [setShadowFarHint](set-shadow-far-hint.md)(shadowFarHint: Float)
+open fun [setShadowFarHint](set-shadow-far-hint.md)(shadowFarHint: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

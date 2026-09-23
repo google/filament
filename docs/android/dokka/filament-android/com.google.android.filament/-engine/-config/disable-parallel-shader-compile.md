@@ -3,7 +3,7 @@
 # disableParallelShaderCompile
 
 [main]\
-open var [disableParallelShaderCompile](disable-parallel-shader-compile.md): Boolean
+open var [disableParallelShaderCompile](disable-parallel-shader-compile.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Set to `true` to forcibly disable parallel shader compilation in the backend. 
 

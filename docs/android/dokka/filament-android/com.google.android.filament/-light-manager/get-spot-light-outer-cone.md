@@ -3,7 +3,7 @@
 # getSpotLightOuterCone
 
 [main]\
-open fun [getSpotLightOuterCone](get-spot-light-outer-cone.md)(i: Int): Float
+open fun [getSpotLightOuterCone](get-spot-light-outer-cone.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 returns the outer cone angle in *radians* between inner and pi/2.
 

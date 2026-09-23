@@ -3,7 +3,7 @@
 # setupFrame
 
 [main]\
-open fun [setupFrame](setup-frame.md)(frameTimeNanos: Long, vsyncPeriodNanos: Long): [FramePacer.FrameStatus](-frame-status/index.md)
+open fun [setupFrame](setup-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), vsyncPeriodNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.FrameStatus](-frame-status/index.md)
 
 Prepares and evaluates the frame pacing state for the upcoming frame cycle.
 
@@ -21,7 +21,7 @@ main
 | vsyncPeriodNanos | Physical display VSYNC refresh period in nanoseconds. |
 
 [main]\
-open fun [setupFrame](setup-frame.md)(frameTimeNanos: Long): [FramePacer.FrameStatus](-frame-status/index.md)
+open fun [setupFrame](setup-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.FrameStatus](-frame-status/index.md)
 
 Prepares and evaluates the frame pacing state for the upcoming frame cycle.
 
@@ -38,7 +38,7 @@ main
 | frameTimeNanos | Incoming hardware base VSYNC timestamp in nanoseconds. |
 
 [main]\
-open fun [setupFrame](setup-frame.md)(frameData: FrameData, vsyncPeriodNanos: Long): [FramePacer.FrameStatus](-frame-status/index.md)
+open fun [setupFrame](setup-frame.md)(frameData: FrameData, vsyncPeriodNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.FrameStatus](-frame-status/index.md)
 
 Prepares and evaluates the frame pacing state for the upcoming frame cycle using Android 13+ FrameData.
 

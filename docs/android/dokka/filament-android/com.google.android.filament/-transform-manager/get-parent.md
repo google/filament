@@ -3,7 +3,7 @@
 # getParent
 
 [main]\
-open fun [getParent](get-parent.md)(i: Int): Int
+open fun [getParent](get-parent.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the parent of a transform component, or the null entity if it is a root.
 

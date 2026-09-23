@@ -3,7 +3,7 @@
 # isAccurateTranslationsEnabled
 
 [main]\
-open fun [isAccurateTranslationsEnabled](is-accurate-translations-enabled.md)(): Boolean
+open fun [isAccurateTranslationsEnabled](is-accurate-translations-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether the high precision translation mode is active.
 

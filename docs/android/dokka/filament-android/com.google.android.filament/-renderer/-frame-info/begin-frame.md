@@ -3,4 +3,4 @@
 # beginFrame
 
 [main]\
-open var [beginFrame](begin-frame.md): Long
+open var [beginFrame](begin-frame.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

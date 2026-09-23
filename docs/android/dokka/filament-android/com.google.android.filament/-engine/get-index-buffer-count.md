@@ -3,4 +3,4 @@
 # getIndexBufferCount
 
 [main]\
-open fun [getIndexBufferCount](get-index-buffer-count.md)(): Int
+open fun [getIndexBufferCount](get-index-buffer-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

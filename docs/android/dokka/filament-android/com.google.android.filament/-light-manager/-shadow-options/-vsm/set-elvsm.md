@@ -3,4 +3,4 @@
 # setElvsm
 
 [main]\
-open fun [setElvsm](set-elvsm.md)(elvsm: Boolean)
+open fun [setElvsm](set-elvsm.md)(elvsm: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))

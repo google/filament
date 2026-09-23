@@ -3,7 +3,7 @@
 # latencyFrames
 
 [main]\
-open fun [latencyFrames](latency-frames.md)(frames: Int): [FramePacer.Builder](index.md)
+open fun [latencyFrames](latency-frames.md)(frames: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [FramePacer.Builder](index.md)
 
 Sets the required latency window in terms of 60Hz display frames.
 

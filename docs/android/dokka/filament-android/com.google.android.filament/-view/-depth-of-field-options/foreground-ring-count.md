@@ -3,7 +3,7 @@
 # foregroundRingCount
 
 [main]\
-open var [foregroundRingCount](foreground-ring-count.md): Int
+open var [foregroundRingCount](foreground-ring-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Number of of rings used by the gather kernels. 
 

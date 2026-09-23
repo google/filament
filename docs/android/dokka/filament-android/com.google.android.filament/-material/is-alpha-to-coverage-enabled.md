@@ -3,6 +3,6 @@
 # isAlphaToCoverageEnabled
 
 [main]\
-open fun [isAlphaToCoverageEnabled](is-alpha-to-coverage-enabled.md)(): Boolean
+open fun [isAlphaToCoverageEnabled](is-alpha-to-coverage-enabled.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Indicates whether this material uses alpha to coverage.

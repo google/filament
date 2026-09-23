@@ -18,7 +18,7 @@ Constructs a new `FramePacer` instance.
 | Name | Summary |
 |---|---|
 | [build](build.md) | [main]<br>open fun [build](build.md)(engine: [Engine](../../../com.google.android.filament/-engine/index.md)): [FramePacer](../index.md)<br>Creates the FramePacer object and returns a wrapper instance. |
-| [latency](latency.md) | [main]<br>open fun [latency](latency.md)(latencyNanos: Long): [FramePacer.Builder](index.md)<br>Sets the required latency window in terms of time duration. |
-| [latencyFrames](latency-frames.md) | [main]<br>open fun [latencyFrames](latency-frames.md)(frames: Int): [FramePacer.Builder](index.md)<br>Sets the required latency window in terms of 60Hz display frames. |
-| [latencyNanos](latency-nanos.md) | [main]<br>open fun [latencyNanos](latency-nanos.md)(latencyNanos: Long): [FramePacer.Builder](index.md)<br>Sets the required latency window in terms of time duration. |
-| [targetFrameRate](target-frame-rate.md) | [main]<br>open fun [targetFrameRate](target-frame-rate.md)(fps: Float): [FramePacer.Builder](index.md)<br>Sets the desired frame rendering step in Hz. |
+| [latency](latency.md) | [main]<br>open fun [latency](latency.md)(latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.Builder](index.md)<br>Sets the required latency window in terms of time duration. |
+| [latencyFrames](latency-frames.md) | [main]<br>open fun [latencyFrames](latency-frames.md)(frames: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [FramePacer.Builder](index.md)<br>Sets the required latency window in terms of 60Hz display frames. |
+| [latencyNanos](latency-nanos.md) | [main]<br>open fun [latencyNanos](latency-nanos.md)(latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.Builder](index.md)<br>Sets the required latency window in terms of time duration. |
+| [targetFrameRate](target-frame-rate.md) | [main]<br>open fun [targetFrameRate](target-frame-rate.md)(fps: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [FramePacer.Builder](index.md)<br>Sets the desired frame rendering step in Hz. |

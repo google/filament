@@ -45,4 +45,4 @@ open fun [destroy](destroy.md)(texture: [Texture](../-texture/index.md))
 
 open fun [destroy](destroy.md)(target: [RenderTarget](../-render-target/index.md))
 
-open fun [destroy](destroy.md)(entity: Int)
+open fun [destroy](destroy.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

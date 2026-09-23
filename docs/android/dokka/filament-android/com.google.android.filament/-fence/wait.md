@@ -28,7 +28,7 @@ main
 | Mode |
 
 [main]\
-open fun [wait](wait.md)(mode: [Fence.Mode](-mode/index.md), timeout: Long): [Fence.FenceStatus](-fence-status/index.md)
+open fun [wait](wait.md)(mode: [Fence.Mode](-mode/index.md), timeout: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Fence.FenceStatus](-fence-status/index.md)
 
 Client-side wait on the Fence. 
 

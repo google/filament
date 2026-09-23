@@ -3,7 +3,7 @@
 # getColorEstimate
 
 [main]\
-open fun [getColorEstimate](get-color-estimate.md)(sh: Array&lt;Float&gt;, direction: Array&lt;Float&gt;, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getColorEstimate](get-color-estimate.md)(sh: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, direction: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Helper to estimate the color and relative intensity of the environment represented by spherical harmonics in a given direction. 
 
@@ -32,7 +32,7 @@ main
 | [setIntensity](set-intensity.md) |
 
 [main]\
-open fun [getColorEstimate](get-color-estimate.md)(sh: Array&lt;Float&gt;, directionx: Float, directiony: Float, directionz: Float, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getColorEstimate](get-color-estimate.md)(sh: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, directionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Helper to estimate the color and relative intensity of the environment represented by spherical harmonics in a given direction. 
 
@@ -63,7 +63,7 @@ main
 | [setIntensity](set-intensity.md) |
 
 [main]\
-open fun [getColorEstimate](get-color-estimate.md)(direction: Array&lt;Float&gt;, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getColorEstimate](get-color-estimate.md)(direction: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Helper to estimate the color and relative intensity of the environment represented by spherical harmonics in a given direction. 
 
@@ -77,7 +77,7 @@ Spherical harmonics must be set in the Builder or the result is undefined.
 | [IndirectLight.Builder](-builder/radiance.md) |
 
 [main]\
-open fun [getColorEstimate](get-color-estimate.md)(directionx: Float, directiony: Float, directionz: Float, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getColorEstimate](get-color-estimate.md)(directionx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directiony: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), directionz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Helper to estimate the color and relative intensity of the environment represented by spherical harmonics in a given direction. 
 

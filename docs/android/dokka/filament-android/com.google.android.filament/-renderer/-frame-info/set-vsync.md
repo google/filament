@@ -3,4 +3,4 @@
 # setVsync
 
 [main]\
-open fun [setVsync](set-vsync.md)(vsync: Long)
+open fun [setVsync](set-vsync.md)(vsync: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

@@ -3,6 +3,6 @@
 # DYNAMIC_LIGHTING
 
 [main]\
-val [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md): Int = 2
+val [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 2
 
 Dynamic lighting

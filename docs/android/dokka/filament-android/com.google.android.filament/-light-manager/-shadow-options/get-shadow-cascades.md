@@ -3,4 +3,4 @@
 # getShadowCascades
 
 [main]\
-open fun [getShadowCascades](get-shadow-cascades.md)(): Int
+open fun [getShadowCascades](get-shadow-cascades.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

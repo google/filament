@@ -3,7 +3,7 @@
 # create
 
 [main]\
-open fun [create](create.md)(entities: Array&lt;Int&gt;)
+open fun [create](create.md)(entities: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)&gt;)
 
 Allocates and creates a batch of new or recycled Entities.
 
@@ -16,7 +16,7 @@ main
 | entities | Output array receiving the populated Entity IDs. |
 
 [main]\
-open fun [create](create.md)(): Int
+open fun [create](create.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Allocates and creates a single new or recycled Entity.
 

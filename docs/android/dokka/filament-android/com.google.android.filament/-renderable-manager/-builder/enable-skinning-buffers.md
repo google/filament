@@ -10,7 +10,7 @@ Allows bones to be swapped out and shared using SkinningBuffer.
 If skinning buffer mode is enabled, clients must call setSkinningBuffer() rather than setBones(). This allows sharing of data between renderables.
 
 [main]\
-open fun [enableSkinningBuffers](enable-skinning-buffers.md)(enabled: Boolean): [RenderableManager.Builder](index.md)
+open fun [enableSkinningBuffers](enable-skinning-buffers.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
 
 Allows bones to be swapped out and shared using SkinningBuffer. 
 

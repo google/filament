@@ -3,6 +3,6 @@
 # getClearColor
 
 [main]\
-open fun [getClearColor](get-clear-color.md)(out: Array&lt;Double&gt;): Array&lt;Double&gt;
+open fun [getClearColor](get-clear-color.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
-open fun [getClearColor](get-clear-color.md)(): Array&lt;Double&gt;
+open fun [getClearColor](get-clear-color.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;

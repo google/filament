@@ -3,7 +3,7 @@
 # hasEntity
 
 [main]\
-open fun [hasEntity](has-entity.md)(entity: Int): Boolean
+open fun [hasEntity](has-entity.md)(entity: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns true if the given entity is in the Scene.
 

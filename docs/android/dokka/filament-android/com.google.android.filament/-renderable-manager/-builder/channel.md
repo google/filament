@@ -3,7 +3,7 @@
 # channel
 
 [main]\
-open fun [channel](channel.md)(channel: Int): [RenderableManager.Builder](index.md)
+open fun [channel](channel.md)(channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Set the channel this renderable is associated to. 
 

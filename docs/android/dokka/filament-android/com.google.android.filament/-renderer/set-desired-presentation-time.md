@@ -3,7 +3,7 @@
 # setDesiredPresentationTime
 
 [main]\
-open fun [setDesiredPresentationTime](set-desired-presentation-time.md)(monotonic_clock_ns: Long)
+open fun [setDesiredPresentationTime](set-desired-presentation-time.md)(monotonic_clock_ns: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))
 
 Set the real desired presentation time targeted for this frame. 
 

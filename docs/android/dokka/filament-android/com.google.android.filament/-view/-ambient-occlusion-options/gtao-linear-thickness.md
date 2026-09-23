@@ -3,7 +3,7 @@
 # gtaoLinearThickness
 
 [main]\
-open var [gtaoLinearThickness](gtao-linear-thickness.md): Boolean
+open var [gtaoLinearThickness](gtao-linear-thickness.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Increase thickness with distance to maintain detail on distant surfaces. 
 

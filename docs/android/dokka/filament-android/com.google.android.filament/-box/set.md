@@ -3,7 +3,7 @@
 # set
 
 [main]\
-open fun [set](set.md)(minx: Float, miny: Float, minz: Float, maxx: Float, maxy: Float, maxz: Float): [Box](index.md)
+open fun [set](set.md)(minx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), miny: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), minz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), maxx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), maxy: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), maxz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [Box](index.md)
 
 Initializes the 3D box from its min / max coordinates on each axis
 
@@ -25,7 +25,7 @@ main
 | maxz | (z component) largest coordinates corner of the box |
 
 [main]\
-open fun [set](set.md)(min: Array&lt;Float&gt;, max: Array&lt;Float&gt;): [Box](index.md)
+open fun [set](set.md)(min: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, max: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Box](index.md)
 
 Initializes the 3D box from its min / max coordinates on each axis
 

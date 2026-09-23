@@ -3,6 +3,6 @@
 # distance
 
 [main]\
-open var [distance](distance.md): Float
+open var [distance](distance.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Distance in world units [m] from the camera to where the fog starts ( >= 0.0 )

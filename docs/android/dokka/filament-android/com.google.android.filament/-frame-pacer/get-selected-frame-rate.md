@@ -3,7 +3,7 @@
 # getSelectedFrameRate
 
 [main]\
-open fun [getSelectedFrameRate](get-selected-frame-rate.md)(): Float
+open fun [getSelectedFrameRate](get-selected-frame-rate.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Returns the actual pacing frame rate selected during the active frame pacing cycle. 
 

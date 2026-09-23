@@ -3,7 +3,7 @@
 # intensity
 
 [main]\
-open fun [intensity](intensity.md)(intensity: Float): [LightManager.Builder](index.md)
+open fun [intensity](intensity.md)(intensity: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Sets the initial intensity of a light.
 
@@ -24,7 +24,7 @@ main
 | intensity | This parameter depends on the Light.Type:<br>- For directional lights, it specifies the illuminance in *lux*(or *lumen/m^2*). - For point lights and spot lights, it specifies the luminous power in *lumen*. |
 
 [main]\
-open fun [intensity](intensity.md)(watts: Float, efficiency: Float): [LightManager.Builder](index.md)
+open fun [intensity](intensity.md)(watts: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), efficiency: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
 Sets the initial intensity of a light in watts. 
 

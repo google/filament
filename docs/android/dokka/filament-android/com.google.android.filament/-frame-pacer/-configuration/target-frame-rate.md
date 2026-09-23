@@ -3,4 +3,4 @@
 # targetFrameRate
 
 [main]\
-open var [targetFrameRate](target-frame-rate.md): Float
+open var [targetFrameRate](target-frame-rate.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

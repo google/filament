@@ -3,7 +3,7 @@
 # setPriority
 
 [main]\
-open fun [setPriority](set-priority.md)(instance: Int, priority: Int)
+open fun [setPriority](set-priority.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), priority: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Changes the coarse-level draw ordering.
 

@@ -3,4 +3,4 @@
 # getVsync
 
 [main]\
-open fun [getVsync](get-vsync.md)(): Long
+open fun [getVsync](get-vsync.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

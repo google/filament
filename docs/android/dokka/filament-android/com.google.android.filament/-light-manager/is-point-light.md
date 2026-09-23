@@ -3,7 +3,7 @@
 # isPointLight
 
 [main]\
-open fun [isPointLight](is-point-light.md)(i: Int): Boolean
+open fun [isPointLight](is-point-light.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Helper function that returns if a light is a point light
 

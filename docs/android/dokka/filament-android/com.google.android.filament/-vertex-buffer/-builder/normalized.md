@@ -24,7 +24,7 @@ main
 | attribute | Enum of the attribute to set the normalization flag to. |
 
 [main]\
-open fun [normalized](normalized.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), normalized: Boolean): [VertexBuffer.Builder](index.md)
+open fun [normalized](normalized.md)(attribute: [VertexBuffer.VertexAttribute](../-vertex-attribute/index.md), normalized: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [VertexBuffer.Builder](index.md)
 
 Sets whether a given attribute should be normalized. 
 

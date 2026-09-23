@@ -3,4 +3,4 @@
 # getClearColorY
 
 [main]\
-open fun [getClearColorY](get-clear-color-y.md)(): Double
+open fun [getClearColorY](get-clear-color-y.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)

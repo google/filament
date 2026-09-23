@@ -3,7 +3,7 @@
 # setParent
 
 [main]\
-open fun [setParent](set-parent.md)(i: Int, newParent: Int)
+open fun [setParent](set-parent.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), newParent: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Re-parents an entity to a new one.
 

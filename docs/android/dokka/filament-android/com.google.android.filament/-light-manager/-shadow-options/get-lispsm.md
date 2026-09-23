@@ -3,4 +3,4 @@
 # getLispsm
 
 [main]\
-open fun [getLispsm](get-lispsm.md)(): Boolean
+open fun [getLispsm](get-lispsm.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

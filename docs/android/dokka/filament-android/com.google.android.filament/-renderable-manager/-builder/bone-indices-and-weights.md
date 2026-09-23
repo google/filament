@@ -3,7 +3,7 @@
 # boneIndicesAndWeights
 
 [main]\
-open fun [boneIndicesAndWeights](bone-indices-and-weights.md)(primitiveIndex: Int, indicesAndWeights: Array&lt;Float&gt;, count: Int, bonesPerVertex: Int): [RenderableManager.Builder](index.md)
+open fun [boneIndicesAndWeights](bone-indices-and-weights.md)(primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), indicesAndWeights: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), bonesPerVertex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Define bone indices and weights &quot;pairs&quot; for vertex skinning as a float2. 
 

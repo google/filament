@@ -3,7 +3,7 @@
 # driverHandleArenaSizeMB
 
 [main]\
-open var [driverHandleArenaSizeMB](driver-handle-arena-size-m-b.md): Long
+open var [driverHandleArenaSizeMB](driver-handle-arena-size-m-b.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Size in MiB of the backend's handle arena. 
 

@@ -3,4 +3,4 @@
 # setClear
 
 [main]\
-open fun [setClear](set-clear.md)(clear: Boolean)
+open fun [setClear](set-clear.md)(clear: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))

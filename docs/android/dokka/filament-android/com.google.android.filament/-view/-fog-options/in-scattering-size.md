@@ -3,7 +3,7 @@
 # inScatteringSize
 
 [main]\
-open var [inScatteringSize](in-scattering-size.md): Float
+open var [inScatteringSize](in-scattering-size.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Very inaccurately simulates the Sun's in-scattering. 
 

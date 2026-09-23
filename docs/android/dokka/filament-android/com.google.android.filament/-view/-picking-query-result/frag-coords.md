@@ -3,7 +3,7 @@
 # fragCoords
 
 [main]\
-open var [fragCoords](frag-coords.md): Array&lt;Float&gt;
+open var [fragCoords](frag-coords.md): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 screen space coordinates in GL convention, this can be used to compute the view or world space position of the picking hit. 
 

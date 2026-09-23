@@ -3,7 +3,7 @@
 # setMaterialGlobal
 
 [main]\
-open fun [setMaterialGlobal](set-material-global.md)(index: Int, valuex: Float, valuey: Float, valuez: Float, valuew: Float)
+open fun [setMaterialGlobal](set-material-global.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), valuex: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuey: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuez: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), valuew: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))
 
 Set the value of material global variables. 
 
@@ -28,7 +28,7 @@ main
 | [getMaterialGlobal](get-material-global.md) |
 
 [main]\
-open fun [setMaterialGlobal](set-material-global.md)(index: Int, value: Array&lt;Float&gt;)
+open fun [setMaterialGlobal](set-material-global.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), value: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Set the value of material global variables. 
 

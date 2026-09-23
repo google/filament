@@ -86,5 +86,5 @@ Here are the default color grading options:
 
 | Name | Summary |
 |---|---|
-| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): Long |
-| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: Long): [ColorGrading](index.md) |
+| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
+| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [ColorGrading](index.md) |

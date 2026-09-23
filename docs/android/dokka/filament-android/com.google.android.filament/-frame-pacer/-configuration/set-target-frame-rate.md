@@ -3,4 +3,4 @@
 # setTargetFrameRate
 
 [main]\
-open fun [setTargetFrameRate](set-target-frame-rate.md)(targetFrameRate: Float)
+open fun [setTargetFrameRate](set-target-frame-rate.md)(targetFrameRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

@@ -3,7 +3,7 @@
 # getBlendOrderAt
 
 [main]\
-open fun [getBlendOrderAt](get-blend-order-at.md)(instance: Int, primitiveIndex: Int): Int
+open fun [getBlendOrderAt](get-blend-order-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Get the drawing order for blended primitives.
 

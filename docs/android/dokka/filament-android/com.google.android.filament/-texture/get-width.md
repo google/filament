@@ -3,7 +3,7 @@
 # getWidth
 
 [main]\
-open fun [getWidth](get-width.md)(): Int
+open fun [getWidth](get-width.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the width of a 2D or 3D texture level
 
@@ -12,7 +12,7 @@ Returns the width of a 2D or 3D texture level
 Width in texel of the specified `level`, clamped to 1.
 
 [main]\
-open fun [getWidth](get-width.md)(level: Int): Int
+open fun [getWidth](get-width.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the width of a 2D or 3D texture level
 

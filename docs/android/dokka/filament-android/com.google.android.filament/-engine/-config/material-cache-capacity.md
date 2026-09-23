@@ -3,7 +3,7 @@
 # materialCacheCapacity
 
 [main]\
-open var [materialCacheCapacity](material-cache-capacity.md): Long
+open var [materialCacheCapacity](material-cache-capacity.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Capacity of the LRU cache for material definitions. 
 

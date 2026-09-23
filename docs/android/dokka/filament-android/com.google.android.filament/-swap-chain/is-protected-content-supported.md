@@ -3,7 +3,7 @@
 # isProtectedContentSupported
 
 [main]\
-open fun [isProtectedContentSupported](is-protected-content-supported.md)(engine: [Engine](../-engine/index.md)): Boolean
+open fun [isProtectedContentSupported](is-protected-content-supported.md)(engine: [Engine](../-engine/index.md)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag. 
 

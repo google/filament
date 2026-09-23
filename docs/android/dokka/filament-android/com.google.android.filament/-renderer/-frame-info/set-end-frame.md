@@ -3,4 +3,4 @@
 # setEndFrame
 
 [main]\
-open fun [setEndFrame](set-end-frame.md)(endFrame: Long)
+open fun [setEndFrame](set-end-frame.md)(endFrame: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

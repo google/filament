@@ -3,7 +3,7 @@
 # metalUploadBufferSizeBytes
 
 [main]\
-open var [metalUploadBufferSizeBytes](metal-upload-buffer-size-bytes.md): Long
+open var [metalUploadBufferSizeBytes](metal-upload-buffer-size-bytes.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 When uploading vertex or index data, the Filament Metal backend copies data into a shared staging area before transferring it to the GPU. 
 

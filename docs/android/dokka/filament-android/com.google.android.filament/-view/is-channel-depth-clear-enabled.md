@@ -3,7 +3,7 @@
 # isChannelDepthClearEnabled
 
 [main]\
-open fun [isChannelDepthClearEnabled](is-channel-depth-clear-enabled.md)(channel: Int): Boolean
+open fun [isChannelDepthClearEnabled](is-channel-depth-clear-enabled.md)(channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 #### Return
 

@@ -3,7 +3,7 @@
 # hasCamera
 
 [main]\
-open fun [hasCamera](has-camera.md)(): Boolean
+open fun [hasCamera](has-camera.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether a Camera is set.
 

@@ -3,7 +3,7 @@
 # transform
 
 [main]\
-open fun [transform](transform.md)(m: Array&lt;Float&gt;, tx: Float, ty: Float, tz: Float, box: [Box](index.md)): [Box](index.md)
+open fun [transform](transform.md)(m: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, tx: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), ty: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), tz: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), box: [Box](index.md)): [Box](index.md)
 
 Transform a Box by a linear transform and a translation.
 
@@ -24,7 +24,7 @@ main
 | box | the box to transform |
 
 [main]\
-open fun [transform](transform.md)(m: Array&lt;Float&gt;, t: Array&lt;Float&gt;, box: [Box](index.md)): [Box](index.md)
+open fun [transform](transform.md)(m: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, t: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, box: [Box](index.md)): [Box](index.md)
 
 Transform a Box by a linear transform and a translation.
 

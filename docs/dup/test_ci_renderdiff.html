@@ -210,6 +210,15 @@ golden repo.</li>
 </code></pre>
 </li>
 </ul>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>The goldens are rendered on Linux/aarch64.</strong> A golden's path records the platform and the
+backend (<code>desktop-opengl</code> and so on) but not the host, and different hosts produce different
+pixels for reasons unrelated to any change: a different compiler, a different Mesa build, a
+different libm. On any other host, including macOS, <code>local_test.sh</code> prints a warning and its
+comparison results are advisory. Rendering locally is still the fastest way to see what a change
+does; to judge it against the goldens, read the presubmit result.</p>
+</blockquote>
 <h2 id="command-line-options"><a class="header" href="#command-line-options">Command-line Options</a></h2>
 <ul>
 <li><code>--test=&lt;path&gt;</code>: Path to the test suite configuration JSON file (defaults to
@@ -217,6 +226,8 @@ golden repo.</li>
 <li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests using fnmatch wildcards (<code>*</code>). It filters against
 the pattern <code>{test.name}.{platform}-{backend}.{target}</code>.</li>
 <li><code>--no_rebuild</code>: Skip rebuilding the executables (<code>gltf_viewer</code> and <code>filament-samples</code>).</li>
+<li><code>--build-only</code>: Build the executables and stop, without rendering. Used by the CI job that warms
+the compiler cache.</li>
 <li><code>--num_threads=&lt;number&gt;</code>: Set the number of threads for rendering. If not set, the system's default is used.</li>
 </ul>
 <p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding and using 8 threads:</p>
@@ -228,18 +239,69 @@ https://github.com/google/filament-assets. Filament team members should have acc
 to the repository. A typical flow for updating the goldens is to upload your changed images
 into <strong>branch</strong> of <code>filament-assets</code>. This branch is paired with a PR or commit on the
 <code>filament</code> repo.</p>
-<p>As an example, imagine I am working on a PR, and I've uploaded my change, which is in a
-branch called <code>my-pr-branch</code>, to <code>filament</code>. This PR requires updating the golden. We would do
-it in the following fashion on a macOS machine:</p>
-<h3 id="using-a-script-to-update-the-golden-repo"><a class="header" href="#using-a-script-to-update-the-golden-repo">Using a script to update the golden repo</a></h3>
+<p>Because the goldens have to come from the same host presubmit renders on, the images themselves
+have to be produced by CI rather than on your machine. The routes below are ordered by how much you
+have to do by hand; the last two are only correct if you are running them on Linux/aarch64.</p>
+<h3 id="automated-update-via-commit-message"><a class="header" href="#automated-update-via-commit-message">Automated update via commit message</a></h3>
+<p>If you are confident in your changes and want CI to handle the update for you, add the following
+line to the commit message of your working branch on <code>filament</code>:</p>
+<pre><code>RDIFF_ACCEPT_NEW_GOLDENS
+</code></pre>
+<p>This has the following effects:</p>
 <ul>
-<li>Make sure you've completed the steps in 'Setting up python'</li>
-<li>Run interactive mode in the <code>update_golden.py</code> script.
-<pre><code>python3 test/renderdiff/src/update_golden.py
+<li>The presubmit test <code>test-renderdiff</code> will be bypassed (it will not perform rendering or
+comparison).</li>
+<li>When the PR is merged, the postsubmit CI will automatically:
+<ol>
+<li>Build Filament and generate the new images, on the same runner presubmit compares on.</li>
+<li>Upload them to a temporary branch in <code>filament-assets</code>.</li>
+<li>Merge that branch into <code>main</code>.</li>
+</ol>
+</li>
+</ul>
+<p>The cost of this route is that nothing verifies the new goldens before they land: presubmit does
+not compare, so the first evidence that they are right is the next PR passing.</p>
+<h3 id="using-the-renderdiff-goldens-workflow"><a class="header" href="#using-the-renderdiff-goldens-workflow">Using the 'Renderdiff Goldens' workflow</a></h3>
+<p>To see the new goldens applied in presubmit before the change lands, generate them first:</p>
+<ul>
+<li>Run the <strong>Renderdiff Goldens</strong> workflow from the Actions tab, selecting your <code>filament</code> branch
+and giving it a branch name for the golden repo (for example <code>my-pr-branch-golden</code>). The workflow
+renders on the presubmit runner and pushes the images to that branch, overwriting it if it
+already exists.</li>
+<li>Add the following line to the commit message of your working branch on <code>filament</code>:
+<pre><code>RDIFF_BRANCH=my-pr-branch-golden
 </code></pre>
 </li>
-<li>This will guide you through a series of steps to push the changes to a remote branch on
-<code>filament-assets</code>.</li>
+</ul>
+<p>Doing the above has multiple effects:</p>
+<ul>
+<li>The presubmit test <a href="https://github.com/google/filament/blob/e85dfe75c86106a05019e13ccdbef67e030af675/.github/workflows/presubmit.yml#L118"><code>test-renderdiff</code></a> will test against the provided
+branch of the golden repo (i.e. <code>my-pr-branch-golden</code>), so you can confirm the change is green
+before it merges.</li>
+<li>If the PR is merged, then there is another workflow that will merge <code>my-pr-branch-golden</code>
+to the <code>main</code> branch of the golden repo.</li>
+</ul>
+<h3 id="from-the-images-a-presubmit-run-produced"><a class="header" href="#from-the-images-a-presubmit-run-produced">From the images a presubmit run produced</a></h3>
+<p>Every <code>test-renderdiff</code> run attaches its renders to the run as the <code>presubmit-renderdiff-result</code>
+artifact, including runs whose comparison failed, which is exactly when the images are interesting.
+This is the route to use when the <strong>Renderdiff Goldens</strong> workflow is not available, for instance
+when the workflow file itself is only present on your branch.</p>
+<ul>
+<li>Download and unpack <code>presubmit-renderdiff-result</code> from the run.</li>
+<li>Build <code>diffimg</code> locally, which the script uses to work out which images actually changed:
+<pre><code>./build.sh debug diffimg
+</code></pre>
+</li>
+<li>Push the images to a branch of the golden repo. This needs write access to <code>filament-assets</code>,
+over SSH by default:
+<pre><code>python3 test/renderdiff/src/update_golden.py \
+    --branch=my-pr-branch-golden \
+    --source=&lt;unpacked artifact&gt;/renders \
+    --commit-msg="New goldens for my change" \
+    --push-to-remote
+</code></pre>
+</li>
+<li>Add <code>RDIFF_BRANCH=my-pr-branch-golden</code> to the commit message, as above.</li>
 </ul>
 <h3 id="manually-updating-the-golden-repo"><a class="header" href="#manually-updating-the-golden-repo">Manually updating the golden repo</a></h3>
 <ul>
@@ -262,33 +324,17 @@ git switch -c my-pr-branch-golden
 </code></pre>
 </li>
 </ul>
-<p>Doing the above has multiple effects:</p>
+<h3 id="using-a-script-to-update-the-golden-repo"><a class="header" href="#using-a-script-to-update-the-golden-repo">Using a script to update the golden repo</a></h3>
+<p>For the interactive equivalent of the above, which walks you through generating, reviewing and
+pushing the changes:</p>
 <ul>
-<li>The presubmit test <a href="https://github.com/google/filament/blob/e85dfe75c86106a05019e13ccdbef67e030af675/.github/workflows/presubmit.yml#L118"><code>test-renderdiff</code></a> will test against the provided
-branch of the golden repo (i.e. <code>my-pr-branch-golden</code>).</li>
-<li>If the PR is merged, then there is another workflow that will merge <code>my-pr-branch-golden</code>
-to the <code>main</code> branch of the golden repo.</li>
-</ul>
-<h3 id="automated-update-via-commit-message"><a class="header" href="#automated-update-via-commit-message">Automated update via commit message</a></h3>
-<p>Alternatively, if you are confident in your changes and want the CI to handle the update
-for you, you can use the following tag in your commit message:</p>
-<ul>
-<li>In the commit message of your working branch on <code>filament</code>, add the following line:
-<pre><code>RDIFF_ACCEPT_NEW_GOLDENS
+<li>Make sure you've completed the steps in 'Setting up python'</li>
+<li>Run interactive mode in the <code>update_golden.py</code> script.
+<pre><code>python3 test/renderdiff/src/update_golden.py
 </code></pre>
 </li>
-</ul>
-<p>This has the following effects:</p>
-<ul>
-<li>The presubmit test <code>test-renderdiff</code> will be bypassed (it will not perform rendering or
-comparison).</li>
-<li>When the PR is merged, the postsubmit CI will automatically:
-<ol>
-<li>Build Filament and generate the new images.</li>
-<li>Upload them to a temporary branch in <code>filament-assets</code>.</li>
-<li>Merge that branch into <code>main</code>.</li>
-</ol>
-</li>
+<li>Note the host caveat above: images generated this way are only the right goldens if you are on
+Linux/aarch64.</li>
 </ul>
 <h2 id="viewing-test-results"><a class="header" href="#viewing-test-results">Viewing test results</a></h2>
 <p>We provide a viewer for looking at the result of a test run. The viewer is a webapp that can

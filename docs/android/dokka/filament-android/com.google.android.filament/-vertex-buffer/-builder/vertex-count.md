@@ -3,7 +3,7 @@
 # vertexCount
 
 [main]\
-open fun [vertexCount](vertex-count.md)(vertexCount: Int): [VertexBuffer.Builder](index.md)
+open fun [vertexCount](vertex-count.md)(vertexCount: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [VertexBuffer.Builder](index.md)
 
 Size of each buffer in the set in vertex.
 

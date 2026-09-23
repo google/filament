@@ -3,4 +3,4 @@
 # setTimelines
 
 [main]\
-open fun [setTimelines](set-timelines.md)(timelines: Array&lt;[FramePacer.HardwareTimeline](../-hardware-timeline/index.md)&gt;)
+open fun [setTimelines](set-timelines.md)(timelines: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[FramePacer.HardwareTimeline](../-hardware-timeline/index.md)&gt;)

@@ -3,7 +3,7 @@
 # getMaterialGlobal
 
 [main]\
-open fun [getMaterialGlobal](get-material-global.md)(index: Int, out: Array&lt;Float&gt;): Array&lt;Float&gt;
+open fun [getMaterialGlobal](get-material-global.md)(index: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;
 
 Get the value of the material global variables. 
 

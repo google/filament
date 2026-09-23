@@ -3,7 +3,7 @@
 # setReceiveShadows
 
 [main]\
-open fun [setReceiveShadows](set-receive-shadows.md)(instance: Int, enable: Boolean)
+open fun [setReceiveShadows](set-receive-shadows.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Changes whether or not the renderable can receive shadows.
 

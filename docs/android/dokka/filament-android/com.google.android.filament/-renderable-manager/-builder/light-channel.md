@@ -3,7 +3,7 @@
 # lightChannel
 
 [main]\
-open fun [lightChannel](light-channel.md)(channel: Int): [RenderableManager.Builder](index.md)
+open fun [lightChannel](light-channel.md)(channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderableManager.Builder](index.md)
 
 Enables or disables a light channel. 
 
@@ -18,7 +18,7 @@ main
 | channel | Light channel to enable or disable, between 0 and 7. |
 
 [main]\
-open fun [lightChannel](light-channel.md)(channel: Int, enable: Boolean): [RenderableManager.Builder](index.md)
+open fun [lightChannel](light-channel.md)(channel: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [RenderableManager.Builder](index.md)
 
 Enables or disables a light channel. 
 

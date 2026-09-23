@@ -3,6 +3,6 @@
 # SHADOW_RECEIVER
 
 [main]\
-val [SHADOW_RECEIVER](-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md): Int = 4
+val [SHADOW_RECEIVER](-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 4
 
 Shadow receiver

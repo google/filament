@@ -3,7 +3,7 @@
 # setBonesAsQuaternions
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: Int, transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: Int, offset: Int)
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates the bone transforms in the range [offset, offset + count). 
 
@@ -21,7 +21,7 @@ main
 | offset | offset in elements (structured element count) in the destination buffer or component |
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: Int, transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: Int)
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Buffer](https://developer.android.com/reference/kotlin/java/nio/Buffer.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates the bone transforms in the range [0, count). 
 
@@ -38,7 +38,7 @@ main
 | count | number of elements (structured element count) in `transforms` |
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: Int, transforms: Array&lt;Float&gt;, arrayOffset: Int, count: Int, offset: Int)
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, arrayOffset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates the bone transforms in the range [offset, offset + count). 
 
@@ -57,7 +57,7 @@ main
 | offset | offset in elements (structured element count) in the destination buffer or component |
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: Int, transforms: Array&lt;Float&gt;, count: Int, offset: Int)
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates the bone transforms in the range [offset, offset + count). 
 
@@ -75,7 +75,7 @@ main
 | offset | offset in elements (structured element count) in the destination buffer or component |
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: Int, transforms: Array&lt;Float&gt;, count: Int)
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;, count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Updates the bone transforms in the range [0, count). 
 
@@ -92,7 +92,7 @@ main
 | count | number of elements (structured element count) in `transforms` |
 
 [main]\
-open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: Int, transforms: Array&lt;Float&gt;)
+open fun [setBonesAsQuaternions](set-bones-as-quaternions.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), transforms: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Updates the bone transforms in the range [0, transforms.length / 8). 
 

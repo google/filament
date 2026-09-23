@@ -3,6 +3,6 @@
 # ghostCount
 
 [main]\
-open var [ghostCount](ghost-count.md): Int
+open var [ghostCount](ghost-count.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 number of flare &quot;ghosts&quot;

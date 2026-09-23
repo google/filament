@@ -3,4 +3,4 @@
 # setShadowNearHint
 
 [main]\
-open fun [setShadowNearHint](set-shadow-near-hint.md)(shadowNearHint: Float)
+open fun [setShadowNearHint](set-shadow-near-hint.md)(shadowNearHint: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

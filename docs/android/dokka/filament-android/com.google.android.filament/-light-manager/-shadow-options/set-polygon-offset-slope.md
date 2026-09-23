@@ -3,4 +3,4 @@
 # setPolygonOffsetSlope
 
 [main]\
-open fun [setPolygonOffsetSlope](set-polygon-offset-slope.md)(polygonOffsetSlope: Float)
+open fun [setPolygonOffsetSlope](set-polygon-offset-slope.md)(polygonOffsetSlope: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))

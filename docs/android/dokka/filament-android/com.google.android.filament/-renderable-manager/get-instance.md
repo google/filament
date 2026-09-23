@@ -3,7 +3,7 @@
 # getInstance
 
 [main]\
-open fun [getInstance](get-instance.md)(e: Int): Int
+open fun [getInstance](get-instance.md)(e: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Gets a temporary handle that can be used to access the renderable state.
 

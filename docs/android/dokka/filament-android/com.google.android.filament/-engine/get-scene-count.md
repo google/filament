@@ -3,4 +3,4 @@
 # getSceneCount
 
 [main]\
-open fun [getSceneCount](get-scene-count.md)(): Int
+open fun [getSceneCount](get-scene-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

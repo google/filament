@@ -65,7 +65,7 @@ helper.post();
 
 | Name | Summary |
 |---|---|
-| [onFrame](on-frame.md) | [main]<br>open fun [onFrame](on-frame.md)(frameTimeNanos: Long)<br>Base callback invoked when a new frame should be rendered.<br>[main]<br>open fun [onFrame](on-frame.md)(frameTimeNanos: Long, frameData: Any)<br>Main callback invoked when a new frame should be rendered, providing optional payload telemetry. |
+| [onFrame](on-frame.md) | [main]<br>open fun [onFrame](on-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))<br>Base callback invoked when a new frame should be rendered.<br>[main]<br>open fun [onFrame](on-frame.md)(frameTimeNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html), frameData: [Any](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-any/index.html))<br>Main callback invoked when a new frame should be rendered, providing optional payload telemetry. |
 | [post](post.md) | [main]<br>open fun [post](post.md)()<br>Posts a callback to Android's Choreographer to schedule the next frame. |
 | [remove](remove.md) | [main]<br>open fun [remove](remove.md)()<br>Cancels any pending frame synchronization callbacks, stopping the scheduling loop. |
 | [setRenderer](set-renderer.md) | [main]<br>open fun [setRenderer](set-renderer.md)(renderer: [Renderer](../../com.google.android.filament/-renderer/index.md))<br>Attaches an optional Filament [Renderer](../../com.google.android.filament/-renderer/index.md) to be automatically paced by this helper. |

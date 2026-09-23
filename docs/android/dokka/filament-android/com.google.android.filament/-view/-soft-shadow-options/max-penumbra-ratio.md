@@ -3,7 +3,7 @@
 # maxPenumbraRatio
 
 [main]\
-open var [maxPenumbraRatio](max-penumbra-ratio.md): Float
+open var [maxPenumbraRatio](max-penumbra-ratio.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 Sets the global default maximum geometric ratio applied to Percentage-Closer Soft Shadows (PCSS). 
 

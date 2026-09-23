@@ -3,7 +3,7 @@
 # getPresentationDeadlineNanos
 
 [main]\
-open fun [getPresentationDeadlineNanos](get-presentation-deadline-nanos.md)(display: Display): Long
+open fun [getPresentationDeadlineNanos](get-presentation-deadline-nanos.md)(display: Display): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 #### Return
 

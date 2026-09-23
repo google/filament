@@ -3,7 +3,7 @@
 # getMaterialTime
 
 [main]\
-open fun [getMaterialTime](get-material-time.md)(): Double
+open fun [getMaterialTime](get-material-time.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
 
 Returns the material time in seconds evaluated for the current frame. 
 

@@ -3,7 +3,7 @@
 # filterWidth
 
 [main]\
-open var [~~filterWidth~~](filter-width.md): Float
+open var [~~filterWidth~~](filter-width.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 ---
 

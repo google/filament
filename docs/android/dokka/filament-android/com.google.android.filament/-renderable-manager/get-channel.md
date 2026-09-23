@@ -3,7 +3,7 @@
 # getChannel
 
 [main]\
-open fun [getChannel](get-channel.md)(instance: Int): Int
+open fun [getChannel](get-channel.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Get the channel a renderable is associated to.
 

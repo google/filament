@@ -52,8 +52,8 @@ Let's say that the video image data at the time of a particular invocation of `b
 
 | Name | Summary |
 |---|---|
-| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): Long |
+| [getNativeObject](get-native-object.md) | [main]<br>open fun [getNativeObject](get-native-object.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html) |
 | [getStreamType](get-stream-type.md) | [main]<br>open fun [getStreamType](get-stream-type.md)(): [Stream.StreamType](-stream-type/index.md)<br>Indicates whether this stream is a NATIVE stream or ACQUIRED stream. |
-| [getTimestamp](get-timestamp.md) | [main]<br>open fun [getTimestamp](get-timestamp.md)(): Long<br>Returns the presentation time of the currently displayed frame in nanosecond. |
-| [setDimensions](set-dimensions.md) | [main]<br>open fun [setDimensions](set-dimensions.md)(width: Int, height: Int)<br>Updates the size of the incoming stream. |
-| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: Long): [Stream](index.md) |
+| [getTimestamp](get-timestamp.md) | [main]<br>open fun [getTimestamp](get-timestamp.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)<br>Returns the presentation time of the currently displayed frame in nanosecond. |
+| [setDimensions](set-dimensions.md) | [main]<br>open fun [setDimensions](set-dimensions.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), height: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))<br>Updates the size of the incoming stream. |
+| [wrap](wrap.md) | [main]<br>open fun [wrap](wrap.md)(nativeObject: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [Stream](index.md) |

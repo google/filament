@@ -3,7 +3,7 @@
 # setAccurateTranslationsEnabled
 
 [main]\
-open fun [setAccurateTranslationsEnabled](set-accurate-translations-enabled.md)(enable: Boolean)
+open fun [setAccurateTranslationsEnabled](set-accurate-translations-enabled.md)(enable: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Enables or disable the accurate translation mode. 
 

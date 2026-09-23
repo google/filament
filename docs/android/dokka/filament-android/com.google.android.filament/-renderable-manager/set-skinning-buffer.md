@@ -3,7 +3,7 @@
 # setSkinningBuffer
 
 [main]\
-open fun [setSkinningBuffer](set-skinning-buffer.md)(instance: Int, skinningBuffer: [SkinningBuffer](../-skinning-buffer/index.md), count: Int, offset: Int)
+open fun [setSkinningBuffer](set-skinning-buffer.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), skinningBuffer: [SkinningBuffer](../-skinning-buffer/index.md), count: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), offset: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Associates a region of a SkinningBuffer to a renderable instance 
 

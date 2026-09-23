@@ -3,4 +3,4 @@
 # setBaseTime
 
 [main]\
-open fun [setBaseTime](set-base-time.md)(baseTime: Long)
+open fun [setBaseTime](set-base-time.md)(baseTime: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

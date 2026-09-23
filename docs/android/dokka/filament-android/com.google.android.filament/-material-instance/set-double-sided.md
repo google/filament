@@ -3,7 +3,7 @@
 # setDoubleSided
 
 [main]\
-open fun [setDoubleSided](set-double-sided.md)(doubleSided: Boolean)
+open fun [setDoubleSided](set-double-sided.md)(doubleSided: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Enables or disables double-sided lighting if the parent Material has double-sided capability, otherwise prints a warning. 
 

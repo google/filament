@@ -5,4 +5,4 @@
 [main]\
 constructor()
 
-constructor(targetFrameRate: Float, latencyNanos: Long)
+constructor(targetFrameRate: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html), latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

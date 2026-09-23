@@ -3,7 +3,7 @@
 # usage
 
 [main]\
-open fun [usage](usage.md)(usage: Int): [Texture.Builder](index.md)
+open fun [usage](usage.md)(usage: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Texture.Builder](index.md)
 
 Specifies if the texture will be used as a render target attachment. 
 

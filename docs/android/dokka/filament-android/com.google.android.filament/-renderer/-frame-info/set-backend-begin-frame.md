@@ -3,4 +3,4 @@
 # setBackendBeginFrame
 
 [main]\
-open fun [setBackendBeginFrame](set-backend-begin-frame.md)(backendBeginFrame: Long)
+open fun [setBackendBeginFrame](set-backend-begin-frame.md)(backendBeginFrame: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

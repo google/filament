@@ -3,7 +3,7 @@
 # latency
 
 [main]\
-open fun [latency](latency.md)(latency: Long): [FramePacer.Builder](index.md)
+open fun [latency](latency.md)(latency: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.Builder](index.md)
 
 Sets the required latency window in terms of time duration. 
 

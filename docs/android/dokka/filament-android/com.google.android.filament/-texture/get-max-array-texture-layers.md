@@ -3,7 +3,7 @@
 # getMaxArrayTextureLayers
 
 [main]\
-open fun [getMaxArrayTextureLayers](get-max-array-texture-layers.md)(engine: [Engine](../-engine/index.md)): Int
+open fun [getMaxArrayTextureLayers](get-max-array-texture-layers.md)(engine: [Engine](../-engine/index.md)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 #### Return
 

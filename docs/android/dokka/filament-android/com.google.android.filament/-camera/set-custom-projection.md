@@ -3,7 +3,7 @@
 # setCustomProjection
 
 [main]\
-open fun [setCustomProjection](set-custom-projection.md)(projection: Array&lt;Double&gt;, near: Double, far: Double)
+open fun [setCustomProjection](set-custom-projection.md)(projection: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Sets a custom projection matrix. 
 
@@ -20,7 +20,7 @@ main
 | far | distance in world units from the camera to the far plane. `far` != `near`. |
 
 [main]\
-open fun [setCustomProjection](set-custom-projection.md)(projection: Array&lt;Double&gt;, projectionForCulling: Array&lt;Double&gt;, near: Double, far: Double)
+open fun [setCustomProjection](set-custom-projection.md)(projection: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, projectionForCulling: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;, near: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), far: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
 Sets the projection matrix. 
 

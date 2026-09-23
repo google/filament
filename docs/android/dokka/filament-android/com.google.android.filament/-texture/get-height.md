@@ -3,7 +3,7 @@
 # getHeight
 
 [main]\
-open fun [getHeight](get-height.md)(): Int
+open fun [getHeight](get-height.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the height of a 2D or 3D texture level
 
@@ -12,7 +12,7 @@ Returns the height of a 2D or 3D texture level
 Height in texel of the specified `level`, clamped to 1.
 
 [main]\
-open fun [getHeight](get-height.md)(level: Int): Int
+open fun [getHeight](get-height.md)(level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the height of a 2D or 3D texture level
 

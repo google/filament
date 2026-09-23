@@ -27,7 +27,7 @@ TextureSampler defines how a texture is accessed.
 
 | Name | Summary |
 |---|---|
-| [getAnisotropy](get-anisotropy.md) | [main]<br>open fun [getAnisotropy](get-anisotropy.md)(): Float<br>returns the anisotropy value |
+| [getAnisotropy](get-anisotropy.md) | [main]<br>open fun [getAnisotropy](get-anisotropy.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)<br>returns the anisotropy value |
 | [getCompareFunc](get-compare-func.md) | [main]<br>open fun [getCompareFunc](get-compare-func.md)(): [TextureSampler.CompareFunc](-compare-func/index.md)<br>returns the compare function |
 | [getCompareMode](get-compare-mode.md) | [main]<br>open fun [getCompareMode](get-compare-mode.md)(): [TextureSampler.CompareMode](-compare-mode/index.md)<br>returns the compare mode |
 | [getMagFilter](get-mag-filter.md) | [main]<br>open fun [getMagFilter](get-mag-filter.md)(): [TextureSampler.MagFilter](-mag-filter/index.md)<br>returns the magnification filter value |
@@ -35,7 +35,7 @@ TextureSampler defines how a texture is accessed.
 | [getWrapModeR](get-wrap-mode-r.md) | [main]<br>open fun [getWrapModeR](get-wrap-mode-r.md)(): [TextureSampler.WrapMode](-wrap-mode/index.md)<br>returns the r-coordinate wrap mode (depth) |
 | [getWrapModeS](get-wrap-mode-s.md) | [main]<br>open fun [getWrapModeS](get-wrap-mode-s.md)(): [TextureSampler.WrapMode](-wrap-mode/index.md)<br>returns the s-coordinate wrap mode (horizontal) |
 | [getWrapModeT](get-wrap-mode-t.md) | [main]<br>open fun [getWrapModeT](get-wrap-mode-t.md)(): [TextureSampler.WrapMode](-wrap-mode/index.md)<br>returns the t-coordinate wrap mode (vertical) |
-| [setAnisotropy](set-anisotropy.md) | [main]<br>open fun [setAnisotropy](set-anisotropy.md)(anisotropy: Float)<br>This controls anisotropic filtering. |
+| [setAnisotropy](set-anisotropy.md) | [main]<br>open fun [setAnisotropy](set-anisotropy.md)(anisotropy: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html))<br>This controls anisotropic filtering. |
 | [setCompareMode](set-compare-mode.md) | [main]<br>open fun [setCompareMode](set-compare-mode.md)(mode: [TextureSampler.CompareMode](-compare-mode/index.md))<br>open fun [setCompareMode](set-compare-mode.md)(mode: [TextureSampler.CompareMode](-compare-mode/index.md), func: [TextureSampler.CompareFunc](-compare-func/index.md))<br>Sets the compare mode and function. |
 | [setMagFilter](set-mag-filter.md) | [main]<br>open fun [setMagFilter](set-mag-filter.md)(v: [TextureSampler.MagFilter](-mag-filter/index.md))<br>Sets the magnification filter |
 | [setMinFilter](set-min-filter.md) | [main]<br>open fun [setMinFilter](set-min-filter.md)(v: [TextureSampler.MinFilter](-min-filter/index.md))<br>Sets the minification filter |

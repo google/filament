@@ -3,7 +3,7 @@
 # nightAdaptation
 
 [main]\
-open fun [nightAdaptation](night-adaptation.md)(adaptation: Float): [ColorGrading.Builder](index.md)
+open fun [nightAdaptation](night-adaptation.md)(adaptation: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [ColorGrading.Builder](index.md)
 
 Controls the amount of night adaptation to replicate a more natural representation of low-light conditions as perceived by the human vision system. 
 

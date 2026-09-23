@@ -3,7 +3,7 @@
 # setPaused
 
 [main]\
-open fun [setPaused](set-paused.md)(paused: Boolean)
+open fun [setPaused](set-paused.md)(paused: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Pause or resume rendering thread. 
 

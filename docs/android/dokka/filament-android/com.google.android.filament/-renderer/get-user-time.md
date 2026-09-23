@@ -3,7 +3,7 @@
 # getUserTime
 
 [main]\
-open fun [getUserTime](get-user-time.md)(): Double
+open fun [getUserTime](get-user-time.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)
 
 Backward compatibility helper for getUserTime().
 

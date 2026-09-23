@@ -3,4 +3,4 @@
 # setBeginFrame
 
 [main]\
-open fun [setBeginFrame](set-begin-frame.md)(beginFrame: Long)
+open fun [setBeginFrame](set-begin-frame.md)(beginFrame: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html))

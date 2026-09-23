@@ -3,4 +3,4 @@
 # refreshRate
 
 [main]\
-open var [refreshRate](refresh-rate.md): Float
+open var [refreshRate](refresh-rate.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

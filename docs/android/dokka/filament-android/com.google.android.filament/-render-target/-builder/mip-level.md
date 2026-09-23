@@ -3,7 +3,7 @@
 # mipLevel
 
 [main]\
-open fun [mipLevel](mip-level.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), level: Int): [RenderTarget.Builder](index.md)
+open fun [mipLevel](mip-level.md)(attachment: [RenderTarget.AttachmentPoint](../-attachment-point/index.md), level: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [RenderTarget.Builder](index.md)
 
 Sets the mipmap level for a given attachment point.
 

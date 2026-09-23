@@ -3,4 +3,4 @@
 # getClearColorZ
 
 [main]\
-open fun [getClearColorZ](get-clear-color-z.md)(): Double
+open fun [getClearColorZ](get-clear-color-z.md)(): [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)

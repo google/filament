@@ -3,7 +3,7 @@
 # latencyNanos
 
 [main]\
-open fun [latencyNanos](latency-nanos.md)(latencyNanos: Long): [FramePacer.Builder](index.md)
+open fun [latencyNanos](latency-nanos.md)(latencyNanos: [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)): [FramePacer.Builder](index.md)
 
 Sets the required latency window in terms of time duration.
 

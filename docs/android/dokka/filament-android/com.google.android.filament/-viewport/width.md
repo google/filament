@@ -3,4 +3,4 @@
 # width
 
 [main]\
-open var [width](width.md): Int
+open var [width](width.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

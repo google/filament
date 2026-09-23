@@ -3,7 +3,7 @@
 # getSunAngularRadius
 
 [main]\
-open fun [getSunAngularRadius](get-sun-angular-radius.md)(i: Int): Float
+open fun [getSunAngularRadius](get-sun-angular-radius.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
 
 returns the angular radius if the sun in degrees.
 

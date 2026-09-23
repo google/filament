@@ -3,7 +3,7 @@
 # advancedSkinning
 
 [main]\
-open fun [advancedSkinning](advanced-skinning.md)(enabled: Boolean): [VertexBuffer.Builder](index.md)
+open fun [advancedSkinning](advanced-skinning.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)): [VertexBuffer.Builder](index.md)
 
 Sets advanced skinning mode. 
 

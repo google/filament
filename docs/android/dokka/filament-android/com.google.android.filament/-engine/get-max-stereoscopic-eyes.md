@@ -3,7 +3,7 @@
 # getMaxStereoscopicEyes
 
 [main]\
-open fun [getMaxStereoscopicEyes](get-max-stereoscopic-eyes.md)(): Int
+open fun [getMaxStereoscopicEyes](get-max-stereoscopic-eyes.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the maximum number of stereoscopic eyes supported by Filament. 
 

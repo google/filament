@@ -3,4 +3,4 @@
 # getPresentDeadline
 
 [main]\
-open fun [getPresentDeadline](get-present-deadline.md)(): Long
+open fun [getPresentDeadline](get-present-deadline.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)

@@ -3,7 +3,7 @@
 # setMediaOverlay
 
 [main]\
-open fun [setMediaOverlay](set-media-overlay.md)(overlay: Boolean)
+open fun [setMediaOverlay](set-media-overlay.md)(overlay: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Controls whether the surface of the SurfaceView used as a render target should be positioned above other surfaces but below the activity's surface. This property only has an effect when used in combination with [setOpaque(false)](set-opaque.md) and does not affect TextureView targets. Must be called before calling [attachTo](attach-to.md) or [attachTo](attach-to.md). Has no effect when using [attachTo](attach-to.md).
 

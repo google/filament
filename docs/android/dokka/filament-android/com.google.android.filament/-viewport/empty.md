@@ -3,7 +3,7 @@
 # empty
 
 [main]\
-open fun [empty](empty.md)(): Boolean
+open fun [empty](empty.md)(): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 Returns whether the area of the view port is null.
 

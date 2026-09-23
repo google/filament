@@ -3,6 +3,6 @@
 # STE
 
 [main]\
-val [STE](-s-t-e.md): Int = 128
+val [STE](-s-t-e.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 128
 
 Instanced stereo rendering

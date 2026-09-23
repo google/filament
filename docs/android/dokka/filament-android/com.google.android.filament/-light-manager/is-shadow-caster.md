@@ -3,7 +3,7 @@
 # isShadowCaster
 
 [main]\
-open fun [isShadowCaster](is-shadow-caster.md)(i: Int): Boolean
+open fun [isShadowCaster](is-shadow-caster.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)
 
 returns whether this light casts shadows.
 

@@ -3,4 +3,4 @@
 # maxSearchRadius
 
 [main]\
-open var [maxSearchRadius](max-search-radius.md): Float
+open var [maxSearchRadius](max-search-radius.md): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)

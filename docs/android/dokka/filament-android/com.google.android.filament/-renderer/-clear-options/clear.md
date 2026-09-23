@@ -3,4 +3,4 @@
 # clear
 
 [main]\
-open var [clear](clear.md): Boolean
+open var [clear](clear.md): [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html)

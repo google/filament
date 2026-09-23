@@ -3,7 +3,7 @@
 # setRotation
 
 [main]\
-open fun [setRotation](set-rotation.md)(rotation: Array&lt;Float&gt;)
+open fun [setRotation](set-rotation.md)(rotation: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)&gt;)
 
 Sets the rigid-body transformation to apply to the IBL.
 

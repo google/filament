@@ -3,7 +3,7 @@
 # getParameterCount
 
 [main]\
-open fun [getParameterCount](get-parameter-count.md)(): Int
+open fun [getParameterCount](get-parameter-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
 Returns the number of parameters declared by this material. 
 

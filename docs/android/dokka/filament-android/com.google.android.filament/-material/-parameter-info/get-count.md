@@ -3,4 +3,4 @@
 # getCount
 
 [main]\
-open fun [getCount](get-count.md)(): Int
+open fun [getCount](get-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)

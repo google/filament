@@ -3,7 +3,7 @@
 # setLayerEnabled
 
 [main]\
-open fun [setLayerEnabled](set-layer-enabled.md)(layer: Int, enabled: Boolean)
+open fun [setLayerEnabled](set-layer-enabled.md)(layer: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
 Helper function to enable or disable a visibility layer.
 

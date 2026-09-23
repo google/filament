@@ -3,7 +3,7 @@
 # getEffectiveLatency
 
 [main]\
-open fun [getEffectiveLatency](get-effective-latency.md)(): Long
+open fun [getEffectiveLatency](get-effective-latency.md)(): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
 
 Returns the effective target latency in nanoseconds.
 

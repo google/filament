@@ -3,6 +3,6 @@
 # setClearColor
 
 [main]\
-open fun [setClearColor](set-clear-color.md)(clearColorX: Double, clearColorY: Double, clearColorZ: Double, clearColorW: Double)
+open fun [setClearColor](set-clear-color.md)(clearColorX: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), clearColorY: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), clearColorZ: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html), clearColorW: [Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html))
 
-open fun [setClearColor](set-clear-color.md)(clearColor: Array&lt;Double&gt;)
+open fun [setClearColor](set-clear-color.md)(clearColor: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;)

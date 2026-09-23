@@ -3,7 +3,7 @@
 # setBlendOrderAt
 
 [main]\
-open fun [setBlendOrderAt](set-blend-order-at.md)(instance: Int, primitiveIndex: Int, order: Int)
+open fun [setBlendOrderAt](set-blend-order-at.md)(instance: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), primitiveIndex: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html), order: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))
 
 Changes the drawing order for blended primitives. 
 

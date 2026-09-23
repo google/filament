@@ -3,4 +3,4 @@
 # setWidth
 
 [main]\
-open fun [setWidth](set-width.md)(width: Int)
+open fun [setWidth](set-width.md)(width: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html))

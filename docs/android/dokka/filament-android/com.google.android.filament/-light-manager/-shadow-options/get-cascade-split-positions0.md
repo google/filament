@@ -3,4 +3,4 @@
 # getCascadeSplitPositions0
 
 [main]\
-open fun [getCascadeSplitPositions0](get-cascade-split-positions0.md)(): Float
+open fun [getCascadeSplitPositions0](get-cascade-split-positions0.md)(): [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)
