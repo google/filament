@@ -180,6 +180,11 @@ void WebGPUDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 
 }
 
+bool WebGPUDriver::isPresentationTimeSupported() {
+    // WebGPU has no API to schedule the presentation of a frame.
+    return false;
+}
+
 void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 

@@ -349,6 +349,12 @@ void MetalDriver::execute(std::function<void(void)> const& fn) {
     }
 }
 
+bool MetalDriver::isPresentationTimeSupported() {
+    // Metal presents the drawable at a given time with -presentDrawable:atTime:, which is
+    // available on all the platforms we support.
+    return true;
+}
+
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     assert_invariant(mContext->currentDrawSwapChain);
     mContext->currentDrawSwapChain->setPresentationTime(monotonic_clock_ns);

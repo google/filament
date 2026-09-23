@@ -1331,6 +1331,14 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     mImpl->mDevice = createVkDevice(deviceCreateInfo);
 }
 
+bool VulkanPlatform::isPresentationTimeSupported() const noexcept {
+    // VulkanPlatformSurfaceSwapChain::present() forwards the presentation time through
+    // VK_GOOGLE_display_timing, which is the only mechanism the default swapchain implementation
+    // supports. That extension is only ever requested on Android, so this is false everywhere
+    // else.
+    return mImpl->mContext.isGoogleDisplayTimingEnabled();
+}
+
 void VulkanPlatform::setPresentationTime(int64_t presentTime) noexcept {
     mImpl->mPresentationTime = presentTime;
 }

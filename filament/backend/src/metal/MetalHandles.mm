@@ -334,9 +334,8 @@ void MetalSwapChain::present() {
         if (frameScheduled.callback) {
             scheduleFrameScheduledCallback(timeNs);
         } else  {
-            if (presentationTimeNs) {
-                const CFTimeInterval timeSeconds =
-                        (CFTimeInterval) presentationTimeNs / 1000000000.0;
+            if (timeNs) {
+                const CFTimeInterval timeSeconds = (CFTimeInterval) timeNs / 1000000000.0;
                 [getPendingCommandBuffer(&context) presentDrawable:drawable atTime:timeSeconds];
             } else {
                 [getPendingCommandBuffer(&context) presentDrawable:drawable];

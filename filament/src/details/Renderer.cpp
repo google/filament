@@ -107,6 +107,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mIsFrameBufferFetchSupported(false),
         mIsFrameBufferFetchMultiSampleSupported(false),
         mIsAutoDepthResolveSupported(false),
+        mIsPresentationTimeSupported(false),
         mUserEpoch(engine.getEngineEpoch()),
         mResourceAllocator(std::make_unique<TextureCache>(
                 engine.getSharedResourceAllocatorDisposer(),
@@ -146,6 +147,7 @@ FRenderer::FRenderer(FEngine& engine) :
     mIsFrameBufferFetchSupported = driver.isFrameBufferFetchSupported();
     mIsFrameBufferFetchMultiSampleSupported = driver.isFrameBufferFetchMultiSampleSupported();
     mIsAutoDepthResolveSupported = driver.isAutoDepthResolveSupported();
+    mIsPresentationTimeSupported = driver.isPresentationTimeSupported();
 
     // our default HDR translucent format, fallback to LDR if not supported by the backend
     if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
@@ -268,10 +270,15 @@ void FRenderer::initializeClearFlags() noexcept {
 
 void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) noexcept {
     using namespace std::chrono;
-    mPresentationTime = steady_clock::time_point(nanoseconds(monotonic_clock_ns));
+    setPresentationTime(steady_clock::time_point(nanoseconds(monotonic_clock_ns)));
 }
 
 void FRenderer::setPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+    // Backends and platforms that can't honor a presentation time never enter paced mode; we
+    // drop the request here so that beginFrame() doesn't see a presentation time at all.
+    if (UTILS_UNLIKELY(!mIsPresentationTimeSupported)) {
+        return;
+    }
     mPresentationTime = monotonic_clock;
 }
 
@@ -476,6 +483,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         mRenderingDeadline = {};
 
         if (presentationTime.time_since_epoch().count()) {
+            // setPresentationTime() is a no-op if the backend doesn't support it, so the
+            // presentation time can only be set if it is supported.
+            assert_invariant(mIsPresentationTimeSupported);
             driver.setPresentationTime(std::chrono::duration_cast<nanoseconds>(
                     presentationTime.time_since_epoch()).count());
         }
@@ -502,6 +512,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare(driver);
     };
 
+    // mPresentationTime is only ever set when the backend supports it, so we can't be in paced
+    // mode on a backend or platform that ignores the presentation time.
     bool const isPacedMode = mPresentationTime.time_since_epoch().count() != 0;
     if (isPacedMode || shouldRenderFrame()) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
