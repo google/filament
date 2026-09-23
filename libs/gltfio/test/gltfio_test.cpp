@@ -702,6 +702,92 @@ static std::vector<uint8_t> makeMalformedEightBitIndexGlb(uint32_t indexCount) {
     return glb;
 }
 
+// Builds a minimal single-primitive GLB whose index accessor can be given an arbitrary type,
+// component type, count and bufferView byteStride. This is what lets a test express the case where
+// the IndexBuffer capacity (count * componentSize) and the size computed from the accessor's
+// stride and type disagree.
+static std::vector<uint8_t> makeIndexAccessorGlb(char const* indexType, int indexComponentType,
+        uint32_t indexCount, uint32_t indexByteStride) {
+    constexpr uint32_t kBinSize = 256u;
+    // Three vertices, so that the all-zero index data in the bin chunk stays in bounds and the
+    // only thing under test is the index accessor's own layout.
+    constexpr uint32_t kPositionCount = 3u;
+    constexpr uint32_t kPositionBytes = kPositionCount * 12u;
+
+    std::string strideJson;
+    if (indexByteStride > 0) {
+        strideJson = ", \"byteStride\": " + std::to_string(indexByteStride);
+    }
+
+    std::string json = std::string(R"({
+  "asset": { "version": "2.0" },
+  "buffers": [
+    { "byteLength": )") + std::to_string(kBinSize) + R"( }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": )" + std::to_string(kPositionBytes) + R"( },
+    { "buffer": 0, "byteOffset": )" + std::to_string(kPositionBytes) + R"(, "byteLength": )" +
+            std::to_string(kBinSize - kPositionBytes) + strideJson + R"( }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": )" + std::to_string(kPositionCount) + R"(,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [0, 0, 0]
+    },
+    {
+      "bufferView": 1,
+      "componentType": )" + std::to_string(indexComponentType) + R"(,
+      "count": )" + std::to_string(indexCount) + R"(,
+      "type": ")" + indexType + R"("
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        { "attributes": { "POSITION": 0 }, "indices": 1 }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    while ((json.size() % 4u) != 0u) {
+        json.push_back(' ');
+    }
+
+    std::vector<uint8_t> bin(kBinSize, 0);
+
+    uint32_t const jsonSize = uint32_t(json.size());
+    uint32_t const binSize = uint32_t(bin.size());
+    uint32_t const totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), bin.begin(), bin.end());
+
+    return glb;
+}
+
+
 static std::vector<uint8_t> makeMorphTargetGlb(int morphTargetCount) {
     std::string targets;
     std::string weights = "[";
@@ -799,6 +885,83 @@ TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
 
     loader->destroyAsset(asset);
     AssetLoader::destroy(&loader);
+}
+
+// The IndexBuffer is allocated as (count * componentSize), so an accessor whose byte span is
+// computed from a larger stride or a wider type would overrun it. AssetLoader rejects such an
+// accessor before the IndexBuffer exists, which is strictly earlier than the cgltf_validate() call
+// in ResourceLoader, so a null return here proves that gltfio's own check is what fired.
+TEST_F(glTFIOTest, RejectsNonScalarIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    // VEC3 of unsigned shorts: capacity would be count * 2, upload would be count * 6.
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("VEC3", 5123, 3u, 0u);
+    EXPECT_EQ(loader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, RejectsStridedIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    // A byteStride of 8 on a scalar ushort accessor: capacity would be count * 2, upload would be
+    // 8 * (count - 1) + 2.
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("SCALAR", 5123, 3u, 8u);
+    EXPECT_EQ(loader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, AcceptsConformingIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    std::vector<uint8_t> glb = makeIndexAccessorGlb("SCALAR", 5123, 3u, 0u);
+    FilamentAsset* asset = loader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    loader->destroyAsset(asset);
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, UploadableIndexAccessorContract) {
+    cgltf_accessor accessor{};
+    accessor.type = cgltf_type_scalar;
+    accessor.component_type = cgltf_component_type_r_16u;
+    accessor.stride = 2;
+    accessor.count = 3;
+    EXPECT_TRUE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+
+    // A wider type inflates cgltf_calc_size() without changing the allocated capacity.
+    accessor.type = cgltf_type_vec3;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    accessor.type = cgltf_type_scalar;
+
+    // A stride larger than the component size spreads the source over more bytes than the
+    // destination holds.
+    accessor.stride = 8;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    accessor.stride = 2;
+
+    // Sparse contents are not the raw bytes of the bufferView, so a straight copy is wrong.
+    accessor.is_sparse = 1;
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    accessor.is_sparse = 0;
+
+    // A count beyond uint32 is only representable where cgltf_size is wider than uint32_t.
+    if constexpr (sizeof(cgltf_size) > sizeof(uint32_t)) {
+        accessor.count = cgltf_size(std::numeric_limits<uint32_t>::max()) + 1;
+        EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
+    }
+
+    // A count whose byte product wraps size_t is rejected on every target.
+    accessor.count = std::numeric_limits<cgltf_size>::max();
+    EXPECT_FALSE(gltfio::utility::isUploadableIndexAccessor(&accessor));
 }
 
 TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
