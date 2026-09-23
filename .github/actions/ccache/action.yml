@@ -48,7 +48,11 @@ inputs:
         - android-arm64-release: the ccache-android warmer, on x86_64 rather than ARM, because the
           NDK only ships a linux-x86_64 toolchain. Read by build-android.
         - desktop (macOS only): the build-mac job, whose "continuous" build covers what presubmit
-          mac compiles. macOS is not split because build-mac is already a single writer.
+          mac compiles. macOS is not split because build-mac is already a single writer. That build
+          compiles a debug tree and a release tree, so this one entry holds both. Read by presubmit
+          build-mac, which wants the release half, and by presubmit test-backend-metal, which
+          compiles only backend_test_mac out of the debug half; test/backend/test.sh has a
+          metal-only path for the sole purpose of keeping its flags identical to what this holds.
         - ios: the postsubmit build-ios job. Its "continuous" build compiles the device release
           objects presubmit needs, plus the debug and simulator ones it does not.
         - web-emsdk-<version>: the postsubmit build-web job. The emsdk version from
