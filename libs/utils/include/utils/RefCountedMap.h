@@ -63,6 +63,11 @@ struct DefaultValue {
  *
  * Don't use RAII here, both because we sometimes want to deliberately leak memory, and because
  * we're managing GL resources that require more managed destruction.
+ *
+ * Key lifetime: a Key is allowed to hold pointers or references into its associated value. This map
+ * therefore guarantees that the key it stores for an entry is always the key that was supplied
+ * together with that entry's value, and never a lookup key belonging to a different value. Callers
+ * relying on this must still make sure the pointee outlives the entry.
  */
 template<typename Key, typename T, typename Hash = std::hash<Key>,
          typename NullValue = refcountedmap::DefaultValue<T>>
@@ -114,8 +119,8 @@ public:
             return &deref(it.value().value);
         }
 
-        if (std::optional<T> lruValue = mLruCache.pop(key, hash)) {
-            return &insert(key, std::move(*lruValue));
+        if (auto lruItem = mLruCache.pop(key, hash)) {
+            return &insert(std::move(lruItem->key), std::move(lruItem->value));
         }
 
         T r = factory();
@@ -145,8 +150,8 @@ public:
             return &deref(it.value().value);
         }
 
-        if (std::optional<T> lruValue = mLruCache.pop(key, hash)) {
-            return &insert(key, std::move(*lruValue));
+        if (auto lruItem = mLruCache.pop(key, hash)) {
+            return &insert(std::move(lruItem->key), std::move(lruItem->value));
         }
 
         // TODO: how to use above computed hash here?
@@ -169,7 +174,7 @@ public:
         if (--it.value().referenceCount == 0) {
             if (it.value().value != NullValue{}()) {
                 if (mLruCache.capacity() > 0) {
-                    mLruCache.put(key, std::move(it.value().value), hash, [&releaser](T&& v) {
+                    mLruCache.put(it.key(), std::move(it.value().value), hash, [&releaser](T&& v) {
                         releaser(deref(v));
                     });
                 } else {
@@ -195,7 +200,7 @@ public:
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         if (--it.value().referenceCount == 0) {
             if (mLruCache.capacity() > 0) {
-                mLruCache.put(key, std::move(it.value().value), hash, [](T&&){});
+                mLruCache.put(it.key(), std::move(it.value().value), hash, [](T&&){});
             }
             // TODO: change to erase_fast
             mMap.erase(it);
@@ -276,9 +281,10 @@ private:
     tsl::robin_map<Key, Entry, Hash> mMap;
     utils::LruCache<Key, T, Hash> mLruCache;
 
-    TValue& insert(KeyRef key, T value) {
+    template<typename K>
+    TValue& insert(K&& key, T value) {
         // TODO: how to use computed hash here?
-        auto it = mMap.insert({ key, Entry{ 1, std::move(value) } });
+        auto it = mMap.insert({ std::forward<K>(key), Entry{ 1, std::move(value) } });
         return deref(it.first.value().value);
     }
 };

@@ -349,6 +349,12 @@ void MetalDriver::execute(std::function<void(void)> const& fn) {
     }
 }
 
+bool MetalDriver::isPresentationTimeSupported() {
+    // Metal presents the drawable at a given time with -presentDrawable:atTime:, which is
+    // available on all the platforms we support.
+    return true;
+}
+
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     assert_invariant(mContext->currentDrawSwapChain);
     mContext->currentDrawSwapChain->setPresentationTime(monotonic_clock_ns);
@@ -405,7 +411,13 @@ void MetalDriver::updateDescriptorSetBuffer(
     auto* bo = handle_cast<MetalBufferObject>(boh);
     id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
     descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
-    ShaderStageFlags stageFlags = descriptorSet->layout->getBindings()[binding].stageFlags;
+
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    assert_invariant(found != bindings.end());
+
+    ShaderStageFlags stageFlags = found->stageFlags;
     if (any(stageFlags & ShaderStageFlags::VERTEX)) {
         descriptorSet->vertexResources.push_back(mtlBuffer);
     }
@@ -1566,7 +1578,7 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
             << "updateIndexBufferAsyncR called with a null buffer.";
 
     id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
-    auto* ib = handle_cast<MetalIndexBuffer>(ibh);
+    auto* ib = promoteToAsync(handle_cast<MetalIndexBuffer>(ibh));
     auto tag = mHandleAllocator.getHandleTag(ibh.getId());
 
     // The completion callback fires from the command buffer's completed handler, an Objective-C
@@ -1617,7 +1629,7 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
             << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
 
     id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
-    auto* bo = handle_cast<MetalBufferObject>(boh);
+    auto* bo = promoteToAsync(handle_cast<MetalBufferObject>(boh));
     auto tag = mHandleAllocator.getHandleTag(boh.getId());
 
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
@@ -1698,16 +1710,13 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
     FILAMENT_CHECK_PRECONDITION(data.buffer) << "update3DImageAsyncR called with a null buffer.";
 
     id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
-    auto* tex = handle_cast<MetalTexture>(th);
+    auto* tex = promoteToAsync(handle_cast<MetalTexture>(th));
     auto tag = mHandleAllocator.getHandleTag(th.getId());
 
     DEBUG_LOG("update3DImageAsyncR(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, "
               "width = "
               "%d, height = %d, depth = %d, data = ?)\n",
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
-
-    FILAMENT_CHECK_PRECONDITION(tex->asynchronous)
-            << "update3DImageAsyncR must be called with an asynchronous texture.";
 
     // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(

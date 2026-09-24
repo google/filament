@@ -5,4 +5,4 @@
 [main]\
 [SAMPLER_2D](index.md)
 
-2D sampler
+2D texture

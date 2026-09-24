@@ -3,9 +3,11 @@
 # forEach
 
 [main]\
-open fun [forEach](for-each.md)(entityProcessor: [Scene.EntityProcessor](-entity-processor/index.md))
+open fun [forEach](for-each.md)(functor: [Scene.ForEachCallback](-for-each-callback/index.md))
 
-Invokes user functor on each entity in the scene. It is not allowed to add or remove an entity from the scene within the functor.
+Invokes user functor on each entity in the scene. 
+
+It is not allowed to add or remove an entity from the scene within the functor.
 
 #### Parameters
 
@@ -13,4 +15,4 @@ main
 
 | | |
 |---|---|
-| entityProcessor | User provided functor called for each entity in the scene |
+| functor | User provided functor called for each entity in the scene |

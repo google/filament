@@ -30,6 +30,8 @@
 #include <utils/Entity.h>
 #include <utils/Path.h>
 
+#include <math/vec3.h>
+
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -132,12 +134,24 @@ public:
             mCameraMode = cameraMode;
             return *this;
         }
-        Builder& resizeable(bool resizeable) {
-            mResizeable = resizeable;
+        /**
+         * Sets the initial eye and target position of the main camera, i.e. the home position of
+         * the camera manipulator. Defaults to an eye of (0, 0, 1) looking at (0, 0, -4).
+         *
+         * Samples that need to frame a specific scene must use this rather than calling
+         * Camera::lookAt() from their setup callback: the main camera is driven by the camera
+         * manipulator and is overwritten from it at the top of every frame.
+         *
+         * This only affects the orbit and map camera modes; free flight always starts from
+         * flightStartPosition.
+         */
+        Builder& cameraHome(filament::math::float3 eye, filament::math::float3 target) {
+            mCameraHomeEye = eye;
+            mCameraHomeTarget = target;
             return *this;
         }
-        Builder& headless(bool headless) {
-            mHeadless = headless;
+        Builder& resizeable(bool resizeable) {
+            mResizeable = resizeable;
             return *this;
         }
         Builder& stereoscopicEyeCount(int stereoscopicEyeCount) {
@@ -335,8 +349,11 @@ public:
         filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
         filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
         filament::camutils::Mode mCameraMode = filament::camutils::Mode::ORBIT;
+        // These defaults match what the orbit manipulator resolves an unset home position to, so
+        // that samples which never call cameraHome() keep their existing framing.
+        filament::math::float3 mCameraHomeEye = { 0.0f, 0.0f, 1.0f };
+        filament::math::float3 mCameraHomeTarget = { 0.0f, 0.0f, -4.0f };
         bool mResizeable = true;
-        bool mHeadless = false;
         int mStereoscopicEyeCount = 2;
         uint8_t mSamples = 1;
         utils::CString mVulkanGPUHint;
@@ -535,6 +552,7 @@ private:
     uint8_t mDirectionalShadowFrustumEnabled = 0x2;
     uint8_t mCameraFrustumEnabled = 0x2;
 
+    // Never null: Builder::build() rejects a missing display manager.
     filament::app::DisplayManager* const mDisplayManager;
     std::unique_ptr<filament::app::AssetLoader> mDefaultAssetLoader;
     filament::app::AssetLoader* const mAssetLoader;
@@ -581,6 +599,8 @@ private:
     filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
     filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
     filament::camutils::Mode const mCameraMode;
+    filament::math::float3 const mCameraHomeEye;
+    filament::math::float3 const mCameraHomeTarget;
     bool const mResizeable = true;
     bool const mHeadless = false;
     int const mStereoscopicEyeCount = 2;

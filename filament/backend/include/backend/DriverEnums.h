@@ -1781,6 +1781,9 @@ enum class Workaround : uint16_t {
     DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
     // Emulate an sRGB swapchain in shader code.
     EMULATE_SRGB_SWAPCHAIN,
+    // WebGL with ANGLE's Metal backend can incur significant overhead when binding many ranges
+    // from a large UBO.
+    DISABLE_MATERIAL_INSTANCE_UNIFORM_BATCHING,
 };
 
 using StereoscopicType = Platform::StereoscopicType;

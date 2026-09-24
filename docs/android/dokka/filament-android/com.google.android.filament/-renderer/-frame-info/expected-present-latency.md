@@ -4,5 +4,3 @@
 
 [main]\
 open var [expectedPresentLatency](expected-present-latency.md): [Long](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-long/index.html)
-
-Time between vsync and the system's expected presentation time [ns].

@@ -5,4 +5,6 @@
 [main]\
 [DEFAULT](index.md)
 
-For default, it follows the engine settings. If UBO batching is enabled on the engine and the material domain is SURFACE, it turns on the UBO batching. Otherwise, it turns off the UBO batching.
+For default, it follows the engine settings. 
+
+If UBO batching is enabled on the engine and the material domain is SURFACE, it turns on the UBO batching. Otherwise, it turns off the UBO batching.

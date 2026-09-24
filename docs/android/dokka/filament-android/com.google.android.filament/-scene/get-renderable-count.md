@@ -5,8 +5,8 @@
 [main]\
 open fun [getRenderableCount](get-renderable-count.md)(): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the number of active (alive) [RenderableManager](../-renderable-manager/index.md) components in the `Scene`.
+Returns the number of active (alive) Renderable objects in the Scene.
 
 #### Return
 
-number of [RenderableManager](../-renderable-manager/index.md) components in the `Scene`.
+The number of active (alive) Renderable objects in the Scene.

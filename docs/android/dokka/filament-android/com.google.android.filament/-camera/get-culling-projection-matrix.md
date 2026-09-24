@@ -5,16 +5,16 @@
 [main]\
 open fun [getCullingProjectionMatrix](get-culling-projection-matrix.md)(out: [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[Double](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-double/index.html)&gt;
 
-Retrieves the camera's culling matrix. The culling matrix is the same as the projection matrix, except the far plane is finite.
+Returns the projection matrix used for culling (far plane is finite).
 
 #### Return
 
-A 16-float array containing the camera's projection as a column-major matrix.
+The projection matrix set by setProjection or setLensProjection.
 
-#### Parameters
+#### See also
 
-main
-
-| | |
-|---|---|
-| out | A 16-float array where the projection matrix will be stored, or null in which case a new array is allocated. |
+| |
+|---|
+| setProjection |
+| [setLensProjection](set-lens-projection.md) |
+| getProjectionMatrix |

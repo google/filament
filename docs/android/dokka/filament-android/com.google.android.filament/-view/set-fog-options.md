@@ -5,7 +5,9 @@
 [main]\
 open fun [setFogOptions](set-fog-options.md)(options: [View.FogOptions](-fog-options/index.md))
 
-Sets fog options.
+Enables or disables fog. 
+
+Disabled by default.
 
 #### Parameters
 
@@ -13,10 +15,4 @@ main
 
 | | |
 |---|---|
-| options | Options for fog. |
-
-#### See also
-
-| |
-|---|
-| [getFogOptions](get-fog-options.md) |
+| options | options |

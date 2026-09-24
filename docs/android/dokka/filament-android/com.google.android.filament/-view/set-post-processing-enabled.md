@@ -5,7 +5,7 @@
 [main]\
 open fun [setPostProcessingEnabled](set-post-processing-enabled.md)(enabled: [Boolean](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-boolean/index.html))
 
-Enables or disables post processing. Enabled by default. 
+Enables or disables post-processing. Enabled by default. 
 
 Post-processing includes:
 
@@ -16,9 +16,7 @@ Post-processing includes:
 - Color grading &gamma encoding
 - Dithering
 - FXAA
-- Dynamic scaling
-
- Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques and should only be used for debugging, UI overlays or when using custom render targets (see RenderTarget). 
+- Dynamic scaling Disabling post-processing forgoes color correctness as well as some antialiasing techniques and should only be used for debugging, UI overlays or when using custom render targets (see RenderTarget).
 
 #### Parameters
 
@@ -26,7 +24,7 @@ main
 
 | | |
 |---|---|
-| enabled | true enables post processing, false disables it |
+| enabled | true enables post-processing, false disables it. |
 
 #### See also
 
@@ -36,4 +34,4 @@ main
 | [setColorGrading](set-color-grading.md) |
 | [setAntiAliasing](set-anti-aliasing.md) |
 | [setDithering](set-dithering.md) |
-| [setSampleCount](set-sample-count.md) |
+| setSampleCount |

@@ -257,10 +257,21 @@ public:
     virtual void commit(SwapChain* UTILS_NONNULL swapChain) noexcept = 0;
 
     /**
-     * Set the time the next committed buffer should be presented to the user at.
+     * Whether this platform can honor setPresentationTime().
+     *
+     * @return true if setPresentationTime() is implemented by this platform, false otherwise
+     *         [default].
+     * @see setPresentationTime()
+     */
+    virtual bool isPresentationTimeSupported() const noexcept;
+
+    /**
+     * Set the time the next committed buffer should be presented to the user at. This is only
+     * honored if isPresentationTimeSupported() returns true.
      *
      * @param presentationTimeInNanosecond  time in the future in nanosecond. The clock used depends
      *                                      on the concrete platform implementation.
+     * @see isPresentationTimeSupported()
      */
     virtual void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept;
 

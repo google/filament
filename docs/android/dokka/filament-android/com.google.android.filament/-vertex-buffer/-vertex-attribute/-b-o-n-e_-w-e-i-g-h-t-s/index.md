@@ -4,3 +4,5 @@
 
 [main]\
 [BONE_WEIGHTS](index.md)
+
+weights of the 4 bones (normalized float4)

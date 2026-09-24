@@ -5,4 +5,4 @@
 [main]\
 [COMPRESSED](index.md)
 
-a compressed type
+compressed pixels,

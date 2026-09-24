@@ -34,7 +34,7 @@ void main()
     {
         _526 = _516;
     }
-    if (!(!_526))
+    if (_526)
     {
         gl_TessLevelOuter[0] = -1.0;
         gl_TessLevelOuter[1] = -1.0;

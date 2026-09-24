@@ -28,7 +28,10 @@ namespace filament::app {
 
 SDLDisplayManager::SDLDisplayManager(filament::Engine::Backend backend)
         : mBackend(backend) {
-    FILAMENT_CHECK_PRECONDITION(init());
+    FILAMENT_CHECK_PRECONDITION(init())
+            << "SDL failed to initialize (" << SDL_GetError()
+            << "). A windowed app requires a display server; use --headless (or "
+               "--screenshot) to render offscreen.";
 }
 
 SDLDisplayManager::~SDLDisplayManager() { terminate(); }
@@ -44,14 +47,11 @@ bool SDLDisplayManager::init() {
 void SDLDisplayManager::terminate() { SDL_Quit(); }
 
 
-WindowHandle SDLDisplayManager::createWindow(const char* title, uint32_t w,
-        uint32_t h, bool resizable, bool headless) {
+WindowHandle SDLDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
+        bool resizable) {
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
     if (resizable) {
         windowFlags |= SDL_WINDOW_RESIZABLE;
-    }
-    if (headless) {
-        windowFlags |= SDL_WINDOW_HIDDEN;
     }
 
     SDL_Window* window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -60,7 +60,7 @@ WindowHandle SDLDisplayManager::createWindow(const char* title, uint32_t w,
     // This must be called before prepareNativeWindow()
     void* nativeWindow = ::getNativeWindowFromSDL(window);
 
-    if (window && !headless) {
+    if (window) {
 #if defined(__APPLE__)
         ::prepareNativeWindow(window);
 #endif
@@ -91,17 +91,17 @@ void SDLDisplayManager::setWindowTitle(WindowHandle window, const char* title) {
     SDL_SetWindowTitle((SDL_Window*) window, title);
 }
 
-void SDLDisplayManager::getWindowSize(WindowHandle window, uint32_t* w,
-        uint32_t* h) const {
-    int iw, ih;
+void SDLDisplayManager::getWindowSize(WindowHandle window, uint32_t* w, uint32_t* h) const {
+    // Note: SDL leaves these untouched if the window is invalid, so they must be initialized.
+    int iw = 0, ih = 0;
     SDL_GetWindowSize((SDL_Window*) window, &iw, &ih);
     *w = (uint32_t) iw;
     *h = (uint32_t) ih;
 }
 
-void SDLDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w,
-        uint32_t* h) const {
-    int iw, ih;
+void SDLDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w, uint32_t* h) const {
+    // Note: SDL leaves these untouched if the window is invalid, so they must be initialized.
+    int iw = 0, ih = 0;
     SDL_GL_GetDrawableSize((SDL_Window*) window, &iw, &ih);
     *w = (uint32_t) iw;
     *h = (uint32_t) ih;

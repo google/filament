@@ -4,3 +4,5 @@
 
 [main]\
 [RG_INTEGER](index.md)
+
+Two Red and Green channels, integer

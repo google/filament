@@ -59,9 +59,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh presubmit
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-desktop-linux:
     name: build-linux
@@ -75,12 +80,21 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-release
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh presubmit
       - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
+      # From the former build-wgsl-webgpu job. build/linux/build.sh passes -W, so the release tree
+      # already has the WebGPU backend and the WGSL code path in filamat.
+      - name: Test - WGSL material compiler
+        run: out/cmake-release/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   build-windows:
     name: build-windows
@@ -113,6 +127,12 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+      # Restore only; the postsubmit ccache-android job is the writer. It covers the two host tool
+      # passes and the aarch64 tree, but not the gradle externalNativeBuild modules, which
+      # configure their own CMakeLists and never see the launcher the root one installs.
+      - uses: ./.github/actions/ccache
+        with:
+          config: android-arm64-release
       - name: Run build script
         # Only build 1 64 bit target during presubmit to cut down build times during presubmit
         # Continuous builds will build everything
@@ -120,6 +140,8 @@ jobs:
           pushd .
           cd build/android && printf "y" | ./build.sh presubmit-with-archive arm64-v8a
           popd
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check artifact sizes
@@ -151,9 +173,18 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Select Xcode 16.4
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      # Restore only; the postsubmit build-ios job is the writer. It selects the same Xcode, which
+      # matters because CCACHE_COMPILERCHECK hashes the compiler binary.
+      - uses: ./.github/actions/ccache
+        with:
+          config: ios
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+      # Not covered by the cache: build-samples.sh drives xcodebuild against the hand-written
+      # projects under ios/samples, which CMake never generates.
       - name: Build iOS samples
         run: |
           cd build/ios && ./build-samples.sh presubmit
@@ -171,9 +202,24 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/web-prereq
+      # Restore only; the postsubmit build-web job is the writer. Its "continuous" build adds a
+      # debug WASM pass on top of what this job compiles and is otherwise flag-identical.
+      #
+      # After web-prereq, which is what puts GITHUB_EMSDK_VERSION in the environment, and which
+      # must also have placed emsdk at its fixed workspace path before anything hashes the
+      # compiler. The version belongs in the key because em++ is a launcher stub that execs
+      # em++.py: CCACHE_COMPILERCHECK=content hashes the stub, which does not change when
+      # emscripten does. Keying on the pinned version is what makes a bump of
+      # build/common/versions start from an empty cache rather than serve objects the previous
+      # toolchain produced.
+      - uses: ./.github/actions/ccache
+        with:
+          config: web-emsdk-${{ env.GITHUB_EMSDK_VERSION }}
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh presubmit
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
 
   validate-docs:
     name: validate-docs
@@ -193,12 +239,22 @@ jobs:
         run: |
           bash docs_src/build/presubmit_check.sh $OUTPUTS_HASHES
 
-  test-renderdiff:
-    name: test-renderdiff
-    runs-on: 'macos-15-xlarge'
-    timeout-minutes: 45
+  # Cheap gate for test-renderdiff below. It exists so that the expensive job can be skipped whole
+  # rather than step by step: a RDIFF_ACCEPT_NEW_GOLDENS commit used to allocate the renderdiff
+  # runner and check the repository out only to do nothing, which is worth avoiding now that the
+  # runner is a paid one.
+  #
+  # The schema validation lives here for the same reason. It needs no build, only the glTF assets
+  # and under a second of Python, so a typo in a test JSON should fail within a minute rather than
+  # at the end of the longest job in the workflow.
+  renderdiff-config:
+    name: renderdiff-config
+    runs-on: 'ubuntu-24.04'
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    outputs:
+      accept: ${{ steps.check_accept.outputs.accept }}
+      golden-branch: ${{ steps.check_accept.outputs.branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -206,7 +262,7 @@ jobs:
           persist-credentials: false
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - name: Check if accepting new goldens
+      - name: Read the renderdiff commit message tags
         id: check_accept
         env:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
@@ -216,6 +272,18 @@ jobs:
           else
             echo "accept=false" >> "$GITHUB_OUTPUT"
           fi
+          # RDIFF_BRANCH, or "main" when the commit message does not name a branch. Whitespace is
+          # stripped because the tag is parsed out of free-form prose and a git ref cannot contain
+          # any: a line like "RDIFF_BRANCH=foo (see #123)" otherwise yields a trailing space, which
+          # the consumers of this output quote and pass through.
+          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py | tr -d '[:space:]')
+          echo "branch=${GOLDEN_BRANCH}" >> "$GITHUB_OUTPUT"
+        shell: bash
+      # Needed by the validation below, not by this job's own logic: a gltf_test names its models
+      # by bare name and the parser resolves each one against model_search_paths on disk, so a
+      # tree without the downloaded assets reports every model in gltf/ as missing. This is a
+      # cache restore of a key the renderdiff job shares, so it costs a download only when that
+      # job would have had to download too.
       - uses: ./.github/actions/get-gltf-assets
       - name: Validate renderdiff test schemas
         run: |
@@ -224,73 +292,47 @@ jobs:
               test/renderdiff/tests/sample.json \
               android/samples/sample-render-validation/src/main/assets/default_test.json
         shell: bash
-      - name: Renderdiff generate
-        if: steps.check_accept.outputs.accept != 'true'
-        uses: ./.github/actions/renderdiff-generate
-      - name: Compare rendered images
-        if: steps.check_accept.outputs.accept != 'true'
-        id: render_compare
-        env:
-          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
-        run: |
-          TEST_DIR=test/renderdiff
-          source ${TEST_DIR}/src/preamble.sh
-          set -eux
-          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 ${TEST_DIR}/src/commit_msg.py)
 
-          python3 ${TEST_DIR}/src/golden_manager.py \
-                  --branch=${GOLDEN_BRANCH} \
-                  --output=${GOLDEN_OUTPUT_DIR}
-
-          # Note that we need to upload the output even if comparison fails, so we undo `set -eux`
-          set +eux
-
-          python3 ${TEST_DIR}/src/compare.py \
-              --src=${GOLDEN_OUTPUT_DIR} \
-              --dest=${RENDER_OUTPUT_DIR} \
-              --out=${DIFF_OUTPUT_DIR} \
-              --diffimg="$(pwd)/out/cmake-release/tools/diffimg/diffimg" \
-              --test="${TEST_DIR}/tests/presubmit.json" 2>&1 | tee compare_output.txt
-
-          if grep "Failed" compare_output.txt > /dev/null; then
-             DELIMITER="EOF_FILE_CONTENT_$(date +%s)" # Using timestamp to make it more unique
-             echo "err<<$DELIMITER" >> "$GITHUB_OUTPUT"
-             cat compare_output.txt >> "$GITHUB_OUTPUT"
-             echo "$DELIMITER" >> "$GITHUB_OUTPUT"
-          fi
-        shell: bash
-      - name: Upload artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: steps.check_accept.outputs.accept != 'true'
-        with:
-          name: presubmit-renderdiff-result
-          path: ./out/renderdiff
-      - name: Check results
-        if: steps.check_accept.outputs.accept != 'true'
-        env:
-          ERROR_STR: ${{ steps.render_compare.outputs.err }}
-        run: |
-          if [ -n "${ERROR_STR}" ]; then
-              echo "${ERROR_STR}"
-              exit 1
-          fi
-
-  build-wgsl-webgpu:
-    name: build-wgsl-webgpu
+  # Renders the suite and compares it against the goldens in filament-assets.
+  #
+  # ARM Linux rather than macOS. This used to run on macos-15-xlarge, where 15 of its 26 minutes
+  # were an uncached debug build, because no macOS job warms a cache for these flags. Here it
+  # restores desktop-renderdiff from the postsubmit warmer, on a runner tier that costs a fraction
+  # of the macOS one. The goldens are generated on this same runner label; macOS renders are still
+  # produced by the postsubmit test-renderdiff-mac job, but nothing compares them.
+  test-renderdiff:
+    name: test-renderdiff
     runs-on: 'arm-ubuntu-24.04-16core'
     timeout-minutes: 45
-    needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    needs: [check-verification, renderdiff-config]
+    # The first clause is the workflow-wide verified-commit convention documented at the top of
+    # this file. The second is this job's own: a gate that failed to parse the commit message has
+    # no branch name to offer, and rendering against the wrong goldens is worse than not rendering.
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.renderdiff-config.result == 'success'
+      && needs.renderdiff-config.outputs.accept != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/linux-prereq
-      - name: Run build script
-        run: ./build.sh -W debug test_filamat filament gltf_viewer
-      - name: Run test
-        run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
+      - uses: ./.github/actions/renderdiff
+        with:
+          compare: 'true'
+          golden-branch: ${{ needs.renderdiff-config.outputs.golden-branch }}
+          ccache-config: desktop-renderdiff
+      # Uploaded even when the comparison failed, which is exactly when the images are wanted.
+      # Retained long enough to still be there when a golden regression is traced back, months
+      # later, to the run that introduced it. These are also the images the golden bootstrap
+      # procedure in test/renderdiff/README.md picks up.
+      - name: Upload renderdiff output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: presubmit-renderdiff-result
+          path: ./out/renderdiff
+          retention-days: 100
 
   test-code-correctness:
     name: test-code-correctness
@@ -304,6 +346,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
+      # This job compiles two configurations, so it restores both caches into the same ccache
+      # directory. The two archives hold disjoint objects, because ccache keys on the full
+      # compiler command line and an asan object never shares a hash with a release one; the only
+      # files they have in common are the statistics counters, which the action zeroes anyway.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-release
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-asan-debug
       - name: Get commit message
         id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
@@ -330,8 +382,12 @@ jobs:
         run: |
           # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
           ./build.sh -b -p desktop debug
-          # This will build and install the release build
-          ./build.sh -p desktop release && ninja -C out/cmake-release install
+          # This will build and install the release build. -W and -y none reproduce what
+          # build/linux/build.sh passes for a release-only build; they have to, because this build
+          # and build-linux share the desktop-release cache.
+          ./build.sh -W -y none -p desktop release && ninja -C out/cmake-release install
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
       - name: Check - clang-tidy (exception escape)
         run: bash test/code-correctness/clang-tidy-proxy.sh
       - name: Check - public header inclusion
@@ -353,7 +409,78 @@ jobs:
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/get-mesa
       - uses: ./.github/actions/get-vulkan-sdk
+      # Deliberately after get-mesa: meson picks ccache up automatically when it is on PATH, so
+      # configuring CCACHE_DIR any earlier would let a Mesa rebuild (which only happens when the
+      # Mesa cache misses) spend this job's cache budget on Mesa objects that no other job wants.
+      # The asan objects this job needs come from the postsubmit ccache-arm-linux warmer.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop-backend-test
       - name: Run backend tests
         shell: bash
         run: |
           bash test/backend/test.sh
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+
+  # The Metal half of the backend suite. Separated because Metal only exists on macOS, and the two
+  # share no build. No GPU-enabled one is needed. The hosted macOS runners expose an "Apple
+  # Paravirtual device" through Apple's Virtualization framework.
+  test-backend-metal:
+    name: test-backend-metal
+    runs-on: 'macos-15'
+    timeout-minutes: 60
+    needs: [check-verification]
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/mac-prereq
+      # Deliberately no xcode-select here. The writer of this cache, postsubmit build-mac, uses the
+      # image's default Xcode, and CCACHE_COMPILERCHECK hashes the compiler binary, so selecting a
+      # different one would miss on every object.
+      - uses: ./.github/actions/ccache
+        with:
+          config: desktop
+      - name: Run Metal backend tests
+        shell: bash
+        run: |
+          bash test/backend/test.sh --backend=metal
+      - uses: ./.github/actions/ccache-stats
+        if: ${{ !cancelled() }}
+
+  # A single gate over the backend suites, so that branch protection can require one check rather
+  # than one per backend. The results are inspected explicitly because a job that declares `needs`
+  # is skipped when a dependency fails, and GitHub reports a skipped required check as a successful
+  # one. A skipped dependency is accepted because that is how the verified-commit convention
+  # documented above disables presubmit for a push to main.
+  test-backend-all:
+    name: test-backend-all
+    runs-on: 'ubuntu-24.04'
+    needs: [test-backend, test-backend-metal]
+    if: always() && !cancelled()
+    steps:
+      - name: Check the backend job results
+        shell: bash
+        # Read through the environment rather than interpolating into the script body, so that the
+        # values cannot be parsed as shell.
+        env:
+          TEST_BACKEND: ${{ needs.test-backend.result }}
+          TEST_BACKEND_METAL: ${{ needs.test-backend-metal.result }}
+        run: |
+          echo "test-backend:       ${TEST_BACKEND}"
+          echo "test-backend-metal: ${TEST_BACKEND_METAL}"
+          FAILED=0
+          for RESULT in "${TEST_BACKEND}" "${TEST_BACKEND_METAL}"; do
+            case "${RESULT}" in
+              success|skipped) ;;
+              *) FAILED=1 ;;
+            esac
+          done
+          if [ "${FAILED}" -ne 0 ]; then
+            echo "::error::A backend job did not pass. See the per-job results above, and the job" \
+                 "itself for the failure."
+            exit 1
+          fi

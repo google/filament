@@ -4,13 +4,3 @@
 
 [main]\
 open fun [destroySwapChain](destroy-swap-chain.md)(swapChain: [SwapChain](../-swap-chain/index.md))
-
-Destroys a [SwapChain](../-swap-chain/index.md) and frees all its associated resources.
-
-#### Parameters
-
-main
-
-| | |
-|---|---|
-| swapChain | the [SwapChain](../-swap-chain/index.md) to destroy |

@@ -2760,7 +2760,9 @@ FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     using namespace std::chrono;
     auto const now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
-    if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+    if (timeout != FENCE_WAIT_FOR_EVER &&
+        timeout <= (uint64_t)nanoseconds::max().count() &&
+        now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
         until = now + nanoseconds(timeout);
     }
 
@@ -3118,6 +3120,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
             return mContext.bugs.disable_depth_precache_for_default_material;
         case Workaround::EMULATE_SRGB_SWAPCHAIN:
             return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
+        case Workaround::DISABLE_MATERIAL_INSTANCE_UNIFORM_BATCHING:
+            return mContext.bugs.disable_material_instance_uniform_batching;
         default:
             return false;
     }
@@ -3343,6 +3347,8 @@ void OpenGLDriver::updateIndexBuffer(
 void OpenGLDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
         BufferDescriptor&& p, uint32_t const byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
+    promoteToAsync(handle_cast<GLIndexBuffer*>(ibh));
+
     getJobQueue()->push([this, ibh, p=std::move(p), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateIndexBufferAsyncR")
@@ -3396,6 +3402,8 @@ void OpenGLDriver::updateBufferObject(
 void OpenGLDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
         BufferDescriptor&& bd, uint32_t const byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
+    promoteToAsync(handle_cast<GLBufferObject*>(boh));
+
     getJobQueue()->push([this, boh, bd=std::move(bd), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         DEBUG_MARKER_NAME("updateBufferObjectAsyncR")
@@ -3499,6 +3507,8 @@ void OpenGLDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& data, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
+    promoteToAsync(handle_cast<GLTexture*>(th));
+
     getJobQueue()->push([this, th, level, xoffset, yoffset, zoffset, width, height, depth,
             data=std::move(data),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
@@ -4532,6 +4542,11 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHa
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain>,
         CallbackHandler*, Invocable<void()>&& /*callback*/) {
     DEBUG_MARKER()
+}
+
+bool OpenGLDriver::isPresentationTimeSupported() {
+    // this is a synchronous call
+    return mPlatform.isPresentationTimeSupported();
 }
 
 void OpenGLDriver::setPresentationTime(int64_t const monotonic_clock_ns) {

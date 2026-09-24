@@ -5,4 +5,6 @@
 [main]\
 [INCR_WRAP](index.md)
 
-Increments the current value. Wraps value to zero when incrementing the maximum representable unsigned value.
+Increments the current value. 
+
+Wraps value to zero when incrementing the maximum representable unsigned value.

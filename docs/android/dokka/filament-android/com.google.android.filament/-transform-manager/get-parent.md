@@ -5,11 +5,7 @@
 [main]\
 open fun [getParent](get-parent.md)(i: [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)
 
-Returns the actual parent entity of an [EntityInstance](../-entity-instance/index.md) originally defined by [setParent](set-parent.md).
-
-#### Return
-
-the parent [Entity](../-entity/index.md).
+Returns the parent of a transform component, or the null entity if it is a root.
 
 #### Parameters
 
@@ -17,10 +13,4 @@ main
 
 | | |
 |---|---|
-| i | the [EntityInstance](../-entity-instance/index.md) of the transform component to get the parent from. |
-
-#### See also
-
-| |
-|---|
-| [getInstance](get-instance.md) |
+| i | The instance of the transform component to query. |

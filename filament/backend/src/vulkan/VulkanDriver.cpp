@@ -265,7 +265,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
           mYcbcrConversionCache(mPlatform->getDevice()),
           mSamplerCache(mPlatform->getDevice()),
           mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
-          mReadPixels(mPlatform->getDevice()),
+          mReadPixels(mPlatform->getDevice(), mContext, mPlatform->getGraphicsQueue(),
+                  mPlatform->getGraphicsQueueFamilyIndex(),
+                  [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); }),
           mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
           mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
           mQueryManager(mPlatform->getDevice()),
@@ -381,6 +383,10 @@ void VulkanDriver::terminate() {
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
+    // Complete the in-flight readbacks first: their completion callbacks are posted from the
+    // readPixels thread via scheduleDestroy(), and anything posted once the ServiceThread has
+    // joined is never dispatched - the user's callback would silently be dropped.
+    mReadPixels.runUntilComplete();
     if constexpr (UTILS_HAS_THREADING) {
         // Flush any callbacks the drained jobs posted via scheduleCallback().
         stopServiceThread();
@@ -403,6 +409,9 @@ void VulkanDriver::terminate() {
     mStagePool.gc();
 
     mCommands.terminate();
+
+    // Must come before mResourceManager: this holds resource_ptrs to textures and descriptor sets.
+    mStreamedImageManager.terminate();
 
     // Must come before samplerCache, ycbcrConversionCache, descriptorSetCache,
     // descriptorSetLayoutCache
@@ -447,6 +456,9 @@ void VulkanDriver::terminate() {
 
 void VulkanDriver::tick(int) {
     mCommands.updateFences();
+
+    // Destroy the resources of the readbacks that completed on the readPixels thread.
+    mReadPixels.gc();
 
     if (getJobWorker()) {
         // This number is randomly/heuristically chosen. Consider making the number optional.
@@ -511,6 +523,10 @@ void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHa
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
         CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
+}
+
+bool VulkanDriver::isPresentationTimeSupported() {
+    return mPlatform->isPresentationTimeSupported();
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -1479,6 +1495,11 @@ void VulkanDriver::destroyStream(Handle<HwStream> sh) {
         return;
     }
     auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    // Commands recorded by updateStreams() before this point still hold a reference to this stream
+    // and can execute after us. Mark the stream first so those commands skip their work instead of
+    // re-populating the cache we are about to drop.
+    stream->markDestroyed();
+    mStreamedImageManager.removeStream(stream);
     stream.dec();
 }
 
@@ -1522,7 +1543,6 @@ Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream, utils::Imm
 }
 
 Handle<HwStream> VulkanDriver::createStreamAcquired(utils::ImmutableCString tag) {
-    // @TODO This is still not thread-safe. We might have to revisit this question.
     FVK_SYSTRACE_SCOPE();
     auto handle = mResourceManager.allocHandle<VulkanStream>();
     auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
@@ -1564,13 +1584,17 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                 scheduleRelease(stream->takePrevious());
             }
 
-            // This executes on the backend thread (updateStreams is synchonous which means it
-            // executes on the user thread) Note: stream is captured by copy which is fine, this is
-            // a copy of a resource_ptr<VulkanStream>. We only need it find the associated stream
-            // inside the mStreamedImageManager texture bindings
-            driver->queueCommand([this, stream, s = stream.get(),
-                                         image = stream->getAcquired().image]() {
-                auto texture = s->getTexture(image);
+            // updateStreams() is synchronous, so we're on the frontend thread here, but the
+            // command we queue below executes on the backend thread. Note: stream is captured by
+            // copy, which is fine, this is a copy of a resource_ptr<VulkanStream>. It keeps the
+            // stream alive and lets us find the associated texture in mStreamedImageManager.
+            driver->queueCommand([this, stream, image = stream->getAcquired().image]() {
+                // destroyStream() is also a queued command and may have executed before us, in
+                // which case there is nothing left to bind and the cache has been purged.
+                if (stream->isDestroyed()) {
+                    return;
+                }
+                auto texture = mStreamedImageManager.getTexture(stream, image);
                 if (!texture) {
                     auto externalImage =
                             fvkutils::createExternalImageFromRaw(mPlatform, image, false);
@@ -1612,7 +1636,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
                     if (imgData.external.valid()) {
                         // Cache the AHB backed image. Acquires the image here.
-                        s->pushImage(image, newTexture);
+                        mStreamedImageManager.pushImage(stream, image, newTexture);
                     }
 
                     texture = newTexture;
@@ -1733,6 +1757,7 @@ bool VulkanDriver::isTextureSwizzleSupported() {
 
 bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
     switch (format) {
+        case TextureFormat::STENCIL8:
         case TextureFormat::DEPTH16:
         case TextureFormat::DEPTH24:
         case TextureFormat::DEPTH32F:
@@ -1761,7 +1786,10 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     }
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(mPlatform->getPhysicalDevice(), vkformat, &info);
-    return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0;
+    VkFormatFeatureFlags const requiredFeature = isDepthFormat(format) || isStencilFormat(format)
+            ? VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+            : VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+    return (info.optimalTilingFeatures & requiredFeature) != 0;
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
@@ -1979,7 +2007,7 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // destroys a resource on the backend thread while an asynchronous update job for the same
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
-    auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
+    auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
 
     getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
@@ -2012,7 +2040,7 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // destroys a resource on the backend thread while an asynchronous update job for the same
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
-    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
+    auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
 
     getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
@@ -2066,7 +2094,7 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     // destroys a resource on the backend thread while an asynchronous update job for the same
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
-    auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+    auto t = promoteToAsync(resource_ptr<VulkanTexture>::cast(&mResourceManager, th));
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
             data = std::move(data),
@@ -2532,13 +2560,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         uint32_t height, PixelBufferDescriptor&& pbd) {
     auto srcTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, src);
     endCommandRecording();
-    mReadPixels.run(
-            srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
-            std::move(pbd),
-            [&context = mContext](uint32_t types, VkFlags reqs) {
-                return context.selectMemoryType(types, reqs);
-            },
-            [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); });
+    mReadPixels.run(srcTarget, x, y, width, height, std::move(pbd));
 }
 
 void VulkanDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t layer, uint32_t x,
@@ -2549,13 +2571,7 @@ void VulkanDriver::readTexture(Handle<HwTexture> src, uint8_t level, uint16_t la
     assert_invariant(srcTexture->target != SamplerType::SAMPLER_3D);
 
     endCommandRecording();
-    mReadPixels.run(
-            srcTexture, level, layer, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
-            std::move(pbd),
-            [&context = mContext](uint32_t types, VkFlags reqs) {
-                return context.selectMemoryType(types, reqs);
-            },
-            [this](PixelBufferDescriptor&& pbd) { scheduleDestroy(std::move(pbd)); });
+    mReadPixels.run(srcTexture, level, layer, x, y, width, height, std::move(pbd));
 }
 
 void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,

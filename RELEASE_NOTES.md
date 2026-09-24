@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.77.2
+
+- build: Keep exceptions enabled for separately built host tools when `build.sh -E` disables exceptions for the target build.
+- vulkan: report depth and stencil render-target format support correctly
+
 ## v1.77.1
 
 - backend: add Metal support for external image handles
