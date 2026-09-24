@@ -6,3 +6,7 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- filamat: completely remove the DIR variant bit [⚠️ **New Material Version**]
+- matc: the `directionalLighting` variant filter is deprecated and ignored; it will be removed in
+  a future release
+- matc: remove the deprecated `dynamicLighting` variant filter

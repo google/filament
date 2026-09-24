@@ -22,6 +22,7 @@
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/ConstantInfo.h>
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
@@ -97,6 +98,64 @@ struct MaterialDefinition {
     // capabilities.
     bool isValidProgram(Variant const variant, DynamicSpecConstKey const specKey,
             backend::ShaderModel const sm, bool isStereoSupported) const noexcept;
+
+    // Checks that `variant` belongs to this material domain's key space.
+    //
+    // Only MaterialDomain::SURFACE interprets the variant key as a bitfield of surface variant
+    // bits; the other domains use a plain index (e.g. PostProcessVariant) drawn from a much
+    // smaller space. Passing a variant from the wrong domain makes every Variant predicate
+    // silently meaningless, so this is the precondition to assert wherever the two meet.
+    bool isVariantValidForDomain(Variant const variant) const noexcept {
+        switch (materialDomain) {
+            case MaterialDomain::SURFACE:
+                return variant.key < VARIANT_COUNT;
+            case MaterialDomain::POST_PROCESS:
+                return variant.key < POST_PROCESS_VARIANT_COUNT;
+            case MaterialDomain::COMPUTE:
+                return variant.key == 0;
+            default:
+                return false;
+        }
+    }
+
+    // Domain-aware variant predicates.
+    //
+    // The Variant:: predicates all encode MaterialDomain::SURFACE semantics; evaluating them on a
+    // variant from another domain yields a silently meaningless answer (e.g. the post-process key
+    // 1 has the STE bit set, so Variant::isStereoVariant() reports it as a stereo variant). Prefer
+    // these accessors over calling Variant:: directly: they resolve to the surface semantics only
+    // when this material actually has them, and are inert otherwise.
+    bool hasSurfaceVariants() const noexcept {
+        return materialDomain == MaterialDomain::SURFACE;
+    }
+
+    bool isValidDepthVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isValidDepthVariant(variant);
+    }
+
+    bool isSSRVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isSSRVariant(variant);
+    }
+
+    bool isStereoVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isStereoVariant(variant);
+    }
+
+    bool isShadowSampler2DVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isShadowSampler2DVariant(variant);
+    }
+
+    bool isDepthMomentsVariant(Variant const variant) const noexcept {
+        return hasSurfaceVariants() && Variant::isDepthMomentsVariant(variant);
+    }
+
+    // The user variant filter mask clears surface variant bits, so it must not be applied to a
+    // key that isn't a surface variant bitfield -- doing so silently maps valid variants of the
+    // other domains onto a different key.
+    Variant filterUserVariant(Variant const variant,
+            UserVariantFilterMask const filterMask) const noexcept {
+        return hasSurfaceVariants() ? Variant::filterUserVariant(variant, filterMask) : variant;
+    }
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
             Variant const variant, bool useS2dDescriptorSetLayout) const noexcept;

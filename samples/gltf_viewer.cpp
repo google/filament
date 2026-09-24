@@ -496,6 +496,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #if !defined(__EMSCRIPTEN__)
             // First compile high priority variants
             ma->compile(Material::CompilerPriorityQueue::HIGH,
+                    UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
 

@@ -346,11 +346,9 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
             Variant::SRE,
             Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
-            Variant::SRE | Variant::DIR,
             Variant::S2D | Variant::SRE,
             Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
-            Variant::S2D | Variant::SRE | Variant::DIR,
             Variant::S2D | Variant::SRE | Variant::STE,
     };
 
@@ -371,6 +369,32 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
     EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
             Variant(Variant::S2D | Variant::SRE), dynamicLighting,
             MaterialDomain::SURFACE, false).hasDynamicLighting());
+}
+
+TEST(MaterialVariant, DirectionalLightingSpecKeyExcludesDepthAndSsr) {
+    // Variant::DIR used to carry directional lighting, and Variant::filterVariant() cleared it on
+    // depth and SSR variants. Now that the bit lives in the specialization key, the same exclusion
+    // has to hold there instead.
+    DynamicSpecConstKey directionalLighting;
+    directionalLighting.setDirectionalLighting(true);
+
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::SPECIAL_SSR_VARIANT), directionalLighting,
+            MaterialDomain::SURFACE, true).hasDirectionalLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::DEPTH_VARIANT), directionalLighting,
+            MaterialDomain::SURFACE, true).hasDirectionalLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::S2D | Variant::SRE), directionalLighting,
+            MaterialDomain::SURFACE, false).hasDirectionalLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant{}, directionalLighting,
+            MaterialDomain::POST_PROCESS, true).hasDirectionalLighting());
+
+    // An ordinary lit surface variant keeps it, otherwise the assertions above prove nothing.
+    EXPECT_TRUE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::S2D | Variant::SRE), directionalLighting,
+            MaterialDomain::SURFACE, true).hasDirectionalLighting());
 }
 
 TEST(MaterialVariant, ExtraDirectionalLightsRequireDirectionalLighting) {
