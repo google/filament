@@ -790,3 +790,137 @@ TEST(PagedArenaBitsetTest, PopSetBits) {
     EXPECT_TRUE(bitset.empty());
 }
 
+TEST(PagedArenaBitsetTest, BatchAddSliceAndInvariants) {
+    auto verifyEquivalent = [](PagedArenaBitset const& actual, PagedArenaBitset const& expected) {
+        EXPECT_EQ(actual.size(), expected.size());
+        EXPECT_EQ(actual.empty(), expected.empty());
+        EXPECT_TRUE(actual.isSubsetOf(expected));
+        EXPECT_TRUE(expected.isSubsetOf(actual));
+
+        std::vector<uint32_t> actualBits;
+        actual.forEachSetBit([&](uint32_t const b) {
+            EXPECT_TRUE(actual[b]);
+            actualBits.push_back(b);
+        });
+        std::vector<uint32_t> expectedBits;
+        expected.forEachSetBit([&](uint32_t const b) {
+            expectedBits.push_back(b);
+        });
+        EXPECT_EQ(actualBits, expectedBits);
+        EXPECT_EQ(actualBits.size(), actual.size());
+    };
+
+    // 1. Empty slice on fresh and populated bitsets (must not create ghost bits or alter size)
+    {
+        PagedArenaBitset bs;
+        bs.add(Slice<const uint32_t>{});
+        EXPECT_TRUE(bs.empty());
+        EXPECT_EQ(bs.size(), 0u);
+        uint32_t traversed = 0;
+        bs.forEachSetBit([&](uint32_t) { traversed++; });
+        EXPECT_EQ(traversed, 0u);
+
+        bs.add(42u);
+        bs.add(Slice<const uint32_t>{});
+        EXPECT_EQ(bs.size(), 1u);
+        EXPECT_TRUE(bs[42u]);
+    }
+
+    // 2. Same-page cache hits, boundary words/bits (0, 63, 64, 4095), and intra-batch duplicates
+    {
+        std::vector<uint32_t> const batch = {
+            0u, 1u, 63u, 64u, 65u, 127u, 128u, 2048u, 4095u,
+            // Duplicates within the same batch and same/different words
+            0u, 63u, 64u, 4095u, 1u, 2048u
+        };
+        PagedArenaBitset batchBs;
+        batchBs.add({ batch.data(), batch.size() });
+
+        PagedArenaBitset scalarBs;
+        for (uint32_t const id : batch) {
+            scalarBs.add(id);
+        }
+        verifyEquivalent(batchBs, scalarBs);
+    }
+
+    // 3. Multi-page & alternating-page stress across all 8 L0 Master Mask words (2^27 domain),
+    // forcing multiple mArena vector reallocations and cachedDirIdx thrashing + hits
+    {
+        std::vector<uint32_t> batch;
+        // Span all 8 master words (each master word covers 64 * 64 * 4096 = 16,777,216 indices)
+        for (uint32_t m = 0; m < 8; ++m) {
+            uint32_t const base = m * (1u << 24);
+            // Multiple pages per master word, multiple words per page
+            for (uint32_t p = 0; p < 40; ++p) {
+                uint32_t const pageBase = base + p * 4096u;
+                batch.push_back(pageBase + 0u);
+                batch.push_back(pageBase + 63u);
+                batch.push_back(pageBase + 64u + (p % 64u));
+                batch.push_back(pageBase + 4095u);
+            }
+        }
+        // Interleave alternating pages and duplicates to test cachedDirIdx transitions
+        for (size_t i = 0, n = batch.size(); i < n; i += 7) {
+            batch.push_back(batch[i]);
+            batch.push_back(batch[n - 1 - i]);
+        }
+        // Include highest valid index in the 2^27 domain
+        batch.push_back((1u << PagedArenaBitset::DOMAIN_BITS) - 1u);
+
+        PagedArenaBitset batchBs;
+        batchBs.add({ batch.data(), batch.size() });
+
+        PagedArenaBitset scalarBs;
+        for (uint32_t const id : batch) {
+            scalarBs.add(id);
+        }
+        verifyEquivalent(batchBs, scalarBs);
+
+        // Also verify defragment() and intersect() invariants on the batch-constructed bitset
+        batchBs.defragment();
+        verifyEquivalent(batchBs, scalarBs);
+    }
+
+    // 4. The Garbage Contract: Recycled pages from mFreePages must be cleanly zeroed
+    // before partial writes in add(Slice), and overlapping pre-existing bits must not double-count
+    {
+        PagedArenaBitset bs;
+        PagedArenaBitset toRemove;
+        // Allocate and heavily populate 16 pages
+        std::vector<uint32_t> initial;
+        for (uint32_t p = 0; p < 16; ++p) {
+            for (uint32_t w = 0; w < 64; ++w) {
+                uint32_t const idx = p * 4096u + w * 64u + (w % 64u);
+                initial.push_back(idx);
+                if (p < 12) {
+                    toRemove.add(idx);
+                }
+            }
+        }
+        bs.add({ initial.data(), initial.size() });
+        // Free pages 0..11 into mFreePages via difference()
+        bs.difference(toRemove);
+
+        // Now add a batch that re-allocates from mFreePages (pages 0..11), touches surviving
+        // pages (12..15) with both existing and new bits, and allocates brand new pages (16..20)
+        std::vector<uint32_t> secondBatch;
+        for (uint32_t p = 0; p <= 20; ++p) {
+            secondBatch.push_back(p * 4096u + 7u);
+            secondBatch.push_back(p * 4096u + 0u); // Overlaps existing bit on pages 12..15
+        }
+        bs.add({ secondBatch.data(), secondBatch.size() });
+
+        PagedArenaBitset expected;
+        for (uint32_t const id : initial) {
+            if (!toRemove[id]) {
+                expected.add(id);
+            }
+        }
+        for (uint32_t const id : secondBatch) {
+            expected.add(id);
+        }
+        verifyEquivalent(bs, expected);
+    }
+}
+
+

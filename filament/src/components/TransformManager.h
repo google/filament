@@ -23,13 +23,17 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/Mutex.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
 #include <math/mat4.h>
 
+#include <atomic>
+#include <cstdint>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace filament {
 
@@ -98,7 +102,7 @@ public:
         destroyComponents(&e, 1);
     }
 
-    void setParent(Instance i, Instance newParent) noexcept;
+    void setParent(Instance i, Instance parent) noexcept;
 
     utils::Entity getParent(Instance i) const noexcept;
 
@@ -118,17 +122,68 @@ public:
 
     void gc() noexcept;
 
-    void registerChangeCallback(void const* token, utils::SingleInstanceComponentManagerBase::ChangeCallback callback) noexcept {
+    // Evaluates any pending dirty world transforms and notifies registered change callbacks
+    // and bitsets.
+    // Note: Because world transforms are evaluated lazily on demand, if
+    // ensureWorldTransformsUpToDate() is not called on the main thread after mutations (as
+    // FScene::prepare() does before dispatching worker jobs), the commit—and therefore any
+    // registered ChangeCallback or PagedArenaBitset updates—will execute on whichever thread
+    // first queries a world transform.
+    UTILS_ALWAYS_INLINE
+    void ensureWorldTransformsUpToDate() const noexcept {
+        // `memory_order_acquire` pairs with `mHasDirtyTransforms.store(false, memory_order_release)`
+        // in `commitDirtyTransformsLocked()` / `computeAllWorldTransforms()` (double-checked locking):
+        // if a concurrent reader thread observes `false` here and skips `commitDirtyTransforms()`
+        // (never acquiring `mCommitLock`), the acquire load guarantees that all `world` / `worldLo`
+        // writes performed by the committing thread are visible before the caller reads `mManager[ci].world`.
+        if (UTILS_UNLIKELY(mHasDirtyTransforms.load(std::memory_order_acquire))) {
+            commitDirtyTransforms();
+        }
+    }
+
+    // Change notifications (registered ChangeCallbacks and PagedArenaBitsets)
+    //
+    // Only changes occurring after registration are reported.
+    //
+    // Threading invariant (internal; the public API is covered by Engine's "not thread-safe"
+    // rule): change notifications are dispatched by the lazy commit *after* world transforms are
+    // published, so a reader on another thread can observe up-to-date transforms while the
+    // committing thread is still updating bitsets / invoking callbacks. Therefore:
+    //
+    // - Code that consumes notifications (reads a registered bitset, or relies on callbacks
+    //   having run) must not run concurrently with readers that may trigger a lazy commit.
+    //   The consuming thread must call ensureWorldTransformsUpToDate() (or flushNotifications())
+    //   *before* any other reader starts, e.g. before dispatching jobs, as FScene::prepare()
+    //   does. Otherwise, callbacks and bitset updates may run on a worker thread.
+    //
+    // - Callbacks may query world transforms (they observe a fully committed hierarchy).
+    //   Mutating the TransformManager from a callback is subject to the usual rule that
+    //   mutations must not run concurrently with readers, which matters because callbacks may
+    //   run on a worker thread.
+    //
+    // See FTransformManager::commitDirtyTransforms() for details.
+    void registerChangeCallback(void const* token,
+            utils::SingleInstanceComponentManagerBase::ChangeCallback callback) noexcept {
+        ensureWorldTransformsUpToDate();
         mManager.registerChangeCallback(token, std::move(callback));
     }
     void unregisterChangeCallback(void const* token) noexcept {
         mManager.unregisterChangeCallback(token);
     }
     void flushNotifications() noexcept {
+        ensureWorldTransformsUpToDate();
         mManager.flushNotifications();
+    }
+    void registerBitset(utils::PagedArenaBitset* bitset) {
+        ensureWorldTransformsUpToDate();
+        mManager.registerBitset(bitset);
+    }
+    void unregisterBitset(utils::PagedArenaBitset const* bitset) {
+        mManager.unregisterBitset(bitset);
     }
 
     utils::Slice<const math::mat4f> getWorldTransforms() const noexcept {
+        ensureWorldTransformsUpToDate();
         return mManager.slice<WORLD>();
     }
 
@@ -141,6 +196,7 @@ public:
     }
 
     const math::mat4f& getWorldTransform(Instance const ci) const noexcept {
+        ensureWorldTransformsUpToDate();
         return mManager[ci].world;
     }
 
@@ -153,6 +209,7 @@ public:
     }
 
     math::mat4 getWorldTransformAccurate(Instance const ci) const noexcept {
+        ensureWorldTransformsUpToDate();
         math::mat4f const& world = mManager[ci].world;
         math::float3 const worldTranslationLo = mManager[ci].worldTranslationLo;
         math::mat4 r(world);
@@ -168,17 +225,37 @@ private:
     void validateNode(Instance i) noexcept;
     void removeNode(Instance i) noexcept;
     void updateNode(Instance i) noexcept;
+    UTILS_ALWAYS_INLINE
     void updateNodeTransform(Instance i) noexcept;
-    void insertNode(Instance i, Instance p) noexcept;
+    UTILS_ALWAYS_INLINE
+    void updateNodeTransform(Instance i, math::mat4f const& local,
+            math::float3 const& localLo, bool zeroLo) noexcept;
+    // Safe without mCommitLock because TransformManager's API contract forbids mutations
+    // (create, destroy, setParent, setTransform) concurrently with other mutations or with
+    // const reader queries; mCommitLock only serializes lazy commits across concurrent readers.
+    UTILS_ALWAYS_INLINE
+    void markNodeDirty(Instance i) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
+    UTILS_NOINLINE
+    void commitDirtyTransforms() const noexcept;
+    void commitDirtyTransformsLocked() noexcept UTILS_REQUIRES(mCommitLock);
+    // Lock-free by design; see the rationale in TransformManager.cpp.
+    void recyclePendingNotifications(std::vector<utils::Entity>&& buffer) noexcept
+            UTILS_NO_THREAD_SAFETY_ANALYSIS;
+    void insertNode(Instance i, Instance parent) noexcept;
     void swapNode(Instance i, Instance j) noexcept;
-    void transformChildren(Sim& manager, Instance firstChild) noexcept;
+    void transformChildren(Sim& manager, Instance parent, bool notifyParent = true) noexcept UTILS_REQUIRES(mCommitLock);
 
     void computeAllWorldTransforms() noexcept;
 
-    static void computeWorldTransform(math::mat4f& outWorld, math::float3& inoutWorldTranslationLo,
+    UTILS_ALWAYS_INLINE
+    static void computeWorldTransform(math::mat4f& outWorld,
+            math::mat4f const& pt, math::mat4f const& local) noexcept;
+
+    UTILS_ALWAYS_INLINE
+    static void computeWorldTransformAccurate(math::mat4f& outWorld,
+            math::float3& inoutWorldTranslationLo,
             math::mat4f const& pt, math::mat4f const& local,
-            math::float3 const& ptTranslationLo, math::float3 const& localTranslationLo,
-            bool accurate);
+            math::float3 const& ptTranslationLo, math::float3 const& localTranslationLo) noexcept;
 
     friend class children_iterator;
 
@@ -191,6 +268,9 @@ private:
         FIRST_CHILD,    // instance to our first child
         NEXT,           // instance to our next sibling
         PREV,           // instance to our previous sibling
+        DIRTY,          // non-zero if local transform changed and world transform is pending;
+                        // guarded by mCommitLock during concurrent lazy commits, or accessed
+                        // lock-free during single-writer mutations (see markNodeDirty).
     };
 
     using Base = utils::SingleInstanceComponentManager<
@@ -201,13 +281,15 @@ private:
             Instance,       // parent
             Instance,       // firstChild
             Instance,       // next
-            Instance        // prev
+            Instance,       // prev
+            uint8_t         // dirty (guarded by mCommitLock during concurrent reads)
     >;
 
     struct Sim : public Base {
         explicit Sim(utils::EntityManager& em) noexcept : Base(em, "TransformManager") {}
         using Base::gc;
         using Base::swap;
+        using Base::data;
 
         SoA& getSoA() { return mData; }
 
@@ -227,6 +309,7 @@ private:
                 Field<FIRST_CHILD>  firstChild;
                 Field<NEXT>         next;
                 Field<PREV>         prev;
+                Field<DIRTY>        dirty; // guarded by mCommitLock during concurrent reads
             };
         };
 
@@ -239,6 +322,10 @@ private:
     };
 
     Sim mManager;
+    mutable utils::Mutex mCommitLock;
+    mutable std::vector<Instance> mDirtyInstances UTILS_GUARDED_BY(mCommitLock);
+    mutable std::vector<utils::Entity> mPendingNotifications UTILS_GUARDED_BY(mCommitLock);
+    mutable std::atomic<bool> mHasDirtyTransforms{ false };
     bool mLocalTransformTransactionOpen = false;
     bool mAccurateTranslations = false;
 };

@@ -561,6 +561,335 @@ TEST(FilamentTest, TransformManagerCallback) {
     Engine::destroy((Engine**)&engine);
 }
 
+TEST(FilamentTest, TransformManagerHierarchyAndMath) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    // Build a 3-level hierarchy:
+    // root (0) -> childA (1), childB (2), childC (3)
+    // childA (1) -> grandChildA1 (4), grandChildA2 (5)
+    // childB (2) -> grandChildB1 (6)
+    std::array<Entity, 7> entities;
+    em.create(entities.size(), entities.data());
+
+    // Asymmetric full 4x4 matrices so every lane and row/col combination is uniquely tested
+    auto makeTestMat = [](float s) -> mat4f {
+        return mat4f{
+            float4{ 1.0f + s,  2.0f - s,  0.5f * s,  0.1f * s },
+            float4{ -0.5f * s, 1.5f + s,  2.5f - s,  0.2f * s },
+            float4{ 0.25f * s, -1.0f + s, 1.25f + s, 0.3f * s },
+            float4{ 10.0f * s, 20.0f * s, 30.0f * s, 1.0f + 0.05f * s }
+        };
+    };
+
+    mat4f const mRoot = makeTestMat(1.0f);
+    mat4f const mChildA = makeTestMat(2.0f);
+    mat4f const mChildB = makeTestMat(3.0f);
+    mat4f const mChildC = makeTestMat(4.0f);
+    mat4f const mGrandA1 = makeTestMat(5.0f);
+    mat4f const mGrandA2 = makeTestMat(6.0f);
+    mat4f const mGrandB1 = makeTestMat(7.0f);
+
+    tcm.create(entities[0], {}, mRoot);
+    auto const iRoot = tcm.getInstance(entities[0]);
+
+    tcm.create(entities[1], iRoot, mChildA);
+    tcm.create(entities[2], iRoot, mChildB);
+    tcm.create(entities[3], iRoot, mChildC);
+    auto const iChildA = tcm.getInstance(entities[1]);
+    auto const iChildB = tcm.getInstance(entities[2]);
+    auto const iChildC = tcm.getInstance(entities[3]);
+
+    tcm.create(entities[4], iChildA, mGrandA1);
+    tcm.create(entities[5], iChildA, mGrandA2);
+    tcm.create(entities[6], iChildB, mGrandB1);
+    auto const iGrandA1 = tcm.getInstance(entities[4]);
+    auto const iGrandA2 = tcm.getInstance(entities[5]);
+    auto const iGrandB1 = tcm.getInstance(entities[6]);
+
+    auto expectMatNear = [](mat4f const& a, mat4f const& b, float eps = 1e-4f) {
+        for (size_t c = 0; c < 4; ++c) {
+            for (size_t r = 0; r < 4; ++r) {
+                float const tol = std::max(eps, std::abs(b[c][r]) * 2e-6f);
+                EXPECT_NEAR(a[c][r], b[c][r], tol) << "col=" << c << " row=" << r;
+            }
+        }
+    };
+
+    // 1. Verify initial world transforms across all levels
+    expectMatNear(tcm.getWorldTransform(iRoot), mRoot);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot * mChildA);
+    expectMatNear(tcm.getWorldTransform(iChildB), mRoot * mChildB);
+    expectMatNear(tcm.getWorldTransform(iChildC), mRoot * mChildC);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot * mChildA) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot * mChildA) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot * mChildB) * mGrandB1);
+
+    // 2. Track change notifications when updating root (all 7 nodes must be notified)
+    std::vector<Entity> notified;
+    tcm.registerChangeCallback(&tcm, [&](Slice<const Entity> changed) {
+        notified.insert(notified.end(), changed.begin(), changed.end());
+    });
+
+    mat4f const mRoot2 = makeTestMat(1.5f);
+    tcm.setTransform(iRoot, mRoot2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 7u);
+
+    expectMatNear(tcm.getWorldTransform(iRoot), mRoot2);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot2 * mChildA);
+    expectMatNear(tcm.getWorldTransform(iChildB), mRoot2 * mChildB);
+    expectMatNear(tcm.getWorldTransform(iChildC), mRoot2 * mChildC);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot2 * mChildA) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot2 * mChildA) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1);
+
+    // 3. Update an intermediate node (childA) -> notifies childA, grandChildA1, grandChildA2 (3 nodes)
+    notified.clear();
+    mat4f const mChildA2 = makeTestMat(2.5f);
+    tcm.setTransform(iChildA, mChildA2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 3u);
+    expectMatNear(tcm.getWorldTransform(iChildA), mRoot2 * mChildA2);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), (mRoot2 * mChildA2) * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), (mRoot2 * mChildA2) * mGrandA2);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1);
+
+    // 4. Update a parented leaf node (grandChildB1) -> notifies 1 node
+    notified.clear();
+    mat4f const mGrandB1_2 = makeTestMat(7.5f);
+    tcm.setTransform(iGrandB1, mGrandB1_2);
+    tcm.flushNotifications();
+    EXPECT_EQ(notified.size(), 1u);
+    expectMatNear(tcm.getWorldTransform(iGrandB1), (mRoot2 * mChildB) * mGrandB1_2);
+
+    // 5. Reparent childA to become a root node (parent == 0)
+    tcm.setParent(iChildA, {});
+    expectMatNear(tcm.getWorldTransform(iChildA), mChildA2);
+    expectMatNear(tcm.getWorldTransform(iGrandA1), mChildA2 * mGrandA1);
+    expectMatNear(tcm.getWorldTransform(iGrandA2), mChildA2 * mGrandA2);
+
+    // 6. Accurate translations mode on both root and child
+    tcm.setAccurateTranslationsEnabled(true);
+    mat4 const dRoot = mat4::translation(double3{ 100000.125, -200000.25, 300000.5 });
+    mat4 const dChild = mat4::translation(double3{ 0.0001220703125, -0.000244140625, 0.00048828125 });
+    tcm.setParent(iChildA, iRoot);
+    tcm.setTransform(iRoot, dRoot);
+    tcm.setTransform(iChildA, dChild);
+    mat4 const expectedWorldAccurate = dRoot * dChild;
+    mat4 const actualWorldAccurate = tcm.getWorldTransformAccurate(iChildA);
+    for (size_t c = 0; c < 4; ++c) {
+        for (size_t r = 0; r < 4; ++r) {
+            EXPECT_NEAR(actualWorldAccurate[c][r], expectedWorldAccurate[c][r], 1e-6);
+        }
+    }
+
+    // 7. Exercise non-recursive transformChildren stack overflow fallback (>128 sibling subtrees)
+    constexpr size_t BRANCH_COUNT = 140;
+    std::vector<Entity> wideEntities(BRANCH_COUNT * 2);
+    em.create(wideEntities.size(), wideEntities.data());
+    mat4f const stepMat = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+        tcm.create(wideEntities[i], iRoot, stepMat);
+        auto const iBranch = tcm.getInstance(wideEntities[i]);
+        tcm.create(wideEntities[BRANCH_COUNT + i], iBranch, stepMat);
+    }
+
+    for (bool const accurate : { false, true }) {
+        tcm.setAccurateTranslationsEnabled(accurate);
+        tcm.flushNotifications();
+        notified.clear();
+        float const scale = accurate ? 2.0f : 1.0f;
+        mat4f const rootTranslate = mat4f::translation(float3{ 10.0f * scale, 20.0f * scale, 30.0f * scale });
+        tcm.setTransform(iRoot, rootTranslate);
+        tcm.flushNotifications();
+        EXPECT_EQ(notified.size(), 7u + BRANCH_COUNT * 2);
+        mat4f const expectedLeaf = rootTranslate * stepMat * stepMat;
+        for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+            auto const iLeaf = tcm.getInstance(wideEntities[BRANCH_COUNT + i]);
+            expectMatNear(tcm.getWorldTransform(iLeaf), expectedLeaf);
+        }
+    }
+
+    tcm.unregisterChangeCallback(&tcm);
+    notified.clear();
+    utils::PagedArenaBitset dirtyBitset;
+    tcm.registerBitset(&dirtyBitset);
+    for (bool const accurate : { false, true }) {
+        tcm.setAccurateTranslationsEnabled(accurate);
+        tcm.flushNotifications();
+        dirtyBitset.clear();
+        float const scale = accurate ? 2.0f : 1.0f;
+        mat4f const rootTranslate = mat4f::translation(float3{ -5.0f * scale, 15.0f * scale, -25.0f * scale });
+        tcm.setTransform(iRoot, rootTranslate);
+        tcm.flushNotifications();
+        EXPECT_TRUE(notified.empty());
+        EXPECT_EQ(dirtyBitset.size(), 7u + BRANCH_COUNT * 2);
+        mat4f const expectedLeaf = rootTranslate * stepMat * stepMat;
+        for (size_t i = 0; i < BRANCH_COUNT; ++i) {
+            auto const iLeaf = tcm.getInstance(wideEntities[BRANCH_COUNT + i]);
+            expectMatNear(tcm.getWorldTransform(iLeaf), expectedLeaf);
+        }
+    }
+    tcm.unregisterBitset(&dirtyBitset);
+
+    for (auto e : wideEntities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
+TEST(FilamentTest, TransformManagerLazyAndConcurrent) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    std::array<Entity, 4> entities;
+    em.create(entities.size(), entities.data());
+
+    mat4f const m0 = mat4f::translation(float3{ 1.0f, 2.0f, 3.0f });
+    mat4f const m1 = mat4f::translation(float3{ 4.0f, 5.0f, 6.0f });
+    mat4f const m2 = mat4f::translation(float3{ 7.0f, 8.0f, 9.0f });
+    mat4f const m3 = mat4f::translation(float3{ 10.0f, 11.0f, 12.0f });
+
+    // Chain: e0 (root) -> e1 -> e2 -> e3
+    tcm.create(entities[0], {}, m0);
+    auto const i0 = tcm.getInstance(entities[0]);
+    tcm.create(entities[1], i0, m1);
+    auto const i1 = tcm.getInstance(entities[1]);
+    tcm.create(entities[2], i1, m2);
+    auto const i2 = tcm.getInstance(entities[2]);
+    tcm.create(entities[3], i2, m3);
+    auto const i3 = tcm.getInstance(entities[3]);
+    tcm.flushNotifications();
+
+    utils::PagedArenaBitset dirtyBitset;
+    tcm.registerBitset(&dirtyBitset);
+    std::atomic<size_t> callbackNotifications{ 0 };
+    tcm.registerChangeCallback(&tcm, [&](Slice<const Entity> changed) {
+        callbackNotifications.fetch_add(changed.size(), std::memory_order_relaxed);
+    });
+
+    // 1. Identical setTransform early exit: 0 notifications and 0 bitset bits
+    dirtyBitset.clear();
+    callbackNotifications.store(0, std::memory_order_relaxed);
+    tcm.setTransform(i0, m0);
+    tcm.setTransform(i1, m1);
+    tcm.setTransform(i2, m2);
+    tcm.setTransform(i3, m3);
+    tcm.flushNotifications();
+    EXPECT_EQ(dirtyBitset.size(), 0u);
+    EXPECT_EQ(callbackNotifications.load(std::memory_order_relaxed), 0u);
+
+    // 2. Repeated updates (T, R, S) and non-contiguous bottom-up + top-down updates:
+    // Update leaf i3 first, then root i0 three times (leaving i1, i2 untouched directly).
+    mat4f const i3New = mat4f::translation(float3{ -1.0f, -2.0f, -3.0f });
+    mat4f const i0Step1 = mat4f::translation(float3{ 10.0f, 0.0f, 0.0f });
+    mat4f const i0Step2 = mat4f::translation(float3{ 10.0f, 20.0f, 0.0f });
+    mat4f const i0Final = mat4f::translation(float3{ 10.0f, 20.0f, 30.0f });
+
+    tcm.setTransform(i3, i3New);
+    tcm.setTransform(i0, i0Step1);
+    tcm.setTransform(i0, i0Step2);
+    tcm.setTransform(i0, i0Final);
+    tcm.flushNotifications();
+
+    // All 4 nodes in the chain must be notified exactly once
+    EXPECT_EQ(dirtyBitset.size(), 4u);
+    EXPECT_EQ(callbackNotifications.load(std::memory_order_relaxed), 4u);
+    EXPECT_EQ(tcm.getWorldTransform(i3), i0Final * m1 * m2 * i3New);
+
+    // 3. Multithreaded concurrent const reads (getWorldTransform / getWorldTransformAccurate)
+    // immediately after setTransform without a prior main-thread flush
+    tcm.setAccurateTranslationsEnabled(true);
+    mat4 const d0 = mat4::translation(double3{ 100000.5, -200000.25, 300000.125 });
+    mat4 const d3 = mat4::translation(double3{ 0.5, 1.25, -2.125 });
+    tcm.setTransform(i0, d0);
+    tcm.setTransform(i3, d3);
+
+    mat4 const expectedAccurate = d0 * mat4(m1) * mat4(m2) * d3;
+    constexpr size_t THREAD_COUNT = 4;
+    std::vector<std::thread> readers;
+    readers.reserve(THREAD_COUNT);
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        readers.emplace_back([&]() {
+            for (int iter = 0; iter < 100; ++iter) {
+                mat4 const actual = tcm.getWorldTransformAccurate(i3);
+                for (size_t c = 0; c < 4; ++c) {
+                    for (size_t r = 0; r < 4; ++r) {
+                        EXPECT_NEAR(actual[c][r], expectedAccurate[c][r], 1e-5);
+                    }
+                }
+            }
+        });
+    }
+    for (auto& th : readers) {
+        th.join();
+    }
+
+    // 4. Verify setTransform(mat4f) clears localTranslationLo even when accurate mode is off
+    // and even when the mat4f high part matches the previously set mat4 high part.
+    tcm.setAccurateTranslationsEnabled(false);
+    mat4 const dLarge = mat4::translation(double3{ 100000.123456789, -200000.987654321, 300000.555555555 });
+    tcm.setTransform(i0, dLarge);
+    mat4f const fLarge = mat4f(dLarge);
+    // High part matches manager[i0].local, but localTranslationLo is non-zero; setTransform(mat4f) must not early-return!
+    tcm.setTransform(i0, fLarge);
+    EXPECT_EQ(tcm.getTransformAccurate(i0), mat4(fLarge));
+    tcm.setAccurateTranslationsEnabled(true);
+    EXPECT_EQ(tcm.getWorldTransformAccurate(i0), mat4(fLarge));
+
+    // 5. Verify ChangeCallback re-entrancy when > MAX_DIRTY_COUNT (16) entities are committed:
+    // Calling getWorldTransform() inside the callback (which fires mid-batch at 16 entities)
+    // must not self-deadlock on mCommitLock and must observe updated world transforms for all
+    // entities in the hierarchy, including those beyond the 16th entity.
+    tcm.setAccurateTranslationsEnabled(false);
+    constexpr size_t kChainLen = 24;
+    Entity chain[kChainLen];
+    em.create(kChainLen, chain);
+    for (size_t k = 0; k < kChainLen; ++k) {
+        auto parent = (k == 0) ? TransformManager::Instance{} : tcm.getInstance(chain[k - 1]);
+        tcm.create(chain[k], parent, mat4f::translation(float3{ 1.0f, 0.0f, 0.0f }));
+    }
+    auto const tailInstance = tcm.getInstance(chain[kChainLen - 1]);
+    size_t reentrantCallbacks = 0;
+    tcm.registerChangeCallback(&chain, [&](Slice<const Entity> changed) {
+        reentrantCallbacks += changed.size();
+        for (Entity e : changed) {
+            auto ci = tcm.getInstance(e);
+            EXPECT_TRUE(ci.isValid());
+            // Re-entrant read of the notified entity and the very last leaf in the 24-node chain
+            (void)tcm.getWorldTransform(ci);
+        }
+        // Even on the first 16-entity flush, the 24th node's world transform must already be updated
+        EXPECT_EQ(tcm.getWorldTransform(tailInstance),
+                mat4f::translation(float3{ float(kChainLen + 1), 0.0f, 0.0f }));
+        // Re-entrant flushNotifications() must not infinitely recurse
+        tcm.flushNotifications();
+    });
+    // Dirty the root of the 24-node chain (+2 instead of +1) and trigger commit via getWorldTransform
+    tcm.setTransform(tcm.getInstance(chain[0]), mat4f::translation(float3{ 2.0f, 0.0f, 0.0f }));
+    EXPECT_EQ(tcm.getWorldTransform(tailInstance),
+            mat4f::translation(float3{ float(kChainLen + 1), 0.0f, 0.0f }));
+    tcm.flushNotifications();
+    EXPECT_GE(reentrantCallbacks, kChainLen);
+    tcm.unregisterChangeCallback(&chain);
+    for (size_t k = 0; k < kChainLen; ++k) {
+        tcm.destroy(chain[k]);
+        em.destroy(chain[k]);
+    }
+
+    tcm.unregisterChangeCallback(&tcm);
+    tcm.unregisterBitset(&dirtyBitset);
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+
 TEST(FilamentTest, UniformInterfaceBlock) {
 
     BufferInterfaceBlock::Builder b;
