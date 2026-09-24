@@ -254,8 +254,21 @@ void VulkanPipelineCache::asyncPrewarmCache(
         .stencilState = {},
         .layout = layout,
     };
+
+    // On some platforms, vertex attributes + bindings are required in order
+    // for pipelines to be linked. Create those proactively here.
+    for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; ++i) {
+        key.vertexAttributes[i].location = i;
+        key.vertexAttributes[i].binding  = i;
+        key.vertexAttributes[i].format   = VK_FORMAT_R8G8B8A8_UNORM; // sensible default, just needs 4 channels.
+        key.vertexAttributes[i].offset   = 0;
+        key.vertexBuffers[i].binding     = i;
+        key.vertexBuffers[i].stride      = sizeof(float) * 4; // vec4
+        key.vertexBuffers[i].inputRate   = VK_VERTEX_INPUT_RATE_VERTEX;
+    }
+
     PipelineDynamicOptions dynamicOptions {
-        .useDynamicVertexInputState = true,
+        .useDynamicVertexInputState = false,
         .useDynamicRenderPasses = true,
         .stereoscopicType = stereoscopicType,
         .stereoscopicViewCount = stereoscopicViewCount,
