@@ -624,6 +624,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_FrameRateControl.cpp
             test/test_MRT.cpp
             test/test_PushConstants.cpp
+            test/test_SpecializationConstants.cpp
             test/test_LoadImage.cpp
             test/test_StencilBuffer.cpp
             test/test_Scissor.cpp
