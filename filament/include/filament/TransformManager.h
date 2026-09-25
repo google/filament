@@ -67,6 +67,21 @@ class FTransformManager;
  *  tcm.destroy(object);
  * ~~~~~~~~~~~
  *
+ * Instance lifetime
+ * =================
+ *
+ * An Instance is a transient handle: TransformManager reorders its components internally to
+ * speed up world transform computation, which changes the Instance associated with an Entity.
+ * An Instance obtained from getInstance() is only valid until the next call to any of:
+ *
+ * - create(), destroy() or setParent() on this TransformManager,
+ * - commitLocalTransformTransaction(),
+ * - Renderer::endFrame() or Renderer::skipFrame(), which perform periodic maintenance.
+ *
+ * Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.
+ *
  */
 class UTILS_PUBLIC TransformManager : public FilamentAPI {
 public:
@@ -138,6 +153,8 @@ public:
      * @param e An Entity.
      * @return An Instance object, which represents the transform component associated with the Entity e.
      * @note Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above.
      * @see hasComponent()
      */
     Instance getInstance(utils::Entity e) const noexcept;

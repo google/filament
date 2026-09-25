@@ -55,6 +55,21 @@ import androidx.annotation.Size;
  *  tcm.destroy(object);
  *
  * }</pre>
+ *
+ * <h1>Instance lifetime</h1>
+ *
+ * <p>An Instance is a transient handle: TransformManager reorders its components internally to
+ * speed up world transform computation, which changes the Instance associated with an Entity.
+ * An Instance obtained from getInstance() is only valid until the next call to any of:</p>
+ *
+ * <ul>
+ *   <li>create(), destroy() or setParent() on this TransformManager,</li>
+ *   <li>commitLocalTransformTransaction(),</li>
+ *   <li>Renderer::endFrame() or Renderer::skipFrame(), which perform periodic maintenance.
+ * Instances must therefore not be kept across frames. Keep the Entity instead, and call
+ * getInstance() again when needed; it is a fast lookup. Using a stale Instance doesn't crash
+ * but silently accesses the wrong component.</li>
+ * </ul>
  */
 public class TransformManager {
     private long mNativeObject;
@@ -83,7 +98,9 @@ public class TransformManager {
     /**
      * Gets an Instance representing the transform component associated with the given Entity.
      *
-     * <p>Use Instance::isValid() to make sure the component exists.</p>
+     * <p>Use Instance::isValid() to make sure the component exists.
+     * @note The returned Instance is transient and must not be kept across frames, see
+     *       "Instance lifetime" above.</p>
      *
      * @param e An Entity.
      *
