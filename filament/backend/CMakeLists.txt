@@ -617,6 +617,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_BufferUpdates.cpp
             test/test_AsyncCompletion.cpp
             test/test_Callbacks.cpp
+            test/test_CallbackManager.cpp
             test/test_JobQueue.cpp
             test/test_MemoryMappedBuffer.cpp
             test/test_MsaaSwapChain.cpp

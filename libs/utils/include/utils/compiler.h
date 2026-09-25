@@ -421,8 +421,10 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 #define UTILS_RELEASE_SHARED(...) \
     UTILS_THREAD_ANNOTATION_ATTRIBUTE(release_shared_capability(__VA_ARGS__))
 
+// Unlike the annotations above, clang never added a "capability"-style alias for this one:
+// locks_excluded is the only spelling it accepts.
 #define UTILS_EXCLUDES(...) \
-    UTILS_THREAD_ANNOTATION_ATTRIBUTE(excludes_capability(__VA_ARGS__))
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(locks_excluded(__VA_ARGS__))
 
 #define UTILS_RETURN_CAPABILITY(x) \
     UTILS_THREAD_ANNOTATION_ATTRIBUTE(lock_returned(x))
