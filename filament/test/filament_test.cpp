@@ -16,6 +16,7 @@
 
 #include "Allocators.h"
 #include "Froxelizer.h"
+#include "MaterialParser.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -791,6 +792,114 @@ TEST(FilamentTest, UniformBufferSize2) {
     buffer.setUniformArray(f2_offset, &f2, 1);
 
     buffer.invalidate();
+}
+
+TEST(FilamentTest, BufferInterfaceBlockRejectsOffsetWrap) {
+    // 3-field wrap layout: 4000 MAT4s (64000 words) + 1 FLOAT + 100 MAT4s (wraps uint16_t to 68).
+    auto buildWrappedUib = []() {
+        BufferInterfaceBlock::Builder b;
+        b.name("WrappedUib");
+        b.add({
+                { "pad", 4000, BufferInterfaceBlock::Type::MAT4 },
+                { "_maskThreshold", 0, BufferInterfaceBlock::Type::FLOAT },
+                { "wrap", 100, BufferInterfaceBlock::Type::MAT4 },
+        });
+        b.build();
+    };
+    // Single-field 32-bit multiplication wrap (16 * 0x10000000 == 0 mod 2^32).
+    auto buildMulOverflowUib = []() {
+        BufferInterfaceBlock::Builder b;
+        b.name("MulOverflowUib");
+        b.add({
+                { "huge", 0x10000000u, BufferInterfaceBlock::Type::MAT4 },
+        });
+        b.build();
+    };
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(buildWrappedUib(), utils::PostconditionPanic);
+    EXPECT_THROW(buildMulOverflowUib(), utils::PostconditionPanic);
+#else
+    EXPECT_DEATH(buildWrappedUib(), "exceeds maximum supported size");
+    EXPECT_DEATH(buildMulOverflowUib(), "exceeds maximum supported size");
+#endif
+}
+
+TEST(FilamentTest, ChunkUniformInterfaceBlockUnflattenValidation) {
+    auto makeUibChunk = [](uint64_t numFields, uint64_t fieldSize, uint8_t fieldType,
+                                uint8_t fieldPrecision) {
+        std::vector<uint8_t> bytes;
+        auto appendBytes = [&](const void* p, size_t n) {
+            auto const* b = static_cast<uint8_t const*>(p);
+            bytes.insert(bytes.end(), b, b + n);
+        };
+        const char blockName[] = "TestBlock";
+        appendBytes(blockName, sizeof(blockName));
+        appendBytes(&numFields, sizeof(numFields));
+        for (uint64_t i = 0; i < numFields; ++i) {
+            const char fieldName[] = "f";
+            appendBytes(fieldName, sizeof(fieldName));
+            appendBytes(&fieldSize, sizeof(fieldSize));
+            appendBytes(&fieldType, sizeof(fieldType));
+            appendBytes(&fieldPrecision, sizeof(fieldPrecision));
+            uint8_t assocSampler = 0;
+            appendBytes(&assocSampler, sizeof(assocSampler));
+        }
+        return bytes;
+    };
+
+    BufferInterfaceBlock uib;
+    // Valid chunk succeeds.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // fieldSize up to UINT16_MAX / 4 fits; one more is rejected.
+    {
+        auto buf = makeUibChunk(1, UINT16_MAX / 4, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(1, UINT16_MAX / 4 + 1, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // numFields up to UINT16_MAX fits; one more is rejected.
+    {
+        auto buf = makeUibChunk(UINT16_MAX, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_TRUE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(UINT16_MAX + 1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // Invalid fieldType (Type::STRUCT or out-of-range) is rejected.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::STRUCT),
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    {
+        auto buf = makeUibChunk(1, 0, 0xFF,
+                uint8_t(BufferInterfaceBlock::Precision::DEFAULT));
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
+    // Invalid fieldPrecision is rejected.
+    {
+        auto buf = makeUibChunk(1, 0, uint8_t(BufferInterfaceBlock::Type::FLOAT), 0xFF);
+        filaflat::Unflattener unflattener(buf.data(), buf.data() + buf.size());
+        EXPECT_FALSE(ChunkUniformInterfaceBlock::unflatten(unflattener, &uib));
+    }
 }
 
 TEST(FilamentTest, BoxCulling) {
