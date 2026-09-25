@@ -223,6 +223,11 @@ public:
     }
 
     /**
+     * @brief Sets multiple bits in a batch.
+     */
+    void add(Slice<const uint32_t> indices);
+
+    /**
      * @brief Clears a bit.
      */
     void remove(uint32_t const index) noexcept {
