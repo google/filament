@@ -248,6 +248,59 @@ TEST(MaterialInstanceTest, SetConstant) {
     Engine::destroy(engine);
 }
 
+TEST(MaterialInstanceTest, ParameterLargerThanBufferIsRejected) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )");
+
+    // Layout: "m" at bytes [0, 48), "f" at byte 48; the buffer is 64 bytes.
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("MaterialInstanceTest");
+    builder.material(shaderCode.c_str());
+    builder.parameter("m", filamat::MaterialBuilder::UniformType::MAT3);
+    builder.parameter("f", filamat::MaterialBuilder::UniformType::FLOAT);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+            .package(result.getData(), result.getSize())
+            .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    MaterialInstance* instance = material->createInstance();
+    ASSERT_NE(instance, nullptr);
+
+    // Values that fit are accepted, including a float4 that ends exactly at the buffer end.
+    instance->setParameter("m", math::mat3f{ 2.0f });
+    EXPECT_EQ(instance->getParameter<math::mat3f>("m"), math::mat3f{ 2.0f });
+    instance->setParameter("f", 1.0f);
+    EXPECT_EQ(instance->getParameter<float>("f"), 1.0f);
+    float const one[1] = { 1.0f };
+    instance->setParameter("f", one, 1);
+    instance->setParameter("f", math::float4{ 1.0f });
+
+#if GTEST_HAS_EXCEPTIONS
+    float const two[2] = { 1.0f, 2.0f };
+    EXPECT_THROW(instance->setParameter("f", math::mat4f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", math::mat3f{}), utils::PreconditionPanic);
+    EXPECT_THROW(instance->setParameter("f", two, 2), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat4f>("f"), utils::PreconditionPanic);
+    EXPECT_THROW(instance->getParameter<math::mat3f>("f"), utils::PreconditionPanic);
+#endif
+
+    engine->destroy(instance);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
 TEST(Material, CompileMaterialWithSkinningEnabled) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
