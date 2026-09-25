@@ -312,6 +312,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
 
         VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
         VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
+        VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME,
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME,
@@ -1082,7 +1083,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     if (setContains(deviceExts, VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME)) {
         chainStruct(&context.mPhysicalDeviceFeatures, &globalPriorityFeatures);
     }
-        
+
     if (setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME)) {
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mVertexInputDynamicStateFeatures);
     }
@@ -1093,6 +1094,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
     if (setContains(deviceExts, VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) {
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mExtendedDynamicState2Features);
+    }
+
+    if (setContains(deviceExts, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mColorWriteEnableFeatures);
     }
 
     if (vkGetPhysicalDeviceProperties2) {
@@ -1326,6 +1331,10 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
 
     if (setContains(deviceExtensions, VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME)) {
         chainStruct(&deviceCreateInfo, &mImpl->mContext.mExtendedDynamicState2Features);
+    }
+
+    if (setContains(deviceExtensions, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &mImpl->mContext.mColorWriteEnableFeatures);
     }
 
     mImpl->mDevice = createVkDevice(deviceCreateInfo);
