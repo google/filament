@@ -29,15 +29,15 @@ Filament provides several default tone mapping operators that fall into three ca
 
 | |
 |---|
-| [LinearToneMapper](../-linear-tone-mapper/index.md) |
-| [ACESToneMapper](../-a-c-e-s-tone-mapper/index.md) |
-| [GenericToneMapper](../-generic-tone-mapper/index.md) |
-| [GT7ToneMapper](../-g-t7-tone-mapper/index.md) |
 | [DisplayRangeToneMapper](../-display-range-tone-mapper/index.md) |
+| [GenericToneMapper](../-generic-tone-mapper/index.md) |
+| [ACESLegacyToneMapper](../-a-c-e-s-legacy-tone-mapper/index.md) |
+| [GT7ToneMapper](../-g-t7-tone-mapper/index.md) |
+| [LinearToneMapper](../-linear-tone-mapper/index.md) |
+| [AgxToneMapper](../-agx-tone-mapper/index.md) |
+| [ACESToneMapper](../-a-c-e-s-tone-mapper/index.md) |
 | [FilmicToneMapper](../-filmic-tone-mapper/index.md) |
 | [PBRNeutralToneMapper](../-p-b-r-neutral-tone-mapper/index.md) |
-| [AgxToneMapper](../-agx-tone-mapper/index.md) |
-| [ACESLegacyToneMapper](../-a-c-e-s-legacy-tone-mapper/index.md) |
 
 ## Types
 
