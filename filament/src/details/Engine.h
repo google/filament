@@ -639,6 +639,11 @@ private:
     template<typename T>
     bool terminateAndDestroy(const T* ptr, ResourceList<T>& list);
 
+    // Frees the frontend object, or defers the free until its asynchronous creation settles.
+    // Must be called after T::terminate().
+    template<typename T>
+    void destroyOrDeferFrontendObject(T* p);
+
     template<typename T>
     void cleanupResourceList(ResourceList<T>&& list);
 
