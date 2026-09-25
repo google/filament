@@ -29,6 +29,7 @@
 #include <cgltf.h>
 #include <meshoptimizer.h>
 
+#include <algorithm>
 #include <limits>
 
 namespace filament::gltfio::utility {
@@ -322,6 +323,46 @@ bool requiresPacking(cgltf_accessor const* accessor) {
             assert_invariant(false);
             return true;
     }
+}
+
+bool isUploadableIndexAccessor(cgltf_accessor const* accessor) {
+    // A sparse accessor's contents are not the raw bytes of its bufferView, so a straight copy of
+    // (count * componentSize) bytes would upload the wrong data.
+    //
+    // TODO: sparse index accessors are valid glTF, so rejecting one fails a conforming asset.
+    // Unpack them with cgltf_accessor_read_index() instead.
+    if (UTILS_UNLIKELY(accessor->is_sparse)) {
+        return false;
+    }
+
+    // Anything other than SCALAR makes cgltf_calc_size() a multiple of the component size, which is
+    // what makes the upload size exceed the allocated capacity.
+    if (accessor->type != cgltf_type_scalar) {
+        return false;
+    }
+
+    cgltf_size const componentSize = cgltf_component_size(accessor->component_type);
+    if (componentSize == 0) {
+        return false;
+    }
+
+    // A byteStride on the referenced bufferView is forbidden for indices. Allowing one would make
+    // the source span (stride * (count - 1) + componentSize) bytes while the destination only holds
+    // (count * componentSize).
+    if (accessor->stride != componentSize) {
+        return false;
+    }
+
+    // Two ceilings apply: IndexBuffer::Builder::indexCount() takes a uint32_t, and
+    // (count * componentSize) must not wrap size_t. Comparing against the smaller of the two keeps
+    // both bounds effective where cgltf_size is 32 bits, as it is on WASM.
+    cgltf_size const maxCount = std::min(cgltf_size(std::numeric_limits<uint32_t>::max()),
+            cgltf_size(std::numeric_limits<size_t>::max() / componentSize));
+    if (accessor->count > maxCount) {
+        return false;
+    }
+
+    return true;
 }
 
 bool loadCgltfBuffers(cgltf_data const* gltf, char const* gltfPath,

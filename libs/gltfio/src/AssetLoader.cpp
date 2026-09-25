@@ -1015,8 +1015,17 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             return false;
         }
 
+        // The capacity we are about to commit to is (count * componentSize). ResourceLoader
+        // computes the size of the upload from the accessor's stride and type, so reject here any
+        // accessor for which those two quantities can disagree.
+        if (!utility::isUploadableIndexAccessor(accessor)) {
+            slog.e << "Malformed index accessor in " << name
+                   << ": indices must be scalar, tightly packed and non-sparse." << io::endl;
+            return false;
+        }
+
         indices = IndexBuffer::Builder()
-            .indexCount(accessor->count)
+            .indexCount(uint32_t(accessor->count))
             .bufferType(indexType)
             .build(mEngine);
 
