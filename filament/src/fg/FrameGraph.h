@@ -323,8 +323,11 @@ public:
      * Execute all referenced passes
      *
      * @param driver a reference to the backend to execute the commands
+     * @param name   name used for the top-level debug group marker (e.g. the View's name).
+     *               If null or empty, "FrameGraph" is used. The string is copied, so it
+     *               doesn't need to outlive this call.
      */
-    void execute(backend::DriverApi& driver) noexcept;
+    void execute(backend::DriverApi& driver, const char* name = nullptr) noexcept;
 
     /**
      * Forwards a resource to another one which gets replaced.

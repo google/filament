@@ -44,7 +44,9 @@
 #include <algorithm>
 #include <functional>
 
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 namespace filament {
 
@@ -248,7 +250,7 @@ FrameGraph& FrameGraph::compile() noexcept {
     return *this;
 }
 
-void FrameGraph::execute(backend::DriverApi& driver) noexcept {
+void FrameGraph::execute(backend::DriverApi& driver, const char* name) noexcept {
 
     bool const useProtectedMemory = mMode == Mode::PROTECTED;
     auto const& passNodes = mPassNodes;
@@ -256,7 +258,16 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
     ResourceCreationContext const context{ *this, driver, useProtectedMemory };
 
     FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameGraph");
-    driver.pushGroupMarker("FrameGraph");
+    if (name && name[0]) {
+        // The marker string is consumed asynchronously by the driver thread, so copy it into
+        // the command stream to guarantee its lifetime.
+        size_t const size = strlen(name) + 1;
+        char* const marker = driver.allocatePod<char>(size);
+        memcpy(marker, name, size);
+        driver.pushGroupMarker(marker);
+    } else {
+        driver.pushGroupMarker("FrameGraph");
+    }
 
     auto first = passNodes.begin();
     const auto activePassNodesEnd = mActivePassNodesEnd;
