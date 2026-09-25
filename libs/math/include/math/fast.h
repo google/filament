@@ -128,13 +128,13 @@ constexpr float exp(float x) noexcept {
  */
 
 #if defined(__ARM_NEON) && defined(__aarch64__)
-inline uint8_t  MATH_PURE qadd(uint8_t a,  uint8_t b)  noexcept { return vuqaddb_s8(a, b);  }
-inline uint16_t MATH_PURE qadd(uint16_t a, uint16_t b) noexcept { return vuqaddh_s16(a, b); }
-inline uint32_t MATH_PURE qadd(uint32_t a, uint32_t b) noexcept { return vuqadds_s32(a, b); }
+inline uint8_t  MATH_PURE qadd(uint8_t a,  uint8_t b)  noexcept { return vqaddb_u8(a, b);  }
+inline uint16_t MATH_PURE qadd(uint16_t a, uint16_t b) noexcept { return vqaddh_u16(a, b); }
+inline uint32_t MATH_PURE qadd(uint32_t a, uint32_t b) noexcept { return vqadds_u32(a, b); }
 
-inline uint8_t  MATH_PURE qsub(uint8_t a,  uint8_t b)  noexcept { return vqsubb_s8(a, b);  }
-inline uint16_t MATH_PURE qsub(uint16_t a, uint16_t b) noexcept { return vqsubh_s16(a, b); }
-inline uint32_t MATH_PURE qsub(uint32_t a, uint32_t b) noexcept { return vqsubs_s32(a, b); }
+inline uint8_t  MATH_PURE qsub(uint8_t a,  uint8_t b)  noexcept { return vqsubb_u8(a, b);  }
+inline uint16_t MATH_PURE qsub(uint16_t a, uint16_t b) noexcept { return vqsubh_u16(a, b); }
+inline uint32_t MATH_PURE qsub(uint32_t a, uint32_t b) noexcept { return vqsubs_u32(a, b); }
 #else
 
 template<typename T, typename = std::enable_if_t<
