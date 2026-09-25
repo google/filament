@@ -56,6 +56,7 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
 
     mTotalSize = newTotalSize;
     mFreeList.clear();
+    mAllocationCount = 0;
 
     // Resize mNodes to the number of slots
     const size_t slotCount = mTotalSize >> mSlotSizeShift;
@@ -68,7 +69,6 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     node->slot.offset = 0;
     node->slot.slotSize = mTotalSize;
     node->slot.isAllocated = false;
-    node->slot.gpuUseCount = 0;
     node->freeListIterator = mFreeList.emplace(mTotalSize, node);
 
     // Set the tail tag
@@ -98,6 +98,7 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
     assert_invariant(remainingSize % mSlotSize == 0);
     assert_invariant((offset + alignedSize) % mSlotSize == 0);
     targetNode->slot.isAllocated = true;
+    ++mAllocationCount;
 
     // Split the slot if it is larger than what we need.
     if (originalSlotSize > alignedSize) {
@@ -114,7 +115,6 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         nextNode->slot.offset = offset + alignedSize;
         nextNode->slot.slotSize = remainingSize;
         nextNode->slot.isAllocated = false;
-        nextNode->slot.gpuUseCount = 0;
         nextNode->freeListIterator = mFreeList.emplace(remainingSize, nextNode);
 
         // Update the Tail of remaining free block
@@ -153,37 +153,12 @@ void BufferAllocator::copySlotToTail(allocation_size_t tailIndex,
 void BufferAllocator::retire(AllocationId id) {
     InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
+    assert_invariant(targetNode->slot.isAllocated);
 
-    Slot& slot = targetNode->slot;
-    slot.isAllocated = false;
-    if (slot.gpuUseCount == 0) {
-        freeSlot(targetNode);
-    }
-}
-
-void BufferAllocator::acquireGpu(AllocationId id) {
-    InternalSlotNode* targetNode = getNodeById(id);
-    assert_invariant(targetNode != nullptr);
-
-    // Should not happen, just for safety
-    if (UTILS_UNLIKELY(targetNode->slot.isFree())) {
-        mFreeList.erase(targetNode->freeListIterator);
-        targetNode->freeListIterator = mFreeList.end();
-    }
-
-    targetNode->slot.gpuUseCount++;
-}
-
-void BufferAllocator::releaseGpu(AllocationId id) {
-    InternalSlotNode* targetNode = getNodeById(id);
-    assert_invariant(targetNode != nullptr);
-    assert_invariant(targetNode->slot.gpuUseCount > 0);
-
-    Slot& slot = targetNode->slot;
-    slot.gpuUseCount--;
-    if (slot.gpuUseCount == 0 && !slot.isAllocated) {
-        freeSlot(targetNode);
-    }
+    targetNode->slot.isAllocated = false;
+    assert_invariant(mAllocationCount > 0);
+    --mAllocationCount;
+    freeSlot(targetNode);
 }
 
 void BufferAllocator::freeSlot(InternalSlotNode* node) {
@@ -247,11 +222,6 @@ BufferAllocator::allocation_size_t
     return getNodeById(id)->slot.offset;
 }
 
-bool BufferAllocator::isLockedByGpu(AllocationId id) const {
-    const InternalSlotNode* targetNode = getNodeById(id);
-    return targetNode->slot.gpuUseCount > 0;
-}
-
 BufferAllocator::allocation_size_t BufferAllocator::slotIndexFromOffset(
         allocation_size_t offset) const noexcept {
     return offset >> mSlotSizeShift;
@@ -278,6 +248,11 @@ BufferAllocator::allocation_size_t BufferAllocator::alignUp(
     if (size == 0) return 0;
 
     return (size + mSlotSize - 1) & ~(mSlotSize - 1);
+}
+
+BufferAllocator::allocation_size_t BufferAllocator::alignDown(
+        allocation_size_t size) const noexcept {
+    return size & ~(mSlotSize - 1);
 }
 
 } // namespace filament

@@ -24,8 +24,9 @@
 
 #include <private/utils/Tracing.h>
 
-#include <utils/Logger.h>
-
+#include <algorithm>
+#include <cstddef>
+#include <utility>
 #include <vector>
 
 namespace filament {
@@ -42,72 +43,39 @@ using allocation_size_t = BufferAllocator::allocation_size_t;
 // FenceManager
 // ------------------------------------------------------------------------------------------------
 
-void UboManager::FenceManager::track(DriverApi& driver, AllocationIdContainer&& allocationIds) {
-    if (allocationIds.empty()) {
-        return;
-    }
-    mFenceAllocationList.emplace_back(driver.createFence(), std::move(allocationIds));
+void UboManager::FenceManager::track(DriverApi& driver) {
+    mFences.push_back({ driver.createFence(), ++mSubmittedSerial });
 }
 
-void UboManager::FenceManager::reclaimCompletedResources(DriverApi& driver,
-        std::function<void(AllocationId)> const& onReclaimed) {
+void UboManager::FenceManager::reclaimCompletedResources(DriverApi& driver) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    uint32_t signaledCount = 0;
-    bool seenSignaledFence = false;
-
-    // Iterate from the newest fence to the oldest.
-    for (auto it = mFenceAllocationList.rbegin(); it != mFenceAllocationList.rend(); ++it) {
-        const Handle<HwFence>& fence = it->first;
-        const FenceStatus status = driver.getFenceStatus(fence);
-
-        // If we have already seen a signaled fence, we can assume all older fences
-        // are also complete, regardless of their reported status (e.g., TIMEOUT_EXPIRED).
-        // This is guaranteed by the in-order execution of GPU command queues.
-        if (seenSignaledFence) {
-            signaledCount++;
-#ifndef NDEBUG
-            if (UTILS_UNLIKELY(status != FenceStatus::CONDITION_SATISFIED)) {
-                LOG(WARNING) << "A fence is either in an error state or hasn't signaled, but a newer "
-                                 "fence has. Will release the resource anyway.";
-            }
-#endif
+    // A completed fence covers every earlier submission on the same command stream.
+    for (auto it = mFences.rbegin(); it != mFences.rend(); ++it) {
+        // Fences are only created by track() and erased as soon as they're destroyed.
+        assert_invariant(it->fence);
+        if (driver.getFenceStatus(it->fence) != FenceStatus::CONDITION_SATISFIED) {
             continue;
         }
 
-        if (status == FenceStatus::CONDITION_SATISFIED) {
-            seenSignaledFence = true;
-            signaledCount++;
+        mCompletedSerial = it->serial;
+        auto firstToKeep = it.base();
+        for (auto completed = mFences.begin(); completed != firstToKeep; ++completed) {
+            driver.destroyFence(std::move(completed->fence));
         }
+        mFences.erase(mFences.begin(), firstToKeep);
+        break;
     }
-
-    if (signaledCount == 0) {
-        // No fences have completed, nothing to do.
-        return;
-    }
-
-    auto firstToKeep = mFenceAllocationList.begin() + signaledCount;
-
-    // Invoke the callback for all resources protected by completed fences.
-    for (auto it = mFenceAllocationList.begin(); it != firstToKeep; ++it) {
-        for (const AllocationId& id : it->second) {
-            onReclaimed(id);
-        }
-        // Destroy the fence handle as it's no longer needed.
-        driver.destroyFence(std::move(it->first));
-    }
-
-    mFenceAllocationList.erase(mFenceAllocationList.begin(), firstToKeep);
 }
 
 void UboManager::FenceManager::reset(DriverApi& driver) {
-    for (auto& [fence, _] : mFenceAllocationList) {
-        if (fence) {
-            driver.destroyFence(std::move(fence));
-        }
+    for (FrameFence& frame : mFences) {
+        assert_invariant(frame.fence);
+        driver.destroyFence(std::move(frame.fence));
     }
-    mFenceAllocationList.clear();
+    mFences.clear();
+    mSubmittedSerial = 0;
+    mCompletedSerial = 0;
 }
-
 
 // ------------------------------------------------------------------------------------------------
 // UboManager
@@ -121,13 +89,19 @@ UboManager::UboManager(DriverApi& driver, allocation_size_t defaultSlotSizeInByt
 
 void UboManager::beginFrame(DriverApi& driver) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    // Check finished frames and decrement GPU count accordingly.
-    mFenceManager.reclaimCompletedResources(driver,
-            [this](AllocationId id) { mAllocator.releaseGpu(id); });
+    mFenceManager.reclaimCompletedResources(driver);
+    // Relies on mRetiredAllocations being sorted by serial (see UboManager.h).
+    auto firstToKeep = mRetiredAllocations.begin();
+    while (firstToKeep != mRetiredAllocations.end() &&
+            mFenceManager.hasCompleted(firstToKeep->serial)) {
+        mAllocator.retire(firstToKeep->id);
+        ++firstToKeep;
+    }
+    mRetiredAllocations.erase(mRetiredAllocations.begin(), firstToKeep);
 
-    // Release slots from unmanaged instances.
+    // endFrame has now fenced any reads issued before these instances were destroyed.
     for (AllocationId id: mFreedAllocations) {
-        mAllocator.retire(id);
+        deferRetirement(id);
     }
     mFreedAllocations.clear();
 
@@ -141,7 +115,7 @@ void UboManager::beginFrame(DriverApi& driver) {
     }
 
     // Calculate the required size and grow the Ubo.
-    const allocation_size_t requiredSize = calculateRequiredSize();
+    const allocation_size_t requiredSize = calculateRequiredSize(driver.getMaxUniformBufferSize());
     reallocate(driver, requiredSize);
 
     // Allocate slots for each MI on the new Ubo.
@@ -165,27 +139,43 @@ void UboManager::finishBeginFrame(DriverApi& driver) {
 }
 
 void UboManager::endFrame(DriverApi& driver) {
-    auto allocationIds =
-            FenceManager::AllocationIdContainer::with_capacity(
-                    mManagedInstances.size() + mFreedAllocations.size());
-    for (const auto* mi: mManagedInstances) {
-        const AllocationId id = mi->getAllocationId();
-        if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
-            continue;
-        }
-
-        mAllocator.acquireGpu(id);
-        allocationIds.push_back(id);
+    // Every allocated slot is owned by exactly one of:
+    //  - a managed instance (may be read by this frame),
+    //  - mFreedAllocations (released this frame, may have been read by this frame),
+    //  - mRetiredAllocations (last read by a frame whose fence is already tracked).
+    // Pending instances own no slot. So if the first two are empty, nothing issued since the
+    // last fence reads the UBO and there is nothing new to fence.
+    assert_invariant(isAllocationAccountingConsistent());
+    if (!mManagedInstances.empty() || !mFreedAllocations.empty()) {
+        mFenceManager.track(driver);
     }
-
-    // Also track MIs that were freed during this frame.
-    for (const AllocationId id: mFreedAllocations) {
-        mAllocator.acquireGpu(id);
-        allocationIds.push_back(id);
-    }
-
-    mFenceManager.track(driver, std::move(allocationIds));
 }
+
+// Must only be called for allocations whose last GPU use was already covered by a fence
+// (i.e. submitted before the last endFrame()). Otherwise the stamped serial is too early and
+// the slot may be reused while still in flight. Defer via mFreedAllocations in that case.
+void UboManager::deferRetirement(AllocationId id) {
+    if (!mFenceManager.isPending()) {
+        mAllocator.retire(id);
+    } else {
+        const FenceManager::Serial serial = mFenceManager.getSubmittedSerial();
+        // beginFrame() retires a prefix of mRetiredAllocations, so it must stay sorted.
+        assert_invariant(mRetiredAllocations.empty() ||
+                mRetiredAllocations.back().serial <= serial);
+        mRetiredAllocations.push_back({ id, serial });
+    }
+}
+
+#ifndef NDEBUG
+bool UboManager::isAllocationAccountingConsistent() const noexcept {
+    const size_t managedCount = std::count_if(mManagedInstances.begin(), mManagedInstances.end(),
+            [](const FMaterialInstance* mi) {
+                return BufferAllocator::isValid(mi->getAllocationId());
+            });
+    return mAllocator.getAllocationCount() ==
+            managedCount + mFreedAllocations.size() + mRetiredAllocations.size();
+}
+#endif
 
 void UboManager::terminate(DriverApi& driver) {
     mFenceManager.reset(driver);
@@ -204,7 +194,9 @@ void UboManager::updateSlot(DriverApi& driver, AllocationId id,
 
 void UboManager::manageMaterialInstance(FMaterialInstance* instance) {
     assert_invariant(std::find(mPendingInstances.begin(), mPendingInstances.end(), instance) ==
-                     mPendingInstances.end());
+            mPendingInstances.end());
+    assert_invariant(std::find(mManagedInstances.begin(), mManagedInstances.end(), instance) ==
+            mManagedInstances.end());
     mPendingInstances.push_back(instance);
 }
 
@@ -223,14 +215,15 @@ void UboManager::unmanageMaterialInstance(FMaterialInstance* materialInstance) {
 
     auto itManaged =
             std::find(mManagedInstances.begin(), mManagedInstances.end(), materialInstance);
-    if (UTILS_LIKELY(itManaged != mManagedInstances.end())) {
-        std::swap(*itManaged, mManagedInstances.back());
-        mManagedInstances.pop_back();
-    }
-
-    if (UTILS_UNLIKELY(!BufferAllocator::isValid(id))) {
+    if (UTILS_UNLIKELY(itManaged == mManagedInstances.end())) {
+        // This MI was never managed, so it owns no slot.
         return;
     }
+    std::swap(*itManaged, mManagedInstances.back());
+    mManagedInstances.pop_back();
+
+    // Outside beginFrame(), every managed instance owns a valid slot (see allocateOnDemand()).
+    assert_invariant(BufferAllocator::isValid(id));
 
     // We push the allocation id back to the list, and defer the actual retirement to beginFrame,
     // so that we centralized all the retirements at the same place.
@@ -241,6 +234,7 @@ void UboManager::unmanageMaterialInstance(FMaterialInstance* materialInstance) {
 UboManager::AllocationResult UboManager::allocateOnDemand() {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     bool reallocationNeeded = false;
+    const size_t previouslyManagedCount = mManagedInstances.size();
 
     // Pass 1: Allocate slots for new material instances (that don't have a slot yet).
     for (auto* mi : mPendingInstances) {
@@ -259,17 +253,20 @@ UboManager::AllocationResult UboManager::allocateOnDemand() {
     mPendingInstances.clear();
 
     // Pass 2: Allocate slots for existing material instances that need to be orphaned.
-    for (auto* mi: mManagedInstances) {
-        if (!BufferAllocator::isValid(mi->getAllocationId())) {
+    // Newly allocated instances have never been submitted and must not be orphaned.
+    for (size_t i = 0; i < previouslyManagedCount; ++i) {
+        FMaterialInstance* mi = mManagedInstances[i];
+        // These instances were all allocated by a previous successful beginFrame().
+        assert_invariant(BufferAllocator::isValid(mi->getAllocationId()));
+
+        // Every existing allocation is conservatively considered used by the last submission.
+        // No per-allocation GPU count is needed, since owned slots cannot be reused anyway.
+        // So a dirty instance needs orphaning only while that submission is still pending.
+        if (!mi->getUniformBuffer().isDirty() || !mFenceManager.isPending()) {
             continue;
         }
 
-        // This instance doesn't need orphaning.
-        if (!mi->getUniformBuffer().isDirty() || !mAllocator.isLockedByGpu(mi->getAllocationId())) {
-            continue;
-        }
-
-        mAllocator.retire(mi->getAllocationId());
+        deferRetirement(mi->getAllocationId());
 
         // If the space is already not sufficient, we don't need to give another try on allocation.
         if (reallocationNeeded) {
@@ -315,13 +312,17 @@ void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
     }
 
     mFenceManager.reset(driver);
+    // Old serials and allocation IDs belong to the discarded UBO generation.
+    mRetiredAllocations.clear();
+    // beginFrame() drains mFreedAllocations before it can reach reallocation.
+    assert_invariant(mFreedAllocations.empty());
     mAllocator.reset(requiredSize);
     mUboSize = requiredSize;
     mUbHandle = driver.createBufferObject(requiredSize, BufferObjectBinding::UNIFORM,
             BufferUsage::DYNAMIC | BufferUsage::SHARED_WRITE_BIT);
 }
 
-allocation_size_t UboManager::calculateRequiredSize() {
+allocation_size_t UboManager::calculateRequiredSize(size_t maxUniformBufferSize) {
     allocation_size_t newBufferSize = 0;
     for (const auto* mi: mManagedInstances) {
         const AllocationId allocationId = mi->getAllocationId();
@@ -333,7 +334,11 @@ allocation_size_t UboManager::calculateRequiredSize() {
             newBufferSize += mAllocator.alignUp(mi->getUniformBuffer().getSize());
         }
     }
-    return mAllocator.alignUp(newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
+
+    // TODO: Add more buffers if one is not enough?
+    // The device limit may not be a multiple of the slot size, so round it down.
+    return std::min(mAllocator.alignDown((allocation_size_t)maxUniformBufferSize),
+            mAllocator.alignUp(newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER));
 }
 
 } // namespace filament
