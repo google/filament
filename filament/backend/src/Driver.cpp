@@ -78,8 +78,7 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
                 // Exit only after the queue is drained. Abandoning callbacks would strand callers
                 // waiting on a completion that never arrives (e.g. FEngine defers freeing an
                 // asynchronous object until its creation callback settles it).
-                if (serviceThreadCallbackQueue.empty()) {
-                    assert_invariant(mExitRequested);
+                if (mExitRequested && serviceThreadCallbackQueue.empty()) {
                     break;
                 }
                 // move the callbacks to a temporary vector
