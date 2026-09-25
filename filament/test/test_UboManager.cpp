@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
+#include "filament_test_resources.h"
 #include "MockDriver.h"
+
 #include "details/MaterialInstance.h"
 #include "details/UboManager.h"
 
@@ -25,7 +24,8 @@
 #include <private/backend/CommandStream.h>
 #include <private/backend/Driver.h>
 
-#include "filament_test_resources.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace {
 using namespace filament;
