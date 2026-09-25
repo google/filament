@@ -117,6 +117,7 @@ cmake ..\.. ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
+    "-DCMAKE_VS_GLOBALS=UseMultiToolTask=true;EnforceProcessCountAcrossBuilds=true" ^
     || exit /b
 
 set build_flags=-j %NUMBER_OF_PROCESSORS%
