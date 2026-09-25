@@ -17,7 +17,15 @@
 #include <ktxreader/Ktx1Reader.h>
 
 
-#if defined(__ANDROID__) || defined(IMAGEIO_LITE)
+// imageio-lite is a cut-down decoder without the libpng/libz/tinyexr dependencies, which are not
+// built for Android or WASM. It is also selectable on desktop via IMAGEIO_LITE.
+#if defined(__ANDROID__) || defined(__EMSCRIPTEN__) || defined(IMAGEIO_LITE)
+#define FILAMENTAPP_USE_IMAGEIO_LITE 1
+#else
+#define FILAMENTAPP_USE_IMAGEIO_LITE 0
+#endif
+
+#if FILAMENTAPP_USE_IMAGEIO_LITE
 #include <imageio-lite/ImageDecoder.h>
 namespace image_ns = imageio_lite;
 #else
@@ -96,7 +104,7 @@ bool IBL::loadFromEquirect(const utils::Path& path) {
             return false;
         }
         std::istringstream in_stream(std::string(buf.begin(), buf.end()), std::ios::binary);
-#if defined(__ANDROID__) || defined(IMAGEIO_LITE)
+#if FILAMENTAPP_USE_IMAGEIO_LITE
         image::LinearImage* image = new image::LinearImage(image_ns::ImageDecoder::decode(in_stream,
                 utils::CString(path.getAbsolutePath().c_str())));
 #else

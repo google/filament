@@ -992,14 +992,24 @@ add_subdirectory(${FILAMENT}/filament)
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
+# assimp is only used by filamentapp's MeshAssimp, which is not built for WASM.
+if (IS_HOST_PLATFORM OR ANDROID)
+   add_subdirectory(${EXTERNAL}/libassimp/tnt)
+endif()
+
+# filamentapp must come before the web/ subdirectories so that its target is
+# already defined when the WASM samples link against it.
+if (IS_HOST_PLATFORM OR ANDROID OR WASM)
+   add_subdirectory(${LIBRARIES}/filamentapp)
+endif()
+
 if (WASM)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/examples)
-endif()
-
-if (IS_HOST_PLATFORM OR ANDROID)
-   add_subdirectory(${LIBRARIES}/filamentapp)
-   add_subdirectory(${EXTERNAL}/libassimp/tnt)
+    # Excluded from the default build so that building filament.js does not also build the
+    # samples, their resources, and the IBL cmgen produces for them. Build the samples through
+    # the filament-samples target, or name one, e.g. gltf_viewer.
+    add_subdirectory(${FILAMENT}/samples EXCLUDE_FROM_ALL)
 endif()
 
 if (IS_HOST_PLATFORM)

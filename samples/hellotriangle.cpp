@@ -159,7 +159,6 @@ int main(int argc, char** argv) {
     auto dm = samples::getDisplayManager(config);
     auto loader = samples::getAssetLoader(config);
     auto app = createSampleApp(config, dm.get(), loader.get());
-    app->run();
-    return 0;
+    return samples::runApp(std::move(app), std::move(dm), std::move(loader));
 }
 #endif

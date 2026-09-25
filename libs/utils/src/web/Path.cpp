@@ -16,6 +16,10 @@
 
 #include <utils/Path.h>
 
+#include <vector>
+
+#include <dirent.h>
+
 namespace utils {
 
 bool Path::mkdir() const {
@@ -28,6 +32,30 @@ Path Path::getCurrentExecutable() {
 
 Path Path::getUserSettingsDirectory() {
     return Path(".");
+}
+
+std::vector<Path> Path::listContents() const {
+    // Emscripten's virtual filesystem implements the POSIX directory API, so this is the same
+    // traversal the native platforms do.
+    if (!isDirectory() || !exists()) {
+        return {};
+    }
+
+    DIR* dir = opendir(c_str());
+    if (dir == nullptr) {
+        return {};
+    }
+
+    std::vector<Path> directoryContents;
+    while (struct dirent* entry = readdir(dir)) {
+        const char* file = entry->d_name;
+        if (file[0] != '.') {
+            directoryContents.push_back(concat(file));
+        }
+    }
+
+    closedir(dir);
+    return directoryContents;
 }
 
 } // namespace utils

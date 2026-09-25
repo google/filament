@@ -19,7 +19,27 @@
 
 #include <utils/Logger.h>
 
+#include <webgpu/webgpu_cpp.h>
+
 #include <cstdint>
+
+// The callback mode used for Buffer::MapAsync.
+//
+// Natively, callbacks are delivered on the driver thread when the backend calls
+// Instance::ProcessEvents().
+//
+// Under Emscripten, that cannot work: the device is created by the page and imported through
+// Module.preinitializedWebGPUDevice, which emdawnwebgpu attaches to a placeholder instance that
+// no wgpu::Instance can process events for. AllowProcessEvents callbacks on that device are
+// therefore never delivered. AllowSpontaneous callbacks are delivered from the browser's event
+// loop once the mapping resolves, which is safe because the WASM backend is single-threaded.
+#if defined(__EMSCRIPTEN__)
+constexpr wgpu::CallbackMode FILAMENT_WEBGPU_MAP_ASYNC_CALLBACK_MODE =
+        wgpu::CallbackMode::AllowSpontaneous;
+#else
+constexpr wgpu::CallbackMode FILAMENT_WEBGPU_MAP_ASYNC_CALLBACK_MODE =
+        wgpu::CallbackMode::AllowProcessEvents;
+#endif
 
 // WebGPU requires that the source buffer of a writeBuffer call has a size that is a multiple of 4.
 constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
