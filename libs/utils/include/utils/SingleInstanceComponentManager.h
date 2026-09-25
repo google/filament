@@ -55,8 +55,9 @@ public:
      * Registers a callback to be triggered when components are added, removed, or modified.
      * @param token A unique identifier for the listener (e.g., 'this' pointer).
      * @param callback The callback to invoke.
-     * @note Registering the same token multiple times will result in multiple
-     *       registrations and the callback being invoked multiple times.
+     * @note Only changes occurring after the callback is registered are buffered and reported
+     *       (matching registerBitset). Registering the same token multiple times will result in
+     *       multiple registrations and the callback being invoked multiple times.
      */
     void registerChangeCallback(void const* token, ChangeCallback callback) noexcept;
 
@@ -114,10 +115,12 @@ public:
     bool popPendingZombie(Entity newEntity, Entity& outZombie) noexcept;
 
     /**
-     * Records a change for the given entity.
-     * Flushes notifications if the internal buffer becomes full.
+     * Records a change for the given entity or slice of entities.
+     * Registered bitsets are updated immediately; if any change callbacks are registered,
+     * the entities are buffered and flushed when the internal buffer becomes full.
      */
     void notifyChange(Entity e) noexcept;
+    void notifyChange(Slice<const Entity> entities) noexcept;
 
     // Non-templated Presence & Instance queries
     bool hasComponent(Entity const e) const noexcept {
@@ -259,6 +262,8 @@ protected:
     PagedArenaBitset mEntities UTILS_GUARDED_BY(mEbrEntitiesLock);
 
 private:
+    void recordDirtyEntity(Entity e) noexcept;
+
     EntityManager& mEntityManager;
     ImmutableCString mName;
     bool mAmortizationSupported = false;
