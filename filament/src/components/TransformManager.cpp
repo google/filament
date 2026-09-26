@@ -162,7 +162,12 @@ void FTransformManager::setParent(Instance const i, Instance const parent) noexc
         auto& manager = mManager;
         Instance const oldParent = manager[i].parent;
         if (oldParent != parent) {
-            // TODO: on debug builds, ensure that the new parent isn't one of our descendant
+#ifndef NDEBUG
+            // ensure that the new parent isn't one of our descendants
+            for (Instance p = parent; p; p = manager[p].parent) {
+                assert_invariant(p != i);
+            }
+#endif
             removeNode(i);
             insertNode(i, parent);
             if (UTILS_LIKELY(oldParent && parent)) {

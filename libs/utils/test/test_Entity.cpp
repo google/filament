@@ -1007,24 +1007,25 @@ TEST(EntityTest, ComponentManager_AutomatedLeapForward_BlocksOnIntersection) {
     EXPECT_EQ(cm.getWatermark(), 1);
 }
 
-TEST(EntityInstanceTest, IncrementDecrement) {
-    using Instance = EntityInstance<struct DummyTag>;
+TEST(EntityTest, EntityInstanceIncrementDecrement) {
+    struct DummyTag {};
+    using Instance = EntityInstance<DummyTag>;
+
     Instance i{ 5 };
+    Instance const prevInc = i++;
+    EXPECT_EQ(prevInc.asValue(), 5u);
+    EXPECT_EQ(i.asValue(), 6u);
 
-    // Prefix increment
-    EXPECT_EQ(++i, Instance{ 6 });
-    EXPECT_EQ(i, Instance{ 6 });
+    Instance const preInc = ++i;
+    EXPECT_EQ(preInc.asValue(), 7u);
+    EXPECT_EQ(i.asValue(), 7u);
 
-    // Postfix increment
-    EXPECT_EQ(i++, Instance{ 6 });
-    EXPECT_EQ(i, Instance{ 7 });
+    Instance const prevDec = i--;
+    EXPECT_EQ(prevDec.asValue(), 7u);
+    EXPECT_EQ(i.asValue(), 6u);
 
-    // Prefix decrement
-    EXPECT_EQ(--i, Instance{ 6 });
-    EXPECT_EQ(i, Instance{ 6 });
-
-    // Postfix decrement
-    EXPECT_EQ(i--, Instance{ 6 });
-    EXPECT_EQ(i, Instance{ 5 });
+    Instance const preDec = --i;
+    EXPECT_EQ(preDec.asValue(), 5u);
+    EXPECT_EQ(i.asValue(), 5u);
 }
 

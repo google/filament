@@ -341,6 +341,35 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(rangeCount, c);
 }
 
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
+TEST(FilamentTest, TransformManagerSetParentCycle) {
+    EntityManager& em = EntityManager::get();
+    FTransformManager tcm(em);
+
+    std::array<Entity, 3> entities;
+    em.create(entities.size(), entities.data());
+
+    tcm.create(entities[0]);
+    TransformManager::Instance const root = tcm.getInstance(entities[0]);
+
+    tcm.create(entities[1], root, mat4f{});
+    TransformManager::Instance const child = tcm.getInstance(entities[1]);
+
+    tcm.create(entities[2], child, mat4f{});
+    TransformManager::Instance const grandchild = tcm.getInstance(entities[2]);
+
+    // Re-parenting a node to itself or any of its descendants must fail an invariant assertion.
+    EXPECT_DEATH(tcm.setParent(root, root), "failed assertion");
+    EXPECT_DEATH(tcm.setParent(root, child), "failed assertion");
+    EXPECT_DEATH(tcm.setParent(root, grandchild), "failed assertion");
+
+    for (auto e : entities) {
+        tcm.destroy(e);
+        em.destroy(e);
+    }
+}
+#endif
+
 TEST(FilamentTest, TransformManagerChildrenIteration) {
     EntityManager& em = EntityManager::get();
     FTransformManager tcm(em);

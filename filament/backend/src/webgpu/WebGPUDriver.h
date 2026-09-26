@@ -103,6 +103,11 @@ private:
     WebGPUBlitter mBlitter;
     webgpuutils::AsyncTaskCounter mReadPixelMapsCounter{};
 
+    // readPixels MapAsync callbacks hold a weak reference to this token. Under Emscripten they are
+    // delivered spontaneously and can arrive after the driver is destroyed, in which case they
+    // must not touch it.
+    std::shared_ptr<bool> const mLifetimeToken{ std::make_shared<bool>(true) };
+
     struct {
         // For push constant
         WebGPUProgram* program = nullptr;

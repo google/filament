@@ -69,8 +69,8 @@ public:
     // and we can iterate
     constexpr EntityInstance& operator++() noexcept { ++mInstance; return *this; }
     constexpr EntityInstance& operator--() noexcept { --mInstance; return *this; }
-    constexpr EntityInstance operator++(int) noexcept { EntityInstance const temp(*this); ++mInstance; return temp; }
-    constexpr EntityInstance operator--(int) noexcept { EntityInstance const temp(*this); --mInstance; return temp; }
+    constexpr const EntityInstance operator++(int) noexcept { return EntityInstance{ mInstance++ }; }
+    constexpr const EntityInstance operator--(int) noexcept { return EntityInstance{ mInstance-- }; }
 
 
     // return a value for this Instance (mostly needed for debugging
