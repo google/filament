@@ -746,6 +746,8 @@ export class View {
     public isStencilBufferEnabled(): boolean;
     public setTransparentPickingEnabled(enabled: boolean): void;
     public isTransparentPickingEnabled(): boolean;
+    public setTighterShadowCasterCullingEnabled(enabled: boolean): void;
+    public isTighterShadowCasterCullingEnabled(): boolean;
     public getViewport(): float4;
     public hasCamera(): boolean;
     public setShadowingEnabled(enabled: boolean): void;

@@ -900,6 +900,8 @@ class_<View>("View")
     .function("_setScreenSpaceReflectionsOptions", &View::setScreenSpaceReflectionsOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("setShadowingEnabled", &View::setShadowingEnabled)
+    .function("setTighterShadowCasterCullingEnabled", &View::setTighterShadowCasterCullingEnabled)
+    .function("isTighterShadowCasterCullingEnabled", &View::isTighterShadowCasterCullingEnabled)
     .function("isShadowingEnabled", &View::isShadowingEnabled)
     .function("setShadowType", &View::setShadowType)
     .function("getShadowType", &View::getShadowType)
@@ -2561,7 +2563,7 @@ class_<AssetLoader>("gltfio$AssetLoader")
     // components, material instances, vertex buffers, index buffers, and textures.
     // asset ::argument:: the Filament asset created using AssetLoader
     .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers())
-    
+
     // gc ::method::
     // Performs a Garbage Collection sweep over all internal component managers.
     .function("gc", &AssetLoader::gc, allow_raw_pointers());

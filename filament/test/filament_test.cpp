@@ -15,6 +15,7 @@
  */
 
 #include "Allocators.h"
+#include "Culler.h"
 #include "Froxelizer.h"
 #include "UniformBuffer.h"
 
@@ -55,8 +56,10 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <iostream>
@@ -1229,6 +1232,189 @@ TEST(FilamentTest, SphereCulling) {
 
     // A sphere that entirely contain the frustum
     EXPECT_TRUE(frustum.intersects({ 0, 200 }));
+}
+
+static void makeTwelvePlanes(Frustum const& frustum, float3 slabMin, float3 slabMax,
+        float4 planes[12]) {
+    frustum.getNormalizedPlanes(planes);
+    planes[6]  = { -1,  0,  0,  slabMin.x };
+    planes[7]  = {  1,  0,  0, -slabMax.x };
+    planes[8]  = {  0, -1,  0,  slabMin.y };
+    planes[9]  = {  0,  1,  0, -slabMax.y };
+    planes[10] = {  0,  0, -1,  slabMin.z };
+    planes[11] = {  0,  0,  1, -slabMax.z };
+}
+
+static bool referenceVisible12(float4 const* planes, float3 const c, float3 const e) {
+    for (size_t j = 0; j < 12; j++) {
+        bool allCornersOutside = true;
+        for (int corner = 0; corner < 8; corner++) {
+            float3 const p = {
+                    c.x + ((corner & 1) ? e.x : -e.x),
+                    c.y + ((corner & 2) ? e.y : -e.y),
+                    c.z + ((corner & 4) ? e.z : -e.z) };
+            if (planes[j].x * p.x + planes[j].y * p.y + planes[j].z * p.z + planes[j].w < 0.0f) {
+                allCornersOutside = false;
+                break;
+            }
+        }
+        if (allCornersOutside) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static float referenceMargin12(float4 const* planes, float3 const c, float3 const e) {
+    float smallest = std::numeric_limits<float>::max();
+    for (size_t j = 0; j < 12; j++) {
+        float const d = planes[j].x * c.x + planes[j].y * c.y + planes[j].z * c.z + planes[j].w -
+                        (std::abs(planes[j].x) * e.x + std::abs(planes[j].y) * e.y +
+                                std::abs(planes[j].z) * e.z);
+        smallest = std::min(smallest, std::abs(d));
+    }
+    return smallest;
+}
+
+TEST(FilamentTest, BoxCulling12Planes) {
+    Frustum const frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
+
+    // The slab clips the frustum to -5 < x < 5, -5 < y < 5, -50 < z < -2.
+    float4 planes[12];
+    makeTwelvePlanes(frustum, { -5, -5, -50 }, { 5, 5, -2 }, planes);
+
+    // Culler reads and writes round(count) elements; COUNT already is a multiple of MODULO.
+    constexpr size_t COUNT = 8;
+    ASSERT_EQ(Culler::round(COUNT), COUNT);
+
+    float cx[COUNT] = {}, cy[COUNT] = {}, cz[COUNT] = {};
+    float ex[COUNT] = {}, ey[COUNT] = {}, ez[COUNT] = {};
+    Culler::result_type results[COUNT] = {};
+
+    auto const setBox = [&](size_t const i, float3 const c, float3 const e) {
+        cx[i] = c.x; cy[i] = c.y; cz[i] = c.z;
+        ex[i] = e.x; ey[i] = e.y; ez[i] = e.z;
+    };
+
+    // 0: well inside both the frustum and the slab
+    setBox(0, { 0, 0, -10 }, { 0.5f, 0.5f, 0.5f });
+    // 1: inside the frustum but beyond the slab's far plane
+    setBox(1, { 0, 0, -80 }, { 0.5f, 0.5f, 0.5f });
+    // 2: inside the frustum but in front of the slab's near plane
+    setBox(2, { 0, 0, -1.5f }, { 0.1f, 0.1f, 0.1f });
+    // 3: inside the slab's z range but pushed out sideways past the slab's +x plane
+    setBox(3, { 8, 0, -10 }, { 0.5f, 0.5f, 0.5f });
+    // 4: straddles the slab's +x plane, so still visible
+    setBox(4, { 5, 0, -10 }, { 1.0f, 1.0f, 1.0f });
+    // 5: behind the camera, rejected by the frustum rather than the slab
+    setBox(5, { 0, 0, 10 }, { 0.5f, 0.5f, 0.5f });
+    // 6: large enough to enclose the whole clipped volume
+    setBox(6, { 0, 0, -10 }, { 500, 500, 500 });
+    // 7: outside the frustum's left plane for its depth
+    setBox(7, { -40, 0, -10 }, { 0.5f, 0.5f, 0.5f });
+
+    Culler::Test::intersects(results, planes, cx, cy, cz, ex, ey, ez, COUNT);
+
+    EXPECT_TRUE(results[0] & 1u)  << "box fully inside the clipped volume";
+    EXPECT_FALSE(results[1] & 1u) << "box beyond the slab far plane";
+    EXPECT_FALSE(results[2] & 1u) << "box in front of the slab near plane";
+    EXPECT_FALSE(results[3] & 1u) << "box past the slab +x plane";
+    EXPECT_TRUE(results[4] & 1u)  << "box straddling the slab +x plane";
+    EXPECT_FALSE(results[5] & 1u) << "box behind the camera";
+    EXPECT_TRUE(results[6] & 1u)  << "box enclosing the clipped volume";
+    EXPECT_FALSE(results[7] & 1u) << "box outside the frustum left plane";
+
+    // Every result must agree with the independent corner-based reference.
+    for (size_t i = 0; i < COUNT; i++) {
+        EXPECT_EQ(bool(results[i] & 1u),
+                referenceVisible12(planes, { cx[i], cy[i], cz[i] }, { ex[i], ey[i], ez[i] }))
+                << "box " << i;
+    }
+}
+
+TEST(FilamentTest, BoxCulling12PlanesMatchesReference) {
+    Frustum const frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
+    float4 planes[12];
+    makeTwelvePlanes(frustum, { -20, -20, -60 }, { 20, 20, -3 }, planes);
+
+    // Not a multiple of MODULO: the kernel rounds up, so the buffers must hold ROUNDED elements.
+    constexpr size_t COUNT = 1021;
+    size_t const ROUNDED = Culler::round(COUNT);
+    ASSERT_GT(ROUNDED, COUNT);
+
+    std::vector<float> cx(ROUNDED), cy(ROUNDED), cz(ROUNDED);
+    std::vector<float> ex(ROUNDED), ey(ROUNDED), ez(ROUNDED);
+    std::vector<Culler::result_type> results(ROUNDED, 0);
+
+    std::default_random_engine gen(42); // NOLINT
+    std::uniform_real_distribution<float> position(-40.0f, 40.0f);
+    std::uniform_real_distribution<float> depth(-80.0f, 5.0f);
+    std::uniform_real_distribution<float> size(0.05f, 12.0f);
+    for (size_t i = 0; i < ROUNDED; i++) {
+        cx[i] = position(gen); cy[i] = position(gen); cz[i] = depth(gen);
+        ex[i] = size(gen);     ey[i] = size(gen);     ez[i] = size(gen);
+    }
+
+    Culler::Test::intersects(results.data(), planes, cx.data(), cy.data(), cz.data(), ex.data(),
+            ey.data(), ez.data(), COUNT);
+
+    // Boxes within a few ULP of a plane can legitimately classify differently; skip them, but
+    // assert they stay rare enough to not mask a regression.
+    constexpr float EPSILON = 1e-3f;
+    size_t skipped = 0;
+    size_t visible = 0;
+    for (size_t i = 0; i < COUNT; i++) {
+        float3 const c = { cx[i], cy[i], cz[i] };
+        float3 const e = { ex[i], ey[i], ez[i] };
+        if (referenceMargin12(planes, c, e) < EPSILON) {
+            skipped++;
+            continue;
+        }
+        ASSERT_EQ(bool(results[i] & 1u), referenceVisible12(planes, c, e))
+                << "box " << i << " at (" << c.x << ", " << c.y << ", " << c.z << ")";
+        visible += bool(results[i] & 1u);
+    }
+
+    EXPECT_LT(skipped, COUNT / 100) << "too many boxes skipped as near-boundary";
+    // Guards against a degenerate data set that would make the comparison above vacuous.
+    EXPECT_GT(visible, 0u);
+    EXPECT_LT(visible, COUNT - skipped);
+}
+
+TEST(FilamentTest, BoxCulling12PlanesBitHandling) {
+    Frustum const frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
+    float4 planes[12];
+    makeTwelvePlanes(frustum, { -5, -5, -50 }, { 5, 5, -2 }, planes);
+
+    constexpr size_t COUNT = 16;
+    float cx[COUNT] = {}, cy[COUNT] = {}, cz[COUNT] = {};
+    float ex[COUNT] = {}, ey[COUNT] = {}, ez[COUNT] = {};
+
+    // Alternate visible and culled boxes so both branches of the bit update are exercised.
+    for (size_t i = 0; i < COUNT; i++) {
+        cz[i] = (i & 1u) ? -10.0f : -80.0f;
+        ex[i] = ey[i] = ez[i] = 0.5f;
+    }
+
+    for (size_t bit = 0; bit < 8; bit++) {
+        // Seed with the complement of the bit under test, so a kernel that never writes the bit,
+        // or writes it inverted, cannot pass.
+        Culler::result_type const mask = Culler::result_type(1u << bit);
+        Culler::result_type const other = Culler::result_type(~mask);
+        std::vector<Culler::result_type> results(COUNT, other);
+
+        Culler::intersects(results.data(), planes, cx, cy, cz, ex, ey, ez, COUNT, bit);
+
+        for (size_t i = 0; i < COUNT; i++) {
+            bool const expected =
+                    referenceVisible12(planes, { cx[i], cy[i], cz[i] }, { ex[i], ey[i], ez[i] });
+            EXPECT_EQ(bool(results[i] & mask), expected)
+                    << "bit " << bit << ", box " << i;
+            // Every other bit must survive untouched.
+            EXPECT_EQ(results[i] & ~mask, other & ~mask)
+                    << "bit " << bit << " leaked into other bits at box " << i;
+        }
+    }
 }
 
 TEST(FilamentTest, ColorConversion) {
