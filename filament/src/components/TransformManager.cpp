@@ -27,7 +27,14 @@
 #include <arm_neon.h>
 #endif
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
 
 using namespace utils;
@@ -114,6 +121,11 @@ inline void FTransformManager::createImpl(Entity const entity, Instance const pa
         manager[i].firstChild = 0;
         manager[i].dirty = 0;
         insertNode(i, parent);
+        if (UTILS_LIKELY(parent)) {
+            invalidateTopologyFromParent(parent);
+        } else {
+            markTopologyDirty();
+        }
         std::visit([this, &manager, i](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, mat4f>) {
@@ -158,13 +170,18 @@ void FTransformManager::setParent(Instance const i, Instance const parent) noexc
 #endif
             removeNode(i);
             insertNode(i, parent);
+            if (UTILS_LIKELY(oldParent && parent)) {
+                invalidateTopologyFromParent(std::min(oldParent, parent));
+            } else {
+                markTopologyDirty();
+            }
             if (UTILS_LIKELY(!mLocalTransformTransactionOpen)) {
                 markNodeDirty(i);
             }
             // Note: setParent() doesn't reorder the child after the parent in the array,
             // but that's not a problem because TransformManager doesn't rely on that.
-            // Also note that commitLocalTransformTransaction() does reorder all children after
-            // their parent, as an optimization to calculate the world transform.
+            // Also note that commitLocalTransformTransaction() and defragment() reorder all
+            // children after their parent, as an optimization to calculate the world transform.
         }
     }
 }
@@ -209,20 +226,50 @@ TransformManager::children_range FTransformManager::getChildrenRange(
 void FTransformManager::destroyComponents(Entity const* entities, size_t const count) noexcept {
     ensureWorldTransformsUpToDate();
     auto& manager = mManager;
+    // Children orphaned below become roots and need their world transform recomputed. They're
+    // recorded by Entity because removeComponent() moves the last component into the destroyed
+    // slot, which would invalidate a saved Instance (including those in mDirtyInstances).
+    std::vector<Entity> orphans;
     for (size_t k = 0; k < count; ++k) {
         Entity const e = entities[k];
         Instance const i = manager.getInstance(e);
         validateNode(i);
         if (i) {
+            Instance const oldParent = manager[i].parent;
+            Instance const firstChild = manager[i].firstChild;
             removeNode(i);
-            Instance child = manager[i].firstChild;
+            Instance child = firstChild;
             while (child) {
                 manager[child].parent = 0;
+                orphans.push_back(manager.getEntity(child));
                 child = manager[child].next;
             }
             Instance const moved = manager.removeComponent(e);
             if (moved != i) {
                 updateNode(i);
+            }
+            Instance const movedParent = (moved != i) ? Instance(manager[i].parent) : oldParent;
+            if (UTILS_LIKELY(oldParent && movedParent && !firstChild)) {
+                Instance minParent = std::min(oldParent, movedParent);
+                if (moved != i && Instance(manager[i].firstChild)) {
+                    minParent = std::min(minParent, i);
+                }
+                invalidateTopologyFromParent(minParent);
+            } else {
+                markTopologyDirty();
+            }
+        }
+    }
+
+    // Now that no more components move, mark the orphans dirty so their world transform becomes
+    // their local transform (and their descendants follow). Orphans destroyed later in the loop
+    // no longer have a component and are skipped. During a transaction, the commit recomputes
+    // everything anyway.
+    if (UTILS_UNLIKELY(!orphans.empty()) && !mLocalTransformTransactionOpen) {
+        for (Entity const e : orphans) {
+            Instance const i = manager.getInstance(e);
+            if (i) {
+                markNodeDirty(i);
             }
         }
     }
@@ -467,6 +514,7 @@ void FTransformManager::computeAllWorldTransforms() noexcept {
             // Ensure that children are always sorted after their parent.
             while (UTILS_UNLIKELY(Instance(manager[i].parent) > i)) {
                 swapNode(i, manager[i].parent);
+                markTopologyDirty();
             }
             Instance const parent = manager[i].parent;
             assert_invariant(parent < i);
@@ -623,27 +671,95 @@ void FTransformManager::updateNode(Instance const i) noexcept {
 }
 
 void FTransformManager::transformChildren(Sim& manager, Instance parent, bool const notifyParent) noexcept {
+    mat4f* const UTILS_RESTRICT worlds = manager.data<WORLD>();
+    mat4f const* const UTILS_RESTRICT locals = manager.data<LOCAL>();
+    Instance const* const UTILS_RESTRICT firstChildren = manager.data<FIRST_CHILD>();
+    uint8_t* const UTILS_RESTRICT dirtyFlags = manager.data<DIRTY>();
+    Entity const* const UTILS_RESTRICT entities = manager.getEntities() - 1;
+    bool const accurate = mAccurateTranslations;
+    float3* const UTILS_RESTRICT worldTranslationLos = manager.data<WORLD_LO>();
+    float3 const* const UTILS_RESTRICT localTranslationLos = manager.data<LOCAL_LO>();
+
+    // Fast path when the SoA is BFS-defragmented (!mTopologyDirty):
+    // Every depth level of any subtree occupies a single contiguous slice [levelStart, levelEnd)
+    // in the SoA, and each parent's children form a contiguous sub-run with parents[c] == p.
+    // This eliminates the DFS stack, all nexts[c] pointer-chasing loads, per-node entity batching,
+    // and walks memory strictly forward in unit-stride BFS order.
+    if (UTILS_LIKELY(!mTopologyDirty)) {
+        Instance* const UTILS_RESTRICT parents = manager.data<PARENT>();
+        // Write sentinel parent = 0 at manager.end() so parents[c] == p and
+        // (parents[c] - parentStart) < parentCount always terminate at the end of the array.
+        // The slot at end() exists because defragment() reserves size() + 1 elements before
+        // clearing mTopologyDirty, and any operation that grows the array (create()) sets
+        // mTopologyDirty again, so the fast path never runs without that spare slot.
+        assert_invariant(manager.getSoA().capacity() > manager.getSoA().size());
+        parents[manager.end()] = 0;
+
+        if (UTILS_LIKELY(notifyParent)) {
+            mPendingNotifications.push_back(entities[parent]);
+        }
+
+        uint32_t parentStart = parent;
+        uint32_t parentCount = 1;
+        uint32_t levelStart = firstChildren[parent];
+
+        while (levelStart != 0) {
+            uint32_t nextLevelStart = 0;
+            uint32_t c = levelStart;
+            if (UTILS_LIKELY(!accurate)) {
+                while (uint32_t(parents[c]) - parentStart < parentCount) {
+                    uint32_t const p = parents[c];
+                    mat4f const pt = worlds[p];
+                    do {
+                        dirtyFlags[c] = 0;
+                        computeWorldTransform(worlds[c], pt, locals[c]);
+                        if (UTILS_UNLIKELY(!nextLevelStart)) {
+                            nextLevelStart = firstChildren[c];
+                        }
+                        ++c;
+                    } while (uint32_t(parents[c]) == p);
+                }
+            } else {
+                while (uint32_t(parents[c]) - parentStart < parentCount) {
+                    uint32_t const p = parents[c];
+                    mat4f const pt = worlds[p];
+                    float3 const ptLo = worldTranslationLos[p];
+                    do {
+                        dirtyFlags[c] = 0;
+                        computeWorldTransformAccurate(
+                                worlds[c], worldTranslationLos[c],
+                                pt, locals[c],
+                                ptLo, localTranslationLos[c]);
+                        if (UTILS_UNLIKELY(!nextLevelStart)) {
+                            nextLevelStart = firstChildren[c];
+                        }
+                        ++c;
+                    } while (uint32_t(parents[c]) == p);
+                }
+            }
+
+            mPendingNotifications.insert(mPendingNotifications.end(),
+                    entities + levelStart, entities + c);
+
+            parentStart = levelStart;
+            parentCount = c - levelStart;
+            levelStart = nextLevelStart;
+        }
+        return;
+    }
+
     constexpr size_t STACK_CAPACITY = 128;
     constexpr size_t BATCH_CAPACITY = 128;
     Instance::Type stack[STACK_CAPACITY];
     Entity dirtyBatch[BATCH_CAPACITY];
     size_t top = 0;
 
-    mat4f* const UTILS_RESTRICT worlds = manager.data<WORLD>();
-    mat4f const* const UTILS_RESTRICT locals = manager.data<LOCAL>();
-    Instance const* const UTILS_RESTRICT firstChildren = manager.data<FIRST_CHILD>();
     Instance const* const UTILS_RESTRICT nexts = manager.data<NEXT>();
-    uint8_t* const UTILS_RESTRICT dirtyFlags = manager.data<DIRTY>();
-    Entity const* const UTILS_RESTRICT entities = manager.getEntities() - 1;
 
     size_t batchCount = 0;
     if (UTILS_LIKELY(notifyParent)) {
         dirtyBatch[batchCount++] = entities[parent];
     }
-
-    bool const accurate = mAccurateTranslations;
-    float3* const UTILS_RESTRICT worldTranslationLos = manager.data<WORLD_LO>();
-    float3 const* const UTILS_RESTRICT localTranslationLos = manager.data<LOCAL_LO>();
 
     do {
         Instance const firstChild = firstChildren[parent];
@@ -872,8 +988,127 @@ void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance const i) n
 #endif
 }
 
+void FTransformManager::invalidateTopologyFromParent(Instance const minParent) noexcept {
+    assert_invariant(minParent);
+    mTopologyDirty = true;
+    if (!mDefragParentCursor) {
+        // Still in Phase 1 (packing roots); Phase 2 hasn't started yet.
+        return;
+    }
+    if (minParent > mDefragParentCursor) {
+        // Phase 2 hasn't reached minParent yet; [1, mDefragWriteCursor) only contains roots and
+        // children of parents <= mDefragParentCursor < minParent.
+        return;
+    }
+    // In the placed child region [mDefragRootCount + 1, mDefragWriteCursor), parents[] is sorted
+    // in monotonically non-decreasing order. Binary-search for the first slot K with
+    // parents[K] >= minParent; all slots [1, K) remain in valid BFS order.
+    Instance const* const parents = mManager.data<PARENT>();
+    Instance::Type const childBegin = mDefragRootCount + 1;
+    Instance::Type const childEnd = std::min<Instance::Type>(mDefragWriteCursor, mManager.end());
+    if (childBegin < childEnd) {
+        auto const it = std::lower_bound(parents + childBegin, parents + childEnd, minParent);
+        mDefragWriteCursor = Instance(uint32_t(it - parents));
+    } else {
+        mDefragWriteCursor = Instance(childBegin);
+    }
+    mDefragParentCursor = minParent;
+    mDefragChildCursor = mManager[minParent].firstChild;
+}
+
 void FTransformManager::gc() noexcept {
     mManager.gc(this, &FTransformManager::destroyComponents);
+    defragment();
+}
+
+void FTransformManager::defragment(size_t const maxSwaps) noexcept {
+    if (UTILS_LIKELY(!mTopologyDirty || maxSwaps == 0)) {
+        return;
+    }
+
+    auto& manager = mManager;
+
+    // swapNode() uses manager.end() as a temporary node to fix up sibling/parent links, and
+    // transformChildren()'s fast path (enabled once mTopologyDirty is cleared) writes a sentinel
+    // there. Reserve it before any path below can clear mTopologyDirty.
+    auto& soa = manager.getSoA();
+    soa.ensureCapacity(soa.size() + 1);
+
+    if (UTILS_UNLIKELY(manager.getComponentCount() <= 1)) {
+        // Nothing to reorder; go back to the initial state.
+        resetDefragCursors();
+        mTopologyDirty = false;
+        return;
+    }
+
+    // Resolve any pending dirty instances before swapping Instance indices so mDirtyInstances
+    // does not hold stale Instance handles.
+    ensureWorldTransformsUpToDate();
+
+    Instance const end = manager.end();
+    size_t swaps = 0;
+    size_t steps = 0;
+    size_t const maxSteps = (maxSwaps <= (SIZE_MAX / 8)) ? (maxSwaps * 8) : SIZE_MAX;
+
+    // Phase 1: Pack all root nodes (parent == 0) into [1, R].
+    if (!mDefragParentCursor) {
+        while (mDefragChildCursor < end && swaps < maxSwaps && steps < maxSteps) {
+            ++steps;
+            Instance const scan = mDefragChildCursor++;
+            if (!Instance(manager[scan].parent)) {
+                Instance const target = mDefragWriteCursor++;
+                if (scan != target) {
+                    swapNode(scan, target);
+                    ++swaps;
+                }
+            }
+        }
+        if (mDefragChildCursor < end) {
+            return;
+        }
+        mDefragRootCount = uint32_t(mDefragWriteCursor) - 1;
+        if (mDefragWriteCursor >= end) {
+            // All nodes in the manager are root nodes; defragmentation is complete.
+            mDefragParentCursor = end;
+            mTopologyDirty = false;
+            return;
+        }
+        mDefragParentCursor = 1;
+        mDefragChildCursor = manager[1].firstChild;
+    }
+
+    // Phase 2: Breadth-First Search (BFS) placement of children into [R + 1, end - 1].
+    // The prefix [1, mDefragWriteCursor) acts as an implicit in-place BFS queue:
+    // mDefragParentCursor scans parents in [1, mDefragWriteCursor) while mDefragWriteCursor
+    // places each parent's children contiguously at the tail of the placed prefix.
+    while (mDefragWriteCursor < end && swaps < maxSwaps && steps < maxSteps) {
+        ++steps;
+        if (!mDefragChildCursor) {
+            ++mDefragParentCursor;
+            if (UTILS_UNLIKELY(mDefragParentCursor >= mDefragWriteCursor)) {
+                mDefragParentCursor = end;
+                mTopologyDirty = false;
+                return;
+            }
+            mDefragChildCursor = manager[mDefragParentCursor].firstChild;
+            continue;
+        }
+
+        Instance const c = mDefragChildCursor;
+        Instance const target = mDefragWriteCursor++;
+        assert_invariant(c >= target);
+        if (c != target) {
+            swapNode(c, target);
+            ++swaps;
+        }
+        // Logical node `c` now resides at `target`; advance to its next sibling in the child list.
+        mDefragChildCursor = manager[target].next;
+    }
+
+    if (mDefragWriteCursor >= end) {
+        mDefragParentCursor = end;
+        mTopologyDirty = false;
+    }
 }
 TransformManager::children_iterator& TransformManager::children_iterator::operator++() noexcept {
     FTransformManager const& that = downcast(*mManager);

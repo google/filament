@@ -121,6 +121,7 @@ public:
     void commitLocalTransformTransaction() noexcept;
 
     void gc() noexcept;
+    void defragment(size_t maxSwaps = 64) noexcept;
 
     // Evaluates any pending dirty world transforms and notifies registered change callbacks
     // and bitsets.
@@ -321,11 +322,34 @@ private:
         }
     };
 
+    // Restarts defragmentation from scratch (Phase 1: packing roots).
+    UTILS_ALWAYS_INLINE
+    void resetDefragCursors() noexcept {
+        mDefragWriteCursor = 1;
+        mDefragParentCursor = 0;
+        mDefragChildCursor = 1;
+        mDefragRootCount = 0;
+    }
+
+    UTILS_ALWAYS_INLINE
+    void markTopologyDirty() noexcept {
+        mTopologyDirty = true;
+        resetDefragCursors();
+    }
+
+    void invalidateTopologyFromParent(Instance minParent) noexcept;
+
     Sim mManager;
     mutable utils::Mutex mCommitLock;
     mutable std::vector<Instance> mDirtyInstances UTILS_GUARDED_BY(mCommitLock);
     mutable std::vector<utils::Entity> mPendingNotifications UTILS_GUARDED_BY(mCommitLock);
     mutable std::atomic<bool> mHasDirtyTransforms{ false };
+    // Defragmentation cursors, initialized to the reset state (see resetDefragCursors()).
+    Instance mDefragWriteCursor = 1;
+    Instance mDefragParentCursor = 0;
+    Instance mDefragChildCursor = 1;
+    Instance::Type mDefragRootCount = 0;
+    bool mTopologyDirty = false;
     bool mLocalTransformTransactionOpen = false;
     bool mAccurateTranslations = false;
 };
