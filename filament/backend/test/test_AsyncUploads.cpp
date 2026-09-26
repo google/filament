@@ -293,7 +293,6 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
 
 TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -302,6 +301,8 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // See BasicAsyncFlow for why tick() is needed here.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -475,7 +476,6 @@ TEST_F(BackendTest, SetVertexBufferObjectAsyncBeforeBufferObjectCreated) {
 
 TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
     SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
-    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
 
     auto& api = getDriverApi();
     auto swapChain = addCleanup(createSwapChain());
@@ -491,6 +491,8 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
     auto waitFor = [&](const bool& flag) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
+            // See BasicAsyncFlow for why tick() is needed here.
+            api.tick();
             api.finish();
             executeCommands();
             getDriver().purge();
