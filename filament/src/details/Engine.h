@@ -17,10 +17,9 @@
 #ifndef TNT_FILAMENT_DETAILS_ENGINE_H
 #define TNT_FILAMENT_DETAILS_ENGINE_H
 
-#include "downcast.h"
-
 #include "Allocators.h"
 #include "DFG.h"
+#include "downcast.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
 #include "MaterialCache.h"
@@ -34,8 +33,6 @@
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 
-#include "ds/DescriptorSetLayout.h"
-
 #include "details/BufferObject.h"
 #include "details/ColorGrading.h"
 #include "details/DebugRegistry.h"
@@ -48,28 +45,29 @@
 #include "details/Skybox.h"
 #include "details/Sync.h"
 
+#include "ds/DescriptorSetLayout.h"
+
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
-
-#include <private/backend/CommandBufferQueue.h>
-#include <private/backend/CommandStream.h>
-
-#include <private/utils/FeatureFlagManager.h>
-
 
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/FramePacer.h>
+#include <filament/IndexBuffer.h>
 #include <filament/IndirectLight.h>
 #include <filament/Material.h>
 #include <filament/Skybox.h>
 #include <filament/Stream.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
-#include <filament/IndexBuffer.h>
+
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/CommandStream.h>
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
+
+#include <private/utils/FeatureFlagManager.h>
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
@@ -81,18 +79,19 @@
 #include <utils/JobSystem.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
-#include <utils/Slice.h>
 #include <utils/PagedArenaBitsetPool.h>
+#include <utils/Slice.h>
 #include <utils/tribool.h>
 
-#include <cstddef>
+#include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <new>
 #include <optional>
-#include <string_view>
 #include <random>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
@@ -192,10 +191,18 @@ public:
     auto& getPerRenderPassArena() noexcept { return mPerRenderPassArena; }
 
     // Material IDs...
-    uint32_t getMaterialId() const noexcept { return mMaterialId++; }
+    uint32_t getMaterialId() const noexcept {
+        return mMaterialId.fetch_add(1, std::memory_order_relaxed);
+    }
 
     const FMaterial* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
-    const FMaterial* getSkyboxMaterial() const noexcept;
+    // The default material's default instance, created by init(). Renderables without a material
+    // instance use it, and shared variants of other materials bind its descriptor sets.
+    const FMaterialInstance* getDefaultMaterialInstance() const noexcept {
+        return mDefaultMaterialInstance;
+    }
+    // not const: creates the skybox material on first use
+    const FMaterial* getSkyboxMaterial() noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
     const FTexture* getDummyCubemap() const noexcept { return mDefaultIblTexture; }
     const FColorGrading* getDefaultColorGrading() const noexcept { return mDefaultColorGrading; }
@@ -625,6 +632,7 @@ public:
 
 private:
     explicit FEngine(Builder const& builder);
+    FEngine(Builder const& builder, Config const& validatedConfig);
     void init();
     void shutdown();
 
@@ -708,7 +716,7 @@ private:
     mutable utils::Mutex mSyncListLock;
     ResourceList<FSync> mSyncs UTILS_GUARDED_BY(mSyncListLock){ "Sync" };
 
-    mutable uint32_t mMaterialId = 0;
+    mutable std::atomic<uint32_t> mMaterialId = 0;
 
     // FMaterialInstance are handled directly by FMaterial
     std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>> mMaterialInstances;
@@ -733,14 +741,15 @@ private:
 
     Epoch mEngineEpoch;
 
-    mutable FMaterial const* mDefaultMaterial = nullptr;
-    mutable FMaterial const* mSkyboxMaterial = nullptr;
-    mutable FSwapChain* mUnprotectedDummySwapchain = nullptr;
+    FMaterial const* mDefaultMaterial = nullptr;
+    FMaterialInstance const* mDefaultMaterialInstance = nullptr;
+    FMaterial const* mSkyboxMaterial = nullptr;
+    FSwapChain* mUnprotectedDummySwapchain = nullptr;
 
-    mutable FTexture* mDefaultIblTexture = nullptr;
-    mutable FIndirectLight* mDefaultIbl = nullptr;
+    FTexture* mDefaultIblTexture = nullptr;
+    FIndirectLight* mDefaultIbl = nullptr;
 
-    mutable FColorGrading* mDefaultColorGrading = nullptr;
+    FColorGrading* mDefaultColorGrading = nullptr;
     FMorphTargetBuffer* mDummyMorphTargetBuffer = nullptr;
 
     mutable utils::CountDownLatch mDriverBarrier;
