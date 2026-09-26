@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
+#include "filament_test_resources.h"
 #include "MockDriver.h"
+
 #include "details/MaterialInstance.h"
 #include "details/UboManager.h"
 
@@ -25,7 +24,8 @@
 #include <private/backend/CommandStream.h>
 #include <private/backend/Driver.h>
 
-#include "filament_test_resources.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace {
 using namespace filament;
@@ -62,6 +62,8 @@ protected:
     static constexpr size_t COMMAND_BUFFERS_SIZE = 3 * MIN_COMMAND_BUFFERS_SIZE;
     static constexpr BufferAllocator::allocation_size_t DEFAULT_SLOT_SIZE = 64;
     static constexpr BufferAllocator::allocation_size_t DEFAULT_TOTAL_SIZE = 1024;
+    static constexpr float BUFFER_SIZE_GROWTH_MULTIPLIER =
+            UboManager::BUFFER_SIZE_GROWTH_MULTIPLIER;
 
     UboManagerTest()
             : mCommandBufferQueue(MIN_COMMAND_BUFFERS_SIZE, COMMAND_BUFFERS_SIZE, false),
@@ -362,6 +364,44 @@ TEST_F(UboManagerTest, UpdateSlot) {
     BufferDescriptor desc(data, sizeof(data));
     mUboManager.updateSlot(mDriverApi, mi1->getAllocationId(), std::move(desc));
 
+    mUboManager.finishBeginFrame(mDriverApi);
+    mUboManager.endFrame(mDriverApi);
+}
+
+TEST_F(UboManagerTest, ReallocationReservesDoubleSizeForAllDirtyExistingInstances) {
+    // Frame 1: Each instance occupies 128 bytes (aligned to 64), so 1024 bytes holds 8 instances.
+    // Manage 5 instances (640 bytes), leaving 3 free instance slots (384 bytes) without reallocating.
+    constexpr size_t NUM_EXISTING = 5;
+    std::vector<FMaterialInstance*> instances;
+    instances.reserve(NUM_EXISTING);
+    for (size_t i = 0; i < NUM_EXISTING; ++i) {
+        FMaterialInstance* mi = createInstance();
+        instances.push_back(mi);
+        mUboManager.manageMaterialInstance(mi);
+    }
+    mUboManager.beginFrame(mDriverApi);
+    ASSERT_EQ(mUboManager.getTotalSize(), DEFAULT_TOTAL_SIZE);
+    for (auto* mi : instances) {
+        mi->getUniformBuffer().clean();
+    }
+    mUboManager.finishBeginFrame(mDriverApi);
+    mUboManager.endFrame(mDriverApi);
+
+    // Frame 2: While Frame 1 is still in flight, mark all 5 existing instances dirty.
+    // During Pass 2, the first 3 instances fit in the remaining 3 free slots, while the last 2
+    // fail with REALLOCATION_REQUIRED. Reallocation must still reserve 2x space for all 5 dirty
+    // existing instances, not just the 2 that overflowed.
+    EXPECT_CALL(mMockDriver, getFenceStatus(mMockDriver.createdFences[0]))
+            .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
+    for (auto* mi : instances) {
+        mi->getUniformBuffer().invalidate();
+    }
+    mUboManager.beginFrame(mDriverApi);
+    const allocation_size_t alignedInstanceSize =
+            mAllocator.alignUp(instances[0]->getUniformBuffer().getSize());
+    const allocation_size_t expectedSize = mAllocator.alignUp(
+            NUM_EXISTING * 2 * alignedInstanceSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
+    EXPECT_EQ(mUboManager.getTotalSize(), expectedSize);
     mUboManager.finishBeginFrame(mDriverApi);
     mUboManager.endFrame(mDriverApi);
 }
