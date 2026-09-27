@@ -1203,13 +1203,7 @@ void WebGPUDriver::updateIndexBufferAsyncR(AsyncCallId jobId,
         const uint32_t byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
-    // Mark the handle as asynchronous even if it wasn't created via createIndexBufferAsync: the
-    // job below will handleCast() this handle when it eventually runs, and handleCast() has no
-    // "not already destroyed" check (unlike Vulkan's ref-counted resource_ptr::cast). If the app
-    // destroys this handle before the job runs, destroyIndexBuffer must route that destruction
-    // through this same queue instead of running it immediately, so it's correctly ordered after
-    // this pending update rather than freeing the resource out from under it.
-    handleCast<WebGPUIndexBuffer>(indexBufferHandle)->asynchronous = true;
+    promoteToAsync(handleCast<WebGPUIndexBuffer>(indexBufferHandle));
     getJobQueue()->push([this, indexBufferHandle, bufferDescriptor = std::move(bufferDescriptor),
             byteOffset, completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         updateIndexBuffer(indexBufferHandle, std::move(bufferDescriptor), byteOffset);
@@ -1228,10 +1222,7 @@ void WebGPUDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
-    // See the identical comment in updateIndexBufferAsyncR: mark this handle asynchronous so a
-    // destroy issued before this job runs gets routed through the same queue instead of freeing
-    // the resource out from under the pending update.
-    handleCast<WebGPUBufferObject>(bufferObjectHandle)->asynchronous = true;
+    promoteToAsync(handleCast<WebGPUBufferObject>(bufferObjectHandle));
     getJobQueue()->push([this, bufferObjectHandle, bufferDescriptor = std::move(bufferDescriptor),
             byteOffset, completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         updateBufferObject(bufferObjectHandle, std::move(bufferDescriptor), byteOffset);
@@ -1264,16 +1255,10 @@ void WebGPUDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId,
         Handle<HwBufferObject> bufferObjectHandle, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
-    // See the identical comment in updateIndexBufferAsyncR. The job below handleCast()s BOTH
-    // handles (via setVertexBufferObject), so both need to be marked: destroying either one
-    // before this job runs must be routed through the same queue rather than running immediately.
-    handleCast<WebGPUVertexBuffer>(vertexBufferHandle)->asynchronous = true;
-    handleCast<WebGPUBufferObject>(bufferObjectHandle)->asynchronous = true;
-    getJobQueue()->push([this, vertexBufferHandle, index, bufferObjectHandle,
-            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        setVertexBufferObject(vertexBufferHandle, index, bufferObjectHandle);
-        completion.schedule(AsyncCallStatus::COMPLETED);
-    }, jobId);
+
+    // No GPU work, only buffer handles to set, which the draws read.
+    runAsyncCallNow(getJobQueue(), jobId, handler, callback, user,
+            [&] { setVertexBufferObject(vertexBufferHandle, index, bufferObjectHandle); });
 }
 
 // Updates a 3D texture region with pixel data from a buffer.
@@ -1427,10 +1412,7 @@ void WebGPUDriver::update3DImageAsyncR(AsyncCallId jobId,
         PixelBufferDescriptor&& pixelBufferDescriptor, CallbackHandler* handler,
         AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
-    // See the identical comment in updateIndexBufferAsyncR: mark this handle asynchronous so a
-    // destroy issued before this job runs gets routed through the same queue instead of freeing
-    // the resource out from under the pending update.
-    handleCast<WebGPUTexture>(textureHandle)->asynchronous = true;
+    promoteToAsync(handleCast<WebGPUTexture>(textureHandle));
     getJobQueue()->push([this, textureHandle, level, xoffset, yoffset, zoffset, width, height,
             depth, pixelBufferDescriptor = std::move(pixelBufferDescriptor),
             completion = AsyncCompletion(this, handler, callback, user)]() mutable {
