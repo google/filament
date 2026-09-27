@@ -1124,7 +1124,7 @@ bool WebGPUDriver::isDepthClampSupported() {
 }
 
 bool WebGPUDriver::isAsynchronousModeEnabled() {
-    return false;
+    return getJobQueue() != nullptr;
 }
 
 bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
