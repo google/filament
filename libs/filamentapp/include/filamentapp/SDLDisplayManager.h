@@ -32,8 +32,7 @@ public:
 
     void terminate() override;
 
-    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
-            bool resizable, bool headless) override;
+    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h, bool resizable) override;
     void destroyWindow(WindowHandle window) override;
 
     void* getNativeWindow(WindowHandle window) const override;
@@ -57,13 +56,6 @@ private:
     bool init();
 
     filament::Engine::Backend const mBackend;
-    // False when SDL could not initialize its video subsystem (e.g. a Linux CI machine with no
-    // DISPLAY). Headless runs still work in that case; windowed runs do not.
-    bool mHasVideo = true;
-    // The size requested for the windowless headless surface. SDL cannot answer size queries
-    // without a real window, so we answer them from here instead.
-    uint32_t mHeadlessWidth = 0;
-    uint32_t mHeadlessHeight = 0;
     mutable std::unordered_map<WindowHandle, void*> mNativeWindowMap;
     static AppKey mapKey(SDL_Scancode scancode);
     static uint16_t getModifiers();

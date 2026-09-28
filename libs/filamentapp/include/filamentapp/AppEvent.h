@@ -200,6 +200,38 @@ struct AppEvent {
 };
 
 /**
+ * Returns the DisplayManager::getMouseState() bit for `button`.
+ *
+ * Buttons follow AppEvent::mouseButton and SDL_GetMouseState(): they are 1-based, so left is 1 and
+ * button n occupies bit n - 1. A button the mask cannot represent yields 0.
+ */
+constexpr uint32_t appMouseButtonMask(int const button) noexcept {
+    if (button < 1 || button > 32) {
+        return 0;
+    }
+    return 1u << uint32_t(button - 1);
+}
+
+/**
+ * Applies a press or release of `button` to a DisplayManager::getMouseState() bitmask, leaving it
+ * unchanged for a button that has no bit.
+ *
+ * Release goes through here because the inline spelling, `buttons &= ~appMouseButtonMask(button)`,
+ * releases every button at once when the mask is 0.
+ */
+constexpr void appSetMouseButton(uint32_t& buttons, int const button, bool const down) noexcept {
+    uint32_t const mask = appMouseButtonMask(button);
+    if (mask == 0) {
+        return;
+    }
+    if (down) {
+        buttons |= mask;
+    } else {
+        buttons &= ~mask;
+    }
+}
+
+/**
  * Key modifiers.
  */
 enum AppKeyModifier : uint16_t {

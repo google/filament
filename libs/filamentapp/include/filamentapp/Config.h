@@ -36,6 +36,9 @@ struct [[deprecated("Use FilamentApp2::Builder methods instead. Deadline: 2027/0
             filament::backend::FeatureLevel::FEATURE_LEVEL_3;
     filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
     bool resizeable = true;
+    // Deprecated: headless is a property of the DisplayManager. Prefer the FilamentApp2 API and
+    // pass a filament::app::HeadlessDisplayManager to Builder::displayManager(). FilamentApp::run()
+    // honors this flag by constructing one on the caller's behalf.
     bool headless = false;
     int stereoscopicEyeCount = 2;
     uint8_t samples = 1;

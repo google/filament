@@ -295,6 +295,7 @@ private:
     bool const mHasVertexInputDynamicState;
     bool const mHasDynamicState;
     bool const mHasDynamicState2;
+    bool const mHasColorWriteEnable;
 
     [[maybe_unused]] VulkanContext const& mContext;
 

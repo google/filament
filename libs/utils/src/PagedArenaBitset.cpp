@@ -235,6 +235,56 @@ bool PagedArenaBitset::fetchAdd(uint32_t const index) {
 }
 
 UTILS_NOINLINE
+void PagedArenaBitset::add(Slice<const uint32_t> const indices) {
+    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+
+    uint32_t const* const UTILS_RESTRICT ptr = indices.data();
+    size_t const count = indices.size();
+
+    uint64_t* const UTILS_RESTRICT summaryMask = mSummaryMask.data();
+    uint16_t* const UTILS_RESTRICT directory = mDirectory.data();
+    Page* UTILS_RESTRICT arena = mArena.data();
+
+    uint32_t cachedDirIdx = ~0u;
+    Page* UTILS_RESTRICT cachedPage = nullptr;
+    uint32_t addedSize = 0;
+
+    for (size_t i = 0; i < count; ++i) {
+        uint32_t const index = ptr[i];
+        assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
+
+        uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
+        if (UTILS_UNLIKELY(dirIdx != cachedDirIdx)) {
+            uint32_t const maskIdx = dirIdx >> WORD_SHIFT;
+            uint32_t const bitInMask = dirIdx & WORD_MASK;
+            uint16_t pageIdx;
+            if (UTILS_UNLIKELY((summaryMask[maskIdx] & (1ULL << bitInMask)) == 0)) {
+                pageIdx = allocatePage();
+                arena = mArena.data();
+                directory[dirIdx] = pageIdx;
+                summaryMask[maskIdx] |= (1ULL << bitInMask);
+                mMasterMask[maskIdx >> WORD_SHIFT] |= (1ULL << (maskIdx & WORD_MASK));
+            } else {
+                pageIdx = directory[dirIdx];
+            }
+            cachedDirIdx = dirIdx;
+            cachedPage = &arena[pageIdx];
+        }
+
+        uint32_t const wordIdx = (index >> WORD_SHIFT) & WORD_MASK;
+        uint32_t const bitIdx = index & WORD_MASK;
+        uint64_t const mask = 1ULL << bitIdx;
+        uint64_t const oldWord = cachedPage->words[wordIdx];
+
+        cachedPage->words[wordIdx] = oldWord | mask;
+        cachedPage->activeWordsMask |= (1ULL << wordIdx);
+        addedSize += uint32_t((oldWord & mask) == 0);
+    }
+
+    mSize += addedSize;
+}
+
+UTILS_NOINLINE
 bool PagedArenaBitset::fetchRemove(uint32_t const index) noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");

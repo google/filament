@@ -228,11 +228,33 @@ the pattern <code>{test.name}.{platform}-{backend}.{target}</code>.</li>
 <li><code>--no_rebuild</code>: Skip rebuilding the executables (<code>gltf_viewer</code> and <code>filament-samples</code>).</li>
 <li><code>--build-only</code>: Build the executables and stop, without rendering. Used by the CI job that warms
 the compiler cache.</li>
-<li><code>--num_threads=&lt;number&gt;</code>: Set the number of threads for rendering. If not set, the system's default is used.</li>
+<li><code>--num_threads=&lt;number&gt;</code>: Number of renders to run concurrently. Each render uses the whole
+machine, because the software drivers size their worker pools from the core count, so the default
+is a quarter of the cores clamped to the range 2 to 4. Raising it oversubscribes the machine.</li>
 </ul>
-<p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding and using 8 threads:</p>
-<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=8
+<p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding, two renders at a time:</p>
+<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=2
 </code></pre>
+<h2 id="when-a-render-crashes"><a class="header" href="#when-a-render-crashes">When a render crashes</a></h2>
+<p>A render that dies on a signal is reported as, for example, <code>error=-6 (killed by SIGABRT)</code>, and its
+output usually names only the assertion that fired, which says nothing about the call that provoked
+it.</p>
+<p>Every run therefore collects what the crash left behind, at no cost when nothing crashed.
+<code>generate.sh</code> raises the core limit before rendering and runs <code>src/report_crashes.sh</code> on the way
+out, which writes a symbolized backtrace per crash into <code>out/renderdiff/crashes</code>. The CI uploads
+that directory with the rest of the renderdiff output, and the backtraces are echoed into the job
+log as well.</p>
+<p>The two platforms leave different evidence, and the script handles both:</p>
+<ul>
+<li>On Linux the kernel writes a core, read by <code>gdb</code>. Where it goes is <code>kernel.core_pattern</code>, which
+only root can change, so the CI points it at <code>/tmp/renderdiff-cores</code>; a local run without that
+setting usually leaves a <code>core</code> file in the test's working directory under <code>/tmp/renderdiff</code>,
+which the script also searches. Cores are deleted once read, because a debug build produces a
+very large one; set <code>RENDERDIFF_KEEP_CORES=1</code> to keep them.</li>
+<li>On macOS no core is written, regardless of the core limit, but ReportCrash leaves a symbolicated
+<code>.ips</code> report in <code>~/Library/Logs/DiagnosticReports</code>. The script renders those as ordinary
+backtraces with <code>src/format_ips.py</code>.</li>
+</ul>
 <h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
 <p>The golden images are stored in a github repository:
 https://github.com/google/filament-assets. Filament team members should have access to write

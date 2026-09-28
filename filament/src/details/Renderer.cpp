@@ -1647,7 +1647,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     //fg.export_graphviz(graphviz, view.getName());
     //DLOG(INFO) << graphviz.c_str();
 
-    fg.execute(driver);
+    fg.execute(driver, view.getName());
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);

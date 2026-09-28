@@ -279,7 +279,8 @@ using the `libiblprefilter` library.
 ## How to make contributions
 
 Please read and follow the steps in [CONTRIBUTING.md](/CONTRIBUTING.md). Make sure you are
-familiar with the [code style](/CODE_STYLE.md).
+familiar with the [code style](/CODE_STYLE.md). For reporting vulnerabilities, please consult
+our [Security Policy](/SECURITY.md).
 
 ## Directory structure
 

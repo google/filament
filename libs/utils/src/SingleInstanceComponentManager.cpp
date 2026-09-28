@@ -28,6 +28,7 @@ namespace utils {
 
 void SingleInstanceComponentManagerBase::registerChangeCallback(
         void const* token, ChangeCallback callback) noexcept {
+    flushNotifications();
     mChangeCallbacks.push_back({ token, std::move(callback) });
 }
 
@@ -39,11 +40,7 @@ void SingleInstanceComponentManagerBase::unregisterChangeCallback(
             mChangeCallbacks.end());
 }
 
-void SingleInstanceComponentManagerBase::notifyChange(Entity const e) noexcept {
-    for (auto* bitset : mBitsets) {
-        bitset->add(e.getId());
-    }
-
+void SingleInstanceComponentManagerBase::recordDirtyEntity(Entity const e) noexcept {
     if constexpr (USE_SORTED_DIRTY_ARRAY) {
         auto const it = std::lower_bound(mDirtyEntities, mDirtyEntities + mDirtyCount, e);
         if (it != mDirtyEntities + mDirtyCount && *it == e) {
@@ -68,13 +65,42 @@ void SingleInstanceComponentManagerBase::notifyChange(Entity const e) noexcept {
     }
 }
 
+void SingleInstanceComponentManagerBase::notifyChange(Entity const e) noexcept {
+    for (auto* bitset : mBitsets) {
+        bitset->add(e.getId());
+    }
+
+    if (UTILS_UNLIKELY(!mChangeCallbacks.empty())) {
+        recordDirtyEntity(e);
+    }
+}
+
+void SingleInstanceComponentManagerBase::notifyChange(Slice<const Entity> const entities) noexcept {
+    static_assert(sizeof(Entity) == sizeof(uint32_t) && std::is_standard_layout_v<Entity>,
+            "Entity must be layout-compatible with uint32_t for zero-copy Slice forwarding");
+
+    Slice const ids{ reinterpret_cast<uint32_t const*>(entities.data()), entities.size() };
+    for (auto* bitset : mBitsets) {
+        bitset->add(ids);
+    }
+
+    if (UTILS_UNLIKELY(!mChangeCallbacks.empty())) {
+        for (Entity const e : entities) {
+            recordDirtyEntity(e);
+        }
+    }
+}
+
 void SingleInstanceComponentManagerBase::flushNotifications() noexcept {
     if (mDirtyCount > 0) {
-        Slice<const Entity> const slice(mDirtyEntities, mDirtyCount);
+        size_t const count = mDirtyCount;
+        mDirtyCount = 0;
+        Entity dirty[MAX_DIRTY_COUNT];
+        std::copy_n(mDirtyEntities, count, dirty);
+        Slice<const Entity> const slice(dirty, count);
         for (auto const& [token, callback] : mChangeCallbacks) {
             callback(slice);
         }
-        mDirtyCount = 0;
     }
 }
 
@@ -99,7 +125,7 @@ void SingleInstanceComponentManagerBase::catchupGarbage() noexcept {
 
     // Process bitsets if any were returned (Clean frames will simply skip this loop)
     if (UTILS_LIKELY(!mMissedGarbage.empty())) {
-        LockGuard<Mutex> lock(mEbrEntitiesLock);
+        LockGuard lock(mEbrEntitiesLock);
         mCollapsedGarbage.clear();
         for (auto const* garbageBits : mMissedGarbage) {
             PagedArenaBitset::intersect(&mCollapsedGarbage, mEntities, *garbageBits);
@@ -193,7 +219,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
             ci = allocator(context, e);
             mInstanceMap[e] = ci;
             {
-                LockGuard<Mutex> lock(mEbrEntitiesLock);
+                LockGuard lock(mEbrEntitiesLock);
                 mEntities.add(e.getId());
             }
             notifyChange(e);
@@ -230,7 +256,7 @@ void SingleInstanceComponentManagerBase::removeComponentsImpl(Entity const* enti
             // managers only run on the main thread, read-only accesses to mEntities from this
             // class do not need synchronization.
             {
-                LockGuard<Mutex> lock(mEbrEntitiesLock);
+                LockGuard lock(mEbrEntitiesLock);
                 mEntities.remove(e.getId());
             }
 
